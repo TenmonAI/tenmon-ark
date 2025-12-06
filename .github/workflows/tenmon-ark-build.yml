@@ -23,9 +23,6 @@ jobs:
           version: 10.4.1
           run_install: false
 
-      - name: Add pnpm to PATH
-        run: echo "$(pnpm root -g)/pnpm" >> $GITHUB_PATH
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
