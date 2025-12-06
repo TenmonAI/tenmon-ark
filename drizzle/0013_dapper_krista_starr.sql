@@ -1,0 +1,23 @@
+CREATE TABLE `userProfiles` (
+	`id` int AUTO_INCREMENT NOT NULL,
+	`userId` int NOT NULL,
+	`birthDate` timestamp,
+	`birthTime` varchar(10),
+	`gender` enum('male','female','other'),
+	`sukuyoMansion` varchar(50),
+	`sukuyoDay` int,
+	`sukuyoMonth` int,
+	`sukuyoYear` int,
+	`kuyoElement` varchar(50),
+	`fireWaterBalance` int,
+	`spiritualDistance` int,
+	`amatsuKanagiPattern` int,
+	`irohaCharacter` varchar(10),
+	`personalityCore` text,
+	`personalityTraits` text,
+	`communicationStyle` text,
+	`createdAt` timestamp NOT NULL DEFAULT (now()),
+	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
+	CONSTRAINT `userProfiles_id` PRIMARY KEY(`id`),
+	CONSTRAINT `userProfiles_userId_unique` UNIQUE(`userId`)
+);

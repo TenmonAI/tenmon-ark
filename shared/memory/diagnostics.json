@@ -1,0 +1,234 @@
+[
+  {
+    "id": "e093c3a3-a4d8-44e1-a1ba-4205e0ed46aa",
+    "timestamp": 1764577606840,
+    "systemHealth": {
+      "score": 100,
+      "status": "healthy"
+    },
+    "issues": [],
+    "metrics": {
+      "apiHealth": 100,
+      "uiHealth": 100,
+      "buildHealth": 100,
+      "sslHealth": 100,
+      "performanceScore": 100
+    }
+  },
+  {
+    "id": "c7e1f0c3-1c27-4065-8554-5273d9b7f38a",
+    "timestamp": 1764577606845,
+    "systemHealth": {
+      "score": 100,
+      "status": "healthy"
+    },
+    "issues": [],
+    "metrics": {
+      "apiHealth": 100,
+      "uiHealth": 100,
+      "buildHealth": 100,
+      "sslHealth": 100,
+      "performanceScore": 100
+    }
+  },
+  {
+    "id": "af895597-17ac-485f-8e4c-4048f4a86d2b",
+    "timestamp": 1764577606848,
+    "systemHealth": {
+      "score": 100,
+      "status": "healthy"
+    },
+    "issues": [],
+    "metrics": {
+      "apiHealth": 100,
+      "uiHealth": 100,
+      "buildHealth": 100,
+      "sslHealth": 100,
+      "performanceScore": 100
+    }
+  },
+  {
+    "id": "c1b7b107-8128-4023-ab52-0bd5c535bf1b",
+    "timestamp": 1764577606850,
+    "systemHealth": {
+      "score": 100,
+      "status": "healthy"
+    },
+    "issues": [],
+    "metrics": {
+      "apiHealth": 100,
+      "uiHealth": 100,
+      "buildHealth": 100,
+      "sslHealth": 100,
+      "performanceScore": 100
+    }
+  },
+  {
+    "id": "1a28dddd-f16c-4ae5-a287-70fddd52a0e1",
+    "timestamp": 1764577606852,
+    "systemHealth": {
+      "score": 100,
+      "status": "healthy"
+    },
+    "issues": [],
+    "metrics": {
+      "apiHealth": 100,
+      "uiHealth": 100,
+      "buildHealth": 100,
+      "sslHealth": 100,
+      "performanceScore": 100
+    }
+  },
+  {
+    "id": "a3878663-2111-4293-9717-d9c4a7034a4c",
+    "timestamp": 1764577606853,
+    "systemHealth": {
+      "score": 100,
+      "status": "healthy"
+    },
+    "issues": [],
+    "metrics": {
+      "apiHealth": 100,
+      "uiHealth": 100,
+      "buildHealth": 100,
+      "sslHealth": 100,
+      "performanceScore": 100
+    }
+  },
+  {
+    "id": "4e7e6b1a-97a4-4ea4-8764-89da4bfe3f66",
+    "timestamp": 1764577992120,
+    "systemHealth": {
+      "score": 100,
+      "status": "healthy"
+    },
+    "issues": [],
+    "metrics": {
+      "apiHealth": 100,
+      "uiHealth": 100,
+      "buildHealth": 100,
+      "sslHealth": 100,
+      "performanceScore": 100
+    }
+  },
+  {
+    "id": "37bd542b-23fa-4a9e-9d3f-e5580c76e365",
+    "timestamp": 1764577992122,
+    "systemHealth": {
+      "score": 100,
+      "status": "healthy"
+    },
+    "issues": [],
+    "metrics": {
+      "apiHealth": 100,
+      "uiHealth": 100,
+      "buildHealth": 100,
+      "sslHealth": 100,
+      "performanceScore": 100
+    }
+  },
+  {
+    "id": "675cdcf5-96c7-4405-84c4-1d6d46d21f19",
+    "timestamp": 1764577992123,
+    "systemHealth": {
+      "score": 100,
+      "status": "healthy"
+    },
+    "issues": [],
+    "metrics": {
+      "apiHealth": 100,
+      "uiHealth": 100,
+      "buildHealth": 100,
+      "sslHealth": 100,
+      "performanceScore": 100
+    }
+  },
+  {
+    "id": "c5f3321d-feba-425c-8e59-c07ac8f92994",
+    "timestamp": 1764577992128,
+    "systemHealth": {
+      "score": 100,
+      "status": "healthy"
+    },
+    "issues": [],
+    "metrics": {
+      "apiHealth": 100,
+      "uiHealth": 100,
+      "buildHealth": 100,
+      "sslHealth": 100,
+      "performanceScore": 100
+    }
+  },
+  {
+    "id": "4e410ce3-576f-4e3b-b89a-fa4d85ba6b6c",
+    "timestamp": 1764578021560,
+    "systemHealth": {
+      "score": 94,
+      "status": "healthy"
+    },
+    "issues": [
+      {
+        "id": "2e1e44f6-4e21-452e-adf5-66c5861f189a",
+        "severity": "high",
+        "category": "performance",
+        "description": "メモリ使用率が高い: 92.3%",
+        "detectedAt": 1764578021560
+      }
+    ],
+    "metrics": {
+      "apiHealth": 100,
+      "uiHealth": 100,
+      "buildHealth": 100,
+      "sslHealth": 100,
+      "performanceScore": 70
+    }
+  },
+  {
+    "id": "5697b984-ffed-4610-bff0-ac22021791cf",
+    "timestamp": 1764578021564,
+    "systemHealth": {
+      "score": 97,
+      "status": "healthy"
+    },
+    "issues": [
+      {
+        "id": "0a6a4979-e27e-4c5c-9e9d-6c33917ac4b1",
+        "severity": "medium",
+        "category": "performance",
+        "description": "メモリ使用率が上昇中: 89.7%",
+        "detectedAt": 1764578021564
+      }
+    ],
+    "metrics": {
+      "apiHealth": 100,
+      "uiHealth": 100,
+      "buildHealth": 100,
+      "sslHealth": 100,
+      "performanceScore": 85
+    }
+  },
+  {
+    "id": "b813e773-8b1c-4edb-a553-af07fe17e322",
+    "timestamp": 1764578021565,
+    "systemHealth": {
+      "score": 97,
+      "status": "healthy"
+    },
+    "issues": [
+      {
+        "id": "bb201c1b-1b34-42db-82a3-1be3b6c176d3",
+        "severity": "medium",
+        "category": "performance",
+        "description": "メモリ使用率が上昇中: 89.9%",
+        "detectedAt": 1764578021565
+      }
+    ],
+    "metrics": {
+      "apiHealth": 100,
+      "uiHealth": 100,
+      "buildHealth": 100,
+      "sslHealth": 100,
+      "performanceScore": 85
+    }
+  }
+]

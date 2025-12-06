@@ -1,0 +1,14 @@
+{
+  "timestamp": 1764747259669,
+  "uiIssues": [],
+  "apiIssues": [],
+  "deployIssues": [],
+  "buildMismatch": false,
+  "systemHealth": {
+    "overall": 100,
+    "ui": 100,
+    "api": 100,
+    "deploy": 100
+  },
+  "suggestions": []
+}

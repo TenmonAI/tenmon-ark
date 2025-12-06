@@ -1,0 +1,91 @@
+{
+  "query": "SELECT * FROM siteInfo LIMIT 10;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 2tYW5pWL2WkeFQm.72bde1c15dfc --database Tg5uYHShwxkXhk5oaTiiLF --execute SELECT * FROM siteInfo LIMIT 10;",
+  "rows": [
+    {
+      "id": "1",
+      "key": "release_status",
+      "value": "development",
+      "description": "現在のリリース状態（development / beta / production）",
+      "updatedBy": "NULL",
+      "createdAt": "2025-12-03 06:00:14",
+      "updatedAt": "2025-12-03 06:16:23"
+    },
+    {
+      "id": "2",
+      "key": "founder_release_date",
+      "value": "2025-02-28",
+      "description": "Founders Edition先行リリース日",
+      "updatedBy": "NULL",
+      "createdAt": "2025-12-03 06:00:14",
+      "updatedAt": "2025-12-03 06:16:25"
+    },
+    {
+      "id": "3",
+      "key": "public_release_date",
+      "value": "2026-03-21",
+      "description": "一般公開リリース日（春分の日）",
+      "updatedBy": "NULL",
+      "createdAt": "2025-12-03 06:00:14",
+      "updatedAt": "2025-12-03 06:16:25"
+    },
+    {
+      "id": "4",
+      "key": "free_plan_available",
+      "value": "false",
+      "description": "Freeプランが現在利用可能かどうか",
+      "updatedBy": "NULL",
+      "createdAt": "2025-12-03 06:00:14",
+      "updatedAt": "2025-12-03 06:16:25"
+    },
+    {
+      "id": "5",
+      "key": "basic_plan_available",
+      "value": "false",
+      "description": "Basicプランが現在利用可能かどうか",
+      "updatedBy": "NULL",
+      "createdAt": "2025-12-03 06:00:15",
+      "updatedAt": "2025-12-03 06:16:26"
+    },
+    {
+      "id": "6",
+      "key": "pro_plan_available",
+      "value": "false",
+      "description": "Proプランが現在利用可能かどうか",
+      "updatedBy": "NULL",
+      "createdAt": "2025-12-03 06:00:15",
+      "updatedAt": "2025-12-03 06:16:26"
+    },
+    {
+      "id": "7",
+      "key": "founder_plan_available",
+      "value": "true",
+      "description": "Founderプランが現在利用可能かどうか",
+      "updatedBy": "NULL",
+      "createdAt": "2025-12-03 06:00:15",
+      "updatedAt": "2025-12-03 06:16:26"
+    },
+    {
+      "id": "8",
+      "key": "current_features",
+      "value": "[\"Twin-Core Engine\",\"Kotodama Engine\",\"Amatsu-Kanagi Algorithm\",\"Chat Interface\",\"Voice Input\"]",
+      "description": "Currently available features (JSON array)",
+      "updatedBy": "NULL",
+      "createdAt": "2025-12-03 06:00:15",
+      "updatedAt": "2025-12-03 06:00:15"
+    },
+    {
+      "id": "9",
+      "key": "upcoming_features",
+      "value": "[\"Custom TENMON-ARK\",\"Site Crawler\",\"Advanced Memory System\",\"Multi-modal Input\"]",
+      "description": "Upcoming features (JSON array)",
+      "updatedBy": "NULL",
+      "createdAt": "2025-12-03 06:00:16",
+      "updatedAt": "2025-12-03 06:00:16"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tkey\tvalue\tdescription\tupdatedBy\tcreatedAt\tupdatedAt\n1\trelease_status\tdevelopment\t現在のリリース状態（development / beta / production）\tNULL\t2025-12-03 06:00:14\t2025-12-03 06:16:23\n2\tfounder_release_date\t2025-02-28\tFounders Edition先行リリース日\tNULL\t2025-12-03 06:00:14\t2025-12-03 06:16:25\n3\tpublic_release_date\t2026-03-21\t一般公開リリース日（春分の日）\tNULL\t2025-12-03 06:00:14\t2025-12-03 06:16:25\n4\tfree_plan_available\tfalse\tFreeプランが現在利用可能かどうか\tNULL\t2025-12-03 06:00:14\t2025-12-03 06:16:25\n5\tbasic_plan_available\tfalse\tBasicプランが現在利用可能かどうか\tNULL\t2025-12-03 06:00:15\t2025-12-03 06:16:26\n6\tpro_plan_available\tfalse\tProプランが現在利用可能かどうか\tNULL\t2025-12-03 06:00:15\t2025-12-03 06:16:26\n7\tfounder_plan_available\ttrue\tFounderプランが現在利用可能かどうか\tNULL\t2025-12-03 06:00:15\t2025-12-03 06:16:26\n8\tcurrent_features\t[\"Twin-Core Engine\",\"Kotodama Engine\",\"Amatsu-Kanagi Algorithm\",\"Chat Interface\",\"Voice Input\"]\tCurrently available features (JSON array)\tNULL\t2025-12-03 06:00:15\t2025-12-03 06:00:15\n9\tupcoming_features\t[\"Custom TENMON-ARK\",\"Site Crawler\",\"Advanced Memory System\",\"Multi-modal Input\"]\tUpcoming features (JSON array)\tNULL\t2025-12-03 06:00:16\t2025-12-03 06:00:16\n",
+  "stderr": "",
+  "execution_time_ms": 1552
+}

@@ -1,0 +1,18 @@
+{
+  "lastUpdated": 1764578021566,
+  "version": "1.0.0",
+  "uptime": 0,
+  "diagnostics": {
+    "lastRun": 1764578021565,
+    "lastReportId": "b813e773-8b1c-4edb-a553-af07fe17e322"
+  },
+  "selfHeal": {
+    "totalCycles": 0,
+    "successRate": 100,
+    "lastCycleId": ""
+  },
+  "manus": {
+    "lastSync": 1764577606849,
+    "connectionStatus": "connected"
+  }
+}

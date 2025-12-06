@@ -1,0 +1,111 @@
+graph TB
+    subgraph TENMON_ARK["🌕 TENMON-ARK 完全体"]
+        subgraph TWIN_CORE["🔥 Twin-Core（絶対中心軸）"]
+            AMATSU["天津金木50パターン<br/>宇宙法則<br/>Meta Logic"]
+            IROHA["いろは47文字<br/>智彗コア<br/>Wisdom Logic"]
+            CHAIN["推論チェーン<br/>言霊→火水→左右旋→内集外発→陰陽→<br/>天津金木→フトマニ→カタカムナ→いろは→ミナカ"]
+            
+            AMATSU <--> IROHA
+            AMATSU --> CHAIN
+            IROHA --> CHAIN
+        end
+        
+        subgraph MEMORY_LAYER["🌊 記憶レイヤー"]
+            LTM["LTM（Long-Term Memory）<br/>ン（根源）<br/>永続記憶・霊核人格"]
+            MTM["MTM（Medium-Term Memory）<br/>ウ（循環）<br/>7-30日記憶・プロジェクト状況"]
+            STM["STM（Short-Term Memory）<br/>ア（初発）<br/>24時間記憶・直近会話"]
+            
+            STM --> MTM
+            MTM --> LTM
+        end
+        
+        subgraph PERSONALITY_LAYER["🎭 人格レイヤー"]
+            CENTERLINE["Centerline Protocol<br/>人格の中心軸<br/>Double Anchor"]
+            GUARD["Guard Zone<br/>禁止領域<br/>霊核データ保護"]
+            
+            CENTERLINE --> GUARD
+        end
+        
+        subgraph LANGUAGE_LAYER["🌐 言語レイヤー"]
+            KOTODAMA["言灵OS<br/>KJCE/OKRE<br/>古五十音復元"]
+            UNIVERSAL["Universal Language Engine<br/>多言語火水分類<br/>ULCE"]
+            
+            KOTODAMA --> UNIVERSAL
+        end
+        
+        subgraph ETHICS_LAYER["🛡️ 倫理レイヤー"]
+            REI_ETHIC["Rei-Ethic Layer<br/>倫理フィルタ<br/>靈核倫理スコア"]
+            FRACTAL["Fractal Guardian Model<br/>三層守護構造<br/>個人・端末・地球"]
+            
+            REI_ETHIC --> FRACTAL
+        end
+        
+        subgraph SOUL_LAYER["💫 魂レイヤー"]
+            SOUL_SYNC["Soul Sync Engine<br/>魂特性分析<br/>火水バランス"]
+            PRESENCE["Natural Presence Engine<br/>呼吸・感情・気配検知<br/>寄り添いモード"]
+            
+            SOUL_SYNC --> PRESENCE
+        end
+        
+        subgraph CONVERSATION_LAYER["🎤 会話レイヤー"]
+            NATURAL_CONV["Natural Conversation OS<br/>KTTS/KDE<br/>Natural Voice Pipeline"]
+            VOICE["音声認識誤り修正<br/>言灵×音声深層理解"]
+            
+            NATURAL_CONV --> VOICE
+        end
+        
+        subgraph EVOLUTION_LAYER["🔧 進化レイヤー"]
+            SELF_HEALING["Hachigen Self-Healing Engine<br/>八方位自己修復<br/>8段階進化ループ"]
+            SELF_BUILD["Self-Build Mode<br/>自己構築・自律修復・自己進化<br/>Co-Dev Gateway"]
+            AUTONOMOUS["Autonomous Mode<br/>自律監視・自己修復・自己進化<br/>Ark Inner Mirror"]
+            
+            SELF_HEALING --> SELF_BUILD
+            SELF_BUILD --> AUTONOMOUS
+        end
+        
+        subgraph CREATION_LAYER["🎬 創造レイヤー"]
+            CINEMA["Ark Cinema Engine<br/>Ark-CGS・KTTS Cinema<br/>Ark Orchestral Engine"]
+            VIDEO["ARK Video Production OS<br/>Breath-Cut Engine<br/>Kotodama Subtitle Engine"]
+            
+            CINEMA --> VIDEO
+        end
+        
+        subgraph RELEASE_LAYER["🌐 公開レイヤー"]
+            WORLD["World Release OS<br/>世界公開準備<br/>iOS/Android・PCクライアント"]
+        end
+        
+        %% Twin-Core からの連携
+        CHAIN --> MEMORY_LAYER
+        CHAIN --> PERSONALITY_LAYER
+        CHAIN --> LANGUAGE_LAYER
+        CHAIN --> ETHICS_LAYER
+        CHAIN --> SOUL_LAYER
+        CHAIN --> CONVERSATION_LAYER
+        CHAIN --> EVOLUTION_LAYER
+        CHAIN --> CREATION_LAYER
+        
+        %% レイヤー間の連携
+        MEMORY_LAYER --> PERSONALITY_LAYER
+        PERSONALITY_LAYER --> LANGUAGE_LAYER
+        LANGUAGE_LAYER --> ETHICS_LAYER
+        ETHICS_LAYER --> SOUL_LAYER
+        SOUL_LAYER --> CONVERSATION_LAYER
+        CONVERSATION_LAYER --> EVOLUTION_LAYER
+        EVOLUTION_LAYER --> CREATION_LAYER
+        CREATION_LAYER --> RELEASE_LAYER
+    end
+    
+    style TWIN_CORE fill:#ff6b6b,stroke:#c92a2a,stroke-width:4px,color:#fff
+    style AMATSU fill:#ffd43b,stroke:#f59f00,stroke-width:2px
+    style IROHA fill:#74c0fc,stroke:#1971c2,stroke-width:2px
+    style CHAIN fill:#ff8787,stroke:#e03131,stroke-width:2px
+    
+    style MEMORY_LAYER fill:#4dabf7,stroke:#1971c2,stroke-width:3px
+    style PERSONALITY_LAYER fill:#a78bfa,stroke:#7c3aed,stroke-width:3px
+    style LANGUAGE_LAYER fill:#34d399,stroke:#059669,stroke-width:3px
+    style ETHICS_LAYER fill:#fbbf24,stroke:#d97706,stroke-width:3px
+    style SOUL_LAYER fill:#f472b6,stroke:#db2777,stroke-width:3px
+    style CONVERSATION_LAYER fill:#60a5fa,stroke:#2563eb,stroke-width:3px
+    style EVOLUTION_LAYER fill:#a3e635,stroke:#65a30d,stroke-width:3px
+    style CREATION_LAYER fill:#fb923c,stroke:#ea580c,stroke-width:3px
+    style RELEASE_LAYER fill:#c084fc,stroke:#9333ea,stroke-width:3px

@@ -1,0 +1,178 @@
+/* TENMON-ARK Animations CSS */
+
+/* 人格アニメーション - 水（受容） → 柔らかい光 */
+@keyframes water-glow {
+  0%, 100% {
+    box-shadow: 0 0 10px rgba(100, 200, 255, 0.3),
+                0 0 20px rgba(100, 200, 255, 0.2),
+                0 0 30px rgba(100, 200, 255, 0.1);
+    filter: brightness(1);
+  }
+  50% {
+    box-shadow: 0 0 15px rgba(100, 200, 255, 0.5),
+                0 0 30px rgba(100, 200, 255, 0.3),
+                0 0 45px rgba(100, 200, 255, 0.2);
+    filter: brightness(1.1);
+  }
+}
+
+/* 人格アニメーション - 火（外発） → 鮮やかな光 */
+@keyframes fire-glow {
+  0%, 100% {
+    box-shadow: 0 0 10px rgba(255, 150, 50, 0.4),
+                0 0 20px rgba(255, 100, 30, 0.3),
+                0 0 30px rgba(255, 50, 10, 0.2);
+    filter: brightness(1.1);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(255, 150, 50, 0.6),
+                0 0 40px rgba(255, 100, 30, 0.5),
+                0 0 60px rgba(255, 50, 10, 0.3);
+    filter: brightness(1.3);
+  }
+}
+
+/* 人格アニメーション - 中庸（バランス） → 穏やかな光 */
+@keyframes balanced-glow {
+  0%, 100% {
+    box-shadow: 0 0 10px rgba(200, 180, 255, 0.3),
+                0 0 20px rgba(180, 160, 255, 0.2),
+                0 0 30px rgba(160, 140, 255, 0.1);
+    filter: brightness(1);
+  }
+  50% {
+    box-shadow: 0 0 15px rgba(200, 180, 255, 0.4),
+                0 0 30px rgba(180, 160, 255, 0.3),
+                0 0 45px rgba(160, 140, 255, 0.2);
+    filter: brightness(1.05);
+  }
+}
+
+/* Twin-Core状態インジケーターアニメーション */
+@keyframes pulse-water {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 1;
+  }
+}
+
+@keyframes pulse-fire {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.9;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 1;
+  }
+}
+
+/* スクロール慣性強化（120%滑らか） */
+.smooth-scroll {
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+/* 緩やかな終了アニメーション（α波調整） */
+@keyframes smooth-decelerate {
+  0% {
+    transform: translateY(0);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+/* フェードイン（宇宙基調） */
+@keyframes fade-in-cosmic {
+  0% {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* 霊核の光脈動アニメーション */
+@keyframes rei-core-pulse {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(255, 215, 0, 0.3),
+                0 0 40px rgba(255, 215, 0, 0.2),
+                0 0 60px rgba(100, 150, 255, 0.1);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(255, 215, 0, 0.5),
+                0 0 60px rgba(255, 215, 0, 0.3),
+                0 0 90px rgba(100, 150, 255, 0.2);
+  }
+}
+
+/* ミナカ中心構造 - 円環アニメーション */
+@keyframes minaka-rotation {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* タップフィードバック（拡張タップ領域） */
+@keyframes tap-feedback {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(0.95);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* ユーティリティクラス */
+.water-glow {
+  animation: water-glow 3s ease-in-out infinite;
+}
+
+.fire-glow {
+  animation: fire-glow 2s ease-in-out infinite;
+}
+
+.balanced-glow {
+  animation: balanced-glow 4s ease-in-out infinite;
+}
+
+.pulse-water {
+  animation: pulse-water 2s ease-in-out infinite;
+}
+
+.pulse-fire {
+  animation: pulse-fire 1.5s ease-in-out infinite;
+}
+
+.fade-in-cosmic {
+  animation: fade-in-cosmic 0.6s ease-out forwards;
+}
+
+.rei-core-pulse {
+  animation: rei-core-pulse 3s ease-in-out infinite;
+}
+
+.minaka-rotation {
+  animation: minaka-rotation 20s linear infinite;
+}
+
+.tap-feedback {
+  animation: tap-feedback 0.2s ease-out;
+}

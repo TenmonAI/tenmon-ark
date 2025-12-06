@@ -1,0 +1,381 @@
+/**
+ * TENMON-ARK Divine Theme vΩ
+ * 黒×金神装UIテーマ
+ * #000000 (漆黒) × #D4AF37 (古代金)
+ */
+
+:root {
+  /* Divine Color Palette */
+  --divine-black: #000000;
+  --divine-gold: #D4AF37;
+  --divine-gold-light: #E5C158;
+  --divine-gold-dark: #B8941F;
+  --divine-blue: #1E3A8A;
+  --divine-blue-light: #3B82F6;
+  
+  /* Glow Effects */
+  --glow-gold: 0 0 10px rgba(212, 175, 55, 0.5), 
+               0 0 20px rgba(212, 175, 55, 0.3), 
+               0 0 30px rgba(212, 175, 55, 0.1);
+  --glow-gold-strong: 0 0 15px rgba(212, 175, 55, 0.8), 
+                      0 0 30px rgba(212, 175, 55, 0.5), 
+                      0 0 45px rgba(212, 175, 55, 0.3);
+  --glow-blue: 0 0 10px rgba(59, 130, 246, 0.5), 
+               0 0 20px rgba(59, 130, 246, 0.3);
+  
+  /* Twin-Core Colors */
+  --twin-fire: #EF4444;
+  --twin-water: #3B82F6;
+  --twin-balance: #D4AF37;
+}
+
+/* Divine Background */
+.divine-bg {
+  background: linear-gradient(
+    135deg,
+    var(--divine-black) 0%,
+    #0a0a0a 50%,
+    var(--divine-black) 100%
+  );
+}
+
+.divine-bg-subtle {
+  background: linear-gradient(
+    180deg,
+    var(--divine-black) 0%,
+    #0f0f0f 100%
+  );
+}
+
+/* Divine Gold Gradient */
+.divine-gold-gradient {
+  background: linear-gradient(
+    135deg,
+    var(--divine-gold-dark) 0%,
+    var(--divine-gold) 50%,
+    var(--divine-gold-light) 100%
+  );
+}
+
+/* Divine Text */
+.divine-text-gold {
+  color: var(--divine-gold);
+  text-shadow: var(--glow-gold);
+}
+
+.divine-text-gold-strong {
+  color: var(--divine-gold-light);
+  text-shadow: var(--glow-gold-strong);
+}
+
+/* Divine Borders */
+.divine-border-gold {
+  border-color: var(--divine-gold);
+  box-shadow: var(--glow-gold);
+}
+
+.divine-border-gold-strong {
+  border-color: var(--divine-gold);
+  box-shadow: var(--glow-gold-strong);
+}
+
+/* Divine Buttons */
+.divine-button {
+  background: var(--divine-gold);
+  color: var(--divine-black);
+  border: 2px solid var(--divine-gold);
+  box-shadow: var(--glow-gold);
+  transition: all 0.3s ease;
+}
+
+.divine-button:hover {
+  background: var(--divine-gold-light);
+  box-shadow: var(--glow-gold-strong);
+  transform: translateY(-2px);
+}
+
+.divine-button:active {
+  transform: translateY(0);
+}
+
+/* Divine Cards */
+.divine-card {
+  background: linear-gradient(
+    135deg,
+    rgba(0, 0, 0, 0.95) 0%,
+    rgba(15, 15, 15, 0.95) 100%
+  );
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  box-shadow: var(--glow-gold), 
+              0 4px 6px -1px rgba(0, 0, 0, 0.5),
+              0 2px 4px -1px rgba(0, 0, 0, 0.3);
+}
+
+.divine-card:hover {
+  border-color: rgba(212, 175, 55, 0.5);
+  box-shadow: var(--glow-gold-strong),
+              0 10px 15px -3px rgba(0, 0, 0, 0.5),
+              0 4px 6px -2px rgba(0, 0, 0, 0.3);
+}
+
+/* Light Particles Animation */
+@keyframes particle-float {
+  0%, 100% {
+    transform: translateY(0) translateX(0);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-100vh) translateX(20px);
+    opacity: 0;
+  }
+}
+
+.light-particle {
+  position: absolute;
+  width: 2px;
+  height: 2px;
+  background: var(--divine-gold);
+  border-radius: 50%;
+  box-shadow: 0 0 4px var(--divine-gold);
+  animation: particle-float linear infinite;
+  pointer-events: none;
+}
+
+/* Twin-Core Glow Animation */
+@keyframes twin-core-pulse {
+  0%, 100% {
+    box-shadow: 0 0 10px rgba(212, 175, 55, 0.5),
+                0 0 20px rgba(212, 175, 55, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(212, 175, 55, 0.8),
+                0 0 40px rgba(212, 175, 55, 0.5),
+                0 0 60px rgba(212, 175, 55, 0.3);
+  }
+}
+
+.twin-core-glow {
+  animation: twin-core-pulse 2s ease-in-out infinite;
+}
+
+/* Text Life Animation */
+@keyframes text-breathe {
+  0%, 100% {
+    opacity: 0.9;
+    text-shadow: 0 0 5px rgba(212, 175, 55, 0.3);
+  }
+  50% {
+    opacity: 1;
+    text-shadow: 0 0 10px rgba(212, 175, 55, 0.5),
+                 0 0 20px rgba(212, 175, 55, 0.3);
+  }
+}
+
+.text-life {
+  animation: text-breathe 3s ease-in-out infinite;
+}
+
+/* Streaming Text Animation */
+@keyframes cursor-blink {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+}
+
+.streaming-cursor {
+  display: inline-block;
+  width: 2px;
+  height: 1em;
+  background: var(--divine-gold);
+  margin-left: 2px;
+  animation: cursor-blink 1s step-end infinite;
+}
+
+/* Message Bubble Animations */
+@keyframes message-slide-in-left {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes message-slide-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.message-ai {
+  animation: message-slide-in-left 0.3s ease-out;
+}
+
+.message-user {
+  animation: message-slide-in-right 0.3s ease-out;
+}
+
+/* AI Message Bubble */
+.bubble-ai {
+  background: linear-gradient(
+    135deg,
+    rgba(0, 0, 0, 0.95) 0%,
+    rgba(15, 15, 15, 0.95) 100%
+  );
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  box-shadow: var(--glow-gold);
+  color: var(--divine-gold);
+}
+
+/* User Message Bubble */
+.bubble-user {
+  background: linear-gradient(
+    135deg,
+    rgba(0, 0, 0, 0.95) 0%,
+    rgba(30, 58, 138, 0.2) 100%
+  );
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  box-shadow: var(--glow-blue);
+  color: rgba(59, 130, 246, 0.9);
+}
+
+/* Sidebar Styles */
+.divine-sidebar {
+  background: linear-gradient(
+    180deg,
+    var(--divine-black) 0%,
+    #0a0a0a 100%
+  );
+  border-right: 1px solid rgba(212, 175, 55, 0.2);
+}
+
+.divine-sidebar-item {
+  color: rgba(212, 175, 55, 0.7);
+  transition: all 0.2s ease;
+}
+
+.divine-sidebar-item:hover {
+  color: var(--divine-gold);
+  background: rgba(212, 175, 55, 0.1);
+  box-shadow: inset 3px 0 0 var(--divine-gold);
+}
+
+.divine-sidebar-item.active {
+  color: var(--divine-gold);
+  background: rgba(212, 175, 55, 0.15);
+  box-shadow: inset 3px 0 0 var(--divine-gold);
+}
+
+/* Input Area */
+.divine-input {
+  background: rgba(0, 0, 0, 0.8);
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  color: var(--divine-gold);
+  transition: all 0.2s ease;
+}
+
+.divine-input:focus {
+  border-color: var(--divine-gold);
+  box-shadow: var(--glow-gold);
+  outline: none;
+}
+
+.divine-input::placeholder {
+  color: rgba(212, 175, 55, 0.4);
+}
+
+/* Scrollbar */
+.divine-scrollbar::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.divine-scrollbar::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.divine-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(212, 175, 55, 0.3);
+  border-radius: 4px;
+}
+
+.divine-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(212, 175, 55, 0.5);
+}
+
+/* Loading Spinner */
+@keyframes divine-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.divine-spinner {
+  border: 3px solid rgba(212, 175, 55, 0.2);
+  border-top-color: var(--divine-gold);
+  border-radius: 50%;
+  animation: divine-spin 1s linear infinite;
+}
+
+/* Twin-Core Fire/Water Indicator */
+.twin-fire {
+  color: var(--twin-fire);
+  text-shadow: 0 0 10px rgba(239, 68, 68, 0.5);
+}
+
+.twin-water {
+  color: var(--twin-water);
+  text-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
+}
+
+.twin-balance {
+  color: var(--twin-balance);
+  text-shadow: var(--glow-gold);
+}
+
+/* Responsive Utilities */
+@media (max-width: 768px) {
+  .divine-sidebar {
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+  }
+  
+  .divine-sidebar.open {
+    transform: translateX(0);
+  }
+}
+
+/* Accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .light-particle,
+  .twin-core-glow,
+  .text-life,
+  .streaming-cursor,
+  .message-ai,
+  .message-user,
+  .divine-spinner {
+    animation: none;
+  }
+  
+  .divine-button:hover,
+  .divine-card:hover,
+  .divine-sidebar-item:hover {
+    transform: none;
+  }
+}

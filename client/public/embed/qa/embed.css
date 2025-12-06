@@ -1,0 +1,40 @@
+/**
+ * TENMON-ARK LP-QA Widget Embed CSS
+ * LP用軽量Q&Aチャットウィジェット埋め込みCSS
+ */
+
+/* リセット */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  background: transparent;
+  overflow: hidden;
+}
+
+/* ウィジェットコンテナ */
+#tenmon-ark-qa-widget {
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+/* iframe */
+#tenmon-ark-qa-widget iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+/* レスポンシブ対応 */
+@media (max-width: 768px) {
+  #tenmon-ark-qa-widget iframe {
+    border-radius: 0;
+  }
+}

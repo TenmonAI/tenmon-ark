@@ -1,0 +1,46 @@
+[
+  {
+    "id": "evo-1764577992132-peoubb",
+    "timestamp": 1764577992132,
+    "newAbility": "Test Ability",
+    "description": "Test evolution entry",
+    "metricsImproved": [
+      {
+        "category": "performance",
+        "before": 70,
+        "after": 85,
+        "improvement": 21.4
+      }
+    ],
+    "relatedChanges": [
+      "Change 1",
+      "Change 2"
+    ],
+    "impact": "medium"
+  },
+  {
+    "id": "evo-1764578021567-a66ko9",
+    "timestamp": 1764578021567,
+    "newAbility": "Auto-Tuning Optimization",
+    "description": "Applied 2 tuning actions",
+    "metricsImproved": [
+      {
+        "category": "lpqa-model",
+        "before": 0,
+        "after": 0,
+        "improvement": 15
+      },
+      {
+        "category": "cache-policy",
+        "before": 0,
+        "after": 0,
+        "improvement": 10
+      }
+    ],
+    "relatedChanges": [
+      "LP-QAモデル戦略をbalancedに変更",
+      "キャッシュTTLを3600秒に変更"
+    ],
+    "impact": "medium"
+  }
+]

@@ -1,0 +1,3 @@
+ALTER TABLE `longTermMemories` ADD `category` enum('worldview','lingua_structure','tenshin_kinoki','project_state','user_profile','task_flow','conversation_recent') DEFAULT 'worldview' NOT NULL;--> statement-breakpoint
+ALTER TABLE `mediumTermMemories` ADD `category` enum('worldview','lingua_structure','tenshin_kinoki','project_state','user_profile','task_flow','conversation_recent') DEFAULT 'conversation_recent' NOT NULL;--> statement-breakpoint
+ALTER TABLE `mediumTermMemories` ADD `updatedAt` timestamp DEFAULT (now()) NOT NULL ON UPDATE CURRENT_TIMESTAMP;

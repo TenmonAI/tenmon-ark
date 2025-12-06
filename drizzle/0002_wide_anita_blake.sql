@@ -1,0 +1,2 @@
+ALTER TABLE `mediumTermMemories` ADD `importance` enum('super_fire','fire','warm','neutral','cool','water') DEFAULT 'neutral' NOT NULL;--> statement-breakpoint
+ALTER TABLE `mediumTermMemories` ADD `expiresAt` timestamp NOT NULL;

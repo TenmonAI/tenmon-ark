@@ -1,0 +1,22 @@
+CREATE TABLE `conversationTests` (
+	`id` int AUTO_INCREMENT NOT NULL,
+	`userId` int NOT NULL,
+	`testId` varchar(64) NOT NULL,
+	`conversationMode` enum('general','intermediate','expert') NOT NULL,
+	`sukuyoMansionId` int,
+	`sukuyoMansionName` varchar(64),
+	`userMessage` text NOT NULL,
+	`aiResponse` text NOT NULL,
+	`understandabilityScore` int NOT NULL,
+	`terminologyScore` int NOT NULL,
+	`sukuyoAlignmentScore` int NOT NULL,
+	`twinCoreStabilityScore` int NOT NULL,
+	`fireWaterBalanceScore` int NOT NULL,
+	`emotionalSupportScore` int NOT NULL,
+	`spiritualStabilityScore` int NOT NULL,
+	`overallScore` int NOT NULL,
+	`result` enum('PASS','WARN','FAIL') NOT NULL,
+	`notes` text,
+	`createdAt` timestamp NOT NULL DEFAULT (now()),
+	CONSTRAINT `conversationTests_id` PRIMARY KEY(`id`)
+);

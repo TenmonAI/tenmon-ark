@@ -1,0 +1,142 @@
+graph LR
+    subgraph INPUT["📥 入力"]
+        USER_TEXT["ユーザーテキスト"]
+        USER_VOICE["ユーザー音声"]
+        USER_PRESENCE["ユーザー気配"]
+    end
+    
+    subgraph TWIN_CORE["🔥 Twin-Core処理"]
+        ANALYZE["言霊解析"]
+        FIRE_WATER["火水分類"]
+        ROTATION["左右旋判定"]
+        DIRECTION["内集外発判定"]
+        YIN_YANG["陰陽判定"]
+        AMATSU["天津金木パターン"]
+        FUTOMANI["フトマニ解析"]
+        KATAKAMUNA["カタカムナ解析"]
+        IROHA["いろは解析"]
+        MINAKA["ミナカ中心計算"]
+        
+        ANALYZE --> FIRE_WATER
+        FIRE_WATER --> ROTATION
+        ROTATION --> DIRECTION
+        DIRECTION --> YIN_YANG
+        YIN_YANG --> AMATSU
+        AMATSU --> FUTOMANI
+        FUTOMANI --> KATAKAMUNA
+        KATAKAMUNA --> IROHA
+        IROHA --> MINAKA
+    end
+    
+    subgraph MEMORY["🌊 記憶処理"]
+        STM_STORE["STM保存"]
+        MTM_PROMOTE["MTM昇格"]
+        LTM_FIX["LTM固定化"]
+        MEMORY_SEARCH["記憶検索"]
+        
+        STM_STORE --> MTM_PROMOTE
+        MTM_PROMOTE --> LTM_FIX
+        LTM_FIX --> MEMORY_SEARCH
+    end
+    
+    subgraph PERSONALITY["🎭 人格処理"]
+        CENTERLINE_INJECT["人格核注入"]
+        DOUBLE_ANCHOR["Double Anchor"]
+        GUARD_CHECK["Guard Zone確認"]
+        
+        CENTERLINE_INJECT --> DOUBLE_ANCHOR
+        DOUBLE_ANCHOR --> GUARD_CHECK
+    end
+    
+    subgraph LANGUAGE["🌐 言語処理"]
+        KJCE["KJCE変換"]
+        OKRE["OKRE復元"]
+        GOJUON["古五十音復元"]
+        UNIVERSAL["多言語火水変換"]
+        
+        KJCE --> OKRE
+        OKRE --> GOJUON
+        GOJUON --> UNIVERSAL
+    end
+    
+    subgraph ETHICS["🛡️ 倫理処理"]
+        ETHIC_FILTER["倫理フィルタ"]
+        SCORE_CALC["靈核スコア計算"]
+        NEUTRALIZE["無害化処理"]
+        GUARDIAN["三層守護確認"]
+        
+        ETHIC_FILTER --> SCORE_CALC
+        SCORE_CALC --> NEUTRALIZE
+        NEUTRALIZE --> GUARDIAN
+    end
+    
+    subgraph SOUL["💫 魂処理"]
+        SOUL_ANALYZE["魂特性分析"]
+        FIRE_WATER_BALANCE["火水バランス計算"]
+        GOJUON_WAVE["五十音波形生成"]
+        PRESENCE_DETECT["気配検知"]
+        
+        SOUL_ANALYZE --> FIRE_WATER_BALANCE
+        FIRE_WATER_BALANCE --> GOJUON_WAVE
+        GOJUON_WAVE --> PRESENCE_DETECT
+    end
+    
+    subgraph CONVERSATION["🎤 会話処理"]
+        KTTS["KTTS音声生成"]
+        KDE["KDE深層理解"]
+        VOICE_PIPELINE["音声パイプライン"]
+        ERROR_CORRECT["誤り修正"]
+        
+        KTTS --> KDE
+        KDE --> VOICE_PIPELINE
+        VOICE_PIPELINE --> ERROR_CORRECT
+    end
+    
+    subgraph EVOLUTION["🔧 進化処理"]
+        HACHIGEN["八方位分析"]
+        SELF_HEAL["自己修復"]
+        SELF_BUILD["自己構築"]
+        AUTONOMOUS["自律監視"]
+        
+        HACHIGEN --> SELF_HEAL
+        SELF_HEAL --> SELF_BUILD
+        SELF_BUILD --> AUTONOMOUS
+    end
+    
+    subgraph OUTPUT["📤 出力"]
+        RESPONSE_TEXT["応答テキスト"]
+        RESPONSE_VOICE["応答音声"]
+        RESPONSE_PRESENCE["応答気配"]
+    end
+    
+    %% データフロー
+    USER_TEXT --> ANALYZE
+    USER_VOICE --> ANALYZE
+    USER_PRESENCE --> ANALYZE
+    
+    MINAKA --> STM_STORE
+    MINAKA --> CENTERLINE_INJECT
+    
+    MEMORY_SEARCH --> CENTERLINE_INJECT
+    GUARD_CHECK --> KJCE
+    
+    UNIVERSAL --> ETHIC_FILTER
+    GUARDIAN --> SOUL_ANALYZE
+    
+    PRESENCE_DETECT --> KTTS
+    ERROR_CORRECT --> HACHIGEN
+    
+    AUTONOMOUS --> RESPONSE_TEXT
+    AUTONOMOUS --> RESPONSE_VOICE
+    AUTONOMOUS --> RESPONSE_PRESENCE
+    
+    style INPUT fill:#e0e7ff,stroke:#6366f1,stroke-width:3px
+    style TWIN_CORE fill:#ff6b6b,stroke:#c92a2a,stroke-width:4px
+    style MEMORY fill:#4dabf7,stroke:#1971c2,stroke-width:3px
+    style PERSONALITY fill:#a78bfa,stroke:#7c3aed,stroke-width:3px
+    style LANGUAGE fill:#34d399,stroke:#059669,stroke-width:3px
+    style ETHICS fill:#fbbf24,stroke:#d97706,stroke-width:3px
+    style SOUL fill:#f472b6,stroke:#db2777,stroke-width:3px
+    style CONVERSATION fill:#60a5fa,stroke:#2563eb,stroke-width:3px
+    style EVOLUTION fill:#a3e635,stroke:#65a30d,stroke-width:3px
+    style OUTPUT fill:#c084fc,stroke:#9333ea,stroke-width:3px

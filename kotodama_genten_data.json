@@ -1,0 +1,345 @@
+{
+  "title": "言霊秘書 稲荷古伝五十連法則",
+  "source": "山口志道霊学全集",
+  "gojiuren_structure": {
+    "direction": "right_to_left",
+    "description": "右から左へ読む日本古来の規則に従う",
+    "columns": [
+      {
+        "position": 1,
+        "name": "空中水灵",
+        "type": "water",
+        "sounds": ["ア", "イ", "ウ", "エ", "オ"],
+        "color": "blue",
+        "element": "水"
+      },
+      {
+        "position": 2,
+        "name": "昇火灵",
+        "type": "fire",
+        "sounds": ["カ", "キ", "ク", "ケ", "コ"],
+        "color": "red",
+        "element": "火"
+      },
+      {
+        "position": 3,
+        "name": "昇水灵",
+        "type": "water",
+        "sounds": ["サ", "シ", "ス", "セ", "ソ"],
+        "color": "blue",
+        "element": "水"
+      },
+      {
+        "position": 4,
+        "name": "水中火灵",
+        "type": "fire_in_water",
+        "sounds": ["タ", "チ", "ツ", "テ", "ト"],
+        "color": "orange",
+        "element": "火中水"
+      },
+      {
+        "position": 5,
+        "name": "火水灵",
+        "type": "fire_water",
+        "sounds": ["ナ", "ニ", "ヌ", "子", "ノ"],
+        "color": "purple",
+        "element": "火水"
+      }
+    ],
+    "note": "ページ50の表に基づく正確な配置。右から左へ：空中水灵（ア行）→昇火灵（カ行）→昇水灵（サ行）→水中火灵（タ行）→火水灵（ナ行）"
+  },
+  "kuni_no_kaka_den": {
+    "title": "国の火水の伝（仮名反之法則）",
+    "structure": {
+      "正火灵": ["ハ", "ヒ", "フ", "ヘ", "ホ"],
+      "火中水灵": ["マ", "ミ", "ム", "メ", "モ"],
+      "火水灵": ["ヤ", "イ", "ユ", "エ", "ヨ"],
+      "濁水灵": ["ラ", "リ", "ル", "レ", "ロ"],
+      "水火灵": ["ワ", "井", "ウ", "エ", "ヲ"]
+    }
+  },
+  "kotodama_meanings": {
+    "ア": {
+      "classification": "空中ノ水灵",
+      "meanings": [
+        "出息也",
+        "命也",
+        "五十連総名",
+        "天也",
+        "海也",
+        "吾也",
+        "自然也",
+        "○也"
+      ],
+      "spiritual_origin": "天の初発、息の解き始め、天地開闢の初音、火水が未分化の状態（天の響き）",
+      "element": "water",
+      "polarity": "陰陽未分",
+      "position": "天",
+      "body": "息の解き始め"
+    },
+    "イ": {
+      "classification": "空中ノ水灵",
+      "meanings": [
+        "浮昇也",
+        "動也",
+        "生也",
+        "暗也"
+      ],
+      "spiritual_origin": "霊核、天地の中心点",
+      "element": "water",
+      "polarity": "陰",
+      "position": "天地中心",
+      "body": "浮昇の息"
+    },
+    "ウ": {
+      "classification": "空中ノ水灵",
+      "meanings": [
+        "胞衣也",
+        "肢也",
+        "枝也"
+      ],
+      "spiritual_origin": "包む、抱く",
+      "element": "water",
+      "polarity": "陰",
+      "position": "天",
+      "body": "包む息"
+    },
+    "エ": {
+      "classification": "空中ノ水灵",
+      "meanings": [
+        "起也",
+        "貴也",
+        "高也",
+        "於也"
+      ],
+      "spiritual_origin": "霊核、天地の中心点",
+      "element": "water",
+      "polarity": "陰",
+      "position": "天地中心",
+      "body": "起きる息"
+    },
+    "オ": {
+      "classification": "空中ノ水灵",
+      "meanings": [
+        "此ア行ヘ総テ天ニ位シテ親音也",
+        "故ニ、各横音ニヒビクナリ"
+      ],
+      "spiritual_origin": "天の総括音",
+      "element": "water",
+      "polarity": "陰陽統合",
+      "position": "天",
+      "body": "天の響き"
+    },
+    "カ": {
+      "classification": "昇火ノ灵",
+      "meanings": [
+        "彰也",
+        "昇也",
+        "別也",
+        "家也",
+        "真也",
+        "是者也",
+        "否也",
+        "揚也",
+        "黒也",
+        "暗也",
+        "大也",
+        "上也",
+        "数也",
+        "疑也",
+        "高也",
+        "限也",
+        "如是也",
+        "陽"
+      ],
+      "spiritual_origin": "火の芽ぶき、発・端",
+      "element": "fire",
+      "polarity": "陽",
+      "position": "地",
+      "body": "発声の起点"
+    },
+    "キ": {
+      "classification": "昇火ノ灵",
+      "meanings": [
+        "彰ノ火ノ灵",
+        "気也",
+        "正気也",
+        "限也",
+        "生也",
+        "草也",
+        "貴也",
+        "来也",
+        "香也",
+        "土也"
+      ],
+      "spiritual_origin": "気・正気",
+      "element": "fire",
+      "polarity": "陽",
+      "position": "地",
+      "body": "気の発動"
+    },
+    "ク": {
+      "classification": "昇火ノ灵",
+      "meanings": [
+        "彰ノ火ノ灵",
+        "異也",
+        "差別也",
+        "正也",
+        "香也",
+        "賀也",
+        "五穀也",
+        "家也",
+        "朝ヨリ暮ニ至ノ義也"
+      ],
+      "spiritual_origin": "区別・差別",
+      "element": "fire",
+      "polarity": "陽",
+      "position": "地",
+      "body": "区切る息"
+    },
+    "ケ": {
+        "classification": "昇火ノ灵",
+      "meanings": [
+        "彰ノ火ノ灵",
+        "男也",
+        "女也",
+        "総テ人ノ灵"
+      ],
+      "spiritual_origin": "人の霊",
+      "element": "fire",
+      "polarity": "陽",
+      "position": "地",
+      "body": "人の息"
+    },
+    "コ": {
+      "classification": "昇火ノ灵",
+      "meanings": [
+        "此ア行ハ、天地ヲ明暗時々刻々ニ別レ、絵テ言語、差別シ字ノ行ナリ"
+      ],
+      "spiritual_origin": "言語の差別",
+      "element": "fire",
+      "polarity": "陽",
+      "position": "地",
+      "body": "言葉の区切り"
+    },
+    "サ": {
+      "classification": "昇火ノ灵",
+      "meanings": [
+        "昇火ノ灵",
+        "割別也",
+        "細也",
+        "小也",
+        "少也",
+        "短也",
+        "誘也",
+        "故也",
+        "去也"
+      ],
+      "spiritual_origin": "霊の分離と発動",
+      "element": "fire",
+      "polarity": "陽",
+      "position": "地",
+      "body": "分ける息"
+    },
+    "ハ": {
+      "classification": "正火灵",
+      "meanings": [
+        "発・端",
+        "天地の広がり",
+        "水火統合の門"
+      ],
+      "spiritual_origin": "正火の灵、発・端、天地の広がり、水火統合の門",
+      "element": "fire",
+      "polarity": "陽",
+      "position": "地",
+      "body": "発する息"
+    }
+  },
+  "oyashima_zu": {
+    "title": "大八嶋図",
+    "description": "大八嶋の御灵を表す神代文字図形",
+    "structure": {
+      "base_symbols": [
+        {
+          "symbol": "⊕",
+          "name": "縄（十○）",
+          "meaning": "形⊕なり。鳥の跡とは形十、是にて則十なり"
+        },
+        {
+          "symbol": "十",
+          "name": "十字",
+          "meaning": "天地の初火水"
+        }
+      ],
+      "combination_rule": "縄を結とは、⊕と⊕を結合。則、大八嶋の御灵なり。文字是に",
+      "examples": [
+        {
+          "character": "雨",
+          "katakamuna_form": "⊕構造",
+          "description": "水の象形"
+        },
+        {
+          "character": "風",
+          "katakamuna_form": "⊕構造",
+          "description": "気の流れ"
+        },
+        {
+          "character": "雪",
+          "katakamuna_form": "⊕構造",
+          "description": "水の結晶"
+        },
+        {
+          "character": "霜",
+          "katakamuna_form": "⊕構造",
+          "description": "水の凝固"
+        }
+      ]
+    },
+    "hiragana_form": {
+      "shape": "○（円形）",
+      "description": "○の大八嶋図（ひらがな）",
+      "center": "ミナカ点",
+      "arrangement": "五十音を円環状に配置"
+    },
+    "katakana_form": {
+      "shape": "□（方形）",
+      "description": "□の大八嶋図（カタカナ）",
+      "center": "ミナカ点",
+      "arrangement": "五十音を方形に配置"
+    }
+  },
+  "katakamuna": {
+    "title": "カタカムナ図形",
+    "description": "神代文字の図形表現",
+    "ten_sun_kagami": {
+      "title": "十寸鏡",
+      "ma": "向なり（前面）",
+      "so": "背なり（背面）",
+      "kagami_etymology": "本語カケミにて、天地の初火水に通てカガなり",
+      "kage_mi": "日月の影を擬、是をカゲミと云。水を駁とす。故に、女の灵とす"
+    },
+    "sound_transformation": {
+      "onkyo_no_nuki": "音響之抜",
+      "onbin_no_nuki": "音便之抜",
+      "examples": [
+        {
+          "original": "アカントモシ",
+          "transformed": "アント",
+          "rule": "アカの反アなり。シ音響をなして"
+        },
+        {
+          "original": "テトモシ",
+          "transformed": "テウ（提灯）",
+          "rule": "テ言便をなして"
+        }
+      ]
+    }
+  },
+  "notes": [
+    "五十連十行は右から左へ読む日本古来の規則に従う",
+    "火の霊／水の霊／火中水／水中火の分類は言霊秘書に100%準拠",
+    "ヤ行のイ（ィ）・エ（ェ）は霊核として特別扱い",
+    "中央にミナカ点を配置",
+    "全ての音に霊的意味、火水分類、性質（陽/陰）、天地の位置、音素の霊的起源、身体性が対応"
+  ]
+}

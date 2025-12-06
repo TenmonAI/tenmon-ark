@@ -1,0 +1,47 @@
+{
+  "repository": {
+    "url": "https://github.com/TenmonAI/tenmon-ark",
+    "branch": "main",
+    "remote": "origin"
+  },
+  "sync": {
+    "autoStage": true,
+    "autoCommit": true,
+    "autoPush": true,
+    "biDirectional": true,
+    "commitMessage": "TENMON-ARK Initial Sync"
+  },
+  "folders": {
+    "autoCreate": true,
+    "structure": {
+      "server": {
+        "sukuyo": ["sukuyoPersonalAIEngine.ts"],
+        "conversation": ["conversationOSv3Engine.ts"],
+        "chat": ["chatStreamingV3Engine.ts", "activationCenteringHybridEngine.ts"]
+      },
+      "client": {
+        "src": {
+          "pages": ["DashboardV3.tsx"],
+          "components": {
+            "overbeing": [
+              "FutomaniBackground.tsx",
+              "FireWaterEnergyFlow.tsx",
+              "AmatsuKanagiPatternTooltip.tsx"
+            ]
+          }
+        }
+      }
+    }
+  },
+  "exclude": [
+    "node_modules",
+    ".next",
+    "dist",
+    "build",
+    ".env.local",
+    ".env.*.local",
+    "*.log",
+    ".DS_Store"
+  ]
+}
+

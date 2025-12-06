@@ -1,0 +1,168 @@
+/**
+ * Chat-First 全体最適化
+ * - 背景揺らぎ（水火の流れ）
+ * - スワイプ操作（戻る／メニュー）
+ * - テキスト行間1.6
+ */
+
+/* 背景揺らぎ（水火の流れ） */
+.chat-page-container::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: radial-gradient(
+    ellipse at 30% 50%,
+    oklch(0.60 0.20 220 / 0.03) 0%,
+    transparent 50%
+  ),
+  radial-gradient(
+    ellipse at 70% 50%,
+    oklch(0.80 0.18 80 / 0.03) 0%,
+    transparent 50%
+  );
+  animation: chatBackgroundFlow 12s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+
+@keyframes chatBackgroundFlow {
+  0%, 100% {
+    opacity: 0.3;
+    transform: translateY(0);
+  }
+  50% {
+    opacity: 0.5;
+    transform: translateY(-10px);
+  }
+}
+
+/* テキスト行間1.6 */
+.chat-bubble p,
+.chat-message-water p,
+.chat-message-fire p,
+.chat-message-balanced p,
+.chat-bubble,
+.chat-message-water,
+.chat-message-fire,
+.chat-message-balanced {
+  line-height: 1.6 !important;
+}
+
+/* スワイプ操作（戻る／メニュー） */
+.chat-swipe-zone-left {
+  position: fixed;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 30px;
+  z-index: 999;
+  pointer-events: auto;
+}
+
+.chat-swipe-zone-right {
+  position: fixed;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 30px;
+  z-index: 999;
+  pointer-events: auto;
+}
+
+/* チャットバブルのアニメーション（α波同調） */
+.chat-bubble,
+.chat-message-water,
+.chat-message-fire,
+.chat-message-balanced {
+  animation: chatBubbleFadeIn 0.25s ease-out;
+}
+
+@keyframes chatBubbleFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* チャット入力欄の最適化 */
+.ark-input-area {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 60px;
+  background: oklch(0.12 0.02 260 / 0.95);
+  backdrop-filter: blur(10px);
+  border-top: 1px solid oklch(0.80 0.18 80 / 0.2);
+  padding: 8px 16px;
+  padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+  z-index: 50;
+}
+
+.ark-input-area textarea {
+  width: 100%;
+  height: 100%;
+  background: oklch(0.15 0.03 240 / 0.5);
+  border: 1px solid oklch(0.80 0.18 80 / 0.3);
+  border-radius: 12px;
+  padding: 8px 12px;
+  color: oklch(0.95 0.08 80);
+  font-size: 16px;
+  line-height: 1.6;
+  resize: none;
+  outline: none;
+}
+
+.ark-input-area textarea:focus {
+  border-color: oklch(0.80 0.18 80 / 0.6);
+  box-shadow: 0 0 0 2px oklch(0.80 0.18 80 / 0.1);
+}
+
+/* 片手親指操作最適化（タップ領域拡大） */
+.tap-target {
+  min-width: 44px;
+  min-height: 44px;
+  position: relative;
+}
+
+.tap-target::before {
+  content: '';
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  bottom: -8px;
+  left: -8px;
+  pointer-events: auto;
+}
+
+/* スクロール最適化 */
+.chat-messages-container {
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+}
+
+/* チャットバブルの水火の色適用 */
+.chat-message-water {
+  background: oklch(0.55 0.18 240 / 0.15) !important;
+  border: 1px solid oklch(0.60 0.20 220 / 0.5) !important;
+  box-shadow: 
+    0 2px 4px oklch(0.10 0.02 260 / 0.2),
+    inset 0 1px 0 oklch(0.60 0.20 220 / 0.1) !important;
+}
+
+.chat-message-fire {
+  background: oklch(0.80 0.18 80 / 0.15) !important;
+  border: 1px solid oklch(0.80 0.18 80 / 0.5) !important;
+  box-shadow: 
+    0 2px 4px oklch(0.10 0.02 260 / 0.2),
+    inset 0 1px 0 oklch(0.95 0.08 80 / 0.1) !important;
+}

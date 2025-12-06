@@ -1,0 +1,961 @@
+/* TENMON-ARK Mobile Optimization CSS */
+
+/* Mobile-ARK 最適化（GPTを超えるスマホUX） */
+
+/* 画面の死にスペース（黒帯）を完全除去 */
+body, html {
+  padding: 0 !important;
+  margin: 0 !important;
+  width: 100% !important;
+  overflow-x: hidden !important;
+}
+
+.main-container {
+  width: 100% !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+#root {
+  width: 100% !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+/* 1. 戻るボタン・メニューナビゲーションの再設計 */
+/* 画面左上 → 画面下部中央に移動、片手操作完全対応 */
+.mobile-nav-bottom {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 80px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.8) 20%);
+  backdrop-filter: blur(10px);
+  z-index: 1000;
+  padding-bottom: env(safe-area-inset-bottom, 20px);
+}
+
+.mobile-back-button {
+  width: 62px;
+  height: 62px;
+  min-width: 62px;
+  min-height: 62px;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border: 2px solid rgba(255, 215, 0, 0.3);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.mobile-back-button:active {
+  transform: scale(0.95);
+  background: rgba(255, 215, 0, 0.2);
+}
+
+/* 画面端スワイプで戻る（iOS 的操作） */
+.swipe-back-zone {
+  position: fixed;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 20px;
+  z-index: 999;
+  touch-action: pan-x;
+}
+
+/* 2. スクロールの慣性強化（標準より 120% 滑らか） */
+.enhanced-scroll {
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+  scroll-behavior: smooth;
+  /* 緩やかな終了アニメーション（α波調整） */
+  scroll-snap-type: y proximity;
+  scroll-padding: 20px;
+}
+
+/* スクロールバーを隠す（モバイル） */
+.enhanced-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.enhanced-scroll {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* 3. チャットUIの "人格アニメーション" */
+/* 水（受容） → 柔らかい光 */
+.chat-message-water {
+  background: linear-gradient(135deg, rgba(100, 200, 255, 0.1) 0%, rgba(100, 200, 255, 0.05) 100%);
+  border-left: 3px solid rgba(100, 200, 255, 0.5);
+  animation: water-glow 3s ease-in-out infinite;
+}
+
+/* 火（外発） → 鮮やかな光 */
+.chat-message-fire {
+  background: linear-gradient(135deg, rgba(255, 150, 50, 0.15) 0%, rgba(255, 150, 50, 0.08) 100%);
+  border-left: 3px solid rgba(255, 150, 50, 0.6);
+  animation: fire-glow 2s ease-in-out infinite;
+}
+
+/* Twin-Coreの状態をUIに動的反映 */
+.twin-core-indicator {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  transition: all 0.5s ease;
+}
+
+.twin-core-indicator.water {
+  background: radial-gradient(circle, rgba(100, 200, 255, 0.3) 0%, rgba(100, 200, 255, 0.1) 100%);
+  box-shadow: 0 0 20px rgba(100, 200, 255, 0.5);
+  animation: pulse-water 2s ease-in-out infinite;
+}
+
+.twin-core-indicator.fire {
+  background: radial-gradient(circle, rgba(255, 150, 50, 0.4) 0%, rgba(255, 150, 50, 0.15) 100%);
+  box-shadow: 0 0 20px rgba(255, 150, 50, 0.6);
+  animation: pulse-fire 1.5s ease-in-out infinite;
+}
+
+/* 4. タップ領域の拡張（48px → 62px） */
+.tap-target {
+  min-width: 62px;
+  min-height: 62px;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+}
+
+/* タップフィードバック */
+.tap-target:active {
+  animation: tap-feedback 0.2s ease-out;
+}
+
+/* タップ領域の視覚的ヒント（開発時のみ） */
+.tap-target-debug::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 62px;
+  height: 62px;
+  border: 1px dashed rgba(255, 0, 0, 0.3);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+/* 5. UI円環構造（ミナカ中心構造） */
+/* 重要ボタンを中心円 → 放射状 */
+.minaka-center {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.minaka-center-core {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 215, 0, 0.3) 0%, rgba(255, 215, 0, 0.1) 100%);
+  box-shadow: 0 0 30px rgba(255, 215, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 10;
+  animation: rei-core-pulse 3s ease-in-out infinite;
+}
+
+.minaka-radial-buttons {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 300px;
+  height: 300px;
+}
+
+.minaka-radial-button {
+  position: absolute;
+  width: 62px;
+  height: 62px;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border: 2px solid rgba(255, 215, 0, 0.3);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+/* 放射状配置（8方向） */
+.minaka-radial-button:nth-child(1) {
+  top: 0;
+  left: 50%;
+  transform: translate(-50%, 0);
+}
+
+.minaka-radial-button:nth-child(2) {
+  top: 15%;
+  right: 15%;
+  transform: translate(0, 0);
+}
+
+.minaka-radial-button:nth-child(3) {
+  top: 50%;
+  right: 0;
+  transform: translate(0, -50%);
+}
+
+.minaka-radial-button:nth-child(4) {
+  bottom: 15%;
+  right: 15%;
+  transform: translate(0, 0);
+}
+
+.minaka-radial-button:nth-child(5) {
+  bottom: 0;
+  left: 50%;
+  transform: translate(-50%, 0);
+}
+
+.minaka-radial-button:nth-child(6) {
+  bottom: 15%;
+  left: 15%;
+  transform: translate(0, 0);
+}
+
+.minaka-radial-button:nth-child(7) {
+  top: 50%;
+  left: 0;
+  transform: translate(0, -50%);
+}
+
+.minaka-radial-button:nth-child(8) {
+  top: 15%;
+  left: 15%;
+  transform: translate(0, 0);
+}
+
+.minaka-radial-button:active {
+  transform: scale(0.95);
+  background: rgba(255, 215, 0, 0.2);
+}
+
+/* GPTより 50% 直感的にする - 視覚的フィードバック強化 */
+.intuitive-feedback {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.intuitive-feedback:hover {
+  transform: scale(1.05);
+  filter: brightness(1.2);
+}
+
+.intuitive-feedback:active {
+  transform: scale(0.95);
+  filter: brightness(0.9);
+}
+
+/* モバイル最適化 - セーフエリア対応 */
+.safe-area-top {
+  padding-top: env(safe-area-inset-top, 20px);
+}
+
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 20px);
+}
+
+.safe-area-left {
+  padding-left: env(safe-area-inset-left, 20px);
+}
+
+.safe-area-right {
+  padding-right: env(safe-area-inset-right, 20px);
+}
+
+/* モバイル最適化 - フォントサイズ調整 */
+@media (max-width: 768px) {
+  html {
+    font-size: 16px;
+  }
+  
+  .mobile-optimized-text {
+    font-size: 1rem;
+    line-height: 1.6;
+  }
+  
+  .mobile-optimized-heading {
+    font-size: 1.5rem;
+    line-height: 1.4;
+  }
+}
+
+/* モバイル最適化 - タッチターゲット最小サイズ */
+button,
+a,
+input,
+select,
+textarea {
+  min-height: 48px;
+  min-width: 48px;
+}
+
+/* 重要ボタンは62px */
+.primary-button,
+.action-button {
+  min-height: 62px;
+  min-width: 62px;
+}
+
+/* 天地バランス（光・影・色） */
+
+/* 上部（天）からの静かな光の反射 */
+.celestial-light {
+  background: linear-gradient(
+    180deg,
+    rgba(255, 215, 0, 0.05) 0%,
+    rgba(255, 215, 0, 0.02) 20%,
+    transparent 40%
+  );
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 200px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* 下部（地）に薄い影 */
+.terrestrial-shadow {
+  background: linear-gradient(
+    0deg,
+    rgba(0, 0, 0, 0.3) 0%,
+    rgba(0, 0, 0, 0.1) 20%,
+    transparent 40%
+  );
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 200px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* 火水グラデーション背景 */
+.fire-water-gradient {
+  background: linear-gradient(
+    135deg,
+    rgba(255, 150, 50, 0.05) 0%,
+    rgba(200, 180, 255, 0.03) 50%,
+    rgba(100, 200, 255, 0.05) 100%
+  );
+}
+
+/* 火のグラデーション */
+.fire-gradient {
+  background: linear-gradient(
+    135deg,
+    rgba(255, 150, 50, 0.1) 0%,
+    rgba(255, 100, 30, 0.05) 100%
+  );
+}
+
+/* 水のグラデーション */
+.water-gradient {
+  background: linear-gradient(
+    135deg,
+    rgba(100, 200, 255, 0.1) 0%,
+    rgba(100, 150, 255, 0.05) 100%
+  );
+}
+
+/* 全ページ余白16px統一（Mobile-ARK v5.0） */
+@media (max-width: 768px) {
+  /* コンテナ余白をスマホ画面で統一 */
+  .container {
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+  }
+
+  /* カード内余白を統一 */
+  .card {
+    padding: 16px !important;
+  }
+
+  /* メインコンテンツ余白を統一 */
+  .main-content,
+  .page-content,
+  .content-area {
+    padding: 16px !important;
+  }
+
+  /* セクション余白を統一 */
+  section {
+    padding: 16px !important;
+  }
+}
+
+@media (min-width: 769px) and (max-width: 1024px) {
+  /* タブレット画面の余白 */
+  .container {
+    padding-left: 24px !important;
+    padding-right: 24px !important;
+  }
+}
+
+@media (min-width: 1025px) {
+  /* デスクトップ画面の余白 */
+  .container {
+    padding-left: 32px !important;
+    padding-right: 32px !important;
+  }
+}
+
+/* Mobile-ARK TalkRoom UI 最適化（GPT超えUI基準） */
+
+/* 1. バブル幅の拡張（画面幅の70～78%使用） */
+.chat-bubble,
+.chat-message-water,
+.chat-message-fire {
+  max-width: 75% !important;
+  width: auto;
+}
+
+/* ユーザーメッセージ（左寄せ） */
+.chat-bubble.user-message {
+  margin-left: 0;
+  margin-right: auto;
+}
+
+/* 天聞アークメッセージ（右寄せ） */
+.chat-bubble.ark-message {
+  margin-left: auto;
+  margin-right: 0;
+}
+
+/* 2. 余白（マージン）の最適化 */
+.chat-container {
+  padding: 12px 16px;
+  max-width: 100%;
+}
+
+/* メッセージ間のマージン 6px → 12px */
+.chat-bubble + .chat-bubble {
+  margin-top: 12px;
+}
+
+/* スクロール領域の拡張 */
+.chat-scroll-area {
+  padding-bottom: 80px; /* 入力欄分の余白 */
+}
+
+/* 3. 背景のコントラスト最適化 */
+.chat-background {
+  background-color: rgba(17, 24, 39, 0.94); /* #111827 opacity 0.94 */
+  backdrop-filter: blur(4px);
+}
+
+/* 4. バブル形状調整（GPT風） */
+.chat-bubble,
+.chat-message-water,
+.chat-message-fire {
+  border-radius: 18px !important;
+  box-shadow: 
+    0 1px 2px rgba(0, 0, 0, 0.1),
+    0 0 8px rgba(255, 215, 0, 0.05); /* 柔らかい光沢 */
+  border: none;
+}
+
+/* バブルの影を抑える */
+.chat-bubble:hover {
+  box-shadow: 
+    0 2px 4px rgba(0, 0, 0, 0.12),
+    0 0 12px rgba(255, 215, 0, 0.08);
+  transition: box-shadow 0.25s cubic-bezier(0.4, 0.0, 0.2, 1);
+}
+
+/* 5. 入力欄の固定化 + 拡張 */
+.chat-input-area {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  min-height: 60px; /* 高さ 48px → 60px */
+  background: rgba(var(--card), 0.95);
+  backdrop-filter: blur(16px);
+  border-top: 1px solid rgba(var(--border), 0.5);
+  z-index: 30;
+}
+
+/* 入力欄内のボタン配置 */
+.chat-input-buttons {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* 6. スクロール挙動の改善 */
+.smooth-scroll-enhanced {
+  scroll-behavior: smooth;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+/* スクロール慣性強化（iOS 120%） */
+.smooth-scroll-enhanced::-webkit-scrollbar {
+  width: 4px;
+}
+
+.smooth-scroll-enhanced::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.smooth-scroll-enhanced::-webkit-scrollbar-thumb {
+  background: rgba(255, 215, 0, 0.2);
+  border-radius: 2px;
+}
+
+.smooth-scroll-enhanced::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 215, 0, 0.3);
+}
+
+/* スクロール終了時の減速カーブ */
+@keyframes scroll-deceleration {
+  0% {
+    scroll-snap-align: start;
+  }
+  100% {
+    scroll-snap-align: end;
+  }
+}
+
+/* 7. 中心軸（ミナカ）レイアウト */
+.minaka-center-layout {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+}
+
+/* ミナカライン（画面中央） */
+.minaka-line {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    rgba(255, 215, 0, 0.1) 50%,
+    transparent 100%
+  );
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* 左（ユーザー・水）配置 */
+.chat-bubble.user-message {
+  align-self: flex-start;
+  margin-left: 0;
+  margin-right: auto;
+  transform-origin: left center;
+}
+
+/* 右（天聞アーク・火）配置 */
+.chat-bubble.ark-message {
+  align-self: flex-end;
+  margin-left: auto;
+  margin-right: 0;
+  transform-origin: right center;
+}
+
+/* 同心構造設計（UI要素がミナカから放射状） */
+.minaka-radial-element {
+  position: relative;
+}
+
+.minaka-radial-element::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at center,
+    rgba(255, 215, 0, 0.05) 0%,
+    transparent 70%
+  );
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* 8. テキストの読みやすさ改善 */
+.chat-bubble p,
+.chat-message-water p,
+.chat-message-fire p {
+  line-height: 1.6 !important; /* 行間 1.45 → 1.6 */
+  font-size: 16px !important; /* フォントサイズ 14px → 16px */
+  max-width: 70ch; /* 行幅最適化（70字前後） */
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  hyphens: auto;
+}
+
+/* メッセージ内のコードブロック */
+.chat-bubble pre,
+.chat-message-water pre,
+.chat-message-fire pre {
+  font-size: 14px;
+  line-height: 1.5;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+/* メッセージ内のリンク */
+.chat-bubble a,
+.chat-message-water a,
+.chat-message-fire a {
+  color: rgba(255, 215, 0, 0.9);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.chat-bubble a:hover,
+.chat-message-water a:hover,
+.chat-message-fire a:hover {
+  color: rgba(255, 215, 0, 1);
+  text-decoration-thickness: 2px;
+}
+
+/* 9. 色反応の調整 */
+
+/* 天聞アーク（火）側のバブル：薄いゴールド・白 */
+.chat-message-fire {
+  background: linear-gradient(
+    135deg,
+    rgba(255, 215, 0, 0.08) 0%,
+    rgba(255, 255, 255, 0.05) 100%
+  );
+  border-left: 3px solid rgba(255, 215, 0, 0.3);
+  color: rgba(255, 255, 255, 0.95);
+}
+
+/* ユーザー（水）側：青・蒼 */
+.chat-message-water {
+  background: linear-gradient(
+    135deg,
+    rgba(100, 200, 255, 0.08) 0%,
+    rgba(100, 150, 255, 0.05) 100%
+  );
+  border-left: 3px solid rgba(100, 200, 255, 0.3);
+  color: rgba(255, 255, 255, 0.95);
+}
+
+/* 中庸（バランス） */
+.chat-message-balanced {
+  background: linear-gradient(
+    135deg,
+    rgba(200, 180, 255, 0.08) 0%,
+    rgba(150, 150, 255, 0.05) 100%
+  );
+  border-left: 3px solid rgba(200, 180, 255, 0.3);
+  color: rgba(255, 255, 255, 0.95);
+}
+
+/* コントラストは柔らかく */
+.chat-message-fire,
+.chat-message-water,
+.chat-message-balanced {
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+/* 10. 影（地）と光（天）の微調整 */
+
+/* バブルの影を3%増加 */
+.chat-bubble,
+.chat-message-water,
+.chat-message-fire,
+.chat-message-balanced {
+  box-shadow: 
+    0 2px 4px rgba(0, 0, 0, 0.13), /* 10% → 13% */
+    0 4px 8px rgba(0, 0, 0, 0.08),
+    0 0 12px rgba(255, 215, 0, 0.05); /* 柔らかい光沢 */
+}
+
+/* 光の反射を静かに付与（背景ブラー2～4px） */
+.chat-bubble::before,
+.chat-message-water::before,
+.chat-message-fire::before,
+.chat-message-balanced::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  border-radius: 18px;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.03) 0%,
+    transparent 50%
+  );
+  pointer-events: none;
+  z-index: -1;
+  filter: blur(3px);
+}
+
+/* 火優位バブルの光反射（ゴールド） */
+.chat-message-fire::before {
+  background: linear-gradient(
+    180deg,
+    rgba(255, 215, 0, 0.05) 0%,
+    transparent 50%
+  );
+}
+
+/* 水優位バブルの光反射（青） */
+.chat-message-water::before {
+  background: linear-gradient(
+    180deg,
+    rgba(100, 200, 255, 0.05) 0%,
+    transparent 50%
+  );
+}
+
+/* Chat-First Navigation v1.0: ヘッダーメニュー修正 */
+.header-menu {
+  overflow-x: hidden;
+  white-space: nowrap;
+  padding-left: 12px;
+  padding-right: 12px;
+}
+
+/* メニュー帯縮小（折りたたみ式） */
+.collapsible-menu {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.25s cubic-bezier(0.4, 0.0, 0.2, 1);
+}
+
+.collapsible-menu.open {
+  max-height: 500px;
+}
+
+/* ヘッダー領域のレイアウト崩れ修正 */
+.header-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  gap: 12px;
+}
+
+.header-container > * {
+  flex-shrink: 0;
+}
+
+/* アイコン重なり防止 */
+.header-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  min-height: 24px;
+  margin-right: 8px;
+}
+
+/* 文字つぶれ防止 */
+.header-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+
+/* Chat-First Navigation v1.0: チャットバブル幅と余白最適化 */
+.container {
+  max-width: 100% !important;
+  padding-left: 16px;
+  padding-right: 16px;
+}
+
+/* 画面の死にスペース削減（ミナカ構造） */
+.chat-page-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  width: 100%;
+  padding: 16px;
+  min-height: 100vh;
+}
+
+/* コンテンツの中央寄せ強化（GPTと同水準） */
+.chat-content-centered {
+  max-width: 78%; /* GPTと同水準 */
+  margin-left: auto;
+  margin-right: auto;
+  width: 100%;
+}
+
+/* バブル幅75%（Mobile-ARK V2仕様） */
+.chat-bubble,
+.chat-message-water,
+.chat-message-fire,
+.chat-message-balanced {
+  max-width: 75% !important;
+  width: auto;
+  margin-bottom: 12px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  margin-left: 0;
+  margin-right: 0;
+}
+
+/* 上下margin削減 */
+.chat-bubble-container {
+  margin-top: 8px;
+  margin-bottom: 8px;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+/* GPT超えの判断遅れゼロUI */
+
+/* 即座のフィードバック（0ms遅延） */
+.instant-feedback {
+  transition: transform 0ms, opacity 0ms;
+}
+
+.instant-feedback:active {
+  transform: scale(0.95);
+  opacity: 0.9;
+}
+
+/* 予測的ハイライト（ユーザーの意図を先読み） */
+.predictive-highlight {
+  position: relative;
+  overflow: hidden;
+}
+
+.predictive-highlight::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 215, 0, 0.1) 50%,
+    transparent 100%
+  );
+  transition: left 0.3s ease-out;
+}
+
+.predictive-highlight:hover::before {
+  left: 100%;
+}
+
+/* 学習型UI - 誤タップ領域の自動拡大 */
+.adaptive-tap-zone {
+  position: relative;
+}
+
+.adaptive-tap-zone::after {
+  content: '';
+  position: absolute;
+  top: -10px;
+  left: -10px;
+  right: -10px;
+  bottom: -10px;
+  border-radius: inherit;
+  pointer-events: auto;
+}
+
+/* α波同調アニメーション */
+@keyframes alpha-wave-pulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+  50% {
+    transform: scale(1.02);
+    opacity: 1;
+  }
+}
+
+.alpha-wave-pulse {
+  animation: alpha-wave-pulse 0.95s ease-in-out infinite;
+}
+
+/* 霊核の光脈動（強化版） */
+.rei-core-pulse-enhanced {
+  animation: rei-core-pulse 3s ease-in-out infinite;
+  box-shadow: 
+    0 0 20px rgba(255, 215, 0, 0.3),
+    0 0 40px rgba(255, 215, 0, 0.2),
+    0 0 60px rgba(100, 150, 255, 0.1),
+    inset 0 0 20px rgba(255, 215, 0, 0.1);
+}
+
+/* ミナカ中心構造の回転（遅い） */
+.minaka-slow-rotation {
+  animation: minaka-rotation 60s linear infinite;
+}
+
+/* 判断遅れゼロ - プリロードアニメーション */
+@keyframes preload-shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.preload-shimmer {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 215, 0, 0.1) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: preload-shimmer 2s ease-in-out infinite;
+}

@@ -1,0 +1,102 @@
+/**
+ * Mobile-ARK V2: UI Flow
+ * - 遷移0.25s
+ * - 戻るボタン逆再生遷移
+ * - フェードイン/アウト
+ * - α波同調（7.5Hz）
+ */
+
+/* ページ遷移アニメーション（0.25s） */
+.ark-page-transition {
+  animation: arkPageFadeIn 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.ark-page-transition-reverse {
+  animation: arkPageFadeOut 0.25s cubic-bezier(0.4, 0, 0.2, 1) reverse;
+}
+
+@keyframes arkPageFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes arkPageFadeOut {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+}
+
+/* 戻るボタン逆再生遷移 */
+.ark-back-transition {
+  animation: arkBackFadeOut 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes arkBackFadeOut {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+}
+
+/* α波同調アニメーション（7.5Hz = 133ms周期） */
+.ark-alpha-wave {
+  animation: arkAlphaWave 133ms ease-in-out infinite;
+}
+
+@keyframes arkAlphaWave {
+  0%, 100% {
+    opacity: 0.95;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* 主要ボタン（画面下部中央） */
+.ark-main-button {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 40;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.ark-main-button:hover {
+  transform: translateX(-50%) scale(1.05);
+}
+
+.ark-main-button:active {
+  transform: translateX(-50%) scale(0.95);
+}
+
+/* スムーズな遷移（全体） */
+* {
+  transition-duration: 0.25s;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* 遷移を無効化する要素 */
+input,
+textarea,
+select,
+button,
+a,
+[role="button"] {
+  transition-duration: 0.15s;
+}

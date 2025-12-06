@@ -1,0 +1,265 @@
+/**
+ * TENMON-ARK Mobile Layout Fix
+ * 
+ * Fixes horizontal overflow issues on mobile devices (especially iOS Safari)
+ * caused by 100vw width calculation bug and fixed min-width values.
+ * 
+ * Root causes addressed:
+ * 1. 100vw includes scrollbar width on iOS Safari
+ * 2. Fixed min-width values designed for PC
+ * 3. Navigation bar not responsive
+ * 4. Container widths not constrained to 100%
+ */
+
+/* ========================================
+   Phase 1: Global Viewport Fixes
+   ======================================== */
+
+/* Prevent horizontal scroll on all devices */
+html, body {
+  overflow-x: hidden !important;
+  max-width: 100% !important;
+  width: 100% !important;
+}
+
+/* Ensure all elements use border-box sizing */
+*, *::before, *::after {
+  box-sizing: border-box !important;
+}
+
+/* Root container constraints */
+#root {
+  width: 100% !important;
+  max-width: 100% !important;
+  overflow-x: hidden !important;
+}
+
+/* ========================================
+   Phase 2: Container Width Constraints
+   ======================================== */
+
+/* Force all major containers to 100% width */
+.container,
+.main,
+.layout,
+.wrapper,
+.page-container,
+.chat-page-container {
+  max-width: 100% !important;
+  width: 100% !important;
+  overflow-x: hidden !important;
+}
+
+/* ========================================
+   Phase 3: Chat UI Mobile Optimization
+   ======================================== */
+
+@media (max-width: 768px) {
+  /* Chat container full width */
+  .chat-container,
+  .chat-wrapper,
+  .chat-area {
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow-x: hidden !important;
+  }
+
+  /* Message bubbles responsive width */
+  .chat-bubble,
+  .message-bubble {
+    max-width: 90% !important;
+  }
+
+  /* Input area full width */
+  .chat-input-area,
+  .input-container {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  /* Textarea responsive width */
+  textarea {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+  }
+}
+
+/* ========================================
+   Phase 4: Embed iframe Optimization
+   ======================================== */
+
+/* iframe elements must fit container */
+iframe {
+  max-width: 100% !important;
+  width: 100% !important;
+}
+
+/* Embed chat specific fixes */
+@media (max-width: 768px) {
+  .ark-chat-ui,
+  .embed-chat-container {
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow-x: hidden !important;
+  }
+}
+
+/* ========================================
+   Phase 5: Navigation Bar Fixes
+   ======================================== */
+
+@media (max-width: 768px) {
+  /* Navigation bar full width */
+  .nav-bar,
+  .header-navigation,
+  nav {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
+  }
+
+  /* Navigation items responsive padding */
+  .nav-item,
+  nav button {
+    padding-left: 0.5rem !important;
+    padding-right: 0.5rem !important;
+    min-width: 0 !important;
+  }
+}
+
+/* ========================================
+   Phase 6: Card and Panel Fixes
+   ======================================== */
+
+@media (max-width: 768px) {
+  /* Cards must fit screen */
+  .card,
+  [class*="Card"] {
+    max-width: 100% !important;
+    overflow-x: hidden !important;
+  }
+
+  /* Panels and dialogs */
+  .panel,
+  .dialog,
+  [role="dialog"] {
+    max-width: 100% !important;
+    width: 100% !important;
+  }
+}
+
+/* ========================================
+   Phase 7: Flexbox Layout Fixes
+   ======================================== */
+
+/* Prevent flex items from overflowing */
+.flex,
+[class*="flex"] {
+  min-width: 0 !important;
+  min-height: 0 !important;
+}
+
+/* Flex containers must constrain children */
+.flex-container {
+  max-width: 100% !important;
+  overflow-x: hidden !important;
+}
+
+/* ========================================
+   Phase 8: Grid Layout Fixes
+   ======================================== */
+
+@media (max-width: 768px) {
+  /* Grid containers responsive */
+  .grid,
+  [class*="grid"] {
+    max-width: 100% !important;
+    overflow-x: hidden !important;
+  }
+}
+
+/* ========================================
+   Phase 9: Image and Media Fixes
+   ======================================== */
+
+/* Images must fit container */
+img,
+video {
+  max-width: 100% !important;
+  height: auto !important;
+}
+
+/* ========================================
+   Phase 10: Utility Classes
+   ======================================== */
+
+/* Mobile-safe width utility */
+.mobile-safe-width {
+  width: 100% !important;
+  max-width: 100% !important;
+  overflow-x: hidden !important;
+}
+
+/* Mobile-safe container utility */
+.mobile-safe-container {
+  width: 100% !important;
+  max-width: 100% !important;
+  padding-left: 1rem !important;
+  padding-right: 1rem !important;
+  overflow-x: hidden !important;
+}
+
+/* Prevent text overflow */
+.mobile-safe-text {
+  word-wrap: break-word !important;
+  overflow-wrap: break-word !important;
+  word-break: break-word !important;
+}
+
+/* ========================================
+   Phase 11: iOS Safari Specific Fixes
+   ======================================== */
+
+/* Fix 100vw bug on iOS Safari */
+@supports (-webkit-touch-callout: none) {
+  /* iOS Safari specific */
+  body {
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow-x: hidden !important;
+  }
+
+  /* Prevent rubber band scrolling horizontally */
+  html {
+    overscroll-behavior-x: none !important;
+  }
+}
+
+/* ========================================
+   Phase 12: Safe Area Insets
+   ======================================== */
+
+/* Respect iOS safe areas */
+@supports (padding: env(safe-area-inset-left)) {
+  .safe-area-padding {
+    padding-left: env(safe-area-inset-left) !important;
+    padding-right: env(safe-area-inset-right) !important;
+  }
+}
+
+/* ========================================
+   Phase 13: Debug Utilities (Development Only)
+   ======================================== */
+
+/* Uncomment to visualize overflow issues during development */
+/*
+.debug-overflow * {
+  outline: 1px solid red !important;
+}
+
+.debug-overflow *:hover {
+  outline: 2px solid yellow !important;
+}
+*/

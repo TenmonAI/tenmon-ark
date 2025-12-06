@@ -1,0 +1,340 @@
+direction: right
+
+title: {
+  label: "🌕 TENMON-ARK Twin-Core 詳細構造図"
+  near: top-center
+  shape: text
+  style: {
+    font-size: 32
+    bold: true
+    fill: "#1a1a1a"
+  }
+}
+
+twin_core: "🔥 Twin-Core（絶対中心軸）" {
+  shape: hexagon
+  style: {
+    fill: "#ff6b6b"
+    stroke: "#c92a2a"
+    stroke-width: 4
+    font-size: 24
+    bold: true
+  }
+  
+  amatsu_kanagi: "天津金木50パターン" {
+    shape: rectangle
+    style: {
+      fill: "#ffd43b"
+      stroke: "#f59f00"
+      stroke-width: 3
+    }
+    
+    meta_logic: "Meta Logic\n宇宙法則" {
+      shape: oval
+      style.fill: "#fff3bf"
+    }
+    
+    patterns: "50パターン解析" {
+      shape: oval
+      style.fill: "#fff3bf"
+    }
+    
+    fire_water: "火水・左右旋\n内集外発" {
+      shape: oval
+      style.fill: "#fff3bf"
+    }
+  }
+  
+  iroha: "いろは47文字" {
+    shape: rectangle
+    style: {
+      fill: "#74c0fc"
+      stroke: "#1971c2"
+      stroke-width: 3
+    }
+    
+    wisdom_logic: "Wisdom Logic\n智彗コア" {
+      shape: oval
+      style.fill: "#d0ebff"
+    }
+    
+    characters: "47文字解析" {
+      shape: oval
+      style.fill: "#d0ebff"
+    }
+    
+    life_law: "生命の法則" {
+      shape: oval
+      style.fill: "#d0ebff"
+    }
+  }
+  
+  reasoning_chain: "推論チェーン" {
+    shape: rectangle
+    style: {
+      fill: "#ff8787"
+      stroke: "#e03131"
+      stroke-width: 3
+    }
+    
+    step1: "言霊 → 火水" {
+      shape: parallelogram
+      style.fill: "#ffc9c9"
+    }
+    
+    step2: "左右旋 → 内集外発" {
+      shape: parallelogram
+      style.fill: "#ffc9c9"
+    }
+    
+    step3: "陰陽 → 天津金木" {
+      shape: parallelogram
+      style.fill: "#ffc9c9"
+    }
+    
+    step4: "フトマニ → カタカムナ" {
+      shape: parallelogram
+      style.fill: "#ffc9c9"
+    }
+    
+    step5: "いろは → ミナカ" {
+      shape: parallelogram
+      style.fill: "#ffc9c9"
+    }
+    
+    step1 -> step2
+    step2 -> step3
+    step3 -> step4
+    step4 -> step5
+  }
+  
+  amatsu_kanagi -> reasoning_chain: "宇宙法則注入"
+  iroha -> reasoning_chain: "智彗注入"
+  amatsu_kanagi <-> iroha: "Twin統合"
+}
+
+memory_layer: "🌊 記憶レイヤー" {
+  shape: rectangle
+  style: {
+    fill: "#4dabf7"
+    stroke: "#1971c2"
+    stroke-width: 3
+  }
+  
+  ltm: "LTM（ン・根源）\n永続記憶" {
+    shape: cylinder
+    style.fill: "#a5d8ff"
+  }
+  
+  mtm: "MTM（ウ・循環）\n7-30日記憶" {
+    shape: cylinder
+    style.fill: "#a5d8ff"
+  }
+  
+  stm: "STM（ア・初発）\n24時間記憶" {
+    shape: cylinder
+    style.fill: "#a5d8ff"
+  }
+  
+  stm -> mtm: "昇格"
+  mtm -> ltm: "固定化"
+}
+
+personality_layer: "🎭 人格レイヤー" {
+  shape: rectangle
+  style: {
+    fill: "#a78bfa"
+    stroke: "#7c3aed"
+    stroke-width: 3
+  }
+  
+  centerline: "Centerline Protocol\n人格の中心軸" {
+    shape: diamond
+    style.fill: "#ddd6fe"
+  }
+  
+  double_anchor: "Double Anchor\n二重固定" {
+    shape: oval
+    style.fill: "#ddd6fe"
+  }
+  
+  guard_zone: "Guard Zone\n禁止領域" {
+    shape: oval
+    style.fill: "#ddd6fe"
+  }
+  
+  centerline -> double_anchor
+  centerline -> guard_zone
+}
+
+language_layer: "🌐 言語レイヤー" {
+  shape: rectangle
+  style: {
+    fill: "#34d399"
+    stroke: "#059669"
+    stroke-width: 3
+  }
+  
+  kotodama: "言灵OS\nKJCE/OKRE" {
+    shape: rectangle
+    style.fill: "#a7f3d0"
+  }
+  
+  universal: "Universal Language Engine\n多言語火水分類" {
+    shape: rectangle
+    style.fill: "#a7f3d0"
+  }
+  
+  ulce: "ULCE\n多言語→五十音変換" {
+    shape: rectangle
+    style.fill: "#a7f3d0"
+  }
+  
+  kotodama -> universal
+  universal -> ulce
+}
+
+ethics_layer: "🛡️ 倫理レイヤー" {
+  shape: rectangle
+  style: {
+    fill: "#fbbf24"
+    stroke: "#d97706"
+    stroke-width: 3
+  }
+  
+  rei_ethic: "Rei-Ethic Layer\n倫理フィルタ" {
+    shape: hexagon
+    style.fill: "#fde68a"
+  }
+  
+  fractal: "Fractal Guardian Model\n三層守護構造" {
+    shape: hexagon
+    style.fill: "#fde68a"
+  }
+  
+  rei_ethic -> fractal
+}
+
+soul_layer: "💫 魂レイヤー" {
+  shape: rectangle
+  style: {
+    fill: "#f472b6"
+    stroke: "#db2777"
+    stroke-width: 3
+  }
+  
+  soul_sync: "Soul Sync Engine\n魂特性分析" {
+    shape: oval
+    style.fill: "#fbcfe8"
+  }
+  
+  presence: "Natural Presence Engine\n呼吸・感情・気配検知" {
+    shape: oval
+    style.fill: "#fbcfe8"
+  }
+  
+  soul_sync -> presence
+}
+
+conversation_layer: "🎤 会話レイヤー" {
+  shape: rectangle
+  style: {
+    fill: "#60a5fa"
+    stroke: "#2563eb"
+    stroke-width: 3
+  }
+  
+  natural_conv: "Natural Conversation OS\nKTTS/KDE" {
+    shape: rectangle
+    style.fill: "#bfdbfe"
+  }
+  
+  voice_pipeline: "Natural Voice Pipeline\n音声認識誤り修正" {
+    shape: rectangle
+    style.fill: "#bfdbfe"
+  }
+  
+  natural_conv -> voice_pipeline
+}
+
+evolution_layer: "🔧 進化レイヤー" {
+  shape: rectangle
+  style: {
+    fill: "#a3e635"
+    stroke: "#65a30d"
+    stroke-width: 3
+  }
+  
+  self_healing: "Hachigen Self-Healing Engine\n八方位自己修復" {
+    shape: hexagon
+    style.fill: "#d9f99d"
+  }
+  
+  self_build: "Self-Build Mode\n自己構築・自律修復" {
+    shape: hexagon
+    style.fill: "#d9f99d"
+  }
+  
+  autonomous: "Autonomous Mode\n自律監視・自己進化" {
+    shape: hexagon
+    style.fill: "#d9f99d"
+  }
+  
+  self_healing -> self_build
+  self_build -> autonomous
+}
+
+creation_layer: "🎬 創造レイヤー" {
+  shape: rectangle
+  style: {
+    fill: "#fb923c"
+    stroke: "#ea580c"
+    stroke-width: 3
+  }
+  
+  cinema: "Ark Cinema Engine\nArk-CGS・KTTS Cinema" {
+    shape: rectangle
+    style.fill: "#fed7aa"
+  }
+  
+  video: "ARK Video Production OS\nBreath-Cut Engine" {
+    shape: rectangle
+    style.fill: "#fed7aa"
+  }
+  
+  cinema -> video
+}
+
+release_layer: "🌐 公開レイヤー" {
+  shape: rectangle
+  style: {
+    fill: "#c084fc"
+    stroke: "#9333ea"
+    stroke-width: 3
+  }
+  
+  world: "World Release OS\n世界公開準備" {
+    shape: cloud
+    style.fill: "#e9d5ff"
+  }
+}
+
+# Twin-Core からの連携
+twin_core.reasoning_chain -> memory_layer: "記憶管理"
+twin_core.reasoning_chain -> personality_layer: "人格安定化"
+twin_core.reasoning_chain -> language_layer: "言語最適化"
+twin_core.reasoning_chain -> ethics_layer: "倫理守護"
+twin_core.reasoning_chain -> soul_layer: "魂分析"
+twin_core.reasoning_chain -> conversation_layer: "会話生成"
+twin_core.reasoning_chain -> evolution_layer: "自己進化"
+twin_core.reasoning_chain -> creation_layer: "創造支援"
+
+# レイヤー間の連携
+memory_layer -> personality_layer: "記憶→人格"
+personality_layer -> language_layer: "人格→言語"
+language_layer -> ethics_layer: "言語→倫理"
+ethics_layer -> soul_layer: "倫理→魂"
+soul_layer -> conversation_layer: "魂→会話"
+conversation_layer -> evolution_layer: "会話→進化"
+evolution_layer -> creation_layer: "進化→創造"
+creation_layer -> release_layer: "創造→公開"
