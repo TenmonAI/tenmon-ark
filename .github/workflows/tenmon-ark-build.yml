@@ -26,6 +26,10 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+        - name: Add pnpm to PATH
+  run: echo "$(pnpm root -g)" >> $GITHUB_PATH
+
+
       - name: Run TypeScript checks
         run: pnpm run check
 
