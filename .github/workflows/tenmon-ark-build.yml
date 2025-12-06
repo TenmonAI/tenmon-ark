@@ -54,7 +54,7 @@ jobs:
           NODE_ENV: production
       
       - name: Build server
-        run: pnpm exec esbuild server/_core/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist
+        run: pnpm exec esbuild server/_core/index.ts --platform=node --packages=external --bundle --format=esm --outfile=dist/index.js
       
       - name: Upload client build artifacts
         uses: actions/upload-artifact@v4
