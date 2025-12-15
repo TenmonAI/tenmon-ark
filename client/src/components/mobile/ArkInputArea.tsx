@@ -7,8 +7,8 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { Send, Mic, Sparkles } from 'lucide-react';
-import { triggerHapticWithSettings } from '@/lib/mobile/haptics';
-import { ALPHA_TRANSITION_DURATION } from '@/lib/mobile/alphaFlow';
+import { triggerHapticWithSettings } from '@/lib/mobileOS/haptics';
+import { ALPHA_TRANSITION_DURATION } from '@/lib/mobileOS/alphaFlow';
 
 interface ArkInputAreaProps {
   onSend: (message: string) => void;

@@ -9,7 +9,7 @@ import { ReactNode } from 'react';
 import ArkGestureNavigation from './ArkGestureNavigation';
 import SmartBackButton from './SmartBackButton';
 import { TwinCoreIndicator } from './TwinCoreChatBubble';
-import { getEnhancedScrollStyle } from '@/lib/mobile/alphaFlow';
+import { getEnhancedScrollStyle } from '@/lib/mobileOS/alphaFlow';
 
 interface ArkMobileLayoutProps {
   children: ReactNode;

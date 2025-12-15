@@ -14,7 +14,7 @@
  * - 上位層の警告は下位層に伝達され、予防的に保護
  */
 
-import * as guardianEngine from "./guardian/guardianModeEngine";
+import * as lifeGuardianEngine from "./lifeGuardian/lifeGuardianModeEngine";
 import * as arkBrowserEngine from "./arkBrowser/arkBrowserEngine";
 import * as arkShieldEngine from "./arkShield/universalArkShieldEngine";
 import { analyzeEthics, EthicAnalysisResult } from "./reiEthicFilterEngine";
@@ -49,7 +49,7 @@ export interface PersonalLayerStatus {
   /** ユーザーID */
   userId: number;
   /** デバイス保護状態 */
-  deviceProtection: any; // guardianEngine.DeviceProtectionStatus
+  deviceProtection: any; // lifeGuardianEngine.DeviceProtectionStatus
   /** 最近の脅威検知 */
   recentThreats: any[];
   /** 保護レベル（0-100） */
@@ -172,7 +172,7 @@ export async function getFractalGuardianStatus(userId: number): Promise<FractalG
  * 個人守護層の状態を取得
  */
 async function getPersonalLayerStatus(userId: number): Promise<PersonalLayerStatus> {
-  const deviceProtection = guardianEngine.getDeviceProtectionStatus();
+  const deviceProtection = lifeGuardianEngine.getDeviceProtectionStatus();
   
   // 保護レベルを計算（0-100）
   const protectionLevel = calculatePersonalProtectionLevel(deviceProtection);

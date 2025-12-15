@@ -1,4 +1,4 @@
-import { invokeLLM } from "../_core/llm";
+import { invokeLLM, type TextContent } from "../_core/llm";
 import { ChatMessage } from "../../drizzle/schema";
 import { applyArkCore } from "../arkCoreIntegration";
 import * as soulSyncArkCore from "../soulSync/soulSyncArkCoreIntegration";
@@ -60,8 +60,8 @@ export async function generateChatResponse(params: {
     } else {
       // If content is an array, extract text from TextContent items
       const textContent = content
-        .filter((item) => item.type === "text")
-        .map((item) => (item as any).text)
+        .filter((item): item is TextContent => item.type === "text")
+        .map((item) => item.text)
         .join("\n");
       responseText = textContent || "";
     }
@@ -139,8 +139,8 @@ export async function generateChatTitle(firstMessage: string, language: string):
     } else {
       // If content is an array, extract text from TextContent items
       const textContent = content
-        .filter((item) => item.type === "text")
-        .map((item) => (item as any).text)
+        .filter((item): item is TextContent => item.type === "text")
+        .map((item) => item.text)
         .join(" ");
       title = textContent.trim();
     }
@@ -159,6 +159,38 @@ export async function generateChatTitle(firstMessage: string, language: string):
 
 
 /**
+ * CompressedMemory type (端末側の記憶要約)
+ */
+export interface CompressedMemory {
+  keywords: string[];
+  intent: string;
+  weight: number;
+}
+
+/**
+ * memorySummary を System Prompt に組み込む
+ * 原文復元不可、数は最大3件、重い処理禁止
+ */
+function buildMemoryContext(memorySummary: CompressedMemory[] | undefined): string {
+  if (!memorySummary || memorySummary.length === 0) return "";
+
+  // weight でソートし、最大3件を取得
+  const top = memorySummary
+    .sort((a, b) => b.weight - a.weight)
+    .slice(0, 3);
+
+  const keywords = top.map(m => m.keywords.join(", ")).join(" / ");
+  const intents = top.map(m => m.intent).join(", ");
+
+  return `
+User abstract memory summary:
+- Key interests: ${keywords}
+- Intent trends: ${intents}
+- Importance level: high
+`.trim();
+}
+
+/**
  * Generate AI response with streaming support
  * Yields text chunks in real-time
  */
@@ -167,8 +199,9 @@ export async function* generateChatResponseStream(params: {
   roomId: number;
   messages: ChatMessage[];
   language: string;
+  memorySummary?: CompressedMemory[];
 }): AsyncGenerator<string, void, unknown> {
-  const { userId, roomId, messages, language } = params;
+  const { userId, roomId, messages, language, memorySummary } = params;
 
   try {
     // 1. Get Centerline Persona (いろは言霊解ベース)
@@ -176,18 +209,26 @@ export async function* generateChatResponseStream(params: {
 
     // 2. Get Synaptic Memory Context (STM → MTM → LTM)
     // TODO: Implement synaptic memory integration
-    const memoryContext = '';
+    const synapticMemoryContext = '';
 
-    // 3. Build conversation history
+    // 3. Build memory context from Kokūzō Node (端末側の記憶要約)
+    const kokuzoMemoryContext = buildMemoryContext(memorySummary);
+
+    // 4. Build conversation history
     const conversationMessages = messages.map((msg) => ({
       role: msg.role as "user" | "assistant" | "system",
       content: msg.content,
     }));
 
-    // 4. Construct final prompt with proper order
+    // 5. Construct final prompt with proper order
+    // memorySummary は System Prompt にのみ注入（User Message には混ぜない）
     const systemPrompt = `${centerlinePersona}
 
-${memoryContext}`;
+${synapticMemoryContext}
+
+${kokuzoMemoryContext}
+
+Follow the user's current request faithfully.`;
 
     // 5. Invoke LLM with streaming
     const { invokeLLMStream } = await import("../_core/llm");

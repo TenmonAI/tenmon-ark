@@ -271,8 +271,8 @@ export const universalLanguageRouter = router({
         responseBalance: responseBalance.balance,
         adjustmentApplied: needsAdjustment,
         balanceDiff,
-      };
-    }),
+    };
+  }),
 
   /**
    * 統計情報を取得

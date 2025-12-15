@@ -19,6 +19,9 @@
 /* Mobile-ARK V2: Color, Shadow, Light */
 @import './styles/color-shadow-light.css';
 
+/* Keyboard Accessibility */
+@import './styles/keyboard.css';
+
 /* Chat-First 全体最適化 */
 @import './styles/chat-first-optimization.css';
 
@@ -27,6 +30,9 @@
 
 /* ChatGPT Mobile UI Complete Adoption */
 @import './styles/chatgpt-mobile-ui.css';
+
+/* DeviceCluster Animations */
+@import './styles/deviceCluster.css';
 
 @custom-variant dark (&:is(.dark *));
 

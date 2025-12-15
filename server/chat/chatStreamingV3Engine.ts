@@ -15,6 +15,15 @@ export interface StreamingEvent {
 }
 
 /**
+ * CompressedMemory type (端末側の記憶要約)
+ */
+export interface CompressedMemory {
+  keywords: string[];
+  intent: string;
+  weight: number;
+}
+
+/**
  * Generate streaming response with GPT-grade quality
  */
 export async function* generateChatStreamingV3(params: {
@@ -22,8 +31,9 @@ export async function* generateChatStreamingV3(params: {
   roomId: number;
   messages: Array<{ role: string; content: string }>;
   language: string;
+  memorySummary?: CompressedMemory[];
 }): AsyncGenerator<StreamingEvent, void, unknown> {
-  const { userId, roomId, messages, language } = params;
+  const { userId, roomId, messages, language, memorySummary } = params;
   
   try {
     // Phase 1: Analyzing
@@ -73,6 +83,7 @@ export async function* generateChatStreamingV3(params: {
       roomId,
       messages,
       language,
+      memorySummary,
     })) {
       chunkCount++;
       yield {

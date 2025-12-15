@@ -326,11 +326,27 @@ export type MediumTermMemory = typeof mediumTermMemories.$inferSelect;
 export type InsertMediumTermMemory = typeof mediumTermMemories.$inferInsert;
 
 /**
+ * Projects - プロジェクト単位で会話を整理
+ */
+export const projects = mysqlTable("projects", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  name: varchar("name", { length: 200 }).notNull(),
+  isTemporaryProject: int("isTemporaryProject").notNull().default(0), // 仮Projectフラグ（GAP-E）
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Project = typeof projects.$inferSelect;
+export type InsertProject = typeof projects.$inferInsert;
+
+/**
  * Conversations for chat history
  */
 export const conversations = mysqlTable("conversations", {
   id: int("id").autoincrement().primaryKey(),
   userId: int("userId").notNull(),
+  projectId: int("projectId"), // Optional: link to project
   title: varchar("title", { length: 500 }),
   shukuyo: varchar("shukuyo", { length: 50 }), // 宿曜27宿
   conversationMode: mysqlEnum("conversationMode", ["general", "intermediate", "expert"]).default("general").notNull(), // 会話モード
@@ -645,6 +661,11 @@ export type InsertProcessingQueue = typeof processingQueue.$inferInsert;
 export const chatRooms = mysqlTable("chatRooms", {
   id: int("id").autoincrement().primaryKey(),
   userId: int("userId").notNull(),
+  projectId: int("projectId"), // Optional: link to project
+  projectLocked: mysqlEnum("projectLocked", ["auto", "manual"]).default("auto").notNull(), // プロジェクト固定状態（auto=自動分類、manual=手動固定）
+  classificationConfidence: int("classificationConfidence"), // 分類信頼度（0-100、GAP-E）
+  classificationLastUpdated: timestamp("classificationLastUpdated"), // 最後に分類された時刻（GAP-E）
+  isTemporaryProject: int("isTemporaryProject").notNull().default(0), // 仮Projectフラグ（GAP-E）
   title: varchar("title", { length: 255 }).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),

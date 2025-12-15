@@ -1,5 +1,4 @@
 import { and, desc, eq } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/mysql2";
 import {
   conversations,
   developerKnowledge,
@@ -27,20 +26,11 @@ import {
   users,
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
+import { db } from "./dbPool";
 
-let _db: ReturnType<typeof drizzle> | null = null;
-
-// Lazily create the drizzle instance so local tooling can run without a DB.
+// コネクションプールを使用（既存コード互換性維持）
 export async function getDb() {
-  if (!_db && process.env.DATABASE_URL) {
-    try {
-      _db = drizzle(process.env.DATABASE_URL);
-    } catch (error) {
-      console.warn("[Database] Failed to connect:", error);
-      _db = null;
-    }
-  }
-  return _db;
+  return db;
 }
 
 export async function upsertUser(user: InsertUser): Promise<void> {

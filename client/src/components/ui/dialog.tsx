@@ -99,6 +99,30 @@ function DialogContent({
   showCloseButton?: boolean;
 }) {
   const { isComposing } = useDialogComposition();
+  const previousFocusRef = React.useRef<HTMLElement | null>(null);
+
+  // Modal表示時に背景スクロール禁止とフォーカス管理
+  React.useEffect(() => {
+    const isOpen = props["data-state"] === "open";
+    if (isOpen) {
+      // 元のフォーカス位置を記憶
+      previousFocusRef.current = document.activeElement as HTMLElement;
+      // 背景スクロール禁止
+      document.body.style.overflow = "hidden";
+    } else {
+      // 背景スクロール復元
+      document.body.style.overflow = "";
+      // 元のフォーカス位置へ戻す
+      if (previousFocusRef.current) {
+        previousFocusRef.current.focus();
+        previousFocusRef.current = null;
+      }
+    }
+
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [props["data-state"]]);
 
   const handleEscapeKeyDown = React.useCallback(
     (e: KeyboardEvent) => {
@@ -123,6 +147,7 @@ function DialogContent({
       <DialogOverlay />
       <DialogPrimitive.Content
         data-slot="dialog-content"
+        role="dialog"
         className={cn(
           "bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border p-6 shadow-lg duration-200 sm:max-w-lg",
           className

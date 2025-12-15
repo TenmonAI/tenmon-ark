@@ -24,13 +24,25 @@ import {
   TrendingUp,
   BarChart3,
   Activity,
+  Shield,
+  Smartphone,
+  BookOpen,
 } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
+import { SpeechInputButton } from "@/components/voice/SpeechInputButton";
+import { SemanticSearchBar } from "@/components/dashboard-v12/SemanticSearchBar";
+import { FeedbackModal } from "@/components/feedback/FeedbackModal";
+import { MessageSquarePlus } from "lucide-react";
+import DeviceClusterDashboard from "@/deviceCluster-v3/ui/DeviceClusterDashboard";
+import { StatusPanel } from "@/components/dashboard-v13/StatusPanel";
+import { TaskProgressPanel } from "@/components/scheduler/TaskProgressPanel";
 
 export default function DashboardV3() {
   const { user, loading: authLoading, isAuthenticated } = useAuth();
   const [, setLocation] = useLocation();
+  const [voiceTranscript, setVoiceTranscript] = useState<string | null>(null);
+  const [feedbackModalOpen, setFeedbackModalOpen] = useState(false);
 
   // Get user subscription
   const { data: subscription, isLoading: subLoading } = trpc.subscription.getMy.useQuery(
@@ -52,8 +64,11 @@ export default function DashboardV3() {
 
   if (authLoading || subLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4">
         <Loader2 className="w-8 h-8 animate-spin text-foreground" />
+        <p className="text-muted-foreground text-sm">
+          {authLoading ? 'セッションを復元中...' : 'プラン情報を読み込み中...'}
+        </p>
       </div>
     );
   }
@@ -73,14 +88,34 @@ export default function DashboardV3() {
             </div>
             <div className="flex items-center gap-2">
               {isFounder && (
-                <div className="flex items-center gap-1 px-3 py-1 rounded-full bg-amber-100 text-amber-800 text-sm font-semibold">
-                  <Crown className="w-4 h-4" />
-                  Founder
-                </div>
+                <>
+                  <div className="flex items-center gap-1 px-3 py-1 rounded-full bg-amber-100 text-amber-800 text-sm font-semibold">
+                    <Crown className="w-4 h-4" />
+                    Founder
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setFeedbackModalOpen(true)}
+                    className="text-xs"
+                  >
+                    <MessageSquarePlus className="w-3 h-3 mr-1" />
+                    改善を提案
+                  </Button>
+                </>
               )}
+              <SpeechInputButton
+                onTranscript={(text) => {
+                  setVoiceTranscript(text);
+                  // 音声入力後、チャットに遷移してテキストを入力
+                  setTimeout(() => setLocation("/chat"), 100);
+                }}
+                language="ja"
+                className="hidden sm:flex"
+              />
               <Button variant="outline" onClick={() => setLocation("/chat")}>
                 <MessageSquare className="w-4 h-4 mr-2" />
-                チャットへ
+                天聞アークに話しかける
               </Button>
             </div>
           </div>
@@ -94,9 +129,26 @@ export default function DashboardV3() {
           <h2 className="text-3xl font-bold mb-2">
             ようこそ、{user?.name || "Guest"}さん
           </h2>
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground mb-4">
             TENMON-ARK 霊核AI国家OSへようこそ。ダッシュボードから各機能にアクセスできます。
           </p>
+          
+          {/* Semantic Search Bar */}
+          <div className="max-w-2xl mb-6">
+            <SemanticSearchBar />
+          </div>
+
+          {/* Status Panel (Dashboard v13) */}
+          <div className="max-w-2xl">
+            <StatusPanel />
+          </div>
+
+          {/* Task Progress Panel (Founder専用) */}
+          {isFounder && (
+            <div className="mt-6">
+              <TaskProgressPanel />
+            </div>
+          )}
         </div>
 
         {/* Founder専用セクション */}
@@ -107,6 +159,82 @@ export default function DashboardV3() {
               Founder Exclusive
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+              {/* API Documentation */}
+              <Card className="cursor-pointer hover:shadow-lg transition-shadow border-amber-200">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <BookOpen className="w-5 h-5 text-amber-600" />
+                    API Documentation
+                  </CardTitle>
+                  <CardDescription>API仕様・エンドポイント一覧</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Button
+                    className="w-full"
+                    onClick={() => setLocation("/docs")}
+                  >
+                    View API Docs
+                  </Button>
+                </CardContent>
+              </Card>
+
+              {/* Life Guardian */}
+              <Card className="cursor-pointer hover:shadow-lg transition-shadow border-amber-200">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Shield className="w-5 h-5 text-amber-600" />
+                    Life Guardian
+                  </CardTitle>
+                  <CardDescription>デバイス保護・脅威検知</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Button
+                    className="w-full"
+                    onClick={() => setLocation("/lifeGuardian")}
+                  >
+                    Open Life Guardian
+                  </Button>
+                </CardContent>
+              </Card>
+
+              {/* Mobile OS */}
+              <Card className="cursor-pointer hover:shadow-lg transition-shadow border-amber-200">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Smartphone className="w-5 h-5 text-amber-600" />
+                    Mobile OS
+                  </CardTitle>
+                  <CardDescription>デバイス接続・管理</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Button
+                    className="w-full"
+                    onClick={() => setLocation("/mobileOS")}
+                  >
+                    Connect Device
+                  </Button>
+                </CardContent>
+              </Card>
+
+              {/* DeviceCluster v3 (β) */}
+              <Card className="cursor-pointer hover:shadow-lg transition-shadow border-amber-200">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Smartphone className="w-5 h-5 text-amber-600" />
+                    DeviceCluster v3 (β)
+                  </CardTitle>
+                  <CardDescription>完全なデバイス一体化 OS</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Button
+                    className="w-full"
+                    onClick={() => setLocation("/deviceCluster-v3")}
+                  >
+                    Open DeviceCluster
+                  </Button>
+                </CardContent>
+              </Card>
+
               {/* Custom ARK Management */}
               <Card className="cursor-pointer hover:shadow-lg transition-shadow border-amber-200">
                 <CardHeader>
@@ -171,24 +299,35 @@ export default function DashboardV3() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
           {/* Chat */}
           <Card
-            className="cursor-pointer hover:shadow-lg transition-shadow"
+            className="cursor-pointer hover:shadow-lg transition-shadow border-primary/20"
             onClick={() => setLocation("/chat")}
           >
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <MessageSquare className="w-5 h-5" />
-                チャット
+                天聞アークに話しかける
               </CardTitle>
               <CardDescription>
-                Twin-Core × 言灵 × 天津金木エンジン搭載
+                Atlas Chat × Twin-Core × 言灵 × 天津金木エンジン搭載
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-muted-foreground mb-2">
                 {roomsLoading
                   ? "読み込み中..."
                   : `${rooms?.length || 0} 件の会話`}
               </p>
+              <Button
+                variant="default"
+                size="sm"
+                className="w-full"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setLocation("/chat");
+                }}
+              >
+                チャットを開始
+              </Button>
             </CardContent>
           </Card>
 
@@ -318,6 +457,13 @@ export default function DashboardV3() {
           </CardContent>
         </Card>
       </main>
+
+      {/* Feedback Modal */}
+      <FeedbackModal
+        open={feedbackModalOpen}
+        onOpenChange={setFeedbackModalOpen}
+        defaultPage="Dashboard"
+      />
     </div>
   );
 }

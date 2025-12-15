@@ -1,6 +1,7 @@
 import { getDb } from "./db";
 import { amatsuKanagiPatterns, irohaInterpretations, katakamuna } from "../drizzle/schema";
 import { eq } from "drizzle-orm";
+import { computeReishoSignature, applyReishoToReasoning, type ReishoSignature } from "./reisho/reishoKernel";
 
 /**
  * Twin-Core統合エンジン
@@ -131,30 +132,135 @@ export interface ReasoningChainResult {
 }
 
 /**
+ * Fallback Reasoning Result（エラー時のフォールバック）
+ * 推論チェーンの一部が失敗した場合に返すデフォルト値
+ */
+function createFallbackReasoning(inputText: string, errorLayer: string, errorMessage: string): ReasoningChainResult {
+  const extractedSounds = inputText.match(/[\u30A0-\u30FF\u3040-\u309F]/g) || [];
+  
+  return {
+    inputText,
+    extractedSounds,
+    kotodama: {
+      sounds: extractedSounds,
+      meanings: [`[Fallback: ${errorLayer}] ${errorMessage}`],
+    },
+    fireWater: {
+      fire: 0,
+      water: 0,
+      balance: 0,
+      dominantElement: "中庸",
+    },
+    rotation: {
+      leftRotation: 0,
+      rightRotation: 0,
+      dominantRotation: "均衡",
+    },
+    convergenceDivergence: {
+      innerConvergence: 0,
+      outerDivergence: 0,
+      dominantMovement: "均衡",
+    },
+    yinYang: {
+      yin: 0,
+      yang: 0,
+      balance: 0,
+      dominantPolarity: "中庸",
+    },
+    amatsuKanagi: {
+      patterns: [],
+      centerCores: [],
+    },
+    futomani: {
+      position: "中央",
+      direction: "均衡",
+      cosmicStructure: "ミナカ（中心）",
+      row: 5,
+      column: 5,
+    },
+    katakamuna: {
+      relatedUtai: [],
+    },
+    irohaWisdom: {
+      characters: [],
+      interpretations: [],
+      lifePrinciplesSummary: "",
+      dharmaTimeStructure: "時間構文なし（フォールバック）",
+    },
+    minaka: {
+      distanceFromCenter: 0.5,
+      spiritualLevel: 50,
+      cosmicAlignment: 50,
+      centerCoreResonance: {
+        yai: 0,
+        yae: 0,
+      },
+    },
+    finalInterpretation: {
+      cosmicMeaning: `[Fallback] 推論チェーンの${errorLayer}でエラーが発生しました。`,
+      wisdomMeaning: `エラー: ${errorMessage}`,
+      unifiedInterpretation: `推論処理中にエラーが発生しましたが、基本的な応答を生成しました。`,
+      recommendations: ["推論エラーが発生しました。システム管理者に報告してください。"],
+    },
+  };
+}
+
+/**
  * Twin-Core推論チェーンを実行
  * 
  * 言霊 → 火水 → 左右旋 → 内集外発 → 陰陽 → 天津金木 → フトマニ → カタカムナ → いろは → ミナカ
+ * 
+ * 各レイヤーでエラーが発生した場合は、fallbackReasoningを返す
  */
 export async function executeTwinCoreReasoning(inputText: string): Promise<ReasoningChainResult> {
-  const db = await getDb();
-  if (!db) {
-    throw new Error("Database connection failed");
+  let db;
+  try {
+    db = await getDb();
+    if (!db) {
+      console.error("[TwinCore Engine] Database connection failed");
+      return createFallbackReasoning(inputText, "Database", "Database connection failed");
+    }
+  } catch (error) {
+    console.error("[TwinCore Engine] Database initialization error:", error);
+    return createFallbackReasoning(inputText, "Database", error instanceof Error ? error.message : "Database initialization failed");
   }
   
   // 1. 言霊レイヤー: カタカナとひらがなを抽出
-  const katakanaMatches = inputText.match(/[\u30A0-\u30FF]/g) || [];
-  const hiraganaMatches = inputText.match(/[\u3040-\u309F]/g) || [];
-  const extractedSounds = [...katakanaMatches, ...hiraganaMatches];
+  let katakanaMatches: string[];
+  let hiraganaMatches: string[];
+  let extractedSounds: string[];
+  
+  try {
+    katakanaMatches = inputText.match(/[\u30A0-\u30FF]/g) || [];
+    hiraganaMatches = inputText.match(/[\u3040-\u309F]/g) || [];
+    extractedSounds = [...katakanaMatches, ...hiraganaMatches];
+  } catch (error) {
+    console.error("[TwinCore Engine] Kotodama layer error:", error);
+    return createFallbackReasoning(inputText, "Kotodama", error instanceof Error ? error.message : "Sound extraction failed");
+  }
   
   // 2. 火水レイヤー: 天津金木パターンから火水を計算
-  const amatsuPatterns = await Promise.all(
-    katakanaMatches.map(async (sound) => {
-      const results = await db.select().from(amatsuKanagiPatterns).where(eq(amatsuKanagiPatterns.sound, sound)).limit(1);
-      return results[0];
-    })
-  );
+  let amatsuPatterns;
+  let validPatterns;
   
-  const validPatterns = amatsuPatterns.filter((p): p is NonNullable<typeof p> => p !== undefined);
+  try {
+    amatsuPatterns = await Promise.all(
+      katakanaMatches.map(async (sound) => {
+        try {
+          const results = await db.select().from(amatsuKanagiPatterns).where(eq(amatsuKanagiPatterns.sound, sound)).limit(1);
+          return results[0];
+        } catch (error) {
+          console.error(`[TwinCore Engine] Pattern lookup error for sound ${sound}:`, error);
+          return undefined;
+        }
+      })
+    );
+    
+    validPatterns = amatsuPatterns.filter((p): p is NonNullable<typeof p> => p !== undefined);
+  } catch (error) {
+    console.error("[TwinCore Engine] Fire-Water layer error:", error);
+    return createFallbackReasoning(inputText, "Fire-Water", error instanceof Error ? error.message : "Pattern analysis failed");
+  }
   
   let fire = 0;
   let water = 0;
@@ -163,80 +269,181 @@ export async function executeTwinCoreReasoning(inputText: string): Promise<Reaso
   let innerConvergence = 0;
   let outerDivergence = 0;
   
-  validPatterns.forEach((pattern) => {
-    const movements = JSON.parse(pattern.movements as string) as string[];
-    movements.forEach((movement) => {
-      if (movement.includes("左旋")) leftRotation++;
-      if (movement.includes("右旋")) rightRotation++;
-      if (movement.includes("内集")) {
-        innerConvergence++;
-        water++;
-      }
-      if (movement.includes("外発")) {
-        outerDivergence++;
-        fire++;
+  try {
+    validPatterns.forEach((pattern) => {
+      try {
+        const movements = JSON.parse(pattern.movements as string) as string[];
+        movements.forEach((movement) => {
+          if (movement.includes("左旋")) leftRotation++;
+          if (movement.includes("右旋")) rightRotation++;
+          if (movement.includes("内集")) {
+            innerConvergence++;
+            water++;
+          }
+          if (movement.includes("外発")) {
+            outerDivergence++;
+            fire++;
+          }
+        });
+      } catch (error) {
+        console.error(`[TwinCore Engine] Pattern movement parsing error:`, error);
+        // 個別パターンのエラーは無視して続行
       }
     });
-  });
+  } catch (error) {
+    console.error("[TwinCore Engine] Movement calculation error:", error);
+    return createFallbackReasoning(inputText, "Movement", error instanceof Error ? error.message : "Movement calculation failed");
+  }
   
   const totalMovements = fire + water || 1;
   const fireWaterBalance = (fire - water) / totalMovements;
   const dominantElement = fireWaterBalance > 0.2 ? "火" : fireWaterBalance < -0.2 ? "水" : "中庸";
   
   // 3. 左右旋レイヤー
-  const totalRotation = leftRotation + rightRotation || 1;
-  const rotationBalance = (rightRotation - leftRotation) / totalRotation;
-  const dominantRotation = rotationBalance > 0.2 ? "右旋" : rotationBalance < -0.2 ? "左旋" : "均衡";
+  let totalRotation: number;
+  let rotationBalance: number;
+  let dominantRotation: "左旋" | "右旋" | "均衡";
+  
+  try {
+    totalRotation = leftRotation + rightRotation || 1;
+    rotationBalance = (rightRotation - leftRotation) / totalRotation;
+    dominantRotation = rotationBalance > 0.2 ? "右旋" : rotationBalance < -0.2 ? "左旋" : "均衡";
+  } catch (error) {
+    console.error("[TwinCore Engine] Rotation layer error:", error);
+    return createFallbackReasoning(inputText, "Rotation", error instanceof Error ? error.message : "Rotation calculation failed");
+  }
   
   // 4. 内集外発レイヤー
-  const totalMovement = innerConvergence + outerDivergence || 1;
-  const movementBalance = (outerDivergence - innerConvergence) / totalMovement;
-  const dominantMovement = movementBalance > 0.2 ? "外発" : movementBalance < -0.2 ? "内集" : "均衡";
+  let totalMovement: number;
+  let movementBalance: number;
+  let dominantMovement: "内集" | "外発" | "均衡";
+  
+  try {
+    totalMovement = innerConvergence + outerDivergence || 1;
+    movementBalance = (outerDivergence - innerConvergence) / totalMovement;
+    dominantMovement = movementBalance > 0.2 ? "外発" : movementBalance < -0.2 ? "内集" : "均衡";
+  } catch (error) {
+    console.error("[TwinCore Engine] Convergence-Divergence layer error:", error);
+    return createFallbackReasoning(inputText, "Convergence-Divergence", error instanceof Error ? error.message : "Movement calculation failed");
+  }
   
   // 5. 陰陽レイヤー
-  const yin = water + leftRotation + innerConvergence;
-  const yang = fire + rightRotation + outerDivergence;
-  const totalYinYang = yin + yang || 1;
-  const yinYangBalance = (yang - yin) / totalYinYang;
-  const dominantPolarity = yinYangBalance > 0.2 ? "陽" : yinYangBalance < -0.2 ? "陰" : "中庸";
+  let yin: number;
+  let yang: number;
+  let totalYinYang: number;
+  let yinYangBalance: number;
+  let dominantPolarity: "陰" | "陽" | "中庸";
+  
+  try {
+    yin = water + leftRotation + innerConvergence;
+    yang = fire + rightRotation + outerDivergence;
+    totalYinYang = yin + yang || 1;
+    yinYangBalance = (yang - yin) / totalYinYang;
+    dominantPolarity = yinYangBalance > 0.2 ? "陽" : yinYangBalance < -0.2 ? "陰" : "中庸";
+  } catch (error) {
+    console.error("[TwinCore Engine] Yin-Yang layer error:", error);
+    return createFallbackReasoning(inputText, "Yin-Yang", error instanceof Error ? error.message : "Yin-Yang calculation failed");
+  }
   
   // 6. 天津金木レイヤー
-  const centerCores = validPatterns.filter(p => p.special);
+  let centerCores;
+  
+  try {
+    centerCores = validPatterns.filter(p => p.special);
+  } catch (error) {
+    console.error("[TwinCore Engine] AmatsuKanagi layer error:", error);
+    return createFallbackReasoning(inputText, "AmatsuKanagi", error instanceof Error ? error.message : "Center core detection failed");
+  }
   
   // 7. フトマニレイヤー
-  const futomaniPosition = determineFutomaniPosition(dominantElement, dominantRotation, dominantMovement);
+  let futomaniPosition;
+  
+  try {
+    futomaniPosition = determineFutomaniPosition(dominantElement, dominantRotation, dominantMovement);
+  } catch (error) {
+    console.error("[TwinCore Engine] Futomani layer error:", error);
+    return createFallbackReasoning(inputText, "Futomani", error instanceof Error ? error.message : "Futomani position calculation failed");
+  }
   
   // 8. カタカムナレイヤー（補助）
-  const relatedUtai = await getRelatedKatakamuna(extractedSounds);
+  let relatedUtai;
+  
+  try {
+    relatedUtai = await getRelatedKatakamuna(extractedSounds);
+  } catch (error) {
+    console.error("[TwinCore Engine] Katakamuna layer error:", error);
+    // カタカムナレイヤーは補助的なので、エラー時は空配列で続行
+    relatedUtai = [];
+  }
   
   // 9. いろは言灵解レイヤー（智彗コア）
-  const irohaResults = await Promise.all(
-    hiraganaMatches.map(async (char) => {
-      const results = await db.select().from(irohaInterpretations).where(eq(irohaInterpretations.character, char)).limit(1);
-      return results[0];
-    })
-  );
+  let irohaResults;
+  let validIroha;
+  let lifePrinciples: string;
+  let dharmaTimeStructure: string;
   
-  const validIroha = irohaResults.filter((r): r is NonNullable<typeof r> => r !== undefined);
-  const lifePrinciples = validIroha.map(r => r.lifePrinciple).join("、");
-  const dharmaTimeStructure = analyzeDharmaTimeStructure(validIroha);
+  try {
+    irohaResults = await Promise.all(
+      hiraganaMatches.map(async (char) => {
+        try {
+          const results = await db.select().from(irohaInterpretations).where(eq(irohaInterpretations.character, char)).limit(1);
+          return results[0];
+        } catch (error) {
+          console.error(`[TwinCore Engine] Iroha lookup error for character ${char}:`, error);
+          return undefined;
+        }
+      })
+    );
+    
+    validIroha = irohaResults.filter((r): r is NonNullable<typeof r> => r !== undefined);
+    lifePrinciples = validIroha.map(r => r.lifePrinciple || "").filter(p => p).join("、");
+    dharmaTimeStructure = analyzeDharmaTimeStructure(validIroha);
+  } catch (error) {
+    console.error("[TwinCore Engine] Iroha Wisdom layer error:", error);
+    // いろはレイヤーは重要だが、エラー時はデフォルト値で続行
+    validIroha = [];
+    lifePrinciples = "";
+    dharmaTimeStructure = "時間構文なし（エラー）";
+  }
   
   // 10. ミナカ（中心）レイヤー
-  const yaiResonance = centerCores.find(c => c.number === 18) ? 1.0 : 0.0;
-  const yaeResonance = centerCores.find(c => c.number === 20) ? 1.0 : 0.0;
-  const distanceFromCenter = calculateDistanceFromCenter(fireWaterBalance, yinYangBalance, movementBalance);
-  // カタカムナの関連度を計算（最大関連度を使用）
-  const maxKatakamunaRelevance = relatedUtai.length > 0 
-    ? Math.max(...relatedUtai.map(u => u.relevance || 0))
-    : undefined;
-  const spiritualLevel = calculateSpiritualLevel(validIroha, distanceFromCenter, maxKatakamunaRelevance);
-  const cosmicAlignment = calculateCosmicAlignment(fireWaterBalance, yinYangBalance, movementBalance);
+  let yaiResonance: number;
+  let yaeResonance: number;
+  let distanceFromCenter: number;
+  let maxKatakamunaRelevance: number | undefined;
+  let spiritualLevel: number;
+  let cosmicAlignment: number;
+  
+  try {
+    yaiResonance = centerCores.find(c => c.number === 18) ? 1.0 : 0.0;
+    yaeResonance = centerCores.find(c => c.number === 20) ? 1.0 : 0.0;
+    distanceFromCenter = calculateDistanceFromCenter(fireWaterBalance, yinYangBalance, movementBalance);
+    // カタカムナの関連度を計算（最大関連度を使用）
+    maxKatakamunaRelevance = relatedUtai.length > 0 
+      ? Math.max(...relatedUtai.map(u => u.relevance || 0))
+      : undefined;
+    spiritualLevel = calculateSpiritualLevel(validIroha, distanceFromCenter, maxKatakamunaRelevance);
+    cosmicAlignment = calculateCosmicAlignment(fireWaterBalance, yinYangBalance, movementBalance);
+  } catch (error) {
+    console.error("[TwinCore Engine] Minaka layer error:", error);
+    return createFallbackReasoning(inputText, "Minaka", error instanceof Error ? error.message : "Center calculation failed");
+  }
   
   // 11. 最終解釈
-  const cosmicMeaning = generateCosmicMeaning(validPatterns, futomaniPosition);
-  const wisdomMeaning = generateWisdomMeaning(validIroha, lifePrinciples);
-  const unifiedInterpretation = generateUnifiedInterpretation(cosmicMeaning, wisdomMeaning, distanceFromCenter, spiritualLevel);
-  const recommendations = generateRecommendations(dominantElement, dominantPolarity, spiritualLevel);
+  let cosmicMeaning: string;
+  let wisdomMeaning: string;
+  let unifiedInterpretation: string;
+  let recommendations: string[];
+  
+  try {
+    cosmicMeaning = generateCosmicMeaning(validPatterns, futomaniPosition);
+    wisdomMeaning = generateWisdomMeaning(validIroha, lifePrinciples);
+    unifiedInterpretation = generateUnifiedInterpretation(cosmicMeaning, wisdomMeaning, distanceFromCenter, spiritualLevel);
+    recommendations = generateRecommendations(dominantElement, dominantPolarity, spiritualLevel);
+  } catch (error) {
+    console.error("[TwinCore Engine] Final interpretation error:", error);
+    return createFallbackReasoning(inputText, "Final Interpretation", error instanceof Error ? error.message : "Interpretation generation failed");
+  }
   
   return {
     inputText,
@@ -319,6 +526,14 @@ export async function executeTwinCoreReasoning(inputText: string): Promise<Reaso
       recommendations,
     },
   };
+  
+  // Reishō シグネチャを注入（推論前）
+  const reishoSignature = computeReishoSignature(inputText);
+  
+  // 推論チェーンに Reishō を適用（推論後）
+  const reishoModulated = applyReishoToReasoning(result, reishoSignature);
+  
+  return reishoModulated;
 }
 
 /**
@@ -371,17 +586,17 @@ function determineFutomaniPosition(
   if (rotation === "右旋") {
     column = 1; // 最右列（東）
     if (position === "中央") {
-      position = "東";
-      direction = "右回転";
-      cosmicStructure = "日（ヒ）";
+    position = "東";
+    direction = "右回転";
+    cosmicStructure = "日（ヒ）";
     }
   } else if (rotation === "左旋") {
     column = 10; // 最左列（西）
     if (position === "中央") {
-      position = "西";
-      direction = "左回転";
-      cosmicStructure = "月（ツキ）";
-    }
+    position = "西";
+    direction = "左回転";
+    cosmicStructure = "月（ツキ）";
+  }
   } else if (rotation === "均衡") {
     column = 5; // 中央列
   }

@@ -18,7 +18,7 @@ import { chatRouter } from "./chat/chatRouter";
 import { kotodamaRouter } from "./routers/kotodamaRouter";
 import { universalLanguageRouter } from "./universal/universalLanguageRouter";
 import { arkBrowserRouter } from "./arkBrowser/arkBrowserRouter";
-import { guardianRouter } from "./guardian/guardianRouter";
+import { lifeGuardianRouter } from "./lifeGuardian/lifeGuardianRouter";
 import { soulSyncRouter } from "./soulSync/soulSyncRouter";
 import { distributedCloudRouter } from "./distributedCloud/distributedCloudRouter";
 import { arkShieldRouter } from "./arkShield/arkShieldRouter";
@@ -70,6 +70,14 @@ import { customArksRouter } from "./routers/customArksRouter";
 import { founderFeedbackRouter } from "./routers/founderFeedbackRouter";
 import { lpQaRouterSimple } from "./routers/lpQaRouterSimple";
 import { lpQaRouterStream } from "./routers/lpQaRouterStream";
+import { animeBackgroundRouter } from "./src/anime/visualSynapse/animeBackgroundRouter";
+import { atlasChatRouter } from "./chat/atlasChatRouter";
+import { kokuzoRouter } from "./routers/kokuzoRouter";
+import { offlineSyncRouter } from "./routers/offlineSyncRouter";
+import { seedBundleRouter } from "./routers/seedBundleRouter";
+import { tenmonTradeRouter } from "./routers/tenmonTradeRouter";
+import { adminTradeRouter } from "./routers/adminTradeRouter";
+import { projectRouter } from "./routers/projectRouter";
 
 export const appRouter = router({
     // if you need to use socket.io, read and register route in server/_core/index.ts, all api should start with '/api/' so that the gateway can route correctly
@@ -87,7 +95,7 @@ export const appRouter = router({
   kotodama: kotodamaRouter,
   universal: universalLanguageRouter,
   arkBrowser: arkBrowserRouter,
-  guardian: guardianRouter,
+  lifeGuardian: lifeGuardianRouter,
   soulSync: soulSyncRouter,
   distributedCloud: distributedCloudRouter,
   arkShield: arkShieldRouter,
@@ -129,6 +137,13 @@ export const appRouter = router({
   founderFeedback: founderFeedbackRouter, // Founder Feedback Center: Founderプラン専用フィードバック機能
   lpQaSimple: lpQaRouterSimple, // LP Q&A Simple: シンプルなLP用Q&Aチャット
   lpQaStream: lpQaRouterStream, // LP Q&A Stream: ストリーミング対応のLP用Q&Aチャット
+  animeBackground: animeBackgroundRouter, // Anime Background: Visual Synapse背景生成
+  atlasChat: atlasChatRouter, // Atlas Chat: 天聞アーク人格の脳
+  kokuzo: kokuzoRouter, // Kokūzō Server: Eternal Structural Memory OS
+  offlineSync: offlineSyncRouter, // Offline Sync: オフライン同期
+  seedBundle: seedBundleRouter, // Seed Bundle: オフライン用 Seed Bundle
+  tenmonTrade: tenmonTradeRouter, // TENMON-TRADE: 内部専用トレードモジュール（フェーズ T-1: 観測のみ）
+  project: projectRouter, // Project: プロジェクト単位で会話を整理
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),
     logout: publicProcedure.mutation(({ ctx }) => {

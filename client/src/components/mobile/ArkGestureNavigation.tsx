@@ -7,9 +7,9 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useLocation } from 'wouter';
-import { GestureEngine, GestureEvent } from '@/lib/mobile/gestureEngine';
-import { triggerHapticWithSettings } from '@/lib/mobile/haptics';
-import { ALPHA_TRANSITION_DURATION } from '@/lib/mobile/alphaFlow';
+import { GestureEngine, GestureEvent } from '@/lib/mobileOS/gestureEngine';
+import { triggerHapticWithSettings } from '@/lib/mobileOS/haptics';
+import { ALPHA_TRANSITION_DURATION } from '@/lib/mobileOS/alphaFlow';
 
 interface ArkGestureNavigationProps {
   children: React.ReactNode;

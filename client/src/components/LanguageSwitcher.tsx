@@ -14,6 +14,7 @@ const languages = [
   { code: "ko", name: "한국어", flag: "🇰🇷" },
   { code: "zh-CN", name: "简体中文", flag: "🇨🇳" },
   { code: "zh-TW", name: "繁體中文", flag: "🇹🇼" },
+  { code: "fr", name: "Français", flag: "🇫🇷" },
 ];
 
 export function LanguageSwitcher() {

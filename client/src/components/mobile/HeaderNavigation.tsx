@@ -8,8 +8,8 @@
 import { MessageCircle, Globe } from 'lucide-react';
 import { useLocation } from 'wouter';
 import { useEffect, useState } from 'react';
-import { triggerHapticWithSettings } from '@/lib/mobile/haptics';
-import { ALPHA_TRANSITION_DURATION } from '@/lib/mobile/alphaFlow';
+import { triggerHapticWithSettings } from '@/lib/mobileOS/haptics';
+import { ALPHA_TRANSITION_DURATION } from '@/lib/mobileOS/alphaFlow';
 
 export default function HeaderNavigation() {
   const [location, setLocation] = useLocation();

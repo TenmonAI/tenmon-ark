@@ -1,0 +1,167 @@
+{
+  "version": "1.0.0",
+  "releaseDate": "2024-12-19",
+  "plans": {
+    "free": {
+      "id": "free",
+      "name": "Free",
+      "displayName": "Free",
+      "price": 0,
+      "currency": "JPY",
+      "billingCycle": "monthly",
+      "features": [
+        "基本的なチャット機能",
+        "月30メッセージまで",
+        "言靈モード",
+        "Twin-Core Light"
+      ],
+      "limits": {
+        "dailyMessages": 3,
+        "fileUploads": 0,
+        "fileStorageBytes": 0,
+        "conversations": 10,
+        "memoryItems": 50
+      },
+      "highlights": [
+        "無料で始められる",
+        "基本的なAI機能を体験"
+      ]
+    },
+    "basic": {
+      "id": "basic",
+      "name": "Basic",
+      "displayName": "Basic",
+      "price": 6000,
+      "currency": "JPY",
+      "billingCycle": "monthly",
+      "features": [
+        "チャット無制限",
+        "Twin-Core Advanced",
+        "言靈解析フル解放",
+        "宿曜解析フル解放",
+        "外部アプリ連携（WordPress/Slack/Notion）",
+        "Universe OS 基本機能",
+        "Reishō Pipeline 基本機能"
+      ],
+      "limits": {
+        "dailyMessages": null,
+        "fileUploads": 100,
+        "fileStorageBytes": 10737418240,
+        "conversations": null,
+        "memoryItems": 1000
+      },
+      "highlights": [
+        "個人運用向けの標準プラン",
+        "Universe OS 基本機能が利用可能"
+      ]
+    },
+    "pro": {
+      "id": "pro",
+      "name": "Pro",
+      "displayName": "Pro",
+      "price": 29800,
+      "currency": "JPY",
+      "billingCycle": "monthly",
+      "features": [
+        "Basic機能すべて",
+        "動画生成・音楽生成",
+        "自動投稿・SNS運用",
+        "Tradingモジュール（MT5/市場分析）",
+        "ULCE・FractalOS・SoulSync完全解放",
+        "Universe OS 完全機能",
+        "Conscious Mesh",
+        "Fractal Overcompression"
+      ],
+      "limits": {
+        "dailyMessages": null,
+        "fileUploads": null,
+        "fileStorageBytes": null,
+        "conversations": null,
+        "memoryItems": null
+      },
+      "highlights": [
+        "AI国家OSとして運用するための全機能",
+        "Universe OS 完全機能が利用可能",
+        "Conscious Mesh によるデバイス間接続"
+      ],
+      "popular": true
+    },
+    "founder": {
+      "id": "founder",
+      "name": "Founder's Edition",
+      "displayName": "Founder's Edition",
+      "price": 0,
+      "currency": "JPY",
+      "billingCycle": "lifetime",
+      "features": [
+        "Pro機能すべて",
+        "Founder専用機能",
+        "早期アクセス",
+        "優先サポート",
+        "Universe OS Extension",
+        "Quantum Memory v3",
+        "Hyperseed Generator"
+      ],
+      "limits": {
+        "dailyMessages": null,
+        "fileUploads": null,
+        "fileStorageBytes": null,
+        "conversations": null,
+        "memoryItems": null
+      },
+      "highlights": [
+        "Founder専用の特別プラン",
+        "すべての機能が利用可能",
+        "新機能への早期アクセス"
+      ],
+      "isFounder": true
+    }
+  },
+  "comparison": {
+    "features": [
+      {
+        "name": "チャット機能",
+        "free": "月30メッセージ",
+        "basic": "無制限",
+        "pro": "無制限",
+        "founder": "無制限"
+      },
+      {
+        "name": "Universe OS",
+        "free": "❌",
+        "basic": "基本機能",
+        "pro": "完全機能",
+        "founder": "Extension"
+      },
+      {
+        "name": "Conscious Mesh",
+        "free": "❌",
+        "basic": "❌",
+        "pro": "✅",
+        "founder": "✅"
+      },
+      {
+        "name": "Fractal Overcompression",
+        "free": "❌",
+        "basic": "❌",
+        "pro": "✅",
+        "founder": "✅"
+      },
+      {
+        "name": "Quantum Memory v3",
+        "free": "❌",
+        "basic": "❌",
+        "pro": "❌",
+        "founder": "✅"
+      },
+      {
+        "name": "Hyperseed Generator",
+        "free": "❌",
+        "basic": "❌",
+        "pro": "❌",
+        "founder": "✅"
+      }
+    ]
+  }
+}
+

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { FilePreview, FilePreviewData } from "./FilePreview";
 import { Loader2, Trash2, Download, Eye } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Switch } from "@/components/ui/switch";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -19,9 +20,10 @@ interface FileListProps {
   onDelete?: (fileId: number) => void;
   onView?: (file: FilePreviewData) => void;
   onDownload?: (file: FilePreviewData) => void;
+  onToggleLearning?: (fileId: number, enabled: boolean) => void;
 }
 
-export function FileList({ files, loading, onDelete, onView, onDownload }: FileListProps) {
+export function FileList({ files, loading, onDelete, onView, onDownload, onToggleLearning }: FileListProps) {
   const [deleteFileId, setDeleteFileId] = useState<number | null>(null);
 
   const handleDelete = () => {
@@ -56,6 +58,21 @@ export function FileList({ files, loading, onDelete, onView, onDownload }: FileL
               file={file}
               onClick={() => onView?.(file)}
             />
+
+            {/* Learning Toggle (Bottom Left) */}
+            {onToggleLearning && (
+              <div className="absolute bottom-2 left-2 flex items-center gap-2 bg-divine-black/80 border border-divine-gold/20 rounded-lg px-2 py-1">
+                <span className="text-xs text-gray-400">学習:</span>
+                <Switch
+                  checked={file.isIntegratedToMemory === 1}
+                  onCheckedChange={(checked) => {
+                    onToggleLearning(file.id, checked);
+                  }}
+                  disabled={file.isProcessed === 0}
+                  className="data-[state=checked]:bg-divine-gold"
+                />
+              </div>
+            )}
 
             {/* Action Buttons */}
             <div

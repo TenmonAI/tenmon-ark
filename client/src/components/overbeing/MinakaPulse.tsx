@@ -18,7 +18,7 @@ export function MinakaPulse() {
     { text: "" },
     { enabled: false } // デフォルトでは無効（必要に応じて有効化）
   );
-  
+
   useEffect(() => {
     setIsVisible(true);
   }, []);

@@ -10,7 +10,7 @@
  */
 
 import * as soulSyncEngine from "./soulSyncEngine";
-import * as guardianEngine from "../guardian/guardianModeEngine";
+import * as lifeGuardianEngine from "../lifeGuardian/lifeGuardianModeEngine";
 import { applyArkCore } from "../arkCoreIntegration";
 import { analyzeEthics } from "../reiEthicFilterEngine";
 
@@ -176,7 +176,7 @@ export async function syncWithGuardian(userId: number): Promise<void> {
   }
 
   // Guardian Modeのデバイス保護状態を取得
-  const deviceProtection = await guardianEngine.getDeviceProtectionStatus();
+  const deviceProtection = lifeGuardianEngine.getDeviceProtectionStatus();
 
   // 魂の歪みとデバイスの脅威を統合分析
   const distortions = soulStatus.currentSoulCharacteristics.distortions;

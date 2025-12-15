@@ -6,7 +6,7 @@
  */
 
 import { ChatMessage } from "../../drizzle/schema";
-import { invokeLLM } from "../_core/llm";
+import { invokeLLM, type TextContent } from "../_core/llm";
 import { LP_MINIMAL_PERSONA_SYSTEM_PROMPT } from "../prompts/lpMinimalPersona";
 import {
   getUniversalMemoryContext,
@@ -116,8 +116,8 @@ export async function generateLpChatResponse(params: {
     } else {
       // If content is an array, extract text from TextContent items
       const textContent = content
-        .filter((item) => item.type === "text")
-        .map((item) => (item as any).text)
+        .filter((item): item is TextContent => item.type === "text")
+        .map((item) => item.text)
         .join("\n");
       responseText = textContent || "";
     }

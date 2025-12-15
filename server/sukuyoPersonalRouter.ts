@@ -43,7 +43,7 @@ async function generatePersonalPersonality(
 }> {
   // Execute 7-layer Sukuyo Personal AI
   const result = await executeSukuyoPersonalAI(userId, birthDate);
-  
+
   return {
     personalityCore: result.personalPersonality.personalityCore,
     personalityTraits: JSON.stringify(result.personalPersonality.personalityTraits),

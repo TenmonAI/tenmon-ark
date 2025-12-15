@@ -10,6 +10,8 @@ import { FutomaniBackground } from '@/components/overbeing/FutomaniBackground';
 import { FireWaterEnergyFlow } from '@/components/overbeing/FireWaterEnergyFlow';
 import { AmatsuKanagiPatternTooltip } from '@/components/overbeing/AmatsuKanagiPatternTooltip';
 import { motion } from 'framer-motion';
+import HinomizuCore from '@/components/HinomizuCore';
+import { startDrone } from '@/lib/drone';
 
 /**
  * TENMON-ARK Home Page
@@ -41,10 +43,24 @@ export default function Home() {
     }
   }, [patterns]);
 
+  // 低周波ドローン起動（ユーザー操作必須）
+  useEffect(() => {
+    const handler = () => {
+      startDrone();
+    };
+    window.addEventListener('click', handler, { once: true });
+    return () => {
+      window.removeEventListener('click', handler);
+    };
+  }, []);
+
   return (
     <div className="min-h-screen bg-black text-white relative overflow-hidden">
       {/* 背景レイヤー */}
       <div className="absolute inset-0 bg-gradient-to-b from-black via-gray-900 to-black" />
+      
+      {/* 火水中枢コア（Three.js） */}
+      <HinomizuCore />
       
       {/* フトマニ十行の背面レイヤー（十字構造） */}
       <FutomaniBackground />
@@ -71,7 +87,7 @@ export default function Home() {
             transition={{ duration: 0.8 }}
             className="text-6xl font-bold bg-gradient-to-r from-yellow-400 via-cyan-400 to-yellow-400 bg-clip-text text-transparent mb-4"
           >
-            TENMON-ARK
+          TENMON-ARK
           </motion.h1>
           <motion.p
             initial={{ opacity: 0 }}

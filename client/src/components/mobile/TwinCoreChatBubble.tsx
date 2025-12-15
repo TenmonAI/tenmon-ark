@@ -6,7 +6,7 @@
  */
 
 import { useEffect, useState } from 'react';
-import { TYPEWRITER_SPEED, PARTICLE_SPAWN_INTERVAL } from '@/lib/mobile/alphaFlow';
+import { TYPEWRITER_SPEED, PARTICLE_SPAWN_INTERVAL } from '@/lib/mobileOS/alphaFlow';
 
 interface TwinCoreChatBubbleProps {
   message: string;

@@ -19,6 +19,25 @@ export function initializeWebSocket(server: HTTPServer): SocketIOServer {
       console.log(`[WebSocket] Client disconnected: ${socket.id}`);
     });
 
+    // TENMON-NODE 登録ハンドラ
+    socket.on("tenmon:node:register", (device) => {
+      console.log(`[TENMON-ARK] Node registered:`, device);
+      // デバイス情報を保存（将来的にはDBに保存）
+      // 現時点ではログのみ
+      
+      // NTP同期: サーバー時刻を送信
+      socket.emit("audio:sync", {
+        serverTimestamp: Date.now(),
+      });
+    });
+
+    // 音響同期リクエスト（NTP同期）
+    socket.on("audio:sync:request", () => {
+      socket.emit("audio:sync", {
+        serverTimestamp: Date.now(),
+      });
+    });
+
     // Subscribe to specific channels
     socket.on("subscribe:fractal", () => {
       socket.join("fractal");
@@ -50,6 +69,14 @@ export function initializeWebSocket(server: HTTPServer): SocketIOServer {
       socket.leave("soulSync");
       console.log(`[WebSocket] Client ${socket.id} unsubscribed from soulSync channel`);
     });
+
+    // TENMON-NODE テスト送信（接続後3秒）
+    setTimeout(() => {
+      socket.emit("tenmon:command", {
+        type: "ping",
+      });
+      console.log(`[TENMON-ARK] Test command sent to ${socket.id}`);
+    }, 3000);
   });
 
   return io;

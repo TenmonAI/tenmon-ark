@@ -13,12 +13,22 @@ export const chatRouter = router({
       z.object({
         title: z.string().optional(),
         language: z.string().default("ja"),
+        projectId: z.number().nullable().optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
+      // projectId が未指定の場合はデフォルトプロジェクトを取得または作成
+      let projectId = input.projectId;
+      if (!projectId) {
+        const { getOrCreateDefaultProject } = await import("../routers/projectRouter");
+        projectId = await getOrCreateDefaultProject(ctx.user.id);
+      }
+      
       const roomId = await chatDb.createChatRoom({
         userId: ctx.user.id,
         title: input.title || "New Chat",
+        projectId: projectId || null,
+        projectLocked: "auto", // 自動分類
       });
 
       return { roomId };
@@ -27,9 +37,15 @@ export const chatRouter = router({
   /**
    * Get all chat rooms for the current user
    */
-  listRooms: protectedProcedure.query(async ({ ctx }) => {
-    return await chatDb.getUserChatRooms(ctx.user.id);
-  }),
+  listRooms: protectedProcedure
+    .input(
+      z.object({
+        projectId: z.number().nullable().optional(),
+      }).optional()
+    )
+    .query(async ({ ctx, input }) => {
+      return await chatDb.getUserChatRooms(ctx.user.id, input?.projectId);
+    }),
 
   /**
    * Get a specific chat room
@@ -71,6 +87,7 @@ export const chatRouter = router({
         roomId: z.number().optional(),
         message: z.string().min(1),
         language: z.string().default("ja"),
+        projectId: z.number().nullable().optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -79,10 +96,52 @@ export const chatRouter = router({
       // Create new room if not provided
       if (!roomId) {
         const title = await generateChatTitle(input.message, input.language);
-        roomId = await chatDb.createChatRoom({
-          userId: ctx.user.id,
-          title,
-        });
+        
+        // projectId が未指定の場合は自動分類
+        let finalProjectId = input.projectId;
+        if (!finalProjectId) {
+          const { autoClassifyProject } = await import("../project/autoClassifier");
+          const { getRecentChatMessages } = await import("../chat/chatDb");
+          
+          // 会話履歴を取得（直近5件）
+          const conversationHistory: string[] = [];
+          if (input.roomId) {
+            const recentMessages = await getRecentChatMessages(input.roomId, 5);
+            conversationHistory.push(...recentMessages.map((m) => m.content));
+          }
+          
+          const classification = await autoClassifyProject({
+            text: input.message,
+            files: [],
+            conversationHistory,
+            userId: ctx.user.id,
+            conversationId: undefined,
+            roomId: input.roomId,
+          });
+          
+          finalProjectId = classification.projectId;
+          
+          // 分類結果を保存（GAP-E）
+          const { isTemporaryProject } = await import("../project/reclassificationManager");
+          const isTemporary = isTemporaryProject(classification.confidence) ? 1 : 0;
+          
+          roomId = await chatDb.createChatRoom({
+            userId: ctx.user.id,
+            title,
+            projectId: finalProjectId || null,
+            projectLocked: "auto", // 自動分類
+            classificationConfidence: Math.round(classification.confidence * 100), // 0-100 に変換
+            classificationLastUpdated: new Date(),
+            isTemporaryProject: isTemporary,
+          });
+        } else {
+          roomId = await chatDb.createChatRoom({
+            userId: ctx.user.id,
+            title,
+            projectId: finalProjectId || null,
+            projectLocked: "auto", // 自動分類
+          });
+        }
       } else {
         // Verify ownership
         const room = await chatDb.getChatRoom(roomId);
@@ -179,6 +238,7 @@ export const chatRouter = router({
         roomId: z.number().optional(),
         message: z.string().min(1),
         language: z.string().default("ja"),
+        projectId: z.number().nullable().optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -187,9 +247,19 @@ export const chatRouter = router({
       // Create new room if not provided
       if (!roomId) {
         const title = await generateChatTitle(input.message, input.language);
+        
+        // projectId が未指定の場合はデフォルトプロジェクトを取得または作成
+        let finalProjectId = input.projectId;
+        if (!finalProjectId) {
+          const { getOrCreateDefaultProject } = await import("../routers/projectRouter");
+          finalProjectId = await getOrCreateDefaultProject(ctx.user.id);
+        }
+        
         roomId = await chatDb.createChatRoom({
           userId: ctx.user.id,
           title,
+          projectId: finalProjectId || null,
+          projectLocked: "auto", // 自動分類
         });
       } else {
         // Verify ownership

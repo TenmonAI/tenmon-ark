@@ -1,0 +1,156 @@
+/**
+ * 🔱 DeviceCluster Animations CSS
+ * alphaFlow連動アニメーション
+ */
+
+/* CSS変数（JavaScriptから動的に更新される） */
+:root {
+  --dc-glow-intensity: 0.8;
+  --dc-pulse-duration: 1000ms;
+  --dc-latency-pulse: 0;
+  --dc-average-latency: 0ms;
+}
+
+/* グローアニメーション（scheduler.currentTask連動） */
+.dc-glow {
+  position: relative;
+  animation: dcGlowPulse var(--dc-pulse-duration) ease-in-out infinite;
+}
+
+.dc-glow::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  background: radial-gradient(
+    circle,
+    rgba(59, 130, 246, calc(var(--dc-glow-intensity) * 0.5)) 0%,
+    rgba(59, 130, 246, calc(var(--dc-glow-intensity) * 0.2)) 50%,
+    transparent 100%
+  );
+  opacity: var(--dc-glow-intensity);
+  animation: dcGlowPulse var(--dc-pulse-duration) ease-in-out infinite;
+  z-index: -1;
+  pointer-events: none;
+}
+
+@keyframes dcGlowPulse {
+  0%, 100% {
+    opacity: calc(var(--dc-glow-intensity) * 0.6);
+    transform: scale(1);
+  }
+  50% {
+    opacity: var(--dc-glow-intensity);
+    transform: scale(1.02);
+  }
+}
+
+/* レイテンシパルス（高レイテンシ時に有効） */
+.dc-latency-pulse {
+  position: relative;
+}
+
+.dc-latency-pulse::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: inherit;
+  border: 2px solid rgba(239, 68, 68, 0.5);
+  animation: dcLatencyPulse 500ms ease-in-out infinite;
+  z-index: -1;
+  pointer-events: none;
+  opacity: calc(var(--dc-latency-pulse) * 1);
+}
+
+@keyframes dcLatencyPulse {
+  0%, 100% {
+    opacity: calc(var(--dc-latency-pulse) * 0.3);
+    transform: scale(1);
+  }
+  50% {
+    opacity: calc(var(--dc-latency-pulse) * 0.8);
+    transform: scale(1.05);
+  }
+}
+
+/* タスク進行状況に連動したアニメーション */
+.dc-task-progress {
+  position: relative;
+  overflow: hidden;
+}
+
+.dc-task-progress::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(59, 130, 246, calc(var(--dc-glow-intensity) * 0.3)) 50%,
+    transparent 100%
+  );
+  animation: dcTaskProgressFlow var(--dc-pulse-duration) linear infinite;
+  z-index: 0;
+  pointer-events: none;
+}
+
+@keyframes dcTaskProgressFlow {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* デバイス接続状態アニメーション */
+.dc-device-connected {
+  animation: dcDeviceConnected 0.5s ease-out;
+}
+
+@keyframes dcDeviceConnected {
+  0% {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Cursor Bridge準備完了アニメーション */
+.dc-cursor-bridge-ready {
+  animation: dcCursorBridgeReady 1s ease-in-out infinite;
+}
+
+@keyframes dcCursorBridgeReady {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(34, 197, 94, 0);
+  }
+}
+
+/* フェーズ別カラー */
+.dc-phase-3 {
+  --dc-phase-color: 59, 130, 246; /* Blue */
+}
+
+.dc-phase-4 {
+  --dc-phase-color: 168, 85, 247; /* Purple */
+}
+
+.dc-phase-5 {
+  --dc-phase-color: 236, 72, 153; /* Pink */
+}
+
+/* フェーズ別グロー */
+.dc-phase-glow {
+  box-shadow: 0 0 20px rgba(var(--dc-phase-color), calc(var(--dc-glow-intensity) * 0.5));
+}
+

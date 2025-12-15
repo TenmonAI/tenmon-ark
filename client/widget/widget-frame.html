@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TENMON-ARK Widget</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      height: 100vh;
+      overflow: hidden;
+    }
+    #widget-root {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+  </style>
+</head>
+<body>
+  <div id="widget-root"></div>
+  <script type="module">
+    // URLパラメータからsiteIdを取得
+    const urlParams = new URLSearchParams(window.location.search);
+    const siteId = urlParams.get('siteId') || 'default';
+
+    // ReactとWidget Coreをロード
+    Promise.all([
+      import('react'),
+      import('react-dom/client'),
+      import('./widget-core.ts')
+    ]).then(([React, ReactDOM, widgetCore]) => {
+      const root = ReactDOM.createRoot(document.getElementById('widget-root'));
+      root.render(React.createElement(widgetCore.WidgetChatUI, { config: { siteId } }));
+    }).catch((error) => {
+      console.error('[Widget] Failed to load widget core:', error);
+      const rootEl = document.getElementById('widget-root');
+      if (rootEl) {
+        rootEl.innerHTML = `
+          <div style="padding: 2rem; text-align: center; color: #666;">
+            <p>ウィジェットの読み込みに失敗しました</p>
+            <p style="font-size: 0.875rem; margin-top: 0.5rem;">${error.message || 'Unknown error'}</p>
+          </div>
+        `;
+      }
+    });
+  </script>
+</body>
+</html>
+

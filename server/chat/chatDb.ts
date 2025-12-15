@@ -1,29 +1,54 @@
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, and } from "drizzle-orm";
 import { getDb } from "../db";
 import { chatRooms, chatMessages, InsertChatRoom, InsertChatMessage } from "../../drizzle/schema";
 
 /**
  * Create a new chat room
  */
-export async function createChatRoom(data: InsertChatRoom) {
+export async function createChatRoom(data: InsertChatRoom & { 
+  projectId?: number | null; 
+  projectLocked?: "auto" | "manual";
+  classificationConfidence?: number | null;
+  classificationLastUpdated?: Date | null;
+  isTemporaryProject?: number;
+}) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  const result = await db.insert(chatRooms).values(data);
+  const result = await db.insert(chatRooms).values({
+    ...data,
+    projectId: data.projectId ?? null,
+    projectLocked: data.projectLocked ?? "auto",
+    classificationConfidence: data.classificationConfidence ?? null,
+    classificationLastUpdated: data.classificationLastUpdated ?? null,
+    isTemporaryProject: data.isTemporaryProject ?? 0,
+  });
   return result[0].insertId;
 }
 
 /**
  * Get all chat rooms for a user
  */
-export async function getUserChatRooms(userId: number) {
+export async function getUserChatRooms(userId: number, projectId?: number | null) {
   const db = await getDb();
   if (!db) return [];
+
+  const conditions = [eq(chatRooms.userId, userId)];
+  
+  // projectIdでフィルタ
+  if (projectId !== undefined) {
+    if (projectId === null) {
+      // projectIdがnullの会話（プロジェクト未設定）
+      conditions.push(eq(chatRooms.projectId, null));
+    } else {
+      conditions.push(eq(chatRooms.projectId, projectId));
+    }
+  }
 
   return await db
     .select()
     .from(chatRooms)
-    .where(eq(chatRooms.userId, userId))
+    .where(and(...conditions))
     .orderBy(desc(chatRooms.updatedAt));
 }
 

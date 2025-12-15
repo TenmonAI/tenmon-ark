@@ -81,6 +81,50 @@ export const chatStreamingRateLimit = rateLimit({
 });
 
 /**
+ * Rate Limit設定（Atlas Chat用）
+ */
+export const atlasChatRateLimit = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15分
+  max: 30, // 15分で30リクエスト（推論処理は負荷が高いため制限を厳しく）
+  message: "Too many Atlas Chat requests from this IP, please try again later.",
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+/**
+ * Rate Limit設定（Whisper STT用）
+ */
+export const whisperRateLimit = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15分
+  max: 20, // 15分で20リクエスト（音声処理は負荷が高いため制限を厳しく）
+  message: "Too many Whisper STT requests from this IP, please try again later.",
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+/**
+ * Rate Limit設定（Semantic Search用）
+ */
+export const semanticSearchRateLimit = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15分
+  max: 100, // 15分で100リクエスト
+  message: "Too many Semantic Search requests from this IP, please try again later.",
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+/**
+ * Rate Limit設定（DeviceCluster用）
+ */
+export const deviceClusterRateLimit = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15分
+  max: 200, // 15分で200リクエスト（デバイス通信は頻繁）
+  message: "Too many DeviceCluster requests from this IP, please try again later.",
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+/**
  * Origin Validation Middleware
  */
 export function validateOrigin(req: Request, res: Response, next: NextFunction) {
@@ -126,6 +170,50 @@ export function validateLpQaApiKey(req: Request, res: Response, next: NextFuncti
     res.status(401).json({
       error: "Unauthorized",
       message: "Invalid API key",
+    });
+  }
+}
+
+/**
+ * Authentication Middleware for Express APIs
+ * すべての /api/* エンドポイントに認証を強制
+ * 
+ * PUBLIC ENDPOINT として明示的にマークされたものは認証不要
+ */
+export async function authMiddleware(req: Request, res: Response, next: NextFunction) {
+  // PUBLIC ENDPOINT チェック（リクエストに public フラグがある場合は認証不要）
+  // これは各ルーターで明示的に設定する必要がある
+  if ((req as any).isPublicEndpoint) {
+    next();
+    return;
+  }
+
+  try {
+    // sdk.authenticateRequest を使用して認証チェック
+    const { sdk } = await import("./sdk");
+    const user = await sdk.authenticateRequest(req);
+
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        error: {
+          code: "UNAUTHORIZED",
+          message: "Authentication required",
+        },
+      });
+    }
+
+    // 認証成功: ユーザー情報をリクエストに追加
+    (req as any).user = user;
+    next();
+  } catch (error) {
+    // 認証エラー
+    return res.status(401).json({
+      success: false,
+      error: {
+        code: "UNAUTHORIZED",
+        message: error instanceof Error ? error.message : "Authentication failed",
+      },
     });
   }
 }

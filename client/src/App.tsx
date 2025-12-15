@@ -46,9 +46,17 @@ import ULCEV3 from "@/pages/ulce/ULCEV3";
 import ApiSettings from "@/pages/settings/ApiSettings";
 import EmbedManagement from "@/pages/settings/EmbedManagement";
 import Settings from "@/pages/Settings";
-import Guardian from "@/pages/guardian/Guardian";
+import LifeGuardian from "@/pages/lifeGuardian/LifeGuardian";
 import SoulSync from "@/pages/soulSync/SoulSync";
+import APIDocs from "@/pages/docs/APIDocs";
+import MobileOS from "@/pages/mobileOS/MobileOS";
+import SelfReviewPage from "@/pages/selfReview/SelfReviewPage";
+import SelfEvolutionPage from "@/pages/selfEvolution/SelfEvolutionPage";
+import AutoFixPage from "@/pages/selfEvolution/AutoFixPage";
+import LoopStatusPage from "@/pages/selfEvolution/LoopStatusPage";
 import DistributedCloud from "@/pages/cloud/DistributedCloud";
+import TestRunnerPage from "@/pages/tests/TestRunnerPage";
+import DeviceClusterDashboard from "@/deviceCluster-v3/ui/DeviceClusterDashboard";
 import ArkShield from "@/pages/arkShield/ArkShield";
 // Phase 5-7: Fractal OS Dashboard, Ethics Dashboard, Soul Sync Settings
 import FractalDashboard from "@/pages/FractalDashboard";
@@ -79,6 +87,9 @@ import Dashboard from "@/pages/Dashboard";
 import Profile from "@/pages/Profile";
 import CustomArks from "@/pages/CustomArks";
 import FounderFeedback from "@/pages/FounderFeedback";
+import ConciergeManager from "@/pages/ConciergeManager";
+import { WorldLaunchWizard } from "@/onboarding/worldLaunchWizard";
+import AdminTradePage from "@/pages/admin/trade/page";
 // ROOT-FIX v1: Global Slots (App.tsxから分離)
 import { HeaderNavigationSlot } from "@/components/global/slots/HeaderNavigationSlot";
 import { FloatingButtonsSlot } from "@/components/global/slots/FloatingButtonsSlot";
@@ -101,6 +112,7 @@ function Router() {
       <Route path={"/subscription"} component={Subscription} />
       <Route path={"/subscription/success"} component={SubscriptionSuccess} />
       <Route path={"/developer"} component={DeveloperDashboard} />
+      <Route path={"/admin/trade"} component={AdminTradePage} />
       <Route path={"/kotodama/converter"} component={KotodamaConverter} />
       <Route path={"/kotodama/gojuon"} component={GojuonChart} />
       <Route path={"/kotodama/core"} component={KotodamaCore} />
@@ -113,10 +125,18 @@ function Router() {
       <Route path={"/ark/cinema"} component={ArkCinema} />
       <Route path={"/ulce"} component={ULCEV3} />
       <Route path={"/settings/api"} component={ApiSettings} />
-      <Route path={"/guardian"} component={Guardian} />
+      <Route path={"/lifeGuardian"} component={LifeGuardian} />
       <Route path={"/soul-sync"} component={SoulSync} />
+      <Route path={"/docs"} component={APIDocs} />
+      <Route path={"/mobileOS"} component={MobileOS} />
+      <Route path={"/self-review"} component={SelfReviewPage} />
+      <Route path={"/self-evolution"} component={SelfEvolutionPage} />
+      <Route path={"/self-evolution/autofix"} component={AutoFixPage} />
+      <Route path={"/self-evolution/loop"} component={LoopStatusPage} />
       <Route path={"/cloud"} component={DistributedCloud} />
+      <Route path={"/tests"} component={TestRunnerPage} />
       <Route path={"/ark-shield"} component={ArkShield} />
+      <Route path={"/deviceCluster-v3"} component={DeviceClusterDashboard} />
       {/* Phase 5-7: Fractal OS Dashboard, Ethics Dashboard, Soul Sync Settings */}
       <Route path={"/fractal/dashboard"} component={FractalDashboard} />
       <Route path={"/ethics/dashboard"} component={EthicsDashboard} />
@@ -157,6 +177,8 @@ function Router() {
       {/* Embed OS - Dynamic Embed Chat */}
       <Route path={"/embed/ark-chat-:uniqueId"} component={EmbedChatPage} />
       <Route path={"/twin-core-persona"} component={TwinCorePersonaDemo} />
+      <Route path={"/concierge"} component={ConciergeManager} />
+      <Route path={"/worldlaunch"} component={WorldLaunchWizard} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />

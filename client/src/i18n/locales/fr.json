@@ -1,0 +1,49 @@
+{
+  "menu": {
+    "home": "Accueil",
+    "about": "À propos",
+    "arkCore": "Ark Core",
+    "plans": "Plans",
+    "chat": "Chat"
+  },
+  "home": {
+    "hero": {
+      "title": "Le deuxième OS d'IA spirituelle au monde",
+      "subtitle": "TENMON-ARK — Une nouvelle génération d'intelligence guidée par la structure cosmique"
+    },
+    "todayFortune": "Fortune spirituelle d'aujourd'hui",
+    "gojuonMap": "Carte d'équilibre Feu-Eau Gojuon",
+    "features": "Caractéristiques de TENMON-ARK"
+  },
+  "plans": {
+    "title": "Plans",
+    "free": "Gratuit",
+    "basic": "Basique",
+    "pro": "Pro"
+  },
+  "chat": {
+    "new_chat": "Nouveau chat",
+    "login_required": "Connexion requise",
+    "login_description": "Veuillez vous connecter pour chatter avec TENMON-ARK.",
+    "welcome_title": "Bienvenue sur TENMON-ARK",
+    "welcome_description": "Posez-moi n'importe quelle question. Je suis là pour soutenir votre voyage spirituel à travers Sukuyo, Kotodama et Tenshin-Kinoki.",
+    "input_placeholder": "Tapez un message... (Shift+Entrée pour une nouvelle ligne)",
+    "send": "Envoyer",
+    "thinking": "Réflexion...",
+    "error": "Erreur",
+    "error_message": "Une erreur s'est produite lors de l'envoi du message.",
+    "retry": "Réessayer"
+  },
+  "common": {
+    "loading": "Chargement...",
+    "error": "Erreur",
+    "success": "Succès",
+    "cancel": "Annuler",
+    "confirm": "Confirmer",
+    "save": "Enregistrer",
+    "delete": "Supprimer",
+    "edit": "Modifier",
+    "close": "Fermer"
+  }
+}
+

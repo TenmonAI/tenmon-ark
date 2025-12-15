@@ -7,8 +7,8 @@
 
 import { Globe } from 'lucide-react';
 import { useLocation } from 'wouter';
-import { triggerHapticWithSettings } from '@/lib/mobile/haptics';
-import { ALPHA_TRANSITION_DURATION } from '@/lib/mobile/alphaFlow';
+import { triggerHapticWithSettings } from '@/lib/mobileOS/haptics';
+import { ALPHA_TRANSITION_DURATION } from '@/lib/mobileOS/alphaFlow';
 
 interface FloatingBrowserButtonProps {
   className?: string;

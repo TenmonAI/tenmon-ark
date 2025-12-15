@@ -1,0 +1,43 @@
+/**
+ * ============================================================
+ *  KEYBOARD ACCESSIBILITY — キーボード操作スタイル
+ * ============================================================
+ */
+
+/* フォーカス時の outline を削除しない（アクセシビリティのため） */
+*:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+}
+
+/* モバイルでは outline を非表示（タッチ操作のため） */
+@media (max-width: 768px) {
+  *:focus-visible {
+    outline: none;
+  }
+
+  /* モバイルで hover 表現を排除 */
+  button:hover,
+  a:hover,
+  [role="button"]:hover {
+    opacity: 1;
+  }
+}
+
+/* キーボード操作可能な要素の最小タップ領域（モバイル） */
+button,
+a,
+[role="button"],
+[tabindex="0"] {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* 画面端の操作ボタンは余白 +12px */
+@media (max-width: 768px) {
+  button:last-child,
+  [role="button"]:last-child {
+    margin-right: 12px;
+  }
+}
+

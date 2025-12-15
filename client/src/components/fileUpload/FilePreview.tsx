@@ -9,6 +9,8 @@ export interface FilePreviewData {
   fileUrl: string;
   mimeType: string;
   createdAt: Date;
+  isProcessed?: number; // 0 or 1
+  isIntegratedToMemory?: number; // 0 or 1
 }
 
 interface FilePreviewProps {
@@ -110,8 +112,8 @@ export function FilePreview({ file, onRemove, onClick }: FilePreviewProps) {
             <span>{formatDate(file.createdAt)}</span>
           </div>
 
-          {/* File Type Badge */}
-          <div className="mt-2">
+          {/* File Type Badge & Learning Status */}
+          <div className="mt-2 flex items-center gap-2">
             <span
               className={cn(
                 "inline-block px-2 py-0.5 text-xs font-medium rounded-full",
@@ -120,6 +122,25 @@ export function FilePreview({ file, onRemove, onClick }: FilePreviewProps) {
             >
               {file.fileType.toUpperCase()}
             </span>
+            {/* Learning Status */}
+            {file.isProcessed !== undefined && (
+              <span
+                className={cn(
+                  "inline-block px-2 py-0.5 text-xs font-medium rounded-full",
+                  file.isIntegratedToMemory === 1
+                    ? "bg-green-500/10 text-green-400 border border-green-500/20"
+                    : file.isProcessed === 1
+                    ? "bg-yellow-500/10 text-yellow-400 border border-yellow-500/20"
+                    : "bg-gray-500/10 text-gray-400 border border-gray-500/20"
+                )}
+              >
+                {file.isIntegratedToMemory === 1
+                  ? "学習済"
+                  : file.isProcessed === 1
+                  ? "学習中"
+                  : "未学習"}
+              </span>
+            )}
           </div>
         </div>
 
