@@ -1,20 +1,14 @@
-import { Router, Request, Response } from "express";
+import { Router, type IRouter, type Request, type Response } from "express";
+import { getHealthReport } from "../ops/health.js";
+import { getReadinessReport } from "../ops/readiness.js";
+import { TENMON_ARK_VERSION } from "../version.js";
 
-const router = Router();
+const router: IRouter = Router();
 
-/**
- * GET /api/health
- * ヘルスチェックエンドポイント
- * JSON のみを返す（HTML を返さない）
- */
-router.get("/health", (req: Request, res: Response) => {
-  res.status(200).json({
-    status: "ok",
-    service: "tenmon-ark-api",
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-  });
-});
+router.get("/health", (_req: Request, res: Response) => res.json(getHealthReport()));
+
+router.get("/readiness", (_req: Request, res: Response) => res.json(getReadinessReport()));
+
+router.get("/version", (_req: Request, res: Response) => res.json({ version: TENMON_ARK_VERSION }));
 
 export default router;
-

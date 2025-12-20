@@ -1,29 +1,39 @@
-import { Router, Request, Response } from "express";
+import { Router, type IRouter, type Request, type Response } from "express";
+import { getSessionId } from "../memory/sessionId.js";
+import { respond } from "../tenmon/respond.js";
+import { sanitizeInput } from "../tenmon/inputSanitizer.js";
+import type { ChatResponseBody } from "../types/chat.js";
 
-const router = Router();
+const router: IRouter = Router();
 
 /**
- * POST /api/chat
- * チャットエンドポイント（ダミー実装）
- * 後で拡張可能
+ * v∞-2: 既存の /api/chat エンドポイント（互換維持）
+ * 
+ * 内部で respond() を呼び出す薄いラッパー
  */
-router.post("/chat", (req: Request, res: Response) => {
-  const { message } = req.body;
+router.post("/chat", (req: Request, res: Response<ChatResponseBody>) => {
+  const messageRaw = (req.body as any)?.message;
 
-  // バリデーション
-  if (!message || typeof message !== "string") {
+  // 入力の検証・正規化
+  const sanitized = sanitizeInput(messageRaw, "web");
+  
+  if (!sanitized.isValid) {
     return res.status(400).json({
-      error: "Bad Request",
-      message: "message is required and must be a string",
+      response: sanitized.error || "message is required",
+      timestamp: new Date().toISOString(),
     });
   }
 
-  // ダミー応答（後で拡張）
-  res.status(200).json({
-    response: `Received: ${message}`,
+  const sessionId = getSessionId(req);
+  
+  // v∞-2: コアロジックを respond() に委譲
+  const finalReply = respond(sanitized.text, sessionId, "web");
+
+  // 既存のレスポンス形式を維持（互換性）
+  return res.json({
+    response: finalReply,
     timestamp: new Date().toISOString(),
   });
 });
 
 export default router;
-

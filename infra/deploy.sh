@@ -9,8 +9,9 @@ echo "TENMON-ARK API/SPA 分離構成 - デプロイ開始"
 echo "=========================================="
 
 # 変数設定
-PROJECT_ROOT="/path/to/os-tenmon-ai-v2-reset"  # 実際のパスに変更してください
+PROJECT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 API_DIR="/opt/tenmon-ark/api"
+WEB_DIR="/opt/tenmon-ark/web"
 SPA_DIR="/var/www/tenmon-ark.com/current/dist"
 NGINX_CONF="/etc/nginx/sites-available/tenmon-ark.com"
 SYSTEMD_SERVICE="/etc/systemd/system/tenmon-ark-api.service"
@@ -28,6 +29,27 @@ sudo cp -r "$PROJECT_ROOT/api"/* "$API_DIR/"
 cd "$API_DIR"
 sudo -u www-data npm install
 sudo -u www-data npm run build
+
+# 2.5 SPA（フロントエンド）をビルドして nginx root に配置
+echo "[2.5/6] SPA（フロントエンド）をビルド・配置中..."
+sudo mkdir -p "$WEB_DIR"
+sudo cp -r "$PROJECT_ROOT/web"/* "$WEB_DIR/"
+cd "$WEB_DIR"
+if [ -f package-lock.json ]; then
+  sudo -u www-data npm ci
+else
+  sudo -u www-data npm install
+fi
+sudo -u www-data npm run build
+
+if [ ! -f "$WEB_DIR/dist/index.html" ]; then
+  echo "[ERROR] web/dist/index.html が生成されていません（Vite build 失敗）"
+  exit 1
+fi
+
+sudo mkdir -p "$SPA_DIR"
+sudo rsync -a --delete "$WEB_DIR/dist/" "$SPA_DIR/"
+sudo chown -R www-data:www-data "$SPA_DIR"
 
 # .env ファイルが存在しない場合は作成
 if [ ! -f "$API_DIR/.env" ]; then
@@ -93,6 +115,17 @@ if curl -s http://127.0.0.1/api/health | grep -q '"status":"ok"'; then
 else
     echo "❌ http://127.0.0.1/api/health が JSON を返していません"
     curl -i http://127.0.0.1/api/health
+    exit 1
+fi
+
+# SPA が HTML を返すことを確認
+echo ""
+echo "--- SPA (/) が index.html を返すか ---"
+if curl -s http://127.0.0.1/ | grep -qi "<!doctype html"; then
+    echo "✅ http://127.0.0.1/ は HTML を返しています"
+else
+    echo "❌ http://127.0.0.1/ が HTML を返していません（フロント未配置/設定不一致）"
+    curl -i http://127.0.0.1/ | head -n 40
     exit 1
 fi
 

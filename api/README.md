@@ -9,6 +9,13 @@ TENMON-ARK プロジェクトの独立した API サーバーです。SPA（フ�
 - **ポート**: 3000 (デフォルト)
 - **レスポンス形式**: JSON のみ（HTML/CSS を返さない）
 
+## 📢 公開ポリシー（固定）
+
+- **TENMON-ARK は「万能AI」を名乗らない**
+- **天聞の判断を補助する存在である**
+- **最終決定権は必ず人間側にある**
+- **危険行為は拒否される（Policy/Permission/Approval の三層）**
+
 ## 🚀 クイックスタート
 
 ### 開発環境
@@ -52,9 +59,13 @@ api/
 │   ├── index.ts          # エントリーポイント
 │   ├── core/
 │   │   └── server.ts     # Express サーバー設定
+│   ├── ops/              # 運用（health/readiness/shutdown/metrics/safeMode）
+│   ├── safety/           # Policy/Approval/Audit
+│   ├── tools/            # Tool (plan/validate/dry-run/execute)
 │   └── routes/
 │       ├── health.ts     # /api/health エンドポイント
 │       └── chat.ts       # /api/chat エンドポイント
+├── db/                   # SQLite（kokuzo/audit/persona）
 ├── dist/                 # ビルド出力（生成される）
 ├── package.json
 ├── tsconfig.json
@@ -76,12 +87,30 @@ curl http://127.0.0.1:3000/api/health
 **レスポンス:**
 ```json
 {
-  "status": "ok",
+  "status": "ok|degraded",
   "service": "tenmon-ark-api",
-  "timestamp": "2025-01-16T12:00:00.000Z",
-  "uptime": 123.45
+  "timestamp": "ISO8601",
+  "node": { "version": "vX.Y.Z", "uptimeSec": 123.45 },
+  "safeMode": { "enabled": false, "reason": null },
+  "db": {
+    "kokuzo": { "ok": true, "path": "...", "sizeBytes": 12345 },
+    "audit": { "ok": true, "path": "...", "sizeBytes": 12345 },
+    "persona": { "ok": true, "path": "...", "sizeBytes": 12345 }
+  },
+  "metrics": {
+    "requestCount": 0,
+    "errorCount": 0
+  }
 }
 ```
+
+### GET /api/readiness
+
+外部公開してよい状態かの判定（safe mode / DB 状態など）
+
+### GET /api/version
+
+TENMON-ARK バージョン（破壊的変更判定用）
 
 ### POST /api/chat
 
