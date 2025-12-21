@@ -8,6 +8,7 @@ import { getCurrentPersonaStateInternal, setPersonaState } from "../persona/pers
 import { decayInertia, getEffectiveMode } from "../persona/inertia.js";
 import { determineThinkingAxis, applyThinkingAxisStructure } from "../persona/thinkingAxis.js";
 import { determineKanagiPhase, applyKanagiPhaseStructure } from "../persona/kanagi.js";
+import { runKanagiEngine } from "../persona/kanagiEngine.js";
 import { determineLexicalBias, applyLexicalBias } from "../persona/lexicalBias.js";
 import { saveKokuzoMemorySeed, getRecentKokuzoMemorySeeds, getKokuzoTendency, generateSummary } from "../kokuzo/memoryStore.js";
 import { adjustInertiaFromTendency, adjustThinkingAxisFromTendency, adjustLexicalBiasFromTendency, adjustInertiaFromFractal, adjustThinkingAxisFromFractal, adjustLexicalBiasFromFractal } from "../kokuzo/influence.js";
@@ -86,6 +87,19 @@ function generateConversationalResponse(
   // CORE-7: 思考軸を決定
   // KOKŪZŌ: 展開されたプロファイルのbaseThinkingAxisを初期値として加味
   const baseThinkingAxis = applyExpandedProfileToThinkingAxis(expandedProfile);
+  
+  // ================================
+  // PHASE 1: KanagiEngine 通過確認（ログのみ）
+  // ================================
+  const kanagiCheck = runKanagiEngine({
+    prevThinkingAxis: currentInternal._thinkingAxis ?? null,
+    input: input,
+    conversationCount: recentCount,
+  });
+
+  // 応答内容はまだ変えない（確認のみ）
+  console.log("[KANAGI-PHASE1]", kanagiCheck);
+
   let thinkingAxis = baseThinkingAxis || determineThinkingAxis(
     effectiveMode,
     currentState._inertia,
