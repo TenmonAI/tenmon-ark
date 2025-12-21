@@ -1,7 +1,7 @@
 import type { ThinkingAxis } from "./thinkingAxis.js";
 
 // CORE-8: 天津金木フェーズ（内部用、UI/レスポンスには返さない）
-export type KanagiPhase = "L-IN" | "L-OUT" | "R-IN" | "R-OUT";
+export type KanagiPhase = "L-IN" | "L-OUT" | "R-IN" | "R-OUT" | "INTEGRATION";
 
 /**
  * CORE-8: thinkingAxisからKanagiPhaseを決定する
@@ -110,6 +110,19 @@ export function applyKanagiPhaseStructure(
     
     // 「理由」「なぜなら」「なぜかというと」などの理由語の前に改行を追加
     structured = structured.replace(/([。！？])(理由|なぜなら|なぜかというと|その理由は)/g, "$1\n\n$2");
+    
+    return structured;
+  }
+
+  // INTEGRATION: 円融無碍の統合応答（矛盾を織り込んだ構造）
+  if (phase === "INTEGRATION") {
+    let structured = text;
+    
+    // 「一方で」「他方で」などの対比構造を明確化
+    structured = structured.replace(/(一方で|他方で|しかし|しかしながら)/g, "\n\n$1");
+    
+    // 「統合すると」「これらの矛盾」などの統合語を強調
+    structured = structured.replace(/(統合すると|これらの矛盾|包括的な理解)/g, "\n\n$1");
     
     return structured;
   }

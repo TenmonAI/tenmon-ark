@@ -2,7 +2,37 @@ import type { PersonaState } from "./personaState.js";
 import type { PersonaInertia } from "./inertia.js";
 
 // CORE-7: 思考軸（内部用、UI/レスポンスには返さない）
+// Amatsu-Kanagi (天津金木) 状態遷移エンジン対応
 export type ThinkingAxis = "introspective" | "observational" | "constructive" | "executive";
+
+// 思考軸の別名（Amatsu-Kanagi エンジン用）
+export type AxisAlias = "observe" | "reflect" | "build" | "act";
+
+/**
+ * 思考軸を別名に変換（Amatsu-Kanagi エンジン用）
+ */
+export function axisToAlias(axis: ThinkingAxis): AxisAlias {
+  const mapping: Record<ThinkingAxis, AxisAlias> = {
+    observational: "observe",
+    introspective: "reflect",
+    constructive: "build",
+    executive: "act",
+  };
+  return mapping[axis];
+}
+
+/**
+ * 別名を思考軸に変換（Amatsu-Kanagi エンジン用）
+ */
+export function aliasToAxis(alias: AxisAlias): ThinkingAxis {
+  const mapping: Record<AxisAlias, ThinkingAxis> = {
+    observe: "observational",
+    reflect: "introspective",
+    build: "constructive",
+    act: "executive",
+  };
+  return mapping[alias];
+}
 
 /**
  * CORE-7: 思考軸を決定する
@@ -128,5 +158,118 @@ export function applyThinkingAxisStructure(
 
   // デフォルト：そのまま
   return text;
+}
+
+/**
+ * Amatsu-Kanagi (天津金木) 状態遷移エンジン
+ * 
+ * 決定論的な状態遷移関数。前の軸を尊重し、入力に基づいて
+ * 適切な遷移を決定する。デフォルトは同じ軸に留まる。
+ * 
+ * ルール:
+ * - デフォルト: 同じ軸に留まる
+ * - observe → reflect: "why" や reasoning 要求時のみ
+ * - reflect → build: "how", "structure", reconstruction 要求時のみ
+ * - build → act: execution や decision 要求時のみ
+ * - 曖昧な入力: 軸を変更しない
+ * - act → observe: 実行完了後（入力が確認や観察を要求する場合）
+ * - observe → act: 直接ジャンプ禁止
+ * 
+ * @param prevAxis 前の思考軸
+ * @param input ユーザー入力
+ * @param _turnCount 会話ターン数（将来の拡張用、現時点では未使用）
+ * @returns 遷移後の思考軸
+ */
+export function transitionAxis(
+  prevAxis: ThinkingAxis,
+  input: string,
+  _turnCount: number
+): ThinkingAxis {
+  const normalizedInput = input.toLowerCase().trim();
+
+  // デフォルト: 同じ軸に留まる
+  let nextAxis: ThinkingAxis = prevAxis;
+
+  // observe (observational) からの遷移
+  if (prevAxis === "observational") {
+    // observe → reflect: "why", "なぜ", "理由", "reasoning", "考え", "内省" など
+    const reflectTriggers = [
+      "why", "なぜ", "理由", "reasoning", "考え", "内省", "reflect",
+      "どうして", "なんで", "理由は", "なぜなら", "考える", "思考",
+    ];
+    if (reflectTriggers.some((trigger) => normalizedInput.includes(trigger))) {
+      nextAxis = "introspective";
+    }
+    // observe → act: 直接ジャンプ禁止（build を経由する必要がある）
+    // そのため、ここでは act への遷移は処理しない
+  }
+
+  // reflect (introspective) からの遷移
+  if (prevAxis === "introspective") {
+    // reflect → build: "how", "どう", "構造", "structure", "構築", "reconstruction" など
+    const buildTriggers = [
+      "how", "どう", "構造", "structure", "構築", "reconstruction",
+      "どのように", "どうやって", "作り", "設計", "設計", "構成",
+      "組み立て", "構築", "再構築",
+    ];
+    if (buildTriggers.some((trigger) => normalizedInput.includes(trigger))) {
+      nextAxis = "constructive";
+    }
+    // reflect → observe: 曖昧な入力や観察要求の場合
+    const observeTriggers = [
+      "見る", "観察", "確認", "observe", "見て", "見ると", "調べる",
+      "確認する", "見てみる", "観測",
+    ];
+    if (observeTriggers.some((trigger) => normalizedInput.includes(trigger))) {
+      nextAxis = "observational";
+    }
+  }
+
+  // build (constructive) からの遷移
+  if (prevAxis === "constructive") {
+    // build → act: "実行", "実行する", "execution", "decision", "決断", "決定" など
+    const actTriggers = [
+      "実行", "実行する", "execution", "decision", "決断", "決定",
+      "やる", "する", "実行して", "決める", "決定する", "決断する",
+      "実行しよう", "実行します", "act", "do it", "go ahead",
+    ];
+    if (actTriggers.some((trigger) => normalizedInput.includes(trigger))) {
+      nextAxis = "executive";
+    }
+    // build → reflect: 再考や内省を要求する場合
+    const reflectTriggers = [
+      "再考", "考え直す", "内省", "reflect", "考え", "思考",
+      "見直す", "再検討",
+    ];
+    if (reflectTriggers.some((trigger) => normalizedInput.includes(trigger))) {
+      nextAxis = "introspective";
+    }
+  }
+
+  // act (executive) からの遷移
+  if (prevAxis === "executive") {
+    // act → observe: 実行完了後、確認や観察を要求する場合
+    const observeTriggers = [
+      "確認", "見る", "観察", "observe", "見て", "見ると", "調べる",
+      "確認する", "見てみる", "観測", "どうなった", "結果", "完了",
+      "終わった", "終了", "done", "finished", "complete",
+    ];
+    if (observeTriggers.some((trigger) => normalizedInput.includes(trigger))) {
+      nextAxis = "observational";
+    }
+    // act → reflect: 実行後の振り返りを要求する場合
+    const reflectTriggers = [
+      "振り返る", "反省", "内省", "reflect", "考え", "思考",
+      "どうだった", "どうか", "評価",
+    ];
+    if (reflectTriggers.some((trigger) => normalizedInput.includes(trigger))) {
+      nextAxis = "introspective";
+    }
+  }
+
+  // 曖昧な入力の場合: 同じ軸に留まる（nextAxis は既に prevAxis に設定されている）
+  // 明示的な遷移トリガーがない場合は、そのまま返す
+
+  return nextAxis;
 }
 

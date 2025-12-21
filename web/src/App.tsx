@@ -1,5 +1,8 @@
 import { useEffect, useState, useRef } from "react";
 import { t } from "./i18n";
+import { KokuzoPage } from "./pages/KokuzoPage";
+import { TrainPage } from "./pages/TrainPage";
+import { TrainingPage } from "./pages/TrainingPage";
 
 type Health = {
   status: string;
@@ -29,6 +32,21 @@ type Message = {
 };
 
 export function App() {
+  // KOKŪZŌ v1.1: Route to /kokuzo page
+  if (window.location.pathname === "/kokuzo") {
+    return <KokuzoPage />;
+  }
+
+  // Training Chat: Route to /train page
+  if (window.location.pathname === "/train") {
+    return <TrainPage />;
+  }
+
+  // Training Chat (Learning Material): Route to /training page
+  if (window.location.pathname === "/training") {
+    return <TrainingPage />;
+  }
+
   const [health, setHealth] = useState<Health | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [persona, setPersona] = useState<Persona | null>(null);

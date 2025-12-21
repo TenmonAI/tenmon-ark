@@ -4,6 +4,19 @@ import { transitionAxis } from "./thinkingAxis.js";
 import { determineKanagiPhase } from "./kanagi.js";
 import type { ThinkingAxis } from "./thinkingAxis.js";
 import type { KanagiPhase } from "./kanagi.js";
+import {
+  createInitialLoopState,
+  observeLoop,
+  resolveLoop,
+  updateCenterState,
+  type LoopState,
+} from "./kanagiMetaObserver.js";
+import {
+  createContradictions,
+  compressAtCenter,
+  synthesize,
+} from "./kanagiDialecticCore.js";
+import type { KanagiTetraState } from "./types.js";
 
 /**
  * ================================
@@ -50,6 +63,8 @@ export type KanagiContext = {
   prevThinkingAxis: ThinkingAxis | null;
   input: string;
   conversationCount: number;
+  sessionId?: string; // セッションID（ループ状態の永続化用）
+  prevLoopState?: LoopState;
 };
 
 /**
@@ -60,7 +75,27 @@ export type KanagiResult = {
   kanagiPhase: KanagiPhase;
   provisional: true;
   frozen: true;
+  reason: "normal" | "force-transition" | "center" | "center-reorganizing" | "integration";
+  isInCenter: boolean;
+  tetraState?: KanagiTetraState; // 弁証核の状態
 };
+
+// ループ状態の永続化（セッション単位で保持）
+const loopStateStore = new Map<string, LoopState>();
+
+/**
+ * ループ状態を取得（セッション単位）
+ */
+function getLoopState(sessionId: string): LoopState {
+  return loopStateStore.get(sessionId) || createInitialLoopState();
+}
+
+/**
+ * ループ状態を保存（セッション単位）
+ */
+function saveLoopState(sessionId: string, state: LoopState): void {
+  loopStateStore.set(sessionId, state);
+}
 
 /**
  * ================================
@@ -83,7 +118,7 @@ export function runKanagiEngine(
   // -------------------------------
   // 既存の transitionAxis を唯一の遷移手段として使用
   const prevAxis: ThinkingAxis = context.prevThinkingAxis ?? "observational";
-  const nextThinkingAxis = transitionAxis(
+  let nextThinkingAxis = transitionAxis(
     prevAxis,
     context.input,
     context.conversationCount
@@ -92,19 +127,103 @@ export function runKanagiEngine(
   // -------------------------------
   // Phase 2: 天津金木フェーズ決定
   // -------------------------------
-  const kanagiPhase = determineKanagiPhase(nextThinkingAxis);
+  let kanagiPhase = determineKanagiPhase(nextThinkingAxis);
+  
+  // -------------------------------
+  // Phase 3: ループ検知とCENTER状態制御（Frozen）
+  // -------------------------------
+  // セッションIDを使用（提供されない場合は会話回数から生成）
+  const sessionId = context.sessionId || `kanagi-${context.conversationCount}`;
+  
+  // -------------------------------
+  // Phase 2.5: 弁証核：矛盾の生成
+  // -------------------------------
+  // 入力から矛盾する解釈を生成（常に実行）
+  const tetraState = createContradictions(context.input, sessionId);
 
-  // -------------------------------
-  // Phase 3: 暫定出力
-  // -------------------------------
-  // ・常に provisional
-  // ・中心は定義しない
-  // ・確定出力は別レイヤで行う
+  let loopState = context.prevLoopState || getLoopState(sessionId);
+
+  // ループを観測（同一思考シグネチャの連続回数を監視）
+  loopState = observeLoop(loopState, nextThinkingAxis, kanagiPhase);
+
+  // ループを解決（強制遷移またはCENTER遷移を決定）
+  const loopResolution = resolveLoop(loopState, kanagiPhase);
+
+  // CENTER状態に入るべきか判定
+  if (loopResolution.shouldEnterCenter) {
+    loopState = updateCenterState(loopState, true);
+    
+    // -------------------------------
+    // Phase 4: CENTER通過時の圧縮（弁証核）
+    // -------------------------------
+    // CENTER状態で矛盾を圧縮（要約）する
+    const compressedTetra = compressAtCenter(tetraState, sessionId);
+    
+    // CENTER状態での蓄積度をチェック
+    // 十分に蓄積されたら INTEGRATION へ遷移
+    if (compressedTetra.centerAccumulation >= 2 && compressedTetra.interpretation.length >= 2) {
+      // INTEGRATION フェーズへ遷移
+      kanagiPhase = "INTEGRATION";
+      
+      // 観測円の生成（統合ではない）
+      const synthesizedTetra = synthesize(compressedTetra, sessionId);
+      
+      saveLoopState(sessionId, loopState);
+      return {
+        thinkingAxis: nextThinkingAxis,
+        kanagiPhase: "INTEGRATION",
+        provisional: true,
+        frozen: true,
+        reason: "integration",
+        isInCenter: false,
+        tetraState: synthesizedTetra,
+      };
+    }
+    
+    // CENTER状態のまま（再編成中）
+    saveLoopState(sessionId, loopState);
+    return {
+      thinkingAxis: nextThinkingAxis,
+      kanagiPhase,
+      provisional: true,
+      frozen: true,
+      reason: "center-reorganizing",
+      isInCenter: true,
+      tetraState: compressedTetra,
+    };
+  }
+
+  // 強制遷移が必要な場合
+  if (loopResolution.shouldForceTransition && loopResolution.forcedPhase) {
+    kanagiPhase = loopResolution.forcedPhase;
+    // 強制遷移後はループ状態をリセット
+    loopState = {
+      signature: `${nextThinkingAxis}-${kanagiPhase}`,
+      consecutiveCount: 1,
+      isInCenter: false,
+    };
+    saveLoopState(sessionId, loopState);
+    return {
+      thinkingAxis: nextThinkingAxis,
+      kanagiPhase,
+      provisional: true,
+      frozen: true,
+      reason: "force-transition",
+      isInCenter: false,
+      tetraState: tetraState, // 強制遷移時も矛盾状態を保持
+    };
+  }
+
+  // 通常処理
+  saveLoopState(sessionId, loopState);
   return {
     thinkingAxis: nextThinkingAxis,
     kanagiPhase,
     provisional: true,
     frozen: true,
+    reason: "normal",
+    isInCenter: false,
+    tetraState: tetraState,
   };
 }
 

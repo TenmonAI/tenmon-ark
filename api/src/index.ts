@@ -9,13 +9,21 @@ import memoryRouter from "./routes/memory.js";
 import personaRouter from "./routes/persona.js";
 import toolRouter from "./routes/tool.js";
 import approvalRouter from "./routes/approval.js";
+import kokuzoRouter from "./routes/kokuzo.js";
+import trainRouter from "./routes/train.js";
+import trainingRouter from "./routes/training.js";
+import kanagiRouter from "./routes/kanagi.js";
 import { incError } from "./ops/metrics.js";
 import { observeErrorForSafeMode } from "./ops/safeMode.js";
 import { registerGracefulShutdown } from "./ops/shutdown.js";
 import { initializeAmbientPersona } from "./tenmon/ambient.js";
+import { bootIntegrityCheck } from "./core/taiFreeze.js";
 
 const PORT = process.env.PORT ? Number(process.env.PORT) : 3000;
 const HOST = process.env.HOST ?? "127.0.0.1";
+
+// 躰整合性チェック（起動時）
+bootIntegrityCheck();
 
 // v∞-3: API起動時に一度だけ人格初期化処理を実行
 initializeAmbientPersona();
@@ -28,6 +36,10 @@ app.use("/api", memoryRouter);
 app.use("/api", personaRouter);
 app.use("/api", toolRouter);
 app.use("/api", approvalRouter);
+app.use("/api", kokuzoRouter); // KOKŪZŌ v1.1: Persistent Wisdom Storage
+app.use("/api", trainRouter); // Training Chat: Personality Formation System
+app.use("/api", trainingRouter); // Training Chat: Learning Material Storage
+app.use("/api", kanagiRouter); // AmatsuKanagi Thought Circuit (水火エンジン)
 
 // 404 (JSON only)
 app.use((_req: Request, res: Response) => {

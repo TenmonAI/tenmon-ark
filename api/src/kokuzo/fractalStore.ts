@@ -52,6 +52,7 @@ export function generateFractalSeed(
     "L-OUT": 0,
     "R-IN": 0,
     "R-OUT": 0,
+    "INTEGRATION": 0,
   };
   
   // lexicalBias の平均値を計算

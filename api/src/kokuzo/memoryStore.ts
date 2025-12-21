@@ -60,6 +60,7 @@ export function getKokuzoTendency(recentSeeds: KokuzoMemorySeed[]): KokuzoTenden
     "L-OUT": 0,
     "R-IN": 0,
     "R-OUT": 0,
+    "INTEGRATION": 0,
   };
   
   let totalInertia = 0;

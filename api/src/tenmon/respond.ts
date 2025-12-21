@@ -95,10 +95,53 @@ function generateConversationalResponse(
     prevThinkingAxis: currentInternal._thinkingAxis ?? null,
     input: input,
     conversationCount: recentCount,
+    sessionId: sessionId, // セッションIDを渡す（ループ状態の永続化用）
   });
 
   // 応答内容はまだ変えない（確認のみ）
   console.log("[KANAGI-PHASE1]", kanagiCheck);
+
+  // ================================
+  // 弁証核：観測円の処理
+  // ================================
+  // integration（観測円）が存在する場合のみ最終応答として返す
+  if (kanagiCheck.tetraState?.integration) {
+    // 観測円を返す（結論ではない）
+    const integration = kanagiCheck.tetraState.integration;
+    let observationReply = integration.observationCircle;
+    
+    // 未解決の緊張を明示
+    if (integration.unresolvedTensions.length > 0) {
+      observationReply += "\n\n未解決の緊張：\n";
+      for (const tension of integration.unresolvedTensions) {
+        observationReply += `- ${tension}\n`;
+      }
+    }
+    
+    // 結論を出さないことを明示
+    observationReply += "\n\n（結論は出さない。矛盾は織りなされ、旋回し、上昇している。）";
+    
+    console.log("[KANAGI-INTEGRATION] Returning observation circle");
+    
+    // 応答を Memory に保存
+    memoryPersistMessage(sessionId, "assistant", observationReply);
+    incMemoryWrite();
+    return observationReply;
+  }
+  
+  // CENTER状態の処理（再編成中）
+  // 注意：DialecticDriveは routes/tenmon.ts で非同期に起動される
+  // ここでは通常の応答生成を続行
+  if (kanagiCheck.isInCenter) {
+    console.log("[KANAGI-CENTER] Reorganizing contradictions, integration pending");
+    // CENTER状態でも通常の応答生成を続行（DialecticDriveは別途起動）
+  }
+  
+  // integration が null の場合は通常の応答生成を続行
+  if (kanagiCheck.tetraState && !kanagiCheck.tetraState.integration) {
+    console.log("[KANAGI-INTEGRATION] Integration pending, contradictions accumulating");
+    // 通常の応答生成を続行
+  }
 
   let thinkingAxis = baseThinkingAxis || determineThinkingAxis(
     effectiveMode,
