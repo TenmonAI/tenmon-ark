@@ -3,13 +3,15 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import multer from "multer";
 import { v4 as uuidv4 } from "uuid";
+import { mapForm, type Phase } from "../kanagi/formMapper.js";
+import { RX } from "../kanagi/extract/regex.js";
+// TokenRole は assignTokenRoles の戻り値で使用されるため、ここでは型インポート不要
 import {
   loadPdfText,
   loadUploadedText,
   extractDefinitions,
   extractRules,
   extractLaws,
-  indexEvidence,
   classifyIki,
   estimatePhase,
   mapToForm,
@@ -27,7 +29,9 @@ import {
   type ReasoningResult,
   type ReasoningTrace,
 } from "../kanagi/index.js";
+
 import { runKanagiReasoner } from "../kanagi/engine/fusionReasoner.js";
+// assignTokenRoles は fusionReasoner.ts 内で呼ばれるため、ここでは不要
 
 const router: IRouter = Router();
 const upload = multer({ dest: "uploads/" });
@@ -51,12 +55,12 @@ router.post("/kanagi/extract", upload.single("file"), async (req: Request, res: 
       text = result.text;
       pages = result.pages;
       source = req.file.originalname || "uploaded";
-    } else if (body.source === "path" && body.path) {
+    } else if ((body as any).path) {
       // パスから読み込み
-      const result = await loadPdfText(body.path);
+      const result = await loadPdfText((body as any).path);
       text = result.text;
       pages = result.pages;
-      source = body.path;
+      source = (body as any).path;
     } else {
       return res.status(400).json({
         error: "Invalid request: file or path is required",
@@ -67,14 +71,6 @@ router.post("/kanagi/extract", upload.single("file"), async (req: Request, res: 
     const definitions = extractDefinitions(text, source, pages);
     const rules = extractRules(text, source, pages);
     const laws = extractLaws(text, source, pages);
-    
-    // 証拠をインデックス化
-    const allEvidence = [
-      ...definitions.flatMap((d) => d.evidence),
-      ...rules.flatMap((r) => r.evidence),
-      ...laws.flatMap((l) => l.evidence),
-    ];
-    const indexedEvidence = indexEvidence(allEvidence, text, source, pages);
     
     // Rulesetを作成
     const rulesetId = uuidv4();
@@ -97,7 +93,7 @@ router.post("/kanagi/extract", upload.single("file"), async (req: Request, res: 
       definitions: definitions.length,
       rules: rules.length,
       laws: laws.length,
-      evidence: indexedEvidence.length,
+      evidence: 0,
       warnings: [],
     };
     
@@ -111,11 +107,78 @@ router.post("/kanagi/extract", upload.single("file"), async (req: Request, res: 
 });
 
 /**
+ * 決定論 Tai/You 抽出（LLMに依存しない最初の核）
+ * 
+ * 役割で火水を決める（動かす＝火、動く＝水）
+ * 名称で固定しない（状況で反転する）
+ * 
+ * @param input 入力テキスト
+ * @returns 躰用エネルギー判定と位相・形
+ */
+function taiYouFromText(input: string): {
+  fire: number;
+  water: number;
+  phase: Phase;
+  form: "CIRCLE" | "DOT" | "WELL" | "LINE";
+  evidence: string[];
+} {
+  // 超ミニ：キーワードで fire/water を数える（後で形態素/依存解析に差し替え）
+  const FIRE = ["動かす", "促す", "開く", "発", "昇", "外", "火"];
+  const WATER = ["動く", "動かされる", "受ける", "閉", "降", "内", "水"];
+  const CENTER = ["凝", "正中", "井", "核", "芯", "源"];
+
+  let fire = 0,
+    water = 0,
+    center = 0;
+  const evidence: string[] = [];
+
+  for (const k of FIRE) {
+    if (input.includes(k)) {
+      fire++;
+      evidence.push(`${k}:FIRE`);
+    }
+  }
+  for (const k of WATER) {
+    if (input.includes(k)) {
+      water++;
+      evidence.push(`${k}:WATER`);
+    }
+  }
+  for (const k of CENTER) {
+    if (input.includes(k)) {
+      center++;
+      evidence.push(`${k}:CENTER`);
+    }
+  }
+
+  // "役割反転"の根拠（言霊秘書の明記）に対応する検出（文字列一致）
+  for (const r of RX.TAIYOU_CORE) {
+    if (r.test(input)) {
+      evidence.push(`TAIYOU_CORE_MATCH:${String(r)}`);
+    }
+  }
+
+  const phase: Phase = {
+    center: center > 0 || (fire === water && fire >= 2),
+    rise: fire > water,
+    fall: water > fire,
+    open: fire >= 2,
+    close: water >= 2,
+  };
+
+  const form = mapForm({ fire, water }, phase);
+
+  return { fire, water, phase, form, evidence };
+}
+
+/**
  * POST /api/kanagi/reason
  * 
  * 入力テキストから推論を実行（螺旋再帰版）
  * 
  * Lv5（円融無碍）: 観測円を次回思考の FACT に再注入する
+ * 
+ * 出力は「答え」ではなく trace（観測円＋躰用判定）を返す
  * 
  * 禁止事項:
  * - observation を要約しない
@@ -124,42 +187,64 @@ router.post("/kanagi/extract", upload.single("file"), async (req: Request, res: 
  */
 router.post("/kanagi/reason", async (req: Request, res: Response) => {
   try {
-    const input = String(req.body.input ?? "");
+    const input = String(req.body?.input ?? "");
 
     if (!input || input.trim().length === 0) {
       return res.status(400).json({
         error: "KANAGI_INPUT_REQUIRED",
         message: "入力が空です。思考を旋回させるには入力が必要です。",
+        provisional: true,
       });
     }
 
     // セッションIDの確保（なければ一時IDを発行してその場限りの螺旋とする）
-    const sessionId = String(req.body.session_id ?? req.body.sessionId ?? `kanagi_${Date.now()}`);
+    const sessionId = String(
+      req.body.session_id ?? req.body.sessionId ?? `kanagi_${Date.now()}`
+    );
 
     console.log(`[KANAGI] Reason request. Session: ${sessionId}`);
 
-    // 螺旋思考の実行
+    // 螺旋思考の実行（既存の runKanagiReasoner を使用）
+    // この中で assignTokenRoles とループ検知が実行される
     const result = await runKanagiReasoner(input, sessionId);
 
-    console.log(`[KANAGI] Spiral depth: ${result.spiral?.depth ?? 0}`);
+    // 決定論 Tai/You 抽出（LLMに依存しない最初の核）
+    const t = taiYouFromText(input);
 
-    return res.json({
-      session_id: sessionId,
+    // 新しい trace 構造を構築
+    // result から assignments と loop を取得
+    const trace = {
+      input,
+      taiyou: {
+        fire: t.fire,
+        water: t.water,
+        assignments: result.taiyou.assignments, // fusionReasoner で割り当てられた assignments
+        evidence: t.evidence,
+      },
+      phase: result.phase, // ループ検知により center が強制される可能性がある
+      form: result.form, // ループ検知により WELL になる可能性がある
+      spiral: result.spiral || {
+        depth: 1,
+        previousObservation: "",
+        nextFactSeed: "",
+      },
+      provisional: true as const,
+      violations: [] as string[],
+      tai_freeze: {
+        enabled: true,
+        tai_hash: result.meta?.tai_hash || "",
+        integrity_verified: result.meta?.integrity_verified ?? true,
+      },
+      loop: result.loop, // ループ検知情報
+      // 後方互換性のためのフィールド
+      iki: result.iki,
+      observationCircle: result.observationCircle,
+      meta: result.meta,
+    };
 
-      // 躰（原理）
-      tai: result.iki.detectedBy, // 簡易的に検知要素を返す（本来はTaiPrinciple）
+    console.log(`[KANAGI] Spiral depth: ${trace.spiral.depth}`);
 
-      // 用（現象）
-      you: [input],
-
-      // 観測円
-      observation: result.observationCircle,
-
-      // 螺旋情報（次への種子）
-      spiral: result.spiral,
-
-      provisional: true,
-    });
+    return res.json({ trace });
   } catch (err) {
     console.error("[KANAGI-ERROR]", err);
     return res.status(500).json({
@@ -269,20 +354,20 @@ router.post("/kanagi/reason/legacy", async (req: Request, res: Response<Reasonin
     });
     
     // Step 7: 推論
-    const reasoningResult = reason(body.input, trace, ruleset);
+    const reasoningResult = reason(body.input, trace as any, ruleset);
     trace.push({
       step: 6,
-      stage: "reasoning",
+      stage: "reasoning" as const,
       input: body.input,
       output: reasoningResult.interpretation,
       evidence: reasoningResult.evidence.map((e) => ({ source: ruleset.name, snippet: e })),
     });
     
     // Step 8: 検証
-    const verificationResult = verify(trace, ruleset);
+    const verificationResult = verify(trace as any, ruleset);
     trace.push({
       step: 7,
-      stage: "verification",
+      stage: "verification" as const,
       input: body.input,
       output: verificationResult.warnings.length > 0 ? "Warnings detected" : "No warnings",
       warnings: verificationResult.warnings,
@@ -390,13 +475,13 @@ router.post("/kanagi/fusion", async (req: Request, res: Response) => {
     const result = await runKanagiReasoner(input);
 
     console.log("[KANAGI-FUSION] Form generated:", result.form);
-    console.log("[KANAGI-FUSION] Observation:", result.observationCircle.description);
+    console.log("[KANAGI-FUSION] Observation:", result.observationCircle?.description || "N/A");
 
     // 解決策(solution)ではなく、観測結果(observation)と軌跡(trace)を返す
     return res.json({
-      output: result.observationCircle.description,
+      output: result.observationCircle?.description || "Observation pending",
       trace: result, // フル可視化により思考をブラックボックス化しない
-      unresolved: result.observationCircle.unresolved,
+      unresolved: result.observationCircle?.unresolved || [],
       meta: result.meta,
     });
   } catch (err) {
