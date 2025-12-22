@@ -1,4 +1,4 @@
-name: Deploy TENMON-ARK to VPS
+name: Deploy to VPS
 
 on:
   push:
@@ -8,37 +8,17 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-
-      - name: Install pnpm
-        run: npm install -g pnpm
-
-      - name: Install dependencies
-        run: pnpm install
-
-      - name: Build TENMON-ARK
-        run: pnpm run build
-
-      - name: Deploy to VPS via SSH
-        uses: appleboy/ssh-action@v1.0.3
+      - name: Deploy to VPS
+        uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
+          username: ${{ secrets.VPS_USERNAME }}
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
-            cd /opt/tenmon-ark/tenmon-ark
-            git pull origin main
-            pnpm install
-            pnpm run build
-            rm -rf /var/www/html/*
-            cp -r dist/public/* /var/www/html/
-            systemctl reload nginx
-
+            cd /opt/tenmon-ark/api
+            git fetch --all
+            git reset --hard origin/main
+            npm install
+            npm run build
+            systemctl restart tenmon-ark-api
