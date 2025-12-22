@@ -3,6 +3,7 @@ import { t } from "./i18n";
 import { KokuzoPage } from "./pages/KokuzoPage";
 import { TrainPage } from "./pages/TrainPage";
 import { TrainingPage } from "./pages/TrainingPage";
+import KanagiPage from "./pages/KanagiPage";
 
 type Health = {
   status: string;
@@ -47,6 +48,11 @@ export function App() {
     return <TrainingPage />;
   }
 
+  // Kanagi Spiral Visualizer: Route to /kanagi page
+  if (window.location.pathname === "/kanagi") {
+    return <KanagiPage />;
+  }
+
   const [health, setHealth] = useState<Health | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [persona, setPersona] = useState<Persona | null>(null);
@@ -54,6 +60,7 @@ export function App() {
   const [message, setMessage] = useState<string>("");
   const [messages, setMessages] = useState<Message[]>([]);
   const [sending, setSending] = useState<boolean>(false);
+  const composingRef = useRef<boolean>(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -105,7 +112,10 @@ export function App() {
     fetch("/api/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message: userMessage }),
+      body: JSON.stringify({ 
+        input: userMessage,
+        session_id: `session_${Date.now()}`,
+      }),
     })
       .then((res) => {
         if (!res.ok) throw new Error("chat api error");
@@ -183,8 +193,11 @@ export function App() {
             className="w-full border border-gray-300 rounded p-3 text-sm resize-none focus:outline-none focus:border-gray-400 transition-colors"
             value={message}
             onChange={(e) => setMessage(e.target.value)}
+            onCompositionStart={() => { composingRef.current = true; }}
+            onCompositionEnd={() => { composingRef.current = false; }}
             onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
+              const isComposing = composingRef.current || (e.nativeEvent as any).isComposing;
+              if (e.key === "Enter" && !e.shiftKey && !isComposing) {
                 e.preventDefault();
                 sendMessage();
               }

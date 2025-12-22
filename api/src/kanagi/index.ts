@@ -1,6 +1,22 @@
 // AmatsuKanagi Thought Circuit (水火エンジン) メインエクスポート
 
-export * from "./types.js";
+// Phase の重複を避けるため、types.js から Phase を除外
+export type {
+  IkiState,
+  FormSymbol,
+  KotodamaRow,
+  Role,
+  Definition,
+  Rule,
+  Law,
+  Evidence,
+  Ruleset,
+  ExtractRequest,
+  ExtractResult,
+  ReasonRequest,
+  ReasoningResult,
+  ReasoningTrace,
+} from "./types.js";
 export * from "./types/trace.js"; // 核融合炉用のトレース型
 export * from "./types/taiyou.js"; // 躰用照合型
 export * from "./types/spiral.js"; // 螺旋再帰型

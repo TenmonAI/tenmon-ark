@@ -12,7 +12,8 @@ const router: IRouter = Router();
  * 内部で respond() を呼び出す薄いラッパー
  */
 router.post("/chat", (req: Request, res: Response<ChatResponseBody>) => {
-  const messageRaw = (req.body as any)?.message;
+  // input または message のどちらでも受け付ける（後方互換性のため）
+  const messageRaw = (req.body as any)?.input || (req.body as any)?.message;
 
   // 入力の検証・正規化
   const sanitized = sanitizeInput(messageRaw, "web");

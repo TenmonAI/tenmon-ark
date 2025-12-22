@@ -6,6 +6,14 @@ import { OPERATOR_KEYWORDS } from "../extract/patterns.js";
 import { mapToFusionForm, type FusionIkiState, type PhaseState } from "./formMapper.js";
 import { getSpiral, setSpiral } from "./spiralState.js";
 import { feedBackToSpiral } from "./spiralFeedback.js";
+import { assignTokenRoles } from "./tokenRoleAssigner.js";
+import { detectLoop } from "./loopDetector.js";
+import {
+  startFermentation,
+  getFermentation,
+  releaseFermentation,
+} from "./fermentationStore.js";
+import { generateContradiction } from "../llm/dialecticLLM.js";
 
 /**
  * 天津金木 思考核融合炉
@@ -33,6 +41,25 @@ export async function runKanagiReasoner(
       injectedInput = `【前提事実(躰)】\n${prev.nextFactSeed}\n\n【今回の現象(用)】\n${input}`;
       currentDepth = prev.depth;
       console.log(`[KANAGI] Spiral injected (Depth: ${currentDepth})`);
+    }
+
+    // CENTER 発酵ログが存在する場合、優先的に躰として注入
+    const fermentation = getFermentation(sessionId);
+    if (fermentation && fermentation.state === "FERMENTING") {
+      injectedInput = `
+【前提事実（躰｜発酵中）】
+未解決矛盾数: ${fermentation.contradictions.length}
+発酵時間: ${fermentation.elapsed}ms
+未解放エネルギー: ${fermentation.unresolvedEnergy}
+
+【今回の現象（用）】
+${input}
+`.trim();
+
+      console.log(
+        "[KANAGI-CENTER] Fermentation injected",
+        sessionId
+      );
     }
   }
 
@@ -71,6 +98,22 @@ export async function runKanagiReasoner(
 
     const iki: FusionIkiState = { fire: fireCount, water: waterCount };
 
+    // Token 単位の役割割当（形態素解析ベース）
+    const assignments = await assignTokenRoles(input);
+
+    // --- LOOP DETECTION (執着検知) ---
+    let loopInfo = { loopDetected: false, count: 0 };
+
+    if (sessionId) {
+      const roles = assignments.map(a => a.role);
+      loopInfo = detectLoop(sessionId, input, roles);
+
+      if (loopInfo.loopDetected) {
+        // 思考停止ではなく「正中へ戻す」
+        console.log(`[KANAGI] Loop detected (count: ${loopInfo.count}), forcing CENTER`);
+      }
+    }
+
     // 2. 位相決定
     const phase: PhaseState = {
       rise: fireCount > waterCount,
@@ -78,8 +121,78 @@ export async function runKanagiReasoner(
       open: fireCount > 2,
       close: waterCount > 2,
       center:
-        centerCount > 0 || (fireCount === waterCount && fireCount > 2),
+        loopInfo.loopDetected || // ループ検知時は強制的に CENTER
+        centerCount > 0 || 
+        (fireCount === waterCount && fireCount > 2),
     };
+
+    // ===== 矛盾生成フェーズ（LLM） =====
+    // 過去の矛盾を保持（発酵ログから取得、または既存の矛盾）
+    let contradictions: Array<{
+      thesis: string;
+      antithesis: string;
+      tensionLevel: number;
+    }> = [];
+
+    // 発酵ログから既存の矛盾を取得
+    if (sessionId) {
+      const fermentation = getFermentation(sessionId);
+      if (fermentation && fermentation.contradictions.length > 0) {
+        contradictions = fermentation.contradictions.map(c => ({
+          thesis: c.thesis,
+          antithesis: c.antithesis,
+          tensionLevel: c.tension,
+        }));
+      }
+    }
+
+    // LLM で新しい矛盾を生成（CENTER または Spiral 時に実行）
+    try {
+      const result = await generateContradiction(injectedInput);
+
+      if (result) {
+        contradictions.push({
+          thesis: result.thesis,
+          antithesis: result.antithesis,
+          tensionLevel: result.tension,
+        });
+
+        console.log("[KANAGI-LLM] Contradiction generated");
+      }
+    } catch (e) {
+      console.error("[KANAGI-LLM] Failed", e);
+    }
+
+    // CENTER に入った場合、発酵を開始
+    if (phase.center && sessionId) {
+      startFermentation(sessionId, {
+        sessionId,
+        contradictions: contradictions.map(c => ({
+          thesis: c.thesis,
+          antithesis: c.antithesis,
+          tension: c.tensionLevel,
+        })),
+        assignments,
+        centerDepth: currentDepth + 1,
+        unresolvedEnergy: Math.abs(iki.fire - iki.water) + centerCount,
+      });
+
+      console.log(
+        "[KANAGI-CENTER] Fermentation started",
+        sessionId
+      );
+    }
+
+    // CENTER から離脱したら発酵を解放
+    if (!phase.center && sessionId) {
+      const released = releaseFermentation(sessionId);
+      if (released) {
+        console.log(
+          "[KANAGI-CENTER] Fermentation released",
+          sessionId
+        );
+      }
+    }
 
     // 3. 形の決定（運動状態）
     const form = mapToFusionForm(iki, phase);
@@ -121,27 +234,60 @@ export async function runKanagiReasoner(
     setSpiral(sessionId, spiral);
   }
 
-  // 5. Trace オブジェクトの構築
-  const trace: KanagiTrace = {
-    input: injectedInput, // 実際に思考した内容を記録
-    iki: { ...iki, detectedBy: detected },
-    phase,
-    form,
-    kotodama: { rowRole: "HUMAN" }, // 仮置き
-    contradictions: [], // ここに将来LLMによる矛盾抽出が入る
-    centerProcess: phase.center
-      ? { stage: "COMPRESS", depth: 1 }
-      : undefined,
-    observationCircle: {
-      description,
-      unresolved,
-    },
-    meta: {
+    // 5. Trace オブジェクトの構築
+    const trace: KanagiTrace = {
+      input: injectedInput, // 実際に思考した内容を記録
+      iki: { ...iki, detectedBy: detected },
+      phase: {
+        center: phase.center,
+        rise: phase.rise,
+        fall: phase.fall,
+        open: phase.open,
+        close: phase.close,
+      },
+      form,
+      kotodama: { rowRole: "HUMAN" }, // 仮置き
+      contradictions, // LLM で生成された矛盾（過去の矛盾も保持）
+      centerProcess: phase.center
+        ? { stage: "COMPRESS", depth: 1 }
+        : undefined,
+      observationCircle: {
+        description,
+        unresolved,
+      },
+      meta: {
+        provisional: true,
+        spiralDepth: spiral.depth,
+      },
+      spiral, // 螺旋再帰構造を追加
+      // 新形式のフィールド（後方互換性のためオプショナル）
+      taiyou: {
+        fire: iki.fire,
+        water: iki.water,
+        assignments,
+        evidence: detected,
+      },
       provisional: true,
-      spiralDepth: spiral.depth,
-    },
-    spiral, // 螺旋再帰構造を追加
-  };
+      violations: [],
+      loop: {
+        detected: loopInfo.loopDetected,
+        count: loopInfo.count,
+      },
+    };
+
+    // 発酵状態を trace に追加
+    const fermentation = sessionId
+      ? getFermentation(sessionId)
+      : null;
+
+    trace.fermentation = fermentation
+      ? {
+          active: fermentation.state === "FERMENTING",
+          elapsed: fermentation.elapsed,
+          unresolvedEnergy: fermentation.unresolvedEnergy,
+          centerDepth: fermentation.centerDepth,
+        }
+      : undefined;
 
   return trace;
   } catch (error) {
@@ -167,11 +313,11 @@ export async function runKanagiReasoner(
         detectedBy: ["ERROR_FALLBACK"],
       },
       phase: {
+        center: false,
         rise: false,
         fall: false,
         open: false,
         close: false,
-        center: false,
       },
       form: "CIRCLE", // 循環状態へフォールバック
       kotodama: { rowRole: "HUMAN" },
@@ -187,6 +333,20 @@ export async function runKanagiReasoner(
         spiralDepth: errorSpiral.depth,
       },
       spiral: errorSpiral,
+      // 新形式のフィールド
+      taiyou: {
+        fire: 1,
+        water: 1,
+        assignments: [],
+        evidence: ["ERROR_FALLBACK"],
+      },
+      provisional: true,
+      violations: [],
+      loop: {
+        detected: false,
+        count: 0,
+      },
+      fermentation: undefined,
     };
 
     return fallbackTrace;

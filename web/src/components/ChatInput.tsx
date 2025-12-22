@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 
 export function ChatInput(props: {
   onSend: (text: string) => void;
@@ -6,6 +6,7 @@ export function ChatInput(props: {
 }) {
   const { onSend, loading } = props;
   const [text, setText] = useState("");
+  const composingRef = useRef<boolean>(false);
 
   useEffect(() => {
     // no-op: keep only useState/useEffect
@@ -31,8 +32,11 @@ export function ChatInput(props: {
           background: "#0b1220",
           color: "#e5e7eb"
         }}
+        onCompositionStart={() => { composingRef.current = true; }}
+        onCompositionEnd={() => { composingRef.current = false; }}
         onKeyDown={(e) => {
-          if (e.key === "Enter" && !e.shiftKey) {
+          const isComposing = composingRef.current || (e.nativeEvent as any).isComposing;
+          if (e.key === "Enter" && !e.shiftKey && !isComposing) {
             e.preventDefault();
             submit();
           }

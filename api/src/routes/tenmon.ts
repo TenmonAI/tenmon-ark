@@ -177,14 +177,16 @@ router.post("/tenmon/respond", async (req: Request, res: Response<TenmonRespondR
     const secureKanagiTrace = secureTrace(kanagiTrace);
     
     // 出力は常に provisional: true（躰制約）
-    const integrityVerified = (secureKanagiTrace.meta as any).integrity_verified ?? true;
+    const integrityVerified = (secureKanagiTrace.meta as any)?.integrity_verified ?? true;
+    const spiralDepth = secureKanagiTrace.meta?.spiralDepth || 0;
+    const observationDescription = secureKanagiTrace.observationCircle?.description || "Observation pending";
     
     return res.json({
-      output: secureKanagiTrace.observationCircle.description,
+      output: observationDescription,
       meta: {
         mode: "integrated",
         tai_integrity: integrityVerified,
-        spiral_depth: secureKanagiTrace.meta.spiralDepth,
+        spiral_depth: spiralDepth,
       },
       trace: secureKanagiTrace,
       provisional: true,

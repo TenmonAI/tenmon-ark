@@ -27,6 +27,34 @@ export function secureTrace(base: Partial<KanagiTrace>): KanagiTrace {
     spiralDepth: base.meta?.spiralDepth || 0,
   };
 
+  // 既存の phase を優先、なければ iki から推測
+  const existingPhase = base.phase || (base.iki ? {
+    center: false,
+    rise: base.iki.fire > base.iki.water,
+    fall: base.iki.water > base.iki.fire,
+    open: base.iki.fire >= 2,
+    close: base.iki.water >= 2,
+  } : {
+    center: false,
+    rise: false,
+    fall: false,
+    open: false,
+    close: false,
+  });
+
+  // 既存の taiyou を優先、なければ iki から構築
+  const existingTaiyou = base.taiyou || (base.iki ? {
+    fire: base.iki.fire,
+    water: base.iki.water,
+    assignments: [],
+    evidence: base.iki.detectedBy,
+  } : {
+    fire: 0,
+    water: 0,
+    assignments: [],
+    evidence: [],
+  });
+
   return {
     input: base.input || "",
     iki: base.iki || {
@@ -34,13 +62,7 @@ export function secureTrace(base: Partial<KanagiTrace>): KanagiTrace {
       water: 0,
       detectedBy: [],
     },
-    phase: base.phase || {
-      rise: false,
-      fall: false,
-      open: false,
-      close: false,
-      center: false,
-    },
+    phase: existingPhase,
     form: base.form || "CIRCLE",
     kotodama: base.kotodama || { rowRole: "HUMAN" },
     contradictions: base.contradictions || [],
@@ -50,7 +72,20 @@ export function secureTrace(base: Partial<KanagiTrace>): KanagiTrace {
       unresolved: [],
     },
     meta: secureMeta,
-    spiral: base.spiral,
+    spiral: base.spiral || {
+      previousObservation: "",
+      nextFactSeed: "",
+      depth: 0,
+    },
+    // 新しい trace 構造のフィールド
+    taiyou: existingTaiyou,
+    provisional: true,
+    violations: integrity ? [] : ["TAI_VIOLATION"],
+    tai_freeze: {
+      enabled: true,
+      tai_hash: status.taiHash,
+      integrity_verified: integrity,
+    },
   };
 }
 
