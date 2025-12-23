@@ -25,6 +25,6 @@ app.get("/health", (_, res) => {
   res.json({ status: "ok" });
 });
 
-app.listen(PORT, () => {
-  console.log(`API listening on http://127.0.0.1:${PORT}`);
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`API listening on http://0.0.0.0:${PORT}`);
 });
