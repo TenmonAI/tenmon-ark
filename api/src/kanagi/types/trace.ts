@@ -31,6 +31,7 @@ export interface TokenAssignment {
 export interface TaiYouEnergy {
   fire: number;  // 動かす側（火）
   water: number; // 動く側（水）
+  spirit?: number; // PHASE 5: 霊（Hi）- CENTERが一定条件を超えたら立てる
   assignments: TokenAssignment[]; // トークン単位の役割割当
   evidence: string[]; // 判定根拠
 }

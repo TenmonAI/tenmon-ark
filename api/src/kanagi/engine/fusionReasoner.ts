@@ -108,12 +108,37 @@ ${input}
     waterCount = countKeywords(injectedInput, OPERATOR_KEYWORDS.WATER, "WATER");
     centerCount = countKeywords(injectedInput, OPERATOR_KEYWORDS.CENTER, "CENTER");
 
+    // PHASE 4: 五十音パターンの「動き」をエネルギー補正に反映
+    const sounds = extractSounds(input);
+    const patternHits = matchPatterns(sounds, patternsData.patterns || []);
+    
+    // 動き（Movements）から fire/water を補正
+    let movementFire = 0;
+    let movementWater = 0;
+    for (const hit of patternHits) {
+      for (const movement of hit.movements) {
+        if (movement.includes("外発")) movementFire++;
+        if (movement.includes("内集")) movementWater++;
+      }
+    }
+    
+    // 補正値を加算（既存のカウントに上乗せ）
+    fireCount += movementFire;
+    waterCount += movementWater;
+
     // デフォルト値補正（入力が短すぎる場合の微動）
     if (injectedInput.length > 0 && fireCount === 0 && waterCount === 0) {
       waterCount = 1; // 静寂は水
     }
 
     const iki: FusionIkiState = { fire: fireCount, water: waterCount };
+
+    // PHASE 5: 霊（Hi）の最小導入
+    // CENTERが一定条件を超えたら spirit を立てる
+    let spiritCount = 0;
+    if (phase.center && centerCount >= 2) {
+      spiritCount = 1; // 正中が深い場合に霊を立てる
+    }
 
     // Token 単位の役割割当（形態素解析ベース）
     const assignments = await assignTokenRoles(input);
@@ -142,6 +167,13 @@ ${input}
         centerCount > 0 || 
         (fireCount === waterCount && fireCount > 2),
     };
+
+    // PHASE 5: 霊（Hi）の最小導入
+    // CENTERが一定条件を超えたら spirit を立てる
+    let spiritCount = 0;
+    if (phase.center && centerCount >= 2) {
+      spiritCount = 1; // 正中が深い場合に霊を立てる
+    }
 
     // ===== 矛盾生成フェーズ（LLM） =====
     // 過去の矛盾を保持（発酵ログから取得、または既存の矛盾）
@@ -289,6 +321,7 @@ ${input}
       taiyou: {
         fire: iki.fire,
         water: iki.water,
+        spirit: spiritCount > 0 ? spiritCount : undefined, // PHASE 5: 霊（Hi）
         assignments,
         evidence: detected,
       },
