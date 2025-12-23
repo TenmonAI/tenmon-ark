@@ -127,6 +127,26 @@ export interface KanagiTrace {
   kotodama?: {
     rowRole: "HEAVEN" | "EARTH" | "HUMAN" | "SERVANT";
     kanaHint?: string;
+    hits?: Array<{
+      number: number;
+      sound: string;
+      category: string;
+      type?: string;
+      pattern: string;
+      movements: string[];
+      meaning?: string;
+      special: boolean;
+    }>;
+    top?: {
+      number: number;
+      sound: string;
+      category: string;
+      type?: string;
+      pattern: string;
+      movements: string[];
+      meaning?: string;
+      special: boolean;
+    };
   };
 
   contradictions?: {

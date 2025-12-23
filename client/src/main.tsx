@@ -39,10 +39,13 @@ queryClient.getMutationCache().subscribe(event => {
   }
 });
 
+// API Base URL (環境変数から取得、デフォルトはVPS)
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://162.43.90.247:3000";
+
 const trpcClient = trpc.createClient({
   links: [
     httpBatchLink({
-      url: "/api/trpc",
+      url: `${API_BASE_URL}/api/trpc`,
       transformer: superjson,
       fetch(input, init) {
         return globalThis.fetch(input, {

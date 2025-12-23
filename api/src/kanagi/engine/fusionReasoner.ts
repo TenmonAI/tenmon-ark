@@ -14,6 +14,23 @@ import {
   releaseFermentation,
 } from "./fermentationStore.js";
 import { generateContradiction } from "../llm/dialecticLLM.js";
+import { extractSounds, matchPatterns } from "./soundExtractor.js";
+import { readFileSync } from "fs";
+import { fileURLToPath } from "url";
+import { dirname, join } from "path";
+
+// 五十音パターンデータを読み込む
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const patternsPath = join(__dirname, "../../../../shared/kanagi/amatsuKanagi50Patterns.json");
+let patternsData: any = null;
+try {
+  const patternsContent = readFileSync(patternsPath, "utf-8");
+  patternsData = JSON.parse(patternsContent);
+} catch (error) {
+  console.warn("[KANAGI] Failed to load patterns data:", error);
+  patternsData = { patterns: [] };
+}
 
 /**
  * 天津金木 思考核融合炉
@@ -234,19 +251,27 @@ ${input}
     setSpiral(sessionId, spiral);
   }
 
-    // 5. Trace オブジェクトの構築
-    const trace: KanagiTrace = {
-      input: injectedInput, // 実際に思考した内容を記録
-      iki: { ...iki, detectedBy: detected },
-      phase: {
-        center: phase.center,
-        rise: phase.rise,
-        fall: phase.fall,
-        open: phase.open,
-        close: phase.close,
-      },
-      form,
-      kotodama: { rowRole: "HUMAN" }, // 仮置き
+  // PHASE 3: 五十音パターンの照合
+  const sounds = extractSounds(input);
+  const patternHits = matchPatterns(sounds, patternsData.patterns || []);
+
+  // 5. Trace オブジェクトの構築
+  const trace: KanagiTrace = {
+    input: injectedInput, // 実際に思考した内容を記録
+    iki: { ...iki, detectedBy: detected },
+    phase: {
+      center: phase.center,
+      rise: phase.rise,
+      fall: phase.fall,
+      open: phase.open,
+      close: phase.close,
+    },
+    form,
+    kotodama: {
+      rowRole: "HUMAN", // 仮置き
+      hits: patternHits,
+      top: patternHits.length > 0 ? patternHits[0] : undefined,
+    },
       contradictions, // LLM で生成された矛盾（過去の矛盾も保持）
       centerProcess: phase.center
         ? { stage: "COMPRESS", depth: 1 }
