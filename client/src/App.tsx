@@ -97,7 +97,13 @@ import { FloatingButtonsSlot } from "@/components/global/slots/FloatingButtonsSl
 function Router() {
   return (
     <Switch>
-      <Route path={"/"} component={Home} />
+      {/* GPT仕様のClean UIをメイン画面に昇格 */}
+      <Route path={"/"} component={ChatRoom} />
+      <Route path={"/chat"} component={ChatRoom} />
+      {/* レガシーパスの整理 */}
+      <Route path={"/home"} component={Home} />
+      <Route path={"/map"} component={Home} />
+      <Route path={"/chat/divine"} component={ChatDivine} />
       <Route path={"/about"} component={About} />
       <Route path={"/ark-core"} component={ArkCore} />
       <Route path={"/ark"} component={ArkProjects} />
@@ -107,8 +113,6 @@ function Router() {
       <Route path={"/ark/create"} component={CreateProject} />
       <Route path={"/project/:id"} component={ProjectDetail} />
       <Route path={"/plans"} component={Plans} />
-      <Route path={"/chat"} component={ChatDivine} />
-      <Route path={"/chat/legacy"} component={ChatRoom} />
       <Route path={"/subscription"} component={Subscription} />
       <Route path={"/subscription/success"} component={SubscriptionSuccess} />
       <Route path={"/developer"} component={DeveloperDashboard} />
