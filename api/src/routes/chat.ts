@@ -46,8 +46,8 @@ router.post("/chat", (req: Request, res: Response<ChatResponseBody>) => {
       responseText = "（……気配のみが漂う……）";
       break;
     default:
-      // 未知のモードは calm として扱う
-      responseText = "……。（静かに耳を傾けている）";
+      // モード不明: 静観する
+      responseText = "……（モード不明。静観する）";
       break;
   }
 
