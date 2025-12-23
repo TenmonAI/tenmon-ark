@@ -1,15 +1,19 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { sanitizeInput } from "../tenmon/inputSanitizer.js";
 import type { ChatResponseBody } from "../types/chat.js";
+import { runKanagiReasoner } from "../kanagi/engine/fusionReasoner.js";
+import { getCurrentPersonaState } from "../persona/personaState.js";
+import { composeResponse } from "../kanagi/engine/responseComposer.js";
+import { getSessionId } from "../memory/sessionId.js";
 
 const router: IRouter = Router();
 
 /**
- * PHASE 1: 人格モード（PersonaState）に基づく分岐ロジック
+ * PHASE 1: 天津金木思考回路をチャットAPIに接続
  * 
- * 固定応答を廃止し、モードに応じた応答を返す
+ * 固定応答を廃止し、天津金木思考回路を通して観測を返す
  */
-router.post("/chat", (req: Request, res: Response<ChatResponseBody>) => {
+router.post("/chat", async (req: Request, res: Response<ChatResponseBody>) => {
   // input または message のどちらでも受け付ける（後方互換性のため）
   const messageRaw = (req.body as any)?.input || (req.body as any)?.message;
 
@@ -23,39 +27,35 @@ router.post("/chat", (req: Request, res: Response<ChatResponseBody>) => {
     });
   }
 
-  // モード取得（省略時は 'calm'）
-  const mode = (req.body as any)?.mode || "calm";
+  try {
+    // セッションID取得
+    const sessionId = getSessionId(req) || `chat_${Date.now()}`;
 
-  // モードに応じた応答を生成（外部AIは使用しない）
-  let responseText: string;
-  switch (mode) {
-    case "calm":
-      // 静寂: 静かに耳を傾けている
-      responseText = "……。（静かに耳を傾けている）";
-      break;
-    case "thinking":
-      // 思考: 認識・解析中
-      responseText = "……認識。解析中……。";
-      break;
-    case "engaged":
-      // 共鳴: 確かに受け取った
-      responseText = "肯定。その言葉、確かに受け取った。";
-      break;
-    case "silent":
-      // 無: 気配のみが漂う
-      responseText = "（……気配のみが漂う……）";
-      break;
-    default:
-      // モード不明: 静観する
-      responseText = "……（モード不明。静観する）";
-      break;
+    // PersonaState 取得
+    const personaState = getCurrentPersonaState();
+
+    // 天津金木思考回路を実行
+    const trace = await runKanagiReasoner(sanitized.text, sessionId);
+
+    // 観測円から応答文を生成
+    const response = composeResponse(trace, personaState);
+
+    // レスポンス形式（厳守）
+    return res.json({
+      response,
+      trace,
+      provisional: true,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    console.error("[CHAT-KANAGI] Error:", error);
+    // エラー時も観測を返す（停止しない）
+    return res.json({
+      response: "思考が循環状態にフォールバックしました。矛盾は保持され、旋回を続けています。",
+      provisional: true,
+      timestamp: new Date().toISOString(),
+    });
   }
-
-  // 既存のレスポンス形式を維持（互換性）
-  return res.json({
-    response: responseText,
-    timestamp: new Date().toISOString(),
-  });
 });
 
 export default router;

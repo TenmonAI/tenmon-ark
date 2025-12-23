@@ -6,4 +6,6 @@ export type ChatRequestBody = {
 export type ChatResponseBody = {
   response: string;
   timestamp: string;
+  trace?: unknown; // KanagiTrace（型循環を避けるため unknown）
+  provisional?: boolean;
 };
