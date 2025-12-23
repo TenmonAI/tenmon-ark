@@ -4,6 +4,7 @@ import { KokuzoPage } from "./pages/KokuzoPage";
 import { TrainPage } from "./pages/TrainPage";
 import { TrainingPage } from "./pages/TrainingPage";
 import KanagiPage from "./pages/KanagiPage";
+import { API_BASE_URL } from "./config/api.js";
 
 type Health = {
   status: string;
@@ -64,7 +65,7 @@ export function App() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    fetch("/api/health")
+    fetch(`${API_BASE_URL}/api/health`)
       .then((res) => {
         if (!res.ok) throw new Error("API error");
         return res.json();
@@ -74,7 +75,7 @@ export function App() {
   }, []);
 
   useEffect(() => {
-    fetch("/api/persona")
+    fetch(`${API_BASE_URL}/api/persona`)
       .then((res) => {
         if (!res.ok) throw new Error("persona api error");
         return res.json();
@@ -84,7 +85,7 @@ export function App() {
   }, []);
 
   useEffect(() => {
-    fetch("/api/memory/stats")
+    fetch(`${API_BASE_URL}/api/memory/stats`)
       .then((res) => {
         if (!res.ok) throw new Error("memory api error");
         return res.json();
@@ -109,7 +110,7 @@ export function App() {
     setSending(true);
     
     // PHASE B: API呼び出し
-    fetch("/api/chat", {
+    fetch(`${API_BASE_URL}/api/chat`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ 

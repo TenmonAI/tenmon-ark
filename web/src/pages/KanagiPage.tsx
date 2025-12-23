@@ -4,6 +4,7 @@ import { CenterPanel } from "../components/CenterPanel";
 import { ContradictionList } from "../components/ContradictionList";
 import { MetaStatus } from "../components/MetaStatus";
 import { KanagiTrace } from "../types/kanagi";
+import { API_BASE_URL } from "../config/api.js";
 
 export default function KanagiPage() {
   const [trace, setTrace] = useState<KanagiTrace | null>(null);
@@ -15,7 +16,7 @@ export default function KanagiPage() {
     
     setLoading(true);
     try {
-      const res = await fetch("/api/kanagi/reason", {
+      const res = await fetch(`${API_BASE_URL}/api/kanagi/reason`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ input: userInput, session_id: "ui-test" }),

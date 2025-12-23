@@ -1,6 +1,7 @@
 // Training Chat: Minimal UI for Personality Formation
 
 import { useState, useEffect } from "react";
+import { API_BASE_URL } from "../config/api.js";
 
 type TrainingIntent = "teach" | "question" | "verify" | "correct";
 
@@ -20,7 +21,7 @@ export function TrainPage() {
     setResponse(null);
 
     try {
-      const res = await fetch("/api/train/message", {
+      const res = await fetch(`${API_BASE_URL}/api/train/message`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -49,7 +50,7 @@ export function TrainPage() {
 
   const commitSession = async (policy: "save" | "compress" | "discard") => {
     try {
-      const res = await fetch("/api/train/commit", {
+      const res = await fetch(`${API_BASE_URL}/api/train/commit`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
