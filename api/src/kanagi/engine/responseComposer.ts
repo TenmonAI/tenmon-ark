@@ -5,6 +5,9 @@
 import type { KanagiTrace } from "../types/trace.js";
 import type { PersonaState } from "../../persona/personaState.js";
 
+// PersonaState の公開部分のみ使用（_inertia等は除外）
+type PublicPersonaState = Omit<PersonaState, "_inertia" | "_thinkingAxis" | "_kanagiPhase">;
+
 /**
  * 形（form）別テンプレート
  */
