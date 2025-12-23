@@ -133,13 +133,6 @@ ${input}
 
     const iki: FusionIkiState = { fire: fireCount, water: waterCount };
 
-    // PHASE 5: 霊（Hi）の最小導入
-    // CENTERが一定条件を超えたら spirit を立てる
-    let spiritCount = 0;
-    if (phase.center && centerCount >= 2) {
-      spiritCount = 1; // 正中が深い場合に霊を立てる
-    }
-
     // Token 単位の役割割当（形態素解析ベース）
     const assignments = await assignTokenRoles(input);
 
@@ -283,9 +276,8 @@ ${input}
     setSpiral(sessionId, spiral);
   }
 
-  // PHASE 3: 五十音パターンの照合
-  const sounds = extractSounds(input);
-  const patternHits = matchPatterns(sounds, patternsData.patterns || []);
+  // PHASE 3: 五十音パターンの照合（既に上で抽出済み）
+  // sounds と patternHits は上で既に計算済み
 
   // 5. Trace オブジェクトの構築
   const trace: KanagiTrace = {
