@@ -1,5 +1,4 @@
 import { Router, type IRouter, type Request, type Response } from "express";
-import { getSessionId } from "../memory/sessionId.js";
 import { sanitizeInput } from "../tenmon/inputSanitizer.js";
 import type { ChatResponseBody } from "../types/chat.js";
 
