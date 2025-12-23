@@ -14,23 +14,13 @@ import {
   releaseFermentation,
 } from "./fermentationStore.js";
 import { generateContradiction } from "../llm/dialecticLLM.js";
-import { extractSounds, matchPatterns } from "./soundExtractor.js";
-import { readFileSync } from "fs";
-import { fileURLToPath } from "url";
-import { dirname, join } from "path";
+import { extractSounds, matchPatterns, type SoundCandidate } from "./soundExtractor.js";
+import { loadPatterns, calculateMovementEnergy } from "../patterns/loadPatterns.js";
+import { composeObservation } from "./observationComposer.js";
+import { verifyTaiFreezeIntegrity } from "../core/taiFreeze.js";
 
-// 五十音パターンデータを読み込む
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-const patternsPath = join(__dirname, "../../../../shared/kanagi/amatsuKanagi50Patterns.json");
-let patternsData: any = null;
-try {
-  const patternsContent = readFileSync(patternsPath, "utf-8");
-  patternsData = JSON.parse(patternsContent);
-} catch (error) {
-  console.warn("[KANAGI] Failed to load patterns data:", error);
-  patternsData = { patterns: [] };
-}
+// 五十音パターンを読み込む（起動時に1回）
+const patternsMap = loadPatterns();
 
 /**
  * 天津金木 思考核融合炉
@@ -81,6 +71,14 @@ ${input}
   }
 
   try {
+    // Tai-Freeze 整合性検証（D-1: 改変検知ログ）
+    // 注: 起動時のハッシュは保存されていないため、現時点では常に verified: true
+    // 実際の改変検知は起動時にハッシュを保存し、実行時に比較する必要がある
+    const integrityCheck = verifyTaiFreezeIntegrity();
+    if (!integrityCheck.verified) {
+      // 改変検知時は CENTER（WELL）に強制遷移
+      console.error("[KANAGI-CRITICAL] Tai-Freeze integrity violation, forcing CENTER");
+    }
 
     // 2. 核分裂（因数分解）
     // 注入された入力文字列から水・火・中をカウントする
@@ -108,18 +106,18 @@ ${input}
     waterCount = countKeywords(injectedInput, OPERATOR_KEYWORDS.WATER, "WATER");
     centerCount = countKeywords(injectedInput, OPERATOR_KEYWORDS.CENTER, "CENTER");
 
-    // PHASE 4: 五十音パターンの「動き」をエネルギー補正に反映
-    const sounds = extractSounds(input);
-    const patternHits = matchPatterns(sounds, patternsData.patterns || []);
+    // 2. Kanagi Lens: 五十音パターンの「動き」をエネルギー補正に反映
+    const soundCandidates = await extractSounds(input);
+    const patternHits = await matchPatterns(soundCandidates, patternsMap);
     
     // 動き（Movements）から fire/water を補正
     let movementFire = 0;
     let movementWater = 0;
     for (const hit of patternHits) {
-      for (const movement of hit.movements) {
-        if (movement.includes("外発")) movementFire++;
-        if (movement.includes("内集")) movementWater++;
-      }
+      const movementEnergy = calculateMovementEnergy(hit.movements);
+      movementFire += movementEnergy.fire;
+      movementWater += movementEnergy.water;
+      detected.push(`pattern-${hit.sound}:${hit.pattern}(KANAGI_LENS)`);
     }
     
     // 補正値を加算（既存のカウントに上乗せ）
@@ -133,8 +131,25 @@ ${input}
 
     const iki: FusionIkiState = { fire: fireCount, water: waterCount };
 
-    // Token 単位の役割割当（形態素解析ベース）
+    // 3. Semantic Lens: Token 単位の役割割当（形態素解析ベース）
     const assignments = await assignTokenRoles(input);
+    
+    // ACTOR（動かす側）→ fire、RECEIVER（動かされる側）→ water を追加
+    let semanticFire = 0;
+    let semanticWater = 0;
+    for (const assignment of assignments) {
+      if (assignment.role === "TAI_FIRE" || assignment.role === "SWAPPED_FIRE") {
+        semanticFire++;
+        detected.push(`token-${assignment.token}:ACTOR(SEMANTIC_LENS)`);
+      } else if (assignment.role === "YOU_WATER" || assignment.role === "SWAPPED_WATER") {
+        semanticWater++;
+        detected.push(`token-${assignment.token}:RECEIVER(SEMANTIC_LENS)`);
+      }
+    }
+    
+    // Semantic lens の結果も加算
+    fireCount += semanticFire;
+    waterCount += semanticWater;
 
     // --- LOOP DETECTION (執着検知) ---
     let loopInfo = { loopDetected: false, count: 0 };
@@ -150,12 +165,14 @@ ${input}
     }
 
     // 2. 位相決定
+    // D-1: Tai-Freeze 改変検知時は強制的に CENTER（WELL）に遷移
     const phase: PhaseState = {
       rise: fireCount > waterCount,
       fall: waterCount > fireCount,
       open: fireCount > 2,
       close: waterCount > 2,
       center:
+        !integrityCheck.verified || // Tai-Freeze 改変検知時は強制的に CENTER
         loopInfo.loopDetected || // ループ検知時は強制的に CENTER
         centerCount > 0 || 
         (fireCount === waterCount && fireCount > 2),
@@ -239,47 +256,74 @@ ${input}
     // 3. 形の決定（運動状態）
     const form = mapToFusionForm(iki, phase);
 
-    // 4. 観測円の生成（核融合）
-    // 意味を解決せず、状態を記述する
-    let description = "";
-    const unresolved: string[] = [];
+    // 4. Trace オブジェクトの構築（一時的、観測円生成前に）
+    // 観測円は後で生成するため、ここでは仮の trace を作成
+    const tempTrace: Partial<KanagiTrace> = {
+      input: injectedInput,
+      iki: { ...iki, detectedBy: detected },
+      phase: {
+        center: phase.center,
+        rise: phase.rise,
+        fall: phase.fall,
+        open: phase.open,
+        close: phase.close,
+      },
+      form,
+      kotodama: {
+        rowRole: "HUMAN",
+        hits: patternHits.map(h => ({
+          number: h.number,
+          sound: h.sound,
+          category: h.category,
+          type: h.type,
+          pattern: h.pattern,
+          movements: h.movements,
+          meaning: h.meaning,
+          special: h.special,
+        })),
+        top: patternHits.length > 0 ? {
+          number: patternHits[0].number,
+          sound: patternHits[0].sound,
+          category: patternHits[0].category,
+          type: patternHits[0].type,
+          pattern: patternHits[0].pattern,
+          movements: patternHits[0].movements,
+          meaning: patternHits[0].meaning,
+          special: patternHits[0].special,
+        } : undefined,
+      },
+      contradictions,
+      centerProcess: phase.center
+        ? { stage: "COMPRESS", depth: 1 }
+        : undefined,
+      taiyou: {
+        fire: iki.fire,
+        water: iki.water,
+        spirit: spiritCount > 0 ? spiritCount : undefined,
+        assignments,
+        evidence: detected, // 最低2つ以上の根拠を残す（Tai-Freeze制約）
+      },
+      provisional: true,
+      violations: [],
+      loop: {
+        detected: loopInfo.loopDetected,
+        count: loopInfo.count,
+      },
+    };
 
-    switch (form) {
-      case "WELL":
-        description =
-          "正中に至り、意味が圧縮されています。矛盾は井戸の中で発酵中。";
-        unresolved.push("圧縮された矛盾の解釈待ち");
-        break;
-      case "DOT":
-        description =
-          "内集する力が強く、一点に凝縮しています。結論への執着が見られます。";
-        unresolved.push("凝縮された意味の展開待ち");
-        break;
-      case "LINE":
-        description =
-          "外発する力が強く、貫通しています。行動への意志が先行中。";
-        unresolved.push("貫通した先の行き先未確定");
-        break;
-      case "CIRCLE":
-        description =
-          "水火が拮抗し、循環しています。矛盾は円融されつつあります。";
-        unresolved.push("循環中の余剰エネルギー");
-        break;
-    }
+    // 5. 観測円の生成（observationComposer を使用）
+    const observation = composeObservation(tempTrace as KanagiTrace);
+    
+    // 6. 次の螺旋の生成
+    // 観測円(Observation)から種子を作る
+    const spiral = feedBackToSpiral(observation.description, currentDepth);
 
-  // 3. 次の螺旋の生成
-  // 観測円(Observation)から種子を作る
-  const spiral = feedBackToSpiral(description, currentDepth);
-
-  // 4. 状態保存
+  // 7. 状態保存
   if (sessionId) {
     setSpiral(sessionId, spiral);
   }
 
-  // PHASE 3: 五十音パターンの照合（既に上で抽出済み）
-  // sounds と patternHits は上で既に計算済み
-
-  // 5. Trace オブジェクトの構築
+  // 8. 最終 Trace オブジェクトの構築
   const trace: KanagiTrace = {
     input: injectedInput, // 実際に思考した内容を記録
     iki: { ...iki, detectedBy: detected },
@@ -292,38 +336,56 @@ ${input}
     },
     form,
     kotodama: {
-      rowRole: "HUMAN", // 仮置き
-      hits: patternHits,
-      top: patternHits.length > 0 ? patternHits[0] : undefined,
+      rowRole: "HUMAN",
+      hits: patternHits.map(h => ({
+        number: h.number,
+        sound: h.sound,
+        category: h.category,
+        type: h.type,
+        pattern: h.pattern,
+        movements: h.movements,
+        meaning: h.meaning,
+        special: h.special,
+      })),
+      top: patternHits.length > 0 ? {
+        number: patternHits[0].number,
+        sound: patternHits[0].sound,
+        category: patternHits[0].category,
+        type: patternHits[0].type,
+        pattern: patternHits[0].pattern,
+        movements: patternHits[0].movements,
+        meaning: patternHits[0].meaning,
+        special: patternHits[0].special,
+      } : undefined,
     },
-      contradictions, // LLM で生成された矛盾（過去の矛盾も保持）
-      centerProcess: phase.center
-        ? { stage: "COMPRESS", depth: 1 }
-        : undefined,
-      observationCircle: {
-        description,
-        unresolved,
-      },
-      meta: {
-        provisional: true,
-        spiralDepth: spiral.depth,
-      },
-      spiral, // 螺旋再帰構造を追加
-      // 新形式のフィールド（後方互換性のためオプショナル）
-      taiyou: {
-        fire: iki.fire,
-        water: iki.water,
-        spirit: spiritCount > 0 ? spiritCount : undefined, // PHASE 5: 霊（Hi）
-        assignments,
-        evidence: detected,
-      },
+    contradictions, // LLM で生成された矛盾（過去の矛盾も保持）
+    centerProcess: phase.center
+      ? { stage: "COMPRESS", depth: 1 }
+      : undefined,
+    observationCircle: {
+      description: observation.description,
+      unresolved: observation.unresolved, // 最低1つは必ず含まれる
+    },
+    meta: {
       provisional: true,
-      violations: [],
-      loop: {
-        detected: loopInfo.loopDetected,
-        count: loopInfo.count,
-      },
-    };
+      spiralDepth: spiral.depth,
+    },
+    spiral, // 螺旋再帰構造を追加
+    // 新形式のフィールド（後方互換性のためオプショナル）
+    taiyou: {
+      fire: iki.fire,
+      water: iki.water,
+      spirit: spiritCount > 0 ? spiritCount : undefined,
+      assignments,
+      evidence: detected, // 最低2つ以上の根拠を残す（Tai-Freeze制約）
+    },
+    provisional: true,
+    violations: [],
+    loop: {
+      detected: loopInfo.loopDetected,
+      count: loopInfo.count,
+    },
+  };
 
     // 発酵状態を trace に追加
     const fermentation = sessionId

@@ -1,5 +1,5 @@
-import kuromoji from "kuromoji";
-import path from "path";
+// B-1: kuromoji tokenizer は共通キャッシュを使用
+import { getTokenizer } from "../utils/tokenizerCache.js";
 
 export type DependencyRole =
   | "ACTOR"        // 動かす主体（火）
@@ -12,23 +12,6 @@ export interface DependencyToken {
   base: string;
   pos: string;
   role: DependencyRole;
-}
-
-// kuromoji tokenizer（シングルトン）
-let tokenizerPromise: Promise<kuromoji.Tokenizer<kuromoji.IpadicFeatures>> | null = null;
-
-function getTokenizer() {
-  if (!tokenizerPromise) {
-    tokenizerPromise = new Promise((resolve, reject) => {
-      kuromoji.builder({
-        dicPath: path.resolve("node_modules/kuromoji/dict"),
-      }).build((err: Error | null, tokenizer: kuromoji.Tokenizer<kuromoji.IpadicFeatures>) => {
-        if (err) reject(err);
-        else resolve(tokenizer);
-      });
-    });
-  }
-  return tokenizerPromise;
 }
 
 /**

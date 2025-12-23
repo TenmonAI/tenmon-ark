@@ -5,11 +5,16 @@
   "license": "MIT",
   "scripts": {
     "dev": "NODE_ENV=development tsx watch server/_core/index.ts",
+    "dev:client": "npm --prefix client run dev",
+    "dev:api": "npm --prefix api run dev",
     "build": "vite build && esbuild server/_core/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist",
+    "build:client": "npm --prefix client run build",
+    "build:api": "npm --prefix api run build",
     "start": "NODE_ENV=production node dist/index.js",
     "check": "tsc --noEmit",
     "format": "prettier --write .",
     "test": "vitest run",
+    "test:api": "npm --prefix api test",
     "db:push": "drizzle-kit generate && drizzle-kit migrate"
   },
   "dependencies": {

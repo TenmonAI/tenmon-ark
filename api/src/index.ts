@@ -4,6 +4,7 @@ import cors from "cors";
 import kanagiRoutes from "./routes/kanagi.js";
 import tenmonRoutes from "./routes/tenmon.js";
 import chatRouter from "./routes/chat.js";
+import healthRouter from "./routes/health.js";
 
 const app = express();
 const PORT = process.env.PORT ? Number(process.env.PORT) : 3000;
@@ -20,7 +21,10 @@ app.use("/api", chatRouter);
 // 既存 tenmon
 app.use("/api/tenmon", tenmonRoutes);
 
-// health check
+// Health router (GET /api/health)
+app.use("/api", healthRouter);
+
+// health check (ルートパス)
 app.get("/health", (_, res) => {
   res.json({ status: "ok" });
 });

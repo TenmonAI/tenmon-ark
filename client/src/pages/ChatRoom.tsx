@@ -30,7 +30,6 @@ import { ReasoningStepsViewer } from "@/components/chat/ReasoningStepsViewer";
 import { Badge } from "@/components/ui/badge";
 import { ALPHA_TRANSITION_DURATION } from "@/lib/mobileOS/alphaFlow";
 import { FeedbackModal } from "@/components/feedback/FeedbackModal";
-import { MessageSquarePlus } from "lucide-react";
 import { usePersonaState } from "@/state/persona/usePersonaState";
 import { PersonaBadge } from "@/components/chat/PersonaBadge";
 import { PersonaChatBubble } from "@/components/chat/PersonaChatBubble";
@@ -65,6 +64,7 @@ export default function ChatRoom() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [roomToDelete, setRoomToDelete] = useState<number | null>(null);
   const [showReasoning, setShowReasoning] = useState<number | null>(null);
+  const [feedbackModalOpen, setFeedbackModalOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { t, i18n } = useTranslation();
@@ -363,6 +363,53 @@ export default function ChatRoom() {
     }
   }, [isStreaming]);
 
+  // PHASE 4: 新APIレスポンス形式対応（暫定送信関数）
+  const [observationData, setObservationData] = useState<{
+    description: string;
+    unresolved: string[];
+    spiralDepth: number;
+    provisional: boolean;
+  } | null>(null);
+
+  const sendMessageDirect = async (message: string) => {
+    try {
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          message,
+          sessionId: currentRoomId?.toString() || undefined,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      // 新APIレスポンス形式の情報を表示
+      if (data.observation && data.spiral) {
+        setObservationData({
+          description: data.observation.description || data.response,
+          unresolved: data.observation.unresolved || [],
+          spiralDepth: data.spiral.depth || 0,
+          provisional: data.provisional === true,
+        });
+      }
+
+      // メッセージを表示（既存のメッセージリストに追加）
+      refetchMessages();
+      setInputMessage("");
+      setErrorMessage(null);
+    } catch (error) {
+      console.error("[ChatRoom] Direct API error:", error);
+      setErrorMessage(error instanceof Error ? error.message : "メッセージの送信に失敗しました。");
+    }
+  };
+
   const handleSendMessage = async () => {
     if (!inputMessage.trim()) return;
 
@@ -390,6 +437,16 @@ export default function ChatRoom() {
       console.warn("[ChatRoom] Failed to log user message:", error);
     }
 
+    // PHASE 4: 新APIレスポンス形式対応（環境変数で切り替え可能）
+    const useDirectAPI = import.meta.env.VITE_USE_DIRECT_API === "true";
+    
+    if (useDirectAPI) {
+      // 直接 /api/chat を呼び出す
+      await sendMessageDirect(inputMessage.trim());
+      return;
+    }
+
+    // 既存のSSEストリーミング（デフォルト）
     // 記憶の要約を取得（中央API送信用、抽象データのみ）
     let memorySummary: any[] = [];
     try {
@@ -819,6 +876,33 @@ export default function ChatRoom() {
 
               {/* Thinking Phases表示 */}
               {currentPhase && <ThinkingPhases currentPhase={currentPhase} />}
+
+              {/* PHASE 4: 新APIレスポンス形式の観測情報表示 */}
+              {observationData && (
+                <div className="chatgpt-message assistant mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                  <div className="text-sm font-semibold text-blue-900 mb-2">観測情報</div>
+                  <div className="text-sm text-gray-700 mb-2">{observationData.description}</div>
+                  {observationData.unresolved.length > 0 && (
+                    <div className="mt-2">
+                      <div className="text-xs font-semibold text-gray-600 mb-1">未解決項目:</div>
+                      <ul className="list-disc list-inside text-xs text-gray-600">
+                        {observationData.unresolved.map((item, idx) => (
+                          <li key={idx}>{item}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  <div className="mt-2 flex items-center gap-2 text-xs text-gray-500">
+                    <span>螺旋深度: {observationData.spiralDepth}</span>
+                    {observationData.provisional && (
+                      <Badge variant="outline" className="text-xs">provisional: true</Badge>
+                    )}
+                  </div>
+                  <div className="mt-2 text-xs text-gray-400 italic">
+                    これは答えではなく、現在の観測です
+                  </div>
+                </div>
+              )}
 
               {/* ストリーミング中のメッセージ */}
               {isStreaming && !currentPhase && streamingContent && (
