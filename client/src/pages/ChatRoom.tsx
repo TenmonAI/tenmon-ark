@@ -1,65 +1,55 @@
 import { useState } from "react";
 
 export default function ChatRoom() {
-  const [text, setText] = useState("");
-  const [response, setResponse] = useState<string | null>(null);
+  const [input, setInput] = useState("");
+  const [output, setOutput] = useState("");
   const [loading, setLoading] = useState(false);
 
-  async function send() {
+  const send = async () => {
+    if (!input.trim()) return;
+
     setLoading(true);
-    setResponse(null);
+    setOutput("");
 
     try {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: text }),
+        body: JSON.stringify({ message: input }),
       });
 
-      const json = await res.json();
-      console.log("API RESPONSE:", json);
-
-      // 最低限これだけ表示する
-      setResponse(
-        json?.observation?.description ??
-        json?.response ??
-        JSON.stringify(json, null, 2)
-      );
+      const data = await res.json();
+      setOutput(data.response ?? "（応答がありません）");
     } catch (e) {
-      setResponse("❌ APIエラー");
-      console.error(e);
+      setOutput("通信エラーが発生しました");
     } finally {
       setLoading(false);
     }
-  }
+  };
 
   return (
     <div style={{ padding: 40, maxWidth: 800 }}>
       <h1>TENMON-ARK</h1>
 
       <textarea
-        value={text}
-        onChange={(e) => setText(e.target.value)}
         rows={4}
-        style={{ width: "100%", marginBottom: 12 }}
+        style={{ width: "100%", fontSize: 16 }}
+        value={input}
+        onChange={(e) => setInput(e.target.value)}
+        placeholder="ここに入力"
       />
 
-      <button onClick={send} disabled={loading}>
-        {loading ? "送信中…" : "Send"}
+      <br />
+
+      <button onClick={send} disabled={loading} style={{ marginTop: 10 }}>
+        {loading ? "Thinking..." : "Send"}
       </button>
 
-      {response && (
-        <pre
-          style={{
-            marginTop: 20,
-            padding: 16,
-            background: "#f5f5f5",
-            whiteSpace: "pre-wrap",
-          }}
-        >
-          {response}
-        </pre>
-      )}
+      <hr />
+
+      <div style={{ whiteSpace: "pre-wrap", marginTop: 20 }}>
+        {output}
+      </div>
     </div>
   );
 }

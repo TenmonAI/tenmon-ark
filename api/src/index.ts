@@ -4,6 +4,8 @@ import cors from "cors";
 import kanagiRoutes from "./routes/kanagi.js";
 import tenmonRoutes from "./routes/tenmon.js";
 import chatRouter from "./routes/chat.js";
+import thinkRouter from "./routes/think.js";
+import judgeRouter from "./routes/judge.js";
 import healthRouter from "./routes/health.js";
 
 const app = express();
@@ -17,6 +19,12 @@ app.use("/api", kanagiRoutes);
 
 // Chat router (POST /api/chat)
 app.use("/api", chatRouter);
+
+// Think router (POST /api/think)
+app.use("/api", thinkRouter);
+
+// Judge router (POST /api/judge)
+app.use("/api", judgeRouter);
 
 // 既存 tenmon
 app.use("/api/tenmon", tenmonRoutes);
