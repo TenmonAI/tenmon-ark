@@ -7,104 +7,152 @@ import { TEXT_DIR } from "./paths.js";
 
 const execFileAsync = promisify(execFile);
 
+type Used = "plain" | "pdftotext-raw" | "pdftotext-layout" | "ocr";
+type Mode = "auto" | "text" | "ocr";
+
 async function ensureDir(p: string) {
   await fs.mkdir(p, { recursive: true });
 }
 
-function looksMojibakeOrBad(text: string): boolean {
-  if (!text) return true;
-  const t = text.slice(0, 6000);
-  // よくある文字化け/崩れの兆候
-  const mojibakeMatches1 = t.match(/[ÃÂäåæçèéêëìíîïðñòóôõöøùúûüýÿ]/g) ?? [];
-  const mojibakeMatches2 = t.match(/\uFFFD/g) ?? []; // replacement char
-  const mojibakeHits = mojibakeMatches1.length + mojibakeMatches2.length;
-  // "文字は出てるが意味のある日本語がほぼ無い"ケース
-  const jpHits = (t.match(/[\u3040-\u30ff\u3400-\u9fff]/g) ?? []).length;
-
-  if (t.length < 300) return true;
-  if (mojibakeHits > 30) return true;
-  if (jpHits < 10 && t.length > 1000) return true; // 量あるのに日本語がほぼ無い
-  return false;
+async function readHead(filePath: string, maxBytes = 64 * 1024): Promise<string> {
+  const fh = await fs.open(filePath, "r");
+  try {
+    const buf = Buffer.alloc(maxBytes);
+    const { bytesRead } = await fh.read(buf, 0, buf.length, 0);
+    return buf.toString("utf-8", 0, bytesRead);
+  } finally {
+    await fh.close();
+  }
 }
 
-async function runPdftotext(pdfPath: string): Promise<string> {
-  const { stdout } = await execFileAsync(
-    "pdftotext",
-    ["-enc", "UTF-8", "-layout", "-nopgbrk", pdfPath, "-"],
-    { maxBuffer: 80 * 1024 * 1024 }
-  );
-  return (stdout || "").replace(/\r\n/g, "\n");
+function scoreText(sample: string): number {
+  const t = sample.slice(0, 8000);
+  const jp = (t.match(/[\u3040-\u30ff\u3400-\u9fff]/g) ?? []).length;
+  const rep = (t.match(/\uFFFD/g) ?? []).length; // 文字化け replacement
+  const ascii = (t.match(/[A-Za-z0-9]/g) ?? []).length;
+  const len = Math.max(1, t.length);
+
+  // 日本語が多いほど良い、replacement多いほど悪い
+  let score = jp * 3 - rep * 15;
+
+  // "量はあるのに日本語がほぼ無い"は強く悪い
+  if (len > 2000 && jp < 80) score -= 300;
+  if (rep > 10) score -= 300;
+
+  // ほどほどにasciiも許す（英語混在）
+  score += Math.min(50, ascii);
+
+  return score;
 }
 
-async function runOCR(pdfPath: string): Promise<string> {
-  // OCRしたPDFを一時生成 → そこから pdftotext
+async function runPdftotextToFile(pdfPath: string, outTxt: string, mode: "raw" | "layout") {
+  const args = ["-enc", "UTF-8", "-nopgbrk"];
+  if (mode === "raw") args.push("-raw");
+  if (mode === "layout") args.push("-layout");
+  args.push(pdfPath, outTxt);
+
+  await execFileAsync("pdftotext", args, { maxBuffer: 8 * 1024 * 1024 });
+}
+
+async function runOCRToText(pdfPath: string, outTxt: string) {
   const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "tenmon-ocr-"));
   const outPdf = path.join(tmpDir, "ocr.pdf");
 
-  // --skip-text: テキストがあるページは基本維持、無ければOCR
-  // --force-ocr: 文字化けPDFでも強制OCRしたいならこちら
-  await execFileAsync(
-    "ocrmypdf",
-    [
-      "--skip-text",
-      "-l",
-      "jpn+eng",
-      "--output-type",
-      "pdf",
-      "--jobs",
-      "2",
-      pdfPath,
-      outPdf,
-    ],
-    { maxBuffer: 20 * 1024 * 1024 }
-  );
-
-  const text = await runPdftotext(outPdf);
-
-  // 後片付け
   try {
-    await fs.rm(tmpDir, { recursive: true, force: true });
-  } catch {
-    // noop
-  }
+    // force-ocr：埋め込みテキストが壊れてても作り直す
+    await execFileAsync(
+      "ocrmypdf",
+      [
+        "--force-ocr",
+        "--rotate-pages",
+        "--deskew",
+        "--output-type",
+        "pdf",
+        "--jobs",
+        "2",
+        "-l",
+        "jpn+eng",
+        pdfPath,
+        outPdf,
+      ],
+      { maxBuffer: 8 * 1024 * 1024 }
+    );
 
-  return text;
+    await runPdftotextToFile(outPdf, outTxt, "raw");
+  } finally {
+    try {
+      await fs.rm(tmpDir, { recursive: true, force: true });
+    } catch {
+      // noop
+    }
+  }
 }
 
 export async function extractToText(args: {
   id: string;
   filePath: string;
   originalName: string;
-}): Promise<{ textPath: string; preview: string; used: "pdftotext" | "ocr" | "plain" }> {
+  mode?: Mode;
+}): Promise<{ textPath: string; preview: string; used: Used }> {
   const { id, filePath, originalName } = args;
+  const mode: Mode = (args.mode ?? "auto") as Mode;
+
   const ext = path.extname(originalName).toLowerCase();
 
   await ensureDir(TEXT_DIR);
   const outPath = path.join(TEXT_DIR, `${id}.txt`);
 
-  let text = "";
-  let used: "pdftotext" | "ocr" | "plain" = "plain";
-
+  // txt系はそのまま
   if (ext === ".txt" || ext === ".md" || ext === ".json" || ext === ".csv") {
-    text = await fs.readFile(filePath, "utf-8");
-    used = "plain";
-  } else if (ext === ".pdf") {
-    // 1) まず pdftotext
-    text = await runPdftotext(filePath);
-    used = "pdftotext";
+    const raw = await fs.readFile(filePath, "utf-8");
+    await fs.writeFile(outPath, raw.replace(/\r\n/g, "\n"), "utf-8");
+    const preview = raw.slice(0, 3000);
+    return { textPath: outPath, preview, used: "plain" };
+  }
 
-    // 2) 文字化け/空っぽっぽいなら OCR フォールバック
-    if (looksMojibakeOrBad(text)) {
-      text = await runOCR(filePath);
-      used = "ocr";
-    }
-  } else {
+  if (ext !== ".pdf") {
     throw new Error(`unsupported file type: ${ext}`);
   }
 
-  text = text.replace(/\r\n/g, "\n");
-  await fs.writeFile(outPath, text, "utf-8");
+  // PDF
+  if (mode === "ocr") {
+    await runOCRToText(filePath, outPath);
+    const head = await readHead(outPath);
+    return { textPath: outPath, preview: head.slice(0, 3000), used: "ocr" };
+  }
 
-  const preview = text.slice(0, 3000);
-  return { textPath: outPath, preview, used };
+  // pdftotext を raw/layout 両方試して評価
+  const tmpRaw = `${outPath}.raw.tmp`;
+  const tmpLayout = `${outPath}.layout.tmp`;
+
+  try {
+    await runPdftotextToFile(filePath, tmpRaw, "raw");
+    await runPdftotextToFile(filePath, tmpLayout, "layout");
+
+    const rawHead = await readHead(tmpRaw);
+    const layoutHead = await readHead(tmpLayout);
+
+    const sRaw = scoreText(rawHead);
+    const sLayout = scoreText(layoutHead);
+
+    const best = sRaw >= sLayout ? { p: tmpRaw, used: "pdftotext-raw" as const, score: sRaw } : { p: tmpLayout, used: "pdftotext-layout" as const, score: sLayout };
+
+    // 文字品質が低いならOCRに落とす（autoのみ）
+    if (mode === "auto" && best.score < 0) {
+      await runOCRToText(filePath, outPath);
+      const head = await readHead(outPath);
+      return { textPath: outPath, preview: head.slice(0, 3000), used: "ocr" };
+    }
+
+    // bestを採用
+    await fs.rename(best.p, outPath);
+    // 残りを削除
+    try { await fs.rm(best.used === "pdftotext-raw" ? tmpLayout : tmpRaw, { force: true }); } catch {}
+    const head = best.used === "pdftotext-raw" ? rawHead : layoutHead;
+    return { textPath: outPath, preview: head.slice(0, 3000), used: best.used };
+  } finally {
+    // 失敗時の掃除
+    try { await fs.rm(tmpRaw, { force: true }); } catch {}
+    try { await fs.rm(tmpLayout, { force: true }); } catch {}
+  }
 }

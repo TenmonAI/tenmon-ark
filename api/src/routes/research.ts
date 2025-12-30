@@ -100,7 +100,13 @@ router.post("/extract", async (req: Request, res: Response) => {
   const filePath = uploadPath(f.storedName);
 
   try {
-    const { preview, used } = await extractToText({ id, filePath, originalName: f.originalName });
+    const mode = String((req.body as any)?.mode ?? "auto");
+    const { preview, used } = await extractToText({
+      id,
+      filePath,
+      originalName: f.originalName,
+      mode: mode === "ocr" ? "ocr" : mode === "text" ? "text" : "auto",
+    });
     await updateFile(id, { extractedAt: new Date().toISOString() });
     return res.json({ ok: true, id, preview, used });
   } catch (e: any) {
