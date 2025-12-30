@@ -3,7 +3,7 @@ import multer from "multer";
 import path from "node:path";
 import { promises as fs } from "node:fs";
 
-import { UPLOAD_DIR } from "../research/paths.js";
+import { UPLOAD_DIR, RESEARCH_DIR } from "../research/paths.js";
 import { addFile, listFiles, sha256File, updateFile, uploadPath, type StoredFile } from "../research/store.js";
 import { extractToText } from "../research/extract.js";
 import { analyzeText } from "../research/analyze.js";
@@ -14,6 +14,7 @@ import { askWithCitations } from "../research/ask.js";
 
 const router = Router();
 
+// --- 文字化け回避ヘルパー ---
 function fixOriginalName(name: string): string {
   // 既に日本語/漢字が含まれていたら、そのまま
   const hasJP = /[\u3040-\u30ff\u3400-\u9fff]/.test(name);
@@ -27,7 +28,7 @@ function fixOriginalName(name: string): string {
     if (decodedHasJP) return decoded;
 
     // 日本語は無いけど、変換で明らかに読みやすくなってる場合も採用（保険）
-    if (decoded !== name && decoded.includes("") === false) return decoded;
+    if (decoded !== name && decoded.includes("\uFFFD") === false) return decoded;
   } catch {
     // noop
   }
@@ -39,6 +40,7 @@ async function ensureDir(p: string) {
   await fs.mkdir(p, { recursive: true });
 }
 
+// --- multer設定 ---
 const storage = multer.diskStorage({
   destination: async (_req, _file, cb) => {
     try {
@@ -63,6 +65,9 @@ const upload = multer({
   limits: { files: 50, fileSize: TWO_GB },
 });
 
+// --- エンドポイント ---
+
+// POST /api/research/upload
 router.post("/upload", upload.array("files", 50), async (req: Request, res: Response) => {
   const files = (req as any).files as Express.Multer.File[] | undefined;
   if (!files || files.length === 0) return res.status(400).json({ ok: false, error: "no files" });
@@ -89,13 +94,43 @@ router.post("/upload", upload.array("files", 50), async (req: Request, res: Resp
   setImmediate(async () => {
     for (const meta of saved) {
       try {
-        // PDFのみ自動で pages build（画像+ページtxt）
-        if ((meta.originalName || "").toLowerCase().endsWith(".pdf")) {
-          const fp = uploadPath(meta.storedName);
+        const fp = uploadPath(meta.storedName);
+        const isPDF = (meta.originalName || "").toLowerCase().endsWith(".pdf");
+
+        // PDFなら build-pages を先に生成（ページ画像 + ページtxt）
+        if (isPDF) {
           await buildPages({ id: meta.id, pdfPath: fp, dpi: 200 });
         }
-        // 既存R2: extract→analyze→analyze-deep もここに追加できる（順に）
-        // まずは pages build を最優先で安定させる
+
+        // 次に extract（auto）→ analyze → analyze-deep
+        try {
+          const { preview, used } = await extractToText({
+            id: meta.id,
+            filePath: fp,
+            originalName: meta.originalName,
+            mode: "auto",
+          });
+          await updateFile(meta.id, { extractedAt: new Date().toISOString() });
+
+          // analyze（通常）
+          try {
+            const textPath = path.join(process.cwd(), "data", "research", "text", `${meta.id}.txt`);
+            await analyzeText({ id: meta.id, textPath });
+            await updateFile(meta.id, { analyzedAt: new Date().toISOString() });
+          } catch (e) {
+            console.error("[research:auto:analyze]", meta.id, e);
+          }
+
+          // analyze-deep（深層）
+          try {
+            const textPath = path.join(process.cwd(), "data", "research", "text", `${meta.id}.txt`);
+            await analyzeDeep({ id: meta.id, textPath });
+          } catch (e) {
+            console.error("[research:auto:analyze-deep]", meta.id, e);
+          }
+        } catch (e) {
+          console.error("[research:auto:extract]", meta.id, e);
+        }
       } catch (e) {
         console.error("[research:auto]", meta.id, e);
       }
@@ -105,11 +140,13 @@ router.post("/upload", upload.array("files", 50), async (req: Request, res: Resp
   return res.json({ ok: true, files: saved });
 });
 
+// GET /api/research/files
 router.get("/files", async (_req: Request, res: Response) => {
   const files = await listFiles();
   return res.json({ ok: true, files });
 });
 
+// POST /api/research/extract
 router.post("/extract", async (req: Request, res: Response) => {
   const id = String((req.body as any)?.id ?? "");
   if (!id) return res.status(400).json({ ok: false, error: "id is required" });
@@ -135,6 +172,7 @@ router.post("/extract", async (req: Request, res: Response) => {
   }
 });
 
+// POST /api/research/analyze
 router.post("/analyze", async (req: Request, res: Response) => {
   const id = String((req.body as any)?.id ?? "");
   if (!id) return res.status(400).json({ ok: false, error: "id is required" });
@@ -149,14 +187,13 @@ router.post("/analyze", async (req: Request, res: Response) => {
   try {
     const { ruleset } = await analyzeText({ id, textPath });
     await updateFile(id, { analyzedAt: new Date().toISOString() });
-
-    // 「本文に無いことは無い」：0件なら blockedReason を返す
     return res.json({ ok: true, id, ruleset });
   } catch (e: any) {
     return res.status(500).json({ ok: false, error: String(e?.message ?? e) });
   }
 });
 
+// POST /api/research/analyze-deep
 router.post("/analyze-deep", async (req: Request, res: Response) => {
   const id = String((req.body as any)?.id ?? "");
   if (!id) return res.status(400).json({ ok: false, error: "id is required" });
@@ -177,6 +214,7 @@ router.post("/analyze-deep", async (req: Request, res: Response) => {
   }
 });
 
+// GET /api/research/rules/:id（通常）
 router.get("/rules/:id", async (req: Request, res: Response) => {
   const id = String(req.params.id ?? "");
   const p = path.join(process.cwd(), "data", "research", "rules", `${id}.json`);
@@ -188,6 +226,19 @@ router.get("/rules/:id", async (req: Request, res: Response) => {
   }
 });
 
+// GET /api/research/rules-deep/:id（深層）
+router.get("/rules-deep/:id", async (req: Request, res: Response) => {
+  const id = String(req.params.id ?? "");
+  const p = path.join(process.cwd(), "data", "research", "rules", `${id}.deep.json`);
+  try {
+    const raw = await fs.readFile(p, "utf-8");
+    return res.json({ ok: true, ruleset: JSON.parse(raw) });
+  } catch {
+    return res.status(404).json({ ok: false, error: "deep rules not found" });
+  }
+});
+
+// POST /api/research/build-pages
 router.post("/build-pages", async (req: Request, res: Response) => {
   const id = String((req.body as any)?.id ?? "");
   if (!id) return res.status(400).json({ ok: false, error: "id is required" });
@@ -207,6 +258,7 @@ router.post("/build-pages", async (req: Request, res: Response) => {
   }
 });
 
+// GET /api/research/pages/:id
 router.get("/pages/:id", async (req: Request, res: Response) => {
   const id = String(req.params.id ?? "");
   const manifest = await readManifest(id);
@@ -214,6 +266,7 @@ router.get("/pages/:id", async (req: Request, res: Response) => {
   return res.json({ ok: true, manifest });
 });
 
+// GET /api/research/page-image/:id/:page
 router.get("/page-image/:id/:page", async (req: Request, res: Response) => {
   const id = String(req.params.id ?? "");
   const page = Number(req.params.page ?? 0);
@@ -229,6 +282,7 @@ router.get("/page-image/:id/:page", async (req: Request, res: Response) => {
   }
 });
 
+// POST /api/research/search
 router.post("/search", async (req: Request, res: Response) => {
   const id = String((req.body as any)?.id ?? "");
   const query = String((req.body as any)?.query ?? "");
@@ -241,6 +295,7 @@ router.post("/search", async (req: Request, res: Response) => {
   return res.json({ ok: true, id, hits });
 });
 
+// POST /api/research/ask
 router.post("/ask", async (req: Request, res: Response) => {
   const id = String((req.body as any)?.id ?? "");
   const question = String((req.body as any)?.question ?? "");
@@ -258,4 +313,3 @@ router.post("/ask", async (req: Request, res: Response) => {
 });
 
 export default router;
-
