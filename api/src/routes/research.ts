@@ -99,9 +99,9 @@ router.post("/extract", async (req: Request, res: Response) => {
   const filePath = uploadPath(f.storedName);
 
   try {
-    const { preview } = await extractToText({ id, filePath, originalName: f.originalName });
+    const { preview, used } = await extractToText({ id, filePath, originalName: f.originalName });
     await updateFile(id, { extractedAt: new Date().toISOString() });
-    return res.json({ ok: true, id, preview });
+    return res.json({ ok: true, id, preview, used });
   } catch (e: any) {
     return res.status(500).json({ ok: false, error: String(e?.message ?? e) });
   }

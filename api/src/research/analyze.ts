@@ -22,13 +22,13 @@ async function ensureDir(p: string) {
   await fs.mkdir(p, { recursive: true });
 }
 
-function extractFirstJsonObject(s: string): any {
-  // たまに ```json ``` が混ざるので、最初の { ... } を拾う
-  const i = s.indexOf("{");
-  const j = s.lastIndexOf("}");
-  if (i < 0 || j < 0 || j <= i) throw new Error("no json object in response");
-  const sliced = s.slice(i, j + 1);
-  return JSON.parse(sliced);
+function stripCodeFences(s: string): string {
+  const t = s.trim();
+  // ```json ... ```
+  if (t.startsWith("```")) {
+    return t.replace(/^```[a-zA-Z]*\n?/, "").replace(/```$/, "").trim();
+  }
+  return t;
 }
 
 async function callOpenAIJSON(prompt: string): Promise<any> {
@@ -44,11 +44,13 @@ async function callOpenAIJSON(prompt: string): Promise<any> {
       model,
       temperature: 0.2,
       max_tokens: 1800,
+      // ★ 可能なモデルなら JSON固定（これが最強）
+      response_format: { type: "json_object" },
       messages: [
         {
           role: "system",
           content:
-            "あなたはTENMON-ARK研究解析エンジンです。外部知識・推測は禁止。入力本文だけが根拠です。出力はJSONのみ。各ルールに必ず evidence（本文の原文引用）を含めること。本文に無いことは rules に含めないこと。",
+            "あなたはTENMON-ARK研究解析エンジン。外部知識は禁止。入力本文だけから抽出。必ずJSONのみを返す。各ルールにevidence（本文の原文引用）必須。JSON以外（説明/箇条書き/コードフェンス）は禁止。",
         },
         { role: "user", content: prompt },
       ],
@@ -56,13 +58,18 @@ async function callOpenAIJSON(prompt: string): Promise<any> {
   });
 
   const raw = await res.text();
-  if (!res.ok) throw new Error(`OpenAI HTTP ${res.status}: ${raw.slice(0, 300)}`);
+  const json = JSON.parse(raw);
+  const content = (json?.choices?.[0]?.message?.content ?? "{}").toString();
+  const cleaned = stripCodeFences(content);
 
-  const outer = JSON.parse(raw);
-  const content = outer?.choices?.[0]?.message?.content ?? "{}";
-
-  // strict parse
-  return extractFirstJsonObject(content);
+  try {
+    return JSON.parse(cleaned);
+  } catch {
+    // 最後の保険：最初の { から最後の } を抜く
+    const m = cleaned.match(/\{[\s\S]*\}/);
+    if (m) return JSON.parse(m[0]);
+    throw new Error("LLM output is not valid JSON");
+  }
 }
 
 function normalizeRule(x: any): Rule | null {
@@ -112,10 +119,10 @@ export async function analyzeText(args: {
   const rawRules = Array.isArray(out?.rules) ? out.rules : [];
 
   // ✅ “本文にあること”担保：evidenceが本文に含まれないルールは捨てる
-  const valid: Rule[] = rawRules
-    .map(normalizeRule)
-    .filter((r): r is Rule => !!r)
-    .filter((r) => sliced.includes(r.evidence))
+  const normalized: (Rule | null)[] = rawRules.map(normalizeRule);
+  const valid: Rule[] = normalized
+    .filter((r): r is Rule => r !== null)
+    .filter((r: Rule) => sliced.includes(r.evidence))
     .slice(0, 80);
 
   const ruleset: Ruleset = {
