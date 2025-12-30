@@ -7,6 +7,7 @@ import { UPLOAD_DIR } from "../research/paths.js";
 import { addFile, listFiles, sha256File, updateFile, uploadPath } from "../research/store.js";
 import { extractToText } from "../research/extract.js";
 import { analyzeText } from "../research/analyze.js";
+import { analyzeDeep } from "../research/analyze_deep.js";
 
 const router = Router();
 
@@ -123,6 +124,26 @@ router.post("/analyze", async (req: Request, res: Response) => {
     await updateFile(id, { analyzedAt: new Date().toISOString() });
 
     // 「本文に無いことは無い」：0件なら blockedReason を返す
+    return res.json({ ok: true, id, ruleset });
+  } catch (e: any) {
+    return res.status(500).json({ ok: false, error: String(e?.message ?? e) });
+  }
+});
+
+router.post("/analyze-deep", async (req: Request, res: Response) => {
+  const id = String((req.body as any)?.id ?? "");
+  if (!id) return res.status(400).json({ ok: false, error: "id is required" });
+
+  const textPath = path.join(process.cwd(), "data", "research", "text", `${id}.txt`);
+  try {
+    await fs.access(textPath);
+  } catch {
+    return res.status(400).json({ ok: false, error: "text not extracted yet. call /extract first" });
+  }
+
+  try {
+    const { ruleset } = await analyzeDeep({ id, textPath });
+    await updateFile(id, { analyzedAt: new Date().toISOString() });
     return res.json({ ok: true, id, ruleset });
   } catch (e: any) {
     return res.status(500).json({ ok: false, error: String(e?.message ?? e) });
