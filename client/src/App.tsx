@@ -250,10 +250,10 @@ export default function App() {
           </span>
 
           <button className="ta-btn ghost" onClick={() => setView("chat")}>
-            Chat
+            会話
           </button>
           <button className="ta-btn ghost" onClick={() => setView("research")}>
-            Research
+            研究
           </button>
 
           <button className="ta-btn ghost" onClick={clearAll}>
