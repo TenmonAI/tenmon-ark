@@ -4,10 +4,13 @@ import path from "node:path";
 import { promises as fs } from "node:fs";
 
 import { UPLOAD_DIR } from "../research/paths.js";
-import { addFile, listFiles, sha256File, updateFile, uploadPath } from "../research/store.js";
+import { addFile, listFiles, sha256File, updateFile, uploadPath, type StoredFile } from "../research/store.js";
 import { extractToText } from "../research/extract.js";
 import { analyzeText } from "../research/analyze.js";
 import { analyzeDeep } from "../research/analyze_deep.js";
+import { buildPages, readManifest } from "../research/pages.js";
+import { searchInPages } from "../research/search.js";
+import { askWithCitations } from "../research/ask.js";
 
 const router = Router();
 
@@ -64,7 +67,7 @@ router.post("/upload", upload.array("files", 50), async (req: Request, res: Resp
   const files = (req as any).files as Express.Multer.File[] | undefined;
   if (!files || files.length === 0) return res.status(400).json({ ok: false, error: "no files" });
 
-  const saved = [];
+  const saved: StoredFile[] = [];
   for (const f of files) {
     const p = uploadPath(path.basename(f.filename));
     const sha = await sha256File(p);
@@ -80,6 +83,24 @@ router.post("/upload", upload.array("files", 50), async (req: Request, res: Resp
 
     saved.push(meta);
   }
+
+  // --- 自動学習（R3）: アップロード後に裏で pages build + extract + analyze を走らせる ---
+  // 失敗しても upload 自体は成功扱い（研究運用を止めない）
+  setImmediate(async () => {
+    for (const meta of saved) {
+      try {
+        // PDFのみ自動で pages build（画像+ページtxt）
+        if ((meta.originalName || "").toLowerCase().endsWith(".pdf")) {
+          const fp = uploadPath(meta.storedName);
+          await buildPages({ id: meta.id, pdfPath: fp, dpi: 200 });
+        }
+        // 既存R2: extract→analyze→analyze-deep もここに追加できる（順に）
+        // まずは pages build を最優先で安定させる
+      } catch (e) {
+        console.error("[research:auto]", meta.id, e);
+      }
+    }
+  });
 
   return res.json({ ok: true, files: saved });
 });
@@ -164,6 +185,75 @@ router.get("/rules/:id", async (req: Request, res: Response) => {
     return res.json({ ok: true, ruleset: JSON.parse(raw) });
   } catch {
     return res.status(404).json({ ok: false, error: "rules not found" });
+  }
+});
+
+router.post("/build-pages", async (req: Request, res: Response) => {
+  const id = String((req.body as any)?.id ?? "");
+  if (!id) return res.status(400).json({ ok: false, error: "id is required" });
+
+  const files = await listFiles();
+  const f = files.find((x) => x.id === id);
+  if (!f) return res.status(404).json({ ok: false, error: "not found" });
+
+  const filePath = uploadPath(f.storedName);
+
+  try {
+    const manifest = await buildPages({ id, pdfPath: filePath, dpi: 200 });
+    await updateFile(id, { extractedAt: new Date().toISOString() });
+    return res.json({ ok: true, id, manifest });
+  } catch (e: any) {
+    return res.status(500).json({ ok: false, error: String(e?.message ?? e) });
+  }
+});
+
+router.get("/pages/:id", async (req: Request, res: Response) => {
+  const id = String(req.params.id ?? "");
+  const manifest = await readManifest(id);
+  if (!manifest) return res.status(404).json({ ok: false, error: "pages not built yet" });
+  return res.json({ ok: true, manifest });
+});
+
+router.get("/page-image/:id/:page", async (req: Request, res: Response) => {
+  const id = String(req.params.id ?? "");
+  const page = Number(req.params.page ?? 0);
+  if (!id || !page) return res.status(400).json({ ok: false, error: "bad params" });
+
+  const p = path.join(process.cwd(), "data", "research", "pages", id, "images", `p-${page}.png`);
+  try {
+    await fs.access(p);
+    res.setHeader("Content-Type", "image/png");
+    return res.sendFile(p);
+  } catch {
+    return res.status(404).json({ ok: false, error: "image not found" });
+  }
+});
+
+router.post("/search", async (req: Request, res: Response) => {
+  const id = String((req.body as any)?.id ?? "");
+  const query = String((req.body as any)?.query ?? "");
+  if (!id || !query) return res.status(400).json({ ok: false, error: "id and query are required" });
+
+  const manifest = await readManifest(id);
+  if (!manifest) return res.status(400).json({ ok: false, error: "pages not built yet. call /build-pages first" });
+
+  const hits = await searchInPages({ id, query, manifest, limit: 12 });
+  return res.json({ ok: true, id, hits });
+});
+
+router.post("/ask", async (req: Request, res: Response) => {
+  const id = String((req.body as any)?.id ?? "");
+  const question = String((req.body as any)?.question ?? "");
+  if (!id || !question) return res.status(400).json({ ok: false, error: "id and question are required" });
+
+  const manifest = await readManifest(id);
+  if (!manifest) return res.status(400).json({ ok: false, error: "pages not built yet. call /build-pages first" });
+
+  try {
+    const out = await askWithCitations({ id, question, manifest });
+    return res.json({ ok: true, id, result: out });
+  } catch (e: any) {
+    return res.status(500).json({ ok: false, error: String(e?.message ?? e) });
   }
 });
 
