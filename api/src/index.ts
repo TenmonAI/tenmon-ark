@@ -7,6 +7,7 @@ import chatRouter from "./routes/chat.js";
 import thinkRouter from "./routes/think.js";
 import judgeRouter from "./routes/judge.js";
 import healthRouter from "./routes/health.js";
+import researchRouter from "./routes/research.js";
 
 const app = express();
 const PORT = process.env.PORT ? Number(process.env.PORT) : 3000;
@@ -31,6 +32,9 @@ app.use("/api/tenmon", tenmonRoutes);
 
 // Health router (GET /api/health)
 app.use("/api", healthRouter);
+
+// Research router (POST /api/research/upload, /api/research/files, etc.)
+app.use("/api/research", researchRouter);
 
 // health check (ルートパス)
 app.get("/health", (_, res) => {
