@@ -246,7 +246,7 @@ export default function App() {
         <div className="ta-right">
           <span className={`ta-chip ${apiOk === null ? "wait" : apiOk ? "ok" : "down"}`}>
             <span className="dot" />
-            API: {apiOk === null ? "checking" : apiOk ? "ok" : "down"}
+            API: {apiOk === null ? "確認中" : apiOk ? "稼働" : "停止"}
           </span>
 
           <button className="ta-btn ghost" onClick={() => setView("chat")}>
@@ -257,7 +257,7 @@ export default function App() {
           </button>
 
           <button className="ta-btn ghost" onClick={clearAll}>
-            Clear
+            クリア
           </button>
         </div>
       </header>

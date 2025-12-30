@@ -116,6 +116,12 @@ server {
     location /api/ {
         proxy_pass http://127.0.0.1:3000;
         proxy_http_version 1.1;
+
+        # Deep Analyze用のタイムアウト設定（1時間）
+        proxy_read_timeout 3600;
+        proxy_send_timeout 3600;
+        proxy_connect_timeout 60;
+
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';
         proxy_set_header Host $host;
@@ -123,8 +129,6 @@ server {
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_cache_bypass $http_upgrade;
-        proxy_read_timeout 300s;
-        proxy_connect_timeout 75s;
     }
 
     # WebSocket（Socket.IO）
