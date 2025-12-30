@@ -1,16 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
-type ThinkRes = {
-  response?: string;
-  timestamp?: string;
-};
-
 type Judgment = {
   type?: string;
   phase?: string;
   reading?: string;
   structure?: string[];
   action?: string;
+};
+
+type ThinkRes = {
+  response?: string;
+  timestamp?: string;
 };
 
 type ChatRes = {
@@ -20,230 +20,124 @@ type ChatRes = {
   timestamp?: string;
 };
 
-type Msg = {
+type Turn = {
   id: string;
-  role: "user" | "assistant";
-  kind: "think" | "judge";
+  role: "user" | "assistant" | "system";
+  channel: "THINK" | "JUDGE" | "SYSTEM";
   text: string;
   ts?: string;
   judgment?: Judgment | null;
 };
 
-const ui = {
-  page: {
-    minHeight: "100vh",
-    background:
-      "radial-gradient(900px 500px at 20% -10%, rgba(245,158,11,0.12), transparent 60%), radial-gradient(900px 500px at 90% 0%, rgba(59,130,246,0.14), transparent 55%), #0b0b0f",
-    color: "#eaeaea",
-    fontFamily:
-      'system-ui, -apple-system, BlinkMacSystemFont, "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif',
-    padding: 24,
-  } as const,
-  shell: {
-    maxWidth: 980,
-    margin: "0 auto",
-  } as const,
-  header: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "flex-end",
-    gap: 16,
-    marginBottom: 18,
-  } as const,
-  title: {
-    fontSize: 26,
-    fontWeight: 800,
-    letterSpacing: 0.3,
-    margin: 0,
-  } as const,
-  subtitle: {
-    marginTop: 6,
-    color: "#a7a7a7",
-    fontSize: 13,
-    lineHeight: 1.6,
-  } as const,
-  chipRow: { display: "flex", gap: 8, flexWrap: "wrap" as const } as const,
-  chip: (ok: boolean) =>
-    ({
-      display: "inline-flex",
-      alignItems: "center",
-      gap: 8,
-      padding: "6px 10px",
-      borderRadius: 999,
-      fontSize: 12,
-      border: "1px solid " + (ok ? "rgba(34,197,94,0.35)" : "rgba(239,68,68,0.35)"),
-      background: ok ? "rgba(34,197,94,0.10)" : "rgba(239,68,68,0.10)",
-      color: ok ? "#86efac" : "#fecaca",
-      userSelect: "none" as const,
-    }) as const,
-  card: {
-    background: "rgba(17,17,23,0.82)",
-    border: "1px solid rgba(255,255,255,0.10)",
-    borderRadius: 14,
-    boxShadow: "0 20px 60px rgba(0,0,0,0.45)",
-    padding: 16,
-  } as const,
-  textarea: {
-    width: "100%",
-    boxSizing: "border-box" as const,
-    background: "rgba(10,10,14,0.95)",
-    color: "#fff",
-    border: "1px solid rgba(255,255,255,0.12)",
-    borderRadius: 12,
-    padding: 14,
-    resize: "vertical" as const,
-    outline: "none",
-    lineHeight: 1.75,
-    fontSize: 14,
-  } as const,
-  btnRow: { display: "flex", gap: 10, marginTop: 10, flexWrap: "wrap" as const } as const,
-  btn: (variant: "primary" | "secondary" | "ghost", disabled?: boolean) =>
-    ({
-      padding: "10px 14px",
-      borderRadius: 10,
-      border:
-        variant === "ghost"
-          ? "1px solid rgba(255,255,255,0.15)"
-          : variant === "secondary"
-          ? "1px solid rgba(255,255,255,0.16)"
-          : "1px solid rgba(255,255,255,0.12)",
-      cursor: disabled ? "not-allowed" : "pointer",
-      fontWeight: 800,
-      background:
-        variant === "primary"
-          ? "linear-gradient(180deg, rgba(255,255,255,1), rgba(224,224,224,1))"
-          : variant === "secondary"
-          ? "rgba(42,42,48,0.90)"
-          : "transparent",
-      color: variant === "primary" ? "#0b0b0f" : "#ffffff",
-      opacity: disabled ? 0.6 : 1,
-      userSelect: "none" as const,
-    }) as const,
-  hint: {
-    marginTop: 10,
-    color: "#9aa0a6",
-    fontSize: 12,
-    lineHeight: 1.7,
-  } as const,
-  logWrap: {
-    marginTop: 14,
-    display: "flex",
-    flexDirection: "column" as const,
-    gap: 10,
-  } as const,
-  bubble: (role: "user" | "assistant") =>
-    ({
-      alignSelf: role === "user" ? "flex-end" : "flex-start",
-      maxWidth: "92%",
-      padding: "12px 14px",
-      borderRadius: 14,
-      border: "1px solid rgba(255,255,255,0.10)",
-      background:
-        role === "user"
-          ? "rgba(59,130,246,0.14)"
-          : "rgba(255,255,255,0.05)",
-      whiteSpace: "pre-wrap" as const,
-      lineHeight: 1.8,
-      fontSize: 14,
-    }) as const,
-  metaRow: {
-    marginTop: 6,
-    display: "flex",
-    gap: 8,
-    alignItems: "center",
-    color: "#a7a7a7",
-    fontSize: 11,
-  } as const,
-  miniTag: (label: string) =>
-    ({
-      padding: "2px 8px",
-      borderRadius: 999,
-      border: "1px solid rgba(255,255,255,0.16)",
-      background: "rgba(255,255,255,0.06)",
-      color: "#d7d7d7",
-    }) as const,
-  errorBox: {
-    marginTop: 12,
-    padding: 12,
-    borderRadius: 12,
-    background: "rgba(127,29,29,0.55)",
-    border: "1px solid rgba(239,68,68,0.35)",
-    whiteSpace: "pre-wrap" as const,
-  } as const,
-  judgeBox: {
-    marginTop: 10,
-    padding: 12,
-    borderRadius: 12,
-    background: "#f5f5f5",
-    color: "#111",
-  } as const,
-  judgePre: {
-    background: "#111",
-    color: "#0f0",
-    padding: 10,
-    borderRadius: 10,
-    whiteSpace: "pre-wrap" as const,
-    overflowX: "auto" as const,
-  } as const,
-};
-
-function makeId() {
+function uid() {
   return `${Date.now()}_${Math.random().toString(16).slice(2)}`;
+}
+
+function prettyTs(ts?: string) {
+  if (!ts) return "";
+  const d = new Date(ts);
+  if (Number.isNaN(d.getTime())) return ts;
+  return d.toLocaleString();
+}
+
+async function safeJson(res: Response) {
+  const raw = await res.text();
+  try {
+    return { ok: true, json: JSON.parse(raw), raw };
+  } catch {
+    return { ok: false, json: null, raw };
+  }
 }
 
 export default function App() {
   const [input, setInput] = useState("");
-  const [log, setLog] = useState<Msg[]>([]);
-  const [openJudgeId, setOpenJudgeId] = useState<string | null>(null);
-
-  const [sendingThink, setSendingThink] = useState(false);
-  const [sendingJudge, setSendingJudge] = useState(false);
-  const [err, setErr] = useState<string>("");
+  const [turns, setTurns] = useState<Turn[]>([
+    {
+      id: uid(),
+      role: "system",
+      channel: "SYSTEM",
+      text: "TENMON-ARK 起動。通常は THINK（会話）で進め、必要時のみ JUDGE（判断）を開いてください。",
+    },
+  ]);
 
   const [apiOk, setApiOk] = useState<boolean | null>(null);
-  const bottomRef = useRef<HTMLDivElement | null>(null);
+  const [loadingThink, setLoadingThink] = useState(false);
+  const [loadingJudge, setLoadingJudge] = useState(false);
+  const [errorText, setErrorText] = useState("");
+
+  const [openJudge, setOpenJudge] = useState<Record<string, boolean>>({});
+
+  const listRef = useRef<HTMLDivElement | null>(null);
+  const inputRef = useRef<HTMLTextAreaElement | null>(null);
 
   const canSend = useMemo(() => input.trim().length > 0, [input]);
 
-  // health check
+  // --- Health check ---
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
+    let alive = true;
+
+    async function ping() {
       try {
-        const r = await fetch("/api/health");
-        if (!r.ok) throw new Error("health not ok");
-        const j = await r.json();
-        if (!cancelled) setApiOk(j?.status === "ok");
+        const res = await fetch("/api/health", { method: "GET" });
+        if (!alive) return;
+        if (!res.ok) return setApiOk(false);
+        const parsed = await safeJson(res);
+        const ok = parsed.ok && parsed.json?.status === "ok";
+        setApiOk(ok);
       } catch {
-        if (!cancelled) setApiOk(false);
+        if (!alive) return;
+        setApiOk(false);
       }
-    })();
+    }
+
+    ping();
+    const t = setInterval(ping, 10_000);
     return () => {
-      cancelled = true;
+      alive = false;
+      clearInterval(t);
     };
   }, []);
 
-  // auto scroll
+  // --- auto scroll ---
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [log.length, sendingThink, sendingJudge]);
+    const el = listRef.current;
+    if (!el) return;
+    el.scrollTop = el.scrollHeight;
+  }, [turns.length]);
+
+  function pushTurn(t: Turn) {
+    setTurns((prev) => [...prev, t]);
+  }
+
+  function clearAll() {
+    setInput("");
+    setErrorText("");
+    setOpenJudge({});
+    setTurns([
+      {
+        id: uid(),
+        role: "system",
+        channel: "SYSTEM",
+        text: "TENMON-ARK 起動。通常は THINK（会話）で進め、必要時のみ JUDGE（判断）を開いてください。",
+      },
+    ]);
+    inputRef.current?.focus();
+  }
 
   async function sendThink() {
-    const text = input.trim();
-    if (!text) return;
+    const msg = input.trim();
+    if (!msg || loadingThink || loadingJudge) return;
 
-    setErr("");
-    setSendingThink(true);
-    setOpenJudgeId(null);
+    setErrorText("");
+    setLoadingThink(true);
 
-    const userMsg: Msg = { id: makeId(), role: "user", kind: "think", text, ts: new Date().toISOString() };
-    setLog((prev) => [...prev, userMsg]);
+    pushTurn({ id: uid(), role: "user", channel: "THINK", text: msg, ts: new Date().toISOString() });
 
     try {
       const res = await fetch("/api/think", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: text }),
+        body: JSON.stringify({ message: msg }),
       });
 
       if (!res.ok) {
@@ -251,38 +145,40 @@ export default function App() {
         throw new Error(`HTTP ${res.status}: ${t.slice(0, 200)}`);
       }
 
-      const data: ThinkRes = await res.json();
-      const assistantMsg: Msg = {
-        id: makeId(),
+      const parsed = await safeJson(res);
+      const data = (parsed.ok ? (parsed.json as ThinkRes) : {}) as ThinkRes;
+
+      pushTurn({
+        id: uid(),
         role: "assistant",
-        kind: "think",
-        text: data.response ?? "",
+        channel: "THINK",
+        text: (data.response ?? "").toString() || "（応答が空でした）",
         ts: data.timestamp,
-      };
-      setLog((prev) => [...prev, assistantMsg]);
+      });
+
       setInput("");
+      inputRef.current?.focus();
     } catch (e: any) {
-      setErr(e?.message ?? "❌ APIエラー");
+      setErrorText(e?.message ?? "❌ APIエラー");
     } finally {
-      setSendingThink(false);
+      setLoadingThink(false);
     }
   }
 
   async function sendJudge() {
-    const text = input.trim();
-    if (!text) return;
+    const msg = input.trim();
+    if (!msg || loadingThink || loadingJudge) return;
 
-    setErr("");
-    setSendingJudge(true);
+    setErrorText("");
+    setLoadingJudge(true);
 
-    const userMsg: Msg = { id: makeId(), role: "user", kind: "judge", text, ts: new Date().toISOString() };
-    setLog((prev) => [...prev, userMsg]);
+    pushTurn({ id: uid(), role: "user", channel: "JUDGE", text: msg, ts: new Date().toISOString() });
 
     try {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: text }),
+        body: JSON.stringify({ message: msg }),
       });
 
       if (!res.ok) {
@@ -290,171 +186,503 @@ export default function App() {
         throw new Error(`HTTP ${res.status}: ${t.slice(0, 200)}`);
       }
 
-      const data: ChatRes = await res.json();
-      const assistantMsg: Msg = {
-        id: makeId(),
+      const parsed = await safeJson(res);
+      const data = (parsed.ok ? (parsed.json as ChatRes) : {}) as ChatRes;
+
+      const assistantId = uid();
+      pushTurn({
+        id: assistantId,
         role: "assistant",
-        kind: "judge",
-        text: data.thought ?? data.response ?? "",
+        channel: "JUDGE",
+        text: (data.thought ?? data.response ?? "").toString() || "（応答が空でした）",
         ts: data.timestamp,
         judgment: data.judgment ?? null,
-      };
+      });
 
-      setLog((prev) => [...prev, assistantMsg]);
-      setInput("");
-
-      // judgment があれば自動で折りたたみ対象に
-      if (assistantMsg.judgment) {
-        setOpenJudgeId(assistantMsg.id);
-      } else {
-        setOpenJudgeId(null);
+      if (data.judgment) {
+        setOpenJudge((prev) => ({ ...prev, [assistantId]: true }));
       }
+
+      setInput("");
+      inputRef.current?.focus();
     } catch (e: any) {
-      setErr(e?.message ?? "❌ APIエラー");
+      setErrorText(e?.message ?? "❌ APIエラー");
     } finally {
-      setSendingJudge(false);
+      setLoadingJudge(false);
     }
   }
 
-  function clearAll() {
-    setInput("");
-    setLog([]);
-    setErr("");
-    setOpenJudgeId(null);
+  function toggleJudge(id: string) {
+    setOpenJudge((prev) => ({ ...prev, [id]: !prev[id] }));
   }
 
-  function onKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
-    // Cmd/Ctrl + Enter で THINK
-    if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
-      e.preventDefault();
-      if (!sendingThink && !sendingJudge && canSend) void sendThink();
+  async function copyText(text: string) {
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      // noop
     }
-    // Shift+Enter は改行（そのまま）
   }
 
   return (
-    <div style={ui.page}>
-      <div style={ui.shell}>
-        <div style={ui.header}>
-          <div>
-            <h1 style={ui.title}>TENMON-ARK</h1>
-            <div style={ui.subtitle}>
-              通常は <b>THINK（会話）</b>：<code>/api/think</code> ／ 必要時のみ{" "}
-              <b>JUDGE（判断）</b>：<code>/api/chat</code>
-              <br />
-              操作：<b>Cmd/Ctrl + Enter</b> で THINK 送信
-            </div>
-          </div>
+    <div className="ta">
+      <style>{css}</style>
 
-          <div style={ui.chipRow}>
-            {apiOk === null ? (
-              <span style={ui.chip(true)}>● API: checking…</span>
-            ) : apiOk ? (
-              <span style={ui.chip(true)}>● API: ok</span>
-            ) : (
-              <span style={ui.chip(false)}>● API: down</span>
-            )}
+      <header className="ta-header">
+        <div className="ta-brand">
+          <div className="ta-title">
+            <span className="ta-mark">◉</span>
+            TENMON-ARK
+          </div>
+          <div className="ta-sub">
+            通常は <b>THINK（会話）</b>：<code>/api/think</code> ／ 必要時のみ <b>JUDGE（判断）</b>：
+            <code>/api/chat</code>
+            <span className="ta-sub2">（Cmd/Ctrl + Enter で THINK 送信）</span>
           </div>
         </div>
 
-        <div style={ui.card}>
-          <textarea
-            rows={4}
-            style={ui.textarea}
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={onKeyDown}
-            placeholder="ここに入力してください。会話は Send（THINK）。判断が必要なら Judge（JUDGE）。"
-          />
+        <div className="ta-right">
+          <span className={`ta-chip ${apiOk === null ? "wait" : apiOk ? "ok" : "down"}`}>
+            <span className="dot" />
+            API: {apiOk === null ? "checking" : apiOk ? "ok" : "down"}
+          </span>
 
-          <div style={ui.btnRow}>
-            <button
-              onClick={() => void sendThink()}
-              disabled={!canSend || sendingThink || sendingJudge}
-              style={ui.btn("primary", !canSend || sendingThink || sendingJudge)}
-            >
-              {sendingThink ? "送信中…" : "Send（THINK）"}
-            </button>
+          <button className="ta-btn ghost" onClick={clearAll}>
+            Clear
+          </button>
+        </div>
+      </header>
 
-            <button
-              onClick={() => void sendJudge()}
-              disabled={!canSend || sendingThink || sendingJudge}
-              style={ui.btn("secondary", !canSend || sendingThink || sendingJudge)}
-            >
-              {sendingJudge ? "判断中…" : "Judge（JUDGE）"}
-            </button>
+      <main className="ta-main">
+        {errorText && <div className="ta-error">{errorText}</div>}
 
-            <button onClick={clearAll} style={ui.btn("ghost")}>
-              Clear
-            </button>
-          </div>
+        <div className="ta-thread" ref={listRef}>
+          {turns.map((t) => {
+            const isUser = t.role === "user";
+            const hasJudgment = !!t.judgment;
 
-          <div style={ui.hint}>
-            THINK は自然会話（丁寧語）です。JUDGE は必要時のみ、判断（構造）を同時に返します。
-          </div>
+            return (
+              <div key={t.id} className={`ta-row ${isUser ? "user" : t.role === "assistant" ? "assistant" : "system"}`}>
+                <div className={`ta-msg ${isUser ? "user" : t.role === "assistant" ? "assistant" : "system"}`}>
+                  <div className="ta-msgHead">
+                    <span className={`ta-badge ${t.channel.toLowerCase()}`}>{t.channel}</span>
+                    <span className="ta-ts">{t.ts ? prettyTs(t.ts) : ""}</span>
 
-          {err && <pre style={ui.errorBox}>{err}</pre>}
-
-          <div style={ui.logWrap}>
-            {log.map((m) => (
-              <div key={m.id} style={{ width: "100%" }}>
-                <div style={ui.bubble(m.role)}>
-                  {m.text}
-
-                  <div style={ui.metaRow}>
-                    <span style={ui.miniTag(m.role === "user" ? "USER" : "TENMON")}>
-                      {m.role === "user" ? "USER" : m.kind === "judge" ? "JUDGE" : "THINK"}
-                    </span>
-                    {m.ts ? <span>{m.ts}</span> : null}
+                    {t.role === "assistant" && (
+                      <button className="ta-mini" onClick={() => copyText(t.text)} title="本文をコピー">
+                        Copy
+                      </button>
+                    )}
                   </div>
 
-                  {m.role === "assistant" && m.kind === "judge" && m.judgment ? (
-                    <div style={{ marginTop: 10 }}>
-                      <button
-                        onClick={() =>
-                          setOpenJudgeId((prev) => (prev === m.id ? null : m.id))
-                        }
-                        style={ui.btn("secondary")}
-                      >
-                        {openJudgeId === m.id ? "判断を閉じる" : "判断を見る"}
+                  <div className="ta-text">{t.text}</div>
+
+                  {t.role === "assistant" && hasJudgment && (
+                    <div className="ta-judgeArea">
+                      <button className="ta-btn sub" onClick={() => toggleJudge(t.id)}>
+                        {openJudge[t.id] ? "判断を閉じる" : "判断を見る"}
                       </button>
 
-                      {openJudgeId === m.id ? (
-                        <div style={ui.judgeBox}>
-                          <div>
-                            <b>type</b>: {m.judgment.type ?? "-"}
-                          </div>
-                          <div>
-                            <b>phase</b>: {m.judgment.phase ?? "-"}
-                          </div>
-                          <div style={{ marginTop: 8 }}>
-                            <b>reading</b>: {m.judgment.reading ?? "-"}
+                      {openJudge[t.id] && (
+                        <div className="ta-judge">
+                          <div className="ta-judgeGrid">
+                            <div>
+                              <b>type</b>: {t.judgment?.type ?? "-"}
+                            </div>
+                            <div>
+                              <b>phase</b>: {t.judgment?.phase ?? "-"}
+                            </div>
                           </div>
 
-                          <div style={{ marginTop: 10 }}>
+                          <div className="ta-judgeLine">
+                            <b>reading</b>: {t.judgment?.reading ?? "-"}
+                          </div>
+
+                          <div className="ta-judgeLine">
                             <b>structure</b>:
                             <ul>
-                              {(m.judgment.structure ?? []).map((s, i) => (
+                              {(t.judgment?.structure ?? []).map((s, i) => (
                                 <li key={i}>{s}</li>
                               ))}
                             </ul>
                           </div>
 
-                          <div style={{ marginTop: 10 }}>
-                            <b>action</b>:
-                            <pre style={ui.judgePre}>{m.judgment.action ?? ""}</pre>
+                          <div className="ta-judgeLine">
+                            <div className="ta-judgeActionHead">
+                              <b>action</b>
+                              <button className="ta-mini" onClick={() => copyText(t.judgment?.action ?? "")}>
+                                Copy
+                              </button>
+                            </div>
+                            <pre className="ta-code">{t.judgment?.action ?? ""}</pre>
                           </div>
                         </div>
-                      ) : null}
+                      )}
                     </div>
-                  ) : null}
+                  )}
                 </div>
               </div>
-            ))}
-            <div ref={bottomRef} />
+            );
+          })}
+        </div>
+      </main>
+
+      <footer className="ta-composer">
+        <div className="ta-composeCard">
+          <textarea
+            ref={inputRef}
+            className="ta-input"
+            rows={4}
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder="ここに入力してください。会話は Send（THINK）。判断が必要なら Judge（JUDGE）。"
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+                e.preventDefault();
+                sendThink();
+              }
+            }}
+          />
+
+          <div className="ta-actionsRow">
+            <button className="ta-btn primary" onClick={sendThink} disabled={!canSend || loadingThink || loadingJudge}>
+              {loadingThink ? "送信中…" : "Send（THINK）"}
+            </button>
+
+            <button className="ta-btn secondary" onClick={sendJudge} disabled={!canSend || loadingThink || loadingJudge}>
+              {loadingJudge ? "判断中…" : "Judge（JUDGE）"}
+            </button>
+          </div>
+
+          <div className="ta-hint">
+            THINK は自然会話（丁寧語）です。JUDGE は必要時のみ、判断（構造）を同時に返します。
           </div>
         </div>
-      </div>
+      </footer>
     </div>
   );
 }
+
+const css = `
+/* ===== Tenmon Ark – Light research theme (ChatGPT-like layout, original styling) ===== */
+:root{
+  --bg: #fbfbfd;
+  --paper: #ffffff;
+  --ink: #111827;
+  --muted: #6b7280;
+  --border: #e5e7eb;
+
+  --accent: #1f3a8a;    /* 藍 */
+  --accent2: #b0892f;   /* 金 */
+  --teal: #0b7a75;      /* Tenmon teal */
+
+  --shadow: 0 10px 30px rgba(17,24,39,0.08);
+}
+
+.ta{
+  min-height: 100vh;
+  background: radial-gradient(900px 500px at 10% -10%, rgba(31,58,138,0.08), transparent 60%),
+              radial-gradient(900px 500px at 90% -10%, rgba(176,137,47,0.09), transparent 55%),
+              var(--bg);
+  color: var(--ink);
+}
+
+.ta-header{
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: rgba(251,251,253,0.85);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--border);
+  padding: 16px 18px;
+  display: flex;
+  gap: 16px;
+  align-items: flex-end;
+  justify-content: space-between;
+}
+
+.ta-brand{display:flex;flex-direction:column;gap:6px}
+.ta-title{
+  font-size: 24px;
+  font-weight: 900;
+  letter-spacing: .4px;
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+.ta-mark{
+  display:inline-flex;
+  width: 28px; height: 28px;
+  align-items:center; justify-content:center;
+  border-radius: 999px;
+  background: linear-gradient(135deg, rgba(31,58,138,0.12), rgba(176,137,47,0.12));
+  border: 1px solid rgba(31,58,138,0.18);
+  color: var(--accent);
+  font-size: 14px;
+}
+
+.ta-sub{
+  font-size: 12px;
+  color: var(--muted);
+}
+.ta-sub code{
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  background: rgba(31,58,138,0.06);
+  border: 1px solid rgba(31,58,138,0.10);
+  padding: 1px 6px;
+  border-radius: 8px;
+  color: #1f2937;
+}
+.ta-sub2{ margin-left:10px; color:#8891a1; }
+
+.ta-right{display:flex; align-items:center; gap:10px}
+
+.ta-chip{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding: 7px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,0.9);
+  box-shadow: 0 6px 16px rgba(17,24,39,0.06);
+}
+.ta-chip .dot{
+  width: 8px; height: 8px; border-radius:999px;
+  background: #9ca3af;
+}
+.ta-chip.ok{ border-color: rgba(11,122,117,0.25); }
+.ta-chip.ok .dot{ background: var(--teal); }
+.ta-chip.down{ border-color: rgba(239,68,68,0.25); }
+.ta-chip.down .dot{ background: #ef4444; }
+.ta-chip.wait .dot{ background:#9ca3af; }
+
+.ta-btn{
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--paper);
+  padding: 10px 14px;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 6px 14px rgba(17,24,39,0.06);
+}
+.ta-btn:hover{ filter: brightness(0.99); }
+.ta-btn:disabled{ opacity: .55; cursor: not-allowed; }
+.ta-btn.primary{
+  background: linear-gradient(180deg, rgba(31,58,138,0.10), rgba(31,58,138,0.04));
+  border-color: rgba(31,58,138,0.18);
+}
+.ta-btn.secondary{
+  background: linear-gradient(180deg, rgba(11,122,117,0.10), rgba(11,122,117,0.04));
+  border-color: rgba(11,122,117,0.22);
+}
+.ta-btn.ghost{
+  background: rgba(255,255,255,0.75);
+}
+.ta-btn.sub{
+  background: rgba(31,58,138,0.06);
+  border-color: rgba(31,58,138,0.14);
+  box-shadow: none;
+  padding: 8px 12px;
+  font-weight: 800;
+}
+
+.ta-mini{
+  margin-left: auto;
+  font-size: 11px;
+  border-radius: 10px;
+  border: 1px solid rgba(17,24,39,0.12);
+  background: rgba(255,255,255,0.6);
+  padding: 4px 8px;
+  cursor: pointer;
+}
+.ta-mini:hover{ background: rgba(255,255,255,0.9); }
+
+.ta-main{
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 16px 18px 120px;
+}
+
+.ta-error{
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(239,68,68,0.08);
+  border: 1px solid rgba(239,68,68,0.18);
+  color: #7f1d1d;
+  margin-bottom: 12px;
+  white-space: pre-wrap;
+}
+
+.ta-thread{
+  height: 58vh;
+  overflow: auto;
+  border-radius: 18px;
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,0.72);
+  box-shadow: var(--shadow);
+  padding: 14px;
+}
+
+.ta-row{display:flex; margin: 10px 0;}
+.ta-row.user{ justify-content: flex-end; }
+.ta-row.assistant, .ta-row.system{ justify-content: flex-start; }
+
+.ta-msg{
+  width: min(860px, 94%);
+  border-radius: 16px;
+  border: 1px solid rgba(17,24,39,0.08);
+  box-shadow: 0 10px 26px rgba(17,24,39,0.06);
+  padding: 12px 14px;
+  background: var(--paper);
+}
+
+.ta-msg.user{
+  background: linear-gradient(180deg, rgba(31,58,138,0.08), rgba(255,255,255,1));
+  border-color: rgba(31,58,138,0.14);
+}
+.ta-msg.assistant{
+  background: var(--paper);
+}
+.ta-msg.system{
+  background: rgba(255,255,255,0.6);
+  border-style: dashed;
+}
+
+.ta-msgHead{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  margin-bottom: 6px;
+}
+
+.ta-badge{
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(17,24,39,0.12);
+  background: rgba(17,24,39,0.03);
+  color: #374151;
+}
+.ta-badge.think{
+  border-color: rgba(11,122,117,0.22);
+  background: rgba(11,122,117,0.06);
+}
+.ta-badge.judge{
+  border-color: rgba(176,137,47,0.28);
+  background: rgba(176,137,47,0.08);
+}
+.ta-badge.system{
+  border-color: rgba(31,58,138,0.16);
+  background: rgba(31,58,138,0.05);
+}
+
+.ta-ts{
+  font-size: 11px;
+  color: #8b93a3;
+}
+
+.ta-text{
+  white-space: pre-wrap;
+  line-height: 1.85;
+  font-size: 14px;
+  color: #111827;
+}
+
+.ta-judgeArea{ margin-top: 10px; }
+
+.ta-judge{
+  margin-top: 10px;
+  border-radius: 14px;
+  border: 1px solid rgba(176,137,47,0.20);
+  background: rgba(255,255,255,0.92);
+  padding: 12px;
+}
+
+.ta-judgeGrid{
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.ta-judgeLine{
+  margin-top: 10px;
+}
+.ta-judgeLine ul{
+  margin: 6px 0 0 18px;
+}
+.ta-judgeActionHead{
+  display:flex;
+  align-items:center;
+  gap: 8px;
+}
+.ta-code{
+  margin-top: 8px;
+  background: #0b1220;
+  color: #a7f3d0;
+  border-radius: 12px;
+  padding: 10px;
+  white-space: pre-wrap;
+  overflow-x: auto;
+  border: 1px solid rgba(31,58,138,0.18);
+}
+
+.ta-composer{
+  position: fixed;
+  left: 0; right: 0;
+  bottom: 0;
+  padding: 14px 18px;
+  background: rgba(251,251,253,0.92);
+  backdrop-filter: blur(10px);
+  border-top: 1px solid var(--border);
+}
+
+.ta-composeCard{
+  max-width: 980px;
+  margin: 0 auto;
+  border-radius: 18px;
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,0.82);
+  box-shadow: var(--shadow);
+  padding: 12px;
+}
+
+.ta-input{
+  width: 100%;
+  box-sizing: border-box;
+  border-radius: 14px;
+  border: 1px solid rgba(17,24,39,0.14);
+  padding: 12px 12px;
+  font-size: 14px;
+  line-height: 1.75;
+  outline: none;
+  background: rgba(255,255,255,0.96);
+  color: #111827;
+  resize: vertical;
+}
+.ta-input:focus{
+  border-color: rgba(31,58,138,0.35);
+  box-shadow: 0 0 0 4px rgba(31,58,138,0.10);
+}
+
+.ta-actionsRow{
+  display:flex;
+  gap: 10px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+
+.ta-hint{
+  margin-top: 10px;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+/* responsive */
+@media (max-width: 680px){
+  .ta-header{ align-items: flex-start; flex-direction: column; }
+  .ta-right{ width: 100%; justify-content: space-between; }
+  .ta-thread{ height: 54vh; }
+  .ta-judgeGrid{ grid-template-columns: 1fr; }
+}
+`;
