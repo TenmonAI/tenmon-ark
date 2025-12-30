@@ -276,7 +276,7 @@ export default function ResearchConsole() {
             cursor: busy !== "" ? "not-allowed" : "pointer",
           }}
         >
-          一覧更新
+          再読込
         </button>
       </div>
 
@@ -429,7 +429,7 @@ export default function ResearchConsole() {
                           cursor: busy !== "" ? "not-allowed" : "pointer",
                         }}
                       >
-                        {bRules ? "読み込み中…" : "ルール読込"}
+                        {bRules ? "読み込み中…" : "ルール表示"}
                       </button>
 
                       <button
