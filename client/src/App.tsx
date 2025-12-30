@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import ResearchConsole from "./ResearchConsole";
 
 type Judgment = {
   type?: string;
@@ -50,6 +51,7 @@ async function safeJson(res: Response) {
 }
 
 export default function App() {
+  const [view, setView] = useState<"chat" | "research">("chat");
   const [input, setInput] = useState("");
   const [turns, setTurns] = useState<Turn[]>([
     {
@@ -247,6 +249,13 @@ export default function App() {
             API: {apiOk === null ? "checking" : apiOk ? "ok" : "down"}
           </span>
 
+          <button className="ta-btn ghost" onClick={() => setView("chat")}>
+            Chat
+          </button>
+          <button className="ta-btn ghost" onClick={() => setView("research")}>
+            Research
+          </button>
+
           <button className="ta-btn ghost" onClick={clearAll}>
             Clear
           </button>
@@ -254,9 +263,15 @@ export default function App() {
       </header>
 
       <main className="ta-main">
-        {errorText && <div className="ta-error">{errorText}</div>}
+        {view === "research" ? (
+          <div className="ta-thread" style={{ height: "auto" }}>
+            <ResearchConsole />
+          </div>
+        ) : (
+          <>
+            {errorText && <div className="ta-error">{errorText}</div>}
 
-        <div className="ta-thread" ref={listRef}>
+            <div className="ta-thread" ref={listRef}>
           {turns.map((t) => {
             const isUser = t.role === "user";
             const hasJudgment = !!t.judgment;
@@ -324,9 +339,12 @@ export default function App() {
               </div>
             );
           })}
-        </div>
+            </div>
+          </>
+        )}
       </main>
 
+      {view === "chat" && (
       <footer className="ta-composer">
         <div className="ta-composeCard">
           <textarea
@@ -359,6 +377,7 @@ export default function App() {
           </div>
         </div>
       </footer>
+      )}
     </div>
   );
 }
