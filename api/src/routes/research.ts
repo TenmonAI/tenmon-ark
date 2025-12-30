@@ -10,6 +10,27 @@ import { analyzeText } from "../research/analyze.js";
 
 const router = Router();
 
+function fixOriginalName(name: string): string {
+  // 既に日本語/漢字が含まれていたら、そのまま
+  const hasJP = /[\u3040-\u30ff\u3400-\u9fff]/.test(name);
+  if (hasJP) return name;
+
+  // multer/busboy が latin1 扱いして文字化けするケースを救済
+  try {
+    const decoded = Buffer.from(name, "latin1").toString("utf8");
+    const decodedHasJP = /[\u3040-\u30ff\u3400-\u9fff]/.test(decoded);
+    // 変換後に日本語が出てきたら採用
+    if (decodedHasJP) return decoded;
+
+    // 日本語は無いけど、変換で明らかに読みやすくなってる場合も採用（保険）
+    if (decoded !== name && decoded.includes("") === false) return decoded;
+  } catch {
+    // noop
+  }
+
+  return name;
+}
+
 async function ensureDir(p: string) {
   await fs.mkdir(p, { recursive: true });
 }
@@ -24,7 +45,8 @@ const storage = multer.diskStorage({
     }
   },
   filename: (_req, file, cb) => {
-    const safe = file.originalname.replace(/[^\w.\-()ぁ-んァ-ヶ一-龠]/g, "_");
+    const original = fixOriginalName(file.originalname);
+    const safe = original.replace(/[^\w.\-()ぁ-んァ-ヶ一-龠]/g, "_");
     cb(null, `${Date.now()}_${Math.random().toString(16).slice(2)}__${safe}`);
   },
 });
@@ -47,7 +69,7 @@ router.post("/upload", upload.array("files", 50), async (req: Request, res: Resp
     const sha = await sha256File(p);
 
     const meta = await addFile({
-      originalName: f.originalname,
+      originalName: fixOriginalName(f.originalname),
       storedName: path.basename(f.filename),
       mime: f.mimetype,
       size: f.size,
