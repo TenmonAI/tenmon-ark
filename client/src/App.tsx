@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import ResearchConsole from "./ResearchConsole";
+import ResearchBuilderPage from "./pages/ResearchBuilderPage";
 
 type Judgment = {
   type?: string;
@@ -51,7 +52,7 @@ async function safeJson(res: Response) {
 }
 
 export default function App() {
-  const [view, setView] = useState<"chat" | "research">("chat");
+  const [view, setView] = useState<"chat" | "research" | "research-builder">("chat");
   const [input, setInput] = useState("");
   const [turns, setTurns] = useState<Turn[]>([
     {
@@ -249,12 +250,15 @@ export default function App() {
             API: {apiOk === null ? "確認中" : apiOk ? "稼働" : "停止"}
           </span>
 
-          <button className="ta-btn ghost" onClick={() => setView("chat")}>
-            会話
-          </button>
-          <button className="ta-btn ghost" onClick={() => setView("research")}>
-            研究
-          </button>
+                      <button className="ta-btn ghost" onClick={() => setView("chat")}>
+                        会話
+                      </button>
+                      <button className="ta-btn ghost" onClick={() => setView("research")}>
+                        研究
+                      </button>
+                      <button className="ta-btn ghost" onClick={() => setView("research-builder")}>
+                        研究ビルダー
+                      </button>
 
           <button className="ta-btn ghost" onClick={clearAll}>
             クリア
@@ -263,13 +267,16 @@ export default function App() {
       </header>
 
       <main className="ta-main">
-        {view === "research" ? (
+        {errorText && <div className="ta-error">{errorText}</div>}
+
+        {view === "research-builder" ? (
+          <ResearchBuilderPage />
+        ) : view === "research" ? (
           <div className="ta-thread" style={{ height: "auto" }}>
             <ResearchConsole />
           </div>
         ) : (
           <>
-            {errorText && <div className="ta-error">{errorText}</div>}
 
             <div className="ta-thread" ref={listRef}>
           {turns.map((t) => {
