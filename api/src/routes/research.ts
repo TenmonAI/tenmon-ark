@@ -3,14 +3,12 @@ import multer from "multer";
 import path from "node:path";
 import { promises as fs } from "node:fs";
 
-import { UPLOAD_DIR, RESEARCH_DIR } from "../research/paths.js";
+import { UPLOAD_DIR, RESEARCH_DIR, RULES_DIR } from "../research/paths.js";
 import { addFile, listFiles, sha256File, updateFile, uploadPath, type StoredFile } from "../research/store.js";
 import { extractToText } from "../research/extract.js";
 import { analyzeText } from "../research/analyze.js";
 import { analyzeDeep } from "../research/analyze_deep.js";
-import { buildPages, readManifest } from "../research/pages.js";
-import { searchInPages } from "../research/search.js";
-import { askWithCitations } from "../research/ask.js";
+import { buildPages } from "../research/pages.js";
 
 const router = Router();
 
@@ -65,7 +63,7 @@ const upload = multer({
   limits: { files: 50, fileSize: TWO_GB },
 });
 
-// --- エンドポイント ---
+// --- 研究APIの正式ルート（6つのエンドポイントのみ）---
 
 // POST /api/research/upload
 router.post("/upload", upload.array("files", 50), async (req: Request, res: Response) => {
@@ -140,12 +138,6 @@ router.post("/upload", upload.array("files", 50), async (req: Request, res: Resp
   return res.json({ ok: true, files: saved });
 });
 
-// GET /api/research/files
-router.get("/files", async (_req: Request, res: Response) => {
-  const files = await listFiles();
-  return res.json({ ok: true, files });
-});
-
 // POST /api/research/extract
 router.post("/extract", async (req: Request, res: Response) => {
   const id = String((req.body as any)?.id ?? "");
@@ -214,30 +206,6 @@ router.post("/analyze-deep", async (req: Request, res: Response) => {
   }
 });
 
-// GET /api/research/rules/:id（通常）
-router.get("/rules/:id", async (req: Request, res: Response) => {
-  const id = String(req.params.id ?? "");
-  const p = path.join(process.cwd(), "data", "research", "rules", `${id}.json`);
-  try {
-    const raw = await fs.readFile(p, "utf-8");
-    return res.json({ ok: true, ruleset: JSON.parse(raw) });
-  } catch {
-    return res.status(404).json({ ok: false, error: "rules not found" });
-  }
-});
-
-// GET /api/research/rules-deep/:id（深層）
-router.get("/rules-deep/:id", async (req: Request, res: Response) => {
-  const id = String(req.params.id ?? "");
-  const p = path.join(process.cwd(), "data", "research", "rules", `${id}.deep.json`);
-  try {
-    const raw = await fs.readFile(p, "utf-8");
-    return res.json({ ok: true, ruleset: JSON.parse(raw) });
-  } catch {
-    return res.status(404).json({ ok: false, error: "deep rules not found" });
-  }
-});
-
 // POST /api/research/build-pages
 router.post("/build-pages", async (req: Request, res: Response) => {
   const id = String((req.body as any)?.id ?? "");
@@ -258,55 +226,83 @@ router.post("/build-pages", async (req: Request, res: Response) => {
   }
 });
 
-// GET /api/research/pages/:id
-router.get("/pages/:id", async (req: Request, res: Response) => {
-  const id = String(req.params.id ?? "");
-  const manifest = await readManifest(id);
-  if (!manifest) return res.status(404).json({ ok: false, error: "pages not built yet" });
-  return res.json({ ok: true, manifest });
-});
-
-// GET /api/research/page-image/:id/:page
-router.get("/page-image/:id/:page", async (req: Request, res: Response) => {
-  const id = String(req.params.id ?? "");
-  const page = Number(req.params.page ?? 0);
-  if (!id || !page) return res.status(400).json({ ok: false, error: "bad params" });
-
-  const p = path.join(process.cwd(), "data", "research", "pages", id, "images", `p-${page}.png`);
-  try {
-    await fs.access(p);
-    res.setHeader("Content-Type", "image/png");
-    return res.sendFile(p);
-  } catch {
-    return res.status(404).json({ ok: false, error: "image not found" });
+// POST /api/research/approve-rules
+router.post("/approve-rules", async (req: Request, res: Response) => {
+  const id = String((req.body as any)?.id ?? "");
+  const ruleIds = Array.isArray((req.body as any)?.ruleIds) ? (req.body as any).ruleIds : [];
+  if (!id || ruleIds.length === 0) {
+    return res.status(400).json({ ok: false, error: "id and ruleIds are required" });
   }
-});
-
-// POST /api/research/search
-router.post("/search", async (req: Request, res: Response) => {
-  const id = String((req.body as any)?.id ?? "");
-  const query = String((req.body as any)?.query ?? "");
-  if (!id || !query) return res.status(400).json({ ok: false, error: "id and query are required" });
-
-  const manifest = await readManifest(id);
-  if (!manifest) return res.status(400).json({ ok: false, error: "pages not built yet. call /build-pages first" });
-
-  const hits = await searchInPages({ id, query, manifest, limit: 12 });
-  return res.json({ ok: true, id, hits });
-});
-
-// POST /api/research/ask
-router.post("/ask", async (req: Request, res: Response) => {
-  const id = String((req.body as any)?.id ?? "");
-  const question = String((req.body as any)?.question ?? "");
-  if (!id || !question) return res.status(400).json({ ok: false, error: "id and question are required" });
-
-  const manifest = await readManifest(id);
-  if (!manifest) return res.status(400).json({ ok: false, error: "pages not built yet. call /build-pages first" });
 
   try {
-    const out = await askWithCitations({ id, question, manifest });
-    return res.json({ ok: true, id, result: out });
+    await ensureDir(RULES_DIR);
+
+    // 深層解析結果を読み込む
+    const deepPath = path.join(RULES_DIR, `${id}.deep.json`);
+    let deepRuleset: any = null;
+    try {
+      const raw = await fs.readFile(deepPath, "utf-8");
+      deepRuleset = JSON.parse(raw);
+    } catch {
+      // 深層解析結果がない場合は通常解析結果を試す
+      const normalPath = path.join(RULES_DIR, `${id}.json`);
+      try {
+        const raw = await fs.readFile(normalPath, "utf-8");
+        deepRuleset = JSON.parse(raw);
+      } catch {
+        return res.status(404).json({ ok: false, error: "ruleset not found. call /analyze or /analyze-deep first" });
+      }
+    }
+
+    // 採用されたルールのみを抽出
+    const approvedRules = (deepRuleset.rules || []).filter((r: any, idx: number) => {
+      // ruleIds がインデックスの場合
+      if (ruleIds.includes(idx)) return true;
+      // ruleIds がルールID（title/rule）の場合
+      if (ruleIds.includes(r.title) || ruleIds.includes(r.rule)) return true;
+      return false;
+    });
+
+    if (approvedRules.length === 0) {
+      return res.status(400).json({ ok: false, error: "no rules approved" });
+    }
+
+    // fixed.json に保存（追記形式）
+    const fixedPath = path.join(RULES_DIR, "fixed.json");
+    let fixedRules: any[] = [];
+    try {
+      const existing = await fs.readFile(fixedPath, "utf-8");
+      const parsed = JSON.parse(existing);
+      fixedRules = Array.isArray(parsed.rules) ? parsed.rules : [];
+    } catch {
+      // ファイルが存在しない場合は新規作成
+    }
+
+    // 重複チェック（同じ rule が既に存在する場合はスキップ）
+    const existingRules = new Set(fixedRules.map((r: any) => r.rule));
+    const newRules = approvedRules.filter((r: any) => !existingRules.has(r.rule));
+
+    if (newRules.length === 0) {
+      return res.json({ ok: true, message: "all rules already approved", approved: 0, skipped: approvedRules.length });
+    }
+
+    fixedRules.push(...newRules.map((r: any) => ({ ...r, sourceId: id, approvedAt: new Date().toISOString() })));
+
+    const fixedContent = {
+      version: "R3",
+      updatedAt: new Date().toISOString(),
+      rules: fixedRules,
+    };
+
+    await fs.writeFile(fixedPath, JSON.stringify(fixedContent, null, 2), "utf-8");
+
+    return res.json({
+      ok: true,
+      id,
+      approved: newRules.length,
+      skipped: approvedRules.length - newRules.length,
+      total: fixedRules.length,
+    });
   } catch (e: any) {
     return res.status(500).json({ ok: false, error: String(e?.message ?? e) });
   }
