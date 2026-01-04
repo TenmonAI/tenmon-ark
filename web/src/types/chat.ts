@@ -8,10 +8,10 @@ export type Message = {
 export type ChatRequest = {
   message: string;
   sessionId: string;
-  persona: "tenmon";
+  meta?: Record<string, any>;
 };
 
 export type ChatResponse = {
   response: string;
-  timestamp: string;
+  timestamp?: string;
 };
