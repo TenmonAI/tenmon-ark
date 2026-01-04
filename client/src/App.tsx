@@ -3,7 +3,7 @@ import Chat from "./pages/Chat";
 
 export default function App() {
   return (
-    <div className="flex h-screen bg-gray-50 text-gray-900">
+    <div className="flex h-screen bg-gray-100 text-gray-900">
       <Sidebar />
       <div className="flex-1 flex flex-col">
         <Chat />

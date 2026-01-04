@@ -1,27 +1,33 @@
 export default function Sidebar() {
   return (
-    <div className="w-64 bg-white border-r flex flex-col">
-      <div className="p-4 border-b font-semibold text-sm">
-        TENMON-ARK
+    <div className="w-64 bg-gray-50 flex flex-col p-3">
+      {/* ロゴ */}
+      <div className="flex items-center gap-2 px-2 py-3">
+        <img
+          src="/logo.png"
+          alt="TENMON-ARK"
+          className="h-7 w-auto"
+        />
       </div>
 
-      <div className="p-3">
-        <button className="w-full text-left text-sm px-3 py-2 rounded-md bg-gray-100 hover:bg-gray-200">
-          ＋ 新しい会話
-        </button>
-      </div>
+      {/* 新しい会話 */}
+      <button className="mt-2 mb-4 w-full rounded-lg bg-white px-3 py-2 text-sm shadow-sm hover:bg-gray-100">
+        ＋ 新しい会話
+      </button>
 
-      <div className="flex-1 overflow-y-auto px-2 space-y-1">
-        <div className="text-xs text-gray-500 px-2 mt-4">最近の会話</div>
-        <div className="px-2 py-2 rounded-md hover:bg-gray-100 cursor-pointer text-sm">
+      {/* 履歴 */}
+      <div className="flex-1 space-y-1 text-sm">
+        <div className="px-2 py-1 text-gray-500 text-xs">最近の会話</div>
+        <div className="rounded-lg px-3 py-2 hover:bg-white cursor-pointer">
           天聞アーク 研究構築
         </div>
-        <div className="px-2 py-2 rounded-md hover:bg-gray-100 cursor-pointer text-sm">
+        <div className="rounded-lg px-3 py-2 hover:bg-white cursor-pointer">
           天津金木 思考整理
         </div>
       </div>
 
-      <div className="border-t p-3 text-xs text-gray-500">
+      {/* ユーザー */}
+      <div className="mt-3 px-2 py-2 text-xs text-gray-500">
         天聞さん
       </div>
     </div>
