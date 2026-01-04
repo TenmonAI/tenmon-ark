@@ -1,13 +1,9 @@
-import Sidebar from "./components/Sidebar";
-import Chat from "./pages/Chat";
+import ChatCore from "./features/chat-core/ChatCore";
 
 export default function App() {
   return (
-    <div className="flex h-screen bg-gray-100 text-gray-900">
-      <Sidebar />
-      <div className="flex-1 flex flex-col">
-        <Chat />
-      </div>
+    <div style={{ height: "100vh" }}>
+      <ChatCore />
     </div>
   );
 }
