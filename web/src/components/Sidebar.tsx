@@ -1,21 +1,17 @@
 export default function Sidebar() {
   return (
-    <aside className="w-64 bg-[#f7f7f8] flex flex-col">
-      {/* ロゴ＋バージョン */}
-      <div className="px-4 py-3 text-sm font-medium text-gray-700">
-        TENMON-ARK ▾
+    <aside className="w-64 bg-[#f7f7f8] px-3 py-4">
+      <div className="mb-4 text-sm font-semibold text-gray-700">
+        TENMON-ARK
       </div>
 
-      {/* 新規チャット */}
-      <div className="px-3 py-2">
-        <button className="w-full rounded-lg px-3 py-2 text-sm bg-white shadow-sm hover:bg-gray-50">
-          ＋ 新しい会話
-        </button>
-      </div>
+      <button className="w-full rounded-md bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">
+        ＋ 新しい会話
+      </button>
 
-      {/* 履歴 */}
-      <div className="flex-1 px-3 py-4 text-xs text-gray-500">
-        履歴（後で）
+      <div className="mt-4 space-y-1 text-sm text-gray-600">
+        <div className="px-2 py-1">天聞アーク 研究構築</div>
+        <div className="px-2 py-1">天津金木 思考整理</div>
       </div>
     </aside>
   );
