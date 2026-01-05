@@ -16,8 +16,10 @@ const STORAGE_DIR = path.resolve(process.cwd(), "storage", "knowledge");
 
 // 環境変数から制限値を取得（デフォルト値あり）
 const MAX_FILE_MB = Number(process.env.MAX_FILE_MB) || 100;
-const MAX_FILES = Number(process.env.MAX_FILES) || 1000;
+const MAX_KNOWLEDGE_FILES = Number(process.env.MAX_KNOWLEDGE_FILES) || 1000;
+const MAX_KNOWLEDGE_TOTAL_MB = Number(process.env.MAX_KNOWLEDGE_TOTAL_MB) || 5000;
 const MAX_FILE_SIZE = MAX_FILE_MB * 1024 * 1024; // バイト単位
+const MAX_KNOWLEDGE_TOTAL_SIZE = MAX_KNOWLEDGE_TOTAL_MB * 1024 * 1024; // バイト単位
 
 // multer設定
 const storage = multer.diskStorage({
@@ -40,7 +42,7 @@ const upload = multer({
   storage,
   limits: {
     fileSize: MAX_FILE_SIZE,
-    files: MAX_FILES,
+    files: MAX_KNOWLEDGE_FILES,
   },
   fileFilter: (req, file, cb) => {
     // テキストファイルのみ許可（Phase1）
@@ -65,7 +67,7 @@ const upload = multer({
  * POST /api/knowledge/upload
  * 複数ファイルをアップロード
  */
-router.post("/upload", upload.array("files", MAX_FILES), async (req: Request, res: Response) => {
+router.post("/upload", upload.array("files", MAX_KNOWLEDGE_FILES), async (req: Request, res: Response) => {
   try {
     const files = req.files as Express.Multer.File[];
 
@@ -78,7 +80,8 @@ router.post("/upload", upload.array("files", MAX_FILES), async (req: Request, re
 
     // 既存ファイル数を確認
     const existingFiles = listKnowledgeFiles();
-    if (existingFiles.length + files.length > MAX_FILES) {
+    const totalFilesAfter = existingFiles.length + files.length;
+    if (totalFilesAfter > MAX_KNOWLEDGE_FILES) {
       // アップロード済みファイルを削除
       files.forEach((file) => {
         const filePath = path.join(STORAGE_DIR, file.filename);
@@ -88,7 +91,26 @@ router.post("/upload", upload.array("files", MAX_FILES), async (req: Request, re
       });
       return res.status(400).json({
         error: "MAX_FILES_EXCEEDED",
-        message: `ファイル数の上限（${MAX_FILES}件）を超えています`,
+        message: `ファイル数の上限（${MAX_KNOWLEDGE_FILES}件）を超えています。現在: ${existingFiles.length}件、追加予定: ${files.length}件`,
+      });
+    }
+
+    // 既存ファイルの合計サイズを計算
+    const existingTotalSize = existingFiles.reduce((sum, f) => sum + f.size, 0);
+    const newFilesTotalSize = files.reduce((sum, f) => sum + f.size, 0);
+    const totalSizeAfter = existingTotalSize + newFilesTotalSize;
+    
+    if (totalSizeAfter > MAX_KNOWLEDGE_TOTAL_SIZE) {
+      // アップロード済みファイルを削除
+      files.forEach((file) => {
+        const filePath = path.join(STORAGE_DIR, file.filename);
+        if (fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath);
+        }
+      });
+      return res.status(400).json({
+        error: "MAX_TOTAL_SIZE_EXCEEDED",
+        message: `合計サイズの上限（${MAX_KNOWLEDGE_TOTAL_MB}MB）を超えています。現在: ${Math.round(existingTotalSize / (1024 * 1024))}MB、追加予定: ${Math.round(newFilesTotalSize / (1024 * 1024))}MB`,
       });
     }
 
@@ -131,7 +153,7 @@ router.post("/upload", upload.array("files", MAX_FILES), async (req: Request, re
       if (err.code === "LIMIT_FILE_COUNT") {
         return res.status(400).json({
           error: "TOO_MANY_FILES",
-          message: `ファイル数の上限（${MAX_FILES}件）を超えています`,
+          message: `ファイル数の上限（${MAX_KNOWLEDGE_FILES}件）を超えています`,
         });
       }
     }
