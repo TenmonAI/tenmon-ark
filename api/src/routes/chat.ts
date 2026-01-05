@@ -24,7 +24,7 @@ function extractTextFromFile(storedName: string, mime: string): string {
     // txt/md/json のみ対応（UTF-8テキストとして読み込む）
     if (mime.includes("text") || mime.includes("json") || storedName.endsWith(".txt") || storedName.endsWith(".md") || storedName.endsWith(".json")) {
       const content = fs.readFileSync(filePath, "utf-8");
-      // 先頭5000文字 + 要約（雑でOK）
+      // 先頭5000文字
       if (content.length > 5000) {
         return content.substring(0, 5000) + "\n\n[... 続きがあります ...]";
       }
@@ -39,37 +39,66 @@ function extractTextFromFile(storedName: string, mime: string): string {
 }
 
 /**
- * System Prompt を組み立てる
+ * System Prompt を三層構造で組み立てる
+ * 
+ * 構造：
+ * 1) CORE（固定・編集不可）
+ *    - 天津金木思考の核
+ *    - 「あなたは天聞アークである」
+ *    - 「言灵・天津金木・構文を重視」
+ *    - 「応答は必ず日本語」
+ * 
+ * 2) STYLE（Settingsの instructions）
+ *    - ユーザーが設定した口調・方針
+ * 
+ * 3) KNOWLEDGE（アップロード資料）
+ *    - txt/md/json から抽出
+ *    - 最大 N ファイル、各先頭 M 文字
  */
 function buildSystemPrompt(): string {
   const settings = getSettings();
   const files = listKnowledgeFiles();
 
-  // 固定：天津金木 System Prompt
+  // ========================================
+  // 1) CORE（固定・編集不可）
+  // ========================================
   let prompt = `あなたは天聞アーク（TENMON-ARK）です。
 天津金木の思考プロセスに従って、ユーザーとの会話を行います。
 
-思考の基本構造：
+【思考の基本構造】
 1. 受信（入力の受容）
 2. 内省（内部での振り返り）
 3. 構文化（構造として整理）
 4. 応答（出力の生成）
 
-自然で親しみやすい会話を心がけ、ユーザーの問いかけに対して適切に応答してください。
-応答は必ず日本語で行ってください。`;
+【重要な原則】
+- 言灵（ことだま）を重視し、言葉の本質を捉える
+- 天津金木の構文に従い、思考を構造化する
+- 応答は必ず日本語で行う
+- 自然で親しみやすい会話を心がける`;
 
-  // 追加：settings.instructions
+  // ========================================
+  // 2) STYLE（Settingsの instructions）
+  // ========================================
   if (settings.instructions && settings.instructions.trim()) {
-    prompt += `\n\n【追加指示】\n${settings.instructions.trim()}`;
+    prompt += `\n\n【追加指示・口調・方針】\n${settings.instructions.trim()}`;
   }
 
-  // 追加：knowledge テキスト
+  // ========================================
+  // 3) KNOWLEDGE（アップロード資料）
+  // ========================================
   if (files.length > 0) {
     prompt += `\n\n【参考資料】\n`;
-    for (const file of files.slice(0, 10)) { // 最大10ファイルまで
+    const maxFiles = 10; // 最大10ファイルまで
+    const maxCharsPerFile = 5000; // 各ファイル先頭5000文字まで
+    
+    for (const file of files.slice(0, maxFiles)) {
       const text = extractTextFromFile(file.storedName, file.mime);
       if (text) {
-        prompt += `\n--- ${file.originalName} ---\n${text}\n`;
+        const truncated = text.length > maxCharsPerFile 
+          ? text.substring(0, maxCharsPerFile) + "\n\n[... 続きがあります ...]"
+          : text;
+        prompt += `\n--- ${file.originalName} ---\n${truncated}\n`;
       }
     }
   }
@@ -88,7 +117,7 @@ router.post("/chat", async (req: Request, res: Response) => {
       });
     }
 
-    // System Prompt を組み立てる
+    // System Prompt を三層構造で組み立てる
     const systemPrompt = buildSystemPrompt();
 
     // THINK モードの場合：天津金木思考ロジックを使用（systemPromptを渡す）

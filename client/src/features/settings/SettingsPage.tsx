@@ -36,11 +36,29 @@ export default function SettingsPage({ onBack }: Props) {
   }, []);
 
   async function loadSettings() {
+    // まず localStorage から読み込む
+    try {
+      const cached = localStorage.getItem("tenmon_settings");
+      if (cached) {
+        const data = JSON.parse(cached);
+        setSettings((prev) => ({ ...prev, ...data }));
+      }
+    } catch (err: any) {
+      console.error("Failed to load from localStorage:", err);
+    }
+
+    // その後 API を呼んで上書き更新
     try {
       const res = await fetch("/api/settings");
       if (res.ok) {
         const data = await res.json();
         setSettings((prev) => ({ ...prev, ...data }));
+        // API から取得したデータを localStorage にも保存
+        localStorage.setItem("tenmon_settings", JSON.stringify({
+          name: data.name,
+          description: data.description,
+          instructions: data.instructions,
+        }));
       }
     } catch (err: any) {
       console.error("Failed to load settings:", err);
@@ -62,16 +80,20 @@ export default function SettingsPage({ onBack }: Props) {
   async function saveSettings() {
     setIsLoading(true);
     try {
+      const data = {
+        name: settings.name,
+        description: settings.description,
+        instructions: settings.instructions,
+      };
+
       const res = await fetch("/api/settings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: settings.name,
-          description: settings.description,
-          instructions: settings.instructions,
-        }),
+        body: JSON.stringify(data),
       });
       if (res.ok) {
+        // localStorage に保存
+        localStorage.setItem("tenmon_settings", JSON.stringify(data));
         alert("設定を保存しました");
       } else {
         alert("設定の保存に失敗しました");
