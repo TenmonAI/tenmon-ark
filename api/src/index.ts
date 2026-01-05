@@ -8,9 +8,13 @@ import thinkRouter from "./routes/think.js";
 import judgeRouter from "./routes/judge.js";
 import healthRouter from "./routes/health.js";
 import researchRouter from "./routes/research.js";
+import { initDB } from "./db/knowledge.js";
 
 const app = express();
 const PORT = process.env.PORT ? Number(process.env.PORT) : 3000;
+
+// Knowledge DB を初期化
+initDB();
 
 app.use(cors());
 app.use(express.json());
