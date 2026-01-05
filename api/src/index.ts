@@ -9,6 +9,7 @@ import judgeRouter from "./routes/judge.js";
 import healthRouter from "./routes/health.js";
 import researchRouter from "./routes/research.js";
 import knowledgeRouter from "./routes/knowledge.js";
+import settingsRouter from "./routes/settings.js";
 import { initDB } from "./db/knowledge.js";
 
 const app = express();
@@ -43,6 +44,9 @@ app.use("/api/research", researchRouter);
 
 // Knowledge router (POST /api/knowledge/upload, GET /api/knowledge/list, DELETE /api/knowledge/:id)
 app.use("/api/knowledge", knowledgeRouter);
+
+// Settings router (GET /api/settings, POST /api/settings)
+app.use("/api/settings", settingsRouter);
 
 // health check (ルートパス)
 app.get("/health", (_, res) => {

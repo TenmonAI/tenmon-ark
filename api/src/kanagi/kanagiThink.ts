@@ -18,10 +18,10 @@ import { ask4o } from "../llm/ask4o.js";
  * 3. 構文化（構造として整理）
  * 4. 応答（出力の生成）
  */
-export async function kanagiThink(input: string): Promise<string> {
+export async function kanagiThink(input: string, systemPrompt?: string): Promise<string> {
   try {
-    // ask4o を呼び出すだけ
-    return await ask4o(input);
+    // ask4o を呼び出す（systemPromptを渡す）
+    return await ask4o(input, systemPrompt);
   } catch (err: any) {
     // エラー時も必ず string を返す
     console.error("[KANAGI-THINK-ERROR]", err);
