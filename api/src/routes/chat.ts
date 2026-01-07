@@ -4,9 +4,12 @@ import { getSettings } from "../db/knowledge.js";
 import { listKnowledgeFiles } from "../db/knowledge.js";
 import { tenmonCore } from "../tenmon-core/index.js";
 import { OUTPUT_TEMPLATE } from "../tenmon-core/persona.js";
-import { getCorpusPage } from "../kotodama/corpusLoader.js";
+import { getCorpusPage, getAvailableDocs } from "../kotodama/corpusLoader.js";
+import { getPageText } from "../kotodama/textLoader.js";
+import { detectLaws } from "../kotodama/ingest/detectLaws.js";
 import fs from "node:fs";
 import path from "node:path";
+import readline from "node:readline";
 
 const router: IRouter = Router();
 
@@ -39,6 +42,222 @@ function extractTextFromFile(storedName: string, mime: string): string {
   }
 
   return "";
+}
+
+/**
+ * ページ由来のLaw候補を取得（JSONLファイルから読み込む）
+ */
+type LawCandidate = {
+  id: string;
+  doc: string;
+  pdfPage: number;
+  title: string;
+  quote: string;
+  rule: string;
+  confidence: number;
+};
+
+async function getPageLawCandidates(doc: string, pdfPage: number, limit = 6): Promise<LawCandidate[]> {
+  // 今は言霊秘書のみ（後でktk/irohaも増やす）
+  const fileMap: Record<string, string> = {
+    "言霊秘書.pdf": "/opt/tenmon-corpus/db/khs_law_candidates.jsonl",
+  };
+  const fp = fileMap[doc];
+  if (!fp || !fs.existsSync(fp)) return [];
+
+  const out: LawCandidate[] = [];
+  const rl = readline.createInterface({
+    input: fs.createReadStream(fp, { encoding: "utf-8" }),
+    crlfDelay: Infinity,
+  });
+
+  for await (const line of rl) {
+    const t = line.trim();
+    if (!t) continue;
+    try {
+      const c = JSON.parse(t) as LawCandidate;
+      if (c.doc === doc && c.pdfPage === pdfPage) {
+        out.push(c);
+        if (out.length >= limit) break;
+      }
+    } catch (err: any) {
+      // JSON解析エラーは無視
+      console.warn(`[GET-PAGE-LAW-CANDIDATES] Failed to parse line: ${err.message}`);
+    }
+  }
+  
+  rl.close();
+  return out;
+}
+
+/**
+ * message から doc と pdfPage を抽出（資料指定必須）
+ * パターン例：
+ * - "言霊秘書.pdf pdfPage=13"
+ * - "言霊秘書.pdf 13ページ"
+ * - "カタカムナ言灵解.pdf pdfPage=5"
+ * - "いろは最終原稿.pdf pdfPage=10"
+ */
+function extractDocAndPage(message: string): { doc: string; pdfPage: number } | null {
+  const availableDocs = getAvailableDocs();
+  
+  // パターン1: "doc名.pdf pdfPage=N" または "doc名.pdf Nページ"
+  for (const doc of availableDocs) {
+    const docName = doc.replace(/\.pdf$/i, "");
+    const escapedDocName = docName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    
+    // "doc名.pdf pdfPage=N" パターン
+    const pdfPagePattern = new RegExp(`${escapedDocName}\\.pdf[^\\d]*pdfPage[=:]\\s*(\\d+)`, "i");
+    const pdfPageMatch = message.match(pdfPagePattern);
+    if (pdfPageMatch && pdfPageMatch[1]) {
+      const pdfPage = Number(pdfPageMatch[1]);
+      if (Number.isFinite(pdfPage) && pdfPage > 0) {
+        return { doc, pdfPage };
+      }
+    }
+    
+    // "doc名.pdf Nページ" パターン
+    const pagePattern = new RegExp(`${escapedDocName}\\.pdf[^\\d]*(\\d+)[^\\d]*ページ`, "i");
+    const pageMatch = message.match(pagePattern);
+    if (pageMatch && pageMatch[1]) {
+      const pdfPage = Number(pageMatch[1]);
+      if (Number.isFinite(pdfPage) && pdfPage > 0) {
+        return { doc, pdfPage };
+      }
+    }
+    
+    // "doc名 Nページ" パターン（.pdf なしでも）
+    const simplePattern = new RegExp(`${escapedDocName}[^\\d]*(\\d+)[^\\d]*ページ`, "i");
+    const simpleMatch = message.match(simplePattern);
+    if (simpleMatch && simpleMatch[1]) {
+      const pdfPage = Number(simpleMatch[1]);
+      if (Number.isFinite(pdfPage) && pdfPage > 0) {
+        return { doc, pdfPage };
+      }
+    }
+  }
+  
+  return null;
+}
+
+/**
+ * Kanagi解析ステップとdecisionFrameを生成
+ * doc/pdfPageで根拠ページが確定したら、tenmon-coreのanalyzeKotodamaを呼んで
+ * analysis.steps と decisionFrame を生成
+ */
+async function generateKanagiAnalysis(
+  message: string,
+  doc: string,
+  pdfPage: number
+): Promise<{
+  analysis: import("../tenmon-core/index.js").KotodamaAnalysis;
+  decisionFrame: {
+    conclusion: string;
+    grounds: { doc: string; pdfPage: number; quote?: string };
+    appliedLaws: Array<{ lawId: string; title: string; source: string }>;
+    operations: Array<{ op: string; description: string }>;
+    alignment: Array<{ doc: string; relation: string }>;
+  };
+}> {
+  // tenmon-core の analyzeKotodama を呼ぶ
+  const analysis = tenmonCore.analyze(message);
+
+  // decisionFrame を構築
+  const appliedLaws: Array<{ lawId: string; title: string; source: string }> = [];
+  const operations: Array<{ op: string; description: string }> = [];
+  const alignment: Array<{ doc: string; relation: string }> = [];
+
+  // ========================================
+  // ページ由来のLaw候補を取得（synapse候補Law：優先）
+  // ========================================
+  const pageCands = await getPageLawCandidates(doc, pdfPage, 6);
+  
+  // ページ由来のLaw候補を appliedLaws に追加（優先）
+  for (const cand of pageCands) {
+    appliedLaws.push({
+      lawId: cand.id,
+      title: cand.title,
+      source: `${cand.doc} P${cand.pdfPage} (page-candidate/${cand.rule})`,
+    });
+  }
+
+  // ========================================
+  // ページ内抽出Law（text.jsonl を参照）
+  // ========================================
+  const pageText = getPageText(doc, pdfPage);
+  
+  if (pageText && pageText.trim().length > 0) {
+    // text が空でない場合：簡易ルール抽出で Law候補を生成
+    const detectedLaws = detectLaws(pageText);
+    
+    for (const detected of detectedLaws) {
+      // LawID を生成（KHS-Pxxxx-Lnnn 形式）
+      const prefix = doc.includes("言霊秘書") ? "KHS" : doc.includes("カタカムナ") ? "KTK" : "IRO";
+      const lawId = `${prefix}-P${String(pdfPage).padStart(4, "0")}-L${String(appliedLaws.length + 1).padStart(3, "0")}`;
+      
+      // 重複チェック
+      if (!appliedLaws.find((l) => l.lawId === lawId)) {
+        appliedLaws.push({
+          lawId,
+          title: detected.title,
+          source: `${doc} P${pdfPage}`,
+        });
+      }
+    }
+  }
+
+  // ========================================
+  // 帯域Law（analysis.hints から取得：補助）
+  // ========================================
+  for (const lawId of analysis.hints) {
+    const law = tenmonCore.getLawById(lawId);
+    if (law) {
+      // 重複チェック
+      if (!appliedLaws.find((l) => l.lawId === lawId)) {
+        appliedLaws.push({
+          lawId: law.id,
+          title: law.title,
+          source: `${law.source.doc} P${law.source.pdfPage}${law.source.section ? ` [${law.source.section}]` : ""}`,
+        });
+      }
+    }
+  }
+
+  // analysis.steps から操作を抽出
+  for (const step of analysis.steps) {
+    if (step.operation) {
+      operations.push({
+        op: step.operation,
+        description: step.description,
+      });
+    }
+  }
+
+  // 整合チェック（言霊秘書/カタカムナ/いろは への接続）
+  const availableDocs = getAvailableDocs();
+  for (const otherDoc of availableDocs) {
+    if (otherDoc !== doc) {
+      // 簡易的な整合チェック（実際の実装ではより詳細なチェックが必要）
+      alignment.push({
+        doc: otherDoc,
+        relation: "参照可能",
+      });
+    }
+  }
+
+  const decisionFrame = {
+    conclusion: "", // 結論は後で生成（この段階では空）
+    grounds: {
+      doc,
+      pdfPage,
+      quote: "", // 後で corpus から取得
+    },
+    appliedLaws,
+    operations,
+    alignment,
+  };
+
+  return { analysis, decisionFrame };
 }
 
 /**
@@ -173,54 +392,80 @@ router.post("/chat", async (req: Request, res: Response) => {
     }
 
     // ========================================
-    // 会話1ターン処理の先頭に必ず analyzeKotodama を実行（例外分岐禁止）
+    // 資料指定必須（SOURCE-GATE）：doc/pdfPage が抽出できない場合は固定応答
     // ========================================
-    let analysisHints: string[] = [];
-    try {
-      const analysis = tenmonCore.analyze(message);
-      analysisHints = analysis.hints || [];
-      
-      // 解析ログを出力（学習素材・DB保存用）
-      console.log("[CHAT-ANALYSIS]", {
-        message: message.substring(0, 100),
-        tokens: analysis.tokens.length,
-        steps: analysis.steps.length,
-        hints: analysisHints,
-      });
-    } catch (analysisErr: any) {
-      // 解析エラーでも会話は続行（例外分岐禁止）
-      console.warn("[CHAT-ANALYSIS-ERROR]", analysisErr);
-    }
-
-    // ========================================
-    // 根拠チェック：lawCards が空の場合は LLM を呼ばずに固定応答を返す
-    // ========================================
-    const lawCards = buildLawCards(analysisHints);
-    if (lawCards.length === 0) {
+    const docAndPage = extractDocAndPage(message);
+    
+    if (!docAndPage) {
+      // 抽出できない場合は固定応答（外部知識を遮断）
+      const availableDocs = getAvailableDocs();
       return res.json({
-        reply: "資料根拠が抽出されていないため、言霊秘書準拠で回答できません。doc/pdfPageを指定してください。",
+        reply: `doc名とpdfPageを指定してください。例：言霊秘書.pdf pdfPage=6\n\n利用可能なドキュメント：\n${availableDocs.map((d) => `- ${d}`).join("\n")}`,
       });
     }
 
-    // System Prompt を三層構造で組み立てる（analysisHints を注入）
-    const systemPrompt = buildSystemPrompt(analysisHints);
-
-    // THINK モードの場合：天津金木思考ロジックを使用（systemPromptを渡す）
-    if (mode === "think" || mode === "THINK" || !mode) {
-      const reply = await kanagiThink(message, systemPrompt);
-      return res.json({ reply });
-    }
-
-    // JUDGE モード（後回し）：仮の判断文を返す
-    if (mode === "judge" || mode === "JUDGE") {
+    // ========================================
+    // doc/pdfPage が抽出できた場合、corpusLoader を直接呼ぶ
+    // ========================================
+    const rec = getCorpusPage(docAndPage.doc, docAndPage.pdfPage);
+    
+    if (!rec) {
       return res.json({
-        reply: `【JUDGE】「${message}」を評価します（JUDGEモードは今後実装予定です）`,
+        reply: `指定されたページ（${docAndPage.doc} P${docAndPage.pdfPage}）が見つかりませんでした。`,
       });
     }
 
-    // その他のモード：THINK として処理
-    const reply = await kanagiThink(message, systemPrompt);
-    return res.json({ reply });
+    // ========================================
+    // Kanagi解析ステップを生成（doc/pdfPageで根拠ページが確定したら）
+    // ========================================
+    const { analysis, decisionFrame } = await generateKanagiAnalysis(
+      message,
+      docAndPage.doc,
+      docAndPage.pdfPage
+    );
+
+    // decisionFrame に corpus からの引用を追加
+    decisionFrame.grounds.quote = rec.cleanedText.substring(0, 500);
+
+    // ========================================
+    // 返答フォーマットを固定：「結論→根拠→適用法則→操作→整合」
+    // ========================================
+    const conclusion = `【結論】\n${docAndPage.doc} P${docAndPage.pdfPage} を参照しました。`;
+    
+    const grounds = `【根拠】\n` +
+      `ドキュメント: ${decisionFrame.grounds.doc}\n` +
+      `ページ: ${decisionFrame.grounds.pdfPage}\n` +
+      `引用（抜粋）: ${decisionFrame.grounds.quote.substring(0, 200)}${decisionFrame.grounds.quote.length > 200 ? "..." : ""}`;
+    
+    const appliedLawsText = decisionFrame.appliedLaws.length > 0
+      ? `【適用法則】\n${decisionFrame.appliedLaws.map((law) => `- ${law.title} (${law.lawId})\n  出典: ${law.source}`).join("\n")}`
+      : `【適用法則】\n（該当する法則が見つかりませんでした）`;
+    
+    const operationsText = decisionFrame.operations.length > 0
+      ? `【操作】\n${decisionFrame.operations.map((op) => `- ${op.op}: ${op.description}`).join("\n")}`
+      : `【操作】\n（適用された操作はありません）`;
+    
+    const alignmentText = decisionFrame.alignment.length > 0
+      ? `【整合】\n${decisionFrame.alignment.map((a) => `- ${a.doc}: ${a.relation}`).join("\n")}`
+      : `【整合】\n（他の資料との整合チェックは未実施）`;
+
+    const reply = `${conclusion}\n\n${grounds}\n\n${appliedLawsText}\n\n${operationsText}\n\n${alignmentText}`;
+
+    // rec を返す（imageUrl も含める）
+    const imageUrl = `/api/corpus/page-image?doc=${encodeURIComponent(docAndPage.doc)}&pdfPage=${docAndPage.pdfPage}`;
+    
+    return res.json({
+      reply,
+      doc: docAndPage.doc,
+      pdfPage: docAndPage.pdfPage,
+      page: rec,
+      imageUrl: rec.imagePath ? imageUrl : null,
+      analysis: {
+        steps: analysis.steps,
+        hints: analysis.hints,
+      },
+      decisionFrame,
+    });
 
   } catch (err: any) {
     // エラー時も必ず reply を返す（UIが沈黙しないようにする）

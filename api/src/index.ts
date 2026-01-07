@@ -14,6 +14,7 @@ import kotodamaRouter from "./routes/kotodama.js";
 import corpusRouter from "./routes/corpus.js";
 import { initDB } from "./db/knowledge.js";
 import { initCorpusLoader } from "./kotodama/corpusLoader.js";
+import { initTextLoader } from "./kotodama/textLoader.js";
 
 const app = express();
 const PORT = process.env.PORT ? Number(process.env.PORT) : 3000;
@@ -23,6 +24,9 @@ initDB();
 
 // Corpus JSONL ローダーを初期化
 initCorpusLoader();
+
+// Text JSONL ローダーを初期化
+initTextLoader();
 
 app.use(cors());
 app.use(express.json());

@@ -34,15 +34,18 @@ router.get("/docs", (req: Request, res: Response) => {
  */
 router.get("/page", (req: Request, res: Response) => {
   try {
-    const doc = req.query.doc as string | undefined;
+    const rawDoc = String(req.query.doc ?? "");
     const pdfPage = req.query.pdfPage ? Number(req.query.pdfPage) : undefined;
 
-    if (!doc) {
+    if (!rawDoc) {
       return res.status(400).json({
         error: "DOC_REQUIRED",
         message: "doc クエリパラメータが必要です",
       });
     }
+
+    // doc を decodeURIComponent した値で getCorpusPage に渡す
+    const doc = decodeURIComponent(rawDoc);
 
     if (!pdfPage || !Number.isFinite(pdfPage) || pdfPage <= 0) {
       return res.status(400).json({
@@ -75,15 +78,18 @@ router.get("/page", (req: Request, res: Response) => {
  */
 router.get("/page-image", (req: Request, res: Response) => {
   try {
-    const doc = req.query.doc as string | undefined;
+    const rawDoc = String(req.query.doc ?? "");
     const pdfPage = req.query.pdfPage ? Number(req.query.pdfPage) : undefined;
 
-    if (!doc) {
+    if (!rawDoc) {
       return res.status(400).json({
         error: "DOC_REQUIRED",
         message: "doc クエリパラメータが必要です",
       });
     }
+
+    // doc を decodeURIComponent した値で getCorpusPage に渡す
+    const doc = decodeURIComponent(rawDoc);
 
     if (!pdfPage || !Number.isFinite(pdfPage) || pdfPage <= 0) {
       return res.status(400).json({
