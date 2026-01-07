@@ -60,16 +60,37 @@ function loadJsonl(filePath: string): Map<number, CorpusPageRecord> {
 }
 
 /**
+ * 利用可能なドキュメント一覧を取得
+ */
+export function getAvailableDocs(): string[] {
+  return Array.from(corpusCache.keys());
+}
+
+/**
  * 起動時に corpus をロード（初期化）
+ * 3冊分（khs_pages.jsonl, ktk_pages.jsonl, iroha_pages.jsonl）をロード
  */
 export function initCorpusLoader(): void {
   const corpusDir = process.env.TENMON_CORPUS_DIR || "/opt/tenmon-corpus/db";
-  const jsonlPath = path.join(corpusDir, "khs_pages.jsonl");
   
-  const map = loadJsonl(jsonlPath);
-  corpusCache.set("言霊秘書.pdf", map);
+  // 言霊秘書（KHS）
+  const khsPath = path.join(corpusDir, "khs_pages.jsonl");
+  const khsMap = loadJsonl(khsPath);
+  corpusCache.set("言霊秘書.pdf", khsMap);
   
-  console.log(`[CORPUS-LOADER] Initialized: ${map.size} pages cached`);
+  // カタカムナ（KTK）
+  const ktkPath = path.join(corpusDir, "ktk_pages.jsonl");
+  const ktkMap = loadJsonl(ktkPath);
+  corpusCache.set("カタカムナ言灵解.pdf", ktkMap);
+  
+  // いろは（IROHA）
+  const irohaPath = path.join(corpusDir, "iroha_pages.jsonl");
+  const irohaMap = loadJsonl(irohaPath);
+  corpusCache.set("いろは最終原稿.pdf", irohaMap);
+  
+  const totalPages = khsMap.size + ktkMap.size + irohaMap.size;
+  console.log(`[CORPUS-LOADER] Initialized: ${totalPages} pages cached across ${corpusCache.size} docs`);
+  console.log(`[CORPUS-LOADER] Docs: ${Array.from(corpusCache.keys()).join(", ")}`);
 }
 
 /**
