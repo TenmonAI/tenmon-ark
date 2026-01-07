@@ -36,28 +36,39 @@ export default function SettingsPage({ onBack }: Props) {
   }, []);
 
   async function loadSettings() {
-    // まず localStorage から読み込む
+    // ① localStorage から即復元
     try {
       const cached = localStorage.getItem("tenmon_settings");
       if (cached) {
         const data = JSON.parse(cached);
-        setSettings((prev) => ({ ...prev, ...data }));
+        setSettings((prev) => ({
+          ...prev,
+          name: data.name || prev.name,
+          description: data.description || prev.description,
+          instructions: data.instructions || prev.instructions,
+        }));
       }
     } catch (err: any) {
       console.error("Failed to load from localStorage:", err);
     }
 
-    // その後 API を呼んで上書き更新
+    // ② その後 /api/settings を fetch
     try {
       const res = await fetch("/api/settings");
       if (res.ok) {
         const data = await res.json();
-        setSettings((prev) => ({ ...prev, ...data }));
-        // API から取得したデータを localStorage にも保存
+        // APIの値で state を上書き
+        setSettings((prev) => ({
+          ...prev,
+          name: data.name || "TENMON-ARK",
+          description: data.description || "",
+          instructions: data.instructions || "",
+        }));
+        // APIの値で localStorage も上書き
         localStorage.setItem("tenmon_settings", JSON.stringify({
-          name: data.name,
-          description: data.description,
-          instructions: data.instructions,
+          name: data.name || "TENMON-ARK",
+          description: data.description || "",
+          instructions: data.instructions || "",
         }));
       }
     } catch (err: any) {
@@ -81,18 +92,20 @@ export default function SettingsPage({ onBack }: Props) {
     setIsLoading(true);
     try {
       const data = {
-        name: settings.name,
-        description: settings.description,
-        instructions: settings.instructions,
+        name: settings.name || "TENMON-ARK",
+        description: settings.description || "",
+        instructions: settings.instructions || "",
       };
 
+      // POST /api/settings で保存
       const res = await fetch("/api/settings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
+      
       if (res.ok) {
-        // localStorage に保存
+        // 同時に localStorage にも保存（key: "tenmon_settings"）
         localStorage.setItem("tenmon_settings", JSON.stringify(data));
         alert("設定を保存しました");
       } else {
