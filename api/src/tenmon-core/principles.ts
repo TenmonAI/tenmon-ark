@@ -303,6 +303,118 @@ export const LAWS_KAMIYO_NANAYO_CORE: Law[] = [
 ];
 
 /**
+ * 言霊の根・体用・操作体系・辞・反転など
+ * 「解析アルゴリズム」そのものに関わる核Lawセット
+ */
+export const LAWS_METHOD_CORE: Law[] = [
+  {
+    id: "KOTODAMA-CORE-KOTODAMA-PROCESS",
+    title: "言霊＝凝→息→言 の生成プロセス",
+    quote: "水火凝々として吹き出すをイキコトと曰う、故に一言と曰う",
+    normalized:
+      "水火が凝り、吹き出すものをイキコトと呼ぶ。言霊は概念ではなく「凝→息→言」という生成プロセスである。",
+    tags: ["kotodama", "iki", "koto", "process"],
+    source: {
+      doc: "言霊秘書.pdf",
+      pdfPage: 31,
+      bookPage: 31,
+      section: "一言の法則",
+      note: "言霊の根源定義（凝→息→言）",
+    },
+  },
+  {
+    id: "KOTODAMA-CORE-TAIYOU-RELATIVE",
+    title: "体用（火水）の相対反転",
+    quote: "水は用、火は体とすといえども、物に付て水火にも火水にもなる",
+    normalized:
+      "水＝用／火＝体といっても、対象と文脈に付いて水火にも火水にも反転する。体用は固定ラベルではなく関係で決まる。",
+    tags: ["taiyou", "mizuho", "relative"],
+    source: {
+      doc: "言霊秘書.pdf",
+      pdfPage: 7,
+      bookPage: 7,
+      section: "水穂伝附言",
+      note: "体用が相対的に反転することの説明",
+    },
+  },
+  {
+    id: "KOTODAMA-CORE-DECODE-FLOW",
+    title: "解読手順：一言法則・延開・省・反約・起言・補言・助言",
+    quote:
+      "御霊に現れた語は直に一言の法則に合して心を知り、詞に現れたものは詞に延開して心を知る。ラリルレにて助け、現れ有る所を省き、反約し、アイウオにて起こし、シミツにて補う。",
+    normalized:
+      "御霊に現れた語は一言の法則に合し、詞は延開して心を知る。その際、助言（ラリルレ）、省、反約、起言（アイウオ）、補言（シミツ）を用いて解読する。",
+    tags: ["method", "operation", "helpers", "decode"],
+    source: {
+      doc: "言霊秘書.pdf",
+      pdfPage: 35,
+      bookPage: 35,
+      section: "一言の法則",
+      note: "解読手順そのものの記述",
+    },
+  },
+  {
+    id: "KOTODAMA-CORE-UNBOUNDED-ENKAI",
+    title: "無限延開：詞に延開こと何言と限りなし",
+    quote: "詞に延開こと、何言と限はなし",
+    normalized: "詞に対する延開は何言と限りがなく、原理的に無限に展開し得る。",
+    tags: ["method", "enkai", "fractal"],
+    source: {
+      doc: "言霊秘書.pdf",
+      pdfPage: 35,
+      bookPage: 35,
+      section: "一言の法則",
+      note: "延開の無制限性（フラクタル展開の根拠）",
+    },
+  },
+  {
+    id: "KOTODAMA-CORE-OPERATIONS-FOR-HARD-WORDS",
+    title: "音義で解けない語への操作（略・転・延・約）",
+    quote: "音義にて素直に解けざる語は略・転・延・約の法を用いる",
+    normalized:
+      "音義で素直に解けない語は、略・転・延・約などの操作を用いて解くこととされる。",
+    tags: ["method", "operation"],
+    source: {
+      doc: "言霊秘書.pdf",
+      pdfPage: 36,
+      bookPage: 36,
+      section: "一言の法則",
+      note: "略・転・延・約など補助操作の列挙",
+    },
+  },
+  {
+    id: "KOTODAMA-CORE-TENIWOHA",
+    title: "辞（テニヲハ）の構文的役割",
+    quote: "辞は二言より五言までにて語と詞と綴り始終を結ぶ",
+    normalized:
+      "辞（テニヲハ）は二〜五言で語と詞を綴り、文の始終を結ぶ連結規則である。",
+    tags: ["teniwoha", "grammar", "syntax"],
+    source: {
+      doc: "言霊秘書.pdf",
+      pdfPage: 37,
+      bookPage: 37,
+      section: "辞",
+      note: "辞（テニヲハ）の定義と語・詞の結節点",
+    },
+  },
+  {
+    id: "KOTODAMA-CORE-HAN-EXAMPLES",
+    title: "反（反転）操作と例",
+    quote: "仮名を反にして上下左右を反す。例に近江（アハウミ→アフミ）などあり。",
+    normalized:
+      "反（反転）の操作は仮名列を反にし、上下・左右を反すことで語義を読む。近江（アハウミ→アフミ）などの具体例が挙げられる。",
+    tags: ["operation", "han", "example"],
+    source: {
+      doc: "言霊秘書.pdf",
+      pdfPage: 40,
+      bookPage: 40,
+      section: "反",
+      note: "反の規則と具体例",
+    },
+  },
+];
+
+/**
  * すべての法則を 1 つの配列に統合
  * （章ごとの配列をそのまま後ろに連結）
  */
@@ -311,6 +423,7 @@ export const LAWS: Law[] = [
   ...LAWS_MIZUHO_P6_P10,
   ...LAWS_FUTOMANI_P13_MINAKANUSHI,
   ...LAWS_KAMIYO_NANAYO_CORE,
+  ...LAWS_METHOD_CORE,
 ];
 
 /**

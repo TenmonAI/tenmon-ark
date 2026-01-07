@@ -124,6 +124,14 @@ export function analyzeKotodama(text: string): KotodamaAnalysis {
   const steps: AnalysisStep[] = [];
   const hints: string[] = [];
 
+  // 不変の思考手順（骨組み）を最初に明示
+  steps.push({
+    operation: null,
+    lawId: null,
+    description:
+      "解析手順: 1) 根拠ページ／法則候補を列挙し、2) 操作候補（省・延開・反約…）を提示し、3) 火水・五十連・御中主・カタカムナ等との整合を確認する。",
+  });
+
   // トークン化のステップ
   steps.push({
     operation: null,
@@ -197,6 +205,26 @@ export function analyzeKotodama(text: string): KotodamaAnalysis {
         }
       }
     }
+  }
+
+  // 整合チェックの簡易ログ（どの軸に繋がりそうか）
+  const axes: string[] = [];
+  if (hints.some((id) => id.startsWith("KOTODAMA-MIZUHO-") || id === "KOTODAMA-CORE-TAIYOU-RELATIVE")) {
+    axes.push("火水（体用・水穂伝附言）");
+  }
+  if (hints.some((id) => id.startsWith("KOTODAMA-FUTOMANI-") || id === "KOTODAMA-CORE-KOTODAMA-PROCESS")) {
+    axes.push("御中主・生成鎖（布斗麻通御霊図／一言の法則）");
+  }
+  if (hints.includes("KOTODAMA-KAMIYO-NANAYO-FORMLESS-IKI")) {
+    axes.push("神世七代（形なきいき＝隠身）");
+  }
+
+  if (axes.length > 0) {
+    steps.push({
+      operation: null,
+      lawId: null,
+      description: `整合軸の候補: ${axes.join(" / ")}`,
+    });
   }
 
   return {
