@@ -2,6 +2,9 @@ import { Router, type IRouter, type Request, type Response } from "express";
 import { kanagiThink } from "../kanagi/kanagiThink.js";
 import { getSettings } from "../db/knowledge.js";
 import { listKnowledgeFiles } from "../db/knowledge.js";
+import { tenmonCore } from "../tenmon-core/index.js";
+import { OUTPUT_TEMPLATE } from "../tenmon-core/persona.js";
+import { getCorpusPage } from "../kotodama/corpusLoader.js";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -39,6 +42,39 @@ function extractTextFromFile(storedName: string, mime: string): string {
 }
 
 /**
+ * analysis.hints から LawCard を組み立てる
+ * tenmon-core の getLawById で引けるものは引く
+ * 足りない場合にのみ corpusLoader を参照（自動全文参照は禁止）
+ */
+function buildLawCards(hints: string[]): string {
+  const lawCards: string[] = [];
+  const seenIds = new Set<string>();
+
+  for (const lawId of hints) {
+    if (seenIds.has(lawId)) continue;
+    seenIds.add(lawId);
+
+    // まず tenmon-core から取得を試みる
+    const law = tenmonCore.getLawById(lawId);
+    if (law) {
+      lawCards.push(
+        `【法則: ${law.title} (${lawId})】\n` +
+        `引用: ${law.quote}\n` +
+        `正規化: ${law.normalized}\n` +
+        `出典: ${law.source.doc} P${law.source.pdfPage}${law.source.bookPage ? ` (書籍P${law.source.bookPage})` : ""}${law.source.section ? ` [${law.source.section}]` : ""}`
+      );
+      continue;
+    }
+
+    // tenmon-core にない場合、corpusLoader から該当ページを参照（ただし自動全文参照は禁止）
+    // ここでは LawID から pdfPage を推定できないため、hint としてのみ記録
+    lawCards.push(`【法則候補: ${lawId}】\n（詳細は corpus を参照してください）`);
+  }
+
+  return lawCards.length > 0 ? lawCards.join("\n\n") : "";
+}
+
+/**
  * System Prompt を三層構造で組み立てる
  * 
  * 構造：
@@ -54,8 +90,10 @@ function extractTextFromFile(storedName: string, mime: string): string {
  * 3) KNOWLEDGE（アップロード資料）
  *    - txt/md/json から抽出
  *    - 最大 N ファイル、各先頭 M 文字
+ * 
+ * 4) LAWS（analyzeKotodama の結果から LawCard を注入）
  */
-function buildSystemPrompt(): string {
+function buildSystemPrompt(analysisHints?: string[]): string {
   const settings = getSettings();
   const files = listKnowledgeFiles();
 
@@ -103,6 +141,23 @@ function buildSystemPrompt(): string {
     }
   }
 
+  // ========================================
+  // 4) LAWS（analyzeKotodama の結果から LawCard を注入）
+  // ========================================
+  if (analysisHints && analysisHints.length > 0) {
+    const lawCards = buildLawCards(analysisHints);
+    if (lawCards) {
+      prompt += `\n\n【適用法則（LawCard）】\n${lawCards}`;
+    }
+  }
+
+  // ========================================
+  // 出力フォーマット（OUTPUT_TEMPLATE の骨格を固定）
+  // ========================================
+  prompt += `\n\n【出力フォーマット（必須）】\n` +
+    `${OUTPUT_TEMPLATE.promise}\n\n` +
+    OUTPUT_TEMPLATE.format.map((item, idx) => `${idx + 1}. ${item}`).join("\n");
+
   return prompt;
 }
 
@@ -117,8 +172,28 @@ router.post("/chat", async (req: Request, res: Response) => {
       });
     }
 
-    // System Prompt を三層構造で組み立てる
-    const systemPrompt = buildSystemPrompt();
+    // ========================================
+    // 会話1ターン処理の先頭に必ず analyzeKotodama を実行（例外分岐禁止）
+    // ========================================
+    let analysisHints: string[] = [];
+    try {
+      const analysis = tenmonCore.analyze(message);
+      analysisHints = analysis.hints || [];
+      
+      // 解析ログを出力（学習素材・DB保存用）
+      console.log("[CHAT-ANALYSIS]", {
+        message: message.substring(0, 100),
+        tokens: analysis.tokens.length,
+        steps: analysis.steps.length,
+        hints: analysisHints,
+      });
+    } catch (analysisErr: any) {
+      // 解析エラーでも会話は続行（例外分岐禁止）
+      console.warn("[CHAT-ANALYSIS-ERROR]", analysisErr);
+    }
+
+    // System Prompt を三層構造で組み立てる（analysisHints を注入）
+    const systemPrompt = buildSystemPrompt(analysisHints);
 
     // THINK モードの場合：天津金木思考ロジックを使用（systemPromptを渡す）
     if (mode === "think" || mode === "THINK" || !mode) {

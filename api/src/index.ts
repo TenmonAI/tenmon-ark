@@ -12,12 +12,16 @@ import knowledgeRouter from "./routes/knowledge.js";
 import settingsRouter from "./routes/settings.js";
 import kotodamaRouter from "./routes/kotodama.js";
 import { initDB } from "./db/knowledge.js";
+import { initCorpusLoader } from "./kotodama/corpusLoader.js";
 
 const app = express();
 const PORT = process.env.PORT ? Number(process.env.PORT) : 3000;
 
 // Knowledge DB を初期化
 initDB();
+
+// Corpus JSONL ローダーを初期化
+initCorpusLoader();
 
 app.use(cors());
 app.use(express.json());
