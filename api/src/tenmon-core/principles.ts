@@ -1,38 +1,47 @@
 /**
  * 不変核：言霊の操作・分類・辞・音解釈の原理
- * 
+ *
  * 法則（Law）を型で定義し、初期法則セットを const 配列で保持
+ * 後続フェーズで PDF 全ページを Law 化しても破綻しないよう、
+ * 出典情報を LawSource 型として拡張しておく。
  */
 
-export type Operation = 
-  | "省"      // 省略
-  | "延開"    // 延開
-  | "反約"    // 反約
-  | "反"      // 反
-  | "約"      // 約
-  | "略"      // 略
-  | "転";     // 転
+export type Operation =
+  | "省" // 省略
+  | "延開" // 延開
+  | "反約" // 反約
+  | "反" // 反
+  | "約" // 約
+  | "略" // 略
+  | "転"; // 転
+
+/**
+ * 出典情報：PDFページ＋書籍ページ＋章を保持
+ */
+export type LawSource = {
+  doc: "言霊秘書.pdf";
+  pdfPage: number;
+  bookPage?: number; // 例: 6〜10, 13〜
+  section?: string; // 例: "水穂伝附言", "布斗麻通御霊", "神世七代"
+  note?: string;
+};
 
 export type Law = {
-  id: string;                    // 例: "KOTODAMA-P069-HELPERS"
-  title: string;                 // 法則のタイトル
-  quote: string;                 // 原文（OCR崩れがあってもそのまま保持）
-  normalized: string;            // 現代語の意味を短く
-  tags: string[];                // 例: ["operation","helpers","grammar"]
-  source: {
-    doc: string;                 // 例: "言霊秘書.pdf"
-    page: number;                 // ページ番号
-    note?: string;                // 補足
-  };
+  id: string; // 例: "KOTODAMA-P069-HELPERS"
+  title: string; // 法則のタイトル
+  quote: string; // 原文（OCR崩れがあってもそのまま保持）
+  normalized: string; // 現代語の意味を短く
+  tags: string[]; // 例: ["operation","helpers","grammar"]
+  source: LawSource;
 };
 
 /**
  * HelperWords（佐言）の定義
  */
 export const HELPER_WORDS = {
-  起言: ["アイ", "ウ", "オ"],      // 4（アイウオ）
-  補言: ["シ", "ミ", "ツ"],        // 3（シミツ）
-  助言: ["ラ", "リ", "ル", "レ"],  // 4（ラリルレ）
+  起言: ["アイ", "ウ", "オ"], // 4（アイウオ）
+  補言: ["シ", "ミ", "ツ"], // 3（シミツ）
+  助言: ["ラ", "リ", "ル", "レ"], // 4（ラリルレ）
 } as const;
 
 /**
@@ -51,9 +60,9 @@ export const GOJUON_ROWS = {
 } as const;
 
 /**
- * 初期法則セット
+ * 基本法則セット（章に依存しないコア）
  */
-export const LAWS: Law[] = [
+const BASE_LAWS: Law[] = [
   {
     id: "KOTODAMA-P069-HELPERS",
     title: "佐言（起言・補言・助言）",
@@ -62,7 +71,9 @@ export const LAWS: Law[] = [
     tags: ["helpers", "grammar", "operation"],
     source: {
       doc: "言霊秘書.pdf",
-      page: 69,
+      pdfPage: 69,
+      bookPage: 69,
+      section: "佐言",
       note: "佐言の定義",
     },
   },
@@ -74,7 +85,9 @@ export const LAWS: Law[] = [
     tags: ["operation", "base"],
     source: {
       doc: "言霊秘書.pdf",
-      page: 1,
+      pdfPage: 1,
+      bookPage: 1,
+      section: "序",
     },
   },
   {
@@ -85,7 +98,9 @@ export const LAWS: Law[] = [
     tags: ["teniwoha", "grammar"],
     source: {
       doc: "言霊秘書.pdf",
-      page: 1,
+      pdfPage: 1,
+      bookPage: 1,
+      section: "序",
     },
   },
   {
@@ -96,7 +111,9 @@ export const LAWS: Law[] = [
     tags: ["taiyou", "structure"],
     source: {
       doc: "言霊秘書.pdf",
-      page: 1,
+      pdfPage: 1,
+      bookPage: 1,
+      section: "序",
     },
   },
   {
@@ -107,7 +124,9 @@ export const LAWS: Law[] = [
     tags: ["mitama", "koto", "structure"],
     source: {
       doc: "言霊秘書.pdf",
-      page: 1,
+      pdfPage: 1,
+      bookPage: 1,
+      section: "序",
     },
   },
   {
@@ -118,7 +137,9 @@ export const LAWS: Law[] = [
     tags: ["koto", "tama", "structure"],
     source: {
       doc: "言霊秘書.pdf",
-      page: 1,
+      pdfPage: 1,
+      bookPage: 1,
+      section: "序",
     },
   },
   {
@@ -129,9 +150,167 @@ export const LAWS: Law[] = [
     tags: ["reigo", "operation", "meaning"],
     source: {
       doc: "言霊秘書.pdf",
-      page: 1,
+      pdfPage: 1,
+      bookPage: 1,
+      section: "序",
     },
   },
+];
+
+/**
+ * 水穂伝附言（例：P6-10）Law セット
+ * 引用テキストは長文コピペせず、キーフレーズ＋出典指定のみ。
+ */
+export const LAWS_MIZUHO_P6_P10: Law[] = [
+  {
+    id: "KOTODAMA-MIZUHO-P6-10-INVISIBLE-HIMIZU",
+    title: "天地間の不可視火水",
+    quote: "天地の間に見えざる火水あり",
+    normalized: "天地の間には目に見えない火と水（火水）が満ちている",
+    tags: ["mizuho", "himizu", "cosmogony"],
+    source: {
+      doc: "言霊秘書.pdf",
+      pdfPage: 6,
+      bookPage: 6,
+      section: "水穂伝附言",
+      note: "天地間の不可視火水（火水）の説明",
+    },
+  },
+  {
+    id: "KOTODAMA-MIZUHO-P6-10-FIRE-AS-YO",
+    title: "火＝用",
+    quote: "火は用なり",
+    normalized: "火は用（働き）として現れる",
+    tags: ["mizuho", "fire", "taiyou"],
+    source: {
+      doc: "言霊秘書.pdf",
+      pdfPage: 6,
+      bookPage: 6,
+      section: "水穂伝附言",
+      note: "火＝用（ヨ）としての定義",
+    },
+  },
+  {
+    id: "KOTODAMA-MIZUHO-P6-10-TAIYO-REVERSIBLE",
+    title: "火鉢／水用の反転",
+    quote: "火鉢と水用は反転の関係にある",
+    normalized: "火鉢（火の器）と水用（水の働き）は体用が反転する",
+    tags: ["mizuho", "himizu", "taiyou"],
+    source: {
+      doc: "言霊秘書.pdf",
+      pdfPage: 7,
+      bookPage: 7,
+      section: "水穂伝附言",
+      note: "火鉢／水用の反転関係",
+    },
+  },
+  {
+    id: "KOTODAMA-MIZUHO-P6-10-ONE-STOP-ORIGIN",
+    title: "万物一に止",
+    quote: "万物一に止まる",
+    normalized: "あらゆるものは一つのところに止まり、そこから発する",
+    tags: ["mizuho", "one", "cosmogony"],
+    source: {
+      doc: "言霊秘書.pdf",
+      pdfPage: 8,
+      bookPage: 8,
+      section: "水穂伝附言",
+      note: "万物一に止の原理",
+    },
+  },
+  {
+    id: "KOTODAMA-MIZUHO-P6-10-GENESIS-CHAIN",
+    title: "生成鎖（凝→火水→息→音→五十詞→形仮名→五十連）",
+    quote: "凝りて父火母水となり、息となり、音となり、五十詞となり、形仮名となり、五十連となる",
+    normalized: "凝→父火母水→息→音→五十詞→形仮名→五十連へと展開する生成鎖",
+    tags: ["mizuho", "cosmogony", "chain"],
+    source: {
+      doc: "言霊秘書.pdf",
+      pdfPage: 9,
+      bookPage: 9,
+      section: "水穂伝附言",
+      note: "生成鎖の概要",
+    },
+  },
+  {
+    id: "KOTODAMA-CORE-IKI-AND-KOTO",
+    title: "息＝御霊／言＝吾",
+    quote: "息は御霊、言は吾",
+    normalized: "息は御霊（いのち）、言は吾（主体）として働く",
+    tags: ["iki", "koto", "core"],
+    source: {
+      doc: "言霊秘書.pdf",
+      pdfPage: 9,
+      bookPage: 9,
+      section: "水穂伝附言",
+      note: "息と言の関係",
+    },
+  },
+];
+
+/**
+ * 布斗麻通御霊図（例：P13〜）Law セット
+ */
+export const LAWS_FUTOMANI_P13_MINAKANUSHI: Law[] = [
+  {
+    id: "KOTODAMA-FUTOMANI-P13-0-AND-NO",
+    title: "0母水／ヽ父滴＝御中主",
+    quote: "0は母水、ヽは父滴にして天之御中主とす",
+    normalized: "0が母水、ヽが父滴であり、その正中が天之御中主（ミナカヌシ）である",
+    tags: ["futomani", "symbol", "minakanushi"],
+    source: {
+      doc: "言霊秘書.pdf",
+      pdfPage: 13,
+      bookPage: 13,
+      section: "布斗麻通御霊図",
+      note: "0とヽによる御中主の図解",
+    },
+  },
+  {
+    id: "KOTODAMA-FUTOMANI-P13-AME-IS-ROTATION",
+    title: "天＝五十連水火の回転",
+    quote: "天は五十連水火の回転なり",
+    normalized: "天とは五十連の水火が回転する運動である",
+    tags: ["futomani", "ame", "rotation"],
+    source: {
+      doc: "言霊秘書.pdf",
+      pdfPage: 13,
+      bookPage: 13,
+      section: "布斗麻通御霊図",
+      note: "天（アメ）の定義",
+    },
+  },
+];
+
+/**
+ * 神世七代（形なきいき＝隠身）Law セット
+ */
+export const LAWS_KAMIYO_NANAYO_CORE: Law[] = [
+  {
+    id: "KOTODAMA-KAMIYO-NANAYO-FORMLESS-IKI",
+    title: "天神七代＝形なきいき＝隠身",
+    quote: "天神七代は形なきいき、隠身なり",
+    normalized: "天神七代は形を持たないいき（隠身）としての段階を示す",
+    tags: ["kamiyo", "nanayo", "iki", "hidden"],
+    source: {
+      doc: "言霊秘書.pdf",
+      pdfPage: 20,
+      bookPage: 20,
+      section: "神世七代",
+      note: "天神七代の性質",
+    },
+  },
+];
+
+/**
+ * すべての法則を 1 つの配列に統合
+ * （章ごとの配列をそのまま後ろに連結）
+ */
+export const LAWS: Law[] = [
+  ...BASE_LAWS,
+  ...LAWS_MIZUHO_P6_P10,
+  ...LAWS_FUTOMANI_P13_MINAKANUSHI,
+  ...LAWS_KAMIYO_NANAYO_CORE,
 ];
 
 /**

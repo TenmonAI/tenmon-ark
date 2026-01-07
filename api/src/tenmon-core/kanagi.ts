@@ -1,11 +1,12 @@
 /**
  * 天津金木思考アルゴリズム（最小動作）
- * 
+ *
  * まずは器＋最小動作で実装
  * 次フェーズで五十音ごとの意味辞書を増やしていく前提で拡張点を用意
  */
 
-import { Law, Operation } from "./principles.js";
+import type { Law } from "./principles.js";
+import { Operation } from "./principles.js";
 
 export type Token = {
   text: string;
@@ -26,8 +27,49 @@ export type KotodamaAnalysis = {
 };
 
 /**
+ * 入力文から Law を示唆するヒント規則
+ * いまはキーワード一致だが、将来は構文一致に拡張する前提。
+ */
+const LAW_HINT_RULES: Array<{
+  id: string;
+  pattern: RegExp;
+  lawIds: string[];
+  note: string;
+}> = [
+  {
+    id: "hint-mizuho-himizu",
+    pattern: /火水|火|水/u,
+    lawIds: [
+      "KOTODAMA-MIZUHO-P6-10-INVISIBLE-HIMIZU",
+      "KOTODAMA-MIZUHO-P6-10-TAIYO-REVERSIBLE",
+    ],
+    note: "火水（鉢用）系の法則候補",
+  },
+  {
+    id: "hint-genesis-chain",
+    pattern: /凝|母胎|息|音|五十|形仮名|五十連|十行/u,
+    lawIds: [
+      "KOTODAMA-MIZUHO-P6-10-GENESIS-CHAIN",
+      "KOTODAMA-CORE-IKI-AND-KOTO",
+    ],
+    note: "生成鎖（凝→息→音→形仮名→五十連）",
+  },
+  {
+    id: "hint-futomani-symbols",
+    pattern: /0|ヽ|御中主|天之御中主|ミナカ|ヌシ|ムスビ/u,
+    lawIds: [
+      "KOTODAMA-FUTOMANI-P13-0-AND-NO",
+      "KOTODAMA-FUTOMANI-P13-AME-IS-ROTATION",
+    ],
+    note: "布斗麻通御霊図・御中主の法則候補",
+  },
+];
+
+/**
  * 日本語テキストをトークン化
  * ひらがな/カタカナ/漢字/記号を分ける（形態素解析は後回しでOK）
+ *
+ * 0 と ヽ は布斗麻通御霊図で重要な記号なので symbol として必ず保持する。
  */
 export function tokenizeJapanese(text: string): Token[] {
   const tokens: Token[] = [];
@@ -51,7 +93,7 @@ export function tokenizeJapanese(text: string): Token[] {
     else if (code >= 0x4e00 && code <= 0x9faf) {
       type = "kanji";
     }
-    // 記号・句読点など
+    // 記号・句読点など（0 / ヽ もここに含めて symbol として扱う）
     else if (
       (code >= 0x3000 && code <= 0x303f) || // CJK記号・句読点
       (code >= 0xff00 && code <= 0xffef) || // 全角記号
@@ -140,6 +182,22 @@ export function analyzeKotodama(text: string): KotodamaAnalysis {
     description: "操作候補: 省・延開・反約・反・約・略・転",
   });
   hints.push("KOTODAMA-OPERATION-BASE");
+
+  // Law ヒント規則の適用
+  for (const rule of LAW_HINT_RULES) {
+    if (rule.pattern.test(text)) {
+      steps.push({
+        operation: null,
+        lawId: rule.lawIds[0] || null,
+        description: `法則ヒント: ${rule.id} → 候補 ${rule.lawIds.join(", ")}（${rule.note}）`,
+      });
+      for (const id of rule.lawIds) {
+        if (!hints.includes(id)) {
+          hints.push(id);
+        }
+      }
+    }
+  }
 
   return {
     tokens,
