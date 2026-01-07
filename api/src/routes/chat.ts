@@ -57,8 +57,7 @@ type LawCandidate = {
   confidence: number;
 };
 
-async function getPageLawCandidates(doc: string, pdfPage: number, limit = 6): Promise<LawCandidate[]> {
-  // 今は言霊秘書のみ（後でktk/irohaも増やす）
+async function getPageCandidates(doc: string, pdfPage: number, limit = 6): Promise<LawCandidate[]> {
   const fileMap: Record<string, string> = {
     "言霊秘書.pdf": "/opt/tenmon-corpus/db/khs_law_candidates.jsonl",
   };
@@ -74,19 +73,12 @@ async function getPageLawCandidates(doc: string, pdfPage: number, limit = 6): Pr
   for await (const line of rl) {
     const t = line.trim();
     if (!t) continue;
-    try {
-      const c = JSON.parse(t) as LawCandidate;
-      if (c.doc === doc && c.pdfPage === pdfPage) {
-        out.push(c);
-        if (out.length >= limit) break;
-      }
-    } catch (err: any) {
-      // JSON解析エラーは無視
-      console.warn(`[GET-PAGE-LAW-CANDIDATES] Failed to parse line: ${err.message}`);
+    const c = JSON.parse(t) as LawCandidate;
+    if (c.doc === doc && c.pdfPage === pdfPage) {
+      out.push(c);
+      if (out.length >= limit) break;
     }
   }
-  
-  rl.close();
   return out;
 }
 
@@ -168,59 +160,46 @@ async function generateKanagiAnalysis(
   const alignment: Array<{ doc: string; relation: string }> = [];
 
   // ========================================
-  // ページ由来のLaw候補を取得（synapse候補Law：優先）
-  // ========================================
-  const pageCands = await getPageLawCandidates(doc, pdfPage, 6);
-  
-  // ページ由来のLaw候補を appliedLaws に追加（優先）
-  for (const cand of pageCands) {
-    appliedLaws.push({
-      lawId: cand.id,
-      title: cand.title,
-      source: `${cand.doc} P${cand.pdfPage} (page-candidate/${cand.rule})`,
-    });
-  }
-
-  // ========================================
-  // ページ内抽出Law（text.jsonl を参照）
-  // ========================================
-  const pageText = getPageText(doc, pdfPage);
-  
-  if (pageText && pageText.trim().length > 0) {
-    // text が空でない場合：簡易ルール抽出で Law候補を生成
-    const detectedLaws = detectLaws(pageText);
-    
-    for (const detected of detectedLaws) {
-      // LawID を生成（KHS-Pxxxx-Lnnn 形式）
-      const prefix = doc.includes("言霊秘書") ? "KHS" : doc.includes("カタカムナ") ? "KTK" : "IRO";
-      const lawId = `${prefix}-P${String(pdfPage).padStart(4, "0")}-L${String(appliedLaws.length + 1).padStart(3, "0")}`;
-      
-      // 重複チェック
-      if (!appliedLaws.find((l) => l.lawId === lawId)) {
-        appliedLaws.push({
-          lawId,
-          title: detected.title,
-          source: `${doc} P${pdfPage}`,
-        });
-      }
-    }
-  }
-
-  // ========================================
   // 帯域Law（analysis.hints から取得：補助）
   // ========================================
+  const laws: Array<{ lawId: string; title: string; note?: string; quote?: string }> = [];
   for (const lawId of analysis.hints) {
     const law = tenmonCore.getLawById(lawId);
     if (law) {
-      // 重複チェック
-      if (!appliedLaws.find((l) => l.lawId === lawId)) {
-        appliedLaws.push({
-          lawId: law.id,
-          title: law.title,
-          source: `${law.source.doc} P${law.source.pdfPage}${law.source.section ? ` [${law.source.section}]` : ""}`,
-        });
-      }
+      laws.push({
+        lawId: law.id,
+        title: law.title,
+        note: `${law.source.doc} P${law.source.pdfPage}${law.source.section ? ` [${law.source.section}]` : ""}`,
+        quote: law.quote,
+      });
     }
+  }
+
+  // ========================================
+  // ページ由来のLaw候補を取得（synapse候補Law：優先）
+  // ========================================
+  const candidates = await getPageCandidates(doc, pdfPage, 6);
+
+  // ========================================
+  // lawsMerged を構築（候補を優先、帯域Lawを補助）
+  // ========================================
+  const lawsMerged = [
+    ...candidates.map(c => ({
+      lawId: c.id,
+      title: c.title,
+      note: `page-candidate/${c.rule}`,
+      quote: c.quote,
+    })),
+    ...laws,
+  ];
+
+  // lawsMerged を appliedLaws 形式に変換（decisionFrame.appliedLaws に差し替え）
+  for (const law of lawsMerged) {
+    appliedLaws.push({
+      lawId: law.lawId,
+      title: law.title,
+      source: law.note || "",
+    });
   }
 
   // analysis.steps から操作を抽出
@@ -437,8 +416,12 @@ router.post("/chat", async (req: Request, res: Response) => {
       `ページ: ${decisionFrame.grounds.pdfPage}\n` +
       `引用（抜粋）: ${decisionFrame.grounds.quote.substring(0, 200)}${decisionFrame.grounds.quote.length > 200 ? "..." : ""}`;
     
+    // lawsMerged を表示（decisionFrame.appliedLaws に含まれている）
     const appliedLawsText = decisionFrame.appliedLaws.length > 0
-      ? `【適用法則】\n${decisionFrame.appliedLaws.map((law) => `- ${law.title} (${law.lawId})\n  出典: ${law.source}`).join("\n")}`
+      ? `【適用法則】\n${decisionFrame.appliedLaws.map((law) => {
+          const isPageCandidate = law.source.includes("page-candidate");
+          return `- ${law.title} (${law.lawId})${isPageCandidate ? ` [${law.source}]` : ""}\n  出典: ${law.source}`;
+        }).join("\n")}`
       : `【適用法則】\n（該当する法則が見つかりませんでした）`;
     
     const operationsText = decisionFrame.operations.length > 0
