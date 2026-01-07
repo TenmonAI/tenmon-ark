@@ -192,6 +192,16 @@ router.post("/chat", async (req: Request, res: Response) => {
       console.warn("[CHAT-ANALYSIS-ERROR]", analysisErr);
     }
 
+    // ========================================
+    // 根拠チェック：lawCards が空の場合は LLM を呼ばずに固定応答を返す
+    // ========================================
+    const lawCards = buildLawCards(analysisHints);
+    if (lawCards.length === 0) {
+      return res.json({
+        reply: "資料根拠が抽出されていないため、言霊秘書準拠で回答できません。doc/pdfPageを指定してください。",
+      });
+    }
+
     // System Prompt を三層構造で組み立てる（analysisHints を注入）
     const systemPrompt = buildSystemPrompt(analysisHints);
 
