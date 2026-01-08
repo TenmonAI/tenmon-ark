@@ -456,14 +456,14 @@ router.post("/chat", async (req: Request, res: Response) => {
       ? `【整合】\n${decisionFrame.alignment.map((a) => `- ${a.doc}: ${a.relation}`).join("\n")}`
       : `【整合】\n（他の資料との整合チェックは未実施）`;
 
-    // 真理チェック結果をフォーマット
+    // 真理チェック結果をフォーマット（統一されたキーで取得）
     const truthItems = truthCheck.items;
     const truthPresent = {
-      himizu: truthItems.find((i) => i.key === "hisui")?.present ?? false,
-      taiyo: truthItems.find((i) => i.key === "taiyou")?.present ?? false,
+      himizu: truthItems.find((i) => i.key === "himizu")?.present ?? false,
+      taiyo: truthItems.find((i) => i.key === "taiyo")?.present ?? false,
       seichu: truthItems.find((i) => i.key === "seichu")?.present ?? false,
       genesis: truthItems.find((i) => i.key === "genesis")?.present ?? false,
-      tenioha: truthItems.find((i) => i.key === "ji")?.present ?? false,
+      tenioha: truthItems.find((i) => i.key === "tenioha")?.present ?? false,
       ops: truthItems.find((i) => i.key === "ops")?.present ?? false,
     };
     const truthMissing = truthItems.filter((i) => !i.present).map((i) => i.label);

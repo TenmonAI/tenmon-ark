@@ -21,17 +21,32 @@ export type TruthCheckResult = {
   summary: string;
 };
 
+// 統一された真理チェックキー
+export type TruthKey = "himizu" | "taiyo" | "seichu" | "genesis" | "tenioha" | "ops";
+
+// 互換マッピング（内部キー → 統一キー）
+const keyMap: Record<string, TruthKey> = {
+  hisui: "himizu",
+  taiyou: "taiyo",
+  ji: "tenioha",
+};
+
+// キーを正規化（互換性のため）
+const normalizedKey = (k: string): TruthKey => (keyMap[k] ?? (k as TruthKey));
+
+// 内部キー（処理用）と外部キー（返却用）のマッピング
 const CHECKS: Array<{
-  key: string;
+  internalKey: string; // 内部処理用キー
+  externalKey: string; // 外部返却用キー（統一）
   label: string;
   keywords: string[];
 }> = [
-  { key: "hisui", label: "火水", keywords: ["火水", "火", "水"] },
-  { key: "taiyou", label: "体用", keywords: ["体用", "体", "用"] },
-  { key: "seichu", label: "正中（御中主）", keywords: ["御中主", "天之御中主", "正中", "0", "ヽ"] },
-  { key: "genesis", label: "生成鎖（凝→息→音→形→連）", keywords: ["凝", "息", "音", "形仮名", "五十連", "十行"] },
-  { key: "ji", label: "辞（テニヲハ）", keywords: ["辞", "テニヲハ", "てにをは"] },
-  { key: "ops", label: "操作（省/延開/反約/反/約/略/転）", keywords: ["省", "延開", "反約", "反", "約", "略", "転"] },
+  { internalKey: "hisui", externalKey: "himizu", label: "火水", keywords: ["火水", "火", "水"] },
+  { internalKey: "taiyou", externalKey: "taiyo", label: "体用", keywords: ["体用", "体", "用"] },
+  { internalKey: "seichu", externalKey: "seichu", label: "正中", keywords: ["御中主", "天之御中主", "正中", "0", "ヽ"] },
+  { internalKey: "genesis", externalKey: "genesis", label: "生成鎖", keywords: ["凝", "息", "音", "形仮名", "五十連", "十行"] },
+  { internalKey: "ji", externalKey: "tenioha", label: "辞", keywords: ["辞", "テニヲハ", "てにをは"] },
+  { internalKey: "ops", externalKey: "ops", label: "操作", keywords: ["省", "延開", "反約", "反", "約", "略", "転"] },
 ];
 
 function textContainsAny(text: string | undefined, keywords: string[]): { hit: boolean; evidence: string[] } {
@@ -62,8 +77,10 @@ export function runTruthCheck(input: TruthCheckInput): TruthCheckResult {
 
   for (const c of CHECKS) {
     const { hit, evidence } = textContainsAny(combined, c.keywords);
+    // 互換マッピングを適用してキーを正規化
+    const normalized = normalizedKey(c.externalKey);
     items.push({
-      key: c.key,
+      key: normalized, // 統一された外部キーで返す（互換マッピング適用済み）
       label: c.label,
       present: hit,
       evidence,
