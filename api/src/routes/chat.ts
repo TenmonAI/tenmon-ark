@@ -10,6 +10,7 @@ import { detectLaws } from "../kotodama/ingest/detectLaws.js";
 import fs from "node:fs";
 import path from "node:path";
 import readline from "node:readline";
+import { runTruthCheck } from "../synapse/truthCheck.js";
 
 const router: IRouter = Router();
 
@@ -149,6 +150,7 @@ async function generateKanagiAnalysis(
     appliedLaws: Array<{ lawId: string; title: string; source: string }>;
     operations: Array<{ op: string; description: string }>;
     alignment: Array<{ doc: string; relation: string }>;
+    truthCheck: import("../synapse/truthCheck.js").TruthCheckResult;
   };
 }> {
   // tenmon-core の analyzeKotodama を呼ぶ
@@ -158,6 +160,7 @@ async function generateKanagiAnalysis(
   const appliedLaws: Array<{ lawId: string; title: string; source: string }> = [];
   const operations: Array<{ op: string; description: string }> = [];
   const alignment: Array<{ doc: string; relation: string }> = [];
+  let truthCheck = undefined as import("../synapse/truthCheck.js").TruthCheckResult | undefined;
 
   // ========================================
   // 帯域Law（analysis.hints から取得：補助）
@@ -224,6 +227,16 @@ async function generateKanagiAnalysis(
     }
   }
 
+  // 真理構造チェックを実行
+  truthCheck = runTruthCheck({
+    doc,
+    pdfPage,
+    message,
+    pageText: getPageText(doc, pdfPage) ?? undefined,
+    appliedLaws,
+    operations,
+  });
+
   const decisionFrame = {
     conclusion: "", // 結論は後で生成（この段階では空）
     grounds: {
@@ -234,6 +247,7 @@ async function generateKanagiAnalysis(
     appliedLaws,
     operations,
     alignment,
+    truthCheck,
   };
 
   return { analysis, decisionFrame };
@@ -415,6 +429,16 @@ router.post("/chat", async (req: Request, res: Response) => {
       `ドキュメント: ${decisionFrame.grounds.doc}\n` +
       `ページ: ${decisionFrame.grounds.pdfPage}\n` +
       `引用（抜粋）: ${decisionFrame.grounds.quote.substring(0, 200)}${decisionFrame.grounds.quote.length > 200 ? "..." : ""}`;
+
+    // 真理構造チェックを実行
+    const truthCheck = runTruthCheck({
+      doc: decisionFrame.grounds.doc,
+      pdfPage: decisionFrame.grounds.pdfPage,
+      message,
+      pageText: decisionFrame.grounds.quote,
+      appliedLaws: decisionFrame.appliedLaws,
+      operations: decisionFrame.operations,
+    });
     
     // lawsMerged を表示（decisionFrame.appliedLaws に含まれている）
     const appliedLawsText = decisionFrame.appliedLaws.length > 0
@@ -432,7 +456,38 @@ router.post("/chat", async (req: Request, res: Response) => {
       ? `【整合】\n${decisionFrame.alignment.map((a) => `- ${a.doc}: ${a.relation}`).join("\n")}`
       : `【整合】\n（他の資料との整合チェックは未実施）`;
 
-    const reply = `${conclusion}\n\n${grounds}\n\n${appliedLawsText}\n\n${operationsText}\n\n${alignmentText}`;
+    // 真理チェック結果をフォーマット
+    const truthItems = truthCheck.items;
+    const truthPresent = {
+      himizu: truthItems.find((i) => i.key === "hisui")?.present ?? false,
+      taiyo: truthItems.find((i) => i.key === "taiyou")?.present ?? false,
+      seichu: truthItems.find((i) => i.key === "seichu")?.present ?? false,
+      genesis: truthItems.find((i) => i.key === "genesis")?.present ?? false,
+      tenioha: truthItems.find((i) => i.key === "ji")?.present ?? false,
+      ops: truthItems.find((i) => i.key === "ops")?.present ?? false,
+    };
+    const truthMissing = truthItems.filter((i) => !i.present).map((i) => i.label);
+    const truthNextHints = truthCheck.recommendedNextPages.map(
+      (p) => `${p.doc} P${p.pdfPage}: ${p.reason}`
+    );
+
+    let reply = `${conclusion}\n\n${grounds}\n\n${appliedLawsText}\n\n${operationsText}\n\n${alignmentText}`;
+
+    // 真理チェックを末尾に追記
+    reply +=
+      `\n【真理チェック】\n` +
+      `- 火水: ${truthPresent.himizu ? "OK" : "不足"}\n` +
+      `- 体用: ${truthPresent.taiyo ? "OK" : "不足"}\n` +
+      `- 正中: ${truthPresent.seichu ? "OK" : "不足"}\n` +
+      `- 生成鎖: ${truthPresent.genesis ? "OK" : "不足"}\n` +
+      `- 辞: ${truthPresent.tenioha ? "OK" : "不足"}\n` +
+      `- 操作: ${truthPresent.ops ? "OK" : "不足"}\n` +
+      (truthMissing.length
+        ? `- 不足項目: ${truthMissing.join(" / ")}\n`
+        : `- 不足項目: なし\n`) +
+      (truthNextHints.length
+        ? `- 次の導線:\n  - ${truthNextHints.join("\n  - ")}\n`
+        : "");
 
     // rec を返す（imageUrl も含める）
     const imageUrl = `/api/corpus/page-image?doc=${encodeURIComponent(docAndPage.doc)}&pdfPage=${docAndPage.pdfPage}`;
