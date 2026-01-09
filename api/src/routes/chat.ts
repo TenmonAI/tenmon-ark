@@ -546,14 +546,21 @@ router.post("/chat", async (req: Request, res: Response) => {
     const detailReply = `${conclusion}\n\n${grounds}\n\n${appliedLawsText}\n\n${operationsText}\n\n${alignmentText}\n\n${truthCheckText}`;
     
     // naturalReply を composeNatural で新規生成
-    const top = decisionFrame.appliedLaws.slice(0, 3).map((law) => law.title).filter(Boolean);
+    const top = decisionFrame.appliedLaws
+      .slice(0, 3)
+      .map((law) => String(law.title || ""))
+      .map((t) => t.replace(/^核心語:\s*/, ""))  // ←ラベル除去
+      .filter(Boolean);
     const miss = truthMissing.length ? truthMissing.join(" / ") : "";
+
+    const arkVoice =
+      top.length
+        ? `私の見立てでは、いまは「${top.join("／")}」を手がかりにすると、いちばん整理が早いです。`
+        : "私の見立てでは、まず「核になる語」を一つ決めると、答えが静かに締まります。";
 
     const naturalReply = composeNatural({
       lead: "承知しました。",
-      body: top.length
-        ? `いまの問いは「${top.join("／")}」の線から整えるのが自然です。`
-        : "いまの問いは、焦点を一つに絞ると進みやすくなります。",
+      body: arkVoice,
       next: miss
         ? `（補助軸：${miss}）どこから一段深くしますか。`
         : "どこから一段深くしますか。言葉ひとつでも構いません。",
