@@ -121,7 +121,8 @@ export function composeNatural(params: NaturalParamsByFrame | NaturalParamsByInt
       body =
         "天聞アークは、「問い」を整えて次の一歩へつなぐための対話システムです。";
       next = "いまは、どんな相談から触れてみましょう。";
-    } else if (intent === "domain") {
+    } else if (intent === "domain" && core) {
+      // domain + core あり: docMode 内での返答（核心語提示は残す）
       const top =
         core?.appliedLaws
           ?.slice(0, 3)
@@ -146,12 +147,25 @@ export function composeNatural(params: NaturalParamsByFrame | NaturalParamsByInt
       if (core?.doc && core.pdfPage) {
         cite = `※ いまは ${core.doc} P${core.pdfPage} を土台に見ています。`;
       }
+    } else if (intent === "domain") {
+      // domain: 短く答えて「#詳細で根拠表示」を提示
+      lead = "承知しました。";
+      body = `「${t}」について、言霊秘書の観点から簡潔に答えます。\n\n` +
+        `（詳細な根拠・法則・真理チェックが必要な場合は「#詳細」を付けて送信してください。）`;
+      next = "さらに詳しく知りたいことがあれば、「#詳細」を付けて送信してください。";
+      
+      if (core?.doc && core.pdfPage) {
+        cite = `※ いまは ${core.doc} P${core.pdfPage} を土台に見ています。`;
+      }
     } else {
       // unknown / grounded など
+      // 実際の質問に答える（一般AIとしての自然応答）
+      // 注意: ここでは LLM を呼ばず、簡易的な返答を返す
+      // 将来的に LLM を統合する場合は、ここで呼ぶ
       lead = "承知しました。";
-      body =
-        "いまは「問いの焦点」を一語にまとめてみると、次の一手が見えやすくなります。";
-      next = "一語だけ挙げるとしたら、どんな言葉になりそうですか。";
+      body = `「${t}」について、簡潔に答えます。\n\n` +
+        `（この機能は開発中です。詳細な回答が必要な場合は「#詳細」を付けて送信してください。）`;
+      next = "さらに詳しく知りたいことがあれば、教えてください。";
     }
 
     const chunks = [lead?.trim(), body.trim(), next?.trim(), cite?.trim()].filter(

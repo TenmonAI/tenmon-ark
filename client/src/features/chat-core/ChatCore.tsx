@@ -78,10 +78,14 @@ export default function ChatCore() {
     }
 
     try {
+      const activeId = "default"; // 暫定（将来的にスレッド一覧から選択）
       const res = await fetch("/api/chat?mode=think", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: userMessage }),
+        body: JSON.stringify({ 
+          message: userMessage,
+          threadId: activeId, // 追加
+        }),
       });
 
       const data = (await res.json()) as any;
