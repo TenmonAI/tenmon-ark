@@ -84,14 +84,26 @@ async function getPageCandidates(doc: string, pdfPage: number, limit = 6): Promi
 }
 
 /**
- * message から doc と pdfPage を抽出（資料指定必須）
+ * メッセージに詳細要求があるかチェック
+ */
+function isDetailedRequest(message: string): boolean {
+  const detailPattern = /(詳細|根拠|法則|引用|真理チェック|#detail|#詳細)/;
+  return detailPattern.test(message);
+}
+
+/**
+ * message から doc と pdfPage を抽出（未指定時は自動選択）
  * パターン例：
  * - "言霊秘書.pdf pdfPage=13"
  * - "言霊秘書.pdf 13ページ"
  * - "カタカムナ言灵解.pdf pdfPage=5"
  * - "いろは最終原稿.pdf pdfPage=10"
+ * 
+ * 未指定時は自動選択：
+ * - doc: デフォルトで "言霊秘書.pdf"
+ * - pdfPage: 質問内容から推定
  */
-function extractDocAndPage(message: string): { doc: string; pdfPage: number } | null {
+function extractDocAndPage(message: string): { doc: string; pdfPage: number } {
   const availableDocs = getAvailableDocs();
   
   // パターン1: "doc名.pdf pdfPage=N" または "doc名.pdf Nページ"
@@ -130,7 +142,25 @@ function extractDocAndPage(message: string): { doc: string; pdfPage: number } | 
     }
   }
   
-  return null;
+  // 未指定時：自動選択（Auto-Resolve）
+  const defaultDoc = "言霊秘書.pdf";
+  let autoPage = 6; // デフォルト：附言核
+  
+  // 質問内容からページを推定
+  const lowerMessage = message.toLowerCase();
+  
+  if (/御中主|正中|布斗麻邇|布斗麻通/.test(lowerMessage)) {
+    autoPage = 13;
+  } else if (/火水|体用|生成鎖|息|凝/.test(lowerMessage)) {
+    autoPage = 6;
+  } else if (/辞|テニヲハ|てにをは/.test(lowerMessage)) {
+    autoPage = 69; // 暫定
+  } else {
+    // それ以外はデフォルト（附言核）
+    autoPage = 6;
+  }
+  
+  return { doc: defaultDoc, pdfPage: autoPage };
 }
 
 /**
@@ -385,27 +415,26 @@ router.post("/chat", async (req: Request, res: Response) => {
     }
 
     // ========================================
-    // 資料指定必須（SOURCE-GATE）：doc/pdfPage が抽出できない場合は固定応答
+    // doc/pdfPage を抽出（未指定時は自動選択）
     // ========================================
     const docAndPage = extractDocAndPage(message);
-    
-    if (!docAndPage) {
-      // 抽出できない場合は固定応答（外部知識を遮断）
-      const availableDocs = getAvailableDocs();
-      return res.json({
-        reply: `doc名とpdfPageを指定してください。例：言霊秘書.pdf pdfPage=6\n\n利用可能なドキュメント：\n${availableDocs.map((d) => `- ${d}`).join("\n")}`,
-      });
-    }
 
     // ========================================
-    // doc/pdfPage が抽出できた場合、corpusLoader を直接呼ぶ
+    // corpusLoader からページを取得
     // ========================================
-    const rec = getCorpusPage(docAndPage.doc, docAndPage.pdfPage);
+    let rec = getCorpusPage(docAndPage.doc, docAndPage.pdfPage);
     
     if (!rec) {
-      return res.json({
-        reply: `指定されたページ（${docAndPage.doc} P${docAndPage.pdfPage}）が見つかりませんでした。`,
-      });
+      // ページが見つからない場合は、デフォルトページ（6）を試す
+      rec = getCorpusPage("言霊秘書.pdf", 6);
+      if (rec) {
+        docAndPage.doc = "言霊秘書.pdf";
+        docAndPage.pdfPage = 6;
+      } else {
+        return res.json({
+          reply: "申し訳ございませんが、参照すべき資料が見つかりませんでした。",
+        });
+      }
     }
 
     // ========================================
@@ -418,19 +447,11 @@ router.post("/chat", async (req: Request, res: Response) => {
     );
 
     // decisionFrame に corpus からの引用を追加
-    decisionFrame.grounds.quote = rec.cleanedText.substring(0, 500);
+    if (rec) {
+      decisionFrame.grounds.quote = rec.cleanedText.substring(0, 500);
+    }
 
-    // ========================================
-    // 返答フォーマットを固定：「結論→根拠→適用法則→操作→整合」
-    // ========================================
-    const conclusion = `【結論】\n${docAndPage.doc} P${docAndPage.pdfPage} を参照しました。`;
-    
-    const grounds = `【根拠】\n` +
-      `ドキュメント: ${decisionFrame.grounds.doc}\n` +
-      `ページ: ${decisionFrame.grounds.pdfPage}\n` +
-      `引用（抜粋）: ${decisionFrame.grounds.quote.substring(0, 200)}${decisionFrame.grounds.quote.length > 200 ? "..." : ""}`;
-
-    // 真理構造チェックを実行
+    // 真理構造チェックを実行（裏で使用）
     const truthCheck = runTruthCheck({
       doc: decisionFrame.grounds.doc,
       pdfPage: decisionFrame.grounds.pdfPage,
@@ -439,8 +460,45 @@ router.post("/chat", async (req: Request, res: Response) => {
       appliedLaws: decisionFrame.appliedLaws,
       operations: decisionFrame.operations,
     });
+
+    // ========================================
+    // 返答フォーマットを二段階で生成
+    // ========================================
     
-    // lawsMerged を表示（decisionFrame.appliedLaws に含まれている）
+    // 詳細要求があるかチェック
+    const isDetailed = isDetailedRequest(message);
+    
+    // 1. naturalReply（会話文：2〜8行）
+    const mainLaws = decisionFrame.appliedLaws.slice(0, 3).map((law) => law.title).join("、");
+    const hasLaws = decisionFrame.appliedLaws.length > 0;
+    
+    let naturalReply = "";
+    if (hasLaws) {
+      naturalReply = `言霊秘書の記述によると、${mainLaws}${decisionFrame.appliedLaws.length > 3 ? "など" : ""}が関連しています。`;
+      
+      if (decisionFrame.grounds.quote) {
+        const quoteExcerpt = decisionFrame.grounds.quote.substring(0, 150);
+        naturalReply += `\n\n${quoteExcerpt}${decisionFrame.grounds.quote.length > 150 ? "..." : ""}`;
+      }
+    } else {
+      naturalReply = "言霊秘書を参照しましたが、ご質問に関連する具体的な法則は見つかりませんでした。";
+    }
+    
+    if (decisionFrame.operations.length > 0) {
+      const opsList = decisionFrame.operations.map((op) => op.op).join("、");
+      naturalReply += `\n\nこの解釈には${opsList}などの操作が適用されています。`;
+    }
+    
+    naturalReply += `\n\n（参照：${docAndPage.doc} P${docAndPage.pdfPage}）`;
+    
+    // 2. detailReply（現在のフル出力）
+    const conclusion = `【結論】\n${docAndPage.doc} P${docAndPage.pdfPage} を参照しました。`;
+    
+    const grounds = `【根拠】\n` +
+      `ドキュメント: ${decisionFrame.grounds.doc}\n` +
+      `ページ: ${decisionFrame.grounds.pdfPage}\n` +
+      `引用（抜粋）: ${decisionFrame.grounds.quote ? decisionFrame.grounds.quote.substring(0, 200) + (decisionFrame.grounds.quote.length > 200 ? "..." : "") : "（引用なし）"}`;
+    
     const appliedLawsText = decisionFrame.appliedLaws.length > 0
       ? `【適用法則】\n${decisionFrame.appliedLaws.map((law) => {
           const isPageCandidate = law.source.includes("page-candidate");
@@ -456,7 +514,7 @@ router.post("/chat", async (req: Request, res: Response) => {
       ? `【整合】\n${decisionFrame.alignment.map((a) => `- ${a.doc}: ${a.relation}`).join("\n")}`
       : `【整合】\n（他の資料との整合チェックは未実施）`;
 
-    // 真理チェック結果をフォーマット（統一されたキーで取得）
+    // 真理チェック結果をフォーマット
     const truthItems = truthCheck.items;
     const truthPresent = {
       himizu: truthItems.find((i) => i.key === "himizu")?.present ?? false,
@@ -471,11 +529,8 @@ router.post("/chat", async (req: Request, res: Response) => {
       (p) => `${p.doc} P${p.pdfPage}: ${p.reason}`
     );
 
-    let reply = `${conclusion}\n\n${grounds}\n\n${appliedLawsText}\n\n${operationsText}\n\n${alignmentText}`;
-
-    // 真理チェックを末尾に追記
-    reply +=
-      `\n【真理チェック】\n` +
+    const truthCheckText =
+      `【真理チェック】\n` +
       `- 火水: ${truthPresent.himizu ? "OK" : "不足"}\n` +
       `- 体用: ${truthPresent.taiyo ? "OK" : "不足"}\n` +
       `- 正中: ${truthPresent.seichu ? "OK" : "不足"}\n` +
@@ -488,6 +543,11 @@ router.post("/chat", async (req: Request, res: Response) => {
       (truthNextHints.length
         ? `- 次の導線:\n  - ${truthNextHints.join("\n  - ")}\n`
         : "");
+
+    const detailReply = `${conclusion}\n\n${grounds}\n\n${appliedLawsText}\n\n${operationsText}\n\n${alignmentText}\n\n${truthCheckText}`;
+    
+    // 詳細要求に応じて返答を選択
+    const reply = isDetailed ? detailReply : naturalReply;
 
     // rec を返す（imageUrl も含める）
     const imageUrl = `/api/corpus/page-image?doc=${encodeURIComponent(docAndPage.doc)}&pdfPage=${docAndPage.pdfPage}`;
@@ -503,6 +563,7 @@ router.post("/chat", async (req: Request, res: Response) => {
         hints: analysis.hints,
       },
       decisionFrame,
+      truthCheck, // 常にJSONに含める（UI側が後で展開できる）
     });
 
   } catch (err: any) {
