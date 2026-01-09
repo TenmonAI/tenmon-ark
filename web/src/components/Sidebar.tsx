@@ -1,6 +1,6 @@
 export default function Sidebar() {
   return (
-    <aside className="w-64 bg-[#f7f7f8] px-3 py-4">
+    <aside className="sticky top-0 h-screen w-64 overflow-y-auto bg-[#f7f7f8] px-3 py-4">
       <div className="mb-4 text-sm font-semibold text-gray-700">
         TENMON-ARK
       </div>

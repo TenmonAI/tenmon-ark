@@ -3,12 +3,12 @@ import Chat from "./pages/Chat";
 
 export default function App() {
   return (
-    <div className="h-screen bg-[#f7f7f8]">
-      <div className="flex h-full bg-white">
+    <div className="min-h-screen bg-[#f7f7f8]">
+      <div className="flex bg-white">
         <Sidebar />
-        <div className="flex-1 flex flex-col bg-white">
+        <main className="min-h-screen flex-1 overflow-y-auto bg-white">
           <Chat />
-        </div>
+        </main>
       </div>
     </div>
   );

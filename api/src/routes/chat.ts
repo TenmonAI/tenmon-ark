@@ -419,18 +419,15 @@ router.post("/chat", async (req: Request, res: Response) => {
     // ========================================
     // intent/detail を決める
     // ========================================
-    const intent = detectIntent(message, false); // hasDocPage は後で判定
+    const intent = detectIntent(message, false);
     const detail = isDetailRequest(message, reqDebug);
 
     // ========================================
-    // smalltalk/aboutArk は "構造出力を出さず" 即返す
+    // smalltalk/aboutArk は docModeに入らず即返す（detail=falseの時だけ）
     // ========================================
     if (!detail && intent === "smalltalk") {
       return res.json({
         response: replySmalltalk(message),
-        evidence: null,
-        kanagi: { thinkingAxis: "natural", phase: "smalltalk" },
-        decisionFrame: { mode: "natural", intent },
         timestamp: new Date().toISOString(),
       });
     }
@@ -438,9 +435,6 @@ router.post("/chat", async (req: Request, res: Response) => {
     if (!detail && intent === "aboutArk") {
       return res.json({
         response: replyAboutArk(),
-        evidence: null,
-        kanagi: { thinkingAxis: "natural", phase: "about" },
-        decisionFrame: { mode: "natural", intent },
         timestamp: new Date().toISOString(),
       });
     }
@@ -549,24 +543,24 @@ router.post("/chat", async (req: Request, res: Response) => {
         ? `- 次の導線:\n  - ${truthNextHints.join("\n  - ")}\n`
         : "");
 
-    const replyDebug = `${conclusion}\n\n${grounds}\n\n${appliedLawsText}\n\n${operationsText}\n\n${alignmentText}\n\n${truthCheckText}`;
+    const detailReply = `${conclusion}\n\n${grounds}\n\n${appliedLawsText}\n\n${operationsText}\n\n${alignmentText}\n\n${truthCheckText}`;
     
-    // 2. replyNatural（通常会話：上品・短い）
+    // naturalReply を composeNatural で新規生成
     const top = decisionFrame.appliedLaws.slice(0, 3).map((law) => law.title).filter(Boolean);
-    const missing = truthMissing.length ? truthMissing.join(" / ") : "";
+    const miss = truthMissing.length ? truthMissing.join(" / ") : "";
 
-    const replyNatural = composeNatural({
+    const naturalReply = composeNatural({
       lead: "承知しました。",
-      body:
-        (top.length
-          ? `いまの問いは、まず「${top.join("／")}」の線から整えるのが自然です。`
-          : "いまの問いは、焦点を一つに絞ると進みやすくなります。") +
-        (missing ? `（足りない軸：${missing}）` : ""),
-      next: "どこから一段深くしますか。言葉ひとつでも構いません。",
+      body: top.length
+        ? `いまの問いは「${top.join("／")}」の線から整えるのが自然です。`
+        : "いまの問いは、焦点を一つに絞ると進みやすくなります。",
+      next: miss
+        ? `（補助軸：${miss}）どこから一段深くしますか。`
+        : "どこから一段深くしますか。言葉ひとつでも構いません。",
     });
 
     // response は detail によって切替
-    const responseText = detail ? replyDebug : replyNatural;
+    const responseText = detail ? detailReply : naturalReply;
 
     // rec を返す（imageUrl も含める）
     const imageUrl = `/api/corpus/page-image?doc=${encodeURIComponent(docAndPage.doc)}&pdfPage=${docAndPage.pdfPage}`;
