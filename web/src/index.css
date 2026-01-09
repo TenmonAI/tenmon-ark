@@ -68,3 +68,43 @@ html, body, #root {
   min-height:0 !important;
   overflow-y:auto !important;
 }
+
+/* ===== FORCE LAYOUT (shell/sidebar fixed) ===== */
+html, body, #root { height: 100%; width: 100%; }
+body { margin: 0; display: block !important; place-items: unset !important; min-height: 0 !important; }
+
+.shell{
+  height: 100vh !important;
+  width: 100% !important;
+  overflow: hidden !important;
+  display: flex !important;
+  min-height: 0 !important;
+}
+
+.sidebar{
+  position: sticky !important;
+  top: 0 !important;
+  height: 100vh !important;
+  overflow-y: auto !important;
+  flex: 0 0 280px !important;
+  min-height: 0 !important;
+}
+
+.main{
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+/* main-inner はスクロールさせない（messages がスクロール担当） */
+.main-inner{
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+}
+
+/* チャット本体の縦スクロールはここだけ */
+.chat-wrap{ flex: 1 1 auto !important; min-height: 0 !important; }
+.messages{ flex: 1 1 auto !important; min-height: 0 !important; overflow-y: auto !important; }

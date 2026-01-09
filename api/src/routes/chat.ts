@@ -420,11 +420,8 @@ router.post("/chat", async (req: Request, res: Response) => {
     // ========================================
     const intent = detectIntent(message, false);
     
-    // debugは本番では無視（#詳細 などのユーザー明示のみで詳細モードへ）
-    // 開発時だけ TENMON_DEBUG=1 の場合に限り debug:true を許可
-    const allowDebug = process.env.TENMON_DEBUG === "1";
-    const reqDebug = (req.body as any)?.debug;
-    const detail = isDetailRequest(message) || (allowDebug && reqDebug === true);
+    // 本番は debug を完全に無視（詳細は #詳細 / #detail / 根拠 / 引用 / 法則 / 真理チェック など「文章側」だけで決まる）
+    const detail = isDetailRequest(message);
     
     const parsed = extractDocAndPage(message);
 
@@ -608,9 +605,6 @@ router.post("/chat", async (req: Request, res: Response) => {
         : "どこから一段深くしますか。言葉ひとつでも構いません。",
     });
 
-    // response は detail によって切替
-    const responseText = detail ? detailReply : naturalReply;
-
     // rec を返す（imageUrl も含める）
     const imageUrl = `/api/corpus/page-image?doc=${encodeURIComponent(docAndPage.doc)}&pdfPage=${docAndPage.pdfPage}`;
     
@@ -622,8 +616,9 @@ router.post("/chat", async (req: Request, res: Response) => {
       page: rec,
     } : null;
     
-    return res.json({
-      response: responseText, // detail によって切替（デフォルトは自然会話）
+    // 返却構造を統一
+    const result: any = {
+      response: naturalReply, // 常に自然文（2〜8行）
       doc: docAndPage.doc,
       pdfPage: docAndPage.pdfPage,
       page: rec,
@@ -632,10 +627,17 @@ router.post("/chat", async (req: Request, res: Response) => {
         steps: analysis.steps,
         hints: analysis.hints,
       },
-      decisionFrame, // 常にJSONに含める（裏の思考回路）
-      truthCheck, // 常にJSONに含める（裏の思考回路）
-      evidence, // 常にJSONに含める（裏の思考回路）
-    });
+      decisionFrame, // 常にJSONに含める（UI展開用）
+      truthCheck, // 常にJSONに含める（UI展開用）
+      evidence, // 常にJSONに含める（UI展開用）
+    };
+    
+    // detail = #詳細 のときだけ付ける（長文ブロックはこっち）
+    if (detail) {
+      result.detail = detailReply;
+    }
+    
+    return res.json(result);
 
   } catch (err: any) {
     // エラー時も必ず reply を返す（UIが沈黙しないようにする）

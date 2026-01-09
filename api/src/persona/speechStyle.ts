@@ -30,8 +30,7 @@ export function shouldShowDebug(message: string, reqDebug?: unknown): boolean {
   return /(debug|デバッグ|根拠|引用|法則|decisionFrame|truthCheck)/i.test(message);
 }
 
-export function isDetailRequest(message: string, reqDebug?: unknown): boolean {
-  if (reqDebug === true) return true;
+export function isDetailRequest(message: string): boolean {
   // #詳細 / 根拠 / 法則 / truthCheck のときだけ詳細表示
   return /(#詳細|#detail|詳細|根拠|引用|法則|truthCheck|真理チェック)/i.test(message);
 }
