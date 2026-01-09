@@ -10,6 +10,9 @@ import { systemNatural, systemHybridDomain, systemGrounded } from "../llm/prompt
 import { pushTurn, getContext } from "../llm/threadMemory.js";
 
 import { detectIntent, isDetailRequest } from "../persona/speechStyle.js";
+import { buildTruthSkeleton } from "../truth/truthSkeleton.js";
+import { fetchLiveEvidence } from "../tools/liveEvidence.js";
+import { getRequestId } from "../middleware/requestId.js";
 
 import fs from "node:fs";
 import readline from "node:readline";
@@ -24,12 +27,7 @@ function parseDocAndPageStrict(text: string): { doc: string | null; pdfPage: num
   return { doc, pdfPage };
 }
 
-// "資料要求"を文章から拾う（#詳細以外の根拠要求）
-function wantsGrounding(message: string) {
-  return /(根拠|引用|出典|法則|lawId|真理チェック|truthCheck|decisionFrame|pdfPage|doc=)/i.test(message);
-}
-
-// LawCandidates（ページ候補）を読む：既存の実装を拡張
+// LawCandidates（ページ候補）を読む
 type LawCandidate = {
   id: string;
   doc: string;
@@ -64,7 +62,6 @@ async function getPageCandidates(doc: string, pdfPage: number, limit = 12): Prom
         if (out.length >= limit) break;
       }
     } catch (e) {
-      // JSON parse エラーは無視
       continue;
     }
   }
@@ -80,6 +77,9 @@ function inferAxis(message: string): ThinkingAxis {
 }
 
 router.post("/chat", async (req: Request, res: Response) => {
+  const startTime = Date.now();
+  const requestId = getRequestId(req);
+  
   try {
     const body = (req.body ?? {}) as any;
     const message = String(body.message ?? "").trim();
@@ -89,56 +89,244 @@ router.post("/chat", async (req: Request, res: Response) => {
       return res.status(400).json({ error: "message required" });
     }
 
+    // =========================
+    // TASK A: docMode条件を「明示」だけに変更
+    // =========================
     const parsed = parseDocAndPageStrict(message);
-    const intent = detectIntent(message, !!parsed.doc || !!parsed.pdfPage);
     const detail = isDetailRequest(message); // debug完全無視
 
-    const wantGrounded = detail || wantsGrounding(message) || (!!parsed.doc && !!parsed.pdfPage);
+    // docMode は以下のみ true:
+    // - detail === true
+    // - OR (strict.doc && strict.pdfPage)
+    // - OR message に "doc=" "pdfPage=" "引用" "根拠" "法則ID" "#詳細" が含まれる
+    const hasExplicitGrounding = /(doc=|pdfPage=|引用|根拠|法則ID|lawId)/i.test(message);
+    const docMode = detail || (!!parsed.doc && !!parsed.pdfPage) || hasExplicitGrounding;
+
+    // intent === domain だけでは docMode に入らない（削除済み）
 
     // =========================
-    // MODE決定
+    // TASK B: Truth Skeleton（真理骨格）を生成
     // =========================
-    const mode: "NATURAL" | "HYBRID" | "GROUNDED" =
-      wantGrounded ? "GROUNDED" : intent === "domain" ? "HYBRID" : "NATURAL";
+    const skeleton = buildTruthSkeleton(message, !!parsed.doc && !!parsed.pdfPage, detail);
 
-    // =========================
-    // NATURAL / HYBRID（表）
-    // =========================
-    if (mode === "NATURAL" || mode === "HYBRID") {
-      const sys = mode === "HYBRID" ? systemHybridDomain() : systemNatural();
-
-      // 直近文脈（暫定：プロセス内）
-      const ctx = getContext(threadId);
-
-      const answer = await llmChat(
-        [
-          { role: "system", content: sys },
-          ...ctx,
-          { role: "user", content: message },
-        ],
-        { temperature: 0.4, max_tokens: 380 }
-      ).catch((e) => {
-        // LLMが落ちても最低限会話を返す
-        console.error("[LLM-ERROR]", e);
-        return "承知しました。いまの問い、もう少しだけ状況を教えてください。";
-      });
-
+    // リスクゲート（暴走防止）
+    if (skeleton.risk === "high") {
+      const safeResponse = "申し訳ございませんが、その内容については回答できません。安全で適切な代替案をご案内できますので、別の質問をお願いします。";
       pushTurn(threadId, { role: "user", content: message, at: Date.now() });
-      pushTurn(threadId, { role: "assistant", content: answer, at: Date.now() });
-
+      pushTurn(threadId, { role: "assistant", content: safeResponse, at: Date.now() });
       return res.json({
-        response: answer,
+        response: safeResponse,
         evidence: null,
-        decisionFrame: { mode, intent },
+        decisionFrame: { mode: skeleton.mode, intent: skeleton.intent, risk: skeleton.risk },
         timestamp: new Date().toISOString(),
       });
     }
 
     // =========================
-    // GROUNDED（資料準拠）
+    // MODE決定（Truth Skeleton ベース）
     // =========================
-    // doc/pdfPageが無ければ "聞き返し" ではなく、まず自然に確認質問を1つ返す
-    // （ここで「doc名とpdfPageを指定してください」は禁止）
+    const mode = skeleton.mode;
+
+    // =========================
+    // LIVE モード（Web検索必須）
+    // =========================
+    if (mode === "LIVE") {
+      // STEP 4-2: LIVEモードはさらに厳しめのレート制限
+      // （ミドルウェアで既に適用されているが、念のため）
+      const liveEvidenceStart = Date.now();
+      const liveEvidence = await fetchLiveEvidence(message, skeleton);
+      const liveEvidenceLatency = Date.now() - liveEvidenceStart;
+
+      if (!liveEvidence) {
+        // Bing APIが落ちた時や検索失敗時の劣化動作
+        const fallbackResponse = "申し訳ございませんが、現在の情報を取得できませんでした。検索サービスに接続できないか、情報が見つかりませんでした。しばらく時間をおいて再度お試しください。または、公式サイトやニュースサイトで直接確認していただくことをお勧めします。";
+        pushTurn(threadId, { role: "user", content: message, at: Date.now() });
+        pushTurn(threadId, { role: "assistant", content: fallbackResponse, at: Date.now() });
+        return res.json({
+          response: fallbackResponse,
+          evidence: null,
+          decisionFrame: { mode, intent: skeleton.intent, error: "live_evidence_fetch_failed" },
+          timestamp: new Date().toISOString(),
+        });
+      }
+
+      // LIVE回答を生成
+      const sys = systemNatural();
+      const ctx = getContext(threadId);
+      // JST時刻に変換
+      const jstTime = new Date(liveEvidence.timestamp).toLocaleString("ja-JP", { timeZone: "Asia/Tokyo" });
+      const livePrompt = `${message}\n\n取得した情報:\n- 値: ${liveEvidence.value}\n- 取得時刻: ${jstTime} JST\n- 出典: ${liveEvidence.sources.map(s => s.url).join(", ")}\n- 信頼度: ${liveEvidence.confidence}\n${liveEvidence.note ? `- 注意: ${liveEvidence.note}\n` : ""}\n\n上記情報を基に、自然な短文で答えてください。必ず取得時刻（JST）と出典URL（最低1、推奨2）を含めてください。不一致や不確実な場合は「確認中」「不一致」と明示し、断定しないでください。`;
+
+      const liveAnswer = await llmChat(
+        [
+          { role: "system", content: sys },
+          ...ctx,
+          { role: "user", content: livePrompt },
+        ],
+        { temperature: 0.3, max_tokens: 300 }
+      ).catch(() => {
+        // LLMが失敗した場合のフォールバック（取得時刻＋出典URLを必ず含める）
+        const jstTimeFallback = new Date(liveEvidence.timestamp).toLocaleString("ja-JP", { timeZone: "Asia/Tokyo" });
+        return `${liveEvidence.value}（取得時刻: ${jstTimeFallback} JST、出典: ${liveEvidence.sources.map(s => s.url).join(", ")}）`;
+      });
+
+      const llmStart = Date.now();
+      pushTurn(threadId, { role: "user", content: message, at: Date.now() });
+      pushTurn(threadId, { role: "assistant", content: liveAnswer, at: Date.now() });
+      const llmLatency = Date.now() - llmStart;
+      const totalLatency = Date.now() - startTime;
+
+      // STEP 3-1: 必須ログ（info）
+      console.log(JSON.stringify({
+        level: "info",
+        requestId,
+        threadId,
+        mode,
+        risk: skeleton.risk,
+        latency: {
+          total: totalLatency,
+          liveEvidence: liveEvidenceLatency,
+          llm: llmLatency,
+        },
+        evidenceConfidence: liveEvidence.confidence,
+        returnedDetail: false,
+      }));
+
+      return res.json({
+        response: liveAnswer,
+        evidence: {
+          live: true,
+          value: liveEvidence.value,
+          timestamp: liveEvidence.timestamp,
+          sources: liveEvidence.sources,
+          confidence: liveEvidence.confidence,
+        },
+        decisionFrame: { mode, intent: skeleton.intent },
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+    // =========================
+    // NATURAL モード（一般会話）
+    // =========================
+    if (mode === "NATURAL") {
+      const sys = systemNatural();
+      const ctx = getContext(threadId);
+
+      // 制約をプロンプトに追加
+      const constraintsText = skeleton.constraints.length > 0
+        ? `\n\n【制約】\n${skeleton.constraints.join("\n")}`
+        : "";
+
+      const llmStart = Date.now();
+      const answer = await llmChat(
+        [
+          { role: "system", content: sys + constraintsText },
+          ...ctx,
+          { role: "user", content: message },
+        ],
+        { temperature: 0.4, max_tokens: 380 }
+      ).catch((e) => {
+        console.error("[LLM-ERROR]", e);
+        return "承知しました。いまの問い、もう少しだけ状況を教えてください。";
+      });
+      const llmLatency = Date.now() - llmStart;
+
+      pushTurn(threadId, { role: "user", content: message, at: Date.now() });
+      pushTurn(threadId, { role: "assistant", content: answer, at: Date.now() });
+      const totalLatency = Date.now() - startTime;
+
+      // STEP 3-1: 必須ログ（info）
+      console.log(JSON.stringify({
+        level: "info",
+        requestId,
+        threadId,
+        mode,
+        risk: skeleton.risk,
+        latency: {
+          total: totalLatency,
+          liveEvidence: null,
+          llm: llmLatency,
+        },
+        evidenceConfidence: null,
+        returnedDetail: false,
+      }));
+
+      return res.json({
+        response: answer,
+        evidence: null,
+        decisionFrame: { mode, intent: skeleton.intent },
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+    // =========================
+    // HYBRID モード（domain: 表1段で答える、裏#詳細なら根拠）
+    // =========================
+    if (mode === "HYBRID") {
+      const sys = systemHybridDomain();
+      const ctx = getContext(threadId);
+
+      // 制約をプロンプトに追加
+      const constraintsText = skeleton.constraints.length > 0
+        ? `\n\n【制約】\n${skeleton.constraints.join("\n")}`
+        : "";
+
+      const llmStart = Date.now();
+      const answer = await llmChat(
+        [
+          { role: "system", content: sys + constraintsText },
+          ...ctx,
+          { role: "user", content: message },
+        ],
+        { temperature: 0.4, max_tokens: 380 }
+      ).catch((e) => {
+        console.error("[LLM-ERROR]", e);
+        return "承知しました。いまの問い、もう少しだけ状況を教えてください。";
+      });
+      const llmLatency = Date.now() - llmStart;
+
+      pushTurn(threadId, { role: "user", content: message, at: Date.now() });
+      pushTurn(threadId, { role: "assistant", content: answer, at: Date.now() });
+      const totalLatency = Date.now() - startTime;
+
+      const result: any = {
+        response: answer,
+        evidence: null,
+        decisionFrame: { mode, intent: skeleton.intent },
+        timestamp: new Date().toISOString(),
+      };
+
+      // #詳細 がある場合のみ、裏面で根拠（pdfPage / lawId / 引用）を出す
+      if (detail) {
+        // HYBRIDモードでは、#詳細があっても資料モードには落ちない
+        // ただし、根拠情報を構造化して返す
+        result.detail = `【ドメイン質問】${message}\n【回答骨格】${answer}\n【注意】#詳細が要求されましたが、HYBRIDモードでは資料モードに強制されません。根拠が必要な場合は、doc/pdfPageを明示してください。`;
+      }
+
+      // STEP 3-1: 必須ログ（info）
+      console.log(JSON.stringify({
+        level: "info",
+        requestId,
+        threadId,
+        mode,
+        risk: skeleton.risk,
+        latency: {
+          total: totalLatency,
+          liveEvidence: null,
+          llm: llmLatency,
+        },
+        evidenceConfidence: null,
+        returnedDetail: detail,
+      }));
+
+      return res.json(result);
+    }
+
+    // =========================
+    // GROUNDED モード（資料準拠）
+    // =========================
+    // doc/pdfPageが無ければ自然に確認質問を1つ返す
     if (!parsed.doc || !parsed.pdfPage) {
       const sys = systemGrounded();
       const ctx = getContext(threadId);
@@ -164,13 +352,13 @@ router.post("/chat", async (req: Request, res: Response) => {
       return res.json({
         response: answer,
         evidence: null,
-        decisionFrame: { mode, intent, need: ["doc", "pdfPage"] },
+        decisionFrame: { mode, intent: skeleton.intent, need: ["doc", "pdfPage"] },
         timestamp: new Date().toISOString(),
       });
     }
 
-    const doc = parsed.doc;
-    const pdfPage = parsed.pdfPage;
+    const doc = parsed.doc!;
+    const pdfPage = parsed.pdfPage!;
 
     const rec = getCorpusPage(doc, pdfPage);
     if (!rec) {
@@ -178,7 +366,7 @@ router.post("/chat", async (req: Request, res: Response) => {
       return res.json({ 
         response: answer, 
         evidence: null, 
-        decisionFrame: { mode, intent }, 
+        decisionFrame: { mode, intent: skeleton.intent }, 
         timestamp: new Date().toISOString() 
       });
     }
@@ -214,6 +402,7 @@ router.post("/chat", async (req: Request, res: Response) => {
       `\n\n【真理チェック】missing=${truth.items.filter(i => !i.present).map(i => i.label).join(", ")}\n` +
       `【ユーザー質問】${message}`;
 
+    const llmStart = Date.now();
     const responseText = await llmChat(
       [
         { role: "system", content: sys },
@@ -222,6 +411,7 @@ router.post("/chat", async (req: Request, res: Response) => {
       ],
       { temperature: 0.35, max_tokens: 420 }
     ).catch(() => "承知しました。資料の範囲では、ここまでは言えます。どの部分を最優先で確かめますか。");
+    const llmLatency = Date.now() - llmStart;
 
     pushTurn(threadId, { role: "user", content: message, at: Date.now() });
     pushTurn(threadId, { role: "assistant", content: responseText, at: Date.now() });
@@ -246,26 +436,45 @@ router.post("/chat", async (req: Request, res: Response) => {
         doc, 
         pdfPage, 
         imagePath: rec.imagePath, 
-        sha256: rec.rawText ? undefined : undefined, // sha256 は rec に無い場合は undefined
         quote: rec.cleanedText.substring(0, 500),
-      },
-      truthCheck: truth,
-      decisionFrame: {
-        mode,
-        intent,
-        grounds: [{ doc, pdfPage }],
-        appliedLaws,
-        operations: ops.map(op => ({ op, description: `${op}操作` })),
-        truthCheck: truth,
       },
       timestamp: new Date().toISOString(),
     };
 
-    if (detail) result.detail = detailText;
+    // #詳細 がある場合のみ、内部根拠（LawCandidate / pdfPage / truthCheck / decisionFrame）を返す
+    if (detail) {
+      result.detail = detailText;
+      result.truthCheck = truth;
+      result.decisionFrame = {
+        mode,
+        intent: skeleton.intent,
+        grounds: [{ doc, pdfPage }],
+        appliedLaws,
+        operations: ops.map(op => ({ op, description: `${op}操作` })),
+        truthCheck: truth,
+      };
+    }
+
+    const totalLatency = Date.now() - startTime;
+
+    // STEP 3-1: 必須ログ（info）
+    console.log(JSON.stringify({
+      level: "info",
+      requestId,
+      threadId,
+      mode,
+      risk: skeleton.risk,
+      latency: {
+        total: totalLatency,
+        liveEvidence: null,
+        llm: llmLatency,
+      },
+      evidenceConfidence: null,
+      returnedDetail: detail,
+    }));
 
     return res.json(result);
   } catch (err: any) {
-    // エラー時も必ず reply を返す（UIが沈黙しないようにする）
     console.error("[CHAT-ERROR]", err);
     const message = req.body?.message || "";
     return res.json({

@@ -5,6 +5,7 @@ import { getPersonaState } from "../persona/personaState.js";
 import type { ToolId } from "../tools/toolTypes.js";
 import { snapshotMetrics } from "./metrics.js";
 import { getSafeModeReason, isSafeMode } from "./safeMode.js";
+import { initThreadDB } from "../db/threads.js";
 
 export type HealthReport = {
   status: "ok" | "degraded";
@@ -17,6 +18,12 @@ export type HealthReport = {
   persona: { ok: boolean; personaId: string; state?: unknown; error?: string };
   tools: { executable: boolean; allowlist: ToolId[] };
   metrics: ReturnType<typeof snapshotMetrics>;
+  // STEP 3-2: Bing key / LLM key / DB が生きているか簡易チェック
+  external: {
+    bingSearch: { ok: boolean; error?: string };
+    llm: { ok: boolean; error?: string };
+    threadDb: { ok: boolean; error?: string };
+  };
 };
 
 function nowIso(): string {
@@ -41,6 +48,13 @@ function dbStatus(kind: DbKind): { ok: boolean; path: string; sizeBytes: number 
     const msg = e?.message ? String(e.message) : "db error";
     return { ok: false, path: p, sizeBytes, error: msg };
   }
+}
+
+/**
+ * ヘルスチェック（async版、外部サービスチェック含む）
+ */
+export async function healthCheck(): Promise<HealthReport> {
+  return getHealthReport();
 }
 
 export function getHealthReport(): HealthReport {
@@ -74,7 +88,42 @@ export function getHealthReport(): HealthReport {
 
   const allowlist: ToolId[] = ["filesystem.read", "http.fetch", "github.read", "calendar.read"];
 
-  const ok = kokuzo.ok && audit.ok && persona.ok;
+  // STEP 3-2: 外部サービスチェック
+  let bingOk = false;
+  let bingError: string | undefined;
+  try {
+    const apiKey = process.env.BING_SEARCH_API_KEY;
+    bingOk = !!apiKey && apiKey.trim().length > 0;
+    if (!bingOk) {
+      bingError = "BING_SEARCH_API_KEY not configured";
+    }
+  } catch (e: any) {
+    bingError = e?.message || "unknown error";
+  }
+
+  let llmOk = false;
+  let llmError: string | undefined;
+  try {
+    const apiKey = process.env.OPENAI_API_KEY;
+    llmOk = !!apiKey && apiKey.trim().length > 0;
+    if (!llmOk) {
+      llmError = "OPENAI_API_KEY not configured";
+    }
+  } catch (e: any) {
+    llmError = e?.message || "unknown error";
+  }
+
+  let threadDbOk = false;
+  let threadDbError: string | undefined;
+  try {
+    initThreadDB();
+    threadDbOk = true;
+  } catch (e: any) {
+    threadDbOk = false;
+    threadDbError = e?.message || "thread db error";
+  }
+
+  const ok = kokuzo.ok && audit.ok && persona.ok && bingOk && llmOk && threadDbOk;
   return {
     status: ok && !isSafeMode() ? "ok" : "degraded",
     service: "tenmon-ark-api",
@@ -86,6 +135,11 @@ export function getHealthReport(): HealthReport {
     persona: personaOk ? { ok: true, personaId, state: personaState } : { ok: false, personaId, error: personaError },
     tools: { executable: !isSafeMode(), allowlist },
     metrics: snapshotMetrics(),
+    external: {
+      bingSearch: bingOk ? { ok: true } : { ok: false, error: bingError },
+      llm: llmOk ? { ok: true } : { ok: false, error: llmError },
+      threadDb: threadDbOk ? { ok: true } : { ok: false, error: threadDbError },
+    },
   };
 }
 

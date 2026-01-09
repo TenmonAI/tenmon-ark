@@ -1,15 +1,15 @@
 import { useState, useEffect } from "react";
 
-function makeThreadTitle(text: string) {
-  const t = text
-    .replace(/\s+/g, " ")
-    .replace(/#(詳細|detail)\b/gi, "")
-    .replace(/doc=\S+|pdfPage[:=]\d+/gi, "")
-    .trim();
+function makeTitle(text: string): string {
+  let t = (text ?? "").trim();
+  t = t.replace(/#(詳細|detail)\b/gi, "");
+  t = t.replace(/\b(doc|pdfPage)\s*[:=]\s*\S+/gi, "");
+  t = t.replace(/[「」『』【】\[\]（）()]/g, "");
+  t = t.replace(/\s+/g, " ").trim();
 
   if (!t) return "新しい会話";
-  const s = t.length > 22 ? t.slice(0, 22) + "…" : t;
-  return s;
+  if (/^(おはよう|こんにちは|こんばんは|ありがとう|おやすみ)/.test(t)) return "ごあいさつ";
+  return t.length > 18 ? t.slice(0, 18) + "…" : t;
 }
 
 type Settings = {
@@ -57,7 +57,7 @@ export default function ChatCore() {
 
     setMessages((m) => [...m, { role: "user", content: userMessage }]);
 
-    // 「新しい会話」用の自動タイトルを一度だけ生成して保存
+    // 送信後：threads[activeId].messages に user を push した直後に
     try {
       const raw = window.localStorage.getItem("tenmon_threads");
       const threads = raw ? JSON.parse(raw) : {};
@@ -65,10 +65,11 @@ export default function ChatCore() {
       const thread = threads[activeId] ?? {
         id: activeId,
         title: "新しい会話",
+        messages: [],
       };
 
-      if (!thread.title || thread.title === "新しい会話") {
-        thread.title = makeThreadTitle(userMessage);
+      if (thread.title === "新しい会話") {
+        thread.title = makeTitle(userMessage);
         threads[activeId] = thread;
         window.localStorage.setItem("tenmon_threads", JSON.stringify(threads));
       }

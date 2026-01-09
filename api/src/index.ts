@@ -13,14 +13,20 @@ import settingsRouter from "./routes/settings.js";
 import kotodamaRouter from "./routes/kotodama.js";
 import corpusRouter from "./routes/corpus.js";
 import { initDB } from "./db/knowledge.js";
+import { initThreadDB } from "./db/threads.js";
 import { initCorpusLoader } from "./kotodama/corpusLoader.js";
 import { initTextLoader } from "./kotodama/textLoader.js";
+import { requestIdMiddleware } from "./middleware/requestId.js";
+import { chatRateLimit } from "./middleware/rateLimit.js";
 
 const app = express();
 const PORT = process.env.PORT ? Number(process.env.PORT) : 3000;
 
 // Knowledge DB を初期化
 initDB();
+
+// Thread DB を初期化
+initThreadDB();
 
 // Corpus JSONL ローダーを初期化
 initCorpusLoader();
@@ -30,6 +36,12 @@ initTextLoader();
 
 app.use(cors());
 app.use(express.json());
+
+// STEP 3-1: requestId ミドルウェア
+app.use(requestIdMiddleware);
+
+// STEP 4-2: Rate Limit（/api/chat に適用）
+app.use("/api/chat", chatRateLimit);
 
 // ★ 重要：kanagi を /api にマウント
 app.use("/api", kanagiRoutes);
