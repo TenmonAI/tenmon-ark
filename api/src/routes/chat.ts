@@ -408,7 +408,6 @@ router.post("/chat", async (req: Request, res: Response) => {
   try {
     const mode = req.query.mode || req.body.mode;
     const message = String(req.body?.message ?? "").trim();
-    const reqDebug = (req.body as any)?.debug;
 
     if (!message) {
       return res.json({
@@ -420,7 +419,13 @@ router.post("/chat", async (req: Request, res: Response) => {
     // intent/detail を決める
     // ========================================
     const intent = detectIntent(message, false);
-    const detail = isDetailRequest(message, reqDebug);
+    
+    // debugは本番では無視（#詳細 などのユーザー明示のみで詳細モードへ）
+    // 開発時だけ TENMON_DEBUG=1 の場合に限り debug:true を許可
+    const allowDebug = process.env.TENMON_DEBUG === "1";
+    const reqDebug = (req.body as any)?.debug;
+    const detail = isDetailRequest(message) || (allowDebug && reqDebug === true);
+    
     const parsed = extractDocAndPage(message);
 
     // ========================================
