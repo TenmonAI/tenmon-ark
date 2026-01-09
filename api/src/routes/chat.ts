@@ -421,28 +421,65 @@ router.post("/chat", async (req: Request, res: Response) => {
     // ========================================
     const intent = detectIntent(message, false);
     const detail = isDetailRequest(message, reqDebug);
+    const parsed = extractDocAndPage(message);
 
     // ========================================
-    // smalltalk/aboutArk は docModeに入らず即返す（detail=falseの時だけ）
+    // docModeは "必要な時だけ"
     // ========================================
-    if (!detail && intent === "smalltalk") {
+    const docMode = detail || intent === "domain" || !!parsed.doc || !!parsed.pdfPage;
+
+    // ========================================
+    // docMode じゃない時は自然会話で返す
+    // ========================================
+    if (!docMode) {
+      // ここが「天聞アークの声」
+      const voice =
+        "私の感触では、いまは「問いの焦点」がまだ揺れている段階です。まず一語だけ決めると、会話がすっと通ります。";
+
+      // 一般質問の例外処理（ここが"人の知能"としての最低ライン）
+      if (/知能指数|IQ/i.test(message)) {
+        return res.json({
+          response:
+            "IQ（知能指数）は検査を受けないと推定できません。\n" +
+            "ただ、目的によってはIQより「集中の持続」「判断の速さ」「言語の整理力」などを見た方が役に立つことがあります。\n\n" +
+            "何のために知りたいですか？（仕事・学習・自己理解など）",
+          timestamp: new Date().toISOString(),
+        });
+      }
+
+      if (/(会話得意|話すの得意|会話できますか)/.test(message)) {
+        return res.json({
+          response:
+            "はい、会話は得意です。\n" +
+            "ただ、私は「思いつき」で返すより、あなたの意図を確認してから整えて返すタイプです。\n\n" +
+            "いま、雑談として話したい？それとも、何か解決したいことがありますか。",
+          timestamp: new Date().toISOString(),
+        });
+      }
+
+      // smalltalk/aboutArk は speechStyle を使う
+      if (intent === "smalltalk") {
+        return res.json({ response: replySmalltalk(message), timestamp: new Date().toISOString() });
+      }
+      if (intent === "aboutArk") {
+        return res.json({ response: replyAboutArk(), timestamp: new Date().toISOString() });
+      }
+
+      // unknown/howto は自然に返す
       return res.json({
-        response: replySmalltalk(message),
+        response:
+          "承知しました。\n\n" +
+          voice +
+          "\n\n" +
+          "いまのテーマを一語で言うなら何ですか？（例：不安／お金／開発／人間関係／健康）",
         timestamp: new Date().toISOString(),
       });
     }
 
-    if (!detail && intent === "aboutArk") {
-      return res.json({
-        response: replyAboutArk(),
-        timestamp: new Date().toISOString(),
-      });
-    }
-
     // ========================================
-    // doc/pdfPage を抽出（未指定時は自動選択）
+    // docMode の時だけ、今の「法則・真理チェック」へ入る
     // ========================================
-    const docAndPage = extractDocAndPage(message);
+    const docAndPage = parsed;
 
     // ========================================
     // corpusLoader からページを取得
