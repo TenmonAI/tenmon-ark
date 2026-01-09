@@ -7,10 +7,11 @@ import { OUTPUT_TEMPLATE } from "../tenmon-core/persona.js";
 import { getCorpusPage, getAvailableDocs } from "../kotodama/corpusLoader.js";
 import { getPageText } from "../kotodama/textLoader.js";
 import { detectLaws } from "../kotodama/ingest/detectLaws.js";
+import { runTruthCheck } from "../synapse/truthCheck.js";
+import { detectIntent, isDetailRequest, replySmalltalk, replyAboutArk, composeNatural } from "../persona/speechStyle.js";
 import fs from "node:fs";
 import path from "node:path";
 import readline from "node:readline";
-import { runTruthCheck } from "../synapse/truthCheck.js";
 
 const router: IRouter = Router();
 
@@ -406,11 +407,41 @@ function buildSystemPrompt(analysisHints?: string[]): string {
 router.post("/chat", async (req: Request, res: Response) => {
   try {
     const mode = req.query.mode || req.body.mode;
-    const message = req.body.message || "";
+    const message = String(req.body?.message ?? "").trim();
+    const reqDebug = (req.body as any)?.debug;
 
-    if (!message || typeof message !== "string") {
+    if (!message) {
       return res.json({
         reply: "メッセージが必要です。何かお聞きしたいことがあれば教えてください。",
+      });
+    }
+
+    // ========================================
+    // intent/detail を決める
+    // ========================================
+    const intent = detectIntent(message, false); // hasDocPage は後で判定
+    const detail = isDetailRequest(message, reqDebug);
+
+    // ========================================
+    // smalltalk/aboutArk は "構造出力を出さず" 即返す
+    // ========================================
+    if (!detail && intent === "smalltalk") {
+      return res.json({
+        response: replySmalltalk(message),
+        evidence: null,
+        kanagi: { thinkingAxis: "natural", phase: "smalltalk" },
+        decisionFrame: { mode: "natural", intent },
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+    if (!detail && intent === "aboutArk") {
+      return res.json({
+        response: replyAboutArk(),
+        evidence: null,
+        kanagi: { thinkingAxis: "natural", phase: "about" },
+        decisionFrame: { mode: "natural", intent },
+        timestamp: new Date().toISOString(),
       });
     }
 
@@ -465,33 +496,7 @@ router.post("/chat", async (req: Request, res: Response) => {
     // 返答フォーマットを二段階で生成
     // ========================================
     
-    // 詳細要求があるかチェック
-    const isDetailed = isDetailedRequest(message);
-    
-    // 1. naturalReply（会話文：2〜8行）
-    const mainLaws = decisionFrame.appliedLaws.slice(0, 3).map((law) => law.title).join("、");
-    const hasLaws = decisionFrame.appliedLaws.length > 0;
-    
-    let naturalReply = "";
-    if (hasLaws) {
-      naturalReply = `言霊秘書の記述によると、${mainLaws}${decisionFrame.appliedLaws.length > 3 ? "など" : ""}が関連しています。`;
-      
-      if (decisionFrame.grounds.quote) {
-        const quoteExcerpt = decisionFrame.grounds.quote.substring(0, 150);
-        naturalReply += `\n\n${quoteExcerpt}${decisionFrame.grounds.quote.length > 150 ? "..." : ""}`;
-      }
-    } else {
-      naturalReply = "言霊秘書を参照しましたが、ご質問に関連する具体的な法則は見つかりませんでした。";
-    }
-    
-    if (decisionFrame.operations.length > 0) {
-      const opsList = decisionFrame.operations.map((op) => op.op).join("、");
-      naturalReply += `\n\nこの解釈には${opsList}などの操作が適用されています。`;
-    }
-    
-    naturalReply += `\n\n（参照：${docAndPage.doc} P${docAndPage.pdfPage}）`;
-    
-    // 2. detailReply（現在のフル出力）
+    // 1. replyDebug（フル構造出力）
     const conclusion = `【結論】\n${docAndPage.doc} P${docAndPage.pdfPage} を参照しました。`;
     
     const grounds = `【根拠】\n` +
@@ -544,26 +549,49 @@ router.post("/chat", async (req: Request, res: Response) => {
         ? `- 次の導線:\n  - ${truthNextHints.join("\n  - ")}\n`
         : "");
 
-    const detailReply = `${conclusion}\n\n${grounds}\n\n${appliedLawsText}\n\n${operationsText}\n\n${alignmentText}\n\n${truthCheckText}`;
+    const replyDebug = `${conclusion}\n\n${grounds}\n\n${appliedLawsText}\n\n${operationsText}\n\n${alignmentText}\n\n${truthCheckText}`;
     
-    // 詳細要求に応じて返答を選択
-    const reply = isDetailed ? detailReply : naturalReply;
+    // 2. replyNatural（通常会話：上品・短い）
+    const top = decisionFrame.appliedLaws.slice(0, 3).map((law) => law.title).filter(Boolean);
+    const missing = truthMissing.length ? truthMissing.join(" / ") : "";
+
+    const replyNatural = composeNatural({
+      lead: "承知しました。",
+      body:
+        (top.length
+          ? `いまの問いは、まず「${top.join("／")}」の線から整えるのが自然です。`
+          : "いまの問いは、焦点を一つに絞ると進みやすくなります。") +
+        (missing ? `（足りない軸：${missing}）` : ""),
+      next: "どこから一段深くしますか。言葉ひとつでも構いません。",
+    });
+
+    // response は detail によって切替
+    const responseText = detail ? replyDebug : replyNatural;
 
     // rec を返す（imageUrl も含める）
     const imageUrl = `/api/corpus/page-image?doc=${encodeURIComponent(docAndPage.doc)}&pdfPage=${docAndPage.pdfPage}`;
     
+    // evidence（裏の思考回路：常に返す）
+    const evidence = rec ? {
+      doc: docAndPage.doc,
+      pdfPage: docAndPage.pdfPage,
+      quote: decisionFrame.grounds.quote || rec.cleanedText.substring(0, 500),
+      page: rec,
+    } : null;
+    
     return res.json({
-      reply,
+      response: responseText, // detail によって切替（デフォルトは自然会話）
       doc: docAndPage.doc,
       pdfPage: docAndPage.pdfPage,
       page: rec,
-      imageUrl: rec.imagePath ? imageUrl : null,
+      imageUrl: rec?.imagePath ? imageUrl : null,
       analysis: {
         steps: analysis.steps,
         hints: analysis.hints,
       },
-      decisionFrame,
-      truthCheck, // 常にJSONに含める（UI側が後で展開できる）
+      decisionFrame, // 常にJSONに含める（裏の思考回路）
+      truthCheck, // 常にJSONに含める（裏の思考回路）
+      evidence, // 常にJSONに含める（裏の思考回路）
     });
 
   } catch (err: any) {
