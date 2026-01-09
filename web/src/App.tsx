@@ -3,9 +3,9 @@ import Chat from "./pages/Chat";
 
 export default function App() {
   return (
-    <div className="flex h-screen overflow-hidden bg-[#f7f7f8]">
+    <div className="app-shell">
       <Sidebar />
-      <main className="flex-1 overflow-y-auto bg-white">
+      <main className="main">
         <Chat />
       </main>
     </div>
