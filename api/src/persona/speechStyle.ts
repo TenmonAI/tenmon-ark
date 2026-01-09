@@ -73,21 +73,101 @@ export function wrapNatural(params: {
   return chunks.join("\n\n");
 }
 
-/**
- * 自然会話を構成する（上品・短い）
- */
-export function composeNatural(params: {
+// 新インターフェース用の型（自然会話ラッパ）
+type NaturalParamsByFrame = {
   lead?: string;
   body: string;
   next?: string;
   cite?: string;
-}): string {
+};
+
+type NaturalCore = {
+  appliedLaws?: Array<{ lawId: string; title?: string | null }>;
+  truthCheck?: {
+    items: Array<{ key: string; present: boolean; label: string }>;
+  };
+  doc?: string;
+  pdfPage?: number;
+};
+
+type NaturalParamsByIntent = {
+  message: string;
+  intent: Intent;
+  core?: NaturalCore;
+};
+
+/**
+ * 自然会話を構成する（上品・短い）
+ * - 旧: lead/body/next/cite 直接指定
+ * - 新: message/intent/core から自動生成
+ */
+export function composeNatural(params: NaturalParamsByFrame | NaturalParamsByIntent): string {
+  // intentベースの新インターフェース
+  if ("message" in params) {
+    const t = params.message.trim();
+    const intent = params.intent;
+    const core = params.core;
+
+    let lead: string | undefined;
+    let body: string;
+    let next: string | undefined;
+    let cite: string | undefined;
+
+    if (intent === "smalltalk") {
+      lead = undefined;
+      body = t || "うん、聞いています。";
+      next = "いま、いちばん気になっていることは何でしょう。";
+    } else if (intent === "aboutArk") {
+      body =
+        "天聞アークは、「問い」を整えて次の一歩へつなぐための対話システムです。";
+      next = "いまは、どんな相談から触れてみましょう。";
+    } else if (intent === "domain") {
+      const top =
+        core?.appliedLaws
+          ?.slice(0, 3)
+          .map((x) => String(x.title || ""))
+          .map((s) => s.replace(/^核心語:\s*/, ""))
+          .filter(Boolean) ?? [];
+
+      const missing =
+        core?.truthCheck?.items.filter((i) => !i.present).map((i) => i.label) ?? [];
+
+      lead = "承知しました。";
+      body = top.length
+        ? `この問いは、まず「${top.join("／")}」の線から軽く整えてみるのが自然です。`
+        : "この問いは、まず核になる語を一つ決めると、静かに収まりが見えてきます。";
+
+      if (missing.length > 0) {
+        next = `（補助軸：${missing.join(" / ")}）どこから一段深くしますか。`;
+      } else {
+        next = "どこから一段深くしますか。言葉ひとつでも構いません。";
+      }
+
+      if (core?.doc && core.pdfPage) {
+        cite = `※ いまは ${core.doc} P${core.pdfPage} を土台に見ています。`;
+      }
+    } else {
+      // unknown / grounded など
+      lead = "承知しました。";
+      body =
+        "いまは「問いの焦点」を一語にまとめてみると、次の一手が見えやすくなります。";
+      next = "一語だけ挙げるとしたら、どんな言葉になりそうですか。";
+    }
+
+    const chunks = [lead?.trim(), body.trim(), next?.trim(), cite?.trim()].filter(
+      Boolean
+    ) as string[];
+    return chunks.join("\n\n");
+  }
+
+  // 旧インターフェース（既存呼び出し互換）
+  const frame = params as NaturalParamsByFrame;
   const chunks = [
-    params.lead?.trim(),
-    params.body.trim(),
-    params.next?.trim(),
-    params.cite?.trim(),
-  ].filter(Boolean);
+    frame.lead?.trim(),
+    frame.body.trim(),
+    frame.next?.trim(),
+    frame.cite?.trim(),
+  ].filter(Boolean) as string[];
   return chunks.join("\n\n");
 }
 

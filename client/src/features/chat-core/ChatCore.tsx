@@ -1,5 +1,17 @@
 import { useState, useEffect } from "react";
 
+function makeThreadTitle(text: string) {
+  const t = text
+    .replace(/\s+/g, " ")
+    .replace(/#(詳細|detail)\b/gi, "")
+    .replace(/doc=\S+|pdfPage[:=]\d+/gi, "")
+    .trim();
+
+  if (!t) return "新しい会話";
+  const s = t.length > 22 ? t.slice(0, 22) + "…" : t;
+  return s;
+}
+
 type Settings = {
   name: string;
   description: string;
@@ -44,6 +56,26 @@ export default function ChatCore() {
     setInput("");
 
     setMessages((m) => [...m, { role: "user", content: userMessage }]);
+
+    // 「新しい会話」用の自動タイトルを一度だけ生成して保存
+    try {
+      const raw = window.localStorage.getItem("tenmon_threads");
+      const threads = raw ? JSON.parse(raw) : {};
+      const activeId = "default";
+      const thread = threads[activeId] ?? {
+        id: activeId,
+        title: "新しい会話",
+      };
+
+      if (!thread.title || thread.title === "新しい会話") {
+        thread.title = makeThreadTitle(userMessage);
+        threads[activeId] = thread;
+        window.localStorage.setItem("tenmon_threads", JSON.stringify(threads));
+      }
+    } catch (e) {
+      // localStorage が使えない環境では無視
+      console.warn("failed to update tenmon_threads:", e);
+    }
 
     try {
       const res = await fetch("/api/chat?mode=think", {

@@ -8,12 +8,28 @@ import { getCorpusPage, getAvailableDocs } from "../kotodama/corpusLoader.js";
 import { getPageText } from "../kotodama/textLoader.js";
 import { detectLaws } from "../kotodama/ingest/detectLaws.js";
 import { runTruthCheck } from "../synapse/truthCheck.js";
-import { detectIntent, isDetailRequest, replySmalltalk, replyAboutArk, composeNatural } from "../persona/speechStyle.js";
+import { detectIntent, isDetailRequest, composeNatural } from "../persona/speechStyle.js";
 import fs from "node:fs";
 import path from "node:path";
 import readline from "node:readline";
 
 const router: IRouter = Router();
+
+// ========================================
+// strict doc/pdfPage パーサ
+//  - 明示指定のみ拾う（未指定は null）
+// ========================================
+function parseDocAndPageStrict(
+  text: string
+): { doc: string | null; pdfPage: number | null } {
+  const docs = getAvailableDocs();
+  const doc = docs.find((d) => text.includes(d)) ?? null;
+
+  const m = text.match(/pdfPage\s*[:=]\s*(\d{1,4})/i);
+  const pdfPage = m ? Number(m[1]) : null;
+
+  return { doc, pdfPage };
+}
 
 // ストレージディレクトリ
 const STORAGE_DIR = path.resolve(process.cwd(), "storage", "knowledge");
@@ -419,61 +435,32 @@ router.post("/chat", async (req: Request, res: Response) => {
     // intent/detail を決める
     // ========================================
     const intent = detectIntent(message, false);
-    
-    // 本番は debug を完全に無視（詳細は #詳細 / #detail / 根拠 / 引用 / 法則 / 真理チェック など「文章側」だけで決まる）
-    const detail = isDetailRequest(message);
-    
-    const parsed = extractDocAndPage(message);
+
+    // 本番では debug フラグは TENMON_DEBUG=1 のときだけ有効
+    const allowDebug = process.env.TENMON_DEBUG === "1";
+    const reqDebug = (req.body as any)?.debug;
+    const detail = isDetailRequest(message) || (allowDebug && reqDebug === true);
+
+    const parsed = parseDocAndPageStrict(message);
 
     // ========================================
     // docModeは "必要な時だけ"
+    //   - #詳細/根拠 要求があるとき
+    //   - doc/pdfPage が明示されたとき
     // ========================================
-    const docMode = detail || intent === "domain" || !!parsed.doc || !!parsed.pdfPage;
+    const docMode = detail || !!parsed.doc || !!parsed.pdfPage;
 
     // ========================================
-    // docMode じゃない時は自然会話で返す
+    // docMode じゃない時は自然会話だけ返す（短文）
     // ========================================
     if (!docMode) {
-      // ここが「天聞アークの声」
-      const voice =
-        "私の感触では、いまは「問いの焦点」がまだ揺れている段階です。まず一語だけ決めると、会話がすっと通ります。";
+      const natural = composeNatural({ message, intent });
 
-      // 一般質問の例外処理（ここが"人の知能"としての最低ライン）
-      if (/知能指数|IQ/i.test(message)) {
-        return res.json({
-          response:
-            "IQ（知能指数）は検査を受けないと推定できません。\n" +
-            "ただ、目的によってはIQより「集中の持続」「判断の速さ」「言語の整理力」などを見た方が役に立つことがあります。\n\n" +
-            "何のために知りたいですか？（仕事・学習・自己理解など）",
-          timestamp: new Date().toISOString(),
-        });
-      }
-
-      if (/(会話得意|話すの得意|会話できますか)/.test(message)) {
-        return res.json({
-          response:
-            "はい、会話は得意です。\n" +
-            "ただ、私は「思いつき」で返すより、あなたの意図を確認してから整えて返すタイプです。\n\n" +
-            "いま、雑談として話したい？それとも、何か解決したいことがありますか。",
-          timestamp: new Date().toISOString(),
-        });
-      }
-
-      // smalltalk/aboutArk は speechStyle を使う
-      if (intent === "smalltalk") {
-        return res.json({ response: replySmalltalk(message), timestamp: new Date().toISOString() });
-      }
-      if (intent === "aboutArk") {
-        return res.json({ response: replyAboutArk(), timestamp: new Date().toISOString() });
-      }
-
-      // unknown/howto は自然に返す
       return res.json({
-        response:
-          "承知しました。\n\n" +
-          voice +
-          "\n\n" +
-          "いまのテーマを一語で言うなら何ですか？（例：不安／お金／開発／人間関係／健康）",
+        response: natural,
+        evidence: null,
+        kanagi: { thinkingAxis: "observational", phase: "R-IN" },
+        decisionFrame: { mode: "natural", intent },
         timestamp: new Date().toISOString(),
       });
     }
@@ -481,7 +468,23 @@ router.post("/chat", async (req: Request, res: Response) => {
     // ========================================
     // docMode の時だけ、今の「法則・真理チェック」へ入る
     // ========================================
-    const docAndPage = parsed;
+    // strict parse 結果をもとに、docMode 内でのみ軽い推定を許可
+    const docResolved = parsed.doc ?? "言霊秘書.pdf";
+    let pdfPageResolved = parsed.pdfPage;
+
+    // ページ未指定のときだけ軽い推定（暫定）
+    // 「とは/定義」→ 定義が出やすいページへ（例: 103）
+    // 「火水/体用/正中/生成鎖」→ コア説明帯域へ（例: 6）
+    if (!pdfPageResolved) {
+      if (/(とは|定義)/.test(message)) pdfPageResolved = 103;
+      else if (/(火水|体用|正中|生成鎖)/.test(message)) pdfPageResolved = 6;
+      else pdfPageResolved = 6; // 最終フォールバック
+    }
+
+    const docAndPage = {
+      doc: docResolved,
+      pdfPage: pdfPageResolved,
+    };
 
     // ========================================
     // corpusLoader からページを取得
@@ -583,26 +586,17 @@ router.post("/chat", async (req: Request, res: Response) => {
         : "");
 
     const detailReply = `${conclusion}\n\n${grounds}\n\n${appliedLawsText}\n\n${operationsText}\n\n${alignmentText}\n\n${truthCheckText}`;
-    
-    // naturalReply を composeNatural で新規生成
-    const top = decisionFrame.appliedLaws
-      .slice(0, 3)
-      .map((law) => String(law.title || ""))
-      .map((t) => t.replace(/^核心語:\s*/, ""))  // ←ラベル除去
-      .filter(Boolean);
-    const miss = truthMissing.length ? truthMissing.join(" / ") : "";
 
-    const arkVoice =
-      top.length
-        ? `私の見立てでは、いまは「${top.join("／")}」を手がかりにすると、いちばん整理が早いです。`
-        : "私の見立てでは、まず「核になる語」を一つ決めると、答えが静かに締まります。";
-
+    // docMode 時の自然会話（短文）を composeNatural で生成
     const naturalReply = composeNatural({
-      lead: "承知しました。",
-      body: arkVoice,
-      next: miss
-        ? `（補助軸：${miss}）どこから一段深くしますか。`
-        : "どこから一段深くしますか。言葉ひとつでも構いません。",
+      message,
+      intent: "domain",
+      core: {
+        appliedLaws: decisionFrame.appliedLaws,
+        truthCheck,
+        doc: docAndPage.doc,
+        pdfPage: docAndPage.pdfPage,
+      },
     });
 
     // rec を返す（imageUrl も含める）
@@ -616,9 +610,9 @@ router.post("/chat", async (req: Request, res: Response) => {
       page: rec,
     } : null;
     
-    // 返却構造を統一
+    // 返却構造を統一（response は常に自然会話）
     const result: any = {
-      response: naturalReply, // 常に自然文（2〜8行）
+      response: naturalReply,
       doc: docAndPage.doc,
       pdfPage: docAndPage.pdfPage,
       page: rec,
@@ -627,7 +621,10 @@ router.post("/chat", async (req: Request, res: Response) => {
         steps: analysis.steps,
         hints: analysis.hints,
       },
-      decisionFrame, // 常にJSONに含める（UI展開用）
+      decisionFrame: {
+        ...decisionFrame,
+        intent: "domain",
+      }, // 常にJSONに含める（UI展開用）
       truthCheck, // 常にJSONに含める（UI展開用）
       evidence, // 常にJSONに含める（UI展開用）
     };
