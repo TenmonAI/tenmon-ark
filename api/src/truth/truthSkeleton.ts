@@ -122,20 +122,28 @@ export function buildTruthSkeleton(
   const truthAxes = extractTruthAxes(message);
   const constraints = extractConstraints(message, risk);
 
-  // MODE決定（domain判定はHYBRID固定）
+  // MODE決定（domain最優先）
   let mode: Mode = "NATURAL";
-  const hasExplicitGrounding = detail || hasDocPage || /(根拠|引用|出典|法則|lawId|真理チェック|truthCheck|decisionFrame|pdfPage|doc=)/i.test(message);
-  
-  if (hasExplicitGrounding) {
-    mode = "GROUNDED";
-  } else if (isLive) {
-    mode = "LIVE";
-  } else if (intent === "domain") {
-    mode = "HYBRID"; // domain判定（言灵/カタカムナ/天津金木/辞…）なら mode="HYBRID" に固定
+
+  // 1) domain は最優先で HYBRID（#詳細でも落とさない）
+  if (intent === "domain") {
+    mode = "HYBRID";
   }
+  // 2) LIVE（domain以外）
+  else if (isLive) {
+    mode = "LIVE";
+  }
+  // 3) GROUNDED（domain以外：明示doc/pdfPage or 明示根拠要求）
+  else if (
+    hasDocPage ||
+    /(根拠|引用|出典|法則|lawId|truthCheck|decisionFrame|pdfPage|doc=)/i.test(message)
+  ) {
+    mode = "GROUNDED";
+  }
+  // 4) それ以外 NATURAL
 
   // needsEvidence
-  const needsEvidence = isLive || risk === "high" || mode === "GROUNDED";
+  const needsEvidence = isLive || risk === "high" || mode === "GROUNDED" || mode === "HYBRID";
 
   // requiredSources
   const requiredSources: string[] = [];

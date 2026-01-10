@@ -13,6 +13,13 @@ router.get("/health", async (_req: Request, res: Response) => {
 
 router.get("/readiness", (_req: Request, res: Response) => res.json(getReadinessReport()));
 
-router.get("/version", (_req: Request, res: Response) => res.json({ version: TENMON_ARK_VERSION }));
+// Phase 1-A: /api/version にビルド情報を追加
+router.get("/version", (_req: Request, res: Response) => {
+  res.json({
+    version: TENMON_ARK_VERSION,
+    builtAt: process.env.TENMON_ARK_BUILT_AT ?? null,
+    gitSha: process.env.TENMON_ARK_GIT_SHA ?? null,
+  });
+});
 
 export default router;

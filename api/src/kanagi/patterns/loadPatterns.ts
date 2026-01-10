@@ -60,7 +60,28 @@ export function loadPatterns(): Map<string, KanagiPattern> {
   try {
     const __filename = fileURLToPath(import.meta.url);
     const __dirname = dirname(__filename);
-    const patternsPath = join(__dirname, "../../../../shared/kanagi/amatsuKanagi50Patterns.json");
+    // 複数のパスを試行（shared/kanagi/ または server/）
+    const candidatePaths = [
+      join(__dirname, "../../../../shared/kanagi/amatsuKanagi50Patterns.json"),
+      join(__dirname, "../../../../server/amatsuKanagi50Patterns.json"),
+    ];
+    
+    let patternsPath: string | null = null;
+    for (const path of candidatePaths) {
+      try {
+        if (readFileSync(path, "utf-8")) {
+          patternsPath = path;
+          break;
+        }
+      } catch {
+        continue;
+      }
+    }
+    
+    if (!patternsPath) {
+      console.warn("[KANAGI-PATTERNS] amatsuKanagi50Patterns.json not found, using empty patterns");
+      return patternMap; // 空のMapを返す（起動継続）
+    }
     
     const content = readFileSync(patternsPath, "utf-8");
     const data: PatternsData = JSON.parse(content);
@@ -70,11 +91,11 @@ export function loadPatterns(): Map<string, KanagiPattern> {
       patternMap.set(pattern.sound, pattern);
     }
 
-    console.log(`[KANAGI-PATTERNS] Loaded ${patternMap.size} patterns`);
+    console.log(`[KANAGI-PATTERNS] Loaded ${patternMap.size} patterns from ${patternsPath}`);
     return patternMap;
-  } catch (error) {
-    console.error("[KANAGI-PATTERNS] Failed to load patterns:", error);
-    return patternMap; // 空のMapを返す
+  } catch (error: any) {
+    console.warn(`[KANAGI-PATTERNS] Failed to load patterns (non-fatal): ${error?.message || error}`);
+    return patternMap; // 空のMapを返す（起動継続）
   }
 }
 

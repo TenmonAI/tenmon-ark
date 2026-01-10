@@ -31,8 +31,13 @@ export function shouldShowDebug(message: string, reqDebug?: unknown): boolean {
 }
 
 export function isDetailRequest(message: string): boolean {
-  // #詳細 / 根拠 / 法則 / truthCheck のときだけ詳細表示
-  return /(#詳細|#detail|詳細|根拠|引用|法則|truthCheck|真理チェック)/i.test(message);
+  // #詳細 / #detail / 詳細 / 根拠 / 引用 / 法則 / truthCheck / 真理チェック を確実に検出
+  // 単語境界を考慮して誤検出を防ぐ
+  const t = message.trim();
+  return (
+    /#詳細|#detail/i.test(t) || // #詳細 または #detail で始まる
+    /\b(詳細|根拠|引用|法則|truthCheck|真理チェック)\b/i.test(t) // 単語境界で囲まれたキーワード
+  );
 }
 
 export function replySmalltalk(message: string): string {

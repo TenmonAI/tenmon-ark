@@ -4,7 +4,11 @@ import { deriveTitle } from "../lib/title";
 type Thread = {
   id: string;
   title: string;
-  messages: { role: "user" | "assistant"; content: string }[];
+  messages: { 
+    role: "user" | "assistant"; 
+    content: string;
+    detail?: string; // #詳細 の場合は detail も保存
+  }[];
 };
 
 // localStorage から threads を読み込む
@@ -108,7 +112,7 @@ export default function Chat() {
     const res = await fetch(`/api/chat?mode=${mode}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message: userMessage }),
+      body: JSON.stringify({ message: userMessage, threadId: activeId }),
     });
 
     const data = await res.json();
@@ -124,7 +128,11 @@ export default function Chat() {
           ...currentThread,
           messages: [
             ...currentThread.messages,
-            { role: "assistant" as const, content: data.reply || data.response || "" },
+            { 
+              role: "assistant" as const, 
+              content: data.reply || data.response || "",
+              detail: data.detail, // #詳細 の場合は detail も保存
+            },
           ],
         },
       };
@@ -145,7 +153,13 @@ export default function Chat() {
                 : "bg-white"
             }`}
           >
-            {m.content}
+            <div>{m.content}</div>
+            {m.detail && (
+              <details className="mt-2 p-2 bg-gray-50 rounded text-xs text-gray-600">
+                <summary className="cursor-pointer font-semibold">#詳細</summary>
+                <pre className="mt-2 whitespace-pre-wrap">{m.detail}</pre>
+              </details>
+            )}
           </div>
         ))}
       </div>
