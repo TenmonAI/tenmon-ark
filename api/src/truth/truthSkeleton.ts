@@ -122,14 +122,16 @@ export function buildTruthSkeleton(
   const truthAxes = extractTruthAxes(message);
   const constraints = extractConstraints(message, risk);
 
-  // MODE決定
+  // MODE決定（domain判定はHYBRID固定）
   let mode: Mode = "NATURAL";
-  if (detail || hasDocPage || /(根拠|引用|出典|法則|lawId|真理チェック|truthCheck|decisionFrame|pdfPage|doc=)/i.test(message)) {
+  const hasExplicitGrounding = detail || hasDocPage || /(根拠|引用|出典|法則|lawId|真理チェック|truthCheck|decisionFrame|pdfPage|doc=)/i.test(message);
+  
+  if (hasExplicitGrounding) {
     mode = "GROUNDED";
   } else if (isLive) {
     mode = "LIVE";
   } else if (intent === "domain") {
-    mode = "HYBRID"; // domain は HYBRID（docMode明示のみでGROUNDEDに落ちる）
+    mode = "HYBRID"; // domain判定（言灵/カタカムナ/天津金木/辞…）なら mode="HYBRID" に固定
   }
 
   // needsEvidence

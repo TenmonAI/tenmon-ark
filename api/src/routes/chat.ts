@@ -9,10 +9,11 @@ import { llmChat } from "../llm/client.js";
 import { systemNatural, systemHybridDomain, systemGrounded } from "../llm/prompts.js";
 import { pushTurn, getContext } from "../llm/threadMemory.js";
 
-import { detectIntent, isDetailRequest } from "../persona/speechStyle.js";
+import { detectIntent, isDetailRequest, composeNatural } from "../persona/speechStyle.js";
 import { buildTruthSkeleton } from "../truth/truthSkeleton.js";
 import { fetchLiveEvidence } from "../tools/liveEvidence.js";
 import { getRequestId } from "../middleware/requestId.js";
+import { buildEvidencePack } from "../kotodama/evidencePack.js";
 
 import fs from "node:fs";
 import readline from "node:readline";
@@ -90,19 +91,10 @@ router.post("/chat", async (req: Request, res: Response) => {
     }
 
     // =========================
-    // TASK A: docMode条件を「明示」だけに変更
+    // detail 判定（req.body.debug を無視）
     // =========================
     const parsed = parseDocAndPageStrict(message);
-    const detail = isDetailRequest(message); // debug完全無視
-
-    // docMode は以下のみ true:
-    // - detail === true
-    // - OR (strict.doc && strict.pdfPage)
-    // - OR message に "doc=" "pdfPage=" "引用" "根拠" "法則ID" "#詳細" が含まれる
-    const hasExplicitGrounding = /(doc=|pdfPage=|引用|根拠|法則ID|lawId)/i.test(message);
-    const docMode = detail || (!!parsed.doc && !!parsed.pdfPage) || hasExplicitGrounding;
-
-    // intent === domain だけでは docMode に入らない（削除済み）
+    const detail = isDetailRequest(message); // req.body.debug は完全無視
 
     // =========================
     // TASK B: Truth Skeleton（真理骨格）を生成
@@ -267,17 +259,31 @@ router.post("/chat", async (req: Request, res: Response) => {
       const sys = systemHybridDomain();
       const ctx = getContext(threadId);
 
-      // 制約をプロンプトに追加
-      const constraintsText = skeleton.constraints.length > 0
-        ? `\n\n【制約】\n${skeleton.constraints.join("\n")}`
-        : "";
+      // evidencePack を構築（doc/pdfPage がある場合）
+      let evidencePack = null;
+      if (parsed.doc && parsed.pdfPage) {
+        evidencePack = await buildEvidencePack(parsed.doc, parsed.pdfPage);
+      }
+
+      // プロンプトに evidencePack を注入
+      let userPrompt = message;
+      if (evidencePack) {
+        const evidenceText =
+          `【資料】doc=${evidencePack.doc} pdfPage=${evidencePack.pdfPage}\n` +
+          `【要約】${evidencePack.summary}\n` +
+          (evidencePack.pageText ? `【ページ本文】${evidencePack.pageText.substring(0, 500)}\n` : "") +
+          `【法則候補】\n${evidencePack.laws.map((l: { id: string; title: string; quote: string }) => `- ${l.id}: ${l.title}\n  引用: ${l.quote}`).join("\n")}\n\n` +
+          `【質問】${message}\n\n` +
+          `上記のEvidence以外で断定しないでください。不足があれば「不足」と述べ、次に読むpdfPageを1つ提示してください。`;
+        userPrompt = evidenceText;
+      }
 
       const llmStart = Date.now();
-      const answer = await llmChat(
+      const rawAnswer = await llmChat(
         [
-          { role: "system", content: sys + constraintsText },
+          { role: "system", content: sys },
           ...ctx,
-          { role: "user", content: message },
+          { role: "user", content: userPrompt },
         ],
         { temperature: 0.4, max_tokens: 380 }
       ).catch((e) => {
@@ -286,22 +292,43 @@ router.post("/chat", async (req: Request, res: Response) => {
       });
       const llmLatency = Date.now() - llmStart;
 
+      // response は常に短い自然文（composeNatural で整形）
+      const response = composeNatural({
+        message: rawAnswer,
+        intent: skeleton.intent as "domain" | "smalltalk" | "aboutArk" | "grounded" | "unknown",
+        core: evidencePack
+          ? {
+              appliedLaws: evidencePack.laws.map((l: { id: string; title: string; quote: string }) => ({ lawId: l.id, title: l.title })),
+              doc: evidencePack.doc,
+              pdfPage: evidencePack.pdfPage,
+            }
+          : undefined,
+      });
+
       pushTurn(threadId, { role: "user", content: message, at: Date.now() });
-      pushTurn(threadId, { role: "assistant", content: answer, at: Date.now() });
+      pushTurn(threadId, { role: "assistant", content: response, at: Date.now() });
       const totalLatency = Date.now() - startTime;
 
       const result: any = {
-        response: answer,
-        evidence: null,
+        response, // 常に短い自然文
+        evidence: evidencePack
+          ? {
+              doc: evidencePack.doc,
+              pdfPage: evidencePack.pdfPage,
+            }
+          : null,
         decisionFrame: { mode, intent: skeleton.intent },
         timestamp: new Date().toISOString(),
       };
 
       // #詳細 がある場合のみ、裏面で根拠（pdfPage / lawId / 引用）を出す
-      if (detail) {
-        // HYBRIDモードでは、#詳細があっても資料モードには落ちない
-        // ただし、根拠情報を構造化して返す
-        result.detail = `【ドメイン質問】${message}\n【回答骨格】${answer}\n【注意】#詳細が要求されましたが、HYBRIDモードでは資料モードに強制されません。根拠が必要な場合は、doc/pdfPageを明示してください。`;
+      if (detail && evidencePack) {
+        const detailText =
+          `【根拠】doc=${evidencePack.doc} pdfPage=${evidencePack.pdfPage}\n` +
+          `【要約】${evidencePack.summary}\n` +
+          `【ページ本文】${evidencePack.pageText}\n\n` +
+          `【法則候補】\n${evidencePack.laws.map((l: { id: string; title: string; quote: string }) => `- ${l.id}: ${l.title}\n  引用: ${l.quote}`).join("\n")}`;
+        result.detail = detailText;
       }
 
       // STEP 3-1: 必須ログ（info）
@@ -362,7 +389,10 @@ router.post("/chat", async (req: Request, res: Response) => {
 
     const rec = getCorpusPage(doc, pdfPage);
     if (!rec) {
-      const answer = "そのページは見当たりませんでした。pdfPage番号を一度だけ確認させてください。";
+      const answer = composeNatural({
+        message: "そのページは見当たりませんでした。pdfPage番号を一度だけ確認させてください。",
+        intent: skeleton.intent as "domain" | "smalltalk" | "aboutArk" | "grounded" | "unknown",
+      });
       return res.json({ 
         response: answer, 
         evidence: null, 
@@ -371,78 +401,99 @@ router.post("/chat", async (req: Request, res: Response) => {
       });
     }
 
-    // コア素材
-    const candidates = await getPageCandidates(doc, pdfPage, 12);
+    // evidencePack を構築
+    const evidencePack = await buildEvidencePack(doc, pdfPage);
+
     const ops = ["省", "延開", "反約", "反", "約", "略", "転"];
     
     // appliedLaws 形式に変換
-    const appliedLaws = candidates.map((c: LawCandidate) => ({
-      lawId: c.id,
-      title: c.title,
-      source: `page-candidate/${c.rule}`,
-    }));
+    const appliedLaws = evidencePack
+      ? evidencePack.laws.map((l: { id: string; title: string; quote: string }) => ({
+          lawId: l.id,
+          title: l.title,
+          source: `page-candidate`,
+        }))
+      : [];
 
     const truth = runTruthCheck({
       doc,
       pdfPage,
       message,
-      pageText: rec.cleanedText.substring(0, 500),
+      pageText: evidencePack?.pageText || rec.cleanedText.substring(0, 500),
       appliedLaws,
       operations: ops.map(op => ({ op, description: `${op}操作` })),
     });
 
-    // LLMに渡す "資料"
+    // LLMに渡す "資料"（evidencePack を注入）
     const sys = systemGrounded();
     const ctx = getContext(threadId);
 
-    const injected =
-      `【資料】doc=${doc} pdfPage=${pdfPage}\n` +
-      `【候補（LawCandidates）】\n` +
-      candidates.map((c: LawCandidate) => `- ${c.id}: ${c.title}\n  引用: ${c.quote}`).join("\n") +
-      `\n\n【真理チェック】missing=${truth.items.filter(i => !i.present).map(i => i.label).join(", ")}\n` +
-      `【ユーザー質問】${message}`;
+    const injected = evidencePack
+      ? `【資料】doc=${doc} pdfPage=${pdfPage}\n` +
+        `【要約】${evidencePack.summary}\n` +
+        `【ページ本文】${evidencePack.pageText.substring(0, 500)}\n` +
+        `【法則候補】\n${evidencePack.laws.map((l: { id: string; title: string; quote: string }) => `- ${l.id}: ${l.title}\n  引用: ${l.quote}`).join("\n")}\n` +
+        `\n【真理チェック】missing=${truth.items.filter(i => !i.present).map(i => i.label).join(", ")}\n` +
+        `【質問】${message}\n\n` +
+        `上記のEvidence以外で断定しないでください。不足があれば「不足」と述べ、次に読むpdfPageを1つ提示してください。`
+      : `【資料】doc=${doc} pdfPage=${pdfPage}\n【質問】${message}\n\n上記のEvidence以外で断定しないでください。`;
 
     const llmStart = Date.now();
-    const responseText = await llmChat(
+    const rawAnswer = await llmChat(
       [
         { role: "system", content: sys },
         ...ctx,
-        { role: "user", content: `上の資料だけを根拠に、自然な短文で答えてください。\n${injected}` },
+        { role: "user", content: injected },
       ],
       { temperature: 0.35, max_tokens: 420 }
     ).catch(() => "承知しました。資料の範囲では、ここまでは言えます。どの部分を最優先で確かめますか。");
     const llmLatency = Date.now() - llmStart;
 
-    pushTurn(threadId, { role: "user", content: message, at: Date.now() });
-    pushTurn(threadId, { role: "assistant", content: responseText, at: Date.now() });
+    // response は常に短い自然文（composeNatural で整形）
+    const response = composeNatural({
+      message: rawAnswer,
+      intent: skeleton.intent as "domain" | "smalltalk" | "aboutArk" | "grounded" | "unknown",
+      core: {
+        appliedLaws,
+        truthCheck: truth,
+        doc,
+        pdfPage,
+      },
+    });
 
-    // detail（要求時のみ）
-    const detailText =
-      `【根拠】doc=${doc} pdfPage=${pdfPage}\n` +
-      candidates.map((c: LawCandidate) => `- ${c.id}: ${c.title}\n  引用: ${c.quote}`).join("\n") +
-      `\n\n【真理チェック】\n` +
-      `present=${JSON.stringify(truth.items.map(i => ({ key: i.key, present: i.present })))}\n` +
-      `missing=${truth.items.filter(i => !i.present).map(i => i.label).join(", ")}\n` +
-      (truth.recommendedNextPages?.length ? `next:\n- ${truth.recommendedNextPages.map(p => `${p.doc} P${p.pdfPage}: ${p.reason}`).join("\n- ")}` : "");
+    pushTurn(threadId, { role: "user", content: message, at: Date.now() });
+    pushTurn(threadId, { role: "assistant", content: response, at: Date.now() });
 
     const axis = inferAxis(message);
     const phase = determineKanagiPhase(axis);
 
-    const responseFinal = applyKanagiPhaseStructure(responseText, phase);
+    // response に構造を適用（必要に応じて）
+    const responseFinal = applyKanagiPhaseStructure(response, phase);
 
     const result: any = {
-      response: responseFinal,
+      response: responseFinal, // 常に短い自然文
       evidence: { 
         doc, 
         pdfPage, 
         imagePath: rec.imagePath, 
-        quote: rec.cleanedText.substring(0, 500),
+        quote: evidencePack?.pageText.substring(0, 500) || rec.cleanedText.substring(0, 500),
       },
       timestamp: new Date().toISOString(),
     };
 
     // #詳細 がある場合のみ、内部根拠（LawCandidate / pdfPage / truthCheck / decisionFrame）を返す
     if (detail) {
+      const detailText = evidencePack
+        ? `【根拠】doc=${doc} pdfPage=${pdfPage}\n` +
+          `【要約】${evidencePack.summary}\n` +
+          `【ページ本文】${evidencePack.pageText}\n\n` +
+          `【法則候補】\n${evidencePack.laws.map((l: { id: string; title: string; quote: string }) => `- ${l.id}: ${l.title}\n  引用: ${l.quote}`).join("\n")}\n\n` +
+          `【真理チェック】\n` +
+          `present=${JSON.stringify(truth.items.map(i => ({ key: i.key, present: i.present })))}\n` +
+          `missing=${truth.items.filter(i => !i.present).map(i => i.label).join(", ")}\n` +
+          (truth.recommendedNextPages?.length ? `next:\n- ${truth.recommendedNextPages.map(p => `${p.doc} P${p.pdfPage}: ${p.reason}`).join("\n- ")}` : "")
+        : `【根拠】doc=${doc} pdfPage=${pdfPage}\n【注意】evidencePack が取得できませんでした。`;
+
       result.detail = detailText;
       result.truthCheck = truth;
       result.decisionFrame = {

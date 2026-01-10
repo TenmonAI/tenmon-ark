@@ -1,18 +1,16 @@
 [Unit]
-Description=TENMON-ARK API Server
-After=network.target mysql.service
+Description=TENMON-ARK API
+After=network.target
+StartLimitIntervalSec=0
 
 [Service]
 Type=simple
-User=www-data
-WorkingDirectory=/opt/tenmon-ark/tenmon-ark
+WorkingDirectory=/opt/tenmon-ark/api
 Environment=NODE_ENV=production
-EnvironmentFile=/opt/tenmon-ark/tenmon-ark/.env
+EnvironmentFile=-/opt/tenmon-ark/api/.env
 ExecStart=/usr/bin/node dist/index.js
-Restart=always
-RestartSec=10
-StandardOutput=journal
-StandardError=journal
+Restart=on-failure
+RestartSec=3
 
 [Install]
 WantedBy=multi-user.target
