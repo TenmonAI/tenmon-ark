@@ -21,6 +21,7 @@ import {
   stripForbiddenFromResponse,
   type EvidenceLaw,
 } from "../kanagi/kanagiCore.js";
+import { verifyCorePlan } from "../kanagi/verifier.js";
 import { containsForbiddenTemplate, getFallbackTemplate } from "../persona/outputGuard.js";
 import { searchPages } from "../kotodama/retrievalIndex.js";
 import { retrieveAutoEvidence, type AutoEvidenceHit } from "../kotodama/retrieveAutoEvidence.js";
@@ -324,12 +325,53 @@ router.post("/chat", async (req: Request, res: Response) => {
         if (mode === "HYBRID") {
           // domainで doc/pdfPage が未指定の場合、自動検索を試みる
           if (!parsed.doc || !parsed.pdfPage) {
-            // 自動証拠検索
-            const autoEvidence = await retrieveAutoEvidence(message);
-            
-            // confidence >= 0.6 なら、その top hit で回答する
-            if (autoEvidence.confidence >= 0.6 && autoEvidence.hits.length > 0) {
-              const topHit = autoEvidence.hits[0];
+            const auto = retrieveAutoEvidence(message, 3);
+            const topHit = auto.hits[0] ?? null;
+            console.info(
+              `[HYBRID-AUTO-EVIDENCE] hits=${auto.hits.length} confidence=${auto.confidence.toFixed(2)} top=${topHit ? `${topHit.doc} P${topHit.pdfPage}` : "none"}`
+            );
+
+            if (auto.hits.length === 0) {
+              // 従来通り（資料指定）
+              const response =
+                "資料準拠で答えるため、参照する資料の指定が必要です。\n" +
+                "例）言霊秘書.pdf pdfPage=6 言灵とは？ #詳細";
+
+              const result: any = {
+                response,
+                evidence: null,
+                decisionFrame: { 
+                  mode, 
+                  intent: skeleton.intent, 
+                  need: ["doc", "pdfPage"], 
+                  llm: null,
+                },
+                timestamp: new Date().toISOString(),
+              };
+
+              if (detail) {
+                result.detail = `#詳細\n- 自動検索結果: 候補が見つかりませんでした\n- 指定方法: 「言霊秘書.pdf pdfPage=6 言灵とは？ #詳細」のように指定してください。`;
+              }
+
+              pushTurn(threadId, { role: "user", content: message, at: Date.now() });
+              pushTurn(threadId, { role: "assistant", content: response, at: Date.now() });
+              const totalLatency = Date.now() - startTime;
+
+              console.log(JSON.stringify({
+                level: "info",
+                requestId,
+                threadId,
+                mode,
+                risk: skeleton.risk,
+                latency: { total: totalLatency, liveEvidence: null, llm: null },
+                evidenceConfidence: 0.0,
+                returnedDetail: detail,
+              }));
+
+              return res.json(result);
+            } else if (auto.confidence >= 0.6) {
+              // confidence>=0.6 → 暫定回答（既存のdoc/pdfPage指定処理に落とす）
+              const topHit = auto.hits[0]!;
               const doc = topHit.doc;
               const pdfPage = topHit.pdfPage;
               const docKey = inferDocKey(doc);
@@ -386,6 +428,58 @@ router.post("/chat", async (req: Request, res: Response) => {
                 isEstimated: true, // 自動検索なので推定フラグ
               });
 
+              // Verifierでclaimsを検証
+              const verification = verifyCorePlan(plan.claims, plan.evidence);
+              
+              // 空仮中検知があれば「断定禁止」に落ちる
+              if (plan.kokakechuFlags.length > 0) {
+                const response = `（資料準拠）\n${plan.thesis}\n\n注意：${plan.kokakechuFlags.join("、")}が検知されました。根拠に基づく回答のみを提供します。\n\n躰：${plan.tai || "（抽出不足）"}\n用：${plan.yo || "（抽出不足）"}`;
+                
+                const result: any = {
+                  response: stripForbiddenFromResponse(response),
+                  evidence: {
+                    doc,
+                    pdfPage,
+                    isEstimated: true,
+                    laws: plan.evidence.laws.slice(0, 10).map(l => ({ id: l.id, title: l.title })),
+                    usedLawIds: plan.usedLawIds,
+                  },
+                  decisionFrame: { 
+                    mode, 
+                    intent: skeleton.intent, 
+                    llm: null, 
+                    grounds: [{ doc, pdfPage }],
+                    kokakechuFlags: plan.kokakechuFlags,
+                  },
+                  timestamp: new Date().toISOString(),
+                };
+
+                if (detail) {
+                  // #詳細は string で返す（LLM由来なし）
+                  // 空仮中検知がある場合も、採用したdoc/pdfPageとsnippetをdetailに追加
+                  const topHitSnippets = topHit.quoteSnippets.slice(0, 2).map((s, i) => `  [抜粋${i + 1}] ${s.slice(0, 150)}...`).join("\n");
+                  result.detail = plan.detailDraft + `\n- 検証結果：${verification.valid ? "有効" : "無効"}\n- 失敗したclaims：${verification.failedClaims.length}件\n\n【自動検索結果（暫定回答）】\n- 採用: ${doc} P${pdfPage}\n- confidence: ${auto.confidence.toFixed(2)}\n- 抜粋:\n${topHitSnippets}`;
+                }
+
+                pushTurn(threadId, { role: "user", content: message, at: Date.now() });
+                pushTurn(threadId, { role: "assistant", content: result.response, at: Date.now() });
+                const totalLatency = Date.now() - startTime;
+
+                console.log(JSON.stringify({
+                  level: "info",
+                  requestId,
+                  threadId,
+                  mode,
+                  risk: skeleton.risk,
+                  latency: { total: totalLatency, liveEvidence: null, llm: null },
+                  evidenceConfidence: plan.evidence.laws.length > 0 ? 1.0 : null,
+                  kokakechuFlags: plan.kokakechuFlags,
+                  returnedDetail: detail,
+                }));
+
+                return res.json(result);
+              }
+
               // response/detail はコード生成のみ
               const response = stripForbiddenFromResponse(plan.responseDraft);
 
@@ -402,7 +496,12 @@ router.post("/chat", async (req: Request, res: Response) => {
                 timestamp: new Date().toISOString(),
               };
 
-              if (detail) result.detail = plan.detailDraft; // ← LLM由来なし
+              if (detail) {
+                // #詳細は string で返す（LLM由来なし）
+                // 暫定回答の場合、採用したdoc/pdfPageとsnippetをdetailに追加
+                const topHitSnippets = topHit.quoteSnippets.slice(0, 2).map((s, i) => `  [抜粋${i + 1}] ${s.slice(0, 150)}...`).join("\n");
+                result.detail = plan.detailDraft + `\n\n【自動検索結果（暫定回答）】\n- 採用: ${doc} P${pdfPage}\n- confidence: ${auto.confidence.toFixed(2)}\n- 抜粋:\n${topHitSnippets}`;
+              }
 
               pushTurn(threadId, { role: "user", content: message, at: Date.now() });
               pushTurn(threadId, { role: "assistant", content: response, at: Date.now() });
@@ -420,60 +519,42 @@ router.post("/chat", async (req: Request, res: Response) => {
               }));
 
               return res.json(result);
+            } else {
+              // confidence < 0.6 → 候補提示
+              const response =
+                "候補を見つけました。どれを参照しますか？（番号で答えてください）\n" +
+                auto.hits.map((h, i) => `${i + 1}) ${h.doc} P${h.pdfPage}（score=${h.score.toFixed(1)}）`).join("\n");
+
+              const result: any = {
+                response,
+                evidence: { auto: true, hits: auto.hits.map(h => ({ doc: h.doc, pdfPage: h.pdfPage, score: h.score })) },
+                decisionFrame: { mode, intent: skeleton.intent, llm: null },
+                timestamp: new Date().toISOString(),
+              };
+
+              if (detail) {
+                result.detail =
+                  "#詳細\n- 自動検索候補:\n" +
+                  auto.hits.map((h, i) => `  ${i + 1}. doc=${h.doc} pdfPage=${h.pdfPage}\n     抜粋: ${(h.quoteSnippets[0] ?? "").slice(0, 120)}...`).join("\n\n");
+              }
+
+              pushTurn(threadId, { role: "user", content: message, at: Date.now() });
+              pushTurn(threadId, { role: "assistant", content: response, at: Date.now() });
+              const totalLatency = Date.now() - startTime;
+
+              console.log(JSON.stringify({
+                level: "info",
+                requestId,
+                threadId,
+                mode,
+                risk: skeleton.risk,
+                latency: { total: totalLatency, liveEvidence: null, llm: null },
+                evidenceConfidence: auto.confidence,
+                returnedDetail: detail,
+              }));
+
+              return res.json(result);
             }
-            
-            // confidence < 0.6 なら「候補ページ提示＋どれを見るか」を返す
-            const candidateLines = autoEvidence.hits.length > 0
-              ? autoEvidence.hits.map((h: AutoEvidenceHit, i: number) => 
-                  `${i + 1}. ${h.doc} P${h.pdfPage}（スコア: ${h.score.toFixed(1)}）`
-                ).join("\n")
-              : "（候補が見つかりませんでした）";
-
-            const response =
-              "資料準拠で答えるため、参照する資料の指定が必要です。\n" +
-              "次の候補ページから選択してください：\n\n" +
-              candidateLines +
-              "\n\n例）言霊秘書.pdf pdfPage=6 言灵とは？ #詳細";
-
-            const result: any = {
-              response,
-              evidence: null,
-              decisionFrame: { 
-                mode, 
-                intent: skeleton.intent, 
-                need: ["doc", "pdfPage"], 
-                llm: null,
-                autoEvidence: {
-                  confidence: autoEvidence.confidence,
-                  hits: autoEvidence.hits.map((h: AutoEvidenceHit) => ({ doc: h.doc, pdfPage: h.pdfPage, score: h.score })),
-                },
-              },
-              timestamp: new Date().toISOString(),
-            };
-
-            if (detail) {
-              result.detail =
-                "（#詳細）HYBRID(domain)は捏造を防ぐため、doc/pdfPage指定が無い場合は根拠を出しません。\n" +
-                "候補ページから選択してください：\n" +
-                candidateLines;
-            }
-
-            pushTurn(threadId, { role: "user", content: message, at: Date.now() });
-            pushTurn(threadId, { role: "assistant", content: response, at: Date.now() });
-            const totalLatency = Date.now() - startTime;
-
-            console.log(JSON.stringify({
-              level: "info",
-              requestId,
-              threadId,
-              mode,
-              risk: skeleton.risk,
-              latency: { total: totalLatency, liveEvidence: null, llm: null },
-              evidenceConfidence: autoEvidence.confidence,
-              returnedDetail: detail,
-            }));
-
-            return res.json(result);
           }
 
       // doc/pdfPage 指定がある場合：Evidenceを組む（LLM禁止）
@@ -533,6 +614,55 @@ router.post("/chat", async (req: Request, res: Response) => {
         isEstimated: false,
       });
 
+      // Verifierでclaimsを検証
+      const verification = verifyCorePlan(plan.claims, plan.evidence);
+      
+      // 空仮中検知があれば「断定禁止」に落ちる
+      if (plan.kokakechuFlags.length > 0) {
+        const response = `（資料準拠）\n${plan.thesis}\n\n注意：${plan.kokakechuFlags.join("、")}が検知されました。根拠に基づく回答のみを提供します。\n\n躰：${plan.tai || "（抽出不足）"}\n用：${plan.yo || "（抽出不足）"}`;
+        
+        const result: any = {
+          response: stripForbiddenFromResponse(response),
+          evidence: {
+            doc,
+            pdfPage,
+            isEstimated: false,
+            laws: plan.evidence.laws.slice(0, 10).map(l => ({ id: l.id, title: l.title })),
+            usedLawIds: plan.usedLawIds,
+          },
+          decisionFrame: { 
+            mode, 
+            intent: skeleton.intent, 
+            llm: null, 
+            grounds: [{ doc, pdfPage }],
+            kokakechuFlags: plan.kokakechuFlags,
+          },
+          timestamp: new Date().toISOString(),
+        };
+
+        if (detail) {
+          result.detail = plan.detailDraft + `\n- 検証結果：${verification.valid ? "有効" : "無効"}\n- 失敗したclaims：${verification.failedClaims.length}件`;
+        }
+
+        pushTurn(threadId, { role: "user", content: message, at: Date.now() });
+        pushTurn(threadId, { role: "assistant", content: result.response, at: Date.now() });
+        const totalLatency = Date.now() - startTime;
+
+        console.log(JSON.stringify({
+          level: "info",
+          requestId,
+          threadId,
+          mode,
+          risk: skeleton.risk,
+          latency: { total: totalLatency, liveEvidence: null, llm: null },
+          evidenceConfidence: plan.evidence.laws.length > 0 ? 1.0 : null,
+          kokakechuFlags: plan.kokakechuFlags,
+          returnedDetail: detail,
+        }));
+
+        return res.json(result);
+      }
+
       // response/detail はコード生成のみ
       const response = stripForbiddenFromResponse(plan.responseDraft);
 
@@ -545,11 +675,24 @@ router.post("/chat", async (req: Request, res: Response) => {
           laws: plan.evidence.laws.slice(0, 10).map(l => ({ id: l.id, title: l.title })),
           usedLawIds: plan.usedLawIds,
         },
-        decisionFrame: { mode, intent: skeleton.intent, llm: null, grounds: [{ doc, pdfPage }] },
+        decisionFrame: { 
+          mode, 
+          intent: skeleton.intent, 
+          llm: null, 
+          grounds: [{ doc, pdfPage }],
+          thesis: plan.thesis,
+          kokakechuFlags: plan.kokakechuFlags.length > 0 ? plan.kokakechuFlags : undefined,
+        },
         timestamp: new Date().toISOString(),
       };
 
-      if (detail) result.detail = plan.detailDraft; // ← LLM由来なし
+      if (detail) {
+        // 検証結果も含める（失敗したclaimsはdetailに出さない）
+        result.detail = plan.detailDraft;
+        if (!verification.valid && verification.failedClaims.length > 0) {
+          result.detail += `\n- 検証：${verification.failedClaims.length}件のclaimが根拠不足のため除外されました`;
+        }
+      }
 
       pushTurn(threadId, { role: "user", content: message, at: Date.now() });
       pushTurn(threadId, { role: "assistant", content: response, at: Date.now() });

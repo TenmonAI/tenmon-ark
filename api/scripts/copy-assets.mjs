@@ -16,6 +16,20 @@ for (const f of files) {
   console.log(`[copy-assets] copied ${src} -> ${dst}`);
 }
 
+// パターンファイルをコピー（src/kanagi/patterns/ -> dist/kanagi/patterns/）
+const patternsSrcDir = path.join(root, "src", "kanagi", "patterns");
+const patternsDstDir = path.join(root, "dist", "kanagi", "patterns");
+if (fs.existsSync(patternsSrcDir)) {
+  fs.mkdirSync(patternsDstDir, { recursive: true });
+  const patternFiles = fs.readdirSync(patternsSrcDir).filter((f) => f.endsWith(".json"));
+  for (const f of patternFiles) {
+    const src = path.join(patternsSrcDir, f);
+    const dst = path.join(patternsDstDir, f);
+    fs.copyFileSync(src, dst);
+    console.log(`[copy-assets] copied ${src} -> ${dst}`);
+  }
+}
+
 // Phase 1-A: ビルド時刻を version.ts に注入（dist/version.js を生成）
 try {
   const { execSync } = await import("node:child_process");

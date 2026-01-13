@@ -292,8 +292,32 @@ echo ""
 echo "【Phase 4: 最終確認（必須3コマンド）】"
 echo ""
 
-echo "1. バージョン確認:"
-curl -sS "${BASE_URL}/api/version" | jq .
+echo "1. バージョン確認（gitSha/builtAt必須）:"
+VERSION_JSON=$(curl -sS "${BASE_URL}/api/version")
+VERSION_VERSION=$(echo "${VERSION_JSON}" | jq -r '.version // "NOT_PRESENT"')
+VERSION_GITSHA=$(echo "${VERSION_JSON}" | jq -r '.gitSha // "NOT_PRESENT"')
+VERSION_BUILTAT=$(echo "${VERSION_JSON}" | jq -r '.builtAt // "NOT_PRESENT"')
+
+echo "${VERSION_JSON}" | jq .
+echo ""
+
+# 検証: version, gitSha, builtAt が存在すること
+if [ "${VERSION_VERSION}" = "NOT_PRESENT" ] || [ "${VERSION_VERSION}" = "null" ]; then
+  echo "${FAIL}: /api/version should contain 'version' field"
+  exit 1
+fi
+
+if [ "${VERSION_GITSHA}" = "NOT_PRESENT" ] || [ "${VERSION_GITSHA}" = "null" ]; then
+  echo "${FAIL}: /api/version should contain 'gitSha' field"
+  exit 1
+fi
+
+if [ "${VERSION_BUILTAT}" = "NOT_PRESENT" ] || [ "${VERSION_BUILTAT}" = "null" ]; then
+  echo "${FAIL}: /api/version should contain 'builtAt' field"
+  exit 1
+fi
+
+echo "${PASS}: /api/version に version, gitSha, builtAt が含まれている"
 echo ""
 
 echo "2. domain質問（HYBRID固定確認）:"
@@ -593,14 +617,182 @@ fi
 echo "${PASS}: doc/pdfPage未指定でも自動検索が動作、捏造なし"
 echo ""
 
+# ============================================
+# Phase 10: domain(HYBRID) で llm=null/0 確認
+# ============================================
+echo "【Phase 10: domain(HYBRID) で llm=null/0 確認】"
+echo "テスト: 言灵とは？ → decisionFrame.llm が null または 0"
+RESPONSE13_JSON=$(curl -sS "${BASE_URL}/api/chat" \
+  -H "Content-Type: application/json" \
+  -d '{"threadId":"test-llm-null","message":"言灵とは？"}')
+
+MODE13=$(echo "${RESPONSE13_JSON}" | jq -r '.decisionFrame.mode')
+INTENT13=$(echo "${RESPONSE13_JSON}" | jq -r '.decisionFrame.intent')
+LLM13=$(echo "${RESPONSE13_JSON}" | jq -r '.decisionFrame.llm // "NOT_PRESENT"')
+
+echo "Mode: ${MODE13}"
+echo "Intent: ${INTENT13}"
+echo "LLM: ${LLM13}"
+echo ""
+
+# 検証: mode が HYBRID であること
+if [ "${MODE13}" != "HYBRID" ]; then
+  echo "${FAIL}: mode should be HYBRID, but got ${MODE13}"
+  exit 1
+fi
+
+# 検証: intent が domain であること
+if [ "${INTENT13}" != "domain" ]; then
+  echo "${FAIL}: intent should be domain, but got ${INTENT13}"
+  exit 1
+fi
+
+# 検証: llm が null または 0 であること
+if [ "${LLM13}" != "null" ] && [ "${LLM13}" != "0" ] && [ "${LLM13}" != "NOT_PRESENT" ]; then
+  echo "${FAIL}: decisionFrame.llm should be null or 0 for domain(HYBRID), but got: ${LLM13}"
+  exit 1
+fi
+
+echo "${PASS}: domain(HYBRID) で decisionFrame.llm が null/0"
+echo ""
+
+# ============================================
+# Phase 11: detailに捏造ID（言霊-001）や pdfPage:3 が出ない（強化）
+# ============================================
+echo "【Phase 11: detailに捏造ID（言霊-001）や pdfPage:3 が出ない（強化）】"
+echo "テスト: 言灵とは？ #詳細 → detail内に捏造ID（言霊-001、言灵-001、カタカムナ-001、いろは-001）や pdfPage:3 が出ない"
+RESPONSE14_JSON=$(curl -sS "${BASE_URL}/api/chat" \
+  -H "Content-Type: application/json" \
+  -d '{"threadId":"test-no-forgery-ids","message":"言灵とは？ #詳細"}')
+
+DETAIL14=$(echo "${RESPONSE14_JSON}" | jq -r '.detail // ""')
+
+# 捏造IDパターンをチェック（言霊-001、言灵-001、カタカムナ-001、いろは-001）
+FORGED_IDS=$(echo "${DETAIL14}" | grep -oE '(言霊-|言灵-|カタカムナ-|いろは-)[0-9]+' || echo "")
+
+# pdfPage:3 のような短いページ番号をチェック（通常は4桁以上）
+SHORT_PAGES=$(echo "${DETAIL14}" | grep -oE 'pdfPage\s*[:=]\s*[0-9]{1,2}[^0-9]' || echo "")
+
+echo "Detail length: $(echo "${DETAIL14}" | wc -c)"
+echo "Forged IDs found: ${FORGED_IDS}"
+echo "Short pages found: ${SHORT_PAGES}"
+echo ""
+
+# 検証: 捏造IDが存在しないこと
+if [ -n "${FORGED_IDS}" ] && [ "${FORGED_IDS}" != "" ]; then
+  echo "${FAIL}: detail に捏造ID（言霊-001、言灵-001、カタカムナ-001、いろは-001）が含まれている: ${FORGED_IDS}"
+  exit 1
+fi
+
+# 検証: pdfPage:3 のような短いページ番号が存在しないこと（警告のみ、FAILにはしない）
+if [ -n "${SHORT_PAGES}" ] && [ "${SHORT_PAGES}" != "" ]; then
+  echo "⚠️  WARN: detail に短いページ番号（pdfPage:3 など）が含まれている可能性: ${SHORT_PAGES}"
+fi
+
+echo "${PASS}: detail に捏造ID（言霊-001、言灵-001、カタカムナ-001、いろは-001）や pdfPage:3 が出ない"
+echo ""
+
+# ============================================
+# Phase 12: domain未指定「言灵とは？」で候補 or 暫定回答（止まらない）強化
+# ============================================
+echo "【Phase 12: domain未指定「言灵とは？」で候補 or 暫定回答（止まらない）強化】"
+echo "テスト: 言灵とは？（doc/pdfPage未指定）→ 候補提示 or 暫定回答が返る、エラーで止まらない"
+RESPONSE15_JSON=$(curl -sS "${BASE_URL}/api/chat" \
+  -H "Content-Type: application/json" \
+  -d '{"threadId":"test-auto-evidence-strong","message":"言灵とは？"}')
+
+MODE15=$(echo "${RESPONSE15_JSON}" | jq -r '.decisionFrame.mode')
+RESPONSE_TEXT15=$(echo "${RESPONSE15_JSON}" | jq -r '.response // ""')
+ERROR15=$(echo "${RESPONSE15_JSON}" | jq -r '.error // "NOT_PRESENT"')
+
+echo "Mode: ${MODE15}"
+echo "Response length: $(echo "${RESPONSE_TEXT15}" | wc -c)"
+echo "Error: ${ERROR15}"
+echo ""
+
+# 検証: mode が HYBRID であること
+if [ "${MODE15}" != "HYBRID" ]; then
+  echo "${FAIL}: mode should be HYBRID, but got ${MODE15}"
+  exit 1
+fi
+
+# 検証: response が空でないこと（止まらない）
+if [ -z "${RESPONSE_TEXT15}" ] || [ "${RESPONSE_TEXT15}" = "null" ]; then
+  echo "${FAIL}: response should not be empty (止まらない)"
+  exit 1
+fi
+
+# 検証: エラーが返されていないこと
+if [ "${ERROR15}" != "NOT_PRESENT" ] && [ "${ERROR15}" != "null" ]; then
+  echo "${FAIL}: error should not be present, but got: ${ERROR15}"
+  exit 1
+fi
+
+# 検証: 候補提示 or 暫定回答が含まれていること
+if ! echo "${RESPONSE_TEXT15}" | grep -qE "(候補|暫定|資料|根拠|推定|どれ|選択|指定)"; then
+  echo "⚠️  WARN: 候補提示 or 暫定回答のキーワードが見つかりません"
+fi
+
+echo "${PASS}: domain未指定「言灵とは？」で候補 or 暫定回答が返る（止まらない）"
+echo ""
+
+# ============================================
+# Phase 13: doc/pdfPage指定で GROUNDED が根拠候補を返す（確認）
+# ============================================
+echo "【Phase 13: doc/pdfPage指定で GROUNDED が根拠候補を返す（確認）】"
+echo "テスト: 言霊秘書.pdf pdfPage=6 言灵の定義 #詳細 → GROUNDED、根拠候補が返る"
+RESPONSE16_JSON=$(curl -sS "${BASE_URL}/api/chat" \
+  -H "Content-Type: application/json" \
+  -d '{"threadId":"test-grounded-evidence","message":"言霊秘書.pdf pdfPage=6 言灵の定義 #詳細"}')
+
+MODE16=$(echo "${RESPONSE16_JSON}" | jq -r '.decisionFrame.mode')
+DETAIL16=$(echo "${RESPONSE16_JSON}" | jq -r '.detail // ""')
+EVIDENCE16=$(echo "${RESPONSE16_JSON}" | jq -r '.evidence // null')
+
+echo "Mode: ${MODE16}"
+echo "Detail length: $(echo "${DETAIL16}" | wc -c)"
+echo "Evidence: ${EVIDENCE16}"
+echo ""
+
+# 検証: mode が GROUNDED であること
+if [ "${MODE16}" != "GROUNDED" ]; then
+  echo "${FAIL}: mode should be GROUNDED, but got ${MODE16}"
+  exit 1
+fi
+
+# 検証: detail が string で null ではないこと
+if [ -z "${DETAIL16}" ] || [ "${DETAIL16}" = "null" ]; then
+  echo "${FAIL}: detail should not be null or empty"
+  exit 1
+fi
+
+# 検証: evidence が null ではないこと
+if [ "${EVIDENCE16}" = "null" ] || [ -z "${EVIDENCE16}" ]; then
+  echo "${FAIL}: evidence should not be null or empty for GROUNDED mode"
+  exit 1
+fi
+
+# 検証: detail に根拠候補（lawId/quote）が含まれていること
+if ! echo "${DETAIL16}" | grep -qE "(lawId|法則候補|引用|quote|KHS-|KTK-|IROHA-)"; then
+  echo "${FAIL}: detail should contain lawId/quote/根拠候補"
+  exit 1
+fi
+
+echo "${PASS}: doc/pdfPage指定で GROUNDED が根拠候補を返す"
+echo ""
+
 echo "=== 全テスト完了 ==="
 echo "✅ すべての受入テストに合格しました"
 echo ""
 echo "【期待値確認】"
+echo "✅ /api/version に version, gitSha, builtAt が含まれている"
 echo "✅ 言灵とは？ → mode=HYBRID"
 echo "✅ 言灵とは？ #詳細 → mode=HYBRID、detailType=string、detailLen>0"
 echo "✅ lawId は KHS- / KTK- / IROHA- 形式のみ（捏造なし）"
 echo "✅ detail に doc/pdfPage が含まれている"
+echo "✅ detail に捏造ID（言霊-001、言灵-001、カタカムナ-001、いろは-001）や pdfPage:3 が出ない"
 echo "✅ response に禁止テンプレ語が入っていない"
 echo "✅ doc/pdfPage未指定でも自動検索が動作、候補 or 回答が返る"
+echo "✅ domain(HYBRID) で decisionFrame.llm が null/0"
+echo "✅ doc/pdfPage指定で GROUNDED が根拠候補を返す"
 

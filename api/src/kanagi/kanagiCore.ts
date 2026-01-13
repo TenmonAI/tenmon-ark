@@ -1,6 +1,9 @@
 // src/kanagi/kanagiCore.ts
 // HYBRID(domain) の「LLM禁止」を構造で固定するための CorePlan
 
+import { runTruthCore } from "./truthCore.js";
+import { filterValidClaims } from "./verifier.js";
+
 export type DocKey = "khs" | "ktk" | "iroha" | "unknown";
 
 export type EvidenceLaw = {
@@ -23,6 +26,11 @@ export type TaiYo = {
   yo:  { text: string; lawIds: string[] };
 };
 
+export type CoreClaim = {
+  text: string;           // 「根拠で言える最小主張」
+  evidenceIds: string[];  // 根拠ID（必須）
+};
+
 export type CorePlan = {
   mode: "HYBRID";
   intent: "domain";
@@ -32,6 +40,13 @@ export type CorePlan = {
 
   taiyo: TaiYo;
   usedLawIds: string[];
+
+  // Truth-Core（躰/用＋空仮中）
+  thesis: string;         // 正中命題（本質命題）
+  tai: string;           // 躰（骨格）
+  yo: string;            // 用（はたらき）
+  kokakechuFlags: string[]; // 空仮中検知：一般テンプレ/根拠なし断定/循環説明など
+  claims: CoreClaim[];   // 主張リスト（各主張はevidenceIds必須）
 
   // 表/裏（LLM禁止）
   responseDraft: string;
@@ -123,12 +138,43 @@ export function buildCoreAnswerPlanFromEvidence(message: string, e: EvidencePack
   const taiyo = pickTaiYo(laws);
   const usedLawIds = Array.from(new Set([...taiyo.tai.lawIds, ...taiyo.yo.lawIds])).filter(Boolean);
 
-  const responseDraft = normalizeSpiritNotation([
+  // 初期claimsを生成（躰/用から）
+  const initialClaims: CoreClaim[] = [];
+  if (taiyo.tai.lawIds.length > 0) {
+    initialClaims.push({
+      text: `躰（骨格）：${taiyo.tai.text.slice(0, 100)}`,
+      evidenceIds: taiyo.tai.lawIds,
+    });
+  }
+  if (taiyo.yo.lawIds.length > 0) {
+    initialClaims.push({
+      text: `用（はたらき）：${taiyo.yo.text.slice(0, 100)}`,
+      evidenceIds: taiyo.yo.lawIds,
+    });
+  }
+
+  // 初期responseDraftを生成
+  const initialResponseDraft = normalizeSpiritNotation([
     "（資料準拠）",
     "まず「躰（骨格）」と「用（はたらき）」に分けて定義を立てます。",
     `躰：${taiyo.tai.text || "（抽出不足）"}`,
     `用：${taiyo.yo.text || "（抽出不足）"}`,
   ].join("\n"));
+
+  // Truth-Coreを実行（躰/用＋空仮中）
+  const truthResult = runTruthCore(message, taiyo, initialResponseDraft, initialClaims, { ...e, laws });
+
+  // Verifierでclaimsを検証
+  const validClaims = filterValidClaims(initialClaims, { ...e, laws });
+
+  const responseDraft = normalizeSpiritNotation([
+    "（資料準拠）",
+    truthResult.thesis ? `正中命題：${truthResult.thesis}` : "",
+    "まず「躰（骨格）」と「用（はたらき）」に分けて定義を立てます。",
+    `躰：${truthResult.tai || taiyo.tai.text || "（抽出不足）"}`,
+    `用：${truthResult.yo || taiyo.yo.text || "（抽出不足）"}`,
+    truthResult.kokakechuFlags.length > 0 ? `\n注意：${truthResult.kokakechuFlags.join("、")}が検知されました。` : "",
+  ].filter(Boolean).join("\n"));
 
   const p = pad4(e.pdfPage);
   const detailLines: string[] = [];
@@ -137,6 +183,12 @@ export function buildCoreAnswerPlanFromEvidence(message: string, e: EvidencePack
   detailLines.push(`- pdfPage: ${e.pdfPage}`);
   detailLines.push(`- idPrefix: ${(e.docKey === "khs" ? "KHS" : e.docKey === "ktk" ? "KTK" : e.docKey === "iroha" ? "IROHA" : "DOC")}-P${p}`);
   detailLines.push(`- isEstimated: ${e.isEstimated}`);
+  if (truthResult.thesis) {
+    detailLines.push(`- 正中命題：${truthResult.thesis}`);
+  }
+  if (truthResult.kokakechuFlags.length > 0) {
+    detailLines.push(`- 空仮中検知：${truthResult.kokakechuFlags.join("、")}`);
+  }
   detailLines.push("- 根拠（抜粋）:");
   const pick = usedLawIds.length ? laws.filter(l => usedLawIds.includes(l.id)) : laws.slice(0, 3);
   for (const l of pick) {
@@ -151,6 +203,11 @@ export function buildCoreAnswerPlanFromEvidence(message: string, e: EvidencePack
     evidence: { ...e, laws },
     taiyo,
     usedLawIds,
+    thesis: truthResult.thesis,
+    tai: truthResult.tai,
+    yo: truthResult.yo,
+    kokakechuFlags: truthResult.kokakechuFlags,
+    claims: validClaims,
     responseDraft,
     detailDraft: detailLines.join("\n"),
   };

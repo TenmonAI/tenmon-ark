@@ -60,8 +60,9 @@ export function loadPatterns(): Map<string, KanagiPattern> {
   try {
     const __filename = fileURLToPath(import.meta.url);
     const __dirname = dirname(__filename);
-    // 複数のパスを試行（shared/kanagi/ または server/）
+    // 複数のパスを試行（dist内を優先、次にshared/kanagi/、server/）
     const candidatePaths = [
+      join(__dirname, "amatsuKanagi50Patterns.json"), // dist/kanagi/patterns/ 内（ビルド時にコピー）
       join(__dirname, "../../../../shared/kanagi/amatsuKanagi50Patterns.json"),
       join(__dirname, "../../../../server/amatsuKanagi50Patterns.json"),
     ];
