@@ -16,6 +16,7 @@ import { initDB } from "./db/knowledge.js";
 import { initThreadDB } from "./db/threads.js";
 import { initCorpusLoader } from "./kotodama/corpusLoader.js";
 import { initTextLoader } from "./kotodama/textLoader.js";
+import { initRetrievalIndex } from "./kotodama/retrievalIndex.js";
 import { requestIdMiddleware } from "./middleware/requestId.js";
 import { chatRateLimit } from "./middleware/rateLimit.js";
 
@@ -33,6 +34,11 @@ initCorpusLoader();
 
 // Text JSONL ローダーを初期化
 initTextLoader();
+
+// Retrieval Index を初期化（真理骨格固定の中枢化）
+initRetrievalIndex().catch((e) => {
+  console.error("[INIT] Failed to initialize Retrieval Index:", e);
+});
 
 app.use(cors());
 app.use(express.json());

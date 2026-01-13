@@ -58,3 +58,4 @@ export function Composer({ onSend, loading = false }: ComposerProps) {
   );
 }
 
+

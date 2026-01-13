@@ -1,14 +1,16 @@
 // /opt/tenmon-ark/api/src/kotodama/evidencePack.ts
 import fs from "node:fs";
 import readline from "node:readline";
+import { createHash } from "node:crypto";
 
 export type EvidencePack = {
   doc: string;
   pdfPage: number;
   laws: Array<{ id: string; title: string; quote: string }>;
-  pageText: string; // ページ本文（先頭N文字）
+  pageText: string; // ページ本文（先頭N文字、最大4000）
   summary: string; // ページの要約（短く）
   imageUrl?: string; // ページ画像のURL（P2: 追加）
+  sha256?: string; // ページ本文のSHA256ハッシュ（Task B: 追加）
   isEstimated?: boolean; // 推定かどうか（P2: 追加）
   estimateExplain?: string; // 推定理由（Phase 3: 追加）
 };
@@ -21,8 +23,8 @@ export type EstimateResult = {
   explain: string;
 };
 
-const MAX_TEXT_LENGTH = 2000; // ページ本文の最大文字数
-const MAX_LAWS = 12; // 法則候補の最大数
+const MAX_TEXT_LENGTH = 4000; // ページ本文の最大文字数（Task B: 4000に変更）
+const MAX_LAWS = 10; // 法則候補の最大数（Task B: 10に変更）
 
 /**
  * Phase 3-A: メッセージから doc/pdfPage を推定（最小実装→改善余地あり）
@@ -78,7 +80,7 @@ export async function estimateDocAndPage(message: string): Promise<EstimateResul
 }
 
 /**
- * Law Candidates を読み込む
+ * Law Candidates を読み込む（fallback: text.jsonl から簡易候補を生成）
  */
 async function loadLawCandidates(
   doc: string,
@@ -92,11 +94,58 @@ async function loadLawCandidates(
   };
 
   const file = fileMap[doc];
-  if (!file || !fs.existsSync(file)) return [];
+  
+  // 1. law_candidates.jsonl がある場合は読み込む
+  if (file && fs.existsSync(file)) {
+    const out: Array<{ id: string; title: string; quote: string }> = [];
+    const rl = readline.createInterface({
+      input: fs.createReadStream(file, "utf-8"),
+      crlfDelay: Infinity,
+    });
+
+    for await (const line of rl) {
+      const t = String(line).trim();
+      if (!t) continue;
+      try {
+        const r = JSON.parse(t) as any;
+        if (r.doc === doc && r.pdfPage === pdfPage) {
+          // lawId の形式チェック（KHS- / KTK- / IROHA- 形式）
+          const lawId = r.id || "";
+          const prefix = doc === "言霊秘書.pdf" ? "KHS-" : doc === "カタカムナ言灵解.pdf" ? "KTK-" : "IROHA-";
+          const validId = lawId.startsWith(prefix) ? lawId : `${prefix}${pdfPage}-${out.length + 1}`;
+          
+          out.push({
+            id: validId,
+            title: r.title || "",
+            quote: (r.quote || "").substring(0, 500), // 引用は500文字まで
+          });
+          if (out.length >= limit) break;
+        }
+      } catch (e) {
+        continue;
+      }
+    }
+    
+    if (out.length > 0) {
+      return out;
+    }
+  }
+
+  // 2. fallback: text.jsonl から簡易候補を生成（ktk/iroha に law_candidates.jsonl が無い場合）
+  const textFileMap: Record<string, string> = {
+    "言霊秘書.pdf": "/opt/tenmon-corpus/db/khs_text.jsonl",
+    "カタカムナ言灵解.pdf": "/opt/tenmon-corpus/db/ktk_text.jsonl",
+    "いろは最終原稿.pdf": "/opt/tenmon-corpus/db/iroha_text.jsonl",
+  };
+  
+  const textFile = textFileMap[doc];
+  if (!textFile || !fs.existsSync(textFile)) return [];
 
   const out: Array<{ id: string; title: string; quote: string }> = [];
+  const prefix = doc === "言霊秘書.pdf" ? "KHS-" : doc === "カタカムナ言灵解.pdf" ? "KTK-" : "IROHA-";
+  
   const rl = readline.createInterface({
-    input: fs.createReadStream(file, "utf-8"),
+    input: fs.createReadStream(textFile, "utf-8"),
     crlfDelay: Infinity,
   });
 
@@ -105,13 +154,24 @@ async function loadLawCandidates(
     if (!t) continue;
     try {
       const r = JSON.parse(t) as any;
-      if (r.doc === doc && r.pdfPage === pdfPage) {
-        out.push({
-          id: r.id || "",
-          title: r.title || "",
-          quote: (r.quote || "").substring(0, 500), // 引用は500文字まで
-        });
-        if (out.length >= limit) break;
+      if (r.doc === doc && r.pdfPage === pdfPage && r.text) {
+        const text = String(r.text);
+        // テキストを300文字ずつに分割して簡易候補を生成
+        const chunks = text.match(/.{1,300}/g) || [];
+        for (let i = 0; i < Math.min(chunks.length, limit); i++) {
+          const chunk = chunks[i];
+          if (chunk.trim().length > 50) { // 50文字以上のチャンクのみ
+            // ID規格: KHS-P####-T### / KTK-P####-T### / IROHA-P####-T###
+            const pageStr = String(pdfPage).padStart(4, "0");
+            const trackStr = String(i + 1).padStart(3, "0");
+            out.push({
+              id: `${prefix}P${pageStr}-T${trackStr}`,
+              title: `ページ本文抜粋 ${i + 1}`,
+              quote: chunk.substring(0, 500),
+            });
+          }
+        }
+        break; // 該当ページを見つけたら終了
       }
     } catch (e) {
       continue;
@@ -209,13 +269,18 @@ export async function buildEvidencePack(
     console.warn(`[EVIDENCE-PACK] Failed to load imageUrl for ${doc} P${pdfPage}:`, e);
   }
 
+  // Task B: sha256 を計算（ページ本文のハッシュ）
+  const truncatedPageText = pageText.substring(0, MAX_TEXT_LENGTH);
+  const sha256 = createHash("sha256").update(truncatedPageText, "utf-8").digest("hex");
+
   return {
     doc,
     pdfPage,
-    laws: laws.slice(0, 10), // P2: 最大10件に制限
-    pageText: pageText.substring(0, 4000), // P2: 最大4000文字
+    laws: laws.slice(0, MAX_LAWS), // Task B: 最大10件に制限
+    pageText: truncatedPageText, // Task B: 最大4000文字
     summary,
     imageUrl,
+    sha256, // Task B: SHA256ハッシュを追加
     isEstimated, // P2: 推定フラグ
     estimateExplain, // Phase 3: 推定理由
   };

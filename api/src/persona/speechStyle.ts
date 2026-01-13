@@ -4,7 +4,10 @@ export type Intent = "smalltalk" | "aboutArk" | "grounded" | "domain" | "unknown
 export function detectIntent(message: string, hasDocPage: boolean): Intent {
   const t = message.trim();
 
-  if (hasDocPage) return "grounded";
+  // domain keywords は最優先（hasDocPage に関係なく）
+  if (/(言[霊靈灵]|言霊|言靈|言灵|ことだま|カタカムナ|いろは|天津金木|布斗麻邇|フトマニ|辞|テニヲハ)/.test(t)) {
+    return "domain";
+  }
 
   // smalltalk
   if (/^(おはよう|こんにちは|こんばんは|やあ|もしもし|ありがとう|有難う|おやすみ|さようなら)/.test(t)) {
@@ -16,10 +19,8 @@ export function detectIntent(message: string, hasDocPage: boolean): Intent {
     return "aboutArk";
   }
 
-  // domain keywords
-  if (/(言[霊靈灵]|言霊|言靈|言灵|ことだま|カタカムナ|いろは|天津金木|布斗麻邇|フトマニ|辞|テニヲハ)/.test(t)) {
-    return "domain";
-  }
+  // hasDocPage がある場合は grounded（domain 以外）
+  if (hasDocPage) return "grounded";
 
   return "unknown";
 }

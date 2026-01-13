@@ -7,7 +7,7 @@ export type Message = {
 
 export type ChatRequest = {
   message: string;
-  sessionId: string;
+  threadId: string; // API側のthreadIdに統一（旧sessionIdからリネーム）
   meta?: Record<string, any>;
 };
 

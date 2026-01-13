@@ -124,3 +124,4 @@ export default function ResearchNavPanel({ selectedFileId, onSelectFile, onUploa
   );
 }
 
+

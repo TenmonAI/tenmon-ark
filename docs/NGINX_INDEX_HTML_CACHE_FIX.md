@@ -131,3 +131,4 @@ curl -I https://tenmon-ark.com/assets/index-abc123.js
 - [Vite: Static Asset Handling](https://vitejs.dev/guide/assets.html)
 - [Nginx: add_header Directive](http://nginx.org/en/docs/http/ngx_http_headers_module.html#add_header)
 
+

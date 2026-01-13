@@ -85,3 +85,4 @@ export function getPageText(doc: string, pdfPage: number): string | null {
   return docMap.get(pdfPage) || null;
 }
 
+

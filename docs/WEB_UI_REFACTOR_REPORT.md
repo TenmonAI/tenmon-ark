@@ -188,3 +188,4 @@ dist/assets/index-DIfF1XIc.js   202.46 kB │ gzip: 63.37 kB
 - 会話履歴は現在メモリ上のみです。永続化が必要な場合は、LocalStorageまたはAPIを実装してください。
 - GPTsページは現在プレースホルダーです。API接続と実装が必要です。
 
+

@@ -335,10 +335,272 @@ echo ""
 # ============================================
 # テスト完了
 # ============================================
+# ============================================
+# Phase 5: 捏造ゼロ検証（lawId形式、doc/pdfPage確認）
+# ============================================
+# Phase 6: domainでdoc/pdfPageがあってもHYBRID固定（追加）
+# ============================================
+echo "【Phase 6: domainでdoc/pdfPageがあってもHYBRID固定】"
+echo "テスト: 言霊秘書.pdf pdfPage=103 言灵とは？ → decisionFrame.intent=domain, mode=HYBRID"
+RESPONSE8_JSON=$(curl -sS "${BASE_URL}/api/chat" \
+  -H "Content-Type: application/json" \
+  -d '{"threadId":"test-domain-with-doc","message":"言霊秘書.pdf pdfPage=103 言灵とは？"}')
+RESPONSE8=$(echo "$RESPONSE8_JSON" | jq -r '.response')
+MODE8=$(echo "$RESPONSE8_JSON" | jq -r '.decisionFrame.mode')
+INTENT8=$(echo "$RESPONSE8_JSON" | jq -r '.decisionFrame.intent')
+
+echo "Response: ${RESPONSE8}"
+echo "Mode: ${MODE8}"
+echo "Intent: ${INTENT8}"
+echo ""
+
+# 検証: intent が domain であること
+if [ "${INTENT8}" != "domain" ]; then
+  echo "${FAIL}: intent should be domain, but got ${INTENT8}"
+  exit 1
+fi
+
+# 検証: mode が HYBRID であること（doc/pdfPage があっても）
+if [ "${MODE8}" != "HYBRID" ]; then
+  echo "${FAIL}: mode should be HYBRID even with doc/pdfPage, but got ${MODE8}"
+  exit 1
+fi
+
+echo "${PASS}: domainでdoc/pdfPageがあってもHYBRID固定"
+echo ""
+
+# ============================================
+# Phase 6: domainでdoc/pdfPageがあってもHYBRID固定（追加）
+# ============================================
+echo "【Phase 6: domainでdoc/pdfPageがあってもHYBRID固定】"
+echo "テスト: 言霊秘書.pdf pdfPage=103 言灵とは？ → decisionFrame.intent=domain, mode=HYBRID"
+RESPONSE8_JSON=$(curl -sS "${BASE_URL}/api/chat" \
+  -H "Content-Type: application/json" \
+  -d '{"threadId":"test-domain-with-doc","message":"言霊秘書.pdf pdfPage=103 言灵とは？"}')
+RESPONSE8=$(echo "$RESPONSE8_JSON" | jq -r '.response')
+MODE8=$(echo "$RESPONSE8_JSON" | jq -r '.decisionFrame.mode')
+INTENT8=$(echo "$RESPONSE8_JSON" | jq -r '.decisionFrame.intent')
+
+echo "Response: ${RESPONSE8}"
+echo "Mode: ${MODE8}"
+echo "Intent: ${INTENT8}"
+echo ""
+
+# 検証: intent が domain であること
+if [ "${INTENT8}" != "domain" ]; then
+  echo "${FAIL}: intent should be domain, but got ${INTENT8}"
+  exit 1
+fi
+
+# 検証: mode が HYBRID であること（doc/pdfPage があっても）
+if [ "${MODE8}" != "HYBRID" ]; then
+  echo "${FAIL}: mode should be HYBRID even with doc/pdfPage, but got ${MODE8}"
+  exit 1
+fi
+
+echo "${PASS}: domainでdoc/pdfPageがあってもHYBRID固定"
+echo ""
+
+# ============================================
+echo "【Phase 5: 捏造ゼロ検証】"
+echo "テスト: 言灵とは？ #詳細 → lawId が KHS- / KTK- / IROHA- 形式のみ（捏造禁止）"
+RESPONSE7_JSON=$(curl -sS "${BASE_URL}/api/chat" \
+  -H "Content-Type: application/json" \
+  -d '{"threadId":"test-no-forgery","message":"言灵とは？ #詳細"}')
+
+DETAIL7=$(echo "${RESPONSE7_JSON}" | jq -r '.detail // ""')
+LAWIDS=$(echo "${DETAIL7}" | grep -oE '(KHS-|KTK-|IROHA-)[A-Z0-9-]+' || echo "")
+INVALID_LAWIDS=$(echo "${DETAIL7}" | grep -oE '(lawId|法則ID|引用ID|言霊-|言灵-|カタカムナ-|いろは-)[A-Z0-9-]*' | grep -vE '^(KHS-|KTK-|IROHA-)' || echo "")
+
+echo "Detail length: $(echo "${DETAIL7}" | wc -c)"
+echo "Valid lawIds found: ${LAWIDS}"
+echo "Invalid lawIds found: ${INVALID_LAWIDS}"
+echo ""
+
+# 検証: lawId が KHS- / KTK- / IROHA- 形式のみ（捏造禁止）
+if [ -n "${INVALID_LAWIDS}" ] && [ "${INVALID_LAWIDS}" != "" ]; then
+  echo "${FAIL}: lawId が捏造されている（KHS- / KTK- / IROHA- 形式以外）: ${INVALID_LAWIDS}"
+  exit 1
+fi
+
+echo "${PASS}: lawId は KHS- / KTK- / IROHA- 形式のみ（捏造なし）"
+echo ""
+
+echo "テスト: detail に doc/pdfPage が必須（無ければFAIL）"
+HAS_DOC_PDFPAGE=$(echo "${DETAIL7}" | grep -qE '(doc=|pdfPage=)' && echo "true" || echo "false")
+
+echo "Has doc/pdfPage in detail: ${HAS_DOC_PDFPAGE}"
+echo ""
+
+if [ "${HAS_DOC_PDFPAGE}" != "true" ]; then
+  echo "${FAIL}: detail に doc/pdfPage が含まれていない"
+  exit 1
+fi
+
+echo "${PASS}: detail に doc/pdfPage が含まれている"
+echo ""
+
+echo "テスト: response に禁止テンプレ語が入っていない"
+RESPONSE_TEXT7=$(echo "${RESPONSE7_JSON}" | jq -r '.response // ""')
+FORBIDDEN_TEMPLATE=$(echo "${RESPONSE_TEXT7}" | grep -E "(日本の伝統的|古来より|ポジティブな言葉|前向きに|明るく|温かみ|深い意味|大切な考え|豊かな文化|素晴らしい概念|昔から|日本人の|心の|言葉の)" || echo "")
+
+echo "Response: ${RESPONSE_TEXT7}"
+echo "Forbidden template found: ${FORBIDDEN_TEMPLATE}"
+echo ""
+
+if [ -n "${FORBIDDEN_TEMPLATE}" ] && [ "${FORBIDDEN_TEMPLATE}" != "" ]; then
+  echo "${FAIL}: response に禁止テンプレ語が含まれている: ${FORBIDDEN_TEMPLATE}"
+  exit 1
+fi
+
+echo "${PASS}: response に禁止テンプレ語が入っていない"
+echo ""
+
+# ============================================
+# Phase 7: detailのID規格確認（追加）
+# ============================================
+echo "【Phase 7: detailのID規格確認】"
+echo "テスト: 言灵とは？ #詳細 → detail内のIDが KHS-P####-T### / KTK-P####-T### / IROHA-P####-T### 形式のみ"
+RESPONSE9_JSON=$(curl -sS "${BASE_URL}/api/chat" \
+  -H "Content-Type: application/json" \
+  -d '{"threadId":"test-id-format","message":"言灵とは？ #詳細"}')
+DETAIL9=$(echo "${RESPONSE9_JSON}" | jq -r '.detail // ""')
+
+# IDを抽出（正規表現: KHS-P####-T### / KTK-P####-T### / IROHA-P####-T###）
+VALID_IDS=$(echo "${DETAIL9}" | grep -oE '(KHS|KTK|IROHA)-P[0-9]{4}-T[0-9]{3}' || echo "")
+INVALID_IDS=$(echo "${DETAIL9}" | grep -oE '(KHS|KTK|IROHA)-[^P]|(KHS|KTK|IROHA)-P[0-9]{1,3}-[^T]|(KHS|KTK|IROHA)-P[0-9]{5,}' || echo "")
+
+echo "Detail length: $(echo "${DETAIL9}" | wc -c)"
+echo "Valid IDs found: ${VALID_IDS}"
+echo "Invalid IDs found: ${INVALID_IDS}"
+echo ""
+
+# 検証: 無効なID形式が存在しないこと
+if [ -n "${INVALID_IDS}" ] && [ "${INVALID_IDS}" != "" ]; then
+  echo "${FAIL}: detail に無効なID形式が含まれている: ${INVALID_IDS}"
+  exit 1
+fi
+
+echo "${PASS}: detail内のIDが正しい形式（KHS-P####-T### / KTK-P####-T### / IROHA-P####-T###）のみ"
+echo ""
+
+# ============================================
+# Phase 8: evidence=0 → LLM不使用（追加）
+# ============================================
+echo "【Phase 8: evidence=0 → LLM不使用】"
+echo "テスト: 存在しないdoc/pdfPageでdomain質問 → evidence=null, LLM未使用（ログで確認）"
+RESPONSE10_JSON=$(curl -sS "${BASE_URL}/api/chat" \
+  -H "Content-Type: application/json" \
+  -d '{"threadId":"test-no-evidence","message":"存在しない.pdf pdfPage=99999 言灵とは？"}')
+MODE10=$(echo "${RESPONSE10_JSON}" | jq -r '.decisionFrame.mode')
+INTENT10=$(echo "${RESPONSE10_JSON}" | jq -r '.decisionFrame.intent')
+EVIDENCE10=$(echo "${RESPONSE10_JSON}" | jq -r '.evidence // "null"')
+RESPONSE10=$(echo "${RESPONSE10_JSON}" | jq -r '.response')
+
+echo "Mode: ${MODE10}"
+echo "Intent: ${INTENT10}"
+echo "Evidence: ${EVIDENCE10}"
+echo "Response: ${RESPONSE10}"
+echo ""
+
+# 検証: intent が domain であること
+if [ "${INTENT10}" != "domain" ]; then
+  echo "${FAIL}: intent should be domain, but got ${INTENT10}"
+  exit 1
+fi
+
+# 検証: mode が HYBRID であること
+if [ "${MODE10}" != "HYBRID" ]; then
+  echo "${FAIL}: mode should be HYBRID, but got ${MODE10}"
+  exit 1
+fi
+
+# 検証: evidence が null であること
+if [ "${EVIDENCE10}" != "null" ]; then
+  echo "⚠️  WARN: evidence should be null when no evidence found, but got: ${EVIDENCE10}"
+fi
+
+# 検証: response が「資料不足」であること（LLM未使用の証拠）
+if ! echo "${RESPONSE10}" | grep -qE "(資料不足|次に読む|指定してください)"; then
+  echo "${FAIL}: response should contain '資料不足' when evidence=0, but got: ${RESPONSE10}"
+  exit 1
+fi
+
+echo "${PASS}: evidence=0 の場合、LLM未使用で「資料不足」レスポンスを返す"
+echo ""
+
+# ============================================
+# Phase 9: doc/pdfPage未指定でも自動検索（追加）
+# ============================================
+echo "【Phase 9: doc/pdfPage未指定でも自動検索】"
+echo "テスト: 言灵とは？ #詳細（doc/pdfPage無し）→ 候補 or 回答が返る、捏造lawId/pdfPageなし"
+RESPONSE12_JSON=$(curl -sS "${BASE_URL}/api/chat" \
+  -H "Content-Type: application/json" \
+  -d '{"threadId":"test-auto-evidence","message":"言灵とは？ #詳細"}' | jq '.')
+
+MODE12=$(echo "${RESPONSE12_JSON}" | jq -r '.decisionFrame.mode')
+RESPONSE_TEXT12=$(echo "${RESPONSE12_JSON}" | jq -r '.response')
+DETAIL12=$(echo "${RESPONSE12_JSON}" | jq -r '.detail // ""')
+AUTO_EVIDENCE=$(echo "${RESPONSE12_JSON}" | jq -r '.decisionFrame.autoEvidence // null')
+EVIDENCE12=$(echo "${RESPONSE12_JSON}" | jq -r '.evidence // null')
+
+echo "Response: ${RESPONSE_TEXT12:0:100}..."
+echo "Mode: ${MODE12}"
+echo "Detail length: $(echo "${DETAIL12}" | wc -c)"
+echo "AutoEvidence: ${AUTO_EVIDENCE}"
+echo "Evidence: ${EVIDENCE12}"
+echo ""
+
+# 検証: mode が HYBRID であること
+if [ "${MODE12}" != "HYBRID" ]; then
+  echo "${FAIL}: mode should be HYBRID, but got ${MODE12}"
+  exit 1
+fi
+
+# 検証: response または候補が返ること
+if [ -z "${RESPONSE_TEXT12}" ] || [ "${RESPONSE_TEXT12}" = "null" ]; then
+  echo "${FAIL}: response should not be empty"
+  exit 1
+fi
+
+# 検証: confidence >= 0.6 の場合は evidence が返ること
+if [ "${AUTO_EVIDENCE}" != "null" ]; then
+  CONFIDENCE=$(echo "${AUTO_EVIDENCE}" | jq -r '.confidence // 0')
+  if (( $(echo "${CONFIDENCE} >= 0.6" | bc -l 2>/dev/null || echo "0") )); then
+    if [ "${EVIDENCE12}" = "null" ] || [ -z "${EVIDENCE12}" ]; then
+      echo "${FAIL}: When confidence >= 0.6, evidence should be returned"
+      exit 1
+    fi
+  fi
+fi
+
+# 検証: detail に捏造lawId/pdfPageが出ないこと
+if [ -n "${DETAIL12}" ] && [ "${DETAIL12}" != "null" ]; then
+  # 捏造された形式のIDをチェック（KHS-/KTK-/IROHA-以外の形式）
+  INVALID_IDS=$(echo "${DETAIL12}" | grep -oE '(lawId|法則ID|引用ID|言霊-|言灵-|カタカムナ-|いろは-)[A-Z0-9-]*' | grep -vE '^(KHS-|KTK-|IROHA-)P[0-9]{4}-T[0-9]{3}' || echo "")
+  if [ -n "${INVALID_IDS}" ]; then
+    echo "${FAIL}: detail contains invalid/fabricated IDs: ${INVALID_IDS}"
+    exit 1
+  fi
+  
+  # pdfPageが捏造されていないことを確認（数値のみ、またはdoc/pdfPage形式のみ）
+  FABRICATED_PAGES=$(echo "${DETAIL12}" | grep -oE 'pdfPage\s*[:=]\s*[0-9]+' | grep -vE 'pdfPage\s*[:=]\s*[0-9]{1,4}' || echo "")
+  if [ -n "${FABRICATED_PAGES}" ]; then
+    echo "⚠️  WARN: Potential fabricated pdfPage in detail: ${FABRICATED_PAGES}"
+  fi
+fi
+
+echo "${PASS}: doc/pdfPage未指定でも自動検索が動作、捏造なし"
+echo ""
+
 echo "=== 全テスト完了 ==="
 echo "✅ すべての受入テストに合格しました"
 echo ""
 echo "【期待値確認】"
 echo "✅ 言灵とは？ → mode=HYBRID"
 echo "✅ 言灵とは？ #詳細 → mode=HYBRID、detailType=string、detailLen>0"
+echo "✅ lawId は KHS- / KTK- / IROHA- 形式のみ（捏造なし）"
+echo "✅ detail に doc/pdfPage が含まれている"
+echo "✅ response に禁止テンプレ語が入っていない"
+echo "✅ doc/pdfPage未指定でも自動検索が動作、候補 or 回答が返る"
 

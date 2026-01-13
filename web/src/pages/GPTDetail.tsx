@@ -14,3 +14,4 @@ export function GPTDetail({ id }: { id: string }) {
   );
 }
 
+

@@ -37,8 +37,8 @@ export function useChat() {
       const sid = sessionId || "default";
       const res = await postChat({
         message: content,
-        sessionId: sid,
-        persona: "tenmon"
+        threadId: sid, // API側のthreadIdに統一
+        meta: { persona: "tenmon" } // metaに移動
       });
       setMessages((prev) => [...prev, { role: "assistant", content: res.response }]);
     } catch (e) {
