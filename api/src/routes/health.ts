@@ -1,7 +1,7 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { healthCheck } from "../ops/health.js";
 import { getReadinessReport } from "../ops/readiness.js";
-import { TENMON_ARK_VERSION } from "../version.js";
+import { TENMON_ARK_VERSION, TENMON_ARK_BUILT_AT, TENMON_ARK_GIT_SHA } from "../version.js";
 
 const router: IRouter = Router();
 
@@ -17,8 +17,8 @@ router.get("/readiness", (_req: Request, res: Response) => res.json(getReadiness
 router.get("/version", (_req: Request, res: Response) => {
   res.json({
     version: TENMON_ARK_VERSION,
-    builtAt: process.env.TENMON_ARK_BUILT_AT ?? null,
-    gitSha: process.env.TENMON_ARK_GIT_SHA ?? null,
+    builtAt: TENMON_ARK_BUILT_AT,
+    gitSha: TENMON_ARK_GIT_SHA,
   });
 });
 
