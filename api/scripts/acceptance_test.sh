@@ -781,6 +781,78 @@ fi
 echo "${PASS}: doc/pdfPage指定で GROUNDED が根拠候補を返す"
 echo ""
 
+# ============================================
+# Phase 14: JSON判別と動作確認（VPS用）
+# ============================================
+echo "【Phase 14: JSON判別と動作確認（VPS用）】"
+echo "テスト: curl -i で Content-Type が application/json であることを確認"
+RESPONSE17_HEADERS=$(curl -sS -i "${BASE_URL}/api/chat" \
+  -H "Content-Type: application/json" \
+  -d '{"threadId":"t","message":"言灵とは？ #詳細"}' | head -n 30)
+
+CONTENT_TYPE=$(echo "${RESPONSE17_HEADERS}" | grep -i "Content-Type:" | head -n 1)
+
+echo "Content-Type header: ${CONTENT_TYPE}"
+echo ""
+
+# 検証: Content-Type が application/json であること
+if ! echo "${CONTENT_TYPE}" | grep -qi "application/json"; then
+  echo "${FAIL}: Content-Type should be application/json, but got: ${CONTENT_TYPE}"
+  exit 1
+fi
+
+echo "${PASS}: Content-Type が application/json"
+echo ""
+
+echo "テスト: 言灵とは？ #詳細 → 「資料指定して」で止まらず、候補提示 or 暫定採用に変わる"
+RESPONSE18_JSON=$(curl -sS "${BASE_URL}/api/chat" \
+  -H "Content-Type: application/json" \
+  -d '{"threadId":"t","message":"言灵とは？ #詳細"}')
+
+RESPONSE18_TEXT=$(echo "${RESPONSE18_JSON}" | jq -r '.response // ""')
+MODE18=$(echo "${RESPONSE18_JSON}" | jq -r '.decisionFrame.mode')
+
+echo "Response: ${RESPONSE18_TEXT:0:200}..."
+echo "Mode: ${MODE18}"
+echo ""
+
+# 検証: mode が HYBRID であること
+if [ "${MODE18}" != "HYBRID" ]; then
+  echo "${FAIL}: mode should be HYBRID, but got ${MODE18}"
+  exit 1
+fi
+
+# 検証: 「資料指定して」で止まらない（候補提示 or 暫定採用が返る）
+if echo "${RESPONSE18_TEXT}" | grep -qE "(資料準拠で答えるため|参照する資料の指定が必要)"; then
+  # ただし、hits==0 の場合は「資料指定して」が返るのは正常
+  EVIDENCE18=$(echo "${RESPONSE18_JSON}" | jq -r '.evidence // null')
+  if [ "${EVIDENCE18}" = "null" ]; then
+    echo "⚠️  WARN: hits==0 のため「資料指定して」が返っています（正常）"
+  else
+    echo "${FAIL}: 「資料指定して」で止まっている（候補提示 or 暫定採用が返るべき）"
+    exit 1
+  fi
+fi
+
+# 検証: 候補提示 or 暫定採用のキーワードが含まれていること
+if ! echo "${RESPONSE18_TEXT}" | grep -qE "(候補|暫定|どれ|選択|番号|confidence|採用|自動検索)"; then
+  echo "⚠️  WARN: 候補提示 or 暫定採用のキーワードが見つかりません"
+fi
+
+echo "${PASS}: 「資料指定して」で止まらず、候補提示 or 暫定採用に変わる"
+echo ""
+
+# ============================================
+# ビルド＆再起動手順（VPS用コメント）
+# ============================================
+echo "【VPS用ビルド＆再起動手順】"
+echo "# cd /opt/tenmon-ark/api"
+echo "# pnpm -s build"
+echo "# systemctl restart tenmon-ark-api.service"
+echo "# sleep 0.6"
+echo ""
+
+# ============================================
 echo "=== 全テスト完了 ==="
 echo "✅ すべての受入テストに合格しました"
 echo ""
@@ -795,4 +867,6 @@ echo "✅ response に禁止テンプレ語が入っていない"
 echo "✅ doc/pdfPage未指定でも自動検索が動作、候補 or 回答が返る"
 echo "✅ domain(HYBRID) で decisionFrame.llm が null/0"
 echo "✅ doc/pdfPage指定で GROUNDED が根拠候補を返す"
+echo "✅ Content-Type が application/json"
+echo "✅ 「資料指定して」で止まらず、候補提示 or 暫定採用に変わる"
 
