@@ -6,6 +6,7 @@ import type { ToolId } from "../tools/toolTypes.js";
 import { snapshotMetrics } from "./metrics.js";
 import { getSafeModeReason, isSafeMode } from "./safeMode.js";
 import { initThreadDB } from "../db/threads.js";
+import { getPatternsLoadStatus } from "../kanagi/patterns/loadPatterns.js";
 
 export type HealthReport = {
   status: "ok" | "degraded";
@@ -18,6 +19,8 @@ export type HealthReport = {
   persona: { ok: boolean; personaId: string; state?: unknown; error?: string };
   tools: { executable: boolean; allowlist: ToolId[] };
   metrics: ReturnType<typeof snapshotMetrics>;
+  // Phase 4: Kanagi patterns のロード状態
+  kanagi: { loaded: boolean; count: number; path: string | null };
   // STEP 3-2: Bing key / LLM key / DB が生きているか簡易チェック
   external: {
     bingSearch: { ok: boolean; error?: string };
@@ -123,6 +126,9 @@ export function getHealthReport(): HealthReport {
     threadDbError = e?.message || "thread db error";
   }
 
+  // Phase 4: Kanagi patterns のロード状態を取得
+  const kanagiStatus = getPatternsLoadStatus();
+
   const ok = kokuzo.ok && audit.ok && persona.ok && bingOk && llmOk && threadDbOk;
   return {
     status: ok && !isSafeMode() ? "ok" : "degraded",
@@ -135,6 +141,7 @@ export function getHealthReport(): HealthReport {
     persona: personaOk ? { ok: true, personaId, state: personaState } : { ok: false, personaId, error: personaError },
     tools: { executable: !isSafeMode(), allowlist },
     metrics: snapshotMetrics(),
+    kanagi: kanagiStatus,
     external: {
       bingSearch: bingOk ? { ok: true } : { ok: false, error: bingError },
       llm: llmOk ? { ok: true } : { ok: false, error: llmError },

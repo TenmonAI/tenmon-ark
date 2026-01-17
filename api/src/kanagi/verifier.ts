@@ -10,7 +10,71 @@ export type VerificationResult = {
 };
 
 /**
- * claimのevidenceIdsが本文に存在するか検証
+ * テキストを正規化（小文字/空白圧縮/記号簡易統一）
+ */
+function normalizeText(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .replace(/[「」『』（）()【】［］\[\]]/g, "")
+    .trim();
+}
+
+/**
+ * アンカー3点方式：長文引用でも誤検知しない検証
+ * quoteが長い場合：
+ * - 先頭80文字
+ * - 中央80文字
+ * - 末尾80文字
+ * のアンカーを取り、本文に 2/3 以上含まれるとOK
+ * 1/3以下はNG → claim を降格/除外
+ */
+function verifyQuoteWithAnchors(quote: string, pageText: string): { valid: boolean; matchedAnchors: number; totalAnchors: number } {
+  const quoteNorm = normalizeText(quote);
+  const pageTextNorm = normalizeText(pageText);
+
+  if (quoteNorm.length <= 80) {
+    // 短いquoteは全体で検証
+    return {
+      valid: pageTextNorm.includes(quoteNorm),
+      matchedAnchors: pageTextNorm.includes(quoteNorm) ? 1 : 0,
+      totalAnchors: 1,
+    };
+  }
+
+  // 長いquoteは3点アンカーで検証
+  const anchors: string[] = [];
+
+  // 先頭80文字
+  anchors.push(quoteNorm.slice(0, 80));
+
+  // 中央80文字
+  const centerStart = Math.floor((quoteNorm.length - 80) / 2);
+  anchors.push(quoteNorm.slice(centerStart, centerStart + 80));
+
+  // 末尾80文字
+  anchors.push(quoteNorm.slice(-80));
+
+  let matchedCount = 0;
+  for (const anchor of anchors) {
+    if (anchor && pageTextNorm.includes(anchor)) {
+      matchedCount++;
+    }
+  }
+
+  // 2/3以上マッチすればOK
+  const threshold = Math.ceil(anchors.length * (2 / 3));
+  const valid = matchedCount >= threshold;
+
+  return {
+    valid,
+    matchedAnchors: matchedCount,
+    totalAnchors: anchors.length,
+  };
+}
+
+/**
+ * claimのevidenceIdsが本文に存在するか検証（Phase 3: アンカー3点方式）
  */
 function verifyClaimEvidence(
   claim: CoreClaim,
@@ -21,9 +85,8 @@ function verifyClaimEvidence(
     return { valid: false, reason: "evidenceIdsが空です" };
   }
   
-  // 各evidenceIdのquoteが本文に存在するか確認
-  const pageText = evidence.pageText.toLowerCase();
-  const allQuotes: string[] = [];
+  // 各evidenceIdのquoteが本文に存在するか確認（アンカー3点方式）
+  const pageText = evidence.pageText;
   
   for (const lawId of claim.evidenceIds) {
     const law = evidence.laws.find(l => l.id === lawId);
@@ -31,14 +94,14 @@ function verifyClaimEvidence(
       return { valid: false, reason: `lawId ${lawId} がevidence.lawsに見つかりません` };
     }
     
-    // quoteが本文に存在するか（簡易：部分一致）
-    const quoteLower = law.quote.toLowerCase();
-    if (!pageText.includes(quoteLower.slice(0, 50))) {
-      // 長いquoteの場合は最初の50文字で検証
-      return { valid: false, reason: `lawId ${lawId} のquoteが本文に存在しません` };
+    // アンカー3点方式で検証
+    const result = verifyQuoteWithAnchors(law.quote, pageText);
+    if (!result.valid) {
+      return {
+        valid: false,
+        reason: `lawId ${lawId} のquoteが本文に存在しません（マッチ: ${result.matchedAnchors}/${result.totalAnchors}アンカー）`,
+      };
     }
-    
-    allQuotes.push(law.quote);
   }
   
   return { valid: true };

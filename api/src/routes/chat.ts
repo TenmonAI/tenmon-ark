@@ -25,6 +25,8 @@ import { verifyCorePlan } from "../kanagi/verifier.js";
 import { containsForbiddenTemplate, getFallbackTemplate } from "../persona/outputGuard.js";
 import { searchPages } from "../kotodama/retrievalIndex.js";
 import { retrieveAutoEvidence, type AutoEvidenceHit } from "../kotodama/retrieveAutoEvidence.js";
+import { composeDetailFromEvidence } from "../persona/composeDetail.js";
+import { getPatternsLoadStatus } from "../kanagi/patterns/loadPatterns.js";
 
 import fs from "node:fs";
 import readline from "node:readline";
@@ -335,6 +337,46 @@ router.post("/chat", async (req: Request, res: Response) => {
         // ルール：LLM禁止 / evidence必須 / detailはコード生成のみ
         // =========================
         if (mode === "HYBRID") {
+          // Phase 4: Kanagi patterns がロードされていない場合は ASK に倒す（断定禁止）
+          const kanagiStatus = getPatternsLoadStatus();
+          if (!kanagiStatus.loaded) {
+            const askResponse = "（資料準拠）\n天津金木パターンが読み込まれていないため、断定を避けます。\n候補ページを指定していただけますか？\n例）言霊秘書.pdf pdfPage=6 言灵とは？ #詳細";
+
+            const result: any = {
+              response: askResponse,
+              evidence: null,
+              decisionFrame: {
+                mode,
+                intent: skeleton.intent,
+                llm: null,
+                kanagiPatternsLoaded: false,
+              },
+              timestamp: new Date().toISOString(),
+            };
+
+            if (detail) {
+              result.detail = `#詳細\n- 天津金木パターン: 未ロード（patternsLoaded=false）\n- 対応: 候補ページを指定してください\n- Kanagi patterns のロード状態は /api/health で確認できます。`;
+            }
+
+            pushTurn(threadId, { role: "user", content: message, at: Date.now() });
+            pushTurn(threadId, { role: "assistant", content: askResponse, at: Date.now() });
+            const totalLatency = Date.now() - startTime;
+
+            console.log(JSON.stringify({
+              level: "info",
+              requestId,
+              threadId,
+              mode,
+              risk: skeleton.risk,
+              latency: { total: totalLatency, liveEvidence: null, llm: null },
+              evidenceConfidence: null,
+              kanagiPatternsLoaded: false,
+              returnedDetail: detail,
+            }));
+
+            return res.json(result);
+          }
+
           // domainで doc/pdfPage が未指定の場合、自動検索を試みる
           if (!parsed.doc || !parsed.pdfPage) {
             const auto = retrieveAutoEvidence(message, 3);
@@ -518,7 +560,12 @@ router.post("/chat", async (req: Request, res: Response) => {
         };
 
         if (detail) {
-          let detailText = plan.detailDraft + `\n- 検証結果：${verification.valid ? "有効" : "無効"}\n- 失敗したclaims：${verification.failedClaims.length}件`;
+          // Phase 2: detail を完全コード生成で統一（捏造ゼロ）
+          let detailText = composeDetailFromEvidence(plan, plan.evidence, {
+            valid: verification.valid,
+            failedClaims: verification.failedClaims.length,
+            warnings: verification.warnings,
+          });
           if (isEstimated && parsed.autoEvidence) {
             const topHitSnippets = parsed.autoEvidence.topHit.quoteSnippets.slice(0, 2).map((s: string, i: number) => `  [抜粋${i + 1}] ${s.slice(0, 150)}...`).join("\n");
             detailText += `\n\n【自動検索結果（暫定回答）】\n- 採用: ${doc} P${pdfPage}\n- confidence: ${parsed.autoEvidence.confidence.toFixed(2)}\n- 抜粋:\n${topHitSnippets}`;
@@ -569,11 +616,12 @@ router.post("/chat", async (req: Request, res: Response) => {
       };
 
       if (detail) {
-        // 検証結果も含める（失敗したclaimsはdetailに出さない）
-        let detailText = plan.detailDraft;
-        if (!verification.valid && verification.failedClaims.length > 0) {
-          detailText += `\n- 検証：${verification.failedClaims.length}件のclaimが根拠不足のため除外されました`;
-        }
+        // Phase 2: detail を完全コード生成で統一（捏造ゼロ）
+        let detailText = composeDetailFromEvidence(plan, plan.evidence, {
+          valid: verification.valid,
+          failedClaims: verification.failedClaims.length,
+          warnings: verification.warnings,
+        });
         if (isEstimated && parsed.autoEvidence) {
           const topHitSnippets = parsed.autoEvidence.topHit.quoteSnippets.slice(0, 2).map((s, i) => `  [抜粋${i + 1}] ${s.slice(0, 150)}...`).join("\n");
           detailText += `\n\n【自動検索結果（暫定回答）】\n- 採用: ${doc} P${pdfPage}\n- confidence: ${parsed.autoEvidence.confidence.toFixed(2)}\n- 抜粋:\n${topHitSnippets}`;

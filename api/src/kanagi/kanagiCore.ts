@@ -1,7 +1,7 @@
 // src/kanagi/kanagiCore.ts
 // HYBRID(domain) の「LLM禁止」を構造で固定するための CorePlan
 
-import { runTruthCore } from "./truthCore.js";
+import { runTruthCore, computeCenterline } from "./truthCore.js";
 import { filterValidClaims } from "./verifier.js";
 
 export type DocKey = "khs" | "ktk" | "iroha" | "unknown";
@@ -48,12 +48,20 @@ export type CorePlan = {
   kokakechuFlags: string[]; // 空仮中検知：一般テンプレ/根拠なし断定/循環説明など
   claims: CoreClaim[];   // 主張リスト（各主張はevidenceIds必須）
 
+  // Phase 5: 正中（centerline）数値化
+  taiScore: number;      // 躰スコア（0..1）
+  yoScore: number;       // 用スコア（0..1）
+  hiScore: number;       // 火スコア（0..1）
+  miScore: number;       // 水スコア（0..1）
+  centerline: number;    // 正中軸（-1..+1）
+  confidence: number;    // 信頼度（0..1）
+
   // 表/裏（LLM禁止）
   responseDraft: string;
   detailDraft: string;
 };
 
-function pad4(n: number) { return String(n).padStart(4, "0"); }
+export function pad4(n: number) { return String(n).padStart(4, "0"); }
 
 export function inferDocKey(doc: string): DocKey {
   if (doc.includes("言霊秘書")) return "khs";
@@ -164,6 +172,9 @@ export function buildCoreAnswerPlanFromEvidence(message: string, e: EvidencePack
   // Truth-Coreを実行（躰/用＋空仮中）
   const truthResult = runTruthCore(message, taiyo, initialResponseDraft, initialClaims, { ...e, laws });
 
+  // Phase 5: 正中（centerline）を数値化
+  const centerlineResult = computeCenterline({ ...e, laws }, taiyo);
+
   // Verifierでclaimsを検証
   const validClaims = filterValidClaims(initialClaims, { ...e, laws });
 
@@ -174,27 +185,11 @@ export function buildCoreAnswerPlanFromEvidence(message: string, e: EvidencePack
     `躰：${truthResult.tai || taiyo.tai.text || "（抽出不足）"}`,
     `用：${truthResult.yo || taiyo.yo.text || "（抽出不足）"}`,
     truthResult.kokakechuFlags.length > 0 ? `\n注意：${truthResult.kokakechuFlags.join("、")}が検知されました。` : "",
+    centerlineResult.confidence < 0.5 ? `\n注意：信頼度が低いため（confidence=${centerlineResult.confidence.toFixed(2)}）、断定を避けます。` : "",
   ].filter(Boolean).join("\n"));
 
-  const p = pad4(e.pdfPage);
-  const detailLines: string[] = [];
-  detailLines.push("#詳細");
-  detailLines.push(`- doc: ${e.doc}`);
-  detailLines.push(`- pdfPage: ${e.pdfPage}`);
-  detailLines.push(`- idPrefix: ${(e.docKey === "khs" ? "KHS" : e.docKey === "ktk" ? "KTK" : e.docKey === "iroha" ? "IROHA" : "DOC")}-P${p}`);
-  detailLines.push(`- isEstimated: ${e.isEstimated}`);
-  if (truthResult.thesis) {
-    detailLines.push(`- 正中命題：${truthResult.thesis}`);
-  }
-  if (truthResult.kokakechuFlags.length > 0) {
-    detailLines.push(`- 空仮中検知：${truthResult.kokakechuFlags.join("、")}`);
-  }
-  detailLines.push("- 根拠（抜粋）:");
-  const pick = usedLawIds.length ? laws.filter(l => usedLawIds.includes(l.id)) : laws.slice(0, 3);
-  for (const l of pick) {
-    detailLines.push(`  - ${l.id} ${l.title}`);
-    detailLines.push(`    引用: ${l.quote}`);
-  }
+  // Phase 2: detailDraft は簡素化（詳細は chat.ts で composeDetailFromEvidence を使う）
+  const detailDraft = "#詳細\n（詳細は composeDetailFromEvidence で生成）";
 
   return {
     mode: "HYBRID",
@@ -208,8 +203,15 @@ export function buildCoreAnswerPlanFromEvidence(message: string, e: EvidencePack
     yo: truthResult.yo,
     kokakechuFlags: truthResult.kokakechuFlags,
     claims: validClaims,
+    // Phase 5: 正中（centerline）数値化
+    taiScore: centerlineResult.taiScore,
+    yoScore: centerlineResult.yoScore,
+    hiScore: centerlineResult.hiScore,
+    miScore: centerlineResult.miScore,
+    centerline: centerlineResult.centerline,
+    confidence: centerlineResult.confidence,
     responseDraft,
-    detailDraft: detailLines.join("\n"),
+    detailDraft,
   };
 }
 
