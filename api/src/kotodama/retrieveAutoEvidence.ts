@@ -18,9 +18,9 @@ export type AutoEvidenceResult = {
 const CORPUS_DIR = process.env.TENMON_CORPUS_DIR ?? "/opt/tenmon-corpus/db";
 
 const DOCS = [
-  { doc: "言霊秘書.pdf", file: "khs_pages.jsonl", weight: 1.2 },
-  { doc: "カタカムナ言灵解.pdf", file: "ktk_pages.jsonl", weight: 1.0 },
-  { doc: "いろは最終原稿.pdf", file: "iroha_pages.jsonl", weight: 1.1 },
+  { doc: "言霊秘書.pdf", file: "khs_text.jsonl", weight: 1.2 },
+  { doc: "カタカムナ言灵解.pdf", file: "ktk_text.jsonl", weight: 1.0 },
+  { doc: "いろは最終原稿.pdf", file: "iroha_text.jsonl", weight: 1.1 },
 ] as const;
 
 function keywordsFrom(message: string): string[] {
@@ -35,6 +35,10 @@ function keywordsFrom(message: string): string[] {
   return Array.from(new Set(hits.length ? hits : ["言灵","言霊"]));
 }
 
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 function snippetAround(text: string, kw: string, width=200): string | null {
   const idx = text.indexOf(kw);
   if (idx < 0) return null;
@@ -43,12 +47,13 @@ function snippetAround(text: string, kw: string, width=200): string | null {
   return text.slice(start, end).replace(/\s+/g, " ").trim();
 }
 
-function scoreText(text: string, kws: string[]): { score: number; snippets: string[] } {
+function scoreText(text: string, kws: string[], weight: number = 1.0): { score: number; snippets: string[] } {
   let score = 0;
   const snippets: string[] = [];
 
   for (const kw of kws) {
-    const count = (text.match(new RegExp(kw, "g")) ?? []).length;
+    const escapedKw = escapeRegExp(kw);
+    const count = (text.match(new RegExp(escapedKw, "g")) ?? []).length;
     if (count > 0) {
       score += count * 10;
       const sn = snippetAround(text, kw, 200);
@@ -59,19 +64,22 @@ function scoreText(text: string, kws: string[]): { score: number; snippets: stri
   // 軽い長さペナルティ
   score -= Math.max(0, Math.floor(text.length / 2000));
 
-  return { score, snippets: snippets.slice(0, 3) };
+  // weight を適用
+  const weightedScore = score * weight;
+
+  return { score: weightedScore, snippets: snippets.slice(0, 3) };
 }
 
 export function retrieveAutoEvidence(message: string, topK=3): AutoEvidenceResult {
   const kws = keywordsFrom(message);
   const hits: AutoEvidenceHit[] = [];
+  let debugLogged = false; // デバッグログは1回だけ
 
   for (const d of DOCS) {
     const filePath = path.join(CORPUS_DIR, d.file);
     if (!fs.existsSync(filePath)) continue;
 
     const lines = fs.readFileSync(filePath, "utf-8").split("\n").filter(Boolean);
-    let debugLogged = false; // デバッグログは1回だけ
     for (const line of lines) {
       let j: any;
       try { j = JSON.parse(line); } catch { continue; }
@@ -80,31 +88,26 @@ export function retrieveAutoEvidence(message: string, topK=3): AutoEvidenceResul
       const pdfPage = Number(j.pdfPage ?? j.page ?? j.pageNumber ?? j.p ?? NaN);
       if (!Number.isFinite(pdfPage)) continue;
 
-      // doc はファイル側の doc を優先（jsonlのdocが欠けても良い）
+      // doc はファイル側の doc を固定
       const doc = d.doc;
 
-      // 本文は textLoader を優先。空なら jsonlの候補キーを fallback
+      // 本文は必ず getPageText のみを使用（jsonlのtextは使わない）
       const fromCache = getPageText(doc, pdfPage);
-      const text = String(
-        fromCache ??
-        j.text ?? j.pageText ?? j.body ?? j.content ?? j.raw ?? j.value ?? j.t ?? ""
-      ).trim();
+      const text = String(fromCache ?? "").trim();
+      if (!text) continue;
 
-      // デバッグ出力（1回だけ）
-      if (process.env.DEBUG_AUTO_EVIDENCE === "1" && !text && j && !debugLogged) {
-        console.debug(`[AUTO-EVIDENCE-DEBUG] ${d.file} pdfPage=${pdfPage} keys:`, Object.keys(j));
+      // scoreText に weight を渡してスコアリング
+      const { score, snippets } = scoreText(text, kws, d.weight ?? 1.0);
+
+      // デバッグ出力（pdfPage=6のとき、1回だけ）
+      if (process.env.DEBUG_AUTO_EVIDENCE === "1" && pdfPage === 6 && !debugLogged) {
+        console.debug(`[AUTO-EVIDENCE-DEBUG] pdfPage=6 score=${score} snippets=${snippets.length} text_len=${text.length}`);
         debugLogged = true;
       }
 
-      if (!text) continue;
-
-      const { score, snippets } = scoreText(text, kws);
       if (score <= 0) continue;
 
-      // weight を適用（文書ごとの重要度調整）
-      const weightedScore = score * (d.weight ?? 1.0);
-
-      hits.push({ doc, pdfPage, score: weightedScore, quoteSnippets: snippets });
+      hits.push({ doc, pdfPage, score, quoteSnippets: snippets });
     }
   }
 
