@@ -17,9 +17,9 @@ export type AutoEvidenceResult = {
 const CORPUS_DIR = process.env.TENMON_CORPUS_DIR ?? "/opt/tenmon-corpus/db";
 
 const DOCS = [
-  { doc: "言霊秘書.pdf", file: "khs_text.jsonl" },
-  { doc: "カタカムナ言灵解.pdf", file: "ktk_text.jsonl" },
-  { doc: "いろは最終原稿.pdf", file: "iroha_text.jsonl" },
+  { doc: "言霊秘書.pdf", file: "khs_pages.jsonl", weight: 1.2 },
+  { doc: "カタカムナ言灵解.pdf", file: "ktk_pages.jsonl", weight: 1.0 },
+  { doc: "いろは最終原稿.pdf", file: "iroha_pages.jsonl", weight: 1.1 },
 ] as const;
 
 function keywordsFrom(message: string): string[] {
@@ -74,17 +74,35 @@ export function retrieveAutoEvidence(message: string, topK=3): AutoEvidenceResul
       let j: any;
       try { j = JSON.parse(line); } catch { continue; }
 
-      const pdfPage = Number(j.pdfPage ?? j.page ?? j.p ?? NaN);
+      // pdfPage も pages系の揺れを許容（pdfPage, page, pageNumber, p）
+      const pdfPage = Number(j.pdfPage ?? j.page ?? j.pageNumber ?? j.p ?? NaN);
+      
+      // docは無ければ d.doc を採用（doc未記載で落とさない）
       const doc = String(j.doc ?? d.doc);
-      const text = String(j.text ?? j.body ?? j.content ?? "");
+      
+      // JSONLの本文キーを "pages系" に合わせて広く拾う（text, pageText, content, body, raw, ocrText）
+      const text = String(
+        j.text ?? j.pageText ?? j.content ?? j.body ?? j.raw ?? j.ocrText ?? ""
+      );
+
+      // デバッグ出力（オプション）
+      if (process.env.DEBUG_AUTO_EVIDENCE === "1" && !text && j) {
+        console.debug(`[AUTO-EVIDENCE-DEBUG] ${d.file} line keys:`, Object.keys(j));
+      }
 
       if (!Number.isFinite(pdfPage) || !text) continue;
-      if (doc !== d.doc) continue;
+      
+      // docフィルタを弱めて「doc空なら弾かない」
+      // docが空/未定義のときは弾かずに進める
+      if (doc && doc !== d.doc && !doc.includes(d.doc.replace(".pdf", ""))) continue;
 
       const { score, snippets } = scoreText(text, kws);
       if (score <= 0) continue;
 
-      hits.push({ doc, pdfPage, score, quoteSnippets: snippets });
+      // weight を適用（文書ごとの重要度調整）
+      const weightedScore = score * (d.weight ?? 1.0);
+
+      hits.push({ doc, pdfPage, score: weightedScore, quoteSnippets: snippets });
     }
   }
 
