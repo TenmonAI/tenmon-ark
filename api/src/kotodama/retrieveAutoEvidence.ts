@@ -1,6 +1,7 @@
 // src/kotodama/retrieveAutoEvidence.ts
 import fs from "node:fs";
 import path from "node:path";
+import { getPageText } from "./textLoader.js";
 
 export type AutoEvidenceHit = {
   doc: string;
@@ -70,31 +71,32 @@ export function retrieveAutoEvidence(message: string, topK=3): AutoEvidenceResul
     if (!fs.existsSync(filePath)) continue;
 
     const lines = fs.readFileSync(filePath, "utf-8").split("\n").filter(Boolean);
+    let debugLogged = false; // デバッグログは1回だけ
     for (const line of lines) {
       let j: any;
       try { j = JSON.parse(line); } catch { continue; }
 
-      // pdfPage も pages系の揺れを許容（pdfPage, page, pageNumber, p）
+      // pdfPage を取得（pdfPage, page, pageNumber, p の揺れを許容）
       const pdfPage = Number(j.pdfPage ?? j.page ?? j.pageNumber ?? j.p ?? NaN);
-      
-      // docは無ければ d.doc を採用（doc未記載で落とさない）
-      const doc = String(j.doc ?? d.doc);
-      
-      // JSONLの本文キーを "pages系" に合わせて広く拾う（text, pageText, content, body, raw, ocrText）
-      const text = String(
-        j.text ?? j.pageText ?? j.content ?? j.body ?? j.raw ?? j.ocrText ?? ""
-      );
+      if (!Number.isFinite(pdfPage)) continue;
 
-      // デバッグ出力（オプション）
-      if (process.env.DEBUG_AUTO_EVIDENCE === "1" && !text && j) {
-        console.debug(`[AUTO-EVIDENCE-DEBUG] ${d.file} line keys:`, Object.keys(j));
+      // doc はファイル側の doc を優先（jsonlのdocが欠けても良い）
+      const doc = d.doc;
+
+      // 本文は textLoader を優先。空なら jsonlの候補キーを fallback
+      const fromCache = getPageText(doc, pdfPage);
+      const text = String(
+        fromCache ??
+        j.text ?? j.pageText ?? j.body ?? j.content ?? j.raw ?? j.value ?? j.t ?? ""
+      ).trim();
+
+      // デバッグ出力（1回だけ）
+      if (process.env.DEBUG_AUTO_EVIDENCE === "1" && !text && j && !debugLogged) {
+        console.debug(`[AUTO-EVIDENCE-DEBUG] ${d.file} pdfPage=${pdfPage} keys:`, Object.keys(j));
+        debugLogged = true;
       }
 
-      if (!Number.isFinite(pdfPage) || !text) continue;
-      
-      // docフィルタを弱めて「doc空なら弾かない」
-      // docが空/未定義のときは弾かずに進める
-      if (doc && doc !== d.doc && !doc.includes(d.doc.replace(".pdf", ""))) continue;
+      if (!text) continue;
 
       const { score, snippets } = scoreText(text, kws);
       if (score <= 0) continue;
