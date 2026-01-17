@@ -377,102 +377,79 @@ router.post("/chat", async (req: Request, res: Response) => {
             return res.json(result);
           }
 
-          // domainで doc/pdfPage が未指定の場合、自動検索を試みる
+          // doc/pdfPage 未指定 → 自動検索（止めない）
           if (!parsed.doc || !parsed.pdfPage) {
             const auto = retrieveAutoEvidence(message, 3);
-            console.info(
-              `[HYBRID-AUTO-EVIDENCE] hits=${auto.hits.length} confidence=${auto.confidence.toFixed(2)} top=${auto.hits[0] ? `${auto.hits[0].doc} P${auto.hits[0].pdfPage}` : "none"}`
-            );
 
-            if (auto.hits.length === 0 || !auto.hits[0]) {
-              // 従来通り（資料指定）
+            // ヒット0：次の観測を提示（空としてASK）
+            if (!auto.hits.length) {
               const response =
-                "資料準拠で答えるため、参照する資料の指定が必要です。\n" +
-                "例）言霊秘書.pdf pdfPage=6 言灵とは？ #詳細";
+                "資料準拠で答えるための該当箇所が見つかりませんでした。\n" +
+                "次のいずれかで確定できます：\n" +
+                "1) 資料名とpdfPageを指定（例：言霊秘書.pdf pdfPage=6）\n" +
+                "2) 質問をもう少し具体化（例：火水の生成鎖／正中／辞 など）";
 
               const result: any = {
                 response,
                 evidence: null,
-                decisionFrame: { 
-                  mode, 
-                  intent: skeleton.intent, 
-                  need: ["doc", "pdfPage"], 
-                  llm: null,
-                },
+                decisionFrame: { mode, intent: skeleton.intent, llm: null, need: ["doc or keywords"] },
                 timestamp: new Date().toISOString(),
-              };
-
-              if (detail) {
-                result.detail = `#詳細\n- 自動検索結果: 候補が見つかりませんでした\n- 指定方法: 「言霊秘書.pdf pdfPage=6 言灵とは？ #詳細」のように指定してください。`;
-              }
-
-              pushTurn(threadId, { role: "user", content: message, at: Date.now() });
-              pushTurn(threadId, { role: "assistant", content: response, at: Date.now() });
-              const totalLatency = Date.now() - startTime;
-
-              console.log(JSON.stringify({
-                level: "info",
-                requestId,
                 threadId,
-                mode,
-                risk: skeleton.risk,
-                latency: { total: totalLatency, liveEvidence: null, llm: null },
-                evidenceConfidence: 0.0,
-                returnedDetail: detail,
-              }));
-
-              return res.json(result);
-            } else if (auto.confidence >= 0.6) {
-              // confidence>=0.6 → 暫定採用して既存のGROUNDED処理へ流す
-              const topHit = auto.hits[0]!;
-              parsed.doc = topHit.doc;
-              parsed.pdfPage = topHit.pdfPage;
-              parsed.isEstimated = true; // 自動検索フラグ
-              parsed.autoEvidence = { // 自動検索結果を保存（detailに追加するため）
-                confidence: auto.confidence,
-                topHit: {
-                  doc: topHit.doc,
-                  pdfPage: topHit.pdfPage,
-                  quoteSnippets: topHit.quoteSnippets,
-                },
-              };
-              // 未指定分岐を抜けて下の既存処理（doc/pdfPage指定時の rec/candidates/laws生成）へ流す
-            } else {
-              // confidence < 0.6 → 候補提示
-              const response =
-                "候補を見つけました。どれを参照しますか？（番号で答えてください）\n" +
-                auto.hits.map((h, i) => `${i + 1}) ${h.doc} P${h.pdfPage}（score=${h.score.toFixed(1)}）`).join("\n");
-
-              const result: any = {
-                response,
-                evidence: { auto: true, hits: auto.hits.map(h => ({ doc: h.doc, pdfPage: h.pdfPage, score: h.score })) },
-                decisionFrame: { mode, intent: skeleton.intent, llm: null, isEstimated: true },
-                timestamp: new Date().toISOString(),
               };
 
               if (detail) {
                 result.detail =
-                  "#詳細\n- 自動検索候補:\n" +
-                  auto.hits.map((h, i) => `  ${i + 1}. doc=${h.doc} pdfPage=${h.pdfPage}\n     抜粋: ${(h.quoteSnippets?.[0] ?? "").slice(0, 120)}...`).join("\n\n");
+                  "#詳細\n- 状態: autoEvidence hits=0\n" +
+                  `- keywords: ${message}\n` +
+                  "- 次の導線: 言霊秘書.pdf pdfPage=6 / pdfPage=13 / pdfPage=69 など";
               }
-
-              pushTurn(threadId, { role: "user", content: message, at: Date.now() });
-              pushTurn(threadId, { role: "assistant", content: response, at: Date.now() });
-              const totalLatency = Date.now() - startTime;
-
-              console.log(JSON.stringify({
-                level: "info",
-                requestId,
-                threadId,
-                mode,
-                risk: skeleton.risk,
-                latency: { total: totalLatency, liveEvidence: null, llm: null },
-                evidenceConfidence: auto.confidence,
-                returnedDetail: detail,
-              }));
-
               return res.json(result);
             }
+
+            // 候補提示（信頼度が低い）
+            if (auto.confidence < 0.6) {
+              const lines = auto.hits.map((h, i) => {
+                const sn = h.quoteSnippets?.[0] ? ` / ${h.quoteSnippets[0]}` : "";
+                return `${i + 1}) ${h.doc} pdfPage=${h.pdfPage} (score=${Math.round(h.score)})${sn}`;
+              });
+
+              const response =
+                "関連候補が複数あります。どれを土台にしますか？\n" +
+                lines.join("\n") +
+                "\n\n返信例：『1番で』または『2番で』";
+
+              const result: any = {
+                response,
+                evidence: null,
+                decisionFrame: { mode, intent: skeleton.intent, llm: null, need: ["choice(1..3)"] },
+                timestamp: new Date().toISOString(),
+                threadId,
+                candidates: auto.hits, // UIで使うなら
+              };
+
+              if (detail) {
+                result.detail =
+                  "#詳細\n- 状態: autoEvidence confidence低\n" +
+                  `- confidence: ${auto.confidence.toFixed(2)}\n` +
+                  lines.join("\n");
+              }
+              return res.json(result);
+            }
+
+            // 信頼度が高い：topHit採用して続行（止めない）
+            const top = auto.hits[0];
+            parsed.doc = top.doc;
+            parsed.pdfPage = top.pdfPage;
+            parsed.isEstimated = true; // 自動検索フラグ
+            parsed.autoEvidence = { // 自動検索結果を保存（detailに追加するため）
+              confidence: auto.confidence,
+              topHit: {
+                doc: top.doc,
+                pdfPage: top.pdfPage,
+                quoteSnippets: top.quoteSnippets,
+              },
+            };
+            // 未指定分岐を抜けて下の既存処理（doc/pdfPage指定時の rec/candidates/laws生成）へ流す
           }
 
       // doc/pdfPage 指定がある場合：Evidenceを組む（LLM禁止）
