@@ -147,11 +147,13 @@ export function retrieveAutoEvidence(message: string, topK=3): AutoEvidenceResul
   const hits: AutoEvidenceHit[] = [];
   const hitMap = new Map<string, AutoEvidenceHit>(); // doc:pdfPageをキーに重複を統合
 
-  // 「いろは」系クエリ判定
-  const hasIroha = norm(message).includes("いろは") || 
-                   norm(message).includes("伊呂波") ||
-                   norm(message).includes("イロハ") ||
-                   norm(message).includes("いろは言灵解");
+  // 「いろは」系クエリ判定（最強・安全：raw + norm の二重チェック）
+  const raw = message;
+  const m = norm(message);
+  const hasIroha =
+    raw.includes("いろは") || raw.includes("イロハ") || raw.includes("伊呂波") ||
+    m.includes("いろは") || m.includes("イロハ") || m.includes("伊呂波") ||
+    m.includes("いろは言灵解");
 
   // hasIroha が true のとき、kws にいろは系の検索語を追加（IROHA側のベーススコアを上げる）
   if (hasIroha) {
