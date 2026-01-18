@@ -33,6 +33,29 @@ import readline from "node:readline";
 
 const router: IRouter = Router();
 
+// 候補メモリ（threadIdごとに候補を保持、TTL=30分）
+type CandidateMemory = {
+  hits: AutoEvidenceHit[];
+  timestamp: number;
+};
+const candidateMemory = new Map<string, CandidateMemory>();
+const CANDIDATE_TTL = 30 * 60 * 1000; // 30分
+
+function getCandidateMemory(threadId: string): AutoEvidenceHit[] | null {
+  const mem = candidateMemory.get(threadId);
+  if (!mem) return null;
+  const age = Date.now() - mem.timestamp;
+  if (age > CANDIDATE_TTL) {
+    candidateMemory.delete(threadId);
+    return null;
+  }
+  return mem.hits;
+}
+
+function setCandidateMemory(threadId: string, hits: AutoEvidenceHit[]): void {
+  candidateMemory.set(threadId, { hits, timestamp: Date.now() });
+}
+
 function parseDocAndPageStrict(text: string): { 
   doc: string | null; 
   pdfPage: number | null;
@@ -126,7 +149,9 @@ router.post("/chat", async (req: Request, res: Response) => {
     // detail 判定（req.body.debug を無視）
     // =========================
     const parsed = parseDocAndPageStrict(message);
-    const detail = isDetailRequest(message); // req.body.debug は完全無視
+    let detail = isDetailRequest(message); // req.body.debug は完全無視
+    let isNumberSelected = false; // 番号選択が成立したかどうか（detail常時返却用）
+    let selectedCandidateNumber: string | null = null; // 選択された候補番号（response用）
 
     // =========================
     // TASK B: Truth Skeleton（真理骨格）を生成
@@ -337,6 +362,105 @@ router.post("/chat", async (req: Request, res: Response) => {
         // ルール：LLM禁止 / evidence必須 / detailはコード生成のみ
         // =========================
         if (mode === "HYBRID") {
+          // 番号選択処理：候補メモリから候補を取得して採用
+          const numMatch = message.match(/^\s*(\d+)\s*$/);
+          if (numMatch) {
+            const candidateIndex = parseInt(numMatch[1], 10) - 1;
+            const savedCandidates = getCandidateMemory(threadId);
+            if (savedCandidates && savedCandidates.length > 0 && candidateIndex >= 0 && candidateIndex < savedCandidates.length) {
+              const selected = savedCandidates[candidateIndex];
+              parsed.doc = selected.doc;
+              parsed.pdfPage = selected.pdfPage;
+              parsed.isEstimated = true;
+              isNumberSelected = true; // 番号選択フラグを立てる（detail常時返却用）
+              detail = true; // 番号選択時は常にdetailを返す
+              selectedCandidateNumber = numMatch[1]; // 選択された候補番号を保存
+              candidateMemory.delete(threadId); // 採用後はメモリをクリア
+              
+              // 番号選択成立直後にdetailを返す（Task A）
+              const doc = selected.doc;
+              const pdfPage = selected.pdfPage;
+              const docKey = inferDocKey(doc);
+              
+              // lawsを組み立てる
+              const rec = getCorpusPage(doc, pdfPage);
+              const pageText = (rec?.cleanedText ?? "").toString().slice(0, 4000);
+              const candidates = await getPageCandidates(doc, pdfPage, 12);
+              let laws = candidates.map((c: LawCandidate) => ({ id: c.id, title: c.title, quote: c.quote }));
+              
+              // fallback（ktk/irohaはcandidatesが空になりやすいので）
+              if (laws.length === 0 && pageText) {
+                laws = makeFallbackLawsFromText({ docKey, pdfPage, pageText, message, limit: 6 });
+              }
+              
+              const pick = numMatch[1];
+              
+              // 暫定回答を生成（LLM不要、コード生成で要点1〜2個を1〜3文でまとめる）
+              let provisionalAnswer = "";
+              if (laws.length > 0) {
+                const firstLaw = laws[0];
+                const title = firstLaw.title || "";
+                const quotePreview = (String(firstLaw.quote ?? "") || "").slice(0, 100).replace(/\s+/g, " ");
+                if (title && quotePreview) {
+                  provisionalAnswer = `資料上このページでは「${title}」について、${quotePreview}${quotePreview.length >= 100 ? "..." : ""}と述べられています。`;
+                } else if (title) {
+                  provisionalAnswer = `資料上このページでは「${title}」について記載があります。`;
+                } else if (quotePreview) {
+                  provisionalAnswer = `資料上このページでは、${quotePreview}${quotePreview.length >= 100 ? "..." : ""}と読めます。`;
+                }
+              }
+              if (!provisionalAnswer && pageText) {
+                const textPreview = pageText.slice(0, 150).replace(/\s+/g, " ");
+                provisionalAnswer = `資料上このページでは、${textPreview}${textPreview.length >= 150 ? "..." : ""}と読めます。`;
+              }
+              if (!provisionalAnswer) {
+                provisionalAnswer = `資料上このページ（${doc} P${pdfPage}）には関連情報があります。`;
+              }
+              
+              const response = `了解しました。候補 ${pick} を採用します（${doc} P${pdfPage}）。\n\n${provisionalAnswer}\n\n根拠候補を添付します。`;
+              
+              pushTurn(threadId, { role: "user", content: message, at: Date.now() });
+              pushTurn(threadId, { role: "assistant", content: response, at: Date.now() });
+              const totalLatency = Date.now() - startTime;
+              
+              console.log(JSON.stringify({
+                level: "info",
+                requestId,
+                threadId,
+                mode,
+                risk: skeleton.risk,
+                latency: { total: totalLatency, liveEvidence: null, llm: null },
+                evidenceConfidence: laws.length > 0 ? 1.0 : null,
+                returnedDetail: true,
+              }));
+              
+              // ★ 常に detail を返す（null禁止）
+              const result: any = {
+                response,
+                evidence: { doc, pdfPage, isEstimated: true, laws: laws.map((l) => ({ id: l.id, title: l.title })) },
+                decisionFrame: { mode: "HYBRID", intent: skeleton.intent, llm: null, isEstimated: true, picked: pick },
+                timestamp: new Date().toISOString(),
+                threadId,
+                detail:
+                  `#詳細\n- doc: ${doc}\n- pdfPage: ${pdfPage}\n- 根拠候補:\n` +
+                  laws.map((l) => `  - ${l.id}: ${l.title}\n    引用: ${(String(l.quote ?? "") || "(引用なし)").slice(0, 240)}`).join("\n"),
+              };
+              
+              return res.json(result);
+            } else {
+              const response = savedCandidates
+                ? `候補番号「${numMatch[1]}」が見つかりませんでした。1〜${savedCandidates.length}の範囲で指定してください。`
+                : "候補が見つかりませんでした。再度質問を送信してください。";
+              return res.json({
+                response,
+                evidence: null,
+                decisionFrame: { mode, intent: skeleton.intent, llm: null, need: ["valid candidate number"] },
+                timestamp: new Date().toISOString(),
+                threadId,
+              });
+            }
+          }
+
           // Phase 4: Kanagi patterns がロードされていない場合は ASK に倒す（断定禁止）
           const kanagiStatus = getPatternsLoadStatus();
           if (!kanagiStatus.loaded) {
@@ -408,6 +532,9 @@ router.post("/chat", async (req: Request, res: Response) => {
 
             // 候補提示（信頼度が低い）
             if (auto.confidence < 0.6) {
+              // 候補をメモリに保存（TTL付き）
+              setCandidateMemory(threadId, auto.hits);
+
               const lines = auto.hits.map((h, i) => {
                 const sn = h.quoteSnippets?.[0] ? ` / ${h.quoteSnippets[0]}` : "";
                 return `${i + 1}) ${h.doc} pdfPage=${h.pdfPage} (score=${Math.round(h.score)})${sn}`;
@@ -416,7 +543,7 @@ router.post("/chat", async (req: Request, res: Response) => {
               const response =
                 "関連候補が複数あります。どれを土台にしますか？\n" +
                 lines.join("\n") +
-                "\n\n返信例：『1番で』または『2番で』";
+                "\n\n返信例：『1』または『2』（番号だけ送信してください）";
 
               const result: any = {
                 response,
@@ -570,10 +697,13 @@ router.post("/chat", async (req: Request, res: Response) => {
       }
 
       // response/detail はコード生成のみ
-      const response = stripForbiddenFromResponse(plan.responseDraft);
+      // 番号選択時はresponseを「候補Xを採用しました。根拠を添付します。」に変更
+      const responseText = isNumberSelected && selectedCandidateNumber
+        ? `候補${selectedCandidateNumber}を採用しました。根拠を添付します。`
+        : stripForbiddenFromResponse(plan.responseDraft);
 
       const result: any = {
-        response,
+        response: responseText,
         evidence: {
           doc,
           pdfPage,
@@ -592,7 +722,8 @@ router.post("/chat", async (req: Request, res: Response) => {
         timestamp: new Date().toISOString(),
       };
 
-      if (detail) {
+      // 番号選択時は常にdetailを返す（A案：null禁止）
+      if (detail || isNumberSelected) {
         // Phase 2: detail を完全コード生成で統一（捏造ゼロ）
         let detailText = composeDetailFromEvidence(plan, plan.evidence, {
           valid: verification.valid,
@@ -603,11 +734,15 @@ router.post("/chat", async (req: Request, res: Response) => {
           const topHitSnippets = parsed.autoEvidence.topHit.quoteSnippets.slice(0, 2).map((s, i) => `  [抜粋${i + 1}] ${s.slice(0, 150)}...`).join("\n");
           detailText += `\n\n【自動検索結果（暫定回答）】\n- 採用: ${doc} P${pdfPage}\n- confidence: ${parsed.autoEvidence.confidence.toFixed(2)}\n- 抜粋:\n${topHitSnippets}`;
         }
-        result.detail = detailText;
+        // detailが空の場合は不足理由+次導線を返す
+        if (!detailText || detailText.trim().length === 0) {
+          detailText = `#詳細\n- 状態: 根拠生成に失敗\n- doc: ${doc}\n- pdfPage: ${pdfPage}\n- 次の導線: 詳細ページを指定してください`;
+        }
+        result.detail = detailText; // 必ずstringで返す（null禁止）
       }
 
       pushTurn(threadId, { role: "user", content: message, at: Date.now() });
-      pushTurn(threadId, { role: "assistant", content: response, at: Date.now() });
+      pushTurn(threadId, { role: "assistant", content: responseText, at: Date.now() });
       const totalLatency = Date.now() - startTime;
 
       console.log(JSON.stringify({

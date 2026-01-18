@@ -18,21 +18,48 @@ export type AutoEvidenceResult = {
 const CORPUS_DIR = process.env.TENMON_CORPUS_DIR ?? "/opt/tenmon-corpus/db";
 
 const DOCS = [
-  { doc: "言霊秘書.pdf", file: "khs_text.jsonl", weight: 1.2 },
-  { doc: "カタカムナ言灵解.pdf", file: "ktk_text.jsonl", weight: 1.0 },
-  { doc: "いろは最終原稿.pdf", file: "iroha_text.jsonl", weight: 1.1 },
+  { doc: "言霊秘書.pdf", textFile: "khs_text.jsonl", lawFile: "khs_law_candidates.jsonl", weight: 1.2 },
+  { doc: "カタカムナ言灵解.pdf", textFile: "ktk_text.jsonl", lawFile: "ktk_law_candidates.jsonl", weight: 1.0 },
+  { doc: "いろは最終原稿.pdf", textFile: "iroha_text.jsonl", lawFile: "iroha_law_candidates.jsonl", weight: 1.1 },
 ] as const;
 
+// 文字列正規化（簡易版）
+function norm(s: string): string {
+  return s.toLowerCase().replace(/\s+/g, "");
+}
+
+// コア用語リスト
+const CORE_TERMS = [
+  "躰","体","用",
+  "正中","水火","生成","辞","テニヲハ",
+  "空仮中","メシア",
+  "カタカムナ","天津金木","布斗麻邇","真言","秘密荘厳心",
+];
+
 function keywordsFrom(message: string): string[] {
-  const important = [
-    "言灵","言霊","ことだま",
-    "躰","体","用",
-    "正中","水火","生成","辞","テニヲハ",
-    "空仮中","メシア",
-    "カタカムナ","天津金木","布斗麻邇","真言","秘密荘厳心",
-  ];
-  const hits = important.filter(k => message.includes(k));
-  return Array.from(new Set(hits.length ? hits : ["言灵","言霊"]));
+  const m = norm(message);
+  const set = new Set<string>();
+
+  // 言霊系：表記揺れを必ず展開
+  const hasKotodama =
+    m.includes("言灵") || m.includes("言霊") || m.includes("言靈") ||
+    m.includes("ことだま") || m.includes("コトダマ");
+
+  if (hasKotodama) {
+    ["言霊", "言靈", "ことだま", "コトダマ"].forEach(x => set.add(x));
+  }
+
+  // 既存の重要語も拾う（ただし言灵単体に偏らない）
+  for (const k of CORE_TERMS) {
+    if (m.includes(norm(k))) set.add(k);
+  }
+
+  // 何も無ければ言霊系を最低セットとして入れる
+  if (set.size === 0) {
+    ["言霊", "言靈", "ことだま", "コトダマ"].forEach(x => set.add(x));
+  }
+
+  return Array.from(set);
 }
 
 function escapeRegExp(s: string): string {
@@ -70,54 +97,238 @@ function scoreText(text: string, kws: string[], weight: number = 1.0): { score: 
   return { score: weightedScore, snippets: snippets.slice(0, 3) };
 }
 
-export function retrieveAutoEvidence(message: string, topK=3): AutoEvidenceResult {
-  const kws = keywordsFrom(message);
-  const hits: AutoEvidenceHit[] = [];
-  let debugLogged = false; // デバッグログは1回だけ
+// law_candidates.jsonlから検索（Phase3.5：優先）
+function scoreLawCandidate(
+  candidate: { title: string; quote: string },
+  kws: string[],
+  message: string,
+  weight: number = 1.0
+): { score: number; snippets: string[] } {
+  let score = 0;
+  const snippets: string[] = [];
 
-  for (const d of DOCS) {
-    const filePath = path.join(CORPUS_DIR, d.file);
-    if (!fs.existsSync(filePath)) continue;
+  const quoteText = candidate.quote || "";
+  const titleText = candidate.title || "";
 
-    const lines = fs.readFileSync(filePath, "utf-8").split("\n").filter(Boolean);
-    for (const line of lines) {
-      let j: any;
-      try { j = JSON.parse(line); } catch { continue; }
-
-      // pdfPage を取得（pdfPage, page, pageNumber, p の揺れを許容）
-      const pdfPage = Number(j.pdfPage ?? j.page ?? j.pageNumber ?? j.p ?? NaN);
-      if (!Number.isFinite(pdfPage)) continue;
-
-      // doc はファイル側の doc を固定
-      const doc = d.doc;
-
-      // 本文は必ず getPageText のみを使用（jsonlのtextは使わない）
-      const fromCache = getPageText(doc, pdfPage);
-      const text = String(fromCache ?? "").trim();
-      if (!text) continue;
-
-      // scoreText に weight を渡してスコアリング
-      const { score, snippets } = scoreText(text, kws, d.weight ?? 1.0);
-
-      // デバッグ出力（pdfPage=6のとき、1回だけ）
-      if (process.env.DEBUG_AUTO_EVIDENCE === "1" && pdfPage === 6 && !debugLogged) {
-        console.debug(`[AUTO-EVIDENCE-DEBUG] pdfPage=6 score=${score} snippets=${snippets.length} text_len=${text.length}`);
-        debugLogged = true;
-      }
-
-      if (score <= 0) continue;
-
-      hits.push({ doc, pdfPage, score, quoteSnippets: snippets });
+  // kw一致（title内）×20
+  const titleLower = titleText.toLowerCase();
+  for (const kw of kws) {
+    if (titleLower.includes(kw.toLowerCase())) {
+      score += 20;
     }
   }
 
-  // 決定論ソート
-  hits.sort((a,b) => (b.score - a.score) || a.doc.localeCompare(b.doc) || (a.pdfPage - b.pdfPage));
+  // kw一致（quote内）×10
+  for (const kw of kws) {
+    const escapedKw = escapeRegExp(kw);
+    const count = (quoteText.match(new RegExp(escapedKw, "gi")) ?? []).length;
+    if (count > 0) {
+      score += count * 10;
+      const sn = snippetAround(quoteText, kw, 200);
+      if (sn) snippets.push(sn);
+    }
+  }
+
+  // query全体がquoteに含まれる場合 +20
+  const messageNorm = norm(message);
+  const quoteNorm = norm(quoteText);
+  if (quoteNorm.includes(messageNorm) && messageNorm.length > 5) {
+    score += 20;
+  }
+
+  // weight を適用
+  const weightedScore = score * weight;
+
+  return { score: weightedScore, snippets: snippets.slice(0, 3) };
+}
+
+export function retrieveAutoEvidence(message: string, topK=3): AutoEvidenceResult {
+  let kws = keywordsFrom(message);
+  const hits: AutoEvidenceHit[] = [];
+  const hitMap = new Map<string, AutoEvidenceHit>(); // doc:pdfPageをキーに重複を統合
+
+  // 「いろは」系クエリ判定
+  const hasIroha = norm(message).includes("いろは") || 
+                   norm(message).includes("伊呂波") ||
+                   norm(message).includes("イロハ") ||
+                   norm(message).includes("いろは言灵解");
+
+  // hasIroha が true のとき、kws にいろは系の検索語を追加（IROHA側のベーススコアを上げる）
+  if (hasIroha) {
+    const irohaKeywords = ["いろは", "イロハ", "伊呂波", "いろは言灵解"];
+    kws = [...kws, ...irohaKeywords];
+  }
+
+  // 言霊系質問かどうかを判定（keywordsFromの戻りに言霊系が含まれるかチェック）
+  const hasKotodama = kws.some(k => 
+    ["言霊", "言靈", "言灵", "ことだま", "コトダマ"].includes(k)
+  );
+
+  // 「カタカムナ」系クエリ判定
+  const hasKatakanana = norm(message).includes("カタカムナ") ||
+                        norm(message).includes("かたかむな") ||
+                        norm(message).includes("カタカムナ言灵解");
+
+  if (process.env.DEBUG_AUTO_EVIDENCE === "1") {
+    console.log("[AE-DEBUG] hasIroha=", hasIroha, "hasKotodama=", hasKotodama);
+    console.log("[AE-DEBUG] kws(final)=", kws);
+  }
+
+  // Phase3.5: law_candidates.jsonlからの検索（最優先）
+  for (const d of DOCS) {
+    const lawFilePath = path.join(CORPUS_DIR, d.lawFile);
+    if (fs.existsSync(lawFilePath)) {
+      const lawLines = fs.readFileSync(lawFilePath, "utf-8").split("\n").filter(Boolean);
+      for (const line of lawLines) {
+        let candidate: any;
+        try { candidate = JSON.parse(line); } catch { continue; }
+
+        // スキーマチェック（confidence/doc/id/pdfPage/quote/rule/title）
+        if (!candidate.doc || !candidate.pdfPage || !Number.isFinite(candidate.pdfPage)) continue;
+        if (candidate.doc !== d.doc) continue;
+
+        let { score: lawScore, snippets: lawSnippets } = scoreLawCandidate(
+          { title: candidate.title || "", quote: candidate.quote || "" },
+          kws,
+          message,
+          d.weight ?? 1.0
+        );
+
+        // 「いろは」系クエリでIROHAへの寄せ補正 +30
+        if (hasIroha && d.doc === "いろは最終原稿.pdf") {
+          lawScore += 30;
+        }
+
+        // 「カタカムナ」系クエリでKTKへの寄せ補正 +30
+        if (hasKatakanana && d.doc === "カタカムナ言灵解.pdf") {
+          lawScore += 30;
+        }
+
+        // P6優先補正（言霊系質問のとき、言霊秘書.pdfの定義帯域にボーナス）
+        // hasIroha の場合は無効化（いろは質問で言霊秘書の定義帯域を押し上げるのは不自然なので抑制）
+        if (hasKotodama && !hasIroha && d.doc === "言霊秘書.pdf") {
+          if (candidate.pdfPage >= 6 && candidate.pdfPage <= 10) {
+            lawScore += 15; // 定義帯域（P6〜10）に大ボーナス
+          } else if (candidate.pdfPage >= 13 && candidate.pdfPage <= 20) {
+            lawScore += 5; // 小定義帯域（P13〜20）に小ボーナス
+          }
+        }
+
+        if (lawScore <= 0) continue;
+
+        const key = `${d.doc}:${candidate.pdfPage}`;
+        const existing = hitMap.get(key);
+        if (existing) {
+          // 既存のhitと統合（スコアの高い方を採用、snippetsを統合）
+          if (lawScore > existing.score) {
+            existing.score = lawScore;
+            existing.quoteSnippets = lawSnippets;
+          } else {
+            existing.quoteSnippets = [...new Set([...existing.quoteSnippets, ...lawSnippets])].slice(0, 3);
+          }
+        } else {
+          hitMap.set(key, {
+            doc: d.doc,
+            pdfPage: candidate.pdfPage,
+            score: lawScore,
+            quoteSnippets: lawSnippets,
+          });
+        }
+      }
+    }
+  }
+
+  // hitMapから配列に変換
+  hits.push(...Array.from(hitMap.values()));
+
+  // 決定論ソート（score desc → pdfPage asc → doc asc）
+  hits.sort((a, b) =>
+    (b.score - a.score) ||
+    (a.pdfPage - b.pdfPage) ||   // ★ 同点は小さいページを優先（P6が勝つ）
+    a.doc.localeCompare(b.doc)
+  );
+
+  // hits が topK 未満の場合のみ textLoader 検索を fallback で補助
+  if (hits.length < topK) {
+    for (const d of DOCS) {
+      const filePath = path.join(CORPUS_DIR, d.textFile);
+      if (!fs.existsSync(filePath)) continue;
+
+      const lines = fs.readFileSync(filePath, "utf-8").split("\n").filter(Boolean);
+      for (const line of lines) {
+        let j: any;
+        try { j = JSON.parse(line); } catch { continue; }
+
+        // pdfPage を取得（pdfPage, page, pageNumber, p の揺れを許容）
+        const pdfPage = Number(j.pdfPage ?? j.page ?? j.pageNumber ?? j.p ?? NaN);
+        if (!Number.isFinite(pdfPage)) continue;
+
+        // doc はファイル側の doc を固定
+        const doc = d.doc;
+
+        const key = `${doc}:${pdfPage}`;
+        // 既に law_candidates で見つかっている場合は追加しない（law_candidates優先）
+        if (hitMap.has(key)) continue;
+
+        // 本文は必ず getPageText のみを使用（jsonlのtextは使わない）
+        const fromCache = getPageText(doc, pdfPage);
+        const text = String(fromCache ?? "").trim();
+        if (!text) continue;
+
+        // scoreText に weight を渡してスコアリング
+        let { score, snippets } = scoreText(text, kws, d.weight ?? 1.0);
+
+        // 「いろは」系クエリでIROHAへの寄せ補正 +30（fallbackでも適用）
+        if (hasIroha && doc === "いろは最終原稿.pdf") {
+          score += 30;
+        }
+
+        // 「カタカムナ」系クエリでKTKへの寄せ補正 +30（fallbackでも適用）
+        if (hasKatakanana && doc === "カタカムナ言灵解.pdf") {
+          score += 30;
+        }
+
+        // P6優先補正（言霊系質問のとき、言霊秘書.pdfの定義帯域にボーナス）
+        // hasIroha の場合は無効化（いろは質問で言霊秘書の定義帯域を押し上げるのは不自然なので抑制）
+        if (hasKotodama && !hasIroha && doc === "言霊秘書.pdf") {
+          if (pdfPage >= 6 && pdfPage <= 10) {
+            score += 15; // 定義帯域（P6〜10）に大ボーナス
+          } else if (pdfPage >= 13 && pdfPage <= 20) {
+            score += 5; // 小定義帯域（P13〜20）に小ボーナス
+          }
+        }
+
+        if (score <= 0) continue;
+
+        hitMap.set(key, { doc, pdfPage, score, quoteSnippets: snippets });
+        hits.push({ doc, pdfPage, score, quoteSnippets: snippets });
+
+        // topK に達したら終了
+        if (hits.length >= topK) break;
+      }
+      if (hits.length >= topK) break;
+    }
+
+    // fallback で追加した分も再ソート
+    hits.sort((a, b) =>
+      (b.score - a.score) ||
+      (a.pdfPage - b.pdfPage) ||
+      a.doc.localeCompare(b.doc)
+    );
+  }
 
   const top = hits.slice(0, topK);
   const topScore = top[0]?.score ?? 0;
   const secondScore = top[1]?.score ?? 0;
   const confidence = topScore > 0 ? topScore / (topScore + secondScore + 1) : 0;
+
+  // DEBUGログにtop3のdoc/pdfPage/scoreを出す
+  if (process.env.DEBUG_AUTO_EVIDENCE === "1") {
+    console.log("[AE-DEBUG] top3:");
+    top.slice(0, 3).forEach((h, i) => {
+      console.log(`  ${i + 1}. doc=${h.doc} pdfPage=${h.pdfPage} score=${h.score.toFixed(1)}`);
+    });
+  }
 
   return { hits: top, confidence };
 }
