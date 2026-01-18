@@ -9,6 +9,9 @@ export type KuGovernorResult = {
   stance: KuStance;
   reason: string;
   nextActions: string[];
+  doc?: string;
+  pdfPage?: number;
+  candidates?: AutoEvidenceHit[];
 };
 
 /**
@@ -55,14 +58,19 @@ export function decideKuStance(
       nextActions: candidates.map((h, i) => 
         `${i + 1}) ${h.doc} pdfPage=${h.pdfPage} (score=${Math.round(h.score)})`
       ),
+      candidates: autoEvidence.hits,
     };
   }
 
   // confidence が高い場合は ANSWER（暫定採用）
+  const top = autoEvidence.hits[0];
   return {
     stance: "ANSWER",
     reason: `自動検索で高信頼度の候補が見つかりました（confidence=${autoEvidence.confidence.toFixed(2)}）`,
     nextActions: ["最上位候補を採用して回答を生成"],
+    doc: top.doc,
+    pdfPage: top.pdfPage,
+    candidates: autoEvidence.hits,
   };
 }
 

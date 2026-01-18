@@ -25,6 +25,7 @@ import { verifyCorePlan } from "../kanagi/verifier.js";
 import { containsForbiddenTemplate, getFallbackTemplate } from "../persona/outputGuard.js";
 import { searchPages } from "../kotodama/retrievalIndex.js";
 import { retrieveAutoEvidence, type AutoEvidenceHit } from "../kotodama/retrieveAutoEvidence.js";
+import { decideKuStance } from "../ku/kuGovernor.js";
 import { composeDetailFromEvidence } from "../persona/composeDetail.js";
 import { getPatternsLoadStatus } from "../kanagi/patterns/loadPatterns.js";
 
@@ -37,6 +38,7 @@ const router: IRouter = Router();
 type AutoPickMemoryEntry = {
   hits: AutoEvidenceHit[];
   createdAt: number;
+  detailRequested?: boolean;
 };
 const autoPickMemory = new Map<string, AutoPickMemoryEntry>();
 const CANDIDATE_TTL = 30 * 60 * 1000; // 30分
@@ -50,6 +52,17 @@ function getCandidateMemory(threadId: string): AutoEvidenceHit[] | null {
     return null;
   }
   return mem.hits;
+}
+
+function getCandidateMemoryEntry(threadId: string): AutoPickMemoryEntry | null {
+  const mem = autoPickMemory.get(threadId);
+  if (!mem) return null;
+  const age = Date.now() - mem.createdAt;
+  if (age > CANDIDATE_TTL) {
+    autoPickMemory.delete(threadId);
+    return null;
+  }
+  return mem;
 }
 
 function parseDocAndPageStrict(text: string): { 
@@ -362,7 +375,8 @@ router.post("/chat", async (req: Request, res: Response) => {
           const numMatch = message.match(/^\s*(\d+)\s*$/);
           if (numMatch) {
             const candidateIndex = parseInt(numMatch[1], 10) - 1;
-            const savedCandidates = getCandidateMemory(threadId);
+            const memo = getCandidateMemoryEntry(threadId);
+            const savedCandidates = memo?.hits ?? null;
             if (savedCandidates && savedCandidates.length > 0 && candidateIndex >= 0 && candidateIndex < savedCandidates.length) {
               const selected = savedCandidates[candidateIndex];
               parsed.doc = selected.doc;
@@ -372,8 +386,8 @@ router.post("/chat", async (req: Request, res: Response) => {
               selectedCandidateNumber = numMatch[1]; // 選択された候補番号を保存
               autoPickMemory.delete(threadId); // 採用後はメモリをクリア
               
-              // 番号選択（pick成立）は「詳細要求を内包」する（detail常時返し）
-              const detailWanted = true; // pick時のみ常にtrue
+              // 番号選択（pick成立）は memo.detailRequested を継承する
+              const detailWanted = detail || memo?.detailRequested || false;
               
               // 番号選択成立直後にdetailを返す（Task A）
               const doc = selected.doc;
@@ -504,84 +518,90 @@ router.post("/chat", async (req: Request, res: Response) => {
           }
 
           // doc/pdfPage 未指定 → 自動検索（止めない）
+          // Phase4: Kū Governor を使用して判定
           if (!parsed.doc || !parsed.pdfPage) {
             const auto = retrieveAutoEvidence(message, 3);
+            const kuResult = decideKuStance(message, mode, auto, null);
 
-            // ヒット0：次の観測を提示（空としてASK）
-            if (!auto.hits.length) {
-              const response =
-                "資料準拠で答えるための該当箇所が見つかりませんでした。\n" +
-                "次のいずれかで確定できます：\n" +
-                "1) 資料名とpdfPageを指定（例：言霊秘書.pdf pdfPage=6）\n" +
-                "2) 質問をもう少し具体化（例：火水の生成鎖／正中／辞 など）";
+            // ASK の場合：既存のレスポンス生成ロジックを使用
+            if (kuResult.stance === "ASK") {
+              // ヒット0：次の観測を提示（空としてASK）
+              if (!auto.hits.length) {
+                const response =
+                  "資料準拠で答えるための該当箇所が見つかりませんでした。\n" +
+                  "次のいずれかで確定できます：\n" +
+                  "1) 資料名とpdfPageを指定（例：言霊秘書.pdf pdfPage=6）\n" +
+                  "2) 質問をもう少し具体化（例：火水の生成鎖／正中／辞 など）";
 
-              const result: any = {
-                response,
-                evidence: null,
-                decisionFrame: { mode, intent: skeleton.intent, llm: null, need: ["doc or keywords"] },
-                timestamp: new Date().toISOString(),
-                threadId,
-              };
+                const result: any = {
+                  response,
+                  evidence: null,
+                  decisionFrame: { mode, intent: skeleton.intent, llm: null, need: ["doc or keywords"] },
+                  timestamp: new Date().toISOString(),
+                  threadId,
+                };
 
-              if (detail) {
-                result.detail =
-                  "#詳細\n- 状態: autoEvidence hits=0\n" +
-                  `- keywords: ${message}\n` +
-                  "- 次の導線: 言霊秘書.pdf pdfPage=6 / pdfPage=13 / pdfPage=69 など";
+                if (detail) {
+                  result.detail =
+                    "#詳細\n- 状態: autoEvidence hits=0\n" +
+                    `- keywords: ${message}\n` +
+                    "- 次の導線: 言霊秘書.pdf pdfPage=6 / pdfPage=13 / pdfPage=69 など";
+                }
+                return res.json(result);
               }
-              return res.json(result);
+
+              // 候補提示（信頼度が低い）
+              if (auto.confidence < 0.6) {
+                // 候補をメモリに保存（TTL付き）
+                autoPickMemory.set(threadId, { hits: auto.hits, createdAt: Date.now(), detailRequested: detail });
+
+                const lines = auto.hits.map((h, i) => {
+                  const sn = h.quoteSnippets?.[0] ? ` / ${h.quoteSnippets[0]}` : "";
+                  return `${i + 1}) ${h.doc} pdfPage=${h.pdfPage} (score=${Math.round(h.score)})${sn}`;
+                });
+
+                const response =
+                  "関連候補が複数あります。どれを土台にしますか？\n" +
+                  lines.join("\n") +
+                  "\n\n返信例：『1』または『2』（番号だけ送信してください）";
+
+                const result: any = {
+                  response,
+                  evidence: null,
+                  decisionFrame: { mode, intent: skeleton.intent, llm: null, need: ["choice(1..3)"] },
+                  timestamp: new Date().toISOString(),
+                  threadId,
+                  candidates: auto.hits, // UIで使うなら
+                };
+
+                if (detail) {
+                  result.detail =
+                    "#詳細\n- 状態: autoEvidence confidence低\n" +
+                    `- confidence: ${auto.confidence.toFixed(2)}\n` +
+                    lines.join("\n");
+                }
+                return res.json(result);
+              }
             }
 
-            // 候補提示（信頼度が低い）
-            if (auto.confidence < 0.6) {
-              // 候補をメモリに保存（TTL付き）
-              autoPickMemory.set(threadId, { hits: auto.hits, createdAt: Date.now() });
-
-              const lines = auto.hits.map((h, i) => {
-                const sn = h.quoteSnippets?.[0] ? ` / ${h.quoteSnippets[0]}` : "";
-                return `${i + 1}) ${h.doc} pdfPage=${h.pdfPage} (score=${Math.round(h.score)})${sn}`;
-              });
-
-              const response =
-                "関連候補が複数あります。どれを土台にしますか？\n" +
-                lines.join("\n") +
-                "\n\n返信例：『1』または『2』（番号だけ送信してください）";
-
-              const result: any = {
-                response,
-                evidence: null,
-                decisionFrame: { mode, intent: skeleton.intent, llm: null, need: ["choice(1..3)"] },
-                timestamp: new Date().toISOString(),
-                threadId,
-                candidates: auto.hits, // UIで使うなら
+            // ANSWER の場合：doc/pdfPage を確定させて既存処理へ流す
+            if (kuResult.stance === "ANSWER" && kuResult.doc && kuResult.pdfPage) {
+              // ★ 暫定採用でも候補を保存し、次の message="1" を成立させる
+              autoPickMemory.set(threadId, { hits: auto.hits, createdAt: Date.now(), detailRequested: detail });
+              
+              parsed.doc = kuResult.doc;
+              parsed.pdfPage = kuResult.pdfPage;
+              parsed.isEstimated = true; // 自動検索フラグ
+              parsed.autoEvidence = { // 自動検索結果を保存（detailに追加するため）
+                confidence: auto.confidence,
+                topHit: {
+                  doc: kuResult.doc,
+                  pdfPage: kuResult.pdfPage,
+                  quoteSnippets: auto.hits[0]?.quoteSnippets ?? [],
+                },
               };
-
-              if (detail) {
-                result.detail =
-                  "#詳細\n- 状態: autoEvidence confidence低\n" +
-                  `- confidence: ${auto.confidence.toFixed(2)}\n` +
-                  lines.join("\n");
-              }
-              return res.json(result);
+              // 未指定分岐を抜けて下の既存処理（doc/pdfPage指定時の rec/candidates/laws生成）へ流す
             }
-
-            // 信頼度が高い：topHit採用して続行（止めない）
-            // ★ 暫定採用でも候補を保存し、次の message="1" を成立させる
-            autoPickMemory.set(threadId, { hits: auto.hits, createdAt: Date.now() });
-            
-            const top = auto.hits[0];
-            parsed.doc = top.doc;
-            parsed.pdfPage = top.pdfPage;
-            parsed.isEstimated = true; // 自動検索フラグ
-            parsed.autoEvidence = { // 自動検索結果を保存（detailに追加するため）
-              confidence: auto.confidence,
-              topHit: {
-                doc: top.doc,
-                pdfPage: top.pdfPage,
-                quoteSnippets: top.quoteSnippets,
-              },
-            };
-            // 未指定分岐を抜けて下の既存処理（doc/pdfPage指定時の rec/candidates/laws生成）へ流す
           }
 
       // doc/pdfPage 指定がある場合：Evidenceを組む（LLM禁止）

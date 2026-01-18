@@ -6,6 +6,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { getPatternsLoadStatus } from "../kanagi/patterns/loadPatterns.js";
 import { RANKING_POLICY } from "../kotodama/rankingPolicy.js";
+import { TENMON_ARK_VERSION, TENMON_ARK_BUILT_AT, TENMON_ARK_GIT_SHA } from "../version.js";
 
 const router = Router();
 
@@ -52,6 +53,11 @@ function getCorpusInfo(fileName: string): CorpusInfo {
 
 router.get("/audit", (req, res) => {
   try {
+    // version/builtAt/gitSha
+    const version = TENMON_ARK_VERSION;
+    const builtAt = TENMON_ARK_BUILT_AT;
+    const gitSha = TENMON_ARK_GIT_SHA;
+
     // corpus存在/行数
     const corpus: CorpusAudit = {
       khs: {
@@ -83,21 +89,29 @@ router.get("/audit", (req, res) => {
       DOC_WEIGHTS: RANKING_POLICY.DOC_WEIGHTS,
     };
 
+    // verifier（未実装）
+    const verifier = {
+      mode: "todo",
+    };
+
     res.json({
+      version,
+      builtAt,
+      gitSha,
       corpus,
       kanagiPatterns: kanagiPatterns.loaded
         ? {
             loaded: true,
             count: kanagiPatterns.count,
-            path: kanagiPatterns.path,
+            sourcePath: kanagiPatterns.path,
           }
         : {
             loaded: false,
             count: 0,
-            path: null,
-            TODO: "kanagi patterns のロード状態を取得できませんでした",
+            sourcePath: null,
           },
       rankingPolicy,
+      verifier,
       timestamp: new Date().toISOString(),
     });
   } catch (error: any) {

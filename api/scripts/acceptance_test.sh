@@ -945,6 +945,114 @@ echo "${PASS}: 暫定採用→番号選択で detailType==\"string\" かつ deta
 echo ""
 
 # ============================================
+# Phase 17: /api/audit 監査仕様テスト（Phase4追加）
+# ============================================
+echo "【Phase 17: /api/audit 監査仕様テスト（Phase4追加）】"
+echo "テスト: /api/audit → 200、JSON、version/builtAt/gitSha/corpus/rankingPolicy/kanagiPatterns/verifier が返る"
+AUDIT_JSON=$(curl -sS -w "\nHTTP_CODE:%{http_code}" "${BASE_URL}/api/audit")
+HTTP_CODE=$(echo "${AUDIT_JSON}" | grep "HTTP_CODE" | cut -d: -f2)
+AUDIT_BODY=$(echo "${AUDIT_JSON}" | sed '/HTTP_CODE/d')
+
+echo "HTTP Code: ${HTTP_CODE}"
+echo "Response: ${AUDIT_BODY}" | jq '.' | head -n 40
+echo ""
+
+# 検証: HTTPステータスコードが200であること
+if [ "${HTTP_CODE}" != "200" ]; then
+  echo "${FAIL}: /api/audit should return 200, but got ${HTTP_CODE}"
+  exit 1
+fi
+
+# 検証: JSONが返ること
+if ! echo "${AUDIT_BODY}" | jq '.' > /dev/null 2>&1; then
+  echo "${FAIL}: /api/audit should return valid JSON"
+  exit 1
+fi
+
+# 検証: version/builtAt/gitSha が存在すること（nullでもOK）
+VERSION_PRESENT=$(echo "${AUDIT_BODY}" | jq 'has("version")')
+BUILT_AT_PRESENT=$(echo "${AUDIT_BODY}" | jq 'has("builtAt")')
+GIT_SHA_PRESENT=$(echo "${AUDIT_BODY}" | jq 'has("gitSha")')
+if [ "${VERSION_PRESENT}" != "true" ] || [ "${BUILT_AT_PRESENT}" != "true" ] || [ "${GIT_SHA_PRESENT}" != "true" ]; then
+  echo "${FAIL}: /api/audit should contain 'version', 'builtAt', and 'gitSha' fields"
+  exit 1
+fi
+
+# 検証: corpus が存在すること
+CORPUS_PRESENT=$(echo "${AUDIT_BODY}" | jq 'has("corpus")')
+if [ "${CORPUS_PRESENT}" != "true" ]; then
+  echo "${FAIL}: /api/audit should contain 'corpus' field"
+  exit 1
+fi
+
+# 検証: rankingPolicy が存在すること
+RANKING_POLICY_PRESENT=$(echo "${AUDIT_BODY}" | jq 'has("rankingPolicy")')
+if [ "${RANKING_POLICY_PRESENT}" != "true" ]; then
+  echo "${FAIL}: /api/audit should contain 'rankingPolicy' field"
+  exit 1
+fi
+
+# 検証: kanagiPatterns が存在すること
+KANAGI_PRESENT=$(echo "${AUDIT_BODY}" | jq 'has("kanagiPatterns")')
+if [ "${KANAGI_PRESENT}" != "true" ]; then
+  echo "${FAIL}: /api/audit should contain 'kanagiPatterns' field"
+  exit 1
+fi
+
+# 検証: verifier が存在すること
+VERIFIER_PRESENT=$(echo "${AUDIT_BODY}" | jq 'has("verifier")')
+if [ "${VERIFIER_PRESENT}" != "true" ]; then
+  echo "${FAIL}: /api/audit should contain 'verifier' field"
+  exit 1
+fi
+
+echo "${PASS}: /api/audit が 200 で JSON を返し、監査仕様の全フィールドが含まれる"
+echo ""
+
+# ============================================
+# Phase 18: Phase2回帰テスト（候補提示→番号選択）
+# ============================================
+echo "【Phase 18: Phase2回帰テスト（候補提示→番号選択）】"
+echo "テスト: threadId固定で「候補提示→1」し、detailType==\"string\" & detailLen>0"
+
+TEST_THREAD_PHASE2="test-phase2-pick-$(date +%s)"
+
+# Step 1: 候補提示（confidence低のクエリ）
+RESPONSE_CANDIDATES=$(curl -sS "${BASE_URL}/api/chat" \
+  -H "Content-Type: application/json" \
+  -d "{\"threadId\":\"${TEST_THREAD_PHASE2}\",\"message\":\"言灵とは？\"}")
+
+echo "Step 1 (候補提示) Response:"
+echo "${RESPONSE_CANDIDATES}" | jq '{response, evidence, decisionFrame}' | head -n 20
+echo ""
+
+# Step 2: message="1" で番号選択
+RESPONSE_PICK_PHASE2=$(curl -sS "${BASE_URL}/api/chat" \
+  -H "Content-Type: application/json" \
+  -d "{\"threadId\":\"${TEST_THREAD_PHASE2}\",\"message\":\"1\"}")
+
+echo "Step 2 (番号選択) Response:"
+echo "${RESPONSE_PICK_PHASE2}" | jq '{response, evidence, detailType:(.detail|type), detailLen:(.detail|length)}' | head -n 20
+echo ""
+
+# 検証: message="1" で detailType が "string" であること
+DETAIL_TYPE_P2=$(echo "${RESPONSE_PICK_PHASE2}" | jq -r 'if .detail then (.detail | type) else "null" end')
+DETAIL_LEN_P2=$(echo "${RESPONSE_PICK_PHASE2}" | jq -r 'if .detail then (.detail | length) else 0 end')
+
+if [ "${DETAIL_TYPE_P2}" != "string" ]; then
+  echo "${FAIL}: Phase2回帰: message=\"1\" で detailType should be 'string', but got '${DETAIL_TYPE_P2}'"
+  exit 1
+fi
+
+if [ "${DETAIL_LEN_P2}" -lt 1 ]; then
+  echo "${FAIL}: Phase2回帰: message=\"1\" で detailLen should be > 0, but got ${DETAIL_LEN_P2}"
+  exit 1
+fi
+
+echo "${PASS}: Phase2回帰: 候補提示→番号選択で detailType==\"string\" かつ detailLen>0"
+echo ""
+
+# ============================================
 echo "=== 全テスト完了 ==="
 echo "✅ すべての受入テストに合格しました"
 echo ""
