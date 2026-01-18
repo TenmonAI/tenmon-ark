@@ -34,26 +34,22 @@ import readline from "node:readline";
 const router: IRouter = Router();
 
 // 候補メモリ（threadIdごとに候補を保持、TTL=30分）
-type CandidateMemory = {
+type AutoPickMemoryEntry = {
   hits: AutoEvidenceHit[];
-  timestamp: number;
+  createdAt: number;
 };
-const candidateMemory = new Map<string, CandidateMemory>();
+const autoPickMemory = new Map<string, AutoPickMemoryEntry>();
 const CANDIDATE_TTL = 30 * 60 * 1000; // 30分
 
 function getCandidateMemory(threadId: string): AutoEvidenceHit[] | null {
-  const mem = candidateMemory.get(threadId);
+  const mem = autoPickMemory.get(threadId);
   if (!mem) return null;
-  const age = Date.now() - mem.timestamp;
+  const age = Date.now() - mem.createdAt;
   if (age > CANDIDATE_TTL) {
-    candidateMemory.delete(threadId);
+    autoPickMemory.delete(threadId);
     return null;
   }
   return mem.hits;
-}
-
-function setCandidateMemory(threadId: string, hits: AutoEvidenceHit[]): void {
-  candidateMemory.set(threadId, { hits, timestamp: Date.now() });
 }
 
 function parseDocAndPageStrict(text: string): { 
@@ -373,9 +369,11 @@ router.post("/chat", async (req: Request, res: Response) => {
               parsed.pdfPage = selected.pdfPage;
               parsed.isEstimated = true;
               isNumberSelected = true; // 番号選択フラグを立てる（detail常時返却用）
-              detail = true; // 番号選択時は常にdetailを返す
               selectedCandidateNumber = numMatch[1]; // 選択された候補番号を保存
-              candidateMemory.delete(threadId); // 採用後はメモリをクリア
+              autoPickMemory.delete(threadId); // 採用後はメモリをクリア
+              
+              // 番号選択（pick成立）は「詳細要求を内包」する（detail常時返し）
+              const detailWanted = true; // pick時のみ常にtrue
               
               // 番号選択成立直後にdetailを返す（Task A）
               const doc = selected.doc;
@@ -434,17 +432,21 @@ router.post("/chat", async (req: Request, res: Response) => {
                 returnedDetail: true,
               }));
               
-              // ★ 常に detail を返す（null禁止）
+              // ★ pick成立時は常に detail を返す（detailWanted=true、null禁止）
               const result: any = {
                 response,
                 evidence: { doc, pdfPage, isEstimated: true, laws: laws.map((l) => ({ id: l.id, title: l.title })) },
                 decisionFrame: { mode: "HYBRID", intent: skeleton.intent, llm: null, isEstimated: true, picked: pick },
                 timestamp: new Date().toISOString(),
                 threadId,
-                detail:
-                  `#詳細\n- doc: ${doc}\n- pdfPage: ${pdfPage}\n- 根拠候補:\n` +
-                  laws.map((l) => `  - ${l.id}: ${l.title}\n    引用: ${(String(l.quote ?? "") || "(引用なし)").slice(0, 240)}`).join("\n"),
               };
+              
+              // pick時は必ずdetailを返す（detailWanted使用）
+              if (detailWanted) {
+                result.detail =
+                  `#詳細\n- doc: ${doc}\n- pdfPage: ${pdfPage}\n- 根拠候補:\n` +
+                  laws.map((l) => `  - ${l.id}: ${l.title}\n    引用: ${(String(l.quote ?? "") || "(引用なし)").slice(0, 240)}`).join("\n");
+              }
               
               return res.json(result);
             } else {
@@ -533,7 +535,7 @@ router.post("/chat", async (req: Request, res: Response) => {
             // 候補提示（信頼度が低い）
             if (auto.confidence < 0.6) {
               // 候補をメモリに保存（TTL付き）
-              setCandidateMemory(threadId, auto.hits);
+              autoPickMemory.set(threadId, { hits: auto.hits, createdAt: Date.now() });
 
               const lines = auto.hits.map((h, i) => {
                 const sn = h.quoteSnippets?.[0] ? ` / ${h.quoteSnippets[0]}` : "";
@@ -564,6 +566,9 @@ router.post("/chat", async (req: Request, res: Response) => {
             }
 
             // 信頼度が高い：topHit採用して続行（止めない）
+            // ★ 暫定採用でも候補を保存し、次の message="1" を成立させる
+            autoPickMemory.set(threadId, { hits: auto.hits, createdAt: Date.now() });
+            
             const top = auto.hits[0];
             parsed.doc = top.doc;
             parsed.pdfPage = top.pdfPage;

@@ -49,6 +49,22 @@ npm run build
 
 # 4. 起動
 npm run start
+
+# 5. ビルドと再起動後の確認（VPS用）
+# ビルド
+pnpm -s build
+
+# サービス再起動（systemd使用時）
+systemctl restart tenmon-ark-api.service
+sleep 0.6
+
+# API動作確認
+curl -sS http://127.0.0.1:3000/api/chat \
+  -H "Content-Type: application/json" \
+  -d '{"threadId":"test","message":"言灵とは？"}' | jq '.decisionFrame.mode'
+
+# /api/audit 確認（Phase4追加）
+curl -sS http://127.0.0.1:3000/api/audit | jq '{corpus, rankingPolicy, kanagiPatterns}'
 ```
 
 ## 📁 ディレクトリ構成

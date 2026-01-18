@@ -2,6 +2,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { getPageText } from "./textLoader.js";
+import { RANKING_POLICY, isKHSDefinitionZone } from "./rankingPolicy.js";
 
 export type AutoEvidenceHit = {
   doc: string;
@@ -18,9 +19,9 @@ export type AutoEvidenceResult = {
 const CORPUS_DIR = process.env.TENMON_CORPUS_DIR ?? "/opt/tenmon-corpus/db";
 
 const DOCS = [
-  { doc: "言霊秘書.pdf", textFile: "khs_text.jsonl", lawFile: "khs_law_candidates.jsonl", weight: 1.2 },
-  { doc: "カタカムナ言灵解.pdf", textFile: "ktk_text.jsonl", lawFile: "ktk_law_candidates.jsonl", weight: 1.0 },
-  { doc: "いろは最終原稿.pdf", textFile: "iroha_text.jsonl", lawFile: "iroha_law_candidates.jsonl", weight: 1.1 },
+  { doc: "言霊秘書.pdf", textFile: "khs_text.jsonl", lawFile: "khs_law_candidates.jsonl", weight: RANKING_POLICY.DOC_WEIGHTS.KHS },
+  { doc: "カタカムナ言灵解.pdf", textFile: "ktk_text.jsonl", lawFile: "ktk_law_candidates.jsonl", weight: RANKING_POLICY.DOC_WEIGHTS.KTK },
+  { doc: "いろは最終原稿.pdf", textFile: "iroha_text.jsonl", lawFile: "iroha_law_candidates.jsonl", weight: RANKING_POLICY.DOC_WEIGHTS.IROHA },
 ] as const;
 
 // 文字列正規化（簡易版）
@@ -110,30 +111,30 @@ function scoreLawCandidate(
   const quoteText = candidate.quote || "";
   const titleText = candidate.title || "";
 
-  // kw一致（title内）×20
+  // kw一致（title内）×20（RANKING_POLICY参照）
   const titleLower = titleText.toLowerCase();
   for (const kw of kws) {
     if (titleLower.includes(kw.toLowerCase())) {
-      score += 20;
+      score += RANKING_POLICY.LAW_CANDIDATES.TITLE_MATCH;
     }
   }
 
-  // kw一致（quote内）×10
+  // kw一致（quote内）×10（RANKING_POLICY参照）
   for (const kw of kws) {
     const escapedKw = escapeRegExp(kw);
     const count = (quoteText.match(new RegExp(escapedKw, "gi")) ?? []).length;
     if (count > 0) {
-      score += count * 10;
+      score += count * RANKING_POLICY.LAW_CANDIDATES.QUOTE_MATCH;
       const sn = snippetAround(quoteText, kw, 200);
       if (sn) snippets.push(sn);
     }
   }
 
-  // query全体がquoteに含まれる場合 +20
+  // query全体がquoteに含まれる場合 +20（RANKING_POLICY参照）
   const messageNorm = norm(message);
   const quoteNorm = norm(quoteText);
   if (quoteNorm.includes(messageNorm) && messageNorm.length > 5) {
-    score += 20;
+    score += RANKING_POLICY.LAW_CANDIDATES.QUERY_CONTAINED;
   }
 
   // weight を適用
@@ -172,7 +173,7 @@ export function retrieveAutoEvidence(message: string, topK=3): AutoEvidenceResul
                         norm(message).includes("カタカムナ言灵解");
 
   if (process.env.DEBUG_AUTO_EVIDENCE === "1") {
-    console.log("[AE-DEBUG] hasIroha=", hasIroha, "hasKotodama=", hasKotodama);
+    console.log("[AE-DEBUG] hasIroha=", hasIroha, "hasKatakanana=", hasKatakanana, "hasKotodama=", hasKotodama);
     console.log("[AE-DEBUG] kws(final)=", kws);
   }
 
@@ -196,23 +197,24 @@ export function retrieveAutoEvidence(message: string, topK=3): AutoEvidenceResul
           d.weight ?? 1.0
         );
 
-        // 「いろは」系クエリでIROHAへの寄せ補正 +30
+        // 「いろは」系クエリでIROHAへの寄せ補正（RANKING_POLICY参照）
         if (hasIroha && d.doc === "いろは最終原稿.pdf") {
-          lawScore += 30;
+          lawScore += RANKING_POLICY.IROHA_BOOST;
         }
 
-        // 「カタカムナ」系クエリでKTKへの寄せ補正 +30
+        // 「カタカムナ」系クエリでKTKへの寄せ補正（RANKING_POLICY参照）
         if (hasKatakanana && d.doc === "カタカムナ言灵解.pdf") {
-          lawScore += 30;
+          lawScore += RANKING_POLICY.KTK_BOOST;
         }
 
         // P6優先補正（言霊系質問のとき、言霊秘書.pdfの定義帯域にボーナス）
         // hasIroha の場合は無効化（いろは質問で言霊秘書の定義帯域を押し上げるのは不自然なので抑制）
         if (hasKotodama && !hasIroha && d.doc === "言霊秘書.pdf") {
-          if (candidate.pdfPage >= 6 && candidate.pdfPage <= 10) {
-            lawScore += 15; // 定義帯域（P6〜10）に大ボーナス
-          } else if (candidate.pdfPage >= 13 && candidate.pdfPage <= 20) {
-            lawScore += 5; // 小定義帯域（P13〜20）に小ボーナス
+          const zone = isKHSDefinitionZone(candidate.pdfPage);
+          if (zone.isPrimary) {
+            lawScore += RANKING_POLICY.KHS_DEFINITION_ZONE_BONUS.PRIMARY.bonus;
+          } else if (zone.isSecondary) {
+            lawScore += RANKING_POLICY.KHS_DEFINITION_ZONE_BONUS.SECONDARY.bonus;
           }
         }
 
@@ -280,23 +282,24 @@ export function retrieveAutoEvidence(message: string, topK=3): AutoEvidenceResul
         // scoreText に weight を渡してスコアリング
         let { score, snippets } = scoreText(text, kws, d.weight ?? 1.0);
 
-        // 「いろは」系クエリでIROHAへの寄せ補正 +30（fallbackでも適用）
+        // 「いろは」系クエリでIROHAへの寄せ補正（fallbackでも適用、RANKING_POLICY参照）
         if (hasIroha && doc === "いろは最終原稿.pdf") {
-          score += 30;
+          score += RANKING_POLICY.IROHA_BOOST;
         }
 
-        // 「カタカムナ」系クエリでKTKへの寄せ補正 +30（fallbackでも適用）
+        // 「カタカムナ」系クエリでKTKへの寄せ補正（fallbackでも適用、RANKING_POLICY参照）
         if (hasKatakanana && doc === "カタカムナ言灵解.pdf") {
-          score += 30;
+          score += RANKING_POLICY.KTK_BOOST;
         }
 
         // P6優先補正（言霊系質問のとき、言霊秘書.pdfの定義帯域にボーナス）
         // hasIroha の場合は無効化（いろは質問で言霊秘書の定義帯域を押し上げるのは不自然なので抑制）
         if (hasKotodama && !hasIroha && doc === "言霊秘書.pdf") {
-          if (pdfPage >= 6 && pdfPage <= 10) {
-            score += 15; // 定義帯域（P6〜10）に大ボーナス
-          } else if (pdfPage >= 13 && pdfPage <= 20) {
-            score += 5; // 小定義帯域（P13〜20）に小ボーナス
+          const zone = isKHSDefinitionZone(pdfPage);
+          if (zone.isPrimary) {
+            score += RANKING_POLICY.KHS_DEFINITION_ZONE_BONUS.PRIMARY.bonus;
+          } else if (zone.isSecondary) {
+            score += RANKING_POLICY.KHS_DEFINITION_ZONE_BONUS.SECONDARY.bonus;
           }
         }
 

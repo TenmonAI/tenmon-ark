@@ -12,6 +12,7 @@ import knowledgeRouter from "./routes/knowledge.js";
 import settingsRouter from "./routes/settings.js";
 import kotodamaRouter from "./routes/kotodama.js";
 import corpusRouter from "./routes/corpus.js";
+import auditRouter from "./routes/audit.js";
 import { initDB } from "./db/knowledge.js";
 import { initThreadDB } from "./db/threads.js";
 import { initCorpusLoader } from "./kotodama/corpusLoader.js";
@@ -81,6 +82,9 @@ app.use("/api/kotodama", kotodamaRouter);
 
 // Corpus router (GET /api/corpus/docs, GET /api/corpus/page, GET /api/corpus/page-image)
 app.use("/api/corpus", corpusRouter);
+
+// Audit router (GET /api/audit)
+app.use("/api", auditRouter);
 
 // health check (ルートパス)
 app.get("/health", (_, res) => {

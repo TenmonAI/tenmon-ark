@@ -853,6 +853,98 @@ echo "# sleep 0.6"
 echo ""
 
 # ============================================
+# Phase 15: /api/audit テスト（Phase4追加）
+# ============================================
+echo "【Phase 15: /api/audit テスト（Phase4追加）】"
+echo "テスト: /api/audit → 200、JSON、corpus/kanagiPatterns/rankingPolicy が返る"
+AUDIT_JSON=$(curl -sS -w "\nHTTP_CODE:%{http_code}" "${BASE_URL}/api/audit")
+HTTP_CODE=$(echo "${AUDIT_JSON}" | grep "HTTP_CODE" | cut -d: -f2)
+AUDIT_BODY=$(echo "${AUDIT_JSON}" | sed '/HTTP_CODE/d')
+
+echo "HTTP Code: ${HTTP_CODE}"
+echo "Response: ${AUDIT_BODY}" | jq '.' | head -n 30
+echo ""
+
+# 検証: HTTPステータスコードが200であること
+if [ "${HTTP_CODE}" != "200" ]; then
+  echo "${FAIL}: /api/audit should return 200, but got ${HTTP_CODE}"
+  exit 1
+fi
+
+# 検証: JSONが返ること
+if ! echo "${AUDIT_BODY}" | jq '.' > /dev/null 2>&1; then
+  echo "${FAIL}: /api/audit should return valid JSON"
+  exit 1
+fi
+
+# 検証: corpus が存在すること
+CORPUS_PRESENT=$(echo "${AUDIT_BODY}" | jq 'has("corpus")')
+if [ "${CORPUS_PRESENT}" != "true" ]; then
+  echo "${FAIL}: /api/audit should contain 'corpus' field"
+  exit 1
+fi
+
+# 検証: rankingPolicy が存在すること
+RANKING_POLICY_PRESENT=$(echo "${AUDIT_BODY}" | jq 'has("rankingPolicy")')
+if [ "${RANKING_POLICY_PRESENT}" != "true" ]; then
+  echo "${FAIL}: /api/audit should contain 'rankingPolicy' field"
+  exit 1
+fi
+
+# 検証: rankingPolicy に主要値が含まれること
+IROHA_BOOST=$(echo "${AUDIT_BODY}" | jq -r '.rankingPolicy.IROHA_BOOST // "NOT_PRESENT"')
+KTK_BOOST=$(echo "${AUDIT_BODY}" | jq -r '.rankingPolicy.KTK_BOOST // "NOT_PRESENT"')
+if [ "${IROHA_BOOST}" = "NOT_PRESENT" ] || [ "${KTK_BOOST}" = "NOT_PRESENT" ]; then
+  echo "${FAIL}: rankingPolicy should contain IROHA_BOOST and KTK_BOOST"
+  exit 1
+fi
+
+echo "${PASS}: /api/audit が 200 で JSON を返し、rankingPolicy値が含まれる"
+echo ""
+
+# ============================================
+# Phase 16: 暫定採用→番号選択の2ステップテスト
+# ============================================
+echo "【Phase 16: 暫定採用→番号選択の2ステップテスト】"
+echo "テスト: confidence高→暫定採用でも、次の message=\"1\" で detailType==\"string\" になる"
+
+# Step 1: confidence高のクエリで暫定採用レスポンスを取得
+TEST_THREAD_ID="test-tentative-pick-$(date +%s)"
+RESPONSE_TENTATIVE=$(curl -sS "${BASE_URL}/api/chat" \
+  -H "Content-Type: application/json" \
+  -d "{\"threadId\":\"${TEST_THREAD_ID}\",\"message\":\"言霊とは？\"}")
+
+echo "Step 1 (暫定採用) Response:"
+echo "${RESPONSE_TENTATIVE}" | jq '{response, evidence, decisionFrame}' | head -n 20
+echo ""
+
+# Step 2: message="1" で番号選択
+RESPONSE_PICK=$(curl -sS "${BASE_URL}/api/chat" \
+  -H "Content-Type: application/json" \
+  -d "{\"threadId\":\"${TEST_THREAD_ID}\",\"message\":\"1\"}")
+
+echo "Step 2 (番号選択) Response:"
+echo "${RESPONSE_PICK}" | jq '{response, evidence, detailType:(.detail|type), detailLen:(.detail|length)}' | head -n 20
+echo ""
+
+# 検証: message="1" で detailType が "string" であること
+DETAIL_TYPE=$(echo "${RESPONSE_PICK}" | jq -r 'if .detail then (.detail | type) else "null" end')
+DETAIL_LEN=$(echo "${RESPONSE_PICK}" | jq -r 'if .detail then (.detail | length) else 0 end')
+
+if [ "${DETAIL_TYPE}" != "string" ]; then
+  echo "${FAIL}: message=\"1\" で detailType should be 'string', but got '${DETAIL_TYPE}'"
+  exit 1
+fi
+
+if [ "${DETAIL_LEN}" -lt 1 ]; then
+  echo "${FAIL}: message=\"1\" で detailLen should be > 0, but got ${DETAIL_LEN}"
+  exit 1
+fi
+
+echo "${PASS}: 暫定採用→番号選択で detailType==\"string\" かつ detailLen>0"
+echo ""
+
+# ============================================
 echo "=== 全テスト完了 ==="
 echo "✅ すべての受入テストに合格しました"
 echo ""
@@ -869,4 +961,6 @@ echo "✅ domain(HYBRID) で decisionFrame.llm が null/0"
 echo "✅ doc/pdfPage指定で GROUNDED が根拠候補を返す"
 echo "✅ Content-Type が application/json"
 echo "✅ 「資料指定して」で止まらず、候補提示 or 暫定採用に変わる"
+echo "✅ /api/audit が 200 で JSON を返し、rankingPolicy値が含まれる（Phase4追加）"
+echo "✅ 暫定採用→番号選択の2ステップで detailType==\"string\" になる（Phase4追加）"
 
