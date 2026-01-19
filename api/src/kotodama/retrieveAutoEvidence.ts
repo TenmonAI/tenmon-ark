@@ -75,7 +75,7 @@ function snippetAround(text: string, kw: string, width=200): string | null {
   return text.slice(start, end).replace(/\s+/g, " ").trim();
 }
 
-function scoreText(text: string, kws: string[], weight: number = 1.0): { score: number; snippets: string[] } {
+function scoreText(text: string, kws: string[], weight: number = RANKING_POLICY.DEFAULT_WEIGHT): { score: number; snippets: string[] } {
   let score = 0;
   const snippets: string[] = [];
 
@@ -83,7 +83,7 @@ function scoreText(text: string, kws: string[], weight: number = 1.0): { score: 
     const escapedKw = escapeRegExp(kw);
     const count = (text.match(new RegExp(escapedKw, "g")) ?? []).length;
     if (count > 0) {
-      score += count * 10;
+      score += count * RANKING_POLICY.TEXT_SEARCH.KEYWORD_MATCH;
       const sn = snippetAround(text, kw, 200);
       if (sn) snippets.push(sn);
     }
@@ -103,7 +103,7 @@ function scoreLawCandidate(
   candidate: { title: string; quote: string },
   kws: string[],
   message: string,
-  weight: number = 1.0
+  weight: number = RANKING_POLICY.DEFAULT_WEIGHT
 ): { score: number; snippets: string[] } {
   let score = 0;
   const snippets: string[] = [];
@@ -194,7 +194,7 @@ export function retrieveAutoEvidence(message: string, topK=3): AutoEvidenceResul
           { title: candidate.title || "", quote: candidate.quote || "" },
           kws,
           message,
-          d.weight ?? 1.0
+          d.weight ?? RANKING_POLICY.DEFAULT_WEIGHT
         );
 
         // 「いろは」系クエリでIROHAへの寄せ補正（RANKING_POLICY参照）
@@ -212,7 +212,9 @@ export function retrieveAutoEvidence(message: string, topK=3): AutoEvidenceResul
         if (hasKotodama && !hasIroha && d.doc === "言霊秘書.pdf") {
           const zone = isKHSDefinitionZone(candidate.pdfPage);
           if (zone.isPrimary) {
-            lawScore += RANKING_POLICY.KHS_DEFINITION_ZONE_BONUS.PRIMARY.bonus;
+            // PRIMARY帯域（P6-10）はページ順で微差をつける：P6が最大、P9も少し上がるが同点にならない
+            // 例：P6 = 15 + (11 - 6) = 20, P7 = 19, P8 = 18, P9 = 17, P10 = 16
+            lawScore += RANKING_POLICY.KHS_DEFINITION_ZONE_BONUS.PRIMARY.bonus + (RANKING_POLICY.KHS_DEFINITION_ZONE_BONUS.PRIMARY.pageOffset - candidate.pdfPage);
           } else if (zone.isSecondary) {
             lawScore += RANKING_POLICY.KHS_DEFINITION_ZONE_BONUS.SECONDARY.bonus;
           }
@@ -280,7 +282,7 @@ export function retrieveAutoEvidence(message: string, topK=3): AutoEvidenceResul
         if (!text) continue;
 
         // scoreText に weight を渡してスコアリング
-        let { score, snippets } = scoreText(text, kws, d.weight ?? 1.0);
+        let { score, snippets } = scoreText(text, kws, d.weight ?? RANKING_POLICY.DEFAULT_WEIGHT);
 
         // 「いろは」系クエリでIROHAへの寄せ補正（fallbackでも適用、RANKING_POLICY参照）
         if (hasIroha && doc === "いろは最終原稿.pdf") {
@@ -297,7 +299,9 @@ export function retrieveAutoEvidence(message: string, topK=3): AutoEvidenceResul
         if (hasKotodama && !hasIroha && doc === "言霊秘書.pdf") {
           const zone = isKHSDefinitionZone(pdfPage);
           if (zone.isPrimary) {
-            score += RANKING_POLICY.KHS_DEFINITION_ZONE_BONUS.PRIMARY.bonus;
+            // PRIMARY帯域（P6-10）はページ順で微差をつける：P6が最大、P9も少し上がるが同点にならない
+            // 例：P6 = 15 + (11 - 6) = 20, P7 = 19, P8 = 18, P9 = 17, P10 = 16
+            score += RANKING_POLICY.KHS_DEFINITION_ZONE_BONUS.PRIMARY.bonus + (RANKING_POLICY.KHS_DEFINITION_ZONE_BONUS.PRIMARY.pageOffset - pdfPage);
           } else if (zone.isSecondary) {
             score += RANKING_POLICY.KHS_DEFINITION_ZONE_BONUS.SECONDARY.bonus;
           }

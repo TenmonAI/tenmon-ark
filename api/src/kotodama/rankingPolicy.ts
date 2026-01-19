@@ -10,7 +10,11 @@ export const RANKING_POLICY = {
 
   // KHS定義帯域ボーナス（言霊系クエリ、hasIrohaがfalseの場合のみ）
   KHS_DEFINITION_ZONE_BONUS: {
-    PRIMARY: { pages: [6, 7, 8, 9, 10], bonus: 15 }, // P6-10
+    PRIMARY: { 
+      pages: [6, 7, 8, 9, 10], 
+      bonus: 15, // 基本ボーナス
+      pageOffset: 11, // ページ順微差計算用オフセット（P6 = bonus + (11 - 6) = 20）
+    }, // P6-10
     SECONDARY: { pages: [13, 14, 15, 16, 17, 18, 19, 20], bonus: 5 }, // P13-20
   },
 
@@ -20,6 +24,14 @@ export const RANKING_POLICY = {
     QUOTE_MATCH: 10, // quote一致 ×10
     QUERY_CONTAINED: 20, // query全体がquoteに含まれる場合 +20
   },
+
+  // テキスト検索スコアリング
+  TEXT_SEARCH: {
+    KEYWORD_MATCH: 10, // キーワード一致の基本スコア（count * 10）
+  },
+
+  // デフォルト重み
+  DEFAULT_WEIGHT: 1.0,
 
   // DOCSのweight
   DOC_WEIGHTS: {

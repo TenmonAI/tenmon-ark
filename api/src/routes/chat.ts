@@ -161,6 +161,9 @@ router.post("/chat", async (req: Request, res: Response) => {
     let detail = isDetailRequest(message); // req.body.debug は完全無視
     let isNumberSelected = false; // 番号選択が成立したかどうか（detail常時返却用）
     let selectedCandidateNumber: string | null = null; // 選択された候補番号（response用）
+    
+    // kuResult を初期化（すべての分岐で必ず設定されるようにする）
+    let kuResult: ReturnType<typeof decideKuStance> | null = null;
 
     // =========================
     // TASK B: Truth Skeleton（真理骨格）を生成
@@ -171,29 +174,70 @@ router.post("/chat", async (req: Request, res: Response) => {
     // doc/pdfPage バリデーション（GROUNDED/HYBRID前）
     // =========================
     if (parsed.doc && !parsed.pdfPage) {
+      // kuResult を設定（doc のみ指定されている場合）
+      if (!kuResult) {
+        kuResult = decideKuStance(message, skeleton.mode, null, null, detail);
+      }
       return res.json({
         response: "pdfPage が見つかりませんでした。例）言霊秘書.pdf pdfPage=6 ... のように指定してください。",
-        decisionFrame: { mode: skeleton.mode, intent: skeleton.intent, llm: null, need: ["pdfPage"] },
+        decisionFrame: { 
+          mode: skeleton.mode, 
+          intent: skeleton.intent, 
+          llm: null, 
+          need: ["pdfPage"],
+          ku: kuResult ? {
+            stance: kuResult.stance,
+            reason: kuResult.reason,
+            nextNeed: kuResult.nextNeed,
+          } : {},
+        },
         timestamp: new Date().toISOString(),
       });
     }
     if (!parsed.doc && parsed.pdfPage) {
+      // kuResult を設定（pdfPage のみ指定されている場合）
+      if (!kuResult) {
+        kuResult = decideKuStance(message, skeleton.mode, null, null, detail);
+      }
       return res.json({
         response: "doc（PDF名）が見つかりませんでした。例）言霊秘書.pdf pdfPage=6 ... のように指定してください。",
-        decisionFrame: { mode: skeleton.mode, intent: skeleton.intent, llm: null, need: ["doc"] },
+        decisionFrame: { 
+          mode: skeleton.mode, 
+          intent: skeleton.intent, 
+          llm: null, 
+          need: ["doc"],
+          ku: kuResult ? {
+            stance: kuResult.stance,
+            reason: kuResult.reason,
+            nextNeed: kuResult.nextNeed,
+          } : {},
+        },
         timestamp: new Date().toISOString(),
       });
     }
 
     // リスクゲート（暴走防止）
     if (skeleton.risk === "high") {
+      // kuResult を設定（リスクゲート時）
+      if (!kuResult) {
+        kuResult = decideKuStance(message, skeleton.mode, null, null, detail);
+      }
       const safeResponse = "申し訳ございませんが、その内容については回答できません。安全で適切な代替案をご案内できますので、別の質問をお願いします。";
       pushTurn(threadId, { role: "user", content: message, at: Date.now() });
       pushTurn(threadId, { role: "assistant", content: safeResponse, at: Date.now() });
       return res.json({
         response: safeResponse,
         evidence: null,
-        decisionFrame: { mode: skeleton.mode, intent: skeleton.intent, risk: skeleton.risk },
+        decisionFrame: { 
+          mode: skeleton.mode, 
+          intent: skeleton.intent, 
+          risk: skeleton.risk,
+          ku: kuResult ? {
+            stance: kuResult.stance,
+            reason: kuResult.reason,
+            nextNeed: kuResult.nextNeed,
+          } : {},
+        },
         timestamp: new Date().toISOString(),
       });
     }
@@ -214,6 +258,10 @@ router.post("/chat", async (req: Request, res: Response) => {
       const liveEvidenceLatency = Date.now() - liveEvidenceStart;
 
       if (!liveEvidence) {
+        // kuResult を設定（LIVE モード fallback 時）
+        if (!kuResult) {
+          kuResult = decideKuStance(message, mode, null, null, detail);
+        }
         // Bing APIが落ちた時や検索失敗時の劣化動作
         const fallbackResponse = "申し訳ございませんが、現在の情報を取得できませんでした。検索サービスに接続できないか、情報が見つかりませんでした。しばらく時間をおいて再度お試しください。または、公式サイトやニュースサイトで直接確認していただくことをお勧めします。";
         pushTurn(threadId, { role: "user", content: message, at: Date.now() });
@@ -221,7 +269,16 @@ router.post("/chat", async (req: Request, res: Response) => {
         return res.json({
           response: fallbackResponse,
           evidence: null,
-          decisionFrame: { mode, intent: skeleton.intent, error: "live_evidence_fetch_failed" },
+          decisionFrame: { 
+            mode, 
+            intent: skeleton.intent, 
+            error: "live_evidence_fetch_failed",
+            ku: kuResult ? {
+              stance: kuResult.stance,
+              reason: kuResult.reason,
+              nextNeed: kuResult.nextNeed,
+            } : {},
+          },
           timestamp: new Date().toISOString(),
         });
       }
@@ -268,6 +325,10 @@ router.post("/chat", async (req: Request, res: Response) => {
         returnedDetail: detail,
       }));
 
+      // kuResult を設定（LIVE モード成功時）
+      if (!kuResult) {
+        kuResult = decideKuStance(message, mode, null, null, detail);
+      }
       const result: any = {
         response: liveAnswer,
         evidence: {
@@ -277,7 +338,15 @@ router.post("/chat", async (req: Request, res: Response) => {
           sources: liveEvidence.sources,
           confidence: liveEvidence.confidence,
         },
-        decisionFrame: { mode, intent: skeleton.intent },
+        decisionFrame: { 
+          mode, 
+          intent: skeleton.intent,
+          ku: kuResult ? {
+            stance: kuResult.stance,
+            reason: kuResult.reason,
+            nextNeed: kuResult.nextNeed,
+          } : {},
+        },
         timestamp: new Date().toISOString(),
       };
 
@@ -344,10 +413,22 @@ router.post("/chat", async (req: Request, res: Response) => {
         returnedDetail: detail,
       }));
 
+      // kuResult を設定（NATURAL モード）
+      if (!kuResult) {
+        kuResult = decideKuStance(message, mode, null, null, detail);
+      }
       const result: any = {
         response: answer,
         evidence: null,
-        decisionFrame: { mode, intent: skeleton.intent },
+        decisionFrame: { 
+          mode, 
+          intent: skeleton.intent,
+          ku: kuResult ? {
+            stance: kuResult.stance,
+            reason: kuResult.reason,
+            nextNeed: kuResult.nextNeed,
+          } : {},
+        },
         timestamp: new Date().toISOString(),
       };
 
@@ -392,6 +473,11 @@ router.post("/chat", async (req: Request, res: Response) => {
               // 番号選択成立直後にdetailを返す（Task A）
               const doc = selected.doc;
               const pdfPage = selected.pdfPage;
+              
+              // kuResult を設定（番号選択成功時、doc/pdfPage が確定した時点）
+              if (!kuResult) {
+                kuResult = decideKuStance(message, mode, null, { doc, pdfPage }, detailWanted);
+              }
               const docKey = inferDocKey(doc);
               
               // lawsを組み立てる
@@ -450,7 +536,18 @@ router.post("/chat", async (req: Request, res: Response) => {
               const result: any = {
                 response,
                 evidence: { doc, pdfPage, isEstimated: true, laws: laws.map((l) => ({ id: l.id, title: l.title })) },
-                decisionFrame: { mode: "HYBRID", intent: skeleton.intent, llm: null, isEstimated: true, picked: pick },
+                decisionFrame: { 
+                  mode: "HYBRID", 
+                  intent: skeleton.intent, 
+                  llm: null, 
+                  isEstimated: true, 
+                  picked: pick,
+                  ku: kuResult ? {
+                    stance: kuResult.stance,
+                    reason: kuResult.reason,
+                    nextNeed: kuResult.nextNeed,
+                  } : {},
+                },
                 timestamp: new Date().toISOString(),
                 threadId,
               };
@@ -467,10 +564,24 @@ router.post("/chat", async (req: Request, res: Response) => {
               const response = savedCandidates
                 ? `候補番号「${numMatch[1]}」が見つかりませんでした。1〜${savedCandidates.length}の範囲で指定してください。`
                 : "候補が見つかりませんでした。再度質問を送信してください。";
+              // kuResult を設定（番号選択エラー時）
+              if (!kuResult) {
+                kuResult = decideKuStance(message, mode, null, null, detail);
+              }
               return res.json({
                 response,
                 evidence: null,
-                decisionFrame: { mode, intent: skeleton.intent, llm: null, need: ["valid candidate number"] },
+                decisionFrame: { 
+                  mode, 
+                  intent: skeleton.intent, 
+                  llm: null, 
+                  need: ["valid candidate number"],
+                  ku: kuResult ? {
+                    stance: kuResult.stance,
+                    reason: kuResult.reason,
+                    nextNeed: kuResult.nextNeed,
+                  } : {},
+                },
                 timestamp: new Date().toISOString(),
                 threadId,
               });
@@ -482,6 +593,10 @@ router.post("/chat", async (req: Request, res: Response) => {
           if (!kanagiStatus.loaded) {
             const askResponse = "（資料準拠）\n天津金木パターンが読み込まれていないため、断定を避けます。\n候補ページを指定していただけますか？\n例）言霊秘書.pdf pdfPage=6 言灵とは？ #詳細";
 
+            // kuResult を設定（Kanagi patterns 未ロード時）
+            if (!kuResult) {
+              kuResult = decideKuStance(message, mode, null, null, detail);
+            }
             const result: any = {
               response: askResponse,
               evidence: null,
@@ -490,6 +605,11 @@ router.post("/chat", async (req: Request, res: Response) => {
                 intent: skeleton.intent,
                 llm: null,
                 kanagiPatternsLoaded: false,
+                ku: kuResult ? {
+                  stance: kuResult.stance,
+                  reason: kuResult.reason,
+                  nextNeed: kuResult.nextNeed,
+                } : {},
               },
               timestamp: new Date().toISOString(),
             };
@@ -518,86 +638,63 @@ router.post("/chat", async (req: Request, res: Response) => {
           }
 
           // doc/pdfPage 未指定 → 自動検索（止めない）
-          // Phase4: Kū Governor を使用して判定
+          // Phase4: Kū Governor を使用して判定（response/detail生成も含む）
           if (!parsed.doc || !parsed.pdfPage) {
             const auto = retrieveAutoEvidence(message, 3);
-            const kuResult = decideKuStance(message, mode, auto, null);
+            kuResult = decideKuStance(message, mode, auto, null, detail);
 
-            // ASK の場合：既存のレスポンス生成ロジックを使用
+            // ASK の場合：kuGovernor が生成した response/detail を返す
             if (kuResult.stance === "ASK") {
-              // ヒット0：次の観測を提示（空としてASK）
-              if (!auto.hits.length) {
-                const response =
-                  "資料準拠で答えるための該当箇所が見つかりませんでした。\n" +
-                  "次のいずれかで確定できます：\n" +
-                  "1) 資料名とpdfPageを指定（例：言霊秘書.pdf pdfPage=6）\n" +
-                  "2) 質問をもう少し具体化（例：火水の生成鎖／正中／辞 など）";
-
-                const result: any = {
-                  response,
-                  evidence: null,
-                  decisionFrame: { mode, intent: skeleton.intent, llm: null, need: ["doc or keywords"] },
-                  timestamp: new Date().toISOString(),
-                  threadId,
-                };
-
-                if (detail) {
-                  result.detail =
-                    "#詳細\n- 状態: autoEvidence hits=0\n" +
-                    `- keywords: ${message}\n` +
-                    "- 次の導線: 言霊秘書.pdf pdfPage=6 / pdfPage=13 / pdfPage=69 など";
-                }
-                return res.json(result);
+              // 候補がある場合はメモリに保存（TTL付き）
+              if (kuResult.candidates && kuResult.candidates.length > 0) {
+                autoPickMemory.set(threadId, { hits: kuResult.candidates, createdAt: Date.now(), detailRequested: detail });
               }
 
-              // 候補提示（信頼度が低い）
-              if (auto.confidence < 0.6) {
-                // 候補をメモリに保存（TTL付き）
-                autoPickMemory.set(threadId, { hits: auto.hits, createdAt: Date.now(), detailRequested: detail });
+              const result: any = {
+                response: kuResult.response!,
+                evidence: null,
+                decisionFrame: { 
+                  mode, 
+                  intent: skeleton.intent, 
+                  llm: null, 
+                  need: kuResult.nextNeed,
+                  ku: {
+                    stance: kuResult.stance,
+                    reason: kuResult.reason,
+                    nextNeed: kuResult.nextNeed,
+                  },
+                },
+                timestamp: new Date().toISOString(),
+                threadId,
+              };
 
-                const lines = auto.hits.map((h, i) => {
-                  const sn = h.quoteSnippets?.[0] ? ` / ${h.quoteSnippets[0]}` : "";
-                  return `${i + 1}) ${h.doc} pdfPage=${h.pdfPage} (score=${Math.round(h.score)})${sn}`;
-                });
-
-                const response =
-                  "関連候補が複数あります。どれを土台にしますか？\n" +
-                  lines.join("\n") +
-                  "\n\n返信例：『1』または『2』（番号だけ送信してください）";
-
-                const result: any = {
-                  response,
-                  evidence: null,
-                  decisionFrame: { mode, intent: skeleton.intent, llm: null, need: ["choice(1..3)"] },
-                  timestamp: new Date().toISOString(),
-                  threadId,
-                  candidates: auto.hits, // UIで使うなら
-                };
-
-                if (detail) {
-                  result.detail =
-                    "#詳細\n- 状態: autoEvidence confidence低\n" +
-                    `- confidence: ${auto.confidence.toFixed(2)}\n` +
-                    lines.join("\n");
-                }
-                return res.json(result);
+              if (kuResult.candidates) {
+                result.candidates = kuResult.candidates; // UIで使うなら
               }
+
+              if (kuResult.detail) {
+                result.detail = kuResult.detail;
+              }
+
+              return res.json(result);
             }
 
             // ANSWER の場合：doc/pdfPage を確定させて既存処理へ流す
             if (kuResult.stance === "ANSWER" && kuResult.doc && kuResult.pdfPage) {
               // ★ 暫定採用でも候補を保存し、次の message="1" を成立させる
-              autoPickMemory.set(threadId, { hits: auto.hits, createdAt: Date.now(), detailRequested: detail });
+              if (kuResult.candidates && kuResult.candidates.length > 0) {
+                autoPickMemory.set(threadId, { hits: kuResult.candidates, createdAt: Date.now(), detailRequested: detail });
+              }
               
               parsed.doc = kuResult.doc;
               parsed.pdfPage = kuResult.pdfPage;
               parsed.isEstimated = true; // 自動検索フラグ
               parsed.autoEvidence = { // 自動検索結果を保存（detailに追加するため）
-                confidence: auto.confidence,
+                confidence: kuResult.autoEvidence?.confidence ?? 0,
                 topHit: {
                   doc: kuResult.doc,
                   pdfPage: kuResult.pdfPage,
-                  quoteSnippets: auto.hits[0]?.quoteSnippets ?? [],
+                  quoteSnippets: kuResult.candidates?.[0]?.quoteSnippets ?? [],
                 },
               };
               // 未指定分岐を抜けて下の既存処理（doc/pdfPage指定時の rec/candidates/laws生成）へ流す
@@ -607,6 +704,12 @@ router.post("/chat", async (req: Request, res: Response) => {
       // doc/pdfPage 指定がある場合：Evidenceを組む（LLM禁止）
       const doc = parsed.doc!;
       const pdfPage = parsed.pdfPage!;
+      
+      // doc/pdfPage が確定した時点で、kuResult が null の場合は必ず設定する
+      if (!kuResult) {
+        kuResult = decideKuStance(message, mode, null, { doc, pdfPage }, detail);
+      }
+      
       const docKey = inferDocKey(doc);
 
       const rec = getCorpusPage(doc, pdfPage);
@@ -628,10 +731,23 @@ router.post("/chat", async (req: Request, res: Response) => {
           "pdfPage番号を一度だけ確認してください。\n" +
           `doc=${doc} pdfPage=${pdfPage}`;
 
+        // kuResult が null の場合は必ず設定する（doc/pdfPage 指定時）
+        if (!kuResult) {
+          kuResult = decideKuStance(message, mode, null, { doc, pdfPage }, detail);
+        }
         const result: any = {
           response,
           evidence: { doc, pdfPage, laws: [] },
-          decisionFrame: { mode, intent: skeleton.intent, llm: null },
+          decisionFrame: { 
+            mode, 
+            intent: skeleton.intent, 
+            llm: null,
+            ku: kuResult ? {
+              stance: kuResult.stance,
+              reason: kuResult.reason,
+              nextNeed: kuResult.nextNeed,
+            } : {},
+          },
           timestamp: new Date().toISOString(),
         };
         if (detail) result.detail = `#詳細\n- doc: ${doc}\n- pdfPage: ${pdfPage}\n- 根拠: （本文データ無し）`;
@@ -684,6 +800,11 @@ router.post("/chat", async (req: Request, res: Response) => {
             llm: null, 
             grounds: [{ doc, pdfPage }],
             kokakechuFlags: plan.kokakechuFlags,
+            ku: kuResult ? {
+              stance: kuResult.stance,
+              reason: kuResult.reason,
+              nextNeed: kuResult.nextNeed,
+            } : {},
           },
           timestamp: new Date().toISOString(),
         };
@@ -736,14 +857,19 @@ router.post("/chat", async (req: Request, res: Response) => {
           laws: plan.evidence.laws.slice(0, 10).map(l => ({ id: l.id, title: l.title })),
           usedLawIds: plan.usedLawIds,
         },
-        decisionFrame: { 
-          mode, 
-          intent: skeleton.intent, 
-          llm: null, 
-          grounds: [{ doc, pdfPage }],
-          thesis: plan.thesis,
-          kokakechuFlags: plan.kokakechuFlags.length > 0 ? plan.kokakechuFlags : undefined,
-        },
+          decisionFrame: { 
+            mode, 
+            intent: skeleton.intent, 
+            llm: null, 
+            grounds: [{ doc, pdfPage }],
+            thesis: plan.thesis,
+            kokakechuFlags: plan.kokakechuFlags.length > 0 ? plan.kokakechuFlags : undefined,
+            ku: kuResult ? {
+              stance: kuResult.stance,
+              reason: kuResult.reason,
+              nextNeed: kuResult.nextNeed,
+            } : {},
+          },
         timestamp: new Date().toISOString(),
       };
 
@@ -801,13 +927,20 @@ router.post("/chat", async (req: Request, res: Response) => {
     });
     
     // mode=null を返さない（必ず mode/intent を設定）
+    // kuResult を設定（エラー時、catch ブロック内で新規作成）
+    const errorKuResult = decideKuStance(errorMessage || "", "NATURAL", null, null, false);
     return res.json({
       response: `エラーが発生しましたが、処理を続行します。あなたの問いかけ「${String(errorMessage).substring(0, 50)}${String(errorMessage).length > 50 ? "..." : ""}」について、改めて考えさせてください。`,
       decisionFrame: { 
         mode: "NATURAL", 
         intent: "unknown", 
         error: "internal_error",
-        llm: null 
+        llm: null,
+        ku: {
+          stance: errorKuResult.stance,
+          reason: errorKuResult.reason,
+          nextNeed: errorKuResult.nextNeed,
+        },
       },
       timestamp: new Date().toISOString(),
     });

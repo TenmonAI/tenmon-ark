@@ -52,13 +52,16 @@ function getCorpusInfo(fileName: string): CorpusInfo {
 }
 
 router.get("/audit", (req, res) => {
+  // 必ず 200 OK と application/json を返す
+  res.setHeader("Content-Type", "application/json");
+  
   try {
-    // version/builtAt/gitSha
+    // version/builtAt/gitSha（dist/version.js から）
     const version = TENMON_ARK_VERSION;
     const builtAt = TENMON_ARK_BUILT_AT;
     const gitSha = TENMON_ARK_GIT_SHA;
 
-    // corpus存在/行数
+    // corpus存在/行数（khs/ktk/iroha の text.jsonl / law_candidates.jsonl）
     const corpus: CorpusAudit = {
       khs: {
         text: getCorpusInfo("khs_text.jsonl"),
@@ -74,10 +77,21 @@ router.get("/audit", (req, res) => {
       },
     };
 
-    // kanagiPatterns状態
-    const kanagiPatterns = getPatternsLoadStatus();
+    // kanagiPatterns状態（loaded/count/sourcePath、取れなければ loaded:false,count:0）
+    const kanagiPatternsStatus = getPatternsLoadStatus();
+    const kanagiPatterns = kanagiPatternsStatus.loaded
+      ? {
+          loaded: true,
+          count: kanagiPatternsStatus.count,
+          sourcePath: kanagiPatternsStatus.path,
+        }
+      : {
+          loaded: false,
+          count: 0,
+          sourcePath: null,
+        };
 
-    // rankingPolicy値
+    // rankingPolicy値（src/kotodama/rankingPolicy.ts の中身）
     const rankingPolicy = {
       IROHA_BOOST: RANKING_POLICY.IROHA_BOOST,
       KTK_BOOST: RANKING_POLICY.KTK_BOOST,
@@ -89,35 +103,37 @@ router.get("/audit", (req, res) => {
       DOC_WEIGHTS: RANKING_POLICY.DOC_WEIGHTS,
     };
 
-    // verifier（未実装）
-    const verifier = {
-      mode: "todo",
-    };
+    // timestamp
+    const timestamp = new Date().toISOString();
 
-    res.json({
+    res.status(200).json({
       version,
       builtAt,
       gitSha,
       corpus,
-      kanagiPatterns: kanagiPatterns.loaded
-        ? {
-            loaded: true,
-            count: kanagiPatterns.count,
-            sourcePath: kanagiPatterns.path,
-          }
-        : {
-            loaded: false,
-            count: 0,
-            sourcePath: null,
-          },
+      kanagiPatterns,
       rankingPolicy,
-      verifier,
-      timestamp: new Date().toISOString(),
+      timestamp,
     });
   } catch (error: any) {
-    res.status(500).json({
-      error: error.message || "Internal server error",
+    // エラー時も 200 OK を返す（監査エンドポイントは常に成功を返す）
+    res.status(200).json({
+      version: TENMON_ARK_VERSION || "unknown",
+      builtAt: TENMON_ARK_BUILT_AT || null,
+      gitSha: TENMON_ARK_GIT_SHA || "unknown",
+      corpus: {
+        khs: { text: { exists: false, lineCount: null }, lawCandidates: { exists: false, lineCount: null } },
+        ktk: { text: { exists: false, lineCount: null }, lawCandidates: { exists: false, lineCount: null } },
+        iroha: { text: { exists: false, lineCount: null }, lawCandidates: { exists: false, lineCount: null } },
+      },
+      kanagiPatterns: {
+        loaded: false,
+        count: 0,
+        sourcePath: null,
+      },
+      rankingPolicy: {},
       timestamp: new Date().toISOString(),
+      error: error?.message || "Internal server error",
     });
   }
 });
