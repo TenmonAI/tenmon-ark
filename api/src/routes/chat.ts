@@ -25,7 +25,7 @@ import { verifyCorePlan } from "../kanagi/verifier.js";
 import { containsForbiddenTemplate, getFallbackTemplate } from "../persona/outputGuard.js";
 import { searchPages } from "../kotodama/retrievalIndex.js";
 import { retrieveAutoEvidence, type AutoEvidenceHit } from "../kotodama/retrieveAutoEvidence.js";
-import { decideKuStance } from "../ku/kuGovernor.js";
+import { decideKuStance, type KuGovernorResult } from "../ku/kuGovernor.js";
 import { composeDetailFromEvidence } from "../persona/composeDetail.js";
 import { getPatternsLoadStatus } from "../kanagi/patterns/loadPatterns.js";
 
@@ -33,6 +33,35 @@ import fs from "node:fs";
 import readline from "node:readline";
 
 const router: IRouter = Router();
+
+// KuFrame 型（decisionFrame.ku 用、null禁止）
+type KuFrame = {
+  stance: "ASK" | "ANSWER";
+  reason: string;
+  nextNeed?: string[];
+  selected?: { doc: string; pdfPage: number } | null;
+};
+
+/**
+ * ku: KuFrame を生成するヘルパー関数（null禁止）
+ * @param stance - "ASK" | "ANSWER"
+ * @param reason - 理由文字列
+ * @param nextNeed - 次の必要なアクション（オプション）
+ * @param selected - 選択された doc/pdfPage（オプション）
+ */
+function ku(
+  stance: "ASK" | "ANSWER",
+  reason: string,
+  nextNeed?: string[],
+  selected?: { doc: string; pdfPage: number } | null
+): KuFrame {
+  return {
+    stance,
+    reason,
+    nextNeed,
+    selected: selected ?? null,
+  };
+}
 
 // 候補メモリ（threadIdごとに候補を保持、TTL=30分）
 type AutoPickMemoryEntry = {
@@ -185,11 +214,7 @@ router.post("/chat", async (req: Request, res: Response) => {
           intent: skeleton.intent, 
           llm: null, 
           need: ["pdfPage"],
-          ku: kuResult ? {
-            stance: kuResult.stance,
-            reason: kuResult.reason,
-            nextNeed: kuResult.nextNeed,
-          } : {},
+          ku: ku("ASK", "pdfPage バリデーションエラー", ["pdfPage"]),
         },
         timestamp: new Date().toISOString(),
       });
@@ -206,11 +231,7 @@ router.post("/chat", async (req: Request, res: Response) => {
           intent: skeleton.intent, 
           llm: null, 
           need: ["doc"],
-          ku: kuResult ? {
-            stance: kuResult.stance,
-            reason: kuResult.reason,
-            nextNeed: kuResult.nextNeed,
-          } : {},
+          ku: ku("ASK", "doc バリデーションエラー", ["doc"]),
         },
         timestamp: new Date().toISOString(),
       });
@@ -232,11 +253,7 @@ router.post("/chat", async (req: Request, res: Response) => {
           mode: skeleton.mode, 
           intent: skeleton.intent, 
           risk: skeleton.risk,
-          ku: kuResult ? {
-            stance: kuResult.stance,
-            reason: kuResult.reason,
-            nextNeed: kuResult.nextNeed,
-          } : {},
+          ku: ku("ASK", "リスクゲート（high risk）", ["retry"]),
         },
         timestamp: new Date().toISOString(),
       });
@@ -273,11 +290,7 @@ router.post("/chat", async (req: Request, res: Response) => {
             mode, 
             intent: skeleton.intent, 
             error: "live_evidence_fetch_failed",
-            ku: kuResult ? {
-              stance: kuResult.stance,
-              reason: kuResult.reason,
-              nextNeed: kuResult.nextNeed,
-            } : {},
+            ku: ku("ASK", "LIVE モード fallback", ["retry"]),
           },
           timestamp: new Date().toISOString(),
         });
@@ -341,11 +354,7 @@ router.post("/chat", async (req: Request, res: Response) => {
         decisionFrame: { 
           mode, 
           intent: skeleton.intent,
-          ku: kuResult ? {
-            stance: kuResult.stance,
-            reason: kuResult.reason,
-            nextNeed: kuResult.nextNeed,
-          } : {},
+          ku: ku("ANSWER", "LIVE モード成功", []),
         },
         timestamp: new Date().toISOString(),
       };
@@ -423,11 +432,7 @@ router.post("/chat", async (req: Request, res: Response) => {
         decisionFrame: { 
           mode, 
           intent: skeleton.intent,
-          ku: kuResult ? {
-            stance: kuResult.stance,
-            reason: kuResult.reason,
-            nextNeed: kuResult.nextNeed,
-          } : {},
+          ku: ku("ANSWER", "NATURAL モード", []),
         },
         timestamp: new Date().toISOString(),
       };
@@ -542,11 +547,7 @@ router.post("/chat", async (req: Request, res: Response) => {
                   llm: null, 
                   isEstimated: true, 
                   picked: pick,
-                  ku: kuResult ? {
-                    stance: kuResult.stance,
-                    reason: kuResult.reason,
-                    nextNeed: kuResult.nextNeed,
-                  } : {},
+                  ku: ku("ANSWER", "pick selected", [], { doc, pdfPage }),
                 },
                 timestamp: new Date().toISOString(),
                 threadId,
@@ -576,11 +577,7 @@ router.post("/chat", async (req: Request, res: Response) => {
                   intent: skeleton.intent, 
                   llm: null, 
                   need: ["valid candidate number"],
-                  ku: kuResult ? {
-                    stance: kuResult.stance,
-                    reason: kuResult.reason,
-                    nextNeed: kuResult.nextNeed,
-                  } : {},
+                  ku: ku("ASK", "pick missing", ["valid candidate number"]),
                 },
                 timestamp: new Date().toISOString(),
                 threadId,
@@ -605,11 +602,7 @@ router.post("/chat", async (req: Request, res: Response) => {
                 intent: skeleton.intent,
                 llm: null,
                 kanagiPatternsLoaded: false,
-                ku: kuResult ? {
-                  stance: kuResult.stance,
-                  reason: kuResult.reason,
-                  nextNeed: kuResult.nextNeed,
-                } : {},
+                ku: ku("ASK", "Kanagi patterns 未ロード", ["doc", "pdfPage"]),
               },
               timestamp: new Date().toISOString(),
             };
@@ -650,6 +643,11 @@ router.post("/chat", async (req: Request, res: Response) => {
                 autoPickMemory.set(threadId, { hits: kuResult.candidates, createdAt: Date.now(), detailRequested: detail });
               }
 
+              // autoEvidence の状態に応じて適切な ku を生成
+              const kuFrame = auto.hits.length === 0
+                ? ku("ASK", "autoEvidence hits=0", ["doc", "pdfPage"])
+                : ku("ASK", "autoEvidence confidence low", ["choice(1..N)"]);
+
               const result: any = {
                 response: kuResult.response!,
                 evidence: null,
@@ -658,11 +656,7 @@ router.post("/chat", async (req: Request, res: Response) => {
                   intent: skeleton.intent, 
                   llm: null, 
                   need: kuResult.nextNeed,
-                  ku: {
-                    stance: kuResult.stance,
-                    reason: kuResult.reason,
-                    nextNeed: kuResult.nextNeed,
-                  },
+                  ku: kuFrame,
                 },
                 timestamp: new Date().toISOString(),
                 threadId,
@@ -742,11 +736,7 @@ router.post("/chat", async (req: Request, res: Response) => {
             mode, 
             intent: skeleton.intent, 
             llm: null,
-            ku: kuResult ? {
-              stance: kuResult.stance,
-              reason: kuResult.reason,
-              nextNeed: kuResult.nextNeed,
-            } : {},
+            ku: ku("ANSWER", "evidenceが弱すぎる場合", [], { doc, pdfPage }),
           },
           timestamp: new Date().toISOString(),
         };
@@ -800,11 +790,7 @@ router.post("/chat", async (req: Request, res: Response) => {
             llm: null, 
             grounds: [{ doc, pdfPage }],
             kokakechuFlags: plan.kokakechuFlags,
-            ku: kuResult ? {
-              stance: kuResult.stance,
-              reason: kuResult.reason,
-              nextNeed: kuResult.nextNeed,
-            } : {},
+            ku: ku("ANSWER", "空仮中検知", [], { doc, pdfPage }),
           },
           timestamp: new Date().toISOString(),
         };
@@ -864,11 +850,7 @@ router.post("/chat", async (req: Request, res: Response) => {
             grounds: [{ doc, pdfPage }],
             thesis: plan.thesis,
             kokakechuFlags: plan.kokakechuFlags.length > 0 ? plan.kokakechuFlags : undefined,
-            ku: kuResult ? {
-              stance: kuResult.stance,
-              reason: kuResult.reason,
-              nextNeed: kuResult.nextNeed,
-            } : {},
+            ku: ku("ANSWER", "grounded specified", [], { doc, pdfPage }),
           },
         timestamp: new Date().toISOString(),
       };
@@ -936,11 +918,7 @@ router.post("/chat", async (req: Request, res: Response) => {
         intent: "unknown", 
         error: "internal_error",
         llm: null,
-        ku: {
-          stance: errorKuResult.stance,
-          reason: errorKuResult.reason,
-          nextNeed: errorKuResult.nextNeed,
-        },
+        ku: ku("ASK", "internal error", ["retry"]),
       },
       timestamp: new Date().toISOString(),
     });
