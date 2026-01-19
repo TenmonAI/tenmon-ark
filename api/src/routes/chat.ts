@@ -373,7 +373,7 @@ router.post("/chat", async (req: Request, res: Response) => {
         if (mode === "HYBRID") {
           // 番号選択処理：候補メモリから候補を取得して採用
           const numMatch = message.match(/^\s*(\d+)\s*$/);
-          if (numMatch) {
+            if (numMatch) {
             const candidateIndex = parseInt(numMatch[1], 10) - 1;
             const memo = getCandidateMemoryEntry(threadId);
             const savedCandidates = memo?.hits ?? null;
@@ -387,7 +387,7 @@ router.post("/chat", async (req: Request, res: Response) => {
               autoPickMemory.delete(threadId); // 採用後はメモリをクリア
               
               // 番号選択（pick成立）は memo.detailRequested を継承する
-              const detailWanted = detail || memo?.detailRequested || false;
+              const detailWanted = detail || (memo?.detailRequested ?? false);
               
               // 番号選択成立直後にdetailを返す（Task A）
               const doc = selected.doc;
