@@ -30,29 +30,25 @@ if (fs.existsSync(patternsSrcDir)) {
   }
 }
 
-// Phase 1-A: ビルド時刻を version.ts に注入（dist/version.js を生成）
+// --- generate dist/version.js (authoritative build metadata) ---
 try {
   const { execSync } = await import("node:child_process");
-  const versionDistPath = path.join(root, "dist", "version.js");
+  
   const builtAt = new Date().toISOString();
-  
-  // Git SHA を取得（可能なら）
-  let gitSha = "unknown";
+  let gitSha = null;
   try {
-    gitSha = execSync("git rev-parse --short HEAD", { encoding: "utf-8", cwd: root }).trim();
-  } catch {
-    // Git が無い場合は unknown のまま
-  }
+    gitSha = execSync("git rev-parse --short HEAD", { encoding: "utf8" }).trim();
+  } catch {}
   
-  // version.js にビルド情報を書き込む
-  const versionContent = `// Phase 1-A: ビルド時に注入される情報
-export const TENMON_ARK_VERSION = "0.9.0";
-export const TENMON_ARK_BUILT_AT = "${builtAt}";
-export const TENMON_ARK_GIT_SHA = "${gitSha}";
-`;
-  
-  fs.writeFileSync(versionDistPath, versionContent, "utf-8");
-  console.log(`[copy-assets] generated ${versionDistPath} with builtAt=${builtAt}, gitSha=${gitSha}`);
+  const outPath = path.join(root, "dist", "version.js");
+  fs.writeFileSync(
+    outPath,
+    `export const TENMON_ARK_VERSION = "0.9.0";\n` +
+      `export const TENMON_ARK_BUILT_AT = ${JSON.stringify(builtAt)};\n` +
+      `export const TENMON_ARK_GIT_SHA = ${JSON.stringify(gitSha)};\n`,
+    "utf8"
+  );
+  console.log("[copy-assets] generated dist/version.js", { builtAt, gitSha });
 } catch (e) {
   console.warn(`[copy-assets] Failed to generate version.js:`, e);
 }

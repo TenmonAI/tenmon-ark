@@ -3,10 +3,17 @@
 
 export const RANKING_POLICY = {
   // IROHAへの寄せ補正（いろは系クエリ）
-  IROHA_BOOST: 30,
+  IROHA_BOOST: 80,
 
   // KTKへの寄せ補正（カタカムナ系クエリ）
   KTK_BOOST: 30,
+  
+  // 言霊定義帯域ボーナス（P6-10, P13-20）
+  KOTODAMA_DEF_BOOST_P6_10: 15,
+  KOTODAMA_DEF_BOOST_P13_20: 5,
+  
+  // confidence閾値
+  CONFIDENCE_THRESHOLD: 0.6,
 
   // KHS定義帯域ボーナス（言霊系クエリ、hasIrohaがfalseの場合のみ）
   KHS_DEFINITION_ZONE_BONUS: {

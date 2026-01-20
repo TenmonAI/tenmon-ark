@@ -380,30 +380,57 @@ router.post("/chat", async (req: Request, res: Response) => {
     // NATURAL モード（一般会話）
     // =========================
     if (mode === "NATURAL") {
-      const sys = systemNatural();
-      const ctx = getContext(threadId);
-
-      // 制約をプロンプトに追加
-      const constraintsText = skeleton.constraints.length > 0
-        ? `\n\n【制約】\n${skeleton.constraints.join("\n")}`
-        : "";
-
-      const llmStart = Date.now();
-      const answer = await llmChat(
-        [
-          { role: "system", content: sys + constraintsText },
-          ...ctx,
-          { role: "user", content: message },
-        ],
-        { temperature: 0.4, max_tokens: 380 }
-      ).catch((e) => {
-        console.error("[LLM-ERROR]", e);
-        return "承知しました。いまの問い、もう少しだけ状況を教えてください。";
-      });
-      const llmLatency = Date.now() - llmStart;
-
+      const messageLower = message.toLowerCase().trim();
+      
+      // 挨拶判定（おはよう/こんにちは/こんばんは）
+      const isGreeting = /^(おはよう|こんにちは|こんばんは|おはようございます)/.test(messageLower);
+      
+      // 日付質問判定（今日は何日？/今日の日付）
+      const isDateQuestion = /(今日|きょう|本日|ほんじつ).*(何日|なんにち|日付|ひづけ|いつ)/.test(messageLower) ||
+                             /(今日|きょう|本日|ほんじつ).*(ですか|？|\?)/.test(messageLower) ||
+                             /(何日|なんにち|日付|ひづけ)/.test(messageLower);
+      
+      let response: string;
+      let llmLatency: number | null = null;
+      
+      if (isGreeting) {
+        // 挨拶への自然な返答（時刻に応じた挨拶を返す）
+        const hour = new Date().getHours();
+        let greeting: string;
+        if (hour >= 5 && hour < 12) {
+          greeting = "おはようございます";
+        } else if (hour >= 12 && hour < 18) {
+          greeting = "こんにちは";
+        } else {
+          greeting = "こんばんは";
+        }
+        response = `${greeting}。天聞アークです。何かお手伝いできることはありますか？`;
+      } else if (isDateQuestion) {
+        // 日付をJSTで返す
+        const now = new Date();
+        const jstDate = now.toLocaleString("ja-JP", { 
+          timeZone: "Asia/Tokyo",
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+          weekday: "long",
+          hour: "2-digit",
+          minute: "2-digit"
+        });
+        response = `今日は${jstDate}です。`;
+      } else {
+        // それ以外の非domain質問 → 目的確認＋doc/pdfPageが必要なら例提示
+        response = "ご質問ありがとうございます。\n\n";
+        response += "資料準拠の回答をご希望の場合は、以下のように指定してください：\n";
+        response += "例）言霊秘書.pdf pdfPage=6 言灵とは？\n";
+        response += "例）カタカムナ言灵解.pdf pdfPage=13 火水とは？\n\n";
+        response += "一般会話の場合は、そのままお話しください。";
+        
+        // LLMを使わずに返す（捏造ゼロ維持）
+      }
+      
       pushTurn(threadId, { role: "user", content: message, at: Date.now() });
-      pushTurn(threadId, { role: "assistant", content: answer, at: Date.now() });
+      pushTurn(threadId, { role: "assistant", content: response, at: Date.now() });
       const totalLatency = Date.now() - startTime;
 
       // STEP 3-1: 必須ログ（info）
@@ -420,6 +447,7 @@ router.post("/chat", async (req: Request, res: Response) => {
         },
         evidenceConfidence: null,
         returnedDetail: detail,
+        naturalType: isGreeting ? "greeting" : isDateQuestion ? "date" : "other",
       }));
 
       // kuResult を設定（NATURAL モード）
@@ -427,7 +455,7 @@ router.post("/chat", async (req: Request, res: Response) => {
         kuResult = decideKuStance(message, mode, null, null, detail);
       }
       const result: any = {
-        response: answer,
+        response,
         evidence: null,
         decisionFrame: { 
           mode, 
@@ -439,7 +467,16 @@ router.post("/chat", async (req: Request, res: Response) => {
 
       // Phase 2-B: #詳細 がある場合のみ、detail を返す（null禁止、detail=falseの場合はフィールドを返さない）
       if (detail) {
-        const detailText = `【NATURAL モード】\n質問: ${message}\n回答: ${answer}\n\n※ NATURAL モードでは、資料準拠の詳細は返されません。詳細が必要な場合は、doc/pdfPage を指定するか「#詳細」とともに送信してください。`;
+        let detailText: string;
+        if (isGreeting) {
+          detailText = `【NATURAL モード：挨拶】\n質問: ${message}\n回答: ${response}\n\n※ 挨拶への自然な返答です。`;
+        } else if (isDateQuestion) {
+          const now = new Date();
+          const jstDate = now.toLocaleString("ja-JP", { timeZone: "Asia/Tokyo" });
+          detailText = `【NATURAL モード：日付】\n質問: ${message}\n回答: ${response}\n\n※ サーバー時刻（JST）: ${jstDate}`;
+        } else {
+          detailText = `【NATURAL モード】\n質問: ${message}\n回答: ${response}\n\n※ 資料準拠の詳細が必要な場合は、doc/pdfPage を指定するか「#詳細」とともに送信してください。`;
+        }
         // Phase 2-B: detail は必ず string で返す（null禁止）
         result.detail = detailText || "（詳細生成に失敗）";
       }

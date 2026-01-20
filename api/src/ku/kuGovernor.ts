@@ -2,6 +2,7 @@
 // Kū Governor（空の守護）：未確定状態を保持し、候補提示または質問の絞り込みを返す
 
 import type { AutoEvidenceResult, AutoEvidenceHit } from "../kotodama/retrieveAutoEvidence.js";
+import { RANKING_POLICY } from "../kotodama/rankingPolicy.js";
 
 export type KuStance = "ANSWER" | "ASK";
 
@@ -68,7 +69,7 @@ export function decideKuStance(
   }
 
   // confidence が低い場合は ASK（候補提示）
-  if (autoEvidence.confidence < 0.6) {
+  if (autoEvidence.confidence < RANKING_POLICY.CONFIDENCE_THRESHOLD) {
     const lines = autoEvidence.hits.map((h, i) => {
       const sn = h.quoteSnippets?.[0] ? ` / ${h.quoteSnippets[0]}` : "";
       return `${i + 1}) ${h.doc} pdfPage=${h.pdfPage} (score=${Math.round(h.score)})${sn}`;

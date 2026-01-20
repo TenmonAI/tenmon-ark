@@ -811,9 +811,11 @@ RESPONSE18_JSON=$(curl -sS "${BASE_URL}/api/chat" \
 
 RESPONSE18_TEXT=$(echo "${RESPONSE18_JSON}" | jq -r '.response // ""')
 MODE18=$(echo "${RESPONSE18_JSON}" | jq -r '.decisionFrame.mode')
+KU_TYPE18=$(echo "${RESPONSE18_JSON}" | jq -e -r '.decisionFrame.ku | type' 2>/dev/null || echo "null")
 
 echo "Response: ${RESPONSE18_TEXT:0:200}..."
 echo "Mode: ${MODE18}"
+echo "Ku type: ${KU_TYPE18}"
 echo ""
 
 # 検証: mode が HYBRID であること
@@ -821,6 +823,13 @@ if [ "${MODE18}" != "HYBRID" ]; then
   echo "${FAIL}: mode should be HYBRID, but got ${MODE18}"
   exit 1
 fi
+
+# ゲート化: kuType が object であることを必須にする（jq -e）
+if [ "${KU_TYPE18}" != "object" ]; then
+  echo "${FAIL}: decisionFrame.ku should be object, but got type: ${KU_TYPE18}"
+  exit 1
+fi
+echo "✅ kuType check: ${KU_TYPE18}"
 
 # 検証: 「資料指定して」で止まらない（候補提示 or 暫定採用が返る）
 if echo "${RESPONSE18_TEXT}" | grep -qE "(資料準拠で答えるため|参照する資料の指定が必要)"; then
@@ -927,9 +936,9 @@ echo "Step 2 (番号選択) Response:"
 echo "${RESPONSE_PICK}" | jq '{response, evidence, detailType:(.detail|type), detailLen:(.detail|length)}' | head -n 20
 echo ""
 
-# 検証: message="1" で detailType が "string" であること
-DETAIL_TYPE=$(echo "${RESPONSE_PICK}" | jq -r 'if .detail then (.detail | type) else "null" end')
-DETAIL_LEN=$(echo "${RESPONSE_PICK}" | jq -r 'if .detail then (.detail | length) else 0 end')
+# ゲート化: message="1" で detailType が "string" であることを必須にする（jq -e）
+DETAIL_TYPE=$(echo "${RESPONSE_PICK}" | jq -e -r 'if .detail then (.detail | type) else "null" end' 2>/dev/null || echo "null")
+DETAIL_LEN=$(echo "${RESPONSE_PICK}" | jq -e -r 'if .detail then (.detail | length) else 0 end' 2>/dev/null || echo "0")
 
 if [ "${DETAIL_TYPE}" != "string" ]; then
   echo "${FAIL}: message=\"1\" で detailType should be 'string', but got '${DETAIL_TYPE}'"
@@ -977,6 +986,19 @@ if [ "${VERSION_PRESENT}" != "true" ] || [ "${BUILT_AT_PRESENT}" != "true" ] || 
   echo "${FAIL}: /api/audit should contain 'version', 'builtAt', and 'gitSha' fields"
   exit 1
 fi
+
+# ゲート化: builtAt が string であることを必須にする（jq -e）
+BUILT_AT_TYPE=$(echo "${AUDIT_BODY}" | jq -r '.builtAt | type')
+if [ "${BUILT_AT_TYPE}" != "string" ]; then
+  echo "${FAIL}: /api/audit builtAt should be string, but got type: ${BUILT_AT_TYPE}"
+  exit 1
+fi
+BUILT_AT_VALUE=$(echo "${AUDIT_BODY}" | jq -e -r '.builtAt' 2>/dev/null || echo "")
+if [ -z "${BUILT_AT_VALUE}" ] || [ "${BUILT_AT_VALUE}" = "null" ]; then
+  echo "${FAIL}: /api/audit builtAt should not be null or empty"
+  exit 1
+fi
+echo "✅ builtAt type check: ${BUILT_AT_TYPE}, value: ${BUILT_AT_VALUE:0:30}..."
 
 # 検証: corpus が存在すること
 CORPUS_PRESENT=$(echo "${AUDIT_BODY}" | jq 'has("corpus")')
@@ -1035,9 +1057,9 @@ echo "Step 2 (番号選択) Response:"
 echo "${RESPONSE_PICK_PHASE2}" | jq '{response, evidence, detailType:(.detail|type), detailLen:(.detail|length)}' | head -n 20
 echo ""
 
-# 検証: message="1" で detailType が "string" であること
-DETAIL_TYPE_P2=$(echo "${RESPONSE_PICK_PHASE2}" | jq -r 'if .detail then (.detail | type) else "null" end')
-DETAIL_LEN_P2=$(echo "${RESPONSE_PICK_PHASE2}" | jq -r 'if .detail then (.detail | length) else 0 end')
+# ゲート化: Phase2回帰で detailType が "string" であることを必須にする（jq -e）
+DETAIL_TYPE_P2=$(echo "${RESPONSE_PICK_PHASE2}" | jq -e -r 'if .detail then (.detail | type) else "null" end' 2>/dev/null || echo "null")
+DETAIL_LEN_P2=$(echo "${RESPONSE_PICK_PHASE2}" | jq -e -r 'if .detail then (.detail | length) else 0 end' 2>/dev/null || echo "0")
 
 if [ "${DETAIL_TYPE_P2}" != "string" ]; then
   echo "${FAIL}: Phase2回帰: message=\"1\" で detailType should be 'string', but got '${DETAIL_TYPE_P2}'"

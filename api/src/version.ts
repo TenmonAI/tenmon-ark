@@ -3,41 +3,25 @@
 export const TENMON_ARK_VERSION = "0.9.0";
 
 // Phase 1: ビルド識別子（反映確認のため）
-// 起動時に gitSha を取得、builtAt はビルド時または起動時のISO時刻
-import { execSync } from "child_process";
+// ビルド時に dist/version.js から注入される値を使用
+// 開発時（dist/version.js が存在しない場合）は null を返す
 
-function getGitSha(): string {
-  // 環境変数があれば優先
-  if (process.env.TENMON_ARK_GIT_SHA || process.env.GIT_SHA) {
-    return process.env.TENMON_ARK_GIT_SHA || process.env.GIT_SHA || "unknown";
-  }
-  
-  try {
-    // 起動時に git rev-parse --short HEAD を実行
-    const sha = execSync("git rev-parse --short HEAD", { 
-      encoding: "utf-8", 
-      cwd: process.cwd(),
-      stdio: ["ignore", "pipe", "ignore"]
-    }).trim();
-    return sha || "unknown";
-  } catch (e) {
-    // git コマンドが失敗した場合（.git がない、git がインストールされていない等）
-    console.warn("[VERSION] Failed to get git SHA:", e);
-    return "unknown";
-  }
+// dist/version.js から値を読み込む（実行時）
+// ビルド時に copy-assets.mjs が生成する dist/version.js から値を取得
+export let TENMON_ARK_BUILT_AT: string | null = null;
+export let TENMON_ARK_GIT_SHA: string | null = null;
+
+// 実行時に dist/version.js を読み込む（ビルド後は存在する）
+// TypeScript の型チェックを回避するため、文字列リテラルで動的 import
+try {
+  // dist/version.js を動的に読み込む（実行時）
+  // @ts-ignore: dist/version.js はビルド時に生成されるため、型チェック時には存在しない
+  const versionModule = await import("../version.js");
+  TENMON_ARK_BUILT_AT = versionModule.TENMON_ARK_BUILT_AT ?? null;
+  TENMON_ARK_GIT_SHA = versionModule.TENMON_ARK_GIT_SHA ?? null;
+} catch (e) {
+  // dist/version.js が存在しない場合（開発時など）は null のまま
+  // ビルド時に copy-assets.mjs が生成する
 }
-
-function getBuiltAt(): string {
-  // 環境変数があれば優先（ビルド時に注入された値）
-  if (process.env.TENMON_ARK_BUILT_AT) {
-    return process.env.TENMON_ARK_BUILT_AT;
-  }
-  
-  // 起動時のISO時刻を返す
-  return new Date().toISOString();
-}
-
-export const TENMON_ARK_BUILT_AT = getBuiltAt();
-export const TENMON_ARK_GIT_SHA = getGitSha();
 
 

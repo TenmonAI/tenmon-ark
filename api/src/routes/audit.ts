@@ -58,7 +58,8 @@ router.get("/audit", (req, res) => {
   try {
     // version/builtAt/gitSha（dist/version.js から）
     const version = TENMON_ARK_VERSION;
-    const builtAt = TENMON_ARK_BUILT_AT;
+    // builtAt は null を許容しない（null の場合は現在時刻を使用）
+    const builtAt = TENMON_ARK_BUILT_AT || new Date().toISOString();
     const gitSha = TENMON_ARK_GIT_SHA;
 
     // corpus存在/行数（khs/ktk/iroha の text.jsonl / law_candidates.jsonl）
@@ -91,17 +92,8 @@ router.get("/audit", (req, res) => {
           sourcePath: null,
         };
 
-    // rankingPolicy値（src/kotodama/rankingPolicy.ts の中身）
-    const rankingPolicy = {
-      IROHA_BOOST: RANKING_POLICY.IROHA_BOOST,
-      KTK_BOOST: RANKING_POLICY.KTK_BOOST,
-      KHS_DEFINITION_ZONE_BONUS: {
-        PRIMARY: RANKING_POLICY.KHS_DEFINITION_ZONE_BONUS.PRIMARY,
-        SECONDARY: RANKING_POLICY.KHS_DEFINITION_ZONE_BONUS.SECONDARY,
-      },
-      LAW_CANDIDATES: RANKING_POLICY.LAW_CANDIDATES,
-      DOC_WEIGHTS: RANKING_POLICY.DOC_WEIGHTS,
-    };
+    // rankingPolicy値（src/kotodama/rankingPolicy.ts の中身をそのまま返す）
+    const rankingPolicy = RANKING_POLICY;
 
     // timestamp
     const timestamp = new Date().toISOString();
@@ -117,10 +109,12 @@ router.get("/audit", (req, res) => {
     });
   } catch (error: any) {
     // エラー時も 200 OK を返す（監査エンドポイントは常に成功を返す）
+    // builtAt は null を許容しない（エラー時は現在時刻を使用）
+    const fallbackBuiltAt = TENMON_ARK_BUILT_AT || new Date().toISOString();
     res.status(200).json({
       version: TENMON_ARK_VERSION || "unknown",
-      builtAt: TENMON_ARK_BUILT_AT || null,
-      gitSha: TENMON_ARK_GIT_SHA || "unknown",
+      builtAt: fallbackBuiltAt,
+      gitSha: TENMON_ARK_GIT_SHA || null,
       corpus: {
         khs: { text: { exists: false, lineCount: null }, lawCandidates: { exists: false, lineCount: null } },
         ktk: { text: { exists: false, lineCount: null }, lawCandidates: { exists: false, lineCount: null } },
