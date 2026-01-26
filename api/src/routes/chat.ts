@@ -94,6 +94,42 @@ function getCandidateMemoryEntry(threadId: string): AutoPickMemoryEntry | null {
   return mem;
 }
 
+// NATURAL モード用ヘルパー関数
+function formatJstNow(): string {
+  const now = new Date();
+  // JST に変換（UTC+9）
+  const jstOffset = 9 * 60; // 分単位
+  const jstTime = new Date(now.getTime() + (jstOffset - now.getTimezoneOffset()) * 60 * 1000);
+  
+  const year = jstTime.getFullYear();
+  const month = String(jstTime.getMonth() + 1).padStart(2, "0");
+  const day = String(jstTime.getDate()).padStart(2, "0");
+  const weekday = jstTime.toLocaleString("ja-JP", { timeZone: "Asia/Tokyo", weekday: "short" });
+  const hour = String(jstTime.getHours()).padStart(2, "0");
+  const minute = String(jstTime.getMinutes()).padStart(2, "0");
+  return `${year}-${month}-${day}（${weekday}）${hour}:${minute}（JST）`;
+}
+
+function classifyNatural(message: string): "greeting" | "datetime" | "other" {
+  const m = message.toLowerCase().trim();
+  
+  // greeting判定（日本語: おはよう/こんにちは/こんばんは/はじめまして/よろしく / 英語: hello/hi/good morning/good afternoon/good evening）
+  if (/^(おはよう|こんにちは|こんばんは|おはようございます|はじめまして|よろしく)/.test(m) ||
+      /^(hello|hi|hey|good\s+(morning|afternoon|evening)|greetings)/.test(m)) {
+    return "greeting";
+  }
+  
+  // datetime判定（日本語: 今日は何日/今日の日付/今何時/何曜日 / 英語: date/time/what date/what time/what day）
+  if (/(今日|きょう|本日|ほんじつ).*(何日|なんにち|日付|ひづけ|いつ|何曜日|なんようび|曜日)/.test(m) ||
+      /(今日|きょう|本日|ほんじつ).*(ですか|？|\?)/.test(m) ||
+      /(今日の日付|きょうのひづけ|何日|なんにち|日付|ひづけ|何曜日|なんようび|曜日|今何時|いまなんじ|時間)/.test(m) ||
+      /(what\s+(date|time|day)|current\s+(date|time)|today|now)/.test(m)) {
+    return "datetime";
+  }
+  
+  return "other";
+}
+
 function parseDocAndPageStrict(text: string): { 
   doc: string | null; 
   pdfPage: number | null;
@@ -380,21 +416,11 @@ router.post("/chat", async (req: Request, res: Response) => {
     // NATURAL モード（一般会話）
     // =========================
     if (mode === "NATURAL") {
-      const messageLower = message.toLowerCase().trim();
-      
-      // 挨拶判定（おはよう/こんにちは/こんばんは）
-      const isGreeting = /^(おはよう|こんにちは|こんばんは|おはようございます)/.test(messageLower);
-      
-      // 日付質問判定（今日は何日？/今日の日付）
-      const isDateQuestion = /(今日|きょう|本日|ほんじつ).*(何日|なんにち|日付|ひづけ|いつ)/.test(messageLower) ||
-                             /(今日|きょう|本日|ほんじつ).*(ですか|？|\?)/.test(messageLower) ||
-                             /(何日|なんにち|日付|ひづけ)/.test(messageLower);
-      
+      const naturalType = classifyNatural(message);
       let response: string;
-      let llmLatency: number | null = null;
       
-      if (isGreeting) {
-        // 挨拶への自然な返答（時刻に応じた挨拶を返す）
+      if (naturalType === "greeting") {
+        // A. greeting: 挨拶への自然な返答（時刻に応じた挨拶を返す）
         const hour = new Date().getHours();
         let greeting: string;
         if (hour >= 5 && hour < 12) {
@@ -404,29 +430,20 @@ router.post("/chat", async (req: Request, res: Response) => {
         } else {
           greeting = "こんばんは";
         }
-        response = `${greeting}。天聞アークです。何かお手伝いできることはありますか？`;
-      } else if (isDateQuestion) {
-        // 日付をJSTで返す
-        const now = new Date();
-        const jstDate = now.toLocaleString("ja-JP", { 
-          timeZone: "Asia/Tokyo",
-          year: "numeric",
-          month: "long",
-          day: "numeric",
-          weekday: "long",
-          hour: "2-digit",
-          minute: "2-digit"
-        });
-        response = `今日は${jstDate}です。`;
+        response = `${greeting}。天聞アークです。\n\n『言灵/カタカムナ/天津金木』は #詳細 を付けると根拠候補を提示できます。`;
+      } else if (naturalType === "datetime") {
+        // B. date/time: JSTで返す
+        const jstNow = formatJstNow();
+        response = `今日は${jstNow}です。`;
       } else {
-        // それ以外の非domain質問 → 目的確認＋doc/pdfPageが必要なら例提示
-        response = "ご質問ありがとうございます。\n\n";
-        response += "資料準拠の回答をご希望の場合は、以下のように指定してください：\n";
-        response += "例）言霊秘書.pdf pdfPage=6 言灵とは？\n";
-        response += "例）カタカムナ言灵解.pdf pdfPage=13 火水とは？\n\n";
-        response += "一般会話の場合は、そのままお話しください。";
-        
-        // LLMを使わずに返す（捏造ゼロ維持）
+        // C. smalltalk誘導: それ以外 → 選択肢3つ + 資料指定の例
+        response = "了解。どういう方向で話しますか？\n\n";
+        response += "1) 言灵/カタカムナ/天津金木の質問\n";
+        response += "2) 資料指定（doc/pdfPage）で厳密回答\n";
+        response += "3) いまの状況整理（何を作りたいか）\n\n";
+        response += "資料指定の例：\n";
+        response += "例）言霊秘書.pdf pdfPage=6 言灵とは？ #詳細\n";
+        response += "例）いろは最終原稿.pdf pdfPage=1 真言とは？ #詳細";
       }
       
       pushTurn(threadId, { role: "user", content: message, at: Date.now() });
@@ -443,11 +460,11 @@ router.post("/chat", async (req: Request, res: Response) => {
         latency: {
           total: totalLatency,
           liveEvidence: null,
-          llm: llmLatency,
+          llm: null,
         },
         evidenceConfidence: null,
         returnedDetail: detail,
-        naturalType: isGreeting ? "greeting" : isDateQuestion ? "date" : "other",
+        naturalType,
       }));
 
       // kuResult を設定（NATURAL モード）
@@ -458,9 +475,10 @@ router.post("/chat", async (req: Request, res: Response) => {
         response,
         evidence: null,
         decisionFrame: { 
-          mode, 
-          intent: skeleton.intent,
-          ku: ku("ANSWER", "NATURAL モード", []),
+          mode: "NATURAL", 
+          intent: "chat",
+          llm: null,
+          ku: ku("ANSWER", `NATURAL モード（${naturalType}）`, []),
         },
         timestamp: new Date().toISOString(),
       };
@@ -468,14 +486,13 @@ router.post("/chat", async (req: Request, res: Response) => {
       // Phase 2-B: #詳細 がある場合のみ、detail を返す（null禁止、detail=falseの場合はフィールドを返さない）
       if (detail) {
         let detailText: string;
-        if (isGreeting) {
+        if (naturalType === "greeting") {
           detailText = `【NATURAL モード：挨拶】\n質問: ${message}\n回答: ${response}\n\n※ 挨拶への自然な返答です。`;
-        } else if (isDateQuestion) {
-          const now = new Date();
-          const jstDate = now.toLocaleString("ja-JP", { timeZone: "Asia/Tokyo" });
-          detailText = `【NATURAL モード：日付】\n質問: ${message}\n回答: ${response}\n\n※ サーバー時刻（JST）: ${jstDate}`;
+        } else if (naturalType === "datetime") {
+          const jstNow = formatJstNow();
+          detailText = `【NATURAL モード：日付】\n質問: ${message}\n回答: ${response}\n\n※ サーバー時刻（JST）: ${jstNow}`;
         } else {
-          detailText = `【NATURAL モード】\n質問: ${message}\n回答: ${response}\n\n※ 資料準拠の詳細が必要な場合は、doc/pdfPage を指定するか「#詳細」とともに送信してください。`;
+          detailText = `【NATURAL モード：雑談誘導】\n質問: ${message}\n回答: ${response}\n\n※ 資料準拠の詳細が必要な場合は、doc/pdfPage を指定するか「#詳細」とともに送信してください。`;
         }
         // Phase 2-B: detail は必ず string で返す（null禁止）
         result.detail = detailText || "（詳細生成に失敗）";

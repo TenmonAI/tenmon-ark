@@ -2,7 +2,8 @@
 # TENMON-ARK 受入テストスクリプト
 # 実行方法: BASE_URL=http://localhost:3000 ./scripts/acceptance_test.sh
 
-set -e
+set -euo pipefail
+set +H
 
 BASE_URL="${BASE_URL:-http://localhost:3000}"
 
@@ -77,6 +78,13 @@ if [ "${MODE2}" != "HYBRID" ]; then
   exit 1
 fi
 
+# ゲート化: HYBRID で decisionFrame.ku が object であることを必須にする（jq -e）
+KU_TYPE2=$(echo "${RESPONSE2_JSON}" | jq -e -r '.decisionFrame.ku | type' 2>/dev/null || echo "null")
+if [ "${KU_TYPE2}" != "object" ]; then
+  echo "${FAIL}: HYBRID mode: decisionFrame.ku should be object, but got type: ${KU_TYPE2}"
+  exit 1
+fi
+
 # Phase 2-C: 資料不足 or 推定 が明示されていることを確認
 if ! echo "${RESPONSE2}" | grep -qE "(資料不足|推定|Evidence|根拠|資料が不足)"; then
   echo "⚠️  WARN: 「資料不足」または「推定」が明示されていない可能性"
@@ -120,6 +128,13 @@ if [ "${MODE2_DETAIL}" != "HYBRID" ]; then
   exit 1
 fi
 
+# ゲート化: HYBRID で decisionFrame.ku が object であることを必須にする（jq -e）
+KU_TYPE2_DETAIL=$(echo "${RESPONSE2_DETAIL_JSON}" | jq -e -r '.decisionFrame.ku | type' 2>/dev/null || echo "null")
+if [ "${KU_TYPE2_DETAIL}" != "object" ]; then
+  echo "${FAIL}: HYBRID mode (with #詳細): decisionFrame.ku should be object, but got type: ${KU_TYPE2_DETAIL}"
+  exit 1
+fi
+
 # Phase 2-B: detail が string で null ではないことを確認
 if [ "${DETAIL2_TYPE}" != "string" ]; then
   echo "${FAIL}: detail should be string, but got type: ${DETAIL2_TYPE}"
@@ -155,6 +170,13 @@ echo ""
 # Phase 2-A: 検証: mode が GROUNDED であること（明示doc/pdfPage + #詳細）
 if [ "${MODE3}" != "GROUNDED" ]; then
   echo "${FAIL}: mode should be GROUNDED, but got ${MODE3}"
+  exit 1
+fi
+
+# ゲート化: GROUNDED で decisionFrame.ku が object であることを必須にする（jq -e）
+KU_TYPE3=$(echo "${RESPONSE3_JSON}" | jq -e -r '.decisionFrame.ku | type' 2>/dev/null || echo "null")
+if [ "${KU_TYPE3}" != "object" ]; then
+  echo "${FAIL}: GROUNDED mode: decisionFrame.ku should be object, but got type: ${KU_TYPE3}"
   exit 1
 fi
 
@@ -760,6 +782,13 @@ if [ "${MODE16}" != "GROUNDED" ]; then
   exit 1
 fi
 
+# ゲート化: GROUNDED で decisionFrame.ku が object であることを必須にする（jq -e）
+KU_TYPE16=$(echo "${RESPONSE16_JSON}" | jq -e -r '.decisionFrame.ku | type' 2>/dev/null || echo "null")
+if [ "${KU_TYPE16}" != "object" ]; then
+  echo "${FAIL}: GROUNDED mode (Phase 13): decisionFrame.ku should be object, but got type: ${KU_TYPE16}"
+  exit 1
+fi
+
 # 検証: detail が string で null ではないこと
 if [ -z "${DETAIL16}" ] || [ "${DETAIL16}" = "null" ]; then
   echo "${FAIL}: detail should not be null or empty"
@@ -987,10 +1016,15 @@ if [ "${VERSION_PRESENT}" != "true" ] || [ "${BUILT_AT_PRESENT}" != "true" ] || 
   exit 1
 fi
 
-# ゲート化: builtAt が string であることを必須にする（jq -e）
-BUILT_AT_TYPE=$(echo "${AUDIT_BODY}" | jq -r '.builtAt | type')
+# ゲート化: builtAt が string && length>0 であることを必須にする（jq -e）
+BUILT_AT_TYPE=$(echo "${AUDIT_BODY}" | jq -e -r '.builtAt | type' 2>/dev/null || echo "null")
+BUILT_AT_LEN=$(echo "${AUDIT_BODY}" | jq -e -r '.builtAt | length' 2>/dev/null || echo "0")
 if [ "${BUILT_AT_TYPE}" != "string" ]; then
   echo "${FAIL}: /api/audit builtAt should be string, but got type: ${BUILT_AT_TYPE}"
+  exit 1
+fi
+if [ "${BUILT_AT_LEN}" -le 0 ]; then
+  echo "${FAIL}: /api/audit builtAt should have length > 0, but got: ${BUILT_AT_LEN}"
   exit 1
 fi
 BUILT_AT_VALUE=$(echo "${AUDIT_BODY}" | jq -e -r '.builtAt' 2>/dev/null || echo "")
@@ -998,7 +1032,7 @@ if [ -z "${BUILT_AT_VALUE}" ] || [ "${BUILT_AT_VALUE}" = "null" ]; then
   echo "${FAIL}: /api/audit builtAt should not be null or empty"
   exit 1
 fi
-echo "✅ builtAt type check: ${BUILT_AT_TYPE}, value: ${BUILT_AT_VALUE:0:30}..."
+echo "✅ builtAt type check: ${BUILT_AT_TYPE}, length: ${BUILT_AT_LEN}, value: ${BUILT_AT_VALUE:0:30}..."
 
 # 検証: corpus が存在すること
 CORPUS_PRESENT=$(echo "${AUDIT_BODY}" | jq 'has("corpus")')
@@ -1075,8 +1109,92 @@ echo "${PASS}: Phase2回帰: 候補提示→番号選択で detailType==\"string
 echo ""
 
 # ============================================
+# Phase 19: NATURAL モードのテスト（新規追加）
+# ============================================
+echo "【Phase 19-1: NATURAL greeting テスト】"
+echo "テスト: hello → mode=NATURAL, kuType=object, llm=null"
+RESPONSE_N1_JSON=$(curl -sS "${BASE_URL}/api/chat" \
+  -H "Content-Type: application/json" \
+  -d '{"threadId":"test-natural-greeting","message":"hello"}')
+
+MODE_N1=$(echo "${RESPONSE_N1_JSON}" | jq -e -r '.decisionFrame.mode' 2>/dev/null || echo "null")
+KU_TYPE_N1=$(echo "${RESPONSE_N1_JSON}" | jq -e -r '.decisionFrame.ku | type' 2>/dev/null || echo "null")
+LLM_N1=$(echo "${RESPONSE_N1_JSON}" | jq -e -r '.decisionFrame.llm // "NOT_PRESENT"' 2>/dev/null || echo "null")
+
+if [ "${MODE_N1}" != "NATURAL" ]; then
+  echo "${FAIL}: NATURAL greeting: mode should be NATURAL, but got ${MODE_N1}"
+  exit 1
+fi
+
+if [ "${KU_TYPE_N1}" != "object" ]; then
+  echo "${FAIL}: NATURAL greeting: decisionFrame.ku should be object, but got type: ${KU_TYPE_N1}"
+  exit 1
+fi
+
+if [ "${LLM_N1}" != "null" ] && [ "${LLM_N1}" != "NOT_PRESENT" ]; then
+  echo "${FAIL}: NATURAL greeting: decisionFrame.llm should be null, but got: ${LLM_N1}"
+  exit 1
+fi
+
+# PASSメッセージは最後にまとめて出力（途中PASS削除）
+
+echo "【Phase 19-2: NATURAL datetime テスト】"
+echo "テスト: date → mode=NATURAL, kuType=object, responseにJST時刻が含まれる"
+RESPONSE_N2_JSON=$(curl -sS "${BASE_URL}/api/chat" \
+  -H "Content-Type: application/json" \
+  -d '{"threadId":"test-natural-datetime","message":"date"}')
+
+MODE_N2=$(echo "${RESPONSE_N2_JSON}" | jq -e -r '.decisionFrame.mode' 2>/dev/null || echo "null")
+KU_TYPE_N2=$(echo "${RESPONSE_N2_JSON}" | jq -e -r '.decisionFrame.ku | type' 2>/dev/null || echo "null")
+RESPONSE_N2=$(echo "${RESPONSE_N2_JSON}" | jq -e -r '.response' 2>/dev/null || echo "")
+
+if [ "${MODE_N2}" != "NATURAL" ]; then
+  echo "${FAIL}: NATURAL datetime: mode should be NATURAL, but got ${MODE_N2}"
+  exit 1
+fi
+
+if [ "${KU_TYPE_N2}" != "object" ]; then
+  echo "${FAIL}: NATURAL datetime: decisionFrame.ku should be object, but got type: ${KU_TYPE_N2}"
+  exit 1
+fi
+
+if ! echo "${RESPONSE_N2}" | grep -qE "(JST|202[0-9]-[0-9]{2}-[0-9]{2}|（[月火水木金土日]）)"; then
+  echo "${FAIL}: NATURAL datetime: response should contain JST, YYYY-MM-DD, or （曜）, but got: ${RESPONSE_N2:0:100}"
+  exit 1
+fi
+
+# PASSメッセージは最後にまとめて出力（途中PASS削除）
+
+echo "【Phase 19-3: NATURAL smalltalk誘導 テスト】"
+echo "テスト: help → mode=NATURAL, kuType=object, responseに選択肢が含まれる"
+RESPONSE_N3_JSON=$(curl -sS "${BASE_URL}/api/chat" \
+  -H "Content-Type: application/json" \
+  -d '{"threadId":"test-natural-smalltalk","message":"help"}')
+
+MODE_N3=$(echo "${RESPONSE_N3_JSON}" | jq -e -r '.decisionFrame.mode' 2>/dev/null || echo "null")
+KU_TYPE_N3=$(echo "${RESPONSE_N3_JSON}" | jq -e -r '.decisionFrame.ku | type' 2>/dev/null || echo "null")
+RESPONSE_N3=$(echo "${RESPONSE_N3_JSON}" | jq -e -r '.response' 2>/dev/null || echo "")
+
+if [ "${MODE_N3}" != "NATURAL" ]; then
+  echo "${FAIL}: NATURAL smalltalk: mode should be NATURAL, but got ${MODE_N3}"
+  exit 1
+fi
+
+if [ "${KU_TYPE_N3}" != "object" ]; then
+  echo "${FAIL}: NATURAL smalltalk: decisionFrame.ku should be object, but got type: ${KU_TYPE_N3}"
+  exit 1
+fi
+
+if ! echo "${RESPONSE_N3}" | grep -qE "(1\)|2\)|3\))"; then
+  echo "${FAIL}: NATURAL smalltalk: response should contain choice options (1) 2) 3)), but got: ${RESPONSE_N3:0:100}"
+  exit 1
+fi
+
+# PASSメッセージは最後にまとめて出力（途中PASS削除）
+
+# ============================================
 echo "=== 全テスト完了 ==="
-echo "✅ すべての受入テストに合格しました"
+echo "✅ すべての受入テストに合格しました（Phase 1-19）"
 echo ""
 echo "【期待値確認】"
 echo "✅ /api/version に version, gitSha, builtAt が含まれている"
@@ -1093,4 +1211,5 @@ echo "✅ Content-Type が application/json"
 echo "✅ 「資料指定して」で止まらず、候補提示 or 暫定採用に変わる"
 echo "✅ /api/audit が 200 で JSON を返し、rankingPolicy値が含まれる（Phase4追加）"
 echo "✅ 暫定採用→番号選択の2ステップで detailType==\"string\" になる（Phase4追加）"
+echo "✅ NATURAL モードで greeting/datetime/smalltalk が動作し、decisionFrame.ku が object（Phase19追加）"
 
