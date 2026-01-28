@@ -381,11 +381,12 @@ router.post("/chat", async (req: Request, res: Response) => {
       const result: any = {
         response,
         evidence: null,
-        decisionFrame: { 
-          mode: "NATURAL", 
+        decisionFrame: {
+          mode: "NATURAL",
           intent: "chat",
           llm: null,
-          ku: ku("ANSWER", `NATURAL モード（${naturalType}）`, []),
+          // NATURAL は常に固定の空オブジェクト（{}）を返す（llm/ku不変）
+          ku: {},
         },
         timestamp: new Date().toISOString(),
       };

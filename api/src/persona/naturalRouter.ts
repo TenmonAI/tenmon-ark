@@ -1,8 +1,8 @@
 // NATURAL モード用ルーター
-// chat.ts から移動したロジック（挙動変更なし）
+// chat.ts から移動したロジック（挙動変更なし、ルールベースのみ）
 
 /**
- * JST時刻をフォーマットする
+ * JST時刻をフォーマットする（YYYY-MM-DD（曜）HH:MM JST）
  */
 export function formatJstNow(): string {
   const now = new Date();
@@ -43,8 +43,16 @@ export function classifyNatural(message: string): "greeting" | "datetime" | "oth
 }
 
 /**
+ * 日本語メッセージかどうかを判定する（ひらがな/カタカナ/漢字を含むか）
+ */
+function isJapanese(message: string): boolean {
+  return /[ぁ-んァ-ン一-龯]/.test(message);
+}
+
+/**
  * NATURAL モードの responseText を生成する
- * 工程2-α: 配線化のため、responseText のみを返す（decisionFrame は chat.ts 側で組み立てる）
+ * - greeting/datetime/other をルールベースで決定
+ * - decisionFrame は chat.ts 側で組み立てる
  */
 export function naturalRouter(input: { message: string; mode: string }): {
   handled: boolean;
@@ -52,30 +60,49 @@ export function naturalRouter(input: { message: string; mode: string }): {
 } {
   const { message } = input;
   const naturalType = classifyNatural(message);
+  const ja = isJapanese(message);
   let responseText: string;
   
   if (naturalType === "greeting") {
-    // A. greeting: JSTに応じた挨拶 + "#詳細で根拠候補提示できます"を1行
+    // greeting: JSTに応じた挨拶 + 「#詳細で根拠候補提示できます」を1行
     const hour = new Date().getHours();
-    let greeting: string;
-    if (hour >= 5 && hour < 12) {
-      greeting = "おはようございます";
-    } else if (hour >= 12 && hour < 18) {
-      greeting = "こんにちは";
+    if (ja) {
+      let greeting: string;
+      if (hour >= 5 && hour < 12) {
+        greeting = "おはようございます";
+      } else if (hour >= 12 && hour < 18) {
+        greeting = "こんにちは";
+      } else {
+        greeting = "こんばんは";
+      }
+      responseText = `${greeting}。天聞アークです。#詳細で根拠候補提示できます。`;
     } else {
-      greeting = "こんばんは";
+      let greeting: string;
+      if (hour >= 5 && hour < 12) {
+        greeting = "Good morning";
+      } else if (hour >= 12 && hour < 18) {
+        greeting = "Good afternoon";
+      } else {
+        greeting = "Good evening";
+      }
+      responseText = `${greeting}, this is Tenmon-ARK. You can send #detail to see evidence candidates.`;
     }
-    responseText = `${greeting}。天聞アークです。#詳細で根拠候補提示できます。`;
   } else if (naturalType === "datetime") {
-    // B. datetime: YYYY-MM-DD（曜）HH:MM JST
-    const jstNow = formatJstNow();
-    responseText = jstNow;
+    // datetime: YYYY-MM-DD（曜）HH:MM JST（言語共通）
+    responseText = formatJstNow();
   } else {
-    // C. other: "どの方向？" + 1)2)3) を必ず含む
-    responseText = "どの方向で話しますか？\n\n";
-    responseText += "1) 言灵/カタカムナ/天津金木の質問\n";
-    responseText += "2) 資料指定（doc/pdfPage）で厳密回答\n";
-    responseText += "3) いまの状況整理（何を作りたいか）";
+    // other: 「どの方向？」 + 1)2)3) を必ず含む（日本語/英語で分岐）
+    if (ja) {
+      responseText = "どの方向で話しますか？\n\n";
+      responseText += "1) 言灵/カタカムナ/天津金木の質問\n";
+      responseText += "2) 資料指定（doc/pdfPage）で厳密回答\n";
+      responseText += "3) いまの状況整理（何を作りたいか）";
+    } else {
+      responseText = "Which direction would you like to go?\n\n";
+      responseText += "1) Questions about Kotodama / Katakamuna / Amatsu Kanagi\n";
+      responseText += "2) Strict answers with doc/pdfPage specified\n";
+      responseText += "3)整理 what you are trying to build now";
+    }
   }
   
   return {
