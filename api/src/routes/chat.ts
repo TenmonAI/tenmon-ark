@@ -14,7 +14,7 @@ import { buildTruthSkeleton } from "../truth/truthSkeleton.js";
 import { fetchLiveEvidence } from "../tools/liveEvidence.js";
 import { getRequestId } from "../middleware/requestId.js";
 import { buildEvidencePack, estimateDocAndPage } from "../kotodama/evidencePack.js";
-import { naturalRouter, formatJstNow, classifyNatural } from "../persona/naturalRouter.js";
+import { naturalRouter } from "../persona/naturalRouter.js";
 import {
   buildCoreAnswerPlanFromEvidence,
   inferDocKey,
@@ -343,71 +343,23 @@ router.post("/chat", async (req: Request, res: Response) => {
     if (mode === "NATURAL") {
       const nat = naturalRouter({ message, mode });
       if (!nat.handled || !nat.responseText) {
-        // フォールバック（通常は到達しない）
         return res.status(500).json({
           error: "NATURAL モードの処理に失敗しました",
           timestamp: new Date().toISOString(),
         });
       }
-      
+
       const response = nat.responseText;
-      const naturalType = classifyNatural(message);
-      
+
       pushTurn(threadId, { role: "user", content: message, at: Date.now() });
       pushTurn(threadId, { role: "assistant", content: response, at: Date.now() });
-      const totalLatency = Date.now() - startTime;
 
-      // STEP 3-1: 必須ログ（info）
-      console.log(JSON.stringify({
-        level: "info",
-        requestId,
-        threadId,
-        mode,
-        risk: skeleton.risk,
-        latency: {
-          total: totalLatency,
-          liveEvidence: null,
-          llm: null,
-        },
-        evidenceConfidence: null,
-        returnedDetail: detail,
-        naturalType,
-      }));
-
-      // kuResult を設定（NATURAL モード）
-      if (!kuResult) {
-        kuResult = decideKuStance(message, mode, null, null, detail);
-      }
-      const result: any = {
+      return res.json({
         response,
         evidence: null,
-        decisionFrame: {
-          mode: "NATURAL",
-          intent: "chat",
-          llm: null,
-          // NATURAL は常に固定の空オブジェクト（{}）を返す（llm/ku不変）
-          ku: {},
-        },
+        decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: {} },
         timestamp: new Date().toISOString(),
-      };
-
-      // Phase 2-B: #詳細 がある場合のみ、detail を返す（null禁止、detail=falseの場合はフィールドを返さない）
-      if (detail) {
-        let detailText: string;
-        if (naturalType === "greeting") {
-          detailText = `【NATURAL モード：挨拶】\n質問: ${message}\n回答: ${response}\n\n※ 挨拶への自然な返答です。`;
-        } else if (naturalType === "datetime") {
-          const jstNow = formatJstNow();
-          detailText = `【NATURAL モード：日付】\n質問: ${message}\n回答: ${response}\n\n※ サーバー時刻（JST）: ${jstNow}`;
-        } else {
-          detailText = `【NATURAL モード：雑談誘導】\n質問: ${message}\n回答: ${response}\n\n※ 資料準拠の詳細が必要な場合は、doc/pdfPage を指定するか「#詳細」とともに送信してください。`;
-        }
-        // Phase 2-B: detail は必ず string で返す（null禁止）
-        result.detail = detailText || "（詳細生成に失敗）";
-      }
-      // Phase 2-B: detail === false の場合は detail フィールドを返さない（nullも返さない）
-
-      return res.json(result);
+      });
     }
 
     // =========================
