@@ -13,9 +13,7 @@ sudo systemctl restart "${SERVICE_NAME}"
 
 echo "[3] wait /api/audit"
 for i in $(seq 1 10); do
-  if curl -fsS "${BASE}/api/audit" >/dev/null 2>&1; then
-    break
-  fi
+  if curl -fsS "${BASE}/api/audit" >/dev/null 2>&1; then break; fi
   sleep 0.5
 done
 
@@ -38,9 +36,7 @@ echo "[19] NATURAL mode (hello / date / help)"
 post_chat_raw() {
   local message="$1"
   jq -nc --arg threadId "t_nat" --arg message "$message" '{threadId:$threadId, message:$message}' \
-  | curl -fsS -X POST "${BASE}/api/chat" \
-      -H "Content-Type: application/json" \
-      -d @-
+  | curl -fsS -X POST "${BASE}/api/chat" -H "Content-Type: application/json" -d @-
 }
 
 assert_natural() {

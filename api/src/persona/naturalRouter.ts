@@ -16,7 +16,7 @@ export function formatJstNow(): string {
   const weekday = jstTime.toLocaleString("ja-JP", { timeZone: "Asia/Tokyo", weekday: "short" });
   const hour = String(jstTime.getHours()).padStart(2, "0");
   const minute = String(jstTime.getMinutes()).padStart(2, "0");
-  return `${year}-${month}-${day}（${weekday}）${hour}:${minute}（JST）`;
+  return `${year}-${month}-${day}（${weekday}）${hour}:${minute} JST`;
 }
 
 /**
@@ -55,7 +55,7 @@ export function naturalRouter(input: { message: string; mode: string }): {
   let responseText: string;
   
   if (naturalType === "greeting") {
-    // A. greeting: 挨拶への自然な返答（時刻に応じた挨拶を返す）
+    // A. greeting: JSTに応じた挨拶 + "#詳細で根拠候補提示できます"を1行
     const hour = new Date().getHours();
     let greeting: string;
     if (hour >= 5 && hour < 12) {
@@ -65,20 +65,17 @@ export function naturalRouter(input: { message: string; mode: string }): {
     } else {
       greeting = "こんばんは";
     }
-    responseText = `${greeting}。天聞アークです。\n\n『言灵/カタカムナ/天津金木』は #詳細 を付けると根拠候補を提示できます。`;
+    responseText = `${greeting}。天聞アークです。#詳細で根拠候補提示できます。`;
   } else if (naturalType === "datetime") {
-    // B. date/time: JSTで返す
+    // B. datetime: YYYY-MM-DD（曜）HH:MM JST
     const jstNow = formatJstNow();
-    responseText = `今日は${jstNow}です。`;
+    responseText = jstNow;
   } else {
-    // C. smalltalk誘導: それ以外 → 選択肢3つ + 資料指定の例
-    responseText = "了解。どういう方向で話しますか？\n\n";
+    // C. other: "どの方向？" + 1)2)3) を必ず含む
+    responseText = "どの方向で話しますか？\n\n";
     responseText += "1) 言灵/カタカムナ/天津金木の質問\n";
     responseText += "2) 資料指定（doc/pdfPage）で厳密回答\n";
-    responseText += "3) いまの状況整理（何を作りたいか）\n\n";
-    responseText += "資料指定の例：\n";
-    responseText += "例）言霊秘書.pdf pdfPage=6 言灵とは？ #詳細\n";
-    responseText += "例）いろは最終原稿.pdf pdfPage=1 真言とは？ #詳細";
+    responseText += "3) いまの状況整理（何を作りたいか）";
   }
   
   return {
