@@ -1,0 +1,23 @@
+# Caddy 設定ファイル例: /etc/caddy/Caddyfile
+# 使用方法:
+#   1. sudo cp Caddyfile.example /etc/caddy/Caddyfile.backup
+#   2. sudo nano /etc/caddy/Caddyfile で既存設定に追加
+#   3. sudo systemctl reload caddy
+
+tenmon-ark.com {
+    # /health の転送
+    handle /health {
+        reverse_proxy http://127.0.0.1:3000
+    }
+
+    # /api/* の転送
+    handle /api/* {
+        reverse_proxy http://127.0.0.1:3000
+    }
+
+    # その他の静的ファイル（必要に応じて）
+    handle {
+        file_server root /var/www/tenmon-ark.com
+    }
+}
+
