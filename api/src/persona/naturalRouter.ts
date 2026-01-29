@@ -1,113 +1,88 @@
-// NATURAL モード用ルーター
-// chat.ts から移動したロジック（挙動変更なし、ルールベースのみ）
+export type NaturalType = "greeting" | "datetime" | "other";
 
-/**
- * JST時刻をフォーマットする（YYYY-MM-DD（曜）HH:MM JST）
- */
-export function formatJstNow(): string {
-  const now = new Date();
-  // JST に変換（UTC+9）
-  const jstOffset = 9 * 60; // 分単位
-  const jstTime = new Date(now.getTime() + (jstOffset - now.getTimezoneOffset()) * 60 * 1000);
-  
-  const year = jstTime.getFullYear();
-  const month = String(jstTime.getMonth() + 1).padStart(2, "0");
-  const day = String(jstTime.getDate()).padStart(2, "0");
-  const weekday = jstTime.toLocaleString("ja-JP", { timeZone: "Asia/Tokyo", weekday: "short" });
-  const hour = String(jstTime.getHours()).padStart(2, "0");
-  const minute = String(jstTime.getMinutes()).padStart(2, "0");
-  return `${year}-${month}-${day}（${weekday}）${hour}:${minute} JST`;
+function pad2(n: number): string {
+  return String(n).padStart(2, "0");
 }
 
-/**
- * メッセージを NATURAL モードのタイプに分類する
- */
-export function classifyNatural(message: string): "greeting" | "datetime" | "other" {
-  const m = message.toLowerCase().trim();
-  
-  // greeting判定（日本語: おはよう/こんにちは/こんばんは/はじめまして/よろしく / 英語: hello/hi/good morning/good afternoon/good evening）
-  if (/^(おはよう|こんにちは|こんばんは|おはようございます|はじめまして|よろしく)/.test(m) ||
-      /^(hello|hi|hey|good\s+(morning|afternoon|evening)|greetings)/.test(m)) {
-    return "greeting";
-  }
-  
-  // datetime判定（日本語: 今日は何日/今日の日付/今何時/何曜日 / 英語: date/time/what date/what time/what day）
-  if (/(今日|きょう|本日|ほんじつ).*(何日|なんにち|日付|ひづけ|いつ|何曜日|なんようび|曜日)/.test(m) ||
-      /(今日|きょう|本日|ほんじつ).*(ですか|？|\?)/.test(m) ||
-      /(今日の日付|きょうのひづけ|何日|なんにち|日付|ひづけ|何曜日|なんようび|曜日|今何時|いまなんじ|時間)/.test(m) ||
-      /(what\s+(date|time|day)|current\s+(date|time)|today|now)/.test(m)) {
-    return "datetime";
-  }
-  
-  return "other";
-}
-
-/**
- * 日本語メッセージかどうかを判定する（ひらがな/カタカナ/漢字を含むか）
- */
 function isJapanese(message: string): boolean {
   return /[ぁ-んァ-ン一-龯]/.test(message);
 }
 
-/**
- * NATURAL モードの responseText を生成する
- * - greeting/datetime/other をルールベースで決定
- * - decisionFrame は chat.ts 側で組み立てる
- */
-export function naturalRouter(input: { message: string; mode: string }): {
-  handled: boolean;
-  responseText: string;
-} {
-  const { message } = input;
-  const naturalType = classifyNatural(message);
-  const ja = isJapanese(message);
-  let responseText: string;
-  
-  if (naturalType === "greeting") {
-    // greeting: JSTに応じた挨拶 + 「#詳細で根拠候補提示できます」を1行
-    const hour = new Date().getHours();
-    if (ja) {
-      let greeting: string;
-      if (hour >= 5 && hour < 12) {
-        greeting = "おはようございます";
-      } else if (hour >= 12 && hour < 18) {
-        greeting = "こんにちは";
-      } else {
-        greeting = "こんばんは";
-      }
-      responseText = `${greeting}。天聞アークです。#詳細で根拠候補提示できます。`;
-    } else {
-      let greeting: string;
-      if (hour >= 5 && hour < 12) {
-        greeting = "Good morning";
-      } else if (hour >= 12 && hour < 18) {
-        greeting = "Good afternoon";
-      } else {
-        greeting = "Good evening";
-      }
-      responseText = `${greeting}, this is Tenmon-ARK. You can send #detail to see evidence candidates.`;
-    }
-  } else if (naturalType === "datetime") {
-    // datetime: YYYY-MM-DD（曜）HH:MM JST（言語共通）
-    responseText = formatJstNow();
-  } else {
-    // other: 「どの方向？」 + 1)2)3) を必ず含む（日本語/英語で分岐）
-    if (ja) {
-      responseText = "どの方向で話しますか？\n\n";
-      responseText += "1) 言灵/カタカムナ/天津金木の質問\n";
-      responseText += "2) 資料指定（doc/pdfPage）で厳密回答\n";
-      responseText += "3) いまの状況整理（何を作りたいか）";
-    } else {
-      responseText = "Which direction would you like to go?\n\n";
-      responseText += "1) Questions about Kotodama / Katakamuna / Amatsu Kanagi\n";
-      responseText += "2) Strict answers with doc/pdfPage specified\n";
-      responseText += "3)整理 what you are trying to build now";
-    }
+export function formatJstNowCompat(): string {
+  const d = new Date();
+  const jst = new Date(d.toLocaleString("en-US", { timeZone: "Asia/Tokyo" }));
+  const yyyy = jst.getFullYear();
+  const mm = pad2(jst.getMonth() + 1);
+  const dd = pad2(jst.getDate());
+  const hh = pad2(jst.getHours());
+  const mi = pad2(jst.getMinutes());
+  return `${yyyy}-${mm}-${dd} ${hh}:${mi} JST`;
+}
+
+export function classifyNaturalCompat(message: string): NaturalType {
+  const raw = String(message || "");
+  const t = raw.trim().toLowerCase();
+  // NOTE: 改行/空白を吸収して判定を安定化（ターミナル貼り付け事故・UI改行混入に強くする）
+  const rawCompact = raw.replace(/\s+/g, "");
+
+  // greeting（日本語 + 英語）
+  if (
+    /^(おはよう|こんにちは|こんばんは|はじめまして|よろしく)/.test(rawCompact) ||
+    /^(hello|hi|hey|good\s+(morning|afternoon|evening)|greetings)\b/.test(t)
+  ) {
+    return "greeting";
   }
-  
+
+  // datetime（日本語 + 英語）
+  if (
+    /(今日|きょう|本日|日付|何日|なんにち|何時|なんじ|時間|何曜日|曜日|今何時)/.test(rawCompact) ||
+    /\b(date|time|day|today|now)\b/.test(t)
+  ) {
+    return "datetime";
+  }
+
+  return "other";
+}
+
+export function naturalRouter(input: { message: string; mode: string }): { handled: boolean; responseText: string } {
+  const message = String(input?.message ?? "");
+  const typ = classifyNaturalCompat(message);
+  const ja = isJapanese(message);
+
+  if (typ === "greeting") {
+    return {
+      handled: true,
+      responseText: ja ? "おはようございます。天聞アークです。" : "Hello. How can I help you today?",
+    };
+  }
+
+  if (typ === "datetime") {
+    const now = formatJstNowCompat();
+    return {
+      handled: true,
+      responseText: ja ? `現在時刻（JST）: ${now}` : `Current time (JST): ${now}`,
+    };
+  }
+
+  // other（会話の入口）— 1)2)3) は必須（Phase19維持）
+  if (ja) {
+    return {
+      handled: true,
+      responseText:
+        "了解。どの方向で話しますか？\n" +
+        "1) 言灵/カタカムナ/天津金木の質問\n" +
+        "2) 資料指定（doc/pdfPage）で厳密回答\n" +
+        "3) いまの状況整理（何を作りたいか）",
+    };
+  }
+
   return {
     handled: true,
-    responseText,
+    responseText:
+      "I can help with the following:\n" +
+      "1) Provide guidance on available features\n" +
+      "2) Explain how to use the chat mode\n" +
+      "3) Share the system status or next steps",
   };
 }
 
