@@ -30,6 +30,61 @@ function parseDocAndPageStrict(text: string): { doc: string | null; pdfPage: num
   return { doc, pdfPage };
 }
 
+function buildGroundedResult(args: {
+  doc: string;
+  pdfPage: number;
+  detailFlag: boolean;
+  timestamp: string;
+  threadId: string;
+}) {
+  const { doc, pdfPage, detailFlag, timestamp, threadId } = args;
+  const responseText = `（資料準拠）${doc} P${pdfPage} を指定として受け取りました。`;
+  const result: any = {
+    response: responseText,
+    evidence: { doc, pdfPage },
+    decisionFrame: {
+      mode: "GROUNDED",
+      intent: "chat",
+      llm: null,
+      ku: ku("ANSWER", "GROUNDED specified", []),
+    },
+    timestamp,
+    threadId,
+  };
+  if (detailFlag) {
+    result.detail =
+      `#詳細\n- doc: ${doc}\n- pdfPage: ${pdfPage}\n- 状態: 根拠抽出は最小実装（fallback）`;
+  }
+  return result;
+}
+
+function buildHybridResult(args: {
+  detailFlag: boolean;
+  timestamp: string;
+  threadId: string;
+}) {
+  const { detailFlag, timestamp, threadId } = args;
+  const result: any = {
+    response:
+      "（資料準拠）doc/pdfPage が未指定です。\n" +
+      "例）言霊秘書.pdf pdfPage=6 言灵とは？ #詳細\n",
+    evidence: null,
+    decisionFrame: {
+      mode: "HYBRID",
+      intent: "chat",
+      llm: null,
+      ku: ku("ASK", "need doc/pdfPage", ["doc", "pdfPage"]),
+    },
+    timestamp,
+    threadId,
+  };
+  if (detailFlag) {
+    result.detail =
+      "#詳細\n- 状態: doc/pdfPage 未指定\n- 次の導線: doc/pdfPage を指定してください";
+  }
+  return result;
+}
+
 router.post("/chat", async (req: Request, res: Response) => {
   const body = (req.body ?? {}) as any;
   const message = String(body.message ?? "").trim();
@@ -50,7 +105,7 @@ router.post("/chat", async (req: Request, res: Response) => {
   // =========================
   if (mode === "NATURAL") {
     const nat = naturalRouter({ message, mode });
-    const responseText = nat?.responseText || "Hello. How can I help you today?";
+    const responseText = nat.responseText;
     return res.json({
       response: responseText,
       evidence: null,
@@ -66,43 +121,13 @@ router.post("/chat", async (req: Request, res: Response) => {
   if (mode === "GROUNDED") {
     const doc = parsed.doc!;
     const pdfPage = parsed.pdfPage!;
-    const responseText = `（資料準拠）${doc} P${pdfPage} を指定として受け取りました。`;
-    const result: any = {
-      response: responseText,
-      evidence: { doc, pdfPage },
-      decisionFrame: { mode: "GROUNDED", intent: "chat", llm: null, ku: ku("ANSWER", "GROUNDED specified", []) },
-      timestamp,
-      threadId,
-    };
-    if (detailFlag) {
-      result.detail =
-        `#詳細\n- doc: ${doc}\n- pdfPage: ${pdfPage}\n- 状態: 根拠抽出は最小実装（fallback）`;
-    }
-    return res.json(result);
+    return res.json(buildGroundedResult({ doc, pdfPage, detailFlag, timestamp, threadId }));
   }
 
   // =========================
   // HYBRID（#詳細 だが doc/pdfPage 未指定）
   // =========================
-  const result: any = {
-    response:
-      "（資料準拠）doc/pdfPage が未指定です。\n" +
-      "例）言霊秘書.pdf pdfPage=6 言灵とは？ #詳細\n",
-    evidence: null,
-    decisionFrame: {
-      mode: "HYBRID",
-      intent: "chat",
-      llm: null,
-      ku: ku("ASK", "need doc/pdfPage", ["doc", "pdfPage"]),
-    },
-    timestamp,
-    threadId,
-  };
-  if (detailFlag) {
-    result.detail =
-      "#詳細\n- 状態: doc/pdfPage 未指定\n- 次の導線: doc/pdfPage を指定してください";
-  }
-  return res.json(result);
+  return res.json(buildHybridResult({ detailFlag, timestamp, threadId }));
 });
 
 export default router;

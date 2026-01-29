@@ -65,3 +65,9 @@ assert_natural "$r3"
 echo "$r3" | node -e 'const r=JSON.parse(require("fs").readFileSync(0,"utf8")); const t=String(r.response||""); if(!(t.includes("1)")&&t.includes("2)")&&t.includes("3)"))) process.exit(1);'
 
 echo "[PASS] Phase19 NATURAL"
+
+echo "[19-0] NATURAL Japanese greeting gate"
+r0="$(post_chat_raw "おはよう")"
+assert_natural "$r0"
+echo "$r0" | node -e 'const r=JSON.parse(require("fs").readFileSync(0,"utf8")); const t=String(r.response||""); if(!(t.includes("おはよう")||t.includes("天聞アーク"))) process.exit(1);'
+echo "[PASS] Phase19-0"

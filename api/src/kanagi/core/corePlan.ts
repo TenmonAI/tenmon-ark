@@ -1,6 +1,3 @@
-// src/kanagi/corePlan.ts
-// TENMON-ARK: CorePlan is a deterministic container (no LLM). Keep minimal and stable.
-
 export type ClaimLevel = "FACT" | "HYPOTHESIS" | "QUESTION";
 
 export type CoreClaim = {
@@ -17,7 +14,6 @@ export type CorePlan = {
   chainOrder: string[];
 };
 
-// Minimal empty plan (for wiring / early phases)
 export function emptyCorePlan(centerClaim = ""): CorePlan {
   return {
     centerClaim,
@@ -27,3 +23,4 @@ export function emptyCorePlan(centerClaim = ""): CorePlan {
     chainOrder: [],
   };
 }
+

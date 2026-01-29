@@ -5,7 +5,11 @@ function pad2(n: number): string {
 }
 
 function isJapanese(message: string): boolean {
-  return /[ぁ-んァ-ン一-龯]/.test(message);
+  // 空白 + ゼロ幅文字を除去し、正規化してから判定（入力経路差を吸収）
+  const compact = String(message || "")
+    .replace(/[\s\u200B-\u200D\uFEFF]+/g, "")
+    .normalize("NFKC");
+  return /[\u3040-\u30ff\u3400-\u9fff]/.test(compact);
 }
 
 export function formatJstNowCompat(): string {
@@ -22,12 +26,19 @@ export function formatJstNowCompat(): string {
 export function classifyNaturalCompat(message: string): NaturalType {
   const raw = String(message || "");
   const t = raw.trim().toLowerCase();
-  // NOTE: 改行/空白を吸収して判定を安定化（ターミナル貼り付け事故・UI改行混入に強くする）
-  const rawCompact = raw.replace(/\s+/g, "");
+  // NOTE: 改行/空白に加えゼロ幅文字も吸収し、その後 Unicode正規化
+  const rawCompactNorm = raw
+    .replace(/[\s\u200B-\u200D\uFEFF]+/g, "")
+    .normalize("NFKC");
+
+  // datetime が動いているので、同じ “regex literal” 方式で greeting も固定
+  const JA_GREET_RE =
+    /(\u304a\u306f\u3088\u3046|\u3053\u3093\u306b\u3061\u306f|\u3053\u3093\u3070\u3093\u306f|\u306f\u3058\u3081\u307e\u3057\u3066|\u3088\u308d\u3057\u304f)/;
 
   // greeting（日本語 + 英語）
   if (
-    /^(おはよう|こんにちは|こんばんは|はじめまして|よろしく)/.test(rawCompact) ||
+    // 先頭固定だと「絵文字/記号 + 挨拶」で漏れるのでアンカーを外す（最小差分）
+    JA_GREET_RE.test(rawCompactNorm) ||
     /^(hello|hi|hey|good\s+(morning|afternoon|evening)|greetings)\b/.test(t)
   ) {
     return "greeting";
@@ -35,7 +46,7 @@ export function classifyNaturalCompat(message: string): NaturalType {
 
   // datetime（日本語 + 英語）
   if (
-    /(今日|きょう|本日|日付|何日|なんにち|何時|なんじ|時間|何曜日|曜日|今何時)/.test(rawCompact) ||
+    /(\u4eca\u65e5|\u304d\u3087\u3046|\u672c\u65e5|\u65e5\u4ed8|\u4f55\u65e5|\u306a\u3093\u306b\u3061|\u4f55\u6642|\u306a\u3093\u3058|\u6642\u9593|\u4f55\u66dc\u65e5|\u66dc\u65e5|\u4eca\u4f55\u6642)/.test(rawCompactNorm) ||
     /\b(date|time|day|today|now)\b/.test(t)
   ) {
     return "datetime";
