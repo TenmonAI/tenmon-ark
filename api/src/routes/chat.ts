@@ -140,6 +140,11 @@ router.post("/chat", async (req: Request, res: Response) => {
     const message = String(body.message ?? "").trim();
     const threadId = String(body.threadId ?? "default").trim();
 
+    // =========================
+    // req.body.mode を完全に無視（calm/thinking などの会話モードAPIに置き換わらないように）
+    // mode は buildTruthSkeleton から決定される（NATURAL/HYBRID/GROUNDED/LIVE）
+    // =========================
+
     if (!message) {
       return res.status(400).json({ error: "message required" });
     }
@@ -222,8 +227,9 @@ router.post("/chat", async (req: Request, res: Response) => {
 
     // =========================
     // MODE決定（Truth Skeleton ベース）
+    // req.body.mode は完全に無視し、skeleton.mode のみを使用
     // =========================
-    const mode = skeleton.mode;
+    const mode = skeleton.mode; // req.body.mode は参照しない（calm/thinking などの会話モードAPIに置き換わらないように）
 
     // =========================
     // LIVE モード（Web検索必須）
@@ -580,8 +586,9 @@ router.post("/chat", async (req: Request, res: Response) => {
                 result.candidates = kuResult.candidates; // UIで使うなら
               }
 
-              if (kuResult.detail) {
-                result.detail = kuResult.detail;
+              // detail は必ず string で返す（null禁止）
+              if (detail) {
+                result.detail = kuResult.detail || `#詳細\n- 自動検索結果: ${auto.hits.length}件の候補が見つかりました\n- 候補から選択してください（番号で指定）`;
               }
 
               return res.json(result);
