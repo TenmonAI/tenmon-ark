@@ -7,6 +7,7 @@ import { composeResponse } from "../kanagi/engine/responseComposer.js";
 import { getSessionId } from "../memory/sessionId.js";
 import { naturalRouter } from "../persona/naturalRouter.js";
 import { emptyCorePlan } from "../kanagi/core/corePlan.js";
+import { applyTruthCore } from "../kanagi/core/truthCore.js";
 
 const router: IRouter = Router();
 
@@ -62,13 +63,17 @@ router.post("/chat", async (req: Request, res: Response<ChatResponseBody>) => {
     // 観測円から応答文を生成
     const response = composeResponse(trace, personaState);
 
-    // CorePlan（器）: まずは最小の決定論コンテナを必ず付与（工程3の封印）
-    const detailPlan = emptyCorePlan(typeof response === "string" ? response.slice(0, 80) : "");
+    // 工程3: CorePlan（器）を必ず経由（最小の決定論コンテナ）
+    const detailPlan = emptyCorePlan(
+      typeof response === "string" ? response.slice(0, 80) : ""
+    );
     detailPlan.chainOrder = ["KANAGI_TRACE", "COMPOSE_RESPONSE"];
-    // trace側が warnings/violations を持つ場合だけ拾う（無ければ空のまま）
     if (trace && Array.isArray((trace as any).violations) && (trace as any).violations.length) {
       detailPlan.warnings = (trace as any).violations.map((v: any) => String(v));
     }
+
+    // 工程4: Truth-Core（判定器）を通す（決定論・LLM禁止）
+    applyTruthCore(detailPlan, { responseText: String(response ?? ""), trace });
 
     // レスポンス形式（厳守）
     return res.json({

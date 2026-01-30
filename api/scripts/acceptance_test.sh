@@ -72,6 +72,11 @@ echo "$r20" | jq -e '(.detailPlan.warnings|type)=="array"' >/dev/null
 echo "$r20" | jq -e '(.detailPlan.chainOrder|type)=="array"' >/dev/null
 echo "[PASS] Phase20 CorePlan"
 
+echo "[21] Truth-Core applied (detailPlan.chainOrder contains TRUTH_CORE)"
+r21="$(post_chat_raw "coreplan test")"
+echo "$r21" | jq -e '(.detailPlan.chainOrder|type)=="array" and (.detailPlan.chainOrder|index("TRUTH_CORE")!=null)' >/dev/null
+echo "[PASS] Phase21 Truth-Core"
+
 echo "[GATE] No Runtime LLM usage in logs"
 if sudo journalctl -u tenmon-ark-api.service --since "$SINCE" --no-pager | grep -q "\[KANAGI-LLM\]"; then
   echo "[FAIL] Runtime LLM usage detected in logs."

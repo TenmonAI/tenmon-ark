@@ -189,6 +189,7 @@ ${input}
     }
 
     // LLM で新しい矛盾を生成（CENTER または Spiral 時に実行）
+    // [SAFETY] Runtime LLM usage is strictly prohibited - generateContradiction always returns null
     try {
       const result = await generateContradiction(injectedInput);
 
@@ -198,11 +199,9 @@ ${input}
           antithesis: result.antithesis,
           tensionLevel: result.tension,
         });
-
-        console.log("[KANAGI-LLM] Contradiction generated");
       }
     } catch (e) {
-      console.error("[KANAGI-LLM] Failed", e);
+      // [SAFETY] Runtime LLM errors are suppressed (no logging)
     }
 
     // CENTER に入った場合、発酵を開始
