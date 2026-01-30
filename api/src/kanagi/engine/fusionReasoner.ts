@@ -189,24 +189,11 @@ ${input}
     }
 
     // LLM で新しい矛盾を生成（CENTER または Spiral 時に実行）
-    // [SAFETY] Runtime LLM usage is strictly prohibited - generateContradiction always returns null
-    // [GATE] No Runtime LLM usage: generateContradiction is disabled, no [KANAGI-LLM] logs
-    const LLM_DISABLED = true; // Runtime LLM prohibition flag
-    if (!LLM_DISABLED) {
-      try {
-        const result = await generateContradiction(injectedInput);
-        // result が null の場合はログを出さない（acceptance gate のため）
-        if (result) {
-          contradictions.push({
-            thesis: result.thesis,
-            antithesis: result.antithesis,
-            tensionLevel: result.tension,
-          });
-        }
-      } catch (e) {
-        // [SAFETY] Runtime LLM errors are suppressed (no logging)
-      }
-    }
+    // [SAFETY] Runtime LLM usage is strictly prohibited - generateContradiction is completely disabled
+    // [GATE] No Runtime LLM usage: contradiction generation is forbidden, no [KANAGI-LLM] logs
+    // Runtime LLM禁止のため、generateContradiction は呼び出さず、常に null 扱い
+    const result = null; // Runtime LLM forbidden - no contradiction generation
+    // no log, no call, no exception
 
     // CENTER に入った場合、発酵を開始
     if (phase.center && sessionId) {
