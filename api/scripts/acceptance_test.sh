@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-cd "$(dirname "$0")/.."
+# symlinkでも必ず実体の api/ に入る
+SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
+cd "$SCRIPT_DIR/.."
 BASE_URL="${BASE_URL:-http://127.0.0.1:3000}"
 
 echo "[1] build"
@@ -9,6 +11,10 @@ pnpm -s build
 
 echo "[2] restart"
 sudo systemctl restart tenmon-ark-api.service
+
+# restart直後（これ以降のログだけを見る）
+SINCE="$(date '+%Y-%m-%d %H:%M:%S')"
+sleep 0.2
 
 echo "[3] wait /api/audit"
 for i in $(seq 1 80); do
@@ -53,5 +59,24 @@ r0="$(post_chat_raw "おはよう")"
 assert_natural "$r0"
 echo "$r0" | jq -r '.response' | grep -E 'おはよう|天聞アーク' >/dev/null
 echo "[PASS] Phase19-0"
+
+echo "[20] CorePlan container (HYBRID detailPlan) gate"
+r20="$(post_chat_raw "coreplan test")"
+# Phase4契約（decisionFrame）に加えて detailPlan を確認
+echo "$r20" | jq -e '.decisionFrame.llm==null and (.decisionFrame.ku|type)=="object"' >/dev/null
+echo "$r20" | jq -e 'has("detailPlan") and (.detailPlan|type)=="object"' >/dev/null
+echo "$r20" | jq -e '(.detailPlan.centerClaim|type)=="string"' >/dev/null
+echo "$r20" | jq -e '(.detailPlan.claims|type)=="array"' >/dev/null
+echo "$r20" | jq -e '(.detailPlan.evidenceIds|type)=="array"' >/dev/null
+echo "$r20" | jq -e '(.detailPlan.warnings|type)=="array"' >/dev/null
+echo "$r20" | jq -e '(.detailPlan.chainOrder|type)=="array"' >/dev/null
+echo "[PASS] Phase20 CorePlan"
+
+echo "[GATE] No Runtime LLM usage in logs"
+if sudo journalctl -u tenmon-ark-api.service --since "$SINCE" --no-pager | grep -q "\[KANAGI-LLM\]"; then
+  echo "[FAIL] Runtime LLM usage detected in logs."
+  exit 1
+fi
+echo "[PASS] No Runtime LLM usage detected."
 
 echo "[PASS] acceptance_test.sh"

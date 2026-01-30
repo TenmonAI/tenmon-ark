@@ -6,6 +6,7 @@ import { getCurrentPersonaState } from "../persona/personaState.js";
 import { composeResponse } from "../kanagi/engine/responseComposer.js";
 import { getSessionId } from "../memory/sessionId.js";
 import { naturalRouter } from "../persona/naturalRouter.js";
+import { emptyCorePlan } from "../kanagi/core/corePlan.js";
 
 const router: IRouter = Router();
 
@@ -61,20 +62,32 @@ router.post("/chat", async (req: Request, res: Response<ChatResponseBody>) => {
     // 観測円から応答文を生成
     const response = composeResponse(trace, personaState);
 
+    // CorePlan（器）: まずは最小の決定論コンテナを必ず付与（工程3の封印）
+    const detailPlan = emptyCorePlan(typeof response === "string" ? response.slice(0, 80) : "");
+    detailPlan.chainOrder = ["KANAGI_TRACE", "COMPOSE_RESPONSE"];
+    // trace側が warnings/violations を持つ場合だけ拾う（無ければ空のまま）
+    if (trace && Array.isArray((trace as any).violations) && (trace as any).violations.length) {
+      detailPlan.warnings = (trace as any).violations.map((v: any) => String(v));
+    }
+
     // レスポンス形式（厳守）
     return res.json({
       response,
       trace,
       provisional: true,
+      detailPlan,
       timestamp: new Date().toISOString(),
       decisionFrame: { mode: "HYBRID", intent: "chat", llm: null, ku: {} },
     });
   } catch (error) {
     console.error("[CHAT-KANAGI] Error:", error);
     // エラー時も観測を返す（停止しない）
+    const detailPlan = emptyCorePlan("ERROR_FALLBACK");
+    detailPlan.chainOrder = ["ERROR_FALLBACK"];
     return res.json({
       response: "思考が循環状態にフォールバックしました。矛盾は保持され、旋回を続けています。",
       provisional: true,
+      detailPlan,
       timestamp: new Date().toISOString(),
       decisionFrame: { mode: "HYBRID", intent: "chat", llm: null, ku: {} },
     });

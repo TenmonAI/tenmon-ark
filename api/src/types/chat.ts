@@ -3,6 +3,8 @@ export type ChatRequestBody = {
   sessionId?: string;
 };
 
+import type { CorePlan } from "../kanagi/core/corePlan.js";
+
 export type ChatResponseBody = {
   response: string;
   timestamp: string;
@@ -11,6 +13,7 @@ export type ChatResponseBody = {
   error?: string;
   evidence?: unknown;
   threadId?: string;
+  detailPlan?: CorePlan;
   decisionFrame?: {
     mode: string;
     intent: string;
