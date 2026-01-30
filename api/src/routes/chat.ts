@@ -10,6 +10,7 @@ import { emptyCorePlan } from "../kanagi/core/corePlan.js";
 import { applyTruthCore } from "../kanagi/core/truthCore.js";
 import { applyVerifier } from "../kanagi/core/verifier.js";
 import { kokuzoRecall, kokuzoRemember } from "../kokuzo/recall.js";
+import { getPageText } from "../kokuzo/pages.js";
 
 const router: IRouter = Router();
 
@@ -63,15 +64,32 @@ router.post("/chat", async (req: Request, res: Response<ChatResponseBody>) => {
   if (mPage && mDoc) {
     const pdfPage = parseInt(mPage[1], 10);
     const doc = mDoc[1];
+    
+    // Phase24: Kokuzo pages ingestion - ページ本文を取得
+    const pageText = getPageText(doc, pdfPage);
+    const evidenceId = `KZPAGE:${doc}:P${pdfPage}`;
+    
+    let responseText = `（資料準拠）${doc} P${pdfPage} を指定として受け取りました。`;
+    if (pageText) {
+      const excerpt = pageText.slice(0, 400).trim();
+      responseText += `\n\n【引用（先頭400文字）】\n${excerpt}${pageText.length > 400 ? "..." : ""}`;
+    } else {
+      responseText += "\n\n※注意: このページは未投入です（ingest_pdf_pages.sh で投入してください）。";
+    }
+    
     const result: any = {
-      response: `（資料準拠）${doc} P${pdfPage} を指定として受け取りました。`,
+      response: responseText,
       evidence: { doc, pdfPage },
       provisional: false,
       detailPlan: (() => {
         const p = emptyCorePlan(`GROUNDED ${doc} P${pdfPage}`);
         p.chainOrder = ["GROUNDED_SPECIFIED", "TRUTH_CORE", "VERIFIER"];
         p.warnings = p.warnings ?? [];
-        p.warnings.push("GROUNDED: evidence locked (content retrieval not implemented yet)");
+        if (pageText) {
+          p.evidenceIds = [evidenceId];
+        } else {
+          p.warnings.push("KOKUZO_PAGE_MISSING");
+        }
         applyTruthCore(p, { responseText: `GROUNDED ${doc} P${pdfPage}`, trace: undefined });
         applyVerifier(p);
         // Phase23: Kokuzo recall（構文記憶）
@@ -88,7 +106,7 @@ router.post("/chat", async (req: Request, res: Response<ChatResponseBody>) => {
       decisionFrame: { mode: "GROUNDED", intent: "chat", llm: null, ku: {} },
     };
     if (wantsDetail) {
-      result.detail = `#詳細\n- doc: ${doc}\n- pdfPage: ${pdfPage}\n- 状態: GROUNDED指定を受理（本文抽出は工程8）`;
+      result.detail = `#詳細\n- doc: ${doc}\n- pdfPage: ${pdfPage}\n- 状態: ${pageText ? "本文取得済み" : "未投入（ingest_pdf_pages.sh で投入してください）"}`;
     }
     return res.json(result);
   }

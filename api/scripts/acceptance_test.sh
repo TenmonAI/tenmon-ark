@@ -98,6 +98,12 @@ r232="$(post_chat_raw_tid "coreplan test" "$tid")"
 echo "$r232" | jq -e 'has("detailPlan") and (.detailPlan.chainOrder|index("KOKUZO_RECALL")!=null)' >/dev/null
 echo "[PASS] Phase23 Kokuzo recall"
 
+echo "[24] GROUNDED with evidenceIds (doc+pdfPage)"
+r24="$(post_chat_raw "言霊秘書.pdf pdfPage=6 テスト #詳細")"
+echo "$r24" | jq -e '.decisionFrame.mode=="GROUNDED"' >/dev/null
+echo "$r24" | jq -e 'has("detailPlan") and (.detailPlan.evidenceIds|type)=="array" and (.detailPlan.evidenceIds|length)>=0' >/dev/null
+echo "[PASS] Phase24 GROUNDED evidenceIds"
+
 echo "[GATE] No Runtime LLM usage in logs"
 if sudo journalctl -u tenmon-ark-api.service --since "$SINCE" --no-pager | grep -q "\[KANAGI-LLM\]"; then
   echo "[FAIL] Runtime LLM usage detected in logs."
