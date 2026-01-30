@@ -9,6 +9,7 @@ import { naturalRouter } from "../persona/naturalRouter.js";
 import { emptyCorePlan } from "../kanagi/core/corePlan.js";
 import { applyTruthCore } from "../kanagi/core/truthCore.js";
 import { applyVerifier } from "../kanagi/core/verifier.js";
+import { kokuzoRecall, kokuzoRemember } from "../kokuzo/recall.js";
 
 const router: IRouter = Router();
 
@@ -73,6 +74,13 @@ router.post("/chat", async (req: Request, res: Response<ChatResponseBody>) => {
         p.warnings.push("GROUNDED: evidence locked (content retrieval not implemented yet)");
         applyTruthCore(p, { responseText: `GROUNDED ${doc} P${pdfPage}`, trace: undefined });
         applyVerifier(p);
+        // Phase23: Kokuzo recall（構文記憶）
+        const prev = kokuzoRecall(threadId);
+        if (prev) {
+          if (!p.chainOrder.includes("KOKUZO_RECALL")) p.chainOrder.push("KOKUZO_RECALL");
+          p.warnings.push(`KOKUZO: recalled centerClaim=${prev.centerClaim.slice(0, 40)}`);
+        }
+        kokuzoRemember(threadId, p);
         return p;
       })(),
       timestamp,
@@ -121,6 +129,14 @@ router.post("/chat", async (req: Request, res: Response<ChatResponseBody>) => {
     // 工程4: Truth-Core（判定器）を通す（決定論・LLM禁止）
     applyTruthCore(detailPlan, { responseText: String(response ?? ""), trace });
     applyVerifier(detailPlan);
+
+    // Phase23: Kokuzo recall（構文記憶）
+    const prev = kokuzoRecall(threadId);
+    if (prev) {
+      if (!detailPlan.chainOrder.includes("KOKUZO_RECALL")) detailPlan.chainOrder.push("KOKUZO_RECALL");
+      detailPlan.warnings.push(`KOKUZO: recalled centerClaim=${prev.centerClaim.slice(0, 40)}`);
+    }
+    kokuzoRemember(threadId, detailPlan);
 
     // レスポンス形式（厳守）
     return res.json({

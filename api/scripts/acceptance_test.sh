@@ -35,6 +35,13 @@ post_chat_raw() {
     -d "{\"threadId\":\"t\",\"message\":\"$1\"}"
 }
 
+post_chat_raw_tid() {
+  local msg="$1"
+  local tid="$2"
+  curl -fsS "$BASE_URL/api/chat" -H "Content-Type: application/json" \
+    -d "{\"threadId\":\"$tid\",\"message\":\"$msg\"}"
+}
+
 assert_natural() {
   local json="$1"
   echo "$json" | jq -e '.decisionFrame.mode=="NATURAL" and .decisionFrame.llm==null and (.decisionFrame.ku|type)=="object"' >/dev/null
@@ -83,6 +90,13 @@ echo "$r22" | jq -e '(.detailPlan.chainOrder|index("VERIFIER")!=null)' >/dev/nul
 echo "$r22" | jq -e '(.detailPlan.warnings|type)=="array"' >/dev/null
 echo "$r22" | jq -e '(.detailPlan.warnings|join(" ")|test("VERIFIER: evidence missing"))' >/dev/null
 echo "[PASS] Phase22 Verifier"
+
+echo "[23] Kokuzo recall (same threadId)"
+tid="t-kokuzo"
+r231="$(post_chat_raw_tid "coreplan test" "$tid")"
+r232="$(post_chat_raw_tid "coreplan test" "$tid")"
+echo "$r232" | jq -e 'has("detailPlan") and (.detailPlan.chainOrder|index("KOKUZO_RECALL")!=null)' >/dev/null
+echo "[PASS] Phase23 Kokuzo recall"
 
 echo "[GATE] No Runtime LLM usage in logs"
 if sudo journalctl -u tenmon-ark-api.service --since "$SINCE" --no-pager | grep -q "\[KANAGI-LLM\]"; then
