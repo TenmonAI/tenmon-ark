@@ -56,6 +56,35 @@ router.post("/chat", async (req: Request, res: Response<ChatResponseBody>) => {
     });
   }
 
+  // GROUNDED分岐: doc + pdfPage 指定時は必ず GROUNDED を返す
+  const mPage = message.match(/pdfPage\s*=\s*(\d+)/i);
+  const mDoc = message.match(/([^\s]+\.pdf)/i);
+  if (mPage && mDoc) {
+    const pdfPage = parseInt(mPage[1], 10);
+    const doc = mDoc[1];
+    const result: any = {
+      response: `（資料準拠）${doc} P${pdfPage} を指定として受け取りました。`,
+      evidence: { doc, pdfPage },
+      provisional: false,
+      detailPlan: (() => {
+        const p = emptyCorePlan(`GROUNDED ${doc} P${pdfPage}`);
+        p.chainOrder = ["GROUNDED_SPECIFIED", "TRUTH_CORE", "VERIFIER"];
+        p.warnings = p.warnings ?? [];
+        p.warnings.push("GROUNDED: evidence locked (content retrieval not implemented yet)");
+        applyTruthCore(p, { responseText: `GROUNDED ${doc} P${pdfPage}`, trace: undefined });
+        applyVerifier(p);
+        return p;
+      })(),
+      timestamp,
+      threadId,
+      decisionFrame: { mode: "GROUNDED", intent: "chat", llm: null, ku: {} },
+    };
+    if (wantsDetail) {
+      result.detail = `#詳細\n- doc: ${doc}\n- pdfPage: ${pdfPage}\n- 状態: GROUNDED指定を受理（本文抽出は工程8）`;
+    }
+    return res.json(result);
+  }
+
   // 入力の検証・正規化
   const sanitized = sanitizeInput(messageRaw, "web");
   
