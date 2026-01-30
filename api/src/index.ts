@@ -13,7 +13,7 @@ app.use(express.json());
 
 app.use("/api", auditRouter);
 app.use("/api", chatRouter);
-app.use("/api", kanagiRoutes);
+app.use("/api/kanagi", kanagiRoutes);
 
 // 既存 tenmon
 app.use("/api/tenmon", tenmonRoutes);
