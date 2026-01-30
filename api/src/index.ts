@@ -1,10 +1,9 @@
 import express from "express";
 import cors from "cors";
-
+import auditRouter from "./routes/audit.js";
+import chatRouter from "./routes/chat.js";
 import kanagiRoutes from "./routes/kanagi.js";
 import tenmonRoutes from "./routes/tenmon.js";
-import chatRouter from "./routes/chat.js";
-import auditRouter from "./routes/audit.js";
 
 const app = express();
 const PORT = process.env.PORT ? Number(process.env.PORT) : 3000;
@@ -12,19 +11,9 @@ const PORT = process.env.PORT ? Number(process.env.PORT) : 3000;
 app.use(cors());
 app.use(express.json());
 
-// SLO: /api/audit (minimal, deterministic)
-app.get("/api/audit", (_req, res) => {
-  return res.json({ ok: true, timestamp: new Date().toISOString() });
-});
-
-// ★ 重要：kanagi を /api にマウント
-app.use("/api", kanagiRoutes);
-
-// Chat router (POST /api/chat)
-app.use("/api", chatRouter);
-
-// Audit router (GET /api/audit)
 app.use("/api", auditRouter);
+app.use("/api", kanagiRoutes);
+app.use("/api", chatRouter);
 
 // 既存 tenmon
 app.use("/api/tenmon", tenmonRoutes);
