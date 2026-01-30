@@ -5,6 +5,7 @@ import { runKanagiReasoner } from "../kanagi/engine/fusionReasoner.js";
 import { getCurrentPersonaState } from "../persona/personaState.js";
 import { composeResponse } from "../kanagi/engine/responseComposer.js";
 import { getSessionId } from "../memory/sessionId.js";
+import { naturalRouter } from "../persona/naturalRouter.js";
 
 const router: IRouter = Router();
 
@@ -16,6 +17,25 @@ const router: IRouter = Router();
 router.post("/chat", async (req: Request, res: Response<ChatResponseBody>) => {
   // input または message のどちらでも受け付ける（後方互換性のため）
   const messageRaw = (req.body as any)?.input || (req.body as any)?.message;
+  const body = (req.body ?? {}) as any;
+  const message = String(messageRaw ?? "").trim();
+  const threadId = String(body.threadId ?? "default").trim();
+  const timestamp = new Date().toISOString();
+
+  if (!message) return res.status(400).json({ response: "message required", error: "message required", timestamp, decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: {} } });
+
+  // Phase19 NATURAL lock: hello/date/help（および日本語挨拶）だけは必ずNATURALで返す
+  const t = message.trim().toLowerCase();
+  if (t === "hello" || t === "date" || t === "help" || message.includes("おはよう")) {
+    const nat = naturalRouter({ message, mode: "NATURAL" });
+    return res.json({
+      response: nat.responseText,
+      evidence: null,
+      decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: {} },
+      timestamp,
+      threadId,
+    });
+  }
 
   // 入力の検証・正規化
   const sanitized = sanitizeInput(messageRaw, "web");
