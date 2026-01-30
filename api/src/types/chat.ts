@@ -8,4 +8,10 @@ export type ChatResponseBody = {
   timestamp: string;
   trace?: unknown; // KanagiTrace（型循環を避けるため unknown）
   provisional?: boolean;
+  decisionFrame?: {
+    mode: string;
+    intent: string;
+    llm: null;
+    ku: Record<string, unknown>;
+  };
 };

@@ -24,6 +24,7 @@ router.post("/chat", async (req: Request, res: Response<ChatResponseBody>) => {
     return res.status(400).json({
       response: sanitized.error || "message is required",
       timestamp: new Date().toISOString(),
+      decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: {} },
     });
   }
 
@@ -46,6 +47,7 @@ router.post("/chat", async (req: Request, res: Response<ChatResponseBody>) => {
       trace,
       provisional: true,
       timestamp: new Date().toISOString(),
+      decisionFrame: { mode: "HYBRID", intent: "chat", llm: null, ku: {} },
     });
   } catch (error) {
     console.error("[CHAT-KANAGI] Error:", error);
@@ -54,6 +56,7 @@ router.post("/chat", async (req: Request, res: Response<ChatResponseBody>) => {
       response: "思考が循環状態にフォールバックしました。矛盾は保持され、旋回を続けています。",
       provisional: true,
       timestamp: new Date().toISOString(),
+      decisionFrame: { mode: "HYBRID", intent: "chat", llm: null, ku: {} },
     });
   }
 });
