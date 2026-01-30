@@ -7,6 +7,7 @@ import { composeResponse } from "../kanagi/engine/responseComposer.js";
 import { getSessionId } from "../memory/sessionId.js";
 import { naturalRouter } from "../persona/naturalRouter.js";
 import { emptyCorePlan } from "../kanagi/core/corePlan.js";
+import { applyTruthCore } from "../kanagi/core/truthCore.js";
 
 const router: IRouter = Router();
 
@@ -70,6 +71,9 @@ router.post("/chat", async (req: Request, res: Response<ChatResponseBody>) => {
     if (trace && Array.isArray((trace as any).violations) && (trace as any).violations.length) {
       detailPlan.warnings = (trace as any).violations.map((v: any) => String(v));
     }
+
+    // 工程4: Truth-Core（判定器）を通す（決定論・LLM禁止）
+    applyTruthCore(detailPlan, { responseText: String(response ?? ""), trace });
 
     // レスポンス形式（厳守）
     return res.json({
