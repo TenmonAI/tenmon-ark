@@ -8,6 +8,7 @@ import { getSessionId } from "../memory/sessionId.js";
 import { naturalRouter } from "../persona/naturalRouter.js";
 import { emptyCorePlan } from "../kanagi/core/corePlan.js";
 import { applyTruthCore } from "../kanagi/core/truthCore.js";
+import { applyVerifier } from "../kanagi/core/verifier.js";
 
 const router: IRouter = Router();
 
@@ -74,6 +75,7 @@ router.post("/chat", async (req: Request, res: Response<ChatResponseBody>) => {
 
     // 工程4: Truth-Core（判定器）を通す（決定論・LLM禁止）
     applyTruthCore(detailPlan, { responseText: String(response ?? ""), trace });
+    applyVerifier(detailPlan);
 
     // レスポンス形式（厳守）
     return res.json({

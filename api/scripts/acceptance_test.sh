@@ -77,6 +77,13 @@ r21="$(post_chat_raw "coreplan test")"
 echo "$r21" | jq -e '(.detailPlan.chainOrder|type)=="array" and (.detailPlan.chainOrder|index("TRUTH_CORE")!=null)' >/dev/null
 echo "[PASS] Phase21 Truth-Core"
 
+echo "[22] Verifier applied (detailPlan.chainOrder contains VERIFIER)"
+r22="$(post_chat_raw "coreplan test")"
+echo "$r22" | jq -e '(.detailPlan.chainOrder|index("VERIFIER")!=null)' >/dev/null
+echo "$r22" | jq -e '(.detailPlan.warnings|type)=="array"' >/dev/null
+echo "$r22" | jq -e '(.detailPlan.warnings|join(" ")|test("VERIFIER: evidence missing"))' >/dev/null
+echo "[PASS] Phase22 Verifier"
+
 echo "[GATE] No Runtime LLM usage in logs"
 if sudo journalctl -u tenmon-ark-api.service --since "$SINCE" --no-pager | grep -q "\[KANAGI-LLM\]"; then
   echo "[FAIL] Runtime LLM usage detected in logs."
