@@ -5,6 +5,8 @@ export type ChatRequestBody = {
 
 import type { CorePlan } from "../kanagi/core/corePlan.js";
 
+import type { KokuzoCandidate } from "../kokuzo/search.js";
+
 export type ChatResponseBody = {
   response: string;
   timestamp: string;
@@ -14,6 +16,7 @@ export type ChatResponseBody = {
   evidence?: unknown;
   threadId?: string;
   detailPlan?: CorePlan;
+  candidates?: KokuzoCandidate[];
   decisionFrame?: {
     mode: string;
     intent: string;

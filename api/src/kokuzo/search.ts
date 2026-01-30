@@ -1,73 +1,62 @@
-// KOKŪZŌ v1.1: Search Engine
+// api/src/kokuzo/search.ts
+// Phase25: HYBRID candidates (deterministic, no LLM)
 
-import { dbPrepare } from "../db/index.js";
-import type { KokuzoChunk, KokuzoSeed } from "./indexer.js";
+import { getDb } from "../db/index.js";
 
-const searchChunksStmt = dbPrepare(
-  "kokuzo",
-  `SELECT 
-    c.id, c.file_id, c.content, c.summary, c.tags, c.thinking_axis, c.created_at,
-    f.filename
-  FROM kokuzo_chunks c
-  JOIN kokuzo_files f ON c.file_id = f.id
-  WHERE c.content LIKE ? OR c.summary LIKE ?
-  ORDER BY c.created_at DESC
-  LIMIT 50`
-);
+export type KokuzoCandidate = {
+  doc: string;
+  pdfPage: number;
+  snippet: string;
+  score: number;
+};
 
-const getSeedsByFileStmt = dbPrepare(
-  "kokuzo",
-  "SELECT id, source_type, source_id, essence, ruleset, created_at FROM kokuzo_seeds WHERE source_type = 'file' AND source_id = ?"
-);
+export function searchPagesForHybrid(doc: string, query: string, limit = 10): KokuzoCandidate[] {
+  const db = getDb("kokuzo");
 
-/**
- * Search chunks by query string
- */
-export function searchChunks(query: string): Array<KokuzoChunk & { filename: string }> {
-  const searchPattern = `%${query}%`;
-  const rows = searchChunksStmt.all(searchPattern, searchPattern) as Array<{
-    id: number;
-    file_id: number;
-    content: string;
-    summary: string;
-    tags: string;
-    thinking_axis: string;
-    created_at: string;
-    filename: string;
-  }>;
+  const q = String(query || "").trim();
+  // 空クエリは候補出せないので即空（呼び出し側でfallbackする）
+  if (!q) return [];
 
-  return rows.map((row) => ({
-    id: row.id,
-    file_id: row.file_id,
-    content: row.content,
-    summary: row.summary,
-    tags: JSON.parse(row.tags || "[]") as string[],
-    thinking_axis: row.thinking_axis as KokuzoChunk["thinking_axis"],
-    created_at: row.created_at,
-    filename: row.filename,
-  }));
+  // 1) LIKE検索（最小）
+  const rows = db
+    .prepare(
+      `SELECT doc, pdfPage, substr(text, 1, 120) AS snippet
+       FROM kokuzo_pages
+       WHERE doc = ? AND text LIKE ?
+       ORDER BY pdfPage ASC
+       LIMIT ?`
+    )
+    .all(doc, `%${q}%`, limit) as any[];
+
+  if (rows && rows.length) {
+    return rows.map((r: any, i: number) => ({
+      doc: String(r.doc),
+      pdfPage: Number(r.pdfPage),
+      snippet: String(r.snippet || ""),
+      score: 100 - i,
+    }));
+  }
+
+  // 2) フォールバック：投入済みのページ帯を候補として返す（導線成立が目的）
+  const range = db
+    .prepare(`SELECT MIN(pdfPage) AS minP, MAX(pdfPage) AS maxP FROM kokuzo_pages WHERE doc = ?`)
+    .get(doc) as any;
+
+  const minP = Number(range?.minP ?? 0);
+  const maxP = Number(range?.maxP ?? 0);
+
+  if (minP && maxP && maxP >= minP) {
+    const cand: KokuzoCandidate[] = [];
+    for (let p = minP; p <= maxP && cand.length < limit; p++) {
+      cand.push({
+        doc,
+        pdfPage: p,
+        snippet: "(fallback) page indexed",
+        score: 10,
+      });
+    }
+    return cand;
+  }
+
+  return [];
 }
-
-/**
- * Get seeds related to a file
- */
-export function getSeedsByFile(fileId: number): KokuzoSeed[] {
-  const rows = getSeedsByFileStmt.all(fileId) as Array<{
-    id: number;
-    source_type: string;
-    source_id: number;
-    essence: string;
-    ruleset: string;
-    created_at: string;
-  }>;
-
-  return rows.map((row) => ({
-    id: row.id,
-    source_type: row.source_type as "file",
-    source_id: row.source_id,
-    essence: row.essence,
-    ruleset: JSON.parse(row.ruleset || "{}") as Record<string, unknown>,
-    created_at: row.created_at,
-  }));
-}
-

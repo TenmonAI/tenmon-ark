@@ -11,6 +11,7 @@ import { applyTruthCore } from "../kanagi/core/truthCore.js";
 import { applyVerifier } from "../kanagi/core/verifier.js";
 import { kokuzoRecall, kokuzoRemember } from "../kokuzo/recall.js";
 import { getPageText } from "../kokuzo/pages.js";
+import { searchPagesForHybrid } from "../kokuzo/search.js";
 
 const router: IRouter = Router();
 
@@ -156,12 +157,16 @@ router.post("/chat", async (req: Request, res: Response<ChatResponseBody>) => {
     }
     kokuzoRemember(threadId, detailPlan);
 
+    // Phase25: candidates（deterministic; if LIKE misses, fallback range is returned）
+    const candidates = searchPagesForHybrid("言霊秘書.pdf", sanitized.text, 10);
+
     // レスポンス形式（厳守）
     return res.json({
       response,
       trace,
       provisional: true,
       detailPlan,
+      candidates,
       timestamp: new Date().toISOString(),
       decisionFrame: { mode: "HYBRID", intent: "chat", llm: null, ku: {} },
     });
