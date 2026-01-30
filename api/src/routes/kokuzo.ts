@@ -80,7 +80,7 @@ router.get("/kokuzo/search", (req: Request, res: Response) => {
 
   try {
     const chunks = searchChunks(query);
-    const fileIds = [...new Set(chunks.map((c) => c.file_id))];
+    const fileIds = [...new Set(chunks.map((c: any) => c.file_id))];
     const seeds = fileIds.flatMap((fileId) => getSeedsByFile(fileId));
 
     return res.json({

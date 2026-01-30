@@ -1,7 +1,8 @@
 // api/src/kokuzo/search.ts
 // Phase25: HYBRID candidates (deterministic, no LLM)
 
-import { getDb } from "../db/index.js";
+import { getDb, dbPrepare } from "../db/index.js";
+import type { KokuzoChunk, KokuzoSeed } from "./indexer.js";
 
 export type KokuzoCandidate = {
   doc: string;
@@ -59,4 +60,35 @@ export function searchPagesForHybrid(doc: string, query: string, limit = 10): Ko
   }
 
   return [];
+}
+
+// --- Backward compatible exports for src/routes/kokuzo.ts ---
+// NOTE: Keep deterministic. No LLM. Minimal SQL.
+
+// /api/kokuzo route legacy: search chunks by text (LIKE)
+export function searchChunks(query: string, limit = 20): KokuzoChunk[] {
+  const q = String(query || "").trim();
+  if (!q) return [];
+  const stmt = dbPrepare(
+    "kokuzo",
+    `SELECT * FROM kokuzo_chunks
+     WHERE text LIKE ?
+     ORDER BY created_at DESC
+     LIMIT ?`
+  );
+  return (stmt.all(`%${q}%`, limit) as any[]) as KokuzoChunk[];
+}
+
+// /api/kokuzo route legacy: get seeds by file (source_id)
+export function getSeedsByFile(fileId: number, limit = 50): KokuzoSeed[] {
+  const id = Number(fileId);
+  if (!Number.isFinite(id)) return [];
+  const stmt = dbPrepare(
+    "kokuzo",
+    `SELECT * FROM kokuzo_seeds
+     WHERE source_type='file' AND source_id=?
+     ORDER BY created_at DESC
+     LIMIT ?`
+  );
+  return (stmt.all(id, limit) as any[]) as KokuzoSeed[];
 }
