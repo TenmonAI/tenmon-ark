@@ -13,35 +13,12 @@ export type DialecticResult = {
  * ⚠️ この関数は「矛盾生成のみ」
  * 躰・制約・正中を一切参照してはならない
  */
+// [SAFETY] Runtime LLM usage is strictly prohibited in TENMON-ARK.
+// decisionFrame.llm must always be null. This function MUST NOT call any LLM.
 export async function generateContradiction(
   input: string
 ): Promise<DialecticResult | null> {
-
-  // === LLM呼び出し（例） ===
-  // ※ ここは既存の OpenAI / Gemini ラッパーに合わせて差し替え
-  const responseText = await callLLM({
-    system: "You are a contradiction generator.",
-    user: buildDialecticPrompt(input),
-  });
-
-  try {
-    const json = JSON.parse(responseText);
-
-    if (
-      typeof json.thesis === "string" &&
-      typeof json.antithesis === "string" &&
-      typeof json.tension === "number"
-    ) {
-      return {
-        thesis: json.thesis,
-        antithesis: json.antithesis,
-        tension: Math.max(1, Math.min(10, json.tension)),
-      };
-    }
-  } catch {
-    console.error("[KANAGI-LLM] Invalid contradiction JSON");
-  }
-
+  void input;
   return null;
 }
 
