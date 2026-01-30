@@ -40,6 +40,22 @@ router.post("/chat", async (req: Request, res: Response<ChatResponseBody>) => {
     });
   }
 
+  // UX guard: 日本語の通常会話は一旦NATURAL(other)で受ける（#詳細や資料指定時だけHYBRIDへ）
+  const isJapanese = /[ぁ-んァ-ン一-龯]/.test(message);
+  const wantsDetail = /#詳細/.test(message);
+  const hasDocPage = /pdfPage\s*=\s*\d+/i.test(message) || /\bdoc\b/i.test(message);
+
+  if (isJapanese && !wantsDetail && !hasDocPage) {
+    const nat = naturalRouter({ message, mode: "NATURAL" });
+    return res.json({
+      response: nat.responseText,
+      evidence: null,
+      decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: {} },
+      timestamp,
+      threadId,
+    });
+  }
+
   // 入力の検証・正規化
   const sanitized = sanitizeInput(messageRaw, "web");
   
