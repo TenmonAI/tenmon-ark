@@ -198,7 +198,8 @@ router.post("/chat", async (req: Request, res: Response<ChatResponseBody>) => {
     kokuzoRemember(threadId, detailPlan);
 
     // Phase25: candidates（deterministic; if LIKE misses, fallback range is returned）
-    const candidates = searchPagesForHybrid("言霊秘書.pdf", sanitized.text, 10);
+    const doc = (sanitized as any).doc ?? null;
+    const candidates = searchPagesForHybrid(doc, sanitized.text, 10);
     
     // Phase26: candidates を threadId に保存（番号選択で再利用）
     setThreadCandidates(threadId, candidates);
