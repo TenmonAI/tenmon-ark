@@ -13,6 +13,7 @@ import { kokuzoRecall, kokuzoRemember } from "../kokuzo/recall.js";
 import { getPageText } from "../kokuzo/pages.js";
 import { searchPagesForHybrid } from "../kokuzo/search.js";
 import { setThreadCandidates, pickFromThread, clearThreadCandidates } from "../kokuzo/threadCandidates.js";
+import { extractLawCandidates } from "../kokuzo/lawCandidates.js";
 
 const router: IRouter = Router();
 
@@ -60,6 +61,12 @@ function buildGroundedResponse(args: {
       if (prev) {
         if (!p.chainOrder.includes("KOKUZO_RECALL")) p.chainOrder.push("KOKUZO_RECALL");
         p.warnings.push(`KOKUZO: recalled centerClaim=${prev.centerClaim.slice(0, 40)}`);
+      }
+      // Phase29: LawCandidates（法則候補抽出）
+      if (pageText) {
+        (p as any).lawCandidates = extractLawCandidates(pageText, { max: 8 });
+      } else {
+        (p as any).lawCandidates = [];
       }
       kokuzoRemember(threadId, p);
       return p;
@@ -196,6 +203,9 @@ router.post("/chat", async (req: Request, res: Response<ChatResponseBody>) => {
       detailPlan.warnings.push(`KOKUZO: recalled centerClaim=${prev.centerClaim.slice(0, 40)}`);
     }
     kokuzoRemember(threadId, detailPlan);
+    
+    // Phase29: LawCandidates（#詳細 のときのみ、現時点では空配列）
+    (detailPlan as any).lawCandidates = [];
 
     // Phase25: candidates（deterministic; if LIKE misses, fallback range is returned）
     const doc = (sanitized as any).doc ?? null;

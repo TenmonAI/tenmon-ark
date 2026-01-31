@@ -142,6 +142,12 @@ if echo "$cand0_snippet" | grep -qE "(監修|校訂|全集)"; then
 fi
 echo "[PASS] Phase28 ranking quality"
 
+echo "[29] Phase29 LawCandidates (GROUNDED #詳細 shows lawCandidates)"
+r29="$(post_chat_raw "言霊秘書.pdf pdfPage=6 テスト #詳細")"
+echo "$r29" | jq -e '.decisionFrame.mode=="GROUNDED"' >/dev/null
+echo "$r29" | jq -e 'has("detailPlan") and (.detailPlan.lawCandidates|type)=="array"' >/dev/null
+echo "[PASS] Phase29 LawCandidates"
+
 echo "[GATE] No Runtime LLM usage in logs"
 if sudo journalctl -u tenmon-ark-api.service --since "$SINCE" --no-pager | grep -q "\[KANAGI-LLM\]"; then
   echo "[FAIL] Runtime LLM usage detected in logs."
