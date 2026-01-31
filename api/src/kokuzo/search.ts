@@ -86,7 +86,7 @@ export function searchPagesForHybrid(docOrNull: string | null, query: string, li
       if (minP && maxP && maxP >= minP) {
         const cand: KokuzoCandidate[] = [];
         const pageOne: KokuzoCandidate[] = [];
-        const snippetStmt = db.prepare(`SELECT substr(text, 1, 120) AS snippet FROM kokuzo_pages WHERE doc = ? AND pdfPage = ?`);
+        const snippetStmt = db.prepare(`SELECT substr(replace(text, char(12), ''), 1, 120) AS snippet FROM kokuzo_pages WHERE doc = ? AND pdfPage = ?`);
         
         // Phase28: まず p!=1 を limit 件まで詰める
         for (let p = minP; p <= maxP; p++) {
@@ -126,7 +126,7 @@ export function searchPagesForHybrid(docOrNull: string | null, query: string, li
     if (docOrNull) {
       rows = db
         .prepare(
-          `SELECT doc, pdfPage, substr(text, 1, 120) AS snippet, bm25(kokuzo_pages_fts) AS rank
+          `SELECT doc, pdfPage, substr(replace(text, char(12), ''), 1, 120) AS snippet, bm25(kokuzo_pages_fts) AS rank
            FROM kokuzo_pages_fts
            WHERE doc = ? AND kokuzo_pages_fts MATCH ?
            ORDER BY rank ASC
@@ -136,7 +136,7 @@ export function searchPagesForHybrid(docOrNull: string | null, query: string, li
     } else {
       rows = db
         .prepare(
-          `SELECT doc, pdfPage, substr(text, 1, 120) AS snippet, bm25(kokuzo_pages_fts) AS rank
+          `SELECT doc, pdfPage, substr(replace(text, char(12), ''), 1, 120) AS snippet, bm25(kokuzo_pages_fts) AS rank
            FROM kokuzo_pages_fts
            WHERE kokuzo_pages_fts MATCH ?
            ORDER BY rank ASC
