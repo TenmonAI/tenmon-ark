@@ -118,6 +118,7 @@ echo "$r261" | jq -e 'has("candidates") and (.candidates|type)=="array" and (.ca
 r262="$(post_chat_raw_tid "1" "$tid26")"
 echo "$r262" | jq -e '(.decisionFrame.mode=="GROUNDED")' >/dev/null
 echo "$r262" | jq -e 'has("evidence") and (.evidence|type)=="object" and has("doc") and has("pdfPage")' >/dev/null
+echo "$r262" | jq -e 'has("detailPlan") and (.detailPlan.chainOrder|index("GROUNDED_SPECIFIED")!=null)' >/dev/null
 echo "[PASS] Phase26 pick -> GROUNDED"
 
 echo "[GATE] No Runtime LLM usage in logs"
