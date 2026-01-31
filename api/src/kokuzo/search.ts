@@ -205,7 +205,7 @@ export function searchPagesForHybrid(docOrNull: string | null, query: string, li
       
       // pdfPage が 1 の場合は大幅ペナルティ（表紙を必ず落とす）
       if (pdfPage === 1) {
-        penalty += 200; // 表紙を必ず下げる（baseScore最大100でも0に潰れる）
+        penalty += 300; // 表紙を必ず下げる（同点・僅差で表紙が勝つ余地を潰す）
       }
       
       const finalScore = Math.max(0, baseScore + bonus - penalty);
