@@ -100,20 +100,20 @@ export function searchPagesForHybrid(docOrNull: string | null, query: string, li
     if (docOrNull) {
       rows = db
         .prepare(
-          `SELECT doc, pdfPage, substr(text, 1, 120) AS snippet
+          `SELECT doc, pdfPage, substr(text, 1, 120) AS snippet, bm25(kokuzo_pages_fts) AS rank
            FROM kokuzo_pages_fts
            WHERE doc = ? AND kokuzo_pages_fts MATCH ?
-           ORDER BY pdfPage ASC
+           ORDER BY rank ASC
            LIMIT ?`
         )
         .all(docOrNull, ftsQuery, limit) as any[];
     } else {
       rows = db
         .prepare(
-          `SELECT doc, pdfPage, substr(text, 1, 120) AS snippet
+          `SELECT doc, pdfPage, substr(text, 1, 120) AS snippet, bm25(kokuzo_pages_fts) AS rank
            FROM kokuzo_pages_fts
            WHERE kokuzo_pages_fts MATCH ?
-           ORDER BY pdfPage ASC
+           ORDER BY rank ASC
            LIMIT ?`
         )
         .all(ftsQuery, limit) as any[];
@@ -125,11 +125,12 @@ export function searchPagesForHybrid(docOrNull: string | null, query: string, li
   }
 
   if (rows && rows.length) {
+    // bm25() は小さいほど良いスコアなので、100 - rank で正規化（最大100点）
     return rows.map((r: any, i: number) => ({
       doc: String(r.doc),
       pdfPage: Number(r.pdfPage),
       snippet: String(r.snippet || ""),
-      score: 100 - i,
+      score: Math.max(0, 100 - (Number(r.rank) || i)),
     }));
   }
 

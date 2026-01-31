@@ -59,18 +59,15 @@ export function upsertPage(doc: string, pdfPage: number, text: string, sha: stri
     const db = getDb("kokuzo");
     const now = new Date().toISOString();
     
-    // kokuzo_pages に UPSERT（rowid を取得するため、まず DELETE してから INSERT）
-    const deleteStmt = dbPrepare("kokuzo", "DELETE FROM kokuzo_pages WHERE doc = ? AND pdfPage = ?");
-    deleteStmt.run(doc, pdfPage);
-    
-    const insertStmt = dbPrepare(
+    // kokuzo_pages に UPSERT（INSERT OR REPLACE で rowid を維持）
+    const upsertStmt = dbPrepare(
       "kokuzo",
-      "INSERT INTO kokuzo_pages (doc, pdfPage, text, sha, updatedAt) VALUES (?, ?, ?, ?, ?)"
+      "INSERT OR REPLACE INTO kokuzo_pages (doc, pdfPage, text, sha, updatedAt) VALUES (?, ?, ?, ?, ?)"
     );
-    insertStmt.run(doc, pdfPage, text, sha, now);
+    upsertStmt.run(doc, pdfPage, text, sha, now);
     
     // FTS5 も更新（Phase27）
-    // rowid を取得してから FTS に INSERT
+    // rowid を取得してから FTS に INSERT/REPLACE
     const rowidStmt = dbPrepare("kokuzo", "SELECT rowid FROM kokuzo_pages WHERE doc = ? AND pdfPage = ?");
     const row = rowidStmt.get(doc, pdfPage) as { rowid: number } | undefined;
     if (row) {
