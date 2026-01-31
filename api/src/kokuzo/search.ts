@@ -255,7 +255,7 @@ export function searchPagesForHybrid(docOrNull: string | null, query: string, li
     if (minP && maxP && maxP >= minP) {
       const cand: KokuzoCandidate[] = [];
       const pageOne: KokuzoCandidate[] = [];
-      const snippetStmt = db.prepare(`SELECT substr(text, 1, 120) AS snippet FROM kokuzo_pages WHERE doc = ? AND pdfPage = ?`);
+      const snippetStmt = db.prepare(`SELECT substr(replace(text, char(12), ''), 1, 120) AS snippet FROM kokuzo_pages WHERE doc = ? AND pdfPage = ?`);
       
       // Phase28: まず p!=1 を limit 件まで詰める
       for (let p = minP; p <= maxP; p++) {
