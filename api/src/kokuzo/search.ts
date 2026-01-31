@@ -78,10 +78,8 @@ export function searchPagesForHybrid(docOrNull: string | null, query: string, li
         const pageOne: KokuzoCandidate[] = [];
         const snippetStmt = db.prepare(`SELECT substr(text, 1, 120) AS snippet FROM kokuzo_pages WHERE doc = ? AND pdfPage = ?`);
         
-        // Phase28: pdfPage=1 を一旦保留し、先に p!=1 を詰める
+        // Phase28: まず p!=1 を limit 件まで詰める
         for (let p = minP; p <= maxP; p++) {
-          if (cand.length >= limit - 1) break; // limit-1件まで（P1用に1件残す）
-          
           const pageText = snippetStmt.get(targetDoc, p) as any;
           const candidate: KokuzoCandidate = {
             doc: targetDoc,
@@ -93,13 +91,15 @@ export function searchPagesForHybrid(docOrNull: string | null, query: string, li
           if (p === 1) {
             pageOne.push(candidate); // P1 は保留
           } else {
-            cand.push(candidate); // P1以外は先に追加
+            if (cand.length < limit) {
+              cand.push(candidate); // P1以外は先に追加（limit件まで）
+            }
           }
         }
         
-        // 余りがあれば P1 を追加（常に末尾）
-        if (pageOne.length > 0 && cand.length < limit) {
-          cand.push(pageOne[0]);
+        // 余りがある場合のみ p==1 を最後に追加（常に cand0 が p==1 にならないようにする）
+        while (cand.length < limit && pageOne.length > 0) {
+          cand.push(pageOne.shift()!);
         }
         
         return cand;
@@ -226,10 +226,8 @@ export function searchPagesForHybrid(docOrNull: string | null, query: string, li
       const pageOne: KokuzoCandidate[] = [];
       const snippetStmt = db.prepare(`SELECT substr(text, 1, 120) AS snippet FROM kokuzo_pages WHERE doc = ? AND pdfPage = ?`);
       
-      // Phase28: pdfPage=1 を一旦保留し、先に p!=1 を詰める
+      // Phase28: まず p!=1 を limit 件まで詰める
       for (let p = minP; p <= maxP; p++) {
-        if (cand.length >= limit - 1) break; // limit-1件まで（P1用に1件残す）
-        
         const pageText = snippetStmt.get(targetDoc, p) as any;
         const candidate: KokuzoCandidate = {
           doc: targetDoc,
@@ -241,13 +239,15 @@ export function searchPagesForHybrid(docOrNull: string | null, query: string, li
         if (p === 1) {
           pageOne.push(candidate); // P1 は保留
         } else {
-          cand.push(candidate); // P1以外は先に追加
+          if (cand.length < limit) {
+            cand.push(candidate); // P1以外は先に追加（limit件まで）
+          }
         }
       }
       
-      // 余りがあれば P1 を追加（常に末尾）
-      if (pageOne.length > 0 && cand.length < limit) {
-        cand.push(pageOne[0]);
+      // 余りがある場合のみ p==1 を最後に追加（常に cand0 が p==1 にならないようにする）
+      while (cand.length < limit && pageOne.length > 0) {
+        cand.push(pageOne.shift()!);
       }
       
       return cand;
