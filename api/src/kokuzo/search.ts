@@ -12,7 +12,7 @@ export type KokuzoCandidate = {
 };
 
 /**
- * クエリを正規化（#詳細、doc/pdfPage指定、記号を除去）
+ * クエリを正規化（#詳細、doc/pdfPage指定、記号を除去、文字揺れ正規化）
  */
 function normalizeHybridQuery(q: string): string {
   let normalized = String(q || "");
@@ -24,6 +24,10 @@ function normalizeHybridQuery(q: string): string {
   normalized = normalized.replace(/doc\s*=\s*[^\s]+/gi, "");
   normalized = normalized.replace(/pdfPage\s*=\s*\d+/gi, "");
   normalized = normalized.replace(/[Pp]\s*\d+/g, "");
+  
+  // 文字揺れ正規化: 「言灵」→「言霊」、「灵」→「霊」
+  normalized = normalized.replace(/言霊?灵/g, "言霊");
+  normalized = normalized.replace(/灵/g, "霊");
   
   // 記号類を空白に（日本語記号も含む）
   normalized = normalized.replace(/[。．、,：:;!?？#=()\[\]{}<>「」『』/\\]/g, " ");
@@ -46,13 +50,27 @@ export function searchPagesForHybrid(docOrNull: string | null, query: string, li
   // クエリを正規化
   const normalizedQuery = normalizeHybridQuery(query);
   
+  // fallback 用の doc を決定（docOrNull が null の場合は最多ページ数のdocを選ぶ）
+  let targetDoc = docOrNull;
+  if (!targetDoc) {
+    const topDoc = db
+      .prepare(
+        `SELECT doc, COUNT(*) AS c
+         FROM kokuzo_pages
+         GROUP BY doc
+         ORDER BY c DESC, doc ASC
+         LIMIT 1`
+      )
+      .get() as any;
+    targetDoc = topDoc ? String(topDoc.doc) : null;
+  }
+
   // 正規化後のクエリが空なら fallback へ
   if (!normalizedQuery) {
-    // fallback: doc が指定されていればその範囲、なければ全ドキュメント
-    if (docOrNull) {
+    if (targetDoc) {
       const range = db
         .prepare(`SELECT MIN(pdfPage) AS minP, MAX(pdfPage) AS maxP FROM kokuzo_pages WHERE doc = ?`)
-        .get(docOrNull) as any;
+        .get(targetDoc) as any;
       const minP = Number(range?.minP ?? 0);
       const maxP = Number(range?.maxP ?? 0);
       if (minP && maxP && maxP >= minP) {
@@ -60,9 +78,9 @@ export function searchPagesForHybrid(docOrNull: string | null, query: string, li
         for (let p = minP; p <= maxP && cand.length < limit; p++) {
           const pageText = db
             .prepare(`SELECT substr(text, 1, 120) AS snippet FROM kokuzo_pages WHERE doc = ? AND pdfPage = ?`)
-            .get(docOrNull, p) as any;
+            .get(targetDoc, p) as any;
           cand.push({
-            doc: docOrNull,
+            doc: targetDoc,
             pdfPage: p,
             snippet: String(pageText?.snippet || "(fallback) page indexed"),
             score: 10,
@@ -107,11 +125,11 @@ export function searchPagesForHybrid(docOrNull: string | null, query: string, li
     }));
   }
 
-  // 2) フォールバック：投入済みのページ帯を候補として返す（導線成立が目的）
-  if (docOrNull) {
+  // 2) フォールバック：LIKE検索が0件の場合も fallback を返す（導線成立が目的）
+  if (targetDoc) {
     const range = db
       .prepare(`SELECT MIN(pdfPage) AS minP, MAX(pdfPage) AS maxP FROM kokuzo_pages WHERE doc = ?`)
-      .get(docOrNull) as any;
+      .get(targetDoc) as any;
 
     const minP = Number(range?.minP ?? 0);
     const maxP = Number(range?.maxP ?? 0);
@@ -121,9 +139,9 @@ export function searchPagesForHybrid(docOrNull: string | null, query: string, li
       for (let p = minP; p <= maxP && cand.length < limit; p++) {
         const pageText = db
           .prepare(`SELECT substr(text, 1, 120) AS snippet FROM kokuzo_pages WHERE doc = ? AND pdfPage = ?`)
-          .get(docOrNull, p) as any;
+          .get(targetDoc, p) as any;
         cand.push({
-          doc: docOrNull,
+          doc: targetDoc,
           pdfPage: p,
           snippet: String(pageText?.snippet || "(fallback) page indexed"),
           score: 10,
