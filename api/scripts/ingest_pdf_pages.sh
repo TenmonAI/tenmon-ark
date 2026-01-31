@@ -39,6 +39,15 @@ CREATE TABLE IF NOT EXISTS kokuzo_pages (
   PRIMARY KEY (doc, pdfPage)
 );
 CREATE INDEX IF NOT EXISTS idx_kokuzo_pages_doc_page ON kokuzo_pages(doc, pdfPage);
+
+-- FTS5 テーブル（Phase27: 全文検索用）
+CREATE VIRTUAL TABLE IF NOT EXISTS kokuzo_pages_fts USING fts5(
+  doc,
+  pdfPage,
+  text,
+  content='kokuzo_pages',
+  content_rowid='rowid'
+);
 SQL
 
 echo "Ingesting $DOC_NAME from $PDF_PATH (pages $START_PAGE-$END_PAGE)"
@@ -63,7 +72,7 @@ for page in $(seq "$START_PAGE" "$END_PAGE"); do
     continue
   fi
 
-  # Pythonで安全にUPSERT（SQLインジェクション/クォート問題/巨大TEXT問題を根絶）
+  # Pythonで安全にUPSERT（SQLインジェクション/クォート問題/巨大TEXT問題を根絶）+ FTS5更新
   python3 - <<'PY' "$DB_PATH" "$DOC_NAME" "$page" "$OUT_TXT"
 import sqlite3, hashlib, datetime, pathlib, sys
 
@@ -75,6 +84,7 @@ sha = hashlib.sha256(text.encode("utf-8", errors="replace")).hexdigest()
 now = datetime.datetime.utcnow().isoformat() + "Z"
 
 db = sqlite3.connect(db_path)
+# kokuzo_pages に UPSERT
 db.execute("""
 INSERT INTO kokuzo_pages(doc, pdfPage, text, sha, updatedAt)
 VALUES(?,?,?,?,?)
@@ -83,6 +93,18 @@ ON CONFLICT(doc,pdfPage) DO UPDATE SET
   sha=excluded.sha,
   updatedAt=excluded.updatedAt
 """, (doc, pdfPage, text, sha, now))
+
+# FTS5 も更新（Phase27）
+rowid = db.execute("SELECT rowid FROM kokuzo_pages WHERE doc = ? AND pdfPage = ?", (doc, pdfPage)).fetchone()[0]
+db.execute("""
+INSERT INTO kokuzo_pages_fts(rowid, doc, pdfPage, text)
+VALUES(?,?,?,?)
+ON CONFLICT(rowid) DO UPDATE SET
+  doc=excluded.doc,
+  pdfPage=excluded.pdfPage,
+  text=excluded.text
+""", (rowid, doc, pdfPage, text))
+
 db.commit()
 print(f"OK (sha={sha[:8]})")
 PY

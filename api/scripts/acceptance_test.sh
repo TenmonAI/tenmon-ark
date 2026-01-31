@@ -120,6 +120,13 @@ echo "$r262" | jq -e '(.decisionFrame.mode=="GROUNDED") and (.evidence|type)=="o
 echo "$r262" | jq -e 'has("detailPlan") and (.detailPlan.chainOrder|index("GROUNDED_SPECIFIED")!=null)' >/dev/null
 echo "[PASS] Phase26 pick -> GROUNDED"
 
+echo "[27] Phase27 FTS5 search (candidates snippet from actual text)"
+r27="$(post_chat_raw "言霊とは何？ #詳細")"
+echo "$r27" | jq -e '(.decisionFrame.mode=="HYBRID")' >/dev/null
+echo "$r27" | jq -e 'has("candidates") and (.candidates|type)=="array" and (.candidates|length)>0' >/dev/null
+echo "$r27" | jq -e '(.candidates[0].snippet|type)=="string" and (.candidates[0].snippet|length)>0' >/dev/null
+echo "[PASS] Phase27 FTS5"
+
 echo "[GATE] No Runtime LLM usage in logs"
 if sudo journalctl -u tenmon-ark-api.service --since "$SINCE" --no-pager | grep -q "\[KANAGI-LLM\]"; then
   echo "[FAIL] Runtime LLM usage detected in logs."

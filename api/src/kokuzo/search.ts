@@ -92,28 +92,36 @@ export function searchPagesForHybrid(docOrNull: string | null, query: string, li
     return [];
   }
 
-  // 1) LIKE検索（doc が null の場合は WHERE doc = ? を外す）
-  let rows: any[];
-  if (docOrNull) {
-    rows = db
-      .prepare(
-        `SELECT doc, pdfPage, substr(text, 1, 120) AS snippet
-         FROM kokuzo_pages
-         WHERE doc = ? AND text LIKE ?
-         ORDER BY pdfPage ASC
-         LIMIT ?`
-      )
-      .all(docOrNull, `%${normalizedQuery}%`, limit) as any[];
-  } else {
-    rows = db
-      .prepare(
-        `SELECT doc, pdfPage, substr(text, 1, 120) AS snippet
-         FROM kokuzo_pages
-         WHERE text LIKE ?
-         ORDER BY pdfPage ASC
-         LIMIT ?`
-      )
-      .all(`%${normalizedQuery}%`, limit) as any[];
+  // 1) FTS5検索（Phase27: 全文検索で精度と速度を向上）
+  // FTS5 のクエリは空白区切りで自動的に AND 検索になる
+  const ftsQuery = normalizedQuery.split(/\s+/).filter(Boolean).join(" ");
+  let rows: any[] = [];
+  try {
+    if (docOrNull) {
+      rows = db
+        .prepare(
+          `SELECT doc, pdfPage, substr(text, 1, 120) AS snippet
+           FROM kokuzo_pages_fts
+           WHERE doc = ? AND kokuzo_pages_fts MATCH ?
+           ORDER BY pdfPage ASC
+           LIMIT ?`
+        )
+        .all(docOrNull, ftsQuery, limit) as any[];
+    } else {
+      rows = db
+        .prepare(
+          `SELECT doc, pdfPage, substr(text, 1, 120) AS snippet
+           FROM kokuzo_pages_fts
+           WHERE kokuzo_pages_fts MATCH ?
+           ORDER BY pdfPage ASC
+           LIMIT ?`
+        )
+        .all(ftsQuery, limit) as any[];
+    }
+  } catch (e) {
+    // FTS5 テーブルが存在しない、またはクエリエラの場合は fallback へ
+    console.warn("[KOKUZO-SEARCH] FTS5 search failed, falling back:", e);
+    rows = [];
   }
 
   if (rows && rows.length) {
