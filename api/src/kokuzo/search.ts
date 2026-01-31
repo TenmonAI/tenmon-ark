@@ -156,17 +156,26 @@ export function searchPagesForHybrid(docOrNull: string | null, query: string, li
       
       // ノイズ判定・本文語判定の対象文字列を page text の先頭500文字にする
       let textForAnalysis = String(r.snippet || "").toLowerCase();
+      let pageText500 = "";
       try {
         const pageTextRow = pageTextStmt.get(doc, pdfPage) as any;
         if (pageTextRow?.pageText) {
-          textForAnalysis = String(pageTextRow.pageText).toLowerCase();
+          pageText500 = String(pageTextRow.pageText);
+          textForAnalysis = pageText500.toLowerCase();
         }
       } catch (e) {
         // 取得できない場合は snippet を使う（既に設定済み）
+        pageText500 = String(r.snippet || "");
+      }
+      
+      // Phase31: 空ページペナルティ（\f や実質空を除外）
+      let penalty = 0;
+      const trimmedLength = pageText500.trim().replace(/\f/g, "").length;
+      if (trimmedLength < 20) {
+        penalty += 120; // 空ページを大幅減点（実質除外）
       }
       
       // ノイズ語ペナルティ
-      let penalty = 0;
       for (const noise of NOISE_WORDS) {
         if (textForAnalysis.includes(noise.toLowerCase())) {
           penalty += 30; // ノイズ語が見つかったら大幅減点

@@ -155,6 +155,16 @@ echo "$r30" | jq -e 'has("detailPlan") and (.detailPlan.saikiho|type)=="object"'
 echo "$r30" | jq -e '(.detailPlan.saikiho.laws|type)=="array"' >/dev/null
 echo "[PASS] Phase30 SaikihoLawSet"
 
+echo "[31] Phase31 candidate quality (empty pages excluded, cand0.snippet not \\f)"
+r31="$(post_chat_raw "言霊とは何？ #詳細")"
+echo "$r31" | jq -e 'has("candidates") and (.candidates|type)=="array" and (.candidates|length)>0' >/dev/null
+cand0_snippet="$(echo "$r31" | jq -r '.candidates[0].snippet // ""')"
+if echo "$cand0_snippet" | grep -qE "^\\f$|^\\s*$"; then
+  echo "[FAIL] Phase31: cand0.snippet is empty or only form feed"
+  exit 1
+fi
+echo "[PASS] Phase31 candidate quality"
+
 echo "[GATE] No Runtime LLM usage in logs"
 if sudo journalctl -u tenmon-ark-api.service --since "$SINCE" --no-pager | grep -q "\[KANAGI-LLM\]"; then
   echo "[FAIL] Runtime LLM usage detected in logs."
