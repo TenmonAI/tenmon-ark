@@ -14,6 +14,7 @@ import { getPageText } from "../kokuzo/pages.js";
 import { searchPagesForHybrid } from "../kokuzo/search.js";
 import { setThreadCandidates, pickFromThread, clearThreadCandidates } from "../kokuzo/threadCandidates.js";
 import { extractLawCandidates } from "../kokuzo/lawCandidates.js";
+import { extractSaikihoLawsFromText } from "../kotodama/saikihoLawSet.js";
 
 const router: IRouter = Router();
 
@@ -67,6 +68,28 @@ function buildGroundedResponse(args: {
         (p as any).lawCandidates = extractLawCandidates(pageText, { max: 8 });
       } else {
         (p as any).lawCandidates = [];
+      }
+      // Phase30: SaikihoLawSet（水火の法則の内部構造、#詳細 のときのみ）
+      if (wantsDetail) {
+        if (pageText) {
+          const laws = extractSaikihoLawsFromText(pageText, { max: 8 });
+          // evidence に doc/pdfPage を設定
+          laws.forEach((law) => {
+            if (law.evidence) {
+              law.evidence.doc = doc;
+              law.evidence.pdfPage = pdfPage;
+            }
+          });
+          (p as any).saikiho = {
+            laws,
+            evidenceIds: p.evidenceIds ?? [],
+          };
+        } else {
+          (p as any).saikiho = {
+            laws: [],
+            evidenceIds: p.evidenceIds ?? [],
+          };
+        }
       }
       kokuzoRemember(threadId, p);
       return p;
