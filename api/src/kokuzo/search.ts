@@ -130,6 +130,9 @@ export function searchPagesForHybrid(docOrNull: string | null, query: string, li
     const NOISE_WORDS = ["全集", "監修", "校訂", "発行", "著作権", "目次", "序", "凡例"];
     const CONTENT_WORDS = ["法則", "云", "曰", "伝", "水", "火", "御", "御灵", "布斗麻邇", "五十"];
     
+    // db.prepare を rows.map の外で用意（N+1でもlimit<=10なので許容）
+    const pageTextStmt = db.prepare(`SELECT substr(text, 1, 500) AS pageText FROM kokuzo_pages WHERE doc = ? AND pdfPage = ?`);
+    
     const scored = rows.map((r: any) => {
       const baseScore = Math.max(0, 100 - (Number(r.rank) || 0));
       const doc = String(r.doc);
@@ -138,9 +141,7 @@ export function searchPagesForHybrid(docOrNull: string | null, query: string, li
       // ノイズ判定・本文語判定の対象文字列を page text の先頭500文字にする
       let textForAnalysis = String(r.snippet || "").toLowerCase();
       try {
-        const pageTextRow = db
-          .prepare(`SELECT substr(text, 1, 500) AS pageText FROM kokuzo_pages WHERE doc = ? AND pdfPage = ?`)
-          .get(doc, pdfPage) as any;
+        const pageTextRow = pageTextStmt.get(doc, pdfPage) as any;
         if (pageTextRow?.pageText) {
           textForAnalysis = String(pageTextRow.pageText).toLowerCase();
         }
@@ -179,8 +180,17 @@ export function searchPagesForHybrid(docOrNull: string | null, query: string, li
       };
     });
     
-    // score DESC でソート
-    scored.sort((a, b) => b.score - a.score);
+    // score DESC でソート、同点なら P1 を後ろに送る tie-break
+    scored.sort((a, b) => {
+      if (b.score !== a.score) {
+        return b.score - a.score; // score DESC
+      }
+      // 同点の場合：P1 を後ろに送る
+      if (a.pdfPage === 1 && b.pdfPage !== 1) return 1;
+      if (a.pdfPage !== 1 && b.pdfPage === 1) return -1;
+      // どちらも P1 またはどちらも P1 以外：pdfPage ASC で安定ソート
+      return a.pdfPage - b.pdfPage;
+    });
     
     return scored.slice(0, limit);
   }
