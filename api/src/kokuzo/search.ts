@@ -4,6 +4,16 @@
 import { getDb, dbPrepare } from "../db/index.js";
 import type { KokuzoChunk, KokuzoSeed } from "./indexer.js";
 
+/**
+ * Phase31: snippet を正規化（\f 除去、空白圧縮、trim）
+ */
+function normalizeSnippet(s: string): string {
+  return String(s || "")
+    .replace(/\f/g, "")        // remove form feed
+    .replace(/\s+/g, " ")      // collapse whitespace
+    .trim();
+}
+
 export type KokuzoCandidate = {
   doc: string;
   pdfPage: number;
@@ -168,9 +178,12 @@ export function searchPagesForHybrid(docOrNull: string | null, query: string, li
         pageText500 = String(r.snippet || "");
       }
       
+      // Phase31: pageText500 を正規化
+      const pageText500n = normalizeSnippet(pageText500);
+      
       // Phase31: 空ページペナルティ（\f や実質空を除外）
       let penalty = 0;
-      const trimmedLength = pageText500.trim().replace(/\f/g, "").length;
+      const trimmedLength = pageText500n.length;
       if (trimmedLength < 20) {
         penalty += 120; // 空ページを大幅減点（実質除外）
       }
@@ -197,10 +210,19 @@ export function searchPagesForHybrid(docOrNull: string | null, query: string, li
       
       const finalScore = Math.max(0, baseScore + bonus - penalty);
       
+      // Phase31: snippet を正規化（空なら pageText500n から生成）
+      let sn = normalizeSnippet(r.snippet || "");
+      if (!sn) {
+        sn = pageText500n.slice(0, 200); // 120でもOK。Phase31的には"空/\fでない"ことが大事
+      }
+      if (!sn) {
+        sn = "(本文抽出不可)"; // それでも空なら固定文（捏造ではなく"抽出不可"の明示）
+      }
+      
       return {
         doc,
         pdfPage,
-        snippet: String(r.snippet || ""),
+        snippet: sn,
         score: finalScore,
       };
     });
