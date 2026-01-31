@@ -75,17 +75,33 @@ export function searchPagesForHybrid(docOrNull: string | null, query: string, li
       const maxP = Number(range?.maxP ?? 0);
       if (minP && maxP && maxP >= minP) {
         const cand: KokuzoCandidate[] = [];
-        for (let p = minP; p <= maxP && cand.length < limit; p++) {
-          const pageText = db
-            .prepare(`SELECT substr(text, 1, 120) AS snippet FROM kokuzo_pages WHERE doc = ? AND pdfPage = ?`)
-            .get(targetDoc, p) as any;
-          cand.push({
+        const pageOne: KokuzoCandidate[] = [];
+        const snippetStmt = db.prepare(`SELECT substr(text, 1, 120) AS snippet FROM kokuzo_pages WHERE doc = ? AND pdfPage = ?`);
+        
+        // Phase28: pdfPage=1 を一旦保留し、先に p!=1 を詰める
+        for (let p = minP; p <= maxP; p++) {
+          if (cand.length >= limit - 1) break; // limit-1件まで（P1用に1件残す）
+          
+          const pageText = snippetStmt.get(targetDoc, p) as any;
+          const candidate: KokuzoCandidate = {
             doc: targetDoc,
             pdfPage: p,
             snippet: String(pageText?.snippet || "(fallback) page indexed"),
             score: 10,
-          });
+          };
+          
+          if (p === 1) {
+            pageOne.push(candidate); // P1 は保留
+          } else {
+            cand.push(candidate); // P1以外は先に追加
+          }
         }
+        
+        // 余りがあれば P1 を追加（常に末尾）
+        if (pageOne.length > 0 && cand.length < limit) {
+          cand.push(pageOne[0]);
+        }
+        
         return cand;
       }
     }
@@ -195,7 +211,8 @@ export function searchPagesForHybrid(docOrNull: string | null, query: string, li
     return scored.slice(0, limit);
   }
 
-  // 2) フォールバック：LIKE検索が0件の場合も fallback を返す（導線成立が目的）
+  // 2) フォールバック：FTS検索が0件の場合も fallback を返す（導線成立が目的）
+  // Phase28: pdfPage=1 を末尾に送る（表紙を下げる）
   if (targetDoc) {
     const range = db
       .prepare(`SELECT MIN(pdfPage) AS minP, MAX(pdfPage) AS maxP FROM kokuzo_pages WHERE doc = ?`)
@@ -206,17 +223,33 @@ export function searchPagesForHybrid(docOrNull: string | null, query: string, li
 
     if (minP && maxP && maxP >= minP) {
       const cand: KokuzoCandidate[] = [];
-      for (let p = minP; p <= maxP && cand.length < limit; p++) {
-        const pageText = db
-          .prepare(`SELECT substr(text, 1, 120) AS snippet FROM kokuzo_pages WHERE doc = ? AND pdfPage = ?`)
-          .get(targetDoc, p) as any;
-        cand.push({
+      const pageOne: KokuzoCandidate[] = [];
+      const snippetStmt = db.prepare(`SELECT substr(text, 1, 120) AS snippet FROM kokuzo_pages WHERE doc = ? AND pdfPage = ?`);
+      
+      // Phase28: pdfPage=1 を一旦保留し、先に p!=1 を詰める
+      for (let p = minP; p <= maxP; p++) {
+        if (cand.length >= limit - 1) break; // limit-1件まで（P1用に1件残す）
+        
+        const pageText = snippetStmt.get(targetDoc, p) as any;
+        const candidate: KokuzoCandidate = {
           doc: targetDoc,
           pdfPage: p,
           snippet: String(pageText?.snippet || "(fallback) page indexed"),
           score: 10,
-        });
+        };
+        
+        if (p === 1) {
+          pageOne.push(candidate); // P1 は保留
+        } else {
+          cand.push(candidate); // P1以外は先に追加
+        }
       }
+      
+      // 余りがあれば P1 を追加（常に末尾）
+      if (pageOne.length > 0 && cand.length < limit) {
+        cand.push(pageOne[0]);
+      }
+      
       return cand;
     }
   }
