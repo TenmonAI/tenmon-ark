@@ -153,7 +153,7 @@ export function searchPagesForHybrid(docOrNull: string | null, query: string, li
   if (rows && rows.length) {
     // bm25() は小さいほど良いスコアなので、100 - rank で正規化（最大100点）
     // Phase28: ノイズ判定でランキング品質を改善（表紙/奥付を下げる）
-    const NOISE_WORDS = ["全集", "監修", "校訂", "発行", "著作権", "目次", "序", "凡例"];
+    const NOISE_WORDS = ["全集", "監修", "校訂", "発行", "著作権", "目次", "序", "凡例", "奥付", "表紙"];
     const CONTENT_WORDS = ["法則", "云", "曰", "伝", "水", "火", "御", "御灵", "布斗麻邇", "五十"];
     
     // db.prepare を rows.map の外で用意（N+1でもlimit<=10なので許容）
