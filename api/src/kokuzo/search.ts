@@ -132,12 +132,26 @@ export function searchPagesForHybrid(docOrNull: string | null, query: string, li
     
     const scored = rows.map((r: any) => {
       const baseScore = Math.max(0, 100 - (Number(r.rank) || 0));
-      const text = String(r.snippet || "").toLowerCase();
+      const doc = String(r.doc);
+      const pdfPage = Number(r.pdfPage);
+      
+      // ノイズ判定・本文語判定の対象文字列を page text の先頭500文字にする
+      let textForAnalysis = String(r.snippet || "").toLowerCase();
+      try {
+        const pageTextRow = db
+          .prepare(`SELECT substr(text, 1, 500) AS pageText FROM kokuzo_pages WHERE doc = ? AND pdfPage = ?`)
+          .get(doc, pdfPage) as any;
+        if (pageTextRow?.pageText) {
+          textForAnalysis = String(pageTextRow.pageText).toLowerCase();
+        }
+      } catch (e) {
+        // 取得できない場合は snippet を使う（既に設定済み）
+      }
       
       // ノイズ語ペナルティ
       let penalty = 0;
       for (const noise of NOISE_WORDS) {
-        if (text.includes(noise.toLowerCase())) {
+        if (textForAnalysis.includes(noise.toLowerCase())) {
           penalty += 30; // ノイズ語が見つかったら大幅減点
         }
       }
@@ -145,21 +159,21 @@ export function searchPagesForHybrid(docOrNull: string | null, query: string, li
       // 本文語ボーナス
       let bonus = 0;
       for (const content of CONTENT_WORDS) {
-        if (text.includes(content.toLowerCase())) {
+        if (textForAnalysis.includes(content.toLowerCase())) {
           bonus += 10; // 本文語が見つかったら加点
         }
       }
       
-      // pdfPage が 1 の場合は軽いペナルティ（表紙の可能性）
-      if (Number(r.pdfPage) === 1) {
-        penalty += 5;
+      // pdfPage が 1 の場合は大幅ペナルティ（表紙を必ず落とす）
+      if (pdfPage === 1) {
+        penalty += 80; // 表紙を必ず下げる
       }
       
       const finalScore = Math.max(0, baseScore + bonus - penalty);
       
       return {
-        doc: String(r.doc),
-        pdfPage: Number(r.pdfPage),
+        doc,
+        pdfPage,
         snippet: String(r.snippet || ""),
         score: finalScore,
       };
