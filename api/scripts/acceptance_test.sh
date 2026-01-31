@@ -127,6 +127,21 @@ echo "$r27" | jq -e 'has("candidates") and (.candidates|type)=="array" and (.can
 echo "$r27" | jq -e '(.candidates[0].snippet|type)=="string" and (.candidates[0].snippet|length)>0' >/dev/null
 echo "[PASS] Phase27 FTS5"
 
+echo "[28] Phase28 ranking quality (noise words filtered, content pages prioritized)"
+r28="$(post_chat_raw "言霊とは何？ #詳細")"
+echo "$r28" | jq -e 'has("candidates") and (.candidates|type)=="array" and (.candidates|length)>0' >/dev/null
+# cand0.snippet が "監修/校訂/全集" を含まない、または cand0.pdfPage が 1 以外
+cand0_snippet="$(echo "$r28" | jq -r '.candidates[0].snippet // ""')"
+cand0_page="$(echo "$r28" | jq -r '.candidates[0].pdfPage // 0')"
+if echo "$cand0_snippet" | grep -qE "(監修|校訂|全集)"; then
+  # ノイズ語が含まれている場合は pdfPage が 1 以外である必要がある
+  if [ "$cand0_page" = "1" ]; then
+    echo "[FAIL] Phase28: cand0 contains noise words and pdfPage=1"
+    exit 1
+  fi
+fi
+echo "[PASS] Phase28 ranking quality"
+
 echo "[GATE] No Runtime LLM usage in logs"
 if sudo journalctl -u tenmon-ark-api.service --since "$SINCE" --no-pager | grep -q "\[KANAGI-LLM\]"; then
   echo "[FAIL] Runtime LLM usage detected in logs."

@@ -126,12 +126,49 @@ export function searchPagesForHybrid(docOrNull: string | null, query: string, li
 
   if (rows && rows.length) {
     // bm25() は小さいほど良いスコアなので、100 - rank で正規化（最大100点）
-    return rows.map((r: any, i: number) => ({
-      doc: String(r.doc),
-      pdfPage: Number(r.pdfPage),
-      snippet: String(r.snippet || ""),
-      score: Math.max(0, 100 - (Number(r.rank) || i)),
-    }));
+    // Phase28: ノイズ判定でランキング品質を改善（表紙/奥付を下げる）
+    const NOISE_WORDS = ["全集", "監修", "校訂", "発行", "著作権", "目次", "序", "凡例"];
+    const CONTENT_WORDS = ["法則", "云", "曰", "伝", "水", "火", "御", "御灵", "布斗麻邇", "五十"];
+    
+    const scored = rows.map((r: any) => {
+      const baseScore = Math.max(0, 100 - (Number(r.rank) || 0));
+      const text = String(r.snippet || "").toLowerCase();
+      
+      // ノイズ語ペナルティ
+      let penalty = 0;
+      for (const noise of NOISE_WORDS) {
+        if (text.includes(noise.toLowerCase())) {
+          penalty += 30; // ノイズ語が見つかったら大幅減点
+        }
+      }
+      
+      // 本文語ボーナス
+      let bonus = 0;
+      for (const content of CONTENT_WORDS) {
+        if (text.includes(content.toLowerCase())) {
+          bonus += 10; // 本文語が見つかったら加点
+        }
+      }
+      
+      // pdfPage が 1 の場合は軽いペナルティ（表紙の可能性）
+      if (Number(r.pdfPage) === 1) {
+        penalty += 5;
+      }
+      
+      const finalScore = Math.max(0, baseScore + bonus - penalty);
+      
+      return {
+        doc: String(r.doc),
+        pdfPage: Number(r.pdfPage),
+        snippet: String(r.snippet || ""),
+        score: finalScore,
+      };
+    });
+    
+    // score DESC でソート
+    scored.sort((a, b) => b.score - a.score);
+    
+    return scored.slice(0, limit);
   }
 
   // 2) フォールバック：LIKE検索が0件の場合も fallback を返す（導線成立が目的）
