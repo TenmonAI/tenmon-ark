@@ -18,19 +18,16 @@ echo "[PASS] dist synced"
 SINCE="$(date '+%Y-%m-%d %H:%M:%S')"
 sleep 0.2
 
-echo "[2] wait /api/audit"
+echo "[3] wait /api/audit"
 for i in $(seq 1 80); do
   j="$(curl -fsS "$BASE_URL/api/audit" 2>/dev/null || true)"
-  if echo "$j" | jq -e 'type=="object" and has("ok")' >/dev/null 2>&1; then
+  if echo "$j" | jq -e '.ok==true' >/dev/null 2>&1; then
     echo "[PASS] audit ready"
     break
   fi
   sleep 0.2
 done
-
-# 最終確認（ok が返ることを確認）
-j="$(curl -fsS "$BASE_URL/api/audit")"
-echo "$j" | jq -e 'type=="object" and has("ok")' >/dev/null || (echo "[FAIL] audit not ready" && exit 1)
+curl -fsS "$BASE_URL/api/audit" | jq -e '.ok==true' >/dev/null
 
 echo "[3] /api/chat decisionFrame contract"
 resp=$(curl -fsS "$BASE_URL/api/chat" -H "Content-Type: application/json" \
