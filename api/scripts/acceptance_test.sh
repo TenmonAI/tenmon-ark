@@ -19,8 +19,6 @@ SINCE="$(date '+%Y-%m-%d %H:%M:%S')"
 sleep 0.2
 
 echo "[2] wait /api/audit"
-
-echo "[3] wait /api/audit"
 for i in $(seq 1 80); do
   if curl -fsS "$BASE_URL/api/audit" >/dev/null 2>&1; then
     break
