@@ -29,6 +29,13 @@ for i in $(seq 1 80); do
 done
 curl -fsS "$BASE_URL/api/audit" | jq -e 'type=="object"' >/dev/null
 
+echo "[GATE] live gitSha must match repo"
+REPO_SHA="$(cd /opt/tenmon-ark-repo/api && git rev-parse --short HEAD)"
+LIVE_SHA="$(curl -fsS "$BASE_URL/api/audit" | jq -r '.gitSha // ""')"
+test -n "$LIVE_SHA" || (echo "[FAIL] /api/audit missing gitSha" && exit 1)
+test "$LIVE_SHA" = "$REPO_SHA" || (echo "[FAIL] live gitSha mismatch (live=$LIVE_SHA repo=$REPO_SHA)" && exit 1)
+echo "[PASS] live gitSha match"
+
 echo "[4] /api/chat decisionFrame contract"
 resp=$(curl -fsS "$BASE_URL/api/chat" -H "Content-Type: application/json" \
   -d '{"threadId":"t","message":"hello"}')
