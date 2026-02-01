@@ -18,6 +18,7 @@ import { extractSaikihoLawsFromText } from "../kotodama/saikihoLawSet.js";
 import { extractFourLayerTags } from "../kotodama/fourLayerTags.js";
 import { extractKojikiTags } from "../kojiki/kojikiTags.js";
 import { buildMythMapEdges } from "../myth/mythMapEdges.js";
+import { getMythMapEdges, setMythMapEdges } from "../kokuzo/mythMapMemory.js";
 
 const router: IRouter = Router();
 
