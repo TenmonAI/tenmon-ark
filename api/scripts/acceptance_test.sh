@@ -27,11 +27,7 @@ echo "[3-0] wait /api/chat NATURAL ready"
 for i in $(seq 1 120); do
   j="$(curl -fsS "$BASE_URL/api/chat" -H "Content-Type: application/json" \
         -d '{"threadId":"t","message":"hello"}' 2>/dev/null || true)"
-
-  if echo "$j" | jq -e 'type=="object"
-    and (.decisionFrame.llm==null)
-    and (.decisionFrame.ku|type)=="object"
-    and (.response|type)=="string"' >/dev/null 2>&1; then
+  if echo "$j" | jq -e 'type=="object" and (.decisionFrame.llm==null) and (.decisionFrame.ku|type)=="object" and (.response|type)=="string"' >/dev/null 2>&1; then
     echo "[PASS] chat ready"
     break
   fi
@@ -39,11 +35,8 @@ for i in $(seq 1 120); do
 done
 
 # 最終ゲート（ここで落ちるなら本当に壊れてる）
-j="$(curl -fsS "$BASE_URL/api/chat" -H "Content-Type: application/json" \
-      -d '{"threadId":"t","message":"hello"}')"
-echo "$j" | jq -e '.decisionFrame.llm==null
-  and (.decisionFrame.ku|type)=="object"
-  and (.response|type)=="string"' >/dev/null \
+j="$(curl -fsS "$BASE_URL/api/chat" -H "Content-Type: application/json" -d '{"threadId":"t","message":"hello"}')"
+echo "$j" | jq -e '.decisionFrame.llm==null and (.decisionFrame.ku|type)=="object" and (.response|type)=="string"' >/dev/null \
   || (echo "[FAIL] chat contract not ready" && exit 1)
 
 echo "[4] /api/chat decisionFrame contract"

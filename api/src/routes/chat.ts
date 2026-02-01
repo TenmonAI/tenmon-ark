@@ -13,6 +13,7 @@ import { kokuzoRecall, kokuzoRemember } from "../kokuzo/recall.js";
 import { getPageText } from "../kokuzo/pages.js";
 import { searchPagesForHybrid } from "../kokuzo/search.js";
 import { setThreadCandidates, pickFromThread, clearThreadCandidates } from "../kokuzo/threadCandidates.js";
+import { getDb, dbPrepare } from "../db/index.js";
 import { extractLawCandidates } from "../kokuzo/lawCandidates.js";
 import { extractSaikihoLawsFromText } from "../kotodama/saikihoLawSet.js";
 import { extractFourLayerTags } from "../kotodama/fourLayerTags.js";
@@ -162,6 +163,78 @@ router.post("/chat", async (req: Request, res: Response<ChatResponseBody>) => {
       }));
     }
     // pick が失敗したら通常処理にフォールスルー
+  }
+
+  // コマンド処理: #status, #search, #pin
+  if (trimmed.startsWith("#status")) {
+    const db = getDb("kokuzo");
+    const pagesCount = dbPrepare("kokuzo", "SELECT COUNT(*) as cnt FROM kokuzo_pages").get()?.cnt || 0;
+    const chunksCount = dbPrepare("kokuzo", "SELECT COUNT(*) as cnt FROM kokuzo_chunks").get()?.cnt || 0;
+    const filesCount = dbPrepare("kokuzo", "SELECT COUNT(*) as cnt FROM kokuzo_files").get()?.cnt || 0;
+    return res.json({
+      response: `【KOKUZO 状態】\n- kokuzo_pages: ${pagesCount}件\n- kokuzo_chunks: ${chunksCount}件\n- kokuzo_files: ${filesCount}件`,
+      evidence: null,
+      decisionFrame: { mode: "NATURAL", intent: "command", llm: null, ku: {} },
+      timestamp,
+      threadId,
+    });
+  }
+
+  if (trimmed.startsWith("#search ")) {
+    const query = trimmed.slice(7).trim();
+    if (!query) {
+      return res.json({
+        response: "エラー: #search <query> の形式で検索語を指定してください",
+        evidence: null,
+        decisionFrame: { mode: "NATURAL", intent: "command", llm: null, ku: {} },
+        timestamp,
+        threadId,
+      });
+    }
+    const candidates = searchPagesForHybrid(null, query, 10);
+    if (candidates.length === 0) {
+      return res.json({
+        response: `【検索結果】「${query}」に該当するページが見つかりませんでした。`,
+        evidence: null,
+        decisionFrame: { mode: "HYBRID", intent: "search", llm: null, ku: {} },
+        candidates: [],
+        timestamp,
+        threadId,
+      });
+    }
+    const results = candidates.slice(0, 5).map((c, i) => 
+      `${i + 1}. ${c.doc} P${c.pdfPage}: ${c.snippet.slice(0, 100)}...`
+    ).join("\n");
+    return res.json({
+      response: `【検索結果】「${query}」\n\n${results}\n\n※ 番号を選択すると詳細を表示します。`,
+      evidence: null,
+      decisionFrame: { mode: "HYBRID", intent: "search", llm: null, ku: {} },
+      candidates: candidates.slice(0, 10),
+      timestamp,
+      threadId,
+    });
+  }
+
+  if (trimmed.startsWith("#pin ")) {
+    const pinMatch = trimmed.match(/doc\s*=\s*([^\s]+)\s+pdfPage\s*=\s*(\d+)/i);
+    if (!pinMatch) {
+      return res.json({
+        response: "エラー: #pin doc=<filename> pdfPage=<number> の形式で指定してください",
+        evidence: null,
+        decisionFrame: { mode: "NATURAL", intent: "command", llm: null, ku: {} },
+        timestamp,
+        threadId,
+      });
+    }
+    const doc = pinMatch[1];
+    const pdfPage = parseInt(pinMatch[2], 10);
+    return res.json(buildGroundedResponse({
+      doc,
+      pdfPage,
+      threadId,
+      timestamp,
+      wantsDetail: true,
+    }));
   }
 
   // Phase19 NATURAL lock: hello/date/help（および日本語挨拶）だけは必ずNATURALで返す
