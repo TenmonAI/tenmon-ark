@@ -23,6 +23,29 @@ for i in $(seq 1 80); do
 done
 curl -fsS "$BASE_URL/api/audit" | jq -e '.ok==true' >/dev/null
 
+echo "[3-0] wait /api/chat NATURAL ready"
+for i in $(seq 1 120); do
+  j="$(curl -fsS "$BASE_URL/api/chat" -H "Content-Type: application/json" \
+        -d '{"threadId":"t","message":"hello"}' 2>/dev/null || true)"
+
+  if echo "$j" | jq -e 'type=="object"
+    and (.decisionFrame.llm==null)
+    and (.decisionFrame.ku|type)=="object"
+    and (.response|type)=="string"' >/dev/null 2>&1; then
+    echo "[PASS] chat ready"
+    break
+  fi
+  sleep 0.2
+done
+
+# 最終ゲート（ここで落ちるなら本当に壊れてる）
+j="$(curl -fsS "$BASE_URL/api/chat" -H "Content-Type: application/json" \
+      -d '{"threadId":"t","message":"hello"}')"
+echo "$j" | jq -e '.decisionFrame.llm==null
+  and (.decisionFrame.ku|type)=="object"
+  and (.response|type)=="string"' >/dev/null \
+  || (echo "[FAIL] chat contract not ready" && exit 1)
+
 echo "[4] /api/chat decisionFrame contract"
 resp=$(curl -fsS "$BASE_URL/api/chat" -H "Content-Type: application/json" \
   -d '{"threadId":"t","message":"hello"}')
