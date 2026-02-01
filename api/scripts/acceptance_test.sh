@@ -56,6 +56,22 @@ done
 j="$(curl -fsS "$BASE_URL/api/chat" -H "Content-Type: application/json" -d '{"threadId":"t","message":"hello"}')"
 echo "$j" | jq -e '.decisionFrame.llm==null and (.decisionFrame.ku|type)=="object" and (.response|type)=="string"' >/dev/null
 
+echo "[3-1] wait /api/chat (contract ready)"
+for i in $(seq 1 120); do
+  chat="$(curl -fsS "$BASE_URL/api/chat" -H "Content-Type: application/json" \
+    -d '{"threadId":"t","message":"hello"}' 2>/dev/null || true)"
+  if echo "$chat" | jq -e 'type=="object" and .decisionFrame.llm==null and (.decisionFrame.ku|type)=="object" and (.response|type)=="string"' >/dev/null 2>&1; then
+    echo "[PASS] chat ready"
+    break
+  fi
+  sleep 0.2
+done
+
+# 最終確認（ここで取れなければFAIL）
+chat="$(curl -fsS "$BASE_URL/api/chat" -H "Content-Type: application/json" \
+  -d '{"threadId":"t","message":"hello"}')"
+echo "$chat" | jq -e '.decisionFrame.llm==null and (.decisionFrame.ku|type)=="object" and (.response|type)=="string"' >/dev/null
+
 echo "[4] /api/chat decisionFrame contract"
 resp=$(curl -fsS "$BASE_URL/api/chat" -H "Content-Type: application/json" \
   -d '{"threadId":"t","message":"hello"}')
