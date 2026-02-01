@@ -8,6 +8,12 @@ import tenmonRoutes from "./routes/tenmon.js";
 const app = express();
 const PORT = process.env.PORT ? Number(process.env.PORT) : 3000;
 
+// Debug: 起動情報を記録
+const startTime = Date.now();
+const pid = process.pid;
+const uptime = process.uptime();
+console.log(`[SERVER-START] PID=${pid} uptime=${uptime}s startTime=${new Date().toISOString()}`);
+
 app.use(cors());
 app.use(express.json());
 
@@ -24,5 +30,8 @@ app.get("/health", (_, res) => {
 });
 
 app.listen(PORT, "0.0.0.0", () => {
+  const listenTime = Date.now();
+  const elapsed = listenTime - startTime;
+  console.log(`[SERVER-LISTEN] PID=${pid} port=${PORT} listenTime=${new Date().toISOString()} elapsed=${elapsed}ms`);
   console.log(`API listening on http://0.0.0.0:${PORT}`);
 });

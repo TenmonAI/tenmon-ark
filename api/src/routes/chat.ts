@@ -136,6 +136,11 @@ function buildGroundedResponse(args: {
  * 固定応答を廃止し、天津金木思考回路を通して観測を返す
  */
 router.post("/chat", async (req: Request, res: Response<ChatResponseBody>) => {
+  const handlerTime = Date.now();
+  const pid = process.pid;
+  const uptime = process.uptime();
+  console.log(`[CHAT-HANDLER] PID=${pid} uptime=${uptime}s handlerTime=${new Date().toISOString()}`);
+  
   // input または message のどちらでも受け付ける（後方互換性のため）
   const messageRaw = (req.body as any)?.input || (req.body as any)?.message;
   const body = (req.body ?? {}) as any;

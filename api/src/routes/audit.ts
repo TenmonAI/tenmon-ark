@@ -3,6 +3,10 @@ import { getGitSha } from "../version.js";
 
 const router = Router();
 router.get("/audit", (_req: Request, res: Response) => {
+  const handlerTime = Date.now();
+  const pid = process.pid;
+  const uptime = process.uptime();
+  console.log(`[AUDIT-HANDLER] PID=${pid} uptime=${uptime}s handlerTime=${new Date().toISOString()}`);
   try {
     const gitSha = getGitSha();
     res.json({ ok: true, timestamp: new Date().toISOString(), gitSha });

@@ -116,6 +116,23 @@ export function getDb(kind: DbKind): DatabaseSync {
 
   applySchemas(database, kind);
 
+  // Debug: kokuzo_pages の存在確認（起動時に必ず存在することを保証）
+  if (kind === "kokuzo") {
+    try {
+      const checkStmt = database.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='kokuzo_pages' LIMIT 1");
+      const result = checkStmt.get() as any;
+      if (!result || result.name !== "kokuzo_pages") {
+        console.error(`[DB] FATAL: kokuzo_pages table missing after schema apply`);
+        console.error(`[DB] Available tables:`, database.prepare("SELECT name FROM sqlite_master WHERE type='table'").all());
+        process.exit(1);
+      }
+      console.log(`[DB] verified kokuzo_pages exists`);
+    } catch (e) {
+      console.error(`[DB] FATAL: failed to verify kokuzo_pages:`, e);
+      process.exit(1);
+    }
+  }
+
   dbs.set(kind, database);
   console.log(`[DB] ready kind=${kind} path=${filePath} at=${nowIso()}`);
   return database;
