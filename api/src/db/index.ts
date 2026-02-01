@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { DatabaseSync, type StatementSync } from "node:sqlite";
+import { markDbReady, markKokuzoVerified } from "../health/readiness.js";
 
 export type DbKind = "kokuzo" | "audit" | "persona";
 
@@ -127,6 +128,7 @@ export function getDb(kind: DbKind): DatabaseSync {
         process.exit(1);
       }
       console.log(`[DB] verified kokuzo_pages exists`);
+      markKokuzoVerified();
     } catch (e) {
       console.error(`[DB] FATAL: failed to verify kokuzo_pages:`, e);
       process.exit(1);
@@ -134,6 +136,7 @@ export function getDb(kind: DbKind): DatabaseSync {
   }
 
   dbs.set(kind, database);
+  markDbReady(kind);
   console.log(`[DB] ready kind=${kind} path=${filePath} at=${nowIso()}`);
   return database;
 }

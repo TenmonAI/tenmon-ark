@@ -4,6 +4,7 @@ import auditRouter from "./routes/audit.js";
 import chatRouter from "./routes/chat.js";
 import kanagiRoutes from "./routes/kanagi.js";
 import tenmonRoutes from "./routes/tenmon.js";
+import { markListenReady } from "./health/readiness.js";
 
 const app = express();
 const PORT = process.env.PORT ? Number(process.env.PORT) : 3000;
@@ -34,4 +35,5 @@ app.listen(PORT, "0.0.0.0", () => {
   const elapsed = listenTime - startTime;
   console.log(`[SERVER-LISTEN] PID=${pid} port=${PORT} listenTime=${new Date().toISOString()} elapsed=${elapsed}ms`);
   console.log(`API listening on http://0.0.0.0:${PORT}`);
+  markListenReady();
 });
