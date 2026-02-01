@@ -139,7 +139,9 @@ router.post("/chat", async (req: Request, res: Response<ChatResponseBody>) => {
   const handlerTime = Date.now();
   const pid = process.pid;
   const uptime = process.uptime();
-  console.log(`[CHAT-HANDLER] PID=${pid} uptime=${uptime}s handlerTime=${new Date().toISOString()}`);
+  const { getReadiness } = await import("../health/readiness.js");
+  const r = getReadiness();
+  console.log(`[CHAT-HANDLER] PID=${pid} uptime=${uptime}s handlerTime=${new Date().toISOString()} stage=${r.stage}`);
   
   // input または message のどちらでも受け付ける（後方互換性のため）
   const messageRaw = (req.body as any)?.input || (req.body as any)?.message;
@@ -360,7 +362,9 @@ router.post("/chat", async (req: Request, res: Response<ChatResponseBody>) => {
       decisionFrame: { mode: "HYBRID", intent: "chat", llm: null, ku: {} },
     });
   } catch (error) {
-    console.error("[CHAT-KANAGI] Error:", error);
+    const pid = process.pid;
+    const uptime = process.uptime();
+    console.error("[CHAT-KANAGI] Error:", { pid, uptime, error });
     // エラー時も観測を返す（停止しない）
     const detailPlan = emptyCorePlan("ERROR_FALLBACK");
     detailPlan.chainOrder = ["ERROR_FALLBACK"];

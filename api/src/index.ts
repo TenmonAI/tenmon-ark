@@ -6,12 +6,25 @@ import kanagiRoutes from "./routes/kanagi.js";
 import tenmonRoutes from "./routes/tenmon.js";
 import { markListenReady } from "./health/readiness.js";
 
+// Debug: 未処理例外のハンドリング
+const pid = process.pid;
+process.on("uncaughtException", (error) => {
+  const uptime = process.uptime();
+  console.error(`[FATAL] uncaughtException pid=${pid} uptime=${uptime}s:`, error);
+  process.exit(1);
+});
+
+process.on("unhandledRejection", (reason, promise) => {
+  const uptime = process.uptime();
+  console.error(`[FATAL] unhandledRejection pid=${pid} uptime=${uptime}s:`, reason);
+  process.exit(1);
+});
+
 const app = express();
 const PORT = process.env.PORT ? Number(process.env.PORT) : 3000;
 
 // Debug: 起動情報を記録
 const startTime = Date.now();
-const pid = process.pid;
 const uptime = process.uptime();
 console.log(`[SERVER-START] PID=${pid} uptime=${uptime}s startTime=${new Date().toISOString()}`);
 
@@ -36,4 +49,5 @@ app.listen(PORT, "0.0.0.0", () => {
   console.log(`[SERVER-LISTEN] PID=${pid} port=${PORT} listenTime=${new Date().toISOString()} elapsed=${elapsed}ms`);
   console.log(`API listening on http://0.0.0.0:${PORT}`);
   markListenReady();
+  console.log(`[READY] listenReady=true`);
 });

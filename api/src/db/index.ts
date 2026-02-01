@@ -2,9 +2,9 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { DatabaseSync, type StatementSync } from "node:sqlite";
-import { markDbReady, markKokuzoVerified } from "../health/readiness.js";
+import { markDbReady, markKokuzoVerified, type DbKind } from "../health/readiness.js";
 
-export type DbKind = "kokuzo" | "audit" | "persona";
+export type { DbKind };
 
 const dbs = new Map<DbKind, DatabaseSync>();
 const dbPaths = new Map<DbKind, string>();
@@ -74,8 +74,9 @@ function applySchemas(database: DatabaseSync, kind: DbKind): void {
   const __filename = fileURLToPath(import.meta.url);
   const __dirname = path.dirname(__filename);
   // dist/db/index.js から見て dist/db/*.sql を読む
-  const schemaDir = path.resolve(__dirname, "db");
+  const schemaDir = __dirname;
   
+  console.log(`[DB-SCHEMA] apply start kind=${kind} schemaDir=${schemaDir}`);
   for (const f of schemaFilesFor(kind)) {
     const full = path.join(schemaDir, f);
     if (!fs.existsSync(full)) {
@@ -85,6 +86,7 @@ function applySchemas(database: DatabaseSync, kind: DbKind): void {
     const sql = fs.readFileSync(full, "utf8");
     withRetry(() => database.exec(sql));
   }
+  console.log(`[DB-SCHEMA] apply done kind=${kind}`);
 }
 
 export function getDb(kind: DbKind): DatabaseSync {
@@ -117,26 +119,36 @@ export function getDb(kind: DbKind): DatabaseSync {
 
   applySchemas(database, kind);
 
+  // schema apply が終わった時点で DB ready
+  markDbReady(kind);
+  console.log(`[READY] dbReady kind=${kind}`);
+
   // Debug: kokuzo_pages の存在確認（起動時に必ず存在することを保証）
   if (kind === "kokuzo") {
     try {
       const checkStmt = database.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='kokuzo_pages' LIMIT 1");
       const result = checkStmt.get() as any;
       if (!result || result.name !== "kokuzo_pages") {
-        console.error(`[DB] FATAL: kokuzo_pages table missing after schema apply`);
+        const pid = process.pid;
+        const uptime = process.uptime();
+        console.error(`[DB] FATAL: kokuzo_pages table missing after schema apply pid=${pid} uptime=${uptime}s`);
         console.error(`[DB] Available tables:`, database.prepare("SELECT name FROM sqlite_master WHERE type='table'").all());
         process.exit(1);
       }
-      console.log(`[DB] verified kokuzo_pages exists`);
+      const pid = process.pid;
+      const uptime = process.uptime();
+      console.log(`[DB] verified kokuzo_pages exists pid=${pid} uptime=${uptime}s`);
       markKokuzoVerified();
+      console.log(`[READY] kokuzoVerified=true`);
     } catch (e) {
-      console.error(`[DB] FATAL: failed to verify kokuzo_pages:`, e);
+      const pid = process.pid;
+      const uptime = process.uptime();
+      console.error(`[DB] FATAL: failed to verify kokuzo_pages pid=${pid} uptime=${uptime}s:`, e);
       process.exit(1);
     }
   }
 
   dbs.set(kind, database);
-  markDbReady(kind);
   console.log(`[DB] ready kind=${kind} path=${filePath} at=${nowIso()}`);
   return database;
 }

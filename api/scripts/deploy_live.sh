@@ -26,3 +26,7 @@ sudo mv "$LIVE/dist.new" "$LIVE/dist"
 
 echo "[deploy] start service"
 sudo systemctl start tenmon-ark-api.service
+sleep 0.3
+echo "[deploy] verify listener"
+sudo ss -lptn 'sport = :3000' || true
+sudo journalctl -u tenmon-ark-api.service -n 30 --no-pager || true

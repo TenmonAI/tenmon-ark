@@ -1,66 +1,54 @@
 // api/src/health/readiness.ts
-// Readiness state management for /api/audit endpoint
+export type DbKind = "kokuzo" | "audit" | "persona";
 
-type ReadinessStage = "listen" | "db" | "kokuzo";
-
-const readinessState = {
-  listen: false,
-  db: new Set<string>(),
-  kokuzoVerified: false,
+type State = {
+  listenReady: boolean;
+  dbReady: Record<DbKind, boolean>;
+  kokuzoVerified: boolean;
+  startedAt: number;
 };
 
-/**
- * Mark server as listening
- */
-export function markListenReady(): void {
-  readinessState.listen = true;
-  console.log(`[READINESS] listen ready`);
+const state: State = {
+  listenReady: false,
+  dbReady: { kokuzo: false, audit: false, persona: false },
+  kokuzoVerified: false,
+  startedAt: Date.now(),
+};
+
+export function markListenReady() {
+  state.listenReady = true;
 }
 
-/**
- * Mark database as ready
- */
-export function markDbReady(kind: string): void {
-  readinessState.db.add(kind);
-  console.log(`[READINESS] db ready kind=${kind} (total: ${readinessState.db.size})`);
+export function markDbReady(kind: DbKind) {
+  state.dbReady[kind] = true;
 }
 
-/**
- * Mark kokuzo_pages verification as complete
- */
-export function markKokuzoVerified(): void {
-  readinessState.kokuzoVerified = true;
-  console.log(`[READINESS] kokuzo verified`);
+export function markKokuzoVerified() {
+  state.kokuzoVerified = true;
 }
 
-/**
- * Check if all readiness stages are complete
- */
-export function isReady(): boolean {
-  return (
-    readinessState.listen &&
-    readinessState.db.has("kokuzo") &&
-    readinessState.kokuzoVerified
-  );
-}
+export function getReadiness() {
+  const uptimeMs = Date.now() - state.startedAt;
+  const ready =
+    state.listenReady &&
+    state.dbReady.kokuzo &&
+    state.dbReady.audit &&
+    state.dbReady.persona &&
+    state.kokuzoVerified;
+  // "どこで止まってるか"が一目で分かる stage
+  let stage = "READY";
+  if (!state.listenReady) stage = "WAIT_LISTEN";
+  else if (!state.dbReady.kokuzo) stage = "WAIT_DB_KOKUZO";
+  else if (!state.dbReady.audit) stage = "WAIT_DB_AUDIT";
+  else if (!state.dbReady.persona) stage = "WAIT_DB_PERSONA";
+  else if (!state.kokuzoVerified) stage = "WAIT_KOKUZO_VERIFY";
 
-/**
- * Get readiness status for debugging
- */
-export function getReadinessStatus(): {
-  ready: boolean;
-  stages: {
-    listen: boolean;
-    db: string[];
-    kokuzoVerified: boolean;
-  };
-} {
   return {
-    ready: isReady(),
-    stages: {
-      listen: readinessState.listen,
-      db: Array.from(readinessState.db),
-      kokuzoVerified: readinessState.kokuzoVerified,
-    },
+    ready,
+    stage,
+    uptimeMs,
+    listenReady: state.listenReady,
+    dbReady: { ...state.dbReady },
+    kokuzoVerified: state.kokuzoVerified,
   };
 }
