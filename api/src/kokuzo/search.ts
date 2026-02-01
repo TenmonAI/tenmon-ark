@@ -14,6 +14,51 @@ function normalizeSnippet(s: string): string {
     .trim();
 }
 
+/**
+ * テーブルが存在するかチェック
+ */
+function tableExists(db: any, name: string): boolean {
+  try {
+    const row = db.prepare(
+      "SELECT 1 AS ok FROM sqlite_master WHERE type='table' AND name=? LIMIT 1"
+    ).get(name) as any;
+    return !!row?.ok;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * snippet を生成（クエリマッチ位置を中心に）
+ */
+function mkSnippet(text: string, q: string, max = 160): string {
+  const t = (text || "").replace(/\s+/g, " ").trim();
+  if (!t) return "";
+  const i = q ? t.toLowerCase().indexOf(q.toLowerCase()) : -1;
+  if (i < 0) return t.slice(0, max);
+  const start = Math.max(0, i - Math.floor(max / 3));
+  return t.slice(start, start + max);
+}
+
+/**
+ * LIKE 検索のスコア計算（クエリの出現回数）
+ */
+function scoreLike(text: string, q: string): number {
+  if (!text || !q) return 0;
+  const hay = text.toLowerCase();
+  const needle = q.toLowerCase();
+  let count = 0;
+  let pos = 0;
+  while (true) {
+    const i = hay.indexOf(needle, pos);
+    if (i < 0) break;
+    count++;
+    pos = i + needle.length;
+    if (count >= 20) break;
+  }
+  return count;
+}
+
 export type KokuzoCandidate = {
   doc: string;
   pdfPage: number;
@@ -130,35 +175,97 @@ export function searchPagesForHybrid(docOrNull: string | null, query: string, li
   }
 
   // 1) FTS5検索（Phase27: 全文検索で精度と速度を向上）
-  // FTS5 のクエリは空白区切りで自動的に AND 検索になる
+  // FTS5 があれば FTS、なければ LIKE、それも無理ならフォールバック
   const ftsQuery = normalizedQuery.split(/\s+/).filter(Boolean).join(" ");
   let rows: any[] = [];
-  try {
-    if (docOrNull) {
-      rows = db
-        .prepare(
-          `SELECT doc, pdfPage, substr(replace(text, char(12), ''), 1, 120) AS snippet, bm25(kokuzo_pages_fts) AS rank
-           FROM kokuzo_pages_fts
-           WHERE doc = ? AND kokuzo_pages_fts MATCH ?
-           ORDER BY rank ASC
-           LIMIT ?`
-        )
-        .all(docOrNull, ftsQuery, limit) as any[];
-    } else {
-      rows = db
-        .prepare(
-          `SELECT doc, pdfPage, substr(replace(text, char(12), ''), 1, 120) AS snippet, bm25(kokuzo_pages_fts) AS rank
-           FROM kokuzo_pages_fts
-           WHERE kokuzo_pages_fts MATCH ?
-           ORDER BY rank ASC
-           LIMIT ?`
-        )
-        .all(ftsQuery, limit) as any[];
+  
+  // Prefer FTS if available
+  const hasFts = tableExists(db, "kokuzo_pages_fts");
+  if (hasFts) {
+    try {
+      if (docOrNull) {
+        rows = db
+          .prepare(
+            `SELECT doc, pdfPage, substr(replace(text, char(12), ''), 1, 120) AS snippet, bm25(kokuzo_pages_fts) AS rank
+             FROM kokuzo_pages_fts
+             WHERE doc = ? AND kokuzo_pages_fts MATCH ?
+             ORDER BY rank ASC
+             LIMIT ?`
+          )
+          .all(docOrNull, ftsQuery, limit) as any[];
+      } else {
+        rows = db
+          .prepare(
+            `SELECT doc, pdfPage, substr(replace(text, char(12), ''), 1, 120) AS snippet, bm25(kokuzo_pages_fts) AS rank
+             FROM kokuzo_pages_fts
+             WHERE kokuzo_pages_fts MATCH ?
+             ORDER BY rank ASC
+             LIMIT ?`
+          )
+          .all(ftsQuery, limit) as any[];
+      }
+    } catch (e) {
+      // FTS5 クエリエラの場合は LIKE へ
+      console.warn("[KOKUZO-SEARCH] FTS5 query failed, falling back to LIKE:", e);
+      rows = [];
     }
-  } catch (e) {
-    // FTS5 テーブルが存在しない、またはクエリエラの場合は fallback へ
-    console.warn("[KOKUZO-SEARCH] FTS5 search failed, falling back:", e);
-    rows = [];
+  }
+  
+  // Fallback: LIKE search on base table (always exists)
+  if (rows.length === 0) {
+    const hasPages = tableExists(db, "kokuzo_pages");
+    if (hasPages) {
+      try {
+        const like = `%${normalizedQuery}%`;
+        let likeRows: any[] = [];
+        if (docOrNull) {
+          likeRows = db
+            .prepare(
+              `SELECT doc, pdfPage, text
+               FROM kokuzo_pages
+               WHERE doc = ? AND text LIKE ?
+               LIMIT 60`
+            )
+            .all(docOrNull, like) as any[];
+        } else {
+          likeRows = db
+            .prepare(
+              `SELECT doc, pdfPage, text
+               FROM kokuzo_pages
+               WHERE text LIKE ?
+               LIMIT 60`
+            )
+            .all(like) as any[];
+        }
+        
+        const ranked = likeRows
+          .map((r: any) => {
+            const text = String(r.text || "");
+            const s = scoreLike(text, normalizedQuery);
+            return {
+              doc: String(r.doc),
+              pdfPage: Number(r.pdfPage),
+              snippet: mkSnippet(text, normalizedQuery),
+              score: s,
+            };
+          })
+          .filter((x: any) => x.score > 0)
+          .sort((a: any, b: any) => b.score - a.score)
+          .slice(0, limit);
+        
+        if (ranked.length > 0) {
+          rows = ranked.map((r: any) => ({
+            doc: r.doc,
+            pdfPage: r.pdfPage,
+            snippet: r.snippet,
+            rank: 100 - r.score, // bm25 と互換性を持たせる（小さいほど良い）
+          }));
+        }
+      } catch (e) {
+        console.warn("[KOKUZO-SEARCH] LIKE search failed, falling back:", e);
+        rows = [];
+      }
+    }
   }
 
   if (rows && rows.length) {

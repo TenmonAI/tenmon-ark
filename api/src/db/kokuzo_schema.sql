@@ -47,3 +47,10 @@ CREATE INDEX IF NOT EXISTS idx_kokuzo_seeds_source
 CREATE INDEX IF NOT EXISTS idx_kokuzo_seeds_created_at
   ON kokuzo_seeds(created_at);
 
+-- === kokuzo_pages (FTS5) : minimal for HYBRID search ===
+CREATE VIRTUAL TABLE IF NOT EXISTS kokuzo_pages
+USING fts5(
+  doc,
+  pdfPage UNINDEXED,
+  text
+);

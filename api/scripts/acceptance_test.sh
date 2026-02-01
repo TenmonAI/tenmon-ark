@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+REPO="/opt/tenmon-ark-repo/api"
+LIVE="/opt/tenmon-ark-live"
+
 SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
 cd "$SCRIPT_DIR/.."
 BASE_URL="${BASE_URL:-http://127.0.0.1:3000}"
@@ -8,17 +11,26 @@ BASE_URL="${BASE_URL:-http://127.0.0.1:3000}"
 echo "[1] deploy"
 bash scripts/deploy_live.sh
 
-echo "[1-1] ensure kokuzo_pages exists (apply schema with -bail)"
-sqlite3 -bail db/kokuzo.sqlite < src/db/kokuzo_schema.sql
-sqlite3 db/kokuzo.sqlite ".tables" | tr ' ' '\n' | grep -E '^kokuzo_pages$' >/dev/null \
-  || (echo "[FAIL] kokuzo_pages not created" && sqlite3 db/kokuzo.sqlite ".schema" && exit 1)
-echo "[PASS] kokuzo_pages exists"
+echo "[1-0] restart service (graceful)"
+sudo systemctl stop tenmon-ark-api.service || true
+sleep 0.2
+sudo systemctl start tenmon-ark-api.service
+sleep 0.4
+
+echo "[1-1] apply DB schema (bail) + ensure kokuzo_pages exists"
+# NOTE: db path is in repo; service reads /opt/tenmon-ark-repo/api/db/*.sqlite
+command -v sqlite3 >/dev/null 2>&1 || (echo "[FAIL] sqlite3 missing. run: sudo apt-get install -y sqlite3" && exit 1)
+sqlite3 -bail "$REPO/db/kokuzo.sqlite" < "$REPO/src/db/kokuzo_schema.sql"
+# kokuzo_pages existence check (must be present even without FTS5)
+has_pages="$(sqlite3 "$REPO/db/kokuzo.sqlite" "SELECT name FROM sqlite_master WHERE type='table' AND name='kokuzo_pages' LIMIT 1;")"
+test "$has_pages" = "kokuzo_pages" || (echo "[FAIL] kokuzo_pages missing after schema apply" && exit 1)
+echo "[PASS] DB schema ok (kokuzo_pages exists)"
 
 echo "[2] dist must match (repo vs live)"
 diff -qr /opt/tenmon-ark-repo/api/dist /opt/tenmon-ark-live/dist >/dev/null || (echo "[FAIL] dist mismatch (repo vs live)" && exit 1)
 echo "[PASS] dist synced"
 
-echo "[3] wait /api/audit (ok==true)"
+echo "[2] wait /api/audit (ok==true)"
 for i in $(seq 1 80); do
   j="$(curl -fsS "$BASE_URL/api/audit" 2>/dev/null || true)"
   if echo "$j" | jq -e '.ok==true' >/dev/null 2>&1; then
@@ -29,21 +41,20 @@ for i in $(seq 1 80); do
 done
 curl -fsS "$BASE_URL/api/audit" | jq -e '.ok==true' >/dev/null
 
-echo "[3-0] wait /api/chat NATURAL ready"
-for i in $(seq 1 120); do
+echo "[2-1] wait /api/chat (decisionFrame contract must be ready)"
+for i in $(seq 1 200); do
   j="$(curl -fsS "$BASE_URL/api/chat" -H "Content-Type: application/json" \
         -d '{"threadId":"t","message":"hello"}' 2>/dev/null || true)"
-  if echo "$j" | jq -e 'type=="object" and (.decisionFrame.llm==null) and (.decisionFrame.ku|type)=="object" and (.response|type)=="string"' >/dev/null 2>&1; then
+  if echo "$j" | jq -e '.decisionFrame.llm==null and (.decisionFrame.ku|type)=="object" and (.response|type)=="string"' >/dev/null 2>&1; then
     echo "[PASS] chat ready"
     break
   fi
   sleep 0.2
 done
 
-# 最終ゲート（ここで落ちるなら本当に壊れてる）
+# 最終ゲート（ここで落ちるなら本当に壊れている）
 j="$(curl -fsS "$BASE_URL/api/chat" -H "Content-Type: application/json" -d '{"threadId":"t","message":"hello"}')"
-echo "$j" | jq -e '.decisionFrame.llm==null and (.decisionFrame.ku|type)=="object" and (.response|type)=="string"' >/dev/null \
-  || (echo "[FAIL] chat contract not ready" && exit 1)
+echo "$j" | jq -e '.decisionFrame.llm==null and (.decisionFrame.ku|type)=="object" and (.response|type)=="string"' >/dev/null
 
 echo "[4] /api/chat decisionFrame contract"
 resp=$(curl -fsS "$BASE_URL/api/chat" -H "Content-Type: application/json" \
