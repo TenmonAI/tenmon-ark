@@ -14,6 +14,12 @@ echo "[PASS] dist synced"
 echo "[1] build"
 pnpm -s build
 
+echo "[1-1] sync dist (repo -> live)"
+sudo mkdir -p /opt/tenmon-ark-live/dist
+sudo rsync -a --delete /opt/tenmon-ark-repo/api/dist/ /opt/tenmon-ark-live/dist/
+diff -qr /opt/tenmon-ark-repo/api/dist /opt/tenmon-ark-live/dist >/dev/null || (echo "[FAIL] dist mismatch after sync" && exit 1)
+echo "[PASS] dist synced after build"
+
 echo "[2] restart"
 sudo systemctl restart tenmon-ark-api.service
 
