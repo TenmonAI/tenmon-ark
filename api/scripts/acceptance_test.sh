@@ -9,6 +9,17 @@ BASE_URL="${BASE_URL:-http://127.0.0.1:3000}"
 echo "[1] deploy"
 bash scripts/deploy_live.sh
 
+echo "[1-0] ensure single listener on :3000"
+# 3000 を掴んでいる node をすべて列挙して kill（残骸除去）
+PIDS="$(sudo ss -ltnp 'sport = :3000' 2>/dev/null | sed -n 's/.*pid=\([0-9]\+\),.*/\1/p' | sort -u)"
+if [ -n "$PIDS" ]; then
+  echo "[1-0] kill pids: $PIDS"
+  for p in $PIDS; do sudo kill -9 "$p" 2>/dev/null || true; done
+  sleep 0.2
+fi
+sudo systemctl restart tenmon-ark-api.service
+sleep 0.4
+
 # [GATE] live dist must exist and match repo dist
 test -f /opt/tenmon-ark-live/dist/kokuzo/search.js || (echo "[FAIL] live dist missing" && exit 1)
 diff -qr /opt/tenmon-ark-repo/api/dist /opt/tenmon-ark-live/dist >/dev/null || (echo "[FAIL] dist mismatch (repo vs live)" && exit 1)
