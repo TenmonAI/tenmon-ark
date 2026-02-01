@@ -11,17 +11,10 @@ test -f /opt/tenmon-ark-live/dist/kokuzo/search.js || (echo "[FAIL] live dist mi
 diff -qr /opt/tenmon-ark-repo/api/dist /opt/tenmon-ark-live/dist >/dev/null || (echo "[FAIL] dist mismatch (repo vs live)" && exit 1)
 echo "[PASS] dist synced"
 
-echo "[1] build"
-pnpm -s build
+echo "[1] deploy"
+bash scripts/deploy_live.sh
 
-echo "[1-1] sync dist (repo -> live)"
-sudo mkdir -p /opt/tenmon-ark-live/dist
-sudo rsync -a --delete /opt/tenmon-ark-repo/api/dist/ /opt/tenmon-ark-live/dist/
-diff -qr /opt/tenmon-ark-repo/api/dist /opt/tenmon-ark-live/dist >/dev/null || (echo "[FAIL] dist mismatch after sync" && exit 1)
-echo "[PASS] dist synced after build"
-
-echo "[2] restart"
-sudo systemctl restart tenmon-ark-api.service
+echo "[2] wait /api/audit"
 
 # restart直後（これ以降のログだけを見る）
 SINCE="$(date '+%Y-%m-%d %H:%M:%S')"
