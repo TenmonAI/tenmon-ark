@@ -34,7 +34,7 @@ test -n "$LIVE_SHA" || (echo "[FAIL] /api/audit missing gitSha" && exit 1)
 test "$LIVE_SHA" = "$REPO_SHA" || (echo "[FAIL] live gitSha mismatch (live=$LIVE_SHA repo=$REPO_SHA)" && exit 1)
 echo "[PASS] live gitSha match"
 
-echo "[4] /api/chat decisionFrame contract"
+echo "[3] /api/chat decisionFrame contract"
 resp=$(curl -fsS "$BASE_URL/api/chat" -H "Content-Type: application/json" \
   -d '{"threadId":"t","message":"hello"}')
 echo "$resp" | jq -e '.decisionFrame.llm==null and (.decisionFrame.ku|type)=="object" and (.response|type)=="string"' >/dev/null
