@@ -240,6 +240,8 @@ router.post("/chat", async (req: Request, res: Response<ChatResponseBody>) => {
     
     // Phase29: LawCandidates（#詳細 のときのみ、現時点では空配列）
     (detailPlan as any).lawCandidates = [];
+    // Phase33: 古事記タグ（常に空配列で初期化、pageText が取れた場合に上書き）
+    (detailPlan as any).kojikiTags = [];
 
     // Phase25: candidates（deterministic; if LIKE misses, fallback range is returned）
     const doc = (sanitized as any).doc ?? null;
