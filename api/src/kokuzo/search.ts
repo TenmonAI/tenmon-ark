@@ -239,7 +239,15 @@ export function searchPagesForHybrid(docOrNull: string | null, query: string, li
       return a.pdfPage - b.pdfPage;
     });
     
-    return scored.slice(0, limit);
+    // Phase28: 最終整列（cand0 が pdfPage=1 かつ snippet に (全集|監修|校訂) を含む形を絶対に作らない）
+    const isBadCover = (c: KokuzoCandidate) => {
+      return c.pdfPage === 1 && /(全集|監修|校訂)/.test(String(c.snippet || ""));
+    };
+    const good = scored.filter(c => !isBadCover(c));
+    const bad = scored.filter(c => isBadCover(c));
+    const final = good.concat(bad).slice(0, limit);
+    
+    return final;
   }
 
   // 2) フォールバック：FTS検索が0件の場合も fallback を返す（導線成立が目的）
