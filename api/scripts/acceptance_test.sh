@@ -29,21 +29,25 @@ echo "[PASS] dist synced"
 SINCE="$(date '+%Y-%m-%d %H:%M:%S')"
 sleep 0.2
 
-echo "[2] wait /api/audit"
-for i in $(seq 1 80); do
-  if curl -fsS "$BASE_URL/api/audit" >/dev/null 2>&1; then
-    break
+echo "[2] wait /api/audit (must match repo gitSha)"
+REPO_SHA="$(cd /opt/tenmon-ark-repo/api && git rev-parse --short HEAD)"
+
+for i in $(seq 1 120); do
+  j="$(curl -fsS "$BASE_URL/api/audit" 2>/dev/null || true)"
+  if echo "$j" | jq -e 'type=="object"' >/dev/null 2>&1; then
+    LIVE_SHA="$(echo "$j" | jq -r '.gitSha // ""')"
+    if [ -n "$LIVE_SHA" ] && [ "$LIVE_SHA" = "$REPO_SHA" ]; then
+      echo "[PASS] audit ready (gitSha=$LIVE_SHA)"
+      break
+    fi
   fi
   sleep 0.2
 done
-curl -fsS "$BASE_URL/api/audit" | jq -e 'type=="object"' >/dev/null
 
-echo "[GATE] live gitSha must match repo"
-REPO_SHA="$(cd /opt/tenmon-ark-repo/api && git rev-parse --short HEAD)"
-LIVE_SHA="$(curl -fsS "$BASE_URL/api/audit" | jq -r '.gitSha // ""')"
-test -n "$LIVE_SHA" || (echo "[FAIL] /api/audit missing gitSha" && exit 1)
-test "$LIVE_SHA" = "$REPO_SHA" || (echo "[FAIL] live gitSha mismatch (live=$LIVE_SHA repo=$REPO_SHA)" && exit 1)
-echo "[PASS] live gitSha match"
+# 最終確認（ここで一致してなければFAIL）
+j="$(curl -fsS "$BASE_URL/api/audit")"
+LIVE_SHA="$(echo "$j" | jq -r '.gitSha // ""')"
+test "$LIVE_SHA" = "$REPO_SHA" || (echo "[FAIL] audit gitSha not ready (live=$LIVE_SHA repo=$REPO_SHA)" && exit 1)
 
 echo "[3] /api/chat decisionFrame contract"
 resp=$(curl -fsS "$BASE_URL/api/chat" -H "Content-Type: application/json" \
