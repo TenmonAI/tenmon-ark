@@ -14,11 +14,6 @@ bash scripts/deploy_live.sh
 echo "[1-0] ensure single listener on :3000 (safe order)"
 sudo systemctl stop tenmon-ark-api.service || true
 sleep 0.2
-PIDS="$(sudo ss -ltnp 'sport = :3000' 2>/dev/null | sed -n 's/.*pid=\([0-9]\+\),.*/\1/p' | sort -u)"
-if [ -n "$PIDS" ]; then
-  echo "[1-0] kill stray pids: $PIDS"
-  for p in $PIDS; do sudo kill -9 "$p" 2>/dev/null || true; done
-fi
 sudo systemctl start tenmon-ark-api.service
 sleep 0.6
 
@@ -35,37 +30,42 @@ echo "[2] dist must match (repo vs live)"
 diff -qr /opt/tenmon-ark-repo/api/dist /opt/tenmon-ark-live/dist >/dev/null || (echo "[FAIL] dist mismatch (repo vs live)" && exit 1)
 echo "[PASS] dist synced"
 
-echo "[2] wait /api/audit (ok==true)"
+echo "[2] wait /api/audit (ok==true + gitSha + readiness)"
 for i in $(seq 1 80); do
   j="$(curl -fsS "$BASE_URL/api/audit" 2>/dev/null || true)"
-  if echo "$j" | jq -e '.ok==true' >/dev/null 2>&1; then
+  if echo "$j" | jq -e '.ok==true and (.gitSha|type)=="string" and (.readiness|type)=="object"' >/dev/null 2>&1; then
     echo "[PASS] audit ready"
     break
   fi
   sleep 0.2
 done
-curl -fsS "$BASE_URL/api/audit" | jq -e '.ok==true' >/dev/null
+curl -fsS "$BASE_URL/api/audit" | jq -e '.ok==true and (.gitSha|type)=="string" and (.readiness|type)=="object"' >/dev/null
 
-echo "[2-1] wait /api/chat (decisionFrame contract must be ready)"
-chat_ready=false
+echo "[3] wait /api/chat (decisionFrame contract)"
+chat_ready=""
+last=""
+
 for i in $(seq 1 120); do
-  j="$(curl -fsS "$BASE_URL/api/chat" -H "Content-Type: application/json" \
-        -d '{"threadId":"t","message":"hello"}' 2>/dev/null || true)"
-  if echo "$j" | jq -e '.decisionFrame.llm==null and (.decisionFrame.ku|type)=="object" and (.response|type)=="string"' >/dev/null 2>&1; then
+  last="$(curl -sS "$BASE_URL/api/chat" -H "Content-Type: application/json" \
+    -d '{"threadId":"t","message":"hello"}' 2>/dev/null || true)"
+
+  if echo "$last" | jq -e '.decisionFrame.llm==null and (.decisionFrame.ku|type)=="object" and (.response|type)=="string"' >/dev/null 2>&1; then
+    chat_ready="yes"
     echo "[PASS] chat ready"
-    chat_ready=true
     break
   fi
   sleep 0.2
 done
 
-# 最終確認（失敗時は journalctl ログを出力して exit 1）
-if [ "$chat_ready" != "true" ]; then
-  echo "[FAIL] /api/chat not ready after 120 retries"
-  echo "[DEBUG] Last response:"
-  j="$(curl -fsS "$BASE_URL/api/chat" -H "Content-Type: application/json" -d '{"threadId":"t","message":"hello"}' 2>&1 || true)"
-  echo "$j" | head -20
-  echo "[DEBUG] Recent journalctl logs:"
+if [ -z "$chat_ready" ]; then
+  echo "[FAIL] /api/chat not ready"
+  echo "---- last /api/chat ----"
+  echo "$last" | tail -n 40 || true
+  echo "---- ss :3000 ----"
+  sudo ss -lptn 'sport = :3000' || true
+  echo "---- systemctl status ----"
+  sudo systemctl status tenmon-ark-api.service --no-pager -l || true
+  echo "---- journalctl (last 200) ----"
   sudo journalctl -u tenmon-ark-api.service -n 200 --no-pager || true
   exit 1
 fi

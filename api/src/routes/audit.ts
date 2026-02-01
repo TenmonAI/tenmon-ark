@@ -33,13 +33,27 @@ router.get("/audit", (_req: Request, res: Response) => {
       readiness: r,
     });
   } catch (error) {
-    // gitSha が取得できない場合は 500 を返す（空文字で返さない）
+    // gitSha と readiness は取得を試みる（失敗時は空文字/null）
+    let gitSha = "";
+    let readiness = null;
+    try {
+      gitSha = getGitSha();
+    } catch {
+      // gitSha 取得失敗時は空文字のまま
+    }
+    try {
+      readiness = getReadiness();
+    } catch {
+      // readiness 取得失敗時は null のまま
+    }
     res.status(500).json({
       ok: false,
       timestamp: new Date().toISOString(),
+      gitSha,
       error: error instanceof Error ? error.message : String(error),
       pid,
       uptime: Math.floor(uptime),
+      readiness,
     });
   }
 });
