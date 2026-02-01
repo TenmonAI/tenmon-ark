@@ -15,6 +15,7 @@ import { searchPagesForHybrid } from "../kokuzo/search.js";
 import { setThreadCandidates, pickFromThread, clearThreadCandidates } from "../kokuzo/threadCandidates.js";
 import { extractLawCandidates } from "../kokuzo/lawCandidates.js";
 import { extractSaikihoLawsFromText } from "../kotodama/saikihoLawSet.js";
+import { extractFourLayerTags } from "../kotodama/fourLayerTags.js";
 
 const router: IRouter = Router();
 
@@ -79,6 +80,8 @@ function buildGroundedResponse(args: {
               law.evidence.doc = doc;
               law.evidence.pdfPage = pdfPage;
             }
+            // Phase32: 四層タグを追加
+            (law as any).tags = extractFourLayerTags(law.body);
           });
           (p as any).saikiho = {
             laws,

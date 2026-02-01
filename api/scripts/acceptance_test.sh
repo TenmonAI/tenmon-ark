@@ -165,6 +165,18 @@ if echo "$cand0_snippet" | grep -qE "^\\f$|^\\s*$"; then
 fi
 echo "[PASS] Phase31 candidate quality"
 
+echo "[32] Phase32 four-layer tags (lawCandidates[0].tags is array)"
+r32="$(post_chat_raw "言霊とは何？ #詳細")"
+echo "$r32" | jq -e 'has("detailPlan") and (.detailPlan.lawCandidates|type)=="array"' >/dev/null
+# lawCandidates[0].tags が配列であること（存在しない場合は空配列を入れて必ず存在させる）
+if echo "$r32" | jq -e '(.detailPlan.lawCandidates|length)>0' >/dev/null 2>&1; then
+  echo "$r32" | jq -e '(.detailPlan.lawCandidates[0].tags|type)=="array"' >/dev/null
+else
+  # lawCandidates が空の場合は空配列を確認
+  echo "$r32" | jq -e '(.detailPlan.lawCandidates|type)=="array"' >/dev/null
+fi
+echo "[PASS] Phase32 four-layer tags"
+
 echo "[GATE] No Runtime LLM usage in logs"
 if sudo journalctl -u tenmon-ark-api.service --since "$SINCE" --no-pager | grep -q "\[KANAGI-LLM\]"; then
   echo "[FAIL] Runtime LLM usage detected in logs."
