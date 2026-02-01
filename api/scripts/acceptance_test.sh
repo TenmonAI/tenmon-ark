@@ -6,6 +6,9 @@ SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
 cd "$SCRIPT_DIR/.."
 BASE_URL="${BASE_URL:-http://127.0.0.1:3000}"
 
+# [GATE] stale dist must not run (prevents Phase28 wobble)
+grep -q "penalty += 300" /opt/tenmon-ark-live/dist/kokuzo/search.js || (echo "[FAIL] stale dist detected (expected penalty+=300 in live/dist)" && exit 1)
+
 echo "[1] build"
 pnpm -s build
 
