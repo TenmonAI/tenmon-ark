@@ -183,6 +183,12 @@ echo "$r33" | jq -e 'has("detailPlan")' >/dev/null
 echo "$r33" | jq -e '(.detailPlan.kojikiTags|type)=="array"' >/dev/null
 echo "[PASS] Phase33 kojikiTags"
 
+echo "[34] Phase34 mythMapEdges (detailPlan.mythMapEdges is array)"
+r34="$(post_chat_raw "言霊とは何？ #詳細")"
+echo "$r34" | jq -e 'has("detailPlan")' >/dev/null
+echo "$r34" | jq -e '(.detailPlan.mythMapEdges|type)=="array"' >/dev/null
+echo "[PASS] Phase34 mythMapEdges"
+
 echo "[GATE] No Runtime LLM usage in logs"
 if sudo journalctl -u tenmon-ark-api.service --since "$SINCE" --no-pager | grep -q "\[KANAGI-LLM\]"; then
   echo "[FAIL] Runtime LLM usage detected in logs."
