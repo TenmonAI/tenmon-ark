@@ -69,10 +69,18 @@ function schemaFilesFor(kind: DbKind): string[] {
 }
 
 function applySchemas(database: DatabaseSync, kind: DbKind): void {
-  const dirPath = path.dirname(fileURLToPath(import.meta.url));
+  // dist 実行でも参照できるパス（dist/db/*.sql を読む）
+  const __filename = fileURLToPath(import.meta.url);
+  const __dirname = path.dirname(__filename);
+  // dist/db/index.js から見て dist/db/*.sql を読む
+  const schemaDir = path.resolve(__dirname, "db");
+  
   for (const f of schemaFilesFor(kind)) {
-    const full = path.join(dirPath, f);
-    if (!fs.existsSync(full)) continue;
+    const full = path.join(schemaDir, f);
+    if (!fs.existsSync(full)) {
+      console.warn(`[DB] schema file not found: ${full}`);
+      continue;
+    }
     const sql = fs.readFileSync(full, "utf8");
     withRetry(() => database.exec(sql));
   }
