@@ -11,11 +11,16 @@ BASE_URL="${BASE_URL:-http://127.0.0.1:3000}"
 echo "[1] deploy"
 bash scripts/deploy_live.sh
 
-echo "[1-0] restart service (graceful)"
+echo "[1-0] ensure single listener on :3000 (safe order)"
 sudo systemctl stop tenmon-ark-api.service || true
 sleep 0.2
+PIDS="$(sudo ss -ltnp 'sport = :3000' 2>/dev/null | sed -n 's/.*pid=\([0-9]\+\),.*/\1/p' | sort -u)"
+if [ -n "$PIDS" ]; then
+  echo "[1-0] kill stray pids: $PIDS"
+  for p in $PIDS; do sudo kill -9 "$p" 2>/dev/null || true; done
+fi
 sudo systemctl start tenmon-ark-api.service
-sleep 0.4
+sleep 0.6
 
 echo "[1-1] apply DB schema (bail) + ensure kokuzo_pages exists"
 # NOTE: db path is in repo; service reads /opt/tenmon-ark-repo/api/db/*.sqlite
