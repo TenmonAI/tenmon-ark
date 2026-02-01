@@ -6,13 +6,13 @@ SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
 cd "$SCRIPT_DIR/.."
 BASE_URL="${BASE_URL:-http://127.0.0.1:3000}"
 
+echo "[1] deploy"
+bash scripts/deploy_live.sh
+
 # [GATE] live dist must exist and match repo dist
 test -f /opt/tenmon-ark-live/dist/kokuzo/search.js || (echo "[FAIL] live dist missing" && exit 1)
 diff -qr /opt/tenmon-ark-repo/api/dist /opt/tenmon-ark-live/dist >/dev/null || (echo "[FAIL] dist mismatch (repo vs live)" && exit 1)
 echo "[PASS] dist synced"
-
-echo "[1] deploy"
-bash scripts/deploy_live.sh
 
 # restart直後（これ以降のログだけを見る）
 SINCE="$(date '+%Y-%m-%d %H:%M:%S')"
