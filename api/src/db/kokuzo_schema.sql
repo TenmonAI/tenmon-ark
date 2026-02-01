@@ -47,10 +47,44 @@ CREATE INDEX IF NOT EXISTS idx_kokuzo_seeds_source
 CREATE INDEX IF NOT EXISTS idx_kokuzo_seeds_created_at
   ON kokuzo_seeds(created_at);
 
--- === kokuzo_pages (FTS5) : minimal for HYBRID search ===
-CREATE VIRTUAL TABLE IF NOT EXISTS kokuzo_pages
-USING fts5(
-  doc,
-  pdfPage UNINDEXED,
-  text
+-- =========================================
+-- kokuzo_pages (required by HYBRID search)
+-- =========================================
+CREATE TABLE IF NOT EXISTS kokuzo_pages (
+  doc TEXT NOT NULL,
+  pdfPage INTEGER NOT NULL,
+  text TEXT NOT NULL DEFAULT '',
+  createdAt TEXT NOT NULL DEFAULT (datetime('now')),
+  updatedAt TEXT NOT NULL DEFAULT (datetime('now')),
+  PRIMARY KEY (doc, pdfPage)
 );
+
+CREATE INDEX IF NOT EXISTS idx_kokuzo_pages_doc ON kokuzo_pages(doc);
+CREATE INDEX IF NOT EXISTS idx_kokuzo_pages_page ON kokuzo_pages(pdfPage);
+
+-- Optional but recommended: FTS for page text
+CREATE VIRTUAL TABLE IF NOT EXISTS kokuzo_pages_fts USING fts5(
+  text,
+  doc UNINDEXED,
+  pdfPage UNINDEXED,
+  content='kokuzo_pages',
+  content_rowid='rowid'
+);
+
+-- Keep FTS in sync (safe even if no inserts happen)
+CREATE TRIGGER IF NOT EXISTS kokuzo_pages_ai AFTER INSERT ON kokuzo_pages BEGIN
+  INSERT INTO kokuzo_pages_fts(rowid, text, doc, pdfPage)
+  VALUES (new.rowid, new.text, new.doc, new.pdfPage);
+END;
+
+CREATE TRIGGER IF NOT EXISTS kokuzo_pages_ad AFTER DELETE ON kokuzo_pages BEGIN
+  INSERT INTO kokuzo_pages_fts(kokuzo_pages_fts, rowid, text, doc, pdfPage)
+  VALUES('delete', old.rowid, old.text, old.doc, old.pdfPage);
+END;
+
+CREATE TRIGGER IF NOT EXISTS kokuzo_pages_au AFTER UPDATE ON kokuzo_pages BEGIN
+  INSERT INTO kokuzo_pages_fts(kokuzo_pages_fts, rowid, text, doc, pdfPage)
+  VALUES('delete', old.rowid, old.text, old.doc, old.pdfPage);
+  INSERT INTO kokuzo_pages_fts(rowid, text, doc, pdfPage)
+  VALUES (new.rowid, new.text, new.doc, new.pdfPage);
+END;
