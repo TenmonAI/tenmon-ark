@@ -119,6 +119,12 @@ if echo "$cand0_snippet" | grep -qE "(監修|校訂|全集)"; then
 fi
 echo "[PASS] Phase28 ranking quality"
 
+echo "[33] Phase33 kojikiTags (detailPlan.kojikiTags is array)"
+r33="$(post_chat_raw "言霊とは何？ #詳細")"
+echo "$r33" | jq -e 'has("detailPlan")' >/dev/null
+echo "$r33" | jq -e '(.detailPlan.kojikiTags|type)=="array"' >/dev/null
+echo "[PASS] Phase33 kojikiTags"
+
 echo "[GATE] No Runtime LLM usage in logs"
 if sudo journalctl -u tenmon-ark-api.service --since "$(date '+%Y-%m-%d %H:%M:%S' -d '1 minute ago')" --no-pager | grep -q "\[KANAGI-LLM\]"; then
   echo "[FAIL] Runtime LLM usage detected in logs."
