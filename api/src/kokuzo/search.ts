@@ -55,25 +55,36 @@ function normalizeHybridQuery(q: string): string {
 }
 
 export function searchPagesForHybrid(docOrNull: string | null, query: string, limit = 10): KokuzoCandidate[] {
-  const db = getDb("kokuzo");
+  try {
+    const db = getDb("kokuzo");
 
-  // クエリを正規化
-  const normalizedQuery = normalizeHybridQuery(query);
-  
-  // fallback 用の doc を決定（docOrNull が null の場合は最多ページ数のdocを選ぶ）
-  let targetDoc = docOrNull;
-  if (!targetDoc) {
-    const topDoc = db
-      .prepare(
-        `SELECT doc, COUNT(*) AS c
-         FROM kokuzo_pages
-         GROUP BY doc
-         ORDER BY c DESC, doc ASC
-         LIMIT 1`
-      )
-      .get() as any;
-    targetDoc = topDoc ? String(topDoc.doc) : null;
-  }
+    // クエリを正規化
+    const normalizedQuery = normalizeHybridQuery(query);
+    
+    // fallback 用の doc を決定（docOrNull が null の場合は最多ページ数のdocを選ぶ）
+    let targetDoc = docOrNull;
+    if (!targetDoc) {
+      try {
+        const topDoc = db
+          .prepare(
+            `SELECT doc, COUNT(*) AS c
+             FROM kokuzo_pages
+             GROUP BY doc
+             ORDER BY c DESC, doc ASC
+             LIMIT 1`
+          )
+          .get() as any;
+        targetDoc = topDoc ? String(topDoc.doc) : null;
+      } catch (e: any) {
+        // kokuzo_pages が存在しない場合は安全なフォールバック
+        const errMsg = String(e?.message || "");
+        if (errMsg.includes("no such table: kokuzo_pages") || errMsg.includes("no such module: fts5")) {
+          console.warn("[KOKUZO-SEARCH] kokuzo_pages not available, returning safe fallback:", errMsg);
+          return getSafeFallbackCandidates(docOrNull, limit);
+        }
+        throw e; // その他のエラーは再スロー
+      }
+    }
 
   // 正規化後のクエリが空なら fallback へ
   if (!normalizedQuery) {
@@ -327,7 +338,36 @@ export function searchPagesForHybrid(docOrNull: string | null, query: string, li
     }
   }
 
-  return [];
+    return [];
+  } catch (e: any) {
+    // 関数全体のエラーハンドリング（DB未整備でもプロセスを落とさない）
+    const errMsg = String(e?.message || "");
+    if (errMsg.includes("no such table: kokuzo_pages") || errMsg.includes("no such module: fts5")) {
+      console.warn("[KOKUZO-SEARCH] kokuzo_pages/FTS5 not available, returning safe fallback:", errMsg);
+      return getSafeFallbackCandidates(docOrNull, limit);
+    }
+    // その他の予期しないエラーも安全に処理
+    console.error("[KOKUZO-SEARCH] unexpected error, returning safe fallback:", e);
+    return getSafeFallbackCandidates(docOrNull, limit);
+  }
+}
+
+/**
+ * 安全なフォールバック候補を返す（DB未整備時でもプロセスを落とさない）
+ */
+function getSafeFallbackCandidates(docOrNull: string | null, limit: number): KokuzoCandidate[] {
+  const doc = docOrNull || "言霊秘書.pdf";
+  const candidates: KokuzoCandidate[] = [];
+  // P1 を避けて 2-11 を返す（limit が 10 なら 2-11 で 10件）
+  for (let p = 2; p <= Math.min(11, limit + 1); p++) {
+    candidates.push({
+      doc,
+      pdfPage: p,
+      snippet: "(fallback) page indexed",
+      score: 10,
+    });
+  }
+  return candidates;
 }
 
 // --- Backward compatible exports for src/routes/kokuzo.ts ---

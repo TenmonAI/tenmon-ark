@@ -8,6 +8,12 @@ BASE_URL="${BASE_URL:-http://127.0.0.1:3000}"
 echo "[1] deploy"
 bash scripts/deploy_live.sh
 
+echo "[1-1] ensure kokuzo_pages exists (apply schema with -bail)"
+sqlite3 -bail db/kokuzo.sqlite < src/db/kokuzo_schema.sql
+sqlite3 db/kokuzo.sqlite ".tables" | tr ' ' '\n' | grep -E '^kokuzo_pages$' >/dev/null \
+  || (echo "[FAIL] kokuzo_pages not created" && sqlite3 db/kokuzo.sqlite ".schema" && exit 1)
+echo "[PASS] kokuzo_pages exists"
+
 echo "[2] dist must match (repo vs live)"
 diff -qr /opt/tenmon-ark-repo/api/dist /opt/tenmon-ark-live/dist >/dev/null || (echo "[FAIL] dist mismatch (repo vs live)" && exit 1)
 echo "[PASS] dist synced"
