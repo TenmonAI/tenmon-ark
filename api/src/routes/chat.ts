@@ -66,7 +66,12 @@ function buildGroundedResponse(args: {
       }
       // Phase29: LawCandidates（法則候補抽出）
       if (pageText) {
-        (p as any).lawCandidates = extractLawCandidates(pageText, { max: 8 });
+        const lawCands = extractLawCandidates(pageText, { max: 8 });
+        // Phase32: 四層タグを追加
+        (p as any).lawCandidates = lawCands.map((cand) => ({
+          ...cand,
+          tags: extractFourLayerTags(cand.text),
+        }));
       } else {
         (p as any).lawCandidates = [];
       }
