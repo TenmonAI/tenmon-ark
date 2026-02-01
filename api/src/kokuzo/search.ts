@@ -404,48 +404,63 @@ export function searchPagesForHybrid(docOrNull: string | null, query: string, li
 
   // 2) フォールバック：FTS検索が0件の場合も fallback を返す（導線成立が目的）
   // Phase28: pdfPage=1 を末尾に送る（表紙を下げる）
+  // Phase25: 空・例外でも必ず候補を返す（candidates: [] で落ちないようにする）
   if (targetDoc) {
-    const range = db
-      .prepare(`SELECT MIN(pdfPage) AS minP, MAX(pdfPage) AS maxP FROM kokuzo_pages WHERE doc = ?`)
-      .get(targetDoc) as any;
+    try {
+      const range = db
+        .prepare(`SELECT MIN(pdfPage) AS minP, MAX(pdfPage) AS maxP FROM kokuzo_pages WHERE doc = ?`)
+        .get(targetDoc) as any;
 
-    const minP = Number(range?.minP ?? 0);
-    const maxP = Number(range?.maxP ?? 0);
+      const minP = Number(range?.minP ?? 0);
+      const maxP = Number(range?.maxP ?? 0);
 
-    if (minP && maxP && maxP >= minP) {
-      const cand: KokuzoCandidate[] = [];
-      const pageOne: KokuzoCandidate[] = [];
-      const snippetStmt = db.prepare(`SELECT substr(replace(text, char(12), ''), 1, 120) AS snippet FROM kokuzo_pages WHERE doc = ? AND pdfPage = ?`);
-      
-      // Phase28: まず p!=1 を limit 件まで詰める
-      for (let p = minP; p <= maxP; p++) {
-        const pageText = snippetStmt.get(targetDoc, p) as any;
-        const candidate: KokuzoCandidate = {
-          doc: targetDoc,
-          pdfPage: p,
-          snippet: String(pageText?.snippet || "(fallback) page indexed"),
-          score: 10,
-        };
+      if (minP && maxP && maxP >= minP) {
+        const cand: KokuzoCandidate[] = [];
+        const pageOne: KokuzoCandidate[] = [];
+        const snippetStmt = db.prepare(`SELECT substr(replace(text, char(12), ''), 1, 120) AS snippet FROM kokuzo_pages WHERE doc = ? AND pdfPage = ?`);
         
-        if (p === 1) {
-          pageOne.push(candidate); // P1 は保留
-        } else {
-          if (cand.length < limit) {
-            cand.push(candidate); // P1以外は先に追加（limit件まで）
+        // Phase28: まず p!=1 を limit 件まで詰める
+        for (let p = minP; p <= maxP; p++) {
+          try {
+            const pageText = snippetStmt.get(targetDoc, p) as any;
+            const candidate: KokuzoCandidate = {
+              doc: targetDoc,
+              pdfPage: p,
+              snippet: String(pageText?.snippet || "(fallback) page indexed"),
+              score: 10,
+            };
+            
+            if (p === 1) {
+              pageOne.push(candidate); // P1 は保留
+            } else {
+              if (cand.length < limit) {
+                cand.push(candidate); // P1以外は先に追加（limit件まで）
+              }
+            }
+          } catch (e) {
+            // 個別ページ取得エラーは無視して続行
+            continue;
           }
         }
+        
+        // 余りがある場合のみ p==1 を最後に追加（常に cand0 が p==1 にならないようにする）
+        while (cand.length < limit && pageOne.length > 0) {
+          cand.push(pageOne.shift()!);
+        }
+        
+        // Phase25: 候補が1件以上あれば返す
+        if (cand.length > 0) {
+          return cand;
+        }
       }
-      
-      // 余りがある場合のみ p==1 を最後に追加（常に cand0 が p==1 にならないようにする）
-      while (cand.length < limit && pageOne.length > 0) {
-        cand.push(pageOne.shift()!);
-      }
-      
-      return cand;
+    } catch (e) {
+      // フォールバック取得エラーは無視して最終フォールバックへ
+      console.warn("[KOKUZO-SEARCH] fallback range query failed, using safe fallback:", e);
     }
   }
 
-    return [];
+  // Phase25: 最終フォールバック（空・例外でも必ず候補を返す）
+  return getSafeFallbackCandidates(docOrNull, limit);
   } catch (e: any) {
     // 関数全体のエラーハンドリング（DB未整備でもプロセスを落とさない）
     const errMsg = String(e?.message || "");
