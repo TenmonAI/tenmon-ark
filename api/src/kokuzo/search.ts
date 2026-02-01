@@ -245,7 +245,41 @@ export function searchPagesForHybrid(docOrNull: string | null, query: string, li
     };
     const good = scored.filter(c => !isBadCover(c));
     const bad = scored.filter(c => isBadCover(c));
-    const final = good.concat(bad).slice(0, limit);
+    let final = good.concat(bad).slice(0, limit);
+    
+    // Phase28: final[0] が bad cover の場合、補完候補を追加して cand0 を回避
+    if (final.length > 0 && isBadCover(final[0])) {
+      const targetDoc = final[0].doc;
+      const existingKeys = new Set(final.map(c => `${c.doc}:${c.pdfPage}`));
+      
+      // 同一docの pdfPage!=1 から補完候補を取得
+      const complementStmt = db.prepare(`
+        SELECT pdfPage, substr(replace(text, char(12), ''), 1, 120) AS snippet
+        FROM kokuzo_pages
+        WHERE doc = ? AND pdfPage != 1
+        ORDER BY pdfPage ASC
+        LIMIT 50
+      `);
+      const complementRows = complementStmt.all(targetDoc) as any[];
+      
+      const complement: KokuzoCandidate[] = [];
+      for (const row of complementRows) {
+        const key = `${targetDoc}:${row.pdfPage}`;
+        if (!existingKeys.has(key)) {
+          complement.push({
+            doc: targetDoc,
+            pdfPage: Number(row.pdfPage),
+            snippet: String(row.snippet || "(complement) page indexed"),
+            score: 5, // 補完候補は低スコア
+          });
+          existingKeys.add(key);
+          if (complement.length >= limit) break;
+        }
+      }
+      
+      // good + complement を先に、bad を後に
+      final = good.concat(complement).concat(bad).slice(0, limit);
+    }
     
     return final;
   }
