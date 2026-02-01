@@ -73,6 +73,8 @@ function buildGroundedResponse(args: {
           ...cand,
           tags: extractFourLayerTags(cand.text),
         }));
+        // Phase33: 古事記タグ抽出
+        (p as any).kojikiTags = extractKojikiTags(pageText);
       } else {
         (p as any).lawCandidates = [];
       }
