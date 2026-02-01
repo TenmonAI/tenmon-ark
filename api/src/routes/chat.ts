@@ -79,6 +79,14 @@ function buildGroundedResponse(args: {
       } else {
         (p as any).lawCandidates = [];
       }
+      // Phase34: 同型写像エッジ（fourLayerTags と kojikiTags の組み合わせ）
+      const kojikiTags = (p as any).kojikiTags || [];
+      const law0Tags = (((p as any).lawCandidates || [])[0] || {}).tags || [];
+      (p as any).mythMapEdges = buildMythMapEdges({
+        fourLayerTags: Array.isArray(law0Tags) ? law0Tags : [],
+        kojikiTags: Array.isArray(kojikiTags) ? kojikiTags : [],
+        evidenceIds: Array.isArray(p.evidenceIds) ? p.evidenceIds : [],
+      });
       // Phase30: SaikihoLawSet（水火の法則の内部構造、#詳細 のときのみ）
       if (wantsDetail) {
         if (pageText) {
