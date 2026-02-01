@@ -16,6 +16,7 @@ import { setThreadCandidates, pickFromThread, clearThreadCandidates } from "../k
 import { extractLawCandidates } from "../kokuzo/lawCandidates.js";
 import { extractSaikihoLawsFromText } from "../kotodama/saikihoLawSet.js";
 import { extractFourLayerTags } from "../kotodama/fourLayerTags.js";
+import { extractKojikiTags } from "../kojiki/kojikiTags.js";
 
 const router: IRouter = Router();
 
