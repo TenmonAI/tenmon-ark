@@ -29,7 +29,7 @@ for i in $(seq 1 80); do
 done
 curl -fsS "$BASE_URL/api/audit" | jq -e '.ok==true' >/dev/null
 
-echo "[3] /api/chat decisionFrame contract"
+echo "[4] /api/chat decisionFrame contract"
 resp=$(curl -fsS "$BASE_URL/api/chat" -H "Content-Type: application/json" \
   -d '{"threadId":"t","message":"hello"}')
 echo "$resp" | jq -e '.decisionFrame.llm==null and (.decisionFrame.ku|type)=="object" and (.response|type)=="string"' >/dev/null
