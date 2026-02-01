@@ -88,6 +88,10 @@ function buildGroundedResponse(args: {
         kojikiTags: Array.isArray(kojikiTags) ? kojikiTags : [],
         evidenceIds: Array.isArray(p.evidenceIds) ? p.evidenceIds : [],
       });
+      // Phase35: mythMapEdges を threadId に保存
+      if ((p as any).mythMapEdges) {
+        setMythMapEdges(threadId, (p as any).mythMapEdges);
+      }
       // Phase30: SaikihoLawSet（水火の法則の内部構造、#詳細 のときのみ）
       if (wantsDetail) {
         if (pageText) {
@@ -254,6 +258,11 @@ router.post("/chat", async (req: Request, res: Response<ChatResponseBody>) => {
     (detailPlan as any).kojikiTags = [];
     // Phase34: 同型写像エッジ（常に空配列で初期化）
     (detailPlan as any).mythMapEdges = [];
+    // Phase35: 同一threadIdの mythMapEdges を再提示（あれば上書き）
+    const recalled = getMythMapEdges(threadId);
+    if (recalled) {
+      (detailPlan as any).mythMapEdges = recalled;
+    }
 
     // Phase25: candidates（deterministic; if LIKE misses, fallback range is returned）
     const doc = (sanitized as any).doc ?? null;
