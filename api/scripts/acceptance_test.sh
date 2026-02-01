@@ -47,19 +47,28 @@ done
 curl -fsS "$BASE_URL/api/audit" | jq -e '.ok==true' >/dev/null
 
 echo "[2-1] wait /api/chat (decisionFrame contract must be ready)"
-for i in $(seq 1 200); do
+chat_ready=false
+for i in $(seq 1 120); do
   j="$(curl -fsS "$BASE_URL/api/chat" -H "Content-Type: application/json" \
         -d '{"threadId":"t","message":"hello"}' 2>/dev/null || true)"
   if echo "$j" | jq -e '.decisionFrame.llm==null and (.decisionFrame.ku|type)=="object" and (.response|type)=="string"' >/dev/null 2>&1; then
     echo "[PASS] chat ready"
+    chat_ready=true
     break
   fi
   sleep 0.2
 done
 
-# 最終ゲート（ここで落ちるなら本当に壊れている）
-j="$(curl -fsS "$BASE_URL/api/chat" -H "Content-Type: application/json" -d '{"threadId":"t","message":"hello"}')"
-echo "$j" | jq -e '.decisionFrame.llm==null and (.decisionFrame.ku|type)=="object" and (.response|type)=="string"' >/dev/null
+# 最終確認（失敗時は journalctl ログを出力して exit 1）
+if [ "$chat_ready" != "true" ]; then
+  echo "[FAIL] /api/chat not ready after 120 retries"
+  echo "[DEBUG] Last response:"
+  j="$(curl -fsS "$BASE_URL/api/chat" -H "Content-Type: application/json" -d '{"threadId":"t","message":"hello"}' 2>&1 || true)"
+  echo "$j" | head -20
+  echo "[DEBUG] Recent journalctl logs:"
+  sudo journalctl -u tenmon-ark-api.service -n 200 --no-pager || true
+  exit 1
+fi
 
 echo "[3-1] wait /api/chat (contract ready)"
 for i in $(seq 1 120); do
