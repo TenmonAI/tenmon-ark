@@ -14,11 +14,11 @@ echo "[PASS] dist synced"
 echo "[1] deploy"
 bash scripts/deploy_live.sh
 
-echo "[2] wait /api/audit"
-
 # restart直後（これ以降のログだけを見る）
 SINCE="$(date '+%Y-%m-%d %H:%M:%S')"
 sleep 0.2
+
+echo "[2] wait /api/audit"
 
 echo "[3] wait /api/audit"
 for i in $(seq 1 80); do
