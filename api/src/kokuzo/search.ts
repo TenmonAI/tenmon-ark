@@ -3,6 +3,7 @@
 
 import { getDb, dbPrepare } from "../db/index.js";
 import type { KokuzoChunk, KokuzoSeed } from "./indexer.js";
+import { extractKotodamaTags, type KotodamaTag } from "../kotodama/tagger.js";
 
 /**
  * Phase31: snippet を正規化（\f 除去、空白圧縮、trim）
@@ -64,6 +65,7 @@ export type KokuzoCandidate = {
   pdfPage: number;
   snippet: string;
   score: number;
+  tags?: KotodamaTag[];
 };
 
 /**
@@ -142,16 +144,19 @@ export function searchPagesForHybrid(docOrNull: string | null, query: string, li
       if (minP && maxP && maxP >= minP) {
         const cand: KokuzoCandidate[] = [];
         const pageOne: KokuzoCandidate[] = [];
-        const snippetStmt = db.prepare(`SELECT substr(replace(text, char(12), ''), 1, 120) AS snippet FROM kokuzo_pages WHERE doc = ? AND pdfPage = ?`);
+        const snippetStmt = db.prepare(`SELECT substr(replace(text, char(12), ''), 1, 120) AS snippet, text AS fullText FROM kokuzo_pages WHERE doc = ? AND pdfPage = ?`);
         
         // Phase28: まず p!=1 を limit 件まで詰める
         for (let p = minP; p <= maxP; p++) {
           const pageText = snippetStmt.get(targetDoc, p) as any;
+          const fullText = String(pageText?.fullText || "");
+          const tags = extractKotodamaTags(fullText);
           const candidate: KokuzoCandidate = {
             doc: targetDoc,
             pdfPage: p,
             snippet: String(pageText?.snippet || "(fallback) page indexed"),
             score: 10,
+            tags: tags.length > 0 ? tags : undefined,
           };
           
           if (p === 1) {
@@ -337,11 +342,15 @@ export function searchPagesForHybrid(docOrNull: string | null, query: string, li
         sn = "(本文抽出不可)"; // それでも空なら固定文（捏造ではなく"抽出不可"の明示）
       }
       
+      // 言霊秘書タグを抽出（pageText500 から）
+      const tags = extractKotodamaTags(pageText500);
+      
       return {
         doc,
         pdfPage,
         snippet: sn,
         score: finalScore,
+        tags: tags.length > 0 ? tags : undefined,
       };
     });
     
@@ -417,17 +426,20 @@ export function searchPagesForHybrid(docOrNull: string | null, query: string, li
       if (minP && maxP && maxP >= minP) {
         const cand: KokuzoCandidate[] = [];
         const pageOne: KokuzoCandidate[] = [];
-        const snippetStmt = db.prepare(`SELECT substr(replace(text, char(12), ''), 1, 120) AS snippet FROM kokuzo_pages WHERE doc = ? AND pdfPage = ?`);
+        const snippetStmt = db.prepare(`SELECT substr(replace(text, char(12), ''), 1, 120) AS snippet, text AS fullText FROM kokuzo_pages WHERE doc = ? AND pdfPage = ?`);
         
         // Phase28: まず p!=1 を limit 件まで詰める
         for (let p = minP; p <= maxP; p++) {
           try {
             const pageText = snippetStmt.get(targetDoc, p) as any;
+            const fullText = String(pageText?.fullText || "");
+            const tags = extractKotodamaTags(fullText);
             const candidate: KokuzoCandidate = {
               doc: targetDoc,
               pdfPage: p,
               snippet: String(pageText?.snippet || "(fallback) page indexed"),
               score: 10,
+              tags: tags.length > 0 ? tags : undefined,
             };
             
             if (p === 1) {
@@ -481,13 +493,31 @@ function getSafeFallbackCandidates(docOrNull: string | null, limit: number): Kok
   const doc = docOrNull || "言霊秘書.pdf";
   const candidates: KokuzoCandidate[] = [];
   // P1 を避けて 2-11 を返す（limit が 10 なら 2-11 で 10件）
-  for (let p = 2; p <= Math.min(11, limit + 1); p++) {
-    candidates.push({
-      doc,
-      pdfPage: p,
-      snippet: "(fallback) page indexed",
-      score: 10,
-    });
+  try {
+    const db = getDb("kokuzo");
+    const fullTextStmt = db.prepare(`SELECT text FROM kokuzo_pages WHERE doc = ? AND pdfPage = ?`);
+    for (let p = 2; p <= Math.min(11, limit + 1); p++) {
+      const fullTextRow = fullTextStmt.get(doc, p) as any;
+      const fullText = String(fullTextRow?.text || "");
+      const tags = extractKotodamaTags(fullText);
+      candidates.push({
+        doc,
+        pdfPage: p,
+        snippet: "(fallback) page indexed",
+        score: 10,
+        tags: tags.length > 0 ? tags : undefined,
+      });
+    }
+  } catch {
+    // DB が利用できない場合は tags なしで返す
+    for (let p = 2; p <= Math.min(11, limit + 1); p++) {
+      candidates.push({
+        doc,
+        pdfPage: p,
+        snippet: "(fallback) page indexed",
+        score: 10,
+      });
+    }
   }
   return candidates;
 }

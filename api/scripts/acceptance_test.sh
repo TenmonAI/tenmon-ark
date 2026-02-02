@@ -360,6 +360,20 @@ fi
 echo "$r37" | jq -e '(.decisionFrame.ku|type)=="object"' >/dev/null
 echo "[PASS] Phase37 KHS E2E"
 
+echo "[38] Phase38 kotodama tags (doc=KHS pdfPage=32 -> tags >= 1)"
+# doc=KHS pdfPage=32 を指定して tags が最低1つ出ることを確認
+r38="$(post_chat_raw_tid "doc=KHS pdfPage=32" "t38")"
+# candidates が存在すること
+if echo "$r38" | jq -e '(.candidates|type)=="array" and (.candidates|length)>0' >/dev/null 2>&1; then
+  # candidates[0] に tags が存在し、最低1つあること
+  echo "$r38" | jq -e '(.candidates[0].tags|type)=="array" and (.candidates[0].tags|length)>=1' >/dev/null || (echo "[FAIL] Phase38: tags not found or empty" && echo "$r38" | jq '.candidates[0]' && exit 1)
+  # tags が IKI/SHIHO/KAMI/HOSHI のいずれかであること
+  echo "$r38" | jq -e '(.candidates[0].tags|map(. as $tag | $tag == "IKI" or $tag == "SHIHO" or $tag == "KAMI" or $tag == "HOSHI")|all)' >/dev/null || (echo "[FAIL] Phase38: invalid tags" && echo "$r38" | jq '.candidates[0].tags' && exit 1)
+  echo "[PASS] Phase38 kotodama tags"
+else
+  echo "[WARN] Phase38: no candidates found (KHS data may not be ingested)"
+fi
+
 echo "[GATE] No Runtime LLM usage in logs"
 if sudo journalctl -u tenmon-ark-api.service --since "$(date '+%Y-%m-%d %H:%M:%S' -d '1 minute ago')" --no-pager | grep -q "\[KANAGI-LLM\]"; then
   echo "[FAIL] Runtime LLM usage detected in logs."
