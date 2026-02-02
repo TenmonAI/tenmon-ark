@@ -105,6 +105,34 @@ export function searchPagesForHybrid(docOrNull: string | null, query: string, li
   try {
     const db = getDb("kokuzo");
 
+    // ピン指定の解析（doc=... pdfPage=...）
+    const pinMatch = query.match(/doc\s*=\s*([^\s]+)\s+pdfPage\s*=\s*(\d+)/i);
+    if (pinMatch) {
+      const pinDoc = pinMatch[1];
+      const pinPdfPage = parseInt(pinMatch[2], 10);
+      
+      // 直SQLで取得
+      const pinStmt = db.prepare(`SELECT doc, pdfPage, text FROM kokuzo_pages WHERE doc = ? AND pdfPage = ?`);
+      const pinRow = pinStmt.get(pinDoc, pinPdfPage) as { doc: string; pdfPage: number; text: string } | undefined;
+      
+      if (pinRow) {
+        // 見つかったら candidates をその1件で返す（先頭固定）
+        const fullText = String(pinRow.text || "");
+        const tags = extractKotodamaTags(fullText);
+        // snippet は text 先頭120文字（既存ルールに合わせる）
+        const snippet = fullText.replace(/\f/g, '').slice(0, 120);
+        
+        return [{
+          doc: pinDoc,
+          pdfPage: pinPdfPage,
+          snippet: snippet || "(pin) page indexed",
+          score: 1000, // ピン指定は最高スコア
+          tags,
+        }];
+      }
+      // 見つからない場合のみ、従来検索へフォールバック
+    }
+
     // クエリを正規化
     const normalizedQuery = normalizeHybridQuery(query);
     
