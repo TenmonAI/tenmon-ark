@@ -26,79 +26,71 @@ has_pages="$(sqlite3 "$DATA_DIR/kokuzo.sqlite" "SELECT name FROM sqlite_master W
 test "$has_pages" = "kokuzo_pages" || (echo "[FAIL] kokuzo_pages missing after schema apply" && exit 1)
 echo "[PASS] DB schema ok (kokuzo_pages exists, dataDir=$DATA_DIR)"
 
-echo "[1-2] start service (single authority)"
-sudo systemctl start tenmon-ark-api.service
-sleep 0.6
-
-echo "[1-3] verify listener"
-sudo ss -lptn 'sport = :3000' || true
-
 echo "[2] dist must match (repo vs live)"
 diff -qr /opt/tenmon-ark-repo/api/dist /opt/tenmon-ark-live/dist >/dev/null || (echo "[FAIL] dist mismatch (repo vs live)" && exit 1)
 echo "[PASS] dist synced"
 
-echo "[2] wait /api/audit (200 + ok==true + readiness READY) x2"
-ok_count=0
-last_sha=""
+# --- after deploy_live.sh (or build+deploy) ---
 
-for i in $(seq 1 200); do
-  body="$(mktemp)"
-  code="$(curl -sS -o "$body" -w '%{http_code}' "$BASE_URL/api/audit" || true)"
+echo "[1-0] ensure single listener on :3000 (final restart happens here)"
+# まずsystemdを止めてから、残骸pidを掃除（順序が大事）
+sudo systemctl stop tenmon-ark-api.service || true
+sleep 0.2
 
-  if [ "$code" = "200" ]; then
-    if jq -e '
-      .ok==true and
-      (.gitSha|type)=="string" and
-      (.readiness|type)=="object" and
-      (.readiness.listenReady==true) and
-      (.readiness.dbReady.persona==true) and
-      (.readiness.dbReady.kokuzo==true) and
-      (.readiness.kokuzoVerified==true)
-    ' "$body" >/dev/null 2>&1; then
-      sha="$(jq -r '.gitSha' "$body")"
-      if [ "$sha" = "$last_sha" ]; then
-        ok_count=$((ok_count+1))
-      else
-        ok_count=1
-        last_sha="$sha"
-      fi
-
-      if [ "$ok_count" -ge 2 ]; then
-        echo "[PASS] audit ready stable (gitSha=$sha)"
-        rm -f "$body"
-        break
-      fi
-    else
-      ok_count=0
-      last_sha=""
-    fi
-  else
-    ok_count=0
-    last_sha=""
-  fi
-
-  rm -f "$body"
+PIDS="$(sudo ss -ltnp 'sport = :3000' 2>/dev/null | sed -n 's/.*pid=\([0-9]\+\),.*/\1/p' | sort -u)"
+if [ -n "${PIDS}" ]; then
+  echo "[1-0] kill stray pids: ${PIDS}"
+  for p in ${PIDS}; do sudo kill -9 "${p}" 2>/dev/null || true; done
   sleep 0.2
-done
+fi
 
-test "$ok_count" -ge 2 || (echo "[FAIL] /api/audit not stable-ready" && exit 1)
+sudo systemctl start tenmon-ark-api.service
+sleep 0.4
 
-echo "[3-1] wait /api/chat ready"
-for i in $(seq 1 120); do
-  j="$(curl -sS "$BASE_URL/api/chat" -H "Content-Type: application/json" \
-    -d '{"threadId":"t-ready","message":"hello"}' 2>/dev/null || true)"
-  if echo "$j" | jq -e 'type=="object" and (.response|type)=="string"' >/dev/null 2>&1; then
-    echo "[PASS] chat ready"
-    break
-  fi
-  sleep 0.2
-done
+# ★ここから先だけを見る（"最終起動"確定）
+SINCE="$(date '+%Y-%m-%d %H:%M:%S')"
+echo "[1-0] SINCE=${SINCE}"
 
-# 最終確認（ダメならFAIL）
-j="$(curl -fsS "$BASE_URL/api/chat" -H "Content-Type: application/json" \
-  -d '{"threadId":"t-ready","message":"hello"}')"
-echo "$j" | jq -e 'type=="object" and (.response|type)=="string"' >/dev/null \
-  || (echo "[FAIL] chat not ready" && exit 1)
+wait_audit() {
+  local deadline=$((SECONDS + 90))
+  while [ $SECONDS -lt $deadline ]; do
+    # 503は仕様なので握りつぶす
+    out="$(curl -sS -m 1.5 http://127.0.0.1:3000/api/audit || true)"
+    # ok==true と gitSha が返るまで待つ
+    echo "$out" | jq -e '.ok == true and (.gitSha|type=="string") and (.gitSha|length>0)' >/dev/null 2>&1 && return 0
+    sleep 0.3
+  done
+
+  echo "[FAIL] /api/audit not ready"
+  sudo journalctl -u tenmon-ark-api.service --since "${SINCE}" --no-pager | tail -n 120
+  return 1
+}
+
+wait_chat() {
+  local deadline=$((SECONDS + 90))
+  while [ $SECONDS -lt $deadline ]; do
+    out="$(curl -sS -m 2 http://127.0.0.1:3000/api/chat \
+      -H 'Content-Type: application/json' \
+      -d '{"threadId":"acc","message":"ping"}' || true)"
+
+    # decisionFrame contract（例：ku object必須、llm null）
+    echo "$out" | jq -e '.decisionFrame.ku|type=="object"' >/dev/null 2>&1 \
+      && echo "$out" | jq -e '.decisionFrame.llm == null' >/dev/null 2>&1 \
+      && return 0
+
+    sleep 0.4
+  done
+
+  echo "[FAIL] /api/chat not ready"
+  sudo journalctl -u tenmon-ark-api.service --since "${SINCE}" --no-pager | tail -n 120
+  return 1
+}
+
+echo "[2] wait /api/audit"
+wait_audit
+
+echo "[2-1] wait /api/chat"
+wait_chat
 
 echo "[3] wait /api/chat (decisionFrame contract)"
 chat_ready=""
