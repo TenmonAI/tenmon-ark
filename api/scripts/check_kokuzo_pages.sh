@@ -12,6 +12,10 @@ if [ ! -f "$KOKUZO_DB" ]; then
   exit 1
 fi
 
+# 総件数
+TOTAL_COUNT="$(sqlite3 "$KOKUZO_DB" "SELECT COUNT(*) FROM kokuzo_pages;" 2>/dev/null || echo "0")"
+echo "[INFO] Total kokuzo_pages count: $TOTAL_COUNT"
+
 # doc="KHS" の存在確認
 echo "[CHECK] doc='KHS' in kokuzo_pages"
 KHS_COUNT="$(sqlite3 "$KOKUZO_DB" "SELECT COUNT(*) FROM kokuzo_pages WHERE doc='KHS' LIMIT 1;" 2>/dev/null || echo "0")"

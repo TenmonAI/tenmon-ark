@@ -46,7 +46,12 @@ sqlite3 -bail "$DATA_DIR/audit.sqlite" < "$REPO/src/db/audit_schema.sql" 2>/dev/
 has_tool_audit="$(sqlite3 "$DATA_DIR/audit.sqlite" "SELECT name FROM sqlite_master WHERE type='table' AND name='tool_audit' LIMIT 1;" 2>/dev/null || echo "")"
 test "$has_tool_audit" = "tool_audit" || (echo "[FAIL] tool_audit missing after audit schema apply (has_tool_audit=$has_tool_audit)" && exit 1)
 
-echo "[PASS] DB schema ok (kokuzo_pages exists, tool_audit exists, dataDir=$DATA_DIR)"
+# kokuzo_pages count > 0 を確認
+PAGES_COUNT="$(sqlite3 "$DATA_DIR/kokuzo.sqlite" "SELECT COUNT(*) FROM kokuzo_pages;" 2>/dev/null || echo "0")"
+if [ "$PAGES_COUNT" = "0" ]; then
+  echo "[WARN] kokuzo_pages is empty (count=0). Run scripts/ingest_khs_minimal.sh to add data."
+fi
+echo "[PASS] DB schema ok (kokuzo_pages exists, tool_audit exists, pages_count=$PAGES_COUNT, dataDir=$DATA_DIR)"
 
 echo "[2] dist must match (repo vs live)"
 diff -qr /opt/tenmon-ark-repo/api/dist /opt/tenmon-ark-live/dist >/dev/null || (echo "[FAIL] dist mismatch (repo vs live)" && exit 1)
@@ -319,15 +324,24 @@ echo "$r36_4" | jq -e '(.response|type)=="string" and (.response|length)>=50' >/
 echo "$r36_4" | jq -e '(.decisionFrame.ku|type)=="object"' >/dev/null
 echo "[PASS] Phase36-2 fallback response"
 
-echo "[37] Phase37 KHS sample ingestion E2E (ingest -> query -> evidence)"
-# KHS サンプルデータを投入
-bash scripts/ingest_kokuzo_sample.sh || (echo "[WARN] ingest failed, but continuing..." && true)
-# 少し待つ（DB書き込みの反映）
-sleep 0.5
+echo "[37] Phase37 KHS minimal ingestion E2E (ingest -> query -> evidence)"
+# kokuzo_pages count > 0 を確認
+PAGES_COUNT="$(sqlite3 "$DATA_DIR/kokuzo.sqlite" "SELECT COUNT(*) FROM kokuzo_pages;" 2>/dev/null || echo "0")"
+if [ "$PAGES_COUNT" = "0" ]; then
+  echo "[INFO] kokuzo_pages is empty, running ingest_khs_minimal.sh"
+  bash scripts/ingest_khs_minimal.sh || (echo "[WARN] ingest failed, but continuing..." && true)
+  sleep 0.5
+fi
 # 「言霊とは何？」で引用が出ることを確認
 r37="$(post_chat_raw_tid "言霊とは何？" "t37")"
-# 回答が50文字以上であること
-echo "$r37" | jq -e '(.response|type)=="string" and (.response|length)>=50' >/dev/null
+# 回答が50文字以上であること（固定文だけにならない）
+echo "$r37" | jq -e '(.response|type)=="string" and (.response|length)>=50' >/dev/null || (echo "[FAIL] Phase37: response is too short or not a string" && exit 1)
+# 固定文だけではないことを確認（「該当する資料が見つかりませんでした」だけではない）
+if echo "$r37" | jq -r '.response' | grep -qE "該当する資料が見つかりませんでした"; then
+  echo "[WARN] Phase37: response contains 'not found' message (may be OK if no data ingested)"
+else
+  echo "[PASS] Phase37: response is not just 'not found' message"
+fi
 # candidates が存在すること（KHS データが投入されていれば）
 if echo "$r37" | jq -e '(.candidates|type)=="array" and (.candidates|length)>0' >/dev/null 2>&1; then
   # evidence または detailPlan.evidence に doc/pdfPage が含まれること
