@@ -41,23 +41,47 @@ function withRetry<T>(fn: () => T, maxRetries = 5): T {
   }
 }
 
-function getDataDir(): string {
-  const dataDir = process.env.TENMON_DATA_DIR ?? "/opt/tenmon-ark-data";
-  // 起動時に dataDir が無ければ作成
-  if (!fs.existsSync(dataDir)) {
-    fs.mkdirSync(dataDir, { recursive: true });
-    console.log(`[DB] created dataDir: ${dataDir}`);
+/**
+ * TENMON_DATA_DIR を取得（存在しなければ作成）
+ * 単一の真実として扱う
+ */
+export function getTenmonDataDir(): string {
+  const dir = process.env.TENMON_DATA_DIR ?? "/opt/tenmon-ark-data";
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+    console.log(`[DB] created dataDir: ${dir}`);
   }
-  return dataDir;
+  return dir;
+}
+
+/**
+ * dataDir 配下の DB ファイルパスを取得（テンプレート関数）
+ * @param dbFileName 例: "kokuzo.sqlite", "audit.sqlite"
+ * 
+ * 使用例:
+ *   const KOKUZO_DB = getDbPath("kokuzo.sqlite");
+ *   const AUDIT_DB  = getDbPath("audit.sqlite");
+ */
+export function getDbPath(dbFileName: string): string;
+export function getDbPath(kind: DbKind): string;
+export function getDbPath(arg: string | DbKind): string {
+  // 文字列の場合はファイル名として扱う（テンプレート関数）
+  if (typeof arg === "string" && arg.endsWith(".sqlite")) {
+    return path.join(getTenmonDataDir(), arg);
+  }
+  // それ以外は kind として扱う（既存コードとの互換性）
+  return getDbPathByKind(arg as DbKind);
 }
 
 function defaultDbFile(kind: DbKind): string {
-  const dataDir = getDataDir();
   const name = kind === "kokuzo" ? "kokuzo.sqlite" : kind === "audit" ? "audit.sqlite" : "persona.sqlite";
-  return path.join(dataDir, name);
+  return getDbPath(name);
 }
 
-export function getDbPath(kind: DbKind): string {
+/**
+ * kind ベースの DB パス取得（内部実装）
+ */
+function getDbPathByKind(kind: DbKind): string {
   const existing = dbPaths.get(kind);
   if (existing) return existing;
 
@@ -72,7 +96,7 @@ export function getDbPath(kind: DbKind): string {
   let filePath: string;
   if (envKey) {
     // 絶対パスの場合はそのまま、相対パスの場合は dataDir 基準
-    filePath = path.isAbsolute(envKey) ? envKey : path.join(getDataDir(), envKey);
+    filePath = path.isAbsolute(envKey) ? envKey : path.join(getTenmonDataDir(), envKey);
   } else {
     filePath = defaultDbFile(kind);
   }
@@ -81,7 +105,7 @@ export function getDbPath(kind: DbKind): string {
   
   // 初回のみログ出力（監査用）
   if (dbPaths.size === 1) {
-    console.log(`[DB] dataDir=${getDataDir()}`);
+    console.log(`[DB] dataDir=${getTenmonDataDir()}`);
   }
   console.log(`[DB] ${kind} path=${filePath}`);
   
@@ -123,7 +147,7 @@ export function getDb(kind: DbKind): DatabaseSync {
 
   // Migration (best-effort): Phase4 single-file DB -> Phase9 kokuzo DB
   if (kind === "kokuzo") {
-    const dataDir = getDataDir();
+    const dataDir = getTenmonDataDir();
     const legacyInDataDir = path.join(dataDir, "tenmon-ark.sqlite");
     const legacy = path.resolve(process.cwd(), "data", "tenmon-ark.sqlite");
     if (!fs.existsSync(filePath)) {
