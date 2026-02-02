@@ -42,6 +42,23 @@ for i in $(seq 1 80); do
 done
 curl -fsS "$BASE_URL/api/audit" | jq -e '.ok==true and (.gitSha|type)=="string" and (.readiness|type)=="object"' >/dev/null
 
+echo "[3-1] wait /api/chat ready"
+for i in $(seq 1 120); do
+  j="$(curl -sS "$BASE_URL/api/chat" -H "Content-Type: application/json" \
+    -d '{"threadId":"t-ready","message":"hello"}' 2>/dev/null || true)"
+  if echo "$j" | jq -e 'type=="object" and (.response|type)=="string"' >/dev/null 2>&1; then
+    echo "[PASS] chat ready"
+    break
+  fi
+  sleep 0.2
+done
+
+# 最終確認（ダメならFAIL）
+j="$(curl -fsS "$BASE_URL/api/chat" -H "Content-Type: application/json" \
+  -d '{"threadId":"t-ready","message":"hello"}')"
+echo "$j" | jq -e 'type=="object" and (.response|type)=="string"' >/dev/null \
+  || (echo "[FAIL] chat not ready" && exit 1)
+
 echo "[3] wait /api/chat (decisionFrame contract)"
 chat_ready=""
 last=""
