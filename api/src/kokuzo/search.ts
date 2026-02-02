@@ -370,9 +370,9 @@ export function searchPagesForHybrid(docOrNull: string | null, query: string, li
     const isBadCover = (c: KokuzoCandidate) => {
       return c.pdfPage === 1 && /(全集|監修|校訂)/.test(String(c.snippet || ""));
     };
-    const good = scored.filter(c => !isBadCover(c));
-    const bad = scored.filter(c => isBadCover(c));
-    let final = good.concat(bad).slice(0, limit);
+    const good: KokuzoCandidate[] = scored.filter(c => !isBadCover(c));
+    const bad: KokuzoCandidate[] = scored.filter(c => isBadCover(c));
+    let final: KokuzoCandidate[] = good.concat(bad).slice(0, limit);
     
     // Phase28: final[0] が bad cover の場合、補完候補を追加して cand0 を回避
     if (final.length > 0 && isBadCover(final[0])) {
