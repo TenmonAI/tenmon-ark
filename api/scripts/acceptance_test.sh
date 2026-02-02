@@ -27,6 +27,20 @@ http_get_json() {
   printf "%s\t%s" "$code" "$body"
 }
 
+echo "[00] Phase00 build sha matches repo HEAD"
+HEAD_SHA="$(git rev-parse --short HEAD)"
+AUDIT_SHA="$(curl -fsS "$BASE_URL/api/audit" | jq -r '.gitSha // empty')"
+echo "HEAD_SHA=$HEAD_SHA AUDIT_SHA=$AUDIT_SHA"
+if [ -z "$AUDIT_SHA" ]; then
+  echo "[FAIL] Phase00: /api/audit.gitSha is empty or missing"
+  exit 1
+fi
+if [ "$HEAD_SHA" != "$AUDIT_SHA" ]; then
+  echo "[FAIL] Phase00: build sha mismatch (HEAD=$HEAD_SHA, AUDIT=$AUDIT_SHA)"
+  exit 1
+fi
+echo "[PASS] Phase00 build sha matches"
+
 echo "[1] deploy (NO_RESTART=1)"
 NO_RESTART=1 bash scripts/deploy_live.sh
 
@@ -664,6 +678,22 @@ if ! echo "$r45" | jq -e '(.candidates|type)=="array" and (.candidates|length)>0
   exit 1
 fi
 echo "[PASS] Phase45 chat integration smoke"
+
+echo "[46] Phase46 TENMON_CORE_PACK_v1 core seed gate"
+echo "[46-1] seed TENMON_CORE_PACK_v1"
+bash scripts/seed_tenmon_core_pack_v1.sh
+
+echo "[46-2] check TENMON_CORE_PACK_v1 seed"
+bash scripts/check_tenmon_core_seed.sh
+
+echo "[46-3] chat smoke for TENMON_CORE (doc=TENMON_CORE pdfPage=1)"
+r46="$(post_chat_raw_tid "doc=TENMON_CORE pdfPage=1 #詳細" "t46")"
+if ! echo "$r46" | jq -e '(.candidates|type)=="array" and (.candidates|length)>0 and (.candidates[0].snippet|type)=="string" and (.candidates[0].snippet|length)>0' >/dev/null 2>&1; then
+  echo "[FAIL] Phase46: chat response for TENMON_CORE did not return snippet"
+  echo "$r46" | jq '.candidates[0]'
+  exit 1
+fi
+echo "[PASS] Phase46 TENMON_CORE core seed gate"
 
 echo "[GATE] No Runtime LLM usage in logs"
 if sudo journalctl -u tenmon-ark-api.service --since "$(date '+%Y-%m-%d %H:%M:%S' -d '1 minute ago')" --no-pager | grep -q "\[KANAGI-LLM\]"; then

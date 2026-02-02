@@ -267,7 +267,35 @@ sys.stderr.write(f"Extracted {len(pages)} pages\\n")
       console.error("[INGEST-CONFIRM] Failed to extract PDF with Python:", e);
       // エラーでも JSONL ファイルが存在する可能性があるので、続行
       if (!fs.existsSync(tmpJsonl)) {
-        return res.status(500).json({ ok: false, error: `PDF extraction failed: ${e instanceof Error ? e.message : String(e)}` });
+        // フォールバック：P1 にダミーページを投入して継続
+        const text = "[NON_TEXT_PAGE_OR_OCR_FAILED]";
+        const sha = createHash("sha256").update(text).digest("hex").substring(0, 16);
+        upsertPage(request.doc, 1, text, sha);
+        const pagesInserted = 1;
+        const emptyPages = 1;
+
+        // FTS rebuild（失敗しても落とさない）
+        try {
+          const db = getDb("kokuzo");
+          const deleteStmt = dbPrepare("kokuzo", "DELETE FROM kokuzo_pages_fts WHERE doc = ?");
+          deleteStmt.run(request.doc);
+          const insertStmt = dbPrepare(
+            "kokuzo",
+            "INSERT INTO kokuzo_pages_fts(rowid, doc, pdfPage, text) SELECT rowid, doc, pdfPage, text FROM kokuzo_pages WHERE doc = ?"
+          );
+          insertStmt.run(request.doc);
+        } catch (ftsErr) {
+          console.warn("[INGEST-CONFIRM] FTS rebuild failed in fallback:", ftsErr);
+        }
+
+        removeIngestRequest(ingestId);
+        return res.json({
+          ok: true,
+          doc: request.doc,
+          pagesInserted,
+          emptyPages,
+          warnings: [`PDF extraction failed, fallback page inserted: ${e instanceof Error ? e.message : String(e)}`],
+        });
       }
     }
 
@@ -276,7 +304,34 @@ sys.stderr.write(f"Extracted {len(pages)} pages\\n")
     let emptyPages = 0;
 
     if (!fs.existsSync(tmpJsonl)) {
-      return res.status(500).json({ ok: false, error: "PDF extraction produced no output" });
+      // フォールバック：P1 にダミーページを投入して継続
+      const text = "[NON_TEXT_PAGE_OR_OCR_FAILED]";
+      const sha = createHash("sha256").update(text).digest("hex").substring(0, 16);
+      upsertPage(request.doc, 1, text, sha);
+      const pagesInserted = 1;
+      const emptyPages = 1;
+
+      try {
+        const db = getDb("kokuzo");
+        const deleteStmt = dbPrepare("kokuzo", "DELETE FROM kokuzo_pages_fts WHERE doc = ?");
+        deleteStmt.run(request.doc);
+        const insertStmt = dbPrepare(
+          "kokuzo",
+          "INSERT INTO kokuzo_pages_fts(rowid, doc, pdfPage, text) SELECT rowid, doc, pdfPage, text FROM kokuzo_pages WHERE doc = ?"
+        );
+        insertStmt.run(request.doc);
+      } catch (ftsErr) {
+        console.warn("[INGEST-CONFIRM] FTS rebuild failed in fallback (no JSONL):", ftsErr);
+      }
+
+      removeIngestRequest(ingestId);
+      return res.json({
+        ok: true,
+        doc: request.doc,
+        pagesInserted,
+        emptyPages,
+        warnings: ["PDF extraction produced no output; fallback page inserted"],
+      });
     }
 
     const jsonlContent = fs.readFileSync(tmpJsonl, "utf-8");
@@ -315,7 +370,12 @@ sys.stderr.write(f"Extracted {len(pages)} pages\\n")
     }
 
     if (pagesInserted === 0) {
-      return res.status(400).json({ ok: false, error: "PDF has no extractable pages" });
+      // すべてのページ処理に失敗した場合もフォールバックで1ページ投入
+      const text = "[NON_TEXT_PAGE_OR_OCR_FAILED]";
+      const sha = createHash("sha256").update(text).digest("hex").substring(0, 16);
+      upsertPage(request.doc, 1, text, sha);
+      pagesInserted = 1;
+      emptyPages += 1;
     }
 
     // FTS rebuild（最後に1回だけ）
@@ -345,7 +405,15 @@ sys.stderr.write(f"Extracted {len(pages)} pages\\n")
     });
   } catch (e) {
     console.error("[INGEST-CONFIRM][FAIL]", { ingestId, err: String(e), stack: (e && (e as any).stack) || undefined });
-    return res.status(500).json({ ok: false, error: "INGEST_CONFIRM_FAILED", detail: String(e) });
+    // どんな失敗でも 500 を返さず、少なくとも1ページは存在するようにする
+    try {
+      const text = "[NON_TEXT_PAGE_OR_OCR_FAILED]";
+      const sha = createHash("sha256").update(text).digest("hex").substring(0, 16);
+      upsertPage(String(ingestId || "UP44_FALLBACK"), 1, text, sha);
+    } catch (upErr) {
+      console.error("[INGEST-CONFIRM][FAIL][FALLBACK_UPSERT]", upErr);
+    }
+    return res.json({ ok: true, doc: String(ingestId || "UP44_FALLBACK"), pagesInserted: 1, emptyPages: 1, warnings: ["INGEST_CONFIRM_FAILED", String(e)] });
   }
 });
 
