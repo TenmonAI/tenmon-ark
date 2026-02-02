@@ -175,56 +175,115 @@ router.post("/ingest/confirm", (req: Request, res: Response) => {
       return res.status(404).json({ ok: false, error: `File not found: ${request.savedPath}` });
     }
 
-    // PDF のページ数を取得（pdftotext で確認）
-    let totalPages = 0;
+    // Python で PDF→JSONL を生成（一時ファイル）
+    const tmpJsonl = path.join(getTenmonDataDir(), "db", `ingest_${ingestId}.jsonl`);
+    const tmpJsonlDir = path.dirname(tmpJsonl);
+    if (!fs.existsSync(tmpJsonlDir)) {
+      fs.mkdirSync(tmpJsonlDir, { recursive: true });
+    }
+
     try {
-      const pageCountOutput = execSync(`pdftotext "${filePath}" - 2>/dev/null | head -1 || echo ""`, {
-        encoding: "utf-8",
-        maxBuffer: 10 * 1024 * 1024, // 10MB
-      });
-      // pdftk や pdfinfo が使える場合はそれを使うが、ここでは簡易的に全ページを試行
-      // 実際には、pdftotext で各ページを試行して存在するページをカウント
-      // 簡易実装: 最大1000ページまで試行（実用上は十分）
-      for (let p = 1; p <= 1000; p++) {
-        try {
-          const testOutput = execSync(
-            `timeout 5s pdftotext -f ${p} -l ${p} "${filePath}" - 2>/dev/null || echo ""`,
-            { encoding: "utf-8", maxBuffer: 1024 * 1024 }
-          );
-          if (testOutput.trim().length > 0) {
-            totalPages = p;
-          } else {
-            break; // 空ページが続いたら終了
-          }
-        } catch {
-          break; // エラーが発生したら終了
+      // Python スクリプトで PDF→JSONL を生成
+      const pythonScript = `
+import sys
+import json
+import io
+
+try:
+    import PyPDF2
+    has_pypdf2 = True
+except ImportError:
+    try:
+        import pypdf
+        has_pypdf2 = False
+    except ImportError:
+        # pdftotext フォールバック
+        import subprocess
+        has_pypdf2 = None
+
+pdf_path = sys.argv[1]
+jsonl_path = sys.argv[2]
+
+pages = []
+
+if has_pypdf2 is True:
+    # PyPDF2
+    with open(pdf_path, "rb") as f:
+        reader = PyPDF2.PdfReader(f)
+        for i, page in enumerate(reader.pages, 1):
+            text = page.extract_text() or ""
+            pages.append({"pdfPage": i, "text": text})
+elif has_pypdf2 is False:
+    # pypdf
+    with open(pdf_path, "rb") as f:
+        reader = pypdf.PdfReader(f)
+        for i, page in enumerate(reader.pages, 1):
+            text = page.extract_text() or ""
+            pages.append({"pdfPage": i, "text": text})
+else:
+    # pdftotext フォールバック
+    import subprocess
+    page_num = 1
+    while True:
+        try:
+            result = subprocess.run(
+                ["pdftotext", "-f", str(page_num), "-l", str(page_num), pdf_path, "-"],
+                capture_output=True,
+                text=True,
+                timeout=5,
+                check=False
+            )
+            if result.returncode != 0 or not result.stdout.strip():
+                break
+            pages.append({"pdfPage": page_num, "text": result.stdout.strip()})
+            page_num += 1
+            if page_num > 10000:  # 安全制限
+                break
+        except (subprocess.TimeoutExpired, FileNotFoundError):
+            break
+
+# JSONL に書き出し
+with open(jsonl_path, "w", encoding="utf-8") as f:
+    for page in pages:
+        f.write(json.dumps(page, ensure_ascii=False) + "\\n")
+
+print(f"Extracted {len(pages)} pages", file=sys.stderr)
+`;
+
+      execFileSync(
+        "python3",
+        ["-c", pythonScript, filePath, tmpJsonl],
+        {
+          encoding: "utf-8",
+          maxBuffer: 50 * 1024 * 1024, // 50MB
+          stdio: ["pipe", "pipe", "pipe"],
         }
-      }
+      );
     } catch (e) {
-      console.warn("[INGEST-CONFIRM] Failed to detect page count, assuming 1 page:", e);
-      totalPages = 1;
+      console.error("[INGEST-CONFIRM] Failed to extract PDF with Python:", e);
+      return res.status(500).json({ ok: false, error: `PDF extraction failed: ${e instanceof Error ? e.message : String(e)}` });
     }
 
-    if (totalPages === 0) {
-      return res.status(400).json({ ok: false, error: "PDF has no extractable pages" });
-    }
-
-    // 各ページを抽出して kokuzo_pages に投入
+    // JSONL を読み込んで kokuzo_pages に投入
     let pagesInserted = 0;
     let emptyPages = 0;
 
-    for (let pdfPage = 1; pdfPage <= totalPages; pdfPage++) {
-      try {
-        // pdftotext でページを抽出
-        const textOutput = execSync(
-          `timeout 30s pdftotext -f ${pdfPage} -l ${pdfPage} "${filePath}" - 2>/dev/null || echo ""`,
-          { encoding: "utf-8", maxBuffer: 10 * 1024 * 1024 }
-        );
+    if (!fs.existsSync(tmpJsonl)) {
+      return res.status(500).json({ ok: false, error: "PDF extraction produced no output" });
+    }
 
-        let text = textOutput.trim();
+    const jsonlContent = fs.readFileSync(tmpJsonl, "utf-8");
+    const lines = jsonlContent.split("\n").filter((line) => line.trim().length > 0);
+
+    for (const line of lines) {
+      try {
+        const pageData = JSON.parse(line) as { pdfPage: number; text: string };
+        const { pdfPage, text: rawText } = pageData;
+
+        let text = rawText || "";
         
         // 空ページの場合は [NON_TEXT_PAGE_OR_OCR_FAILED] を入れて空ページゼロ化
-        if (!text || text.length === 0) {
+        if (!text || text.trim().length === 0) {
           text = "[NON_TEXT_PAGE_OR_OCR_FAILED]";
           emptyPages++;
         }
@@ -236,13 +295,20 @@ router.post("/ingest/confirm", (req: Request, res: Response) => {
         upsertPage(request.doc, pdfPage, text, sha);
         pagesInserted++;
       } catch (e) {
-        console.warn(`[INGEST-CONFIRM] Failed to extract page ${pdfPage}:`, e);
-        // エラーが発生したページも [NON_TEXT_PAGE_OR_OCR_FAILED] として投入
-        const sha = createHash("sha256").update("[NON_TEXT_PAGE_OR_OCR_FAILED]").digest("hex").substring(0, 16);
-        upsertPage(request.doc, pdfPage, "[NON_TEXT_PAGE_OR_OCR_FAILED]", sha);
-        pagesInserted++;
-        emptyPages++;
+        console.warn(`[INGEST-CONFIRM] Failed to parse JSONL line:`, e);
+        // パースエラーはスキップ
       }
+    }
+
+    // 一時ファイルを削除
+    try {
+      fs.unlinkSync(tmpJsonl);
+    } catch (e) {
+      console.warn("[INGEST-CONFIRM] Failed to delete temp JSONL file:", e);
+    }
+
+    if (pagesInserted === 0) {
+      return res.status(400).json({ ok: false, error: "PDF has no extractable pages" });
     }
 
     // FTS rebuild（最後に1回だけ）
