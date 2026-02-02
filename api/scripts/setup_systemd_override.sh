@@ -5,6 +5,7 @@ set -euo pipefail
 # 実行: sudo bash api/scripts/setup_systemd_override.sh
 
 LIVE="/opt/tenmon-ark-live"
+DATA_DIR="/opt/tenmon-ark-data"
 OVERRIDE_DIR="/etc/systemd/system/tenmon-ark-api.service.d"
 OVERRIDE_FILE="$OVERRIDE_DIR/override.conf"
 
@@ -15,13 +16,11 @@ echo "[setup] create override.conf"
 sudo tee "$OVERRIDE_FILE" > /dev/null <<EOF
 [Service]
 WorkingDirectory=$LIVE
-Environment=TENMON_ARK_DB_KOKUZO_PATH=$LIVE/db/kokuzo.sqlite
-Environment=TENMON_ARK_DB_AUDIT_PATH=$LIVE/db/audit.sqlite
-Environment=TENMON_ARK_DB_PERSONA_PATH=$LIVE/db/persona.sqlite
+Environment=TENMON_DATA_DIR=$DATA_DIR
 EOF
 
-echo "[setup] create DB directory"
-sudo mkdir -p "$LIVE/db"
+echo "[setup] create data directory"
+sudo mkdir -p "$DATA_DIR"
 
 echo "[setup] reload systemd daemon"
 sudo systemctl daemon-reload

@@ -41,16 +41,27 @@ function withRetry<T>(fn: () => T, maxRetries = 5): T {
   }
 }
 
+function getDataDir(): string {
+  const dataDir = process.env.TENMON_DATA_DIR ?? "/opt/tenmon-ark-data";
+  // 起動時に dataDir が無ければ作成
+  if (!fs.existsSync(dataDir)) {
+    fs.mkdirSync(dataDir, { recursive: true });
+    console.log(`[DB] created dataDir: ${dataDir}`);
+  }
+  return dataDir;
+}
+
 function defaultDbFile(kind: DbKind): string {
-  const dir = path.resolve(process.cwd(), "db");
+  const dataDir = getDataDir();
   const name = kind === "kokuzo" ? "kokuzo.sqlite" : kind === "audit" ? "audit.sqlite" : "persona.sqlite";
-  return path.join(dir, name);
+  return path.join(dataDir, name);
 }
 
 export function getDbPath(kind: DbKind): string {
   const existing = dbPaths.get(kind);
   if (existing) return existing;
 
+  // 個別の環境変数（後方互換性のため残す）
   const envKey =
     kind === "kokuzo"
       ? process.env.TENMON_ARK_DB_KOKUZO_PATH
@@ -58,8 +69,22 @@ export function getDbPath(kind: DbKind): string {
         ? process.env.TENMON_ARK_DB_AUDIT_PATH
         : process.env.TENMON_ARK_DB_PERSONA_PATH;
 
-  const filePath = envKey ? path.resolve(process.cwd(), envKey) : defaultDbFile(kind);
+  let filePath: string;
+  if (envKey) {
+    // 絶対パスの場合はそのまま、相対パスの場合は dataDir 基準
+    filePath = path.isAbsolute(envKey) ? envKey : path.join(getDataDir(), envKey);
+  } else {
+    filePath = defaultDbFile(kind);
+  }
+
   dbPaths.set(kind, filePath);
+  
+  // 初回のみログ出力（監査用）
+  if (dbPaths.size === 1) {
+    console.log(`[DB] dataDir=${getDataDir()}`);
+  }
+  console.log(`[DB] ${kind} path=${filePath}`);
+  
   return filePath;
 }
 
@@ -98,12 +123,26 @@ export function getDb(kind: DbKind): DatabaseSync {
 
   // Migration (best-effort): Phase4 single-file DB -> Phase9 kokuzo DB
   if (kind === "kokuzo") {
+    const dataDir = getDataDir();
+    const legacyInDataDir = path.join(dataDir, "tenmon-ark.sqlite");
     const legacy = path.resolve(process.cwd(), "data", "tenmon-ark.sqlite");
-    if (!fs.existsSync(filePath) && fs.existsSync(legacy)) {
-      try {
-        fs.copyFileSync(legacy, filePath);
-      } catch {
-        // ignore; start fresh
+    if (!fs.existsSync(filePath)) {
+      // まず dataDir 内の legacy を確認
+      if (fs.existsSync(legacyInDataDir)) {
+        try {
+          fs.copyFileSync(legacyInDataDir, filePath);
+          console.log(`[DB] migrated from ${legacyInDataDir}`);
+        } catch {
+          // ignore; start fresh
+        }
+      } else if (fs.existsSync(legacy)) {
+        // 次に process.cwd()/data を確認（後方互換性）
+        try {
+          fs.copyFileSync(legacy, filePath);
+          console.log(`[DB] migrated from ${legacy}`);
+        } catch {
+          // ignore; start fresh
+        }
       }
     }
   }

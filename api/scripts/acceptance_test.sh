@@ -3,6 +3,10 @@ set -euo pipefail
 
 REPO="/opt/tenmon-ark-repo/api"
 LIVE="/opt/tenmon-ark-live"
+DATA_DIR="${TENMON_DATA_DIR:-/opt/tenmon-ark-data}"
+
+# DB参照先を data ディレクトリに統一
+export TENMON_DATA_DIR="$DATA_DIR"
 
 SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
 cd "$SCRIPT_DIR/.."
@@ -14,10 +18,13 @@ NO_RESTART=1 bash scripts/deploy_live.sh
 
 echo "[1-1] apply DB schema (bail) + ensure kokuzo_pages exists"
 command -v sqlite3 >/dev/null 2>&1 || (echo "[FAIL] sqlite3 missing. run: sudo apt-get install -y sqlite3" && exit 1)
-sqlite3 -bail "$REPO/db/kokuzo.sqlite" < "$REPO/src/db/kokuzo_schema.sql"
-has_pages="$(sqlite3 "$REPO/db/kokuzo.sqlite" "SELECT name FROM sqlite_master WHERE type='table' AND name='kokuzo_pages' LIMIT 1;")"
+# dataDir が無ければ作成
+sudo mkdir -p "$DATA_DIR" || true
+# schema を dataDir の DB に適用
+sqlite3 -bail "$DATA_DIR/kokuzo.sqlite" < "$REPO/src/db/kokuzo_schema.sql"
+has_pages="$(sqlite3 "$DATA_DIR/kokuzo.sqlite" "SELECT name FROM sqlite_master WHERE type='table' AND name='kokuzo_pages' LIMIT 1;")"
 test "$has_pages" = "kokuzo_pages" || (echo "[FAIL] kokuzo_pages missing after schema apply" && exit 1)
-echo "[PASS] DB schema ok (kokuzo_pages exists)"
+echo "[PASS] DB schema ok (kokuzo_pages exists, dataDir=$DATA_DIR)"
 
 echo "[1-2] start service (single authority)"
 sudo systemctl start tenmon-ark-api.service
