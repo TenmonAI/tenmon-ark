@@ -416,6 +416,10 @@ router.post("/chat", async (req: Request, res: Response<ChatResponseBody>) => {
     
     // ドメイン質問の場合、回答本文を改善（候補があれば本文を生成、なければ最低限の説明）
     let finalResponse = response;
+    let evidenceDoc: string | null = null;
+    let evidencePdfPage: number | null = null;
+    let evidenceQuote: string | null = null;
+    
     if (isDomainQuestion && isJapanese && !wantsDetail && !hasDocPage) {
       if (candidates.length > 0) {
         const top = candidates[0];
@@ -424,19 +428,48 @@ router.post("/chat", async (req: Request, res: Response<ChatResponseBody>) => {
           // 回答本文を生成（50文字以上、短く自然に、最後にメニューを添える）
           const excerpt = pageText.trim().slice(0, 300);
           finalResponse = `${excerpt}${excerpt.length < pageText.trim().length ? '...' : ''}\n\n※ 必要なら資料指定（doc/pdfPage）で厳密にもできます。`;
+          // 根拠情報を保存
+          evidenceDoc = top.doc;
+          evidencePdfPage = top.pdfPage;
+          evidenceQuote = top.snippet || excerpt.slice(0, 100);
         } else {
           // ページテキストが取得できない場合のフォールバック
           finalResponse = `${sanitized.text}について、kokuzo データベースから関連情報を検索しましたが、詳細な説明が見つかりませんでした。資料指定（doc/pdfPage）で厳密に検索することもできます。`;
         }
       } else {
         // 候補がない場合でも最低限の説明を返す（50文字以上）
-        finalResponse = `${sanitized.text}について、kokuzo データベースから関連情報を検索しましたが、該当する資料が見つかりませんでした。資料指定（doc/pdfPage）で厳密に検索するか、別の質問を試してください。`;
+        finalResponse = `${sanitized.text}について、kokuzo データベースから関連情報を検索しましたが、該当する資料が見つかりませんでした。\n\n資料を投入するには、scripts/ingest_kokuzo_sample.sh を実行するか、doc/pdfPage を指定して厳密に検索してください。`;
       }
       
       // 回答本文が50文字未満の場合は補足を追加
       if (finalResponse.length < 50) {
         finalResponse = `${finalResponse}\n\nより詳しい情報が必要な場合は、資料指定（doc/pdfPage）で厳密に検索することもできます。`;
       }
+    }
+
+    // ドメイン質問で根拠がある場合、evidence と detailPlan に情報を追加
+    let evidence: { doc: string; pdfPage: number; quote: string } | null = null;
+    if (isDomainQuestion && evidenceDoc && evidencePdfPage !== null) {
+      evidence = {
+        doc: evidenceDoc,
+        pdfPage: evidencePdfPage,
+        quote: evidenceQuote || "",
+      };
+      // detailPlan.evidence に設定
+      (detailPlan as any).evidence = evidence;
+      // evidenceIds にも追加
+      if (!detailPlan.evidenceIds) {
+        detailPlan.evidenceIds = [];
+      }
+      const evidenceId = `KZPAGE:${evidenceDoc}:P${evidencePdfPage}`;
+      if (!detailPlan.evidenceIds.includes(evidenceId)) {
+        detailPlan.evidenceIds.push(evidenceId);
+      }
+    } else if (isDomainQuestion && candidates.length === 0) {
+      // 根拠がない場合を明示
+      (detailPlan as any).evidence = null;
+      (detailPlan as any).evidenceStatus = "not_found";
+      (detailPlan as any).evidenceHint = "資料を投入するには scripts/ingest_kokuzo_sample.sh を実行してください";
     }
 
     // レスポンス形式（厳守）
@@ -446,6 +479,7 @@ router.post("/chat", async (req: Request, res: Response<ChatResponseBody>) => {
       provisional: true,
       detailPlan,
       candidates,
+      evidence,
       timestamp: new Date().toISOString(),
       decisionFrame: { mode: "HYBRID", intent: "chat", llm: null, ku: {} },
     });

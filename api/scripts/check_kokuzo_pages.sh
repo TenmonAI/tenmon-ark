@@ -37,7 +37,7 @@ else
   echo "[PASS] KHS pages found: $KHS_COUNT"
 fi
 
-# 全docの一覧
+# 全docの一覧（doc別件数・上位20）
 echo ""
-echo "[INFO] All docs in kokuzo_pages:"
-sqlite3 "$KOKUZO_DB" "SELECT DISTINCT doc, COUNT(*) as pages FROM kokuzo_pages GROUP BY doc;" 2>/dev/null || echo "No data"
+echo "[INFO] All docs in kokuzo_pages (top 20 by page count):"
+sqlite3 "$KOKUZO_DB" "SELECT DISTINCT doc, COUNT(*) as pages FROM kokuzo_pages GROUP BY doc ORDER BY pages DESC LIMIT 20;" 2>/dev/null || echo "No data"

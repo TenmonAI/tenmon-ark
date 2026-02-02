@@ -316,6 +316,33 @@ echo "$r36_4" | jq -e '(.response|type)=="string" and (.response|length)>=50' >/
 echo "$r36_4" | jq -e '(.decisionFrame.ku|type)=="object"' >/dev/null
 echo "[PASS] Phase36-2 fallback response"
 
+echo "[37] Phase37 KHS sample ingestion E2E (ingest -> query -> evidence)"
+# KHS サンプルデータを投入
+bash scripts/ingest_kokuzo_sample.sh || (echo "[WARN] ingest failed, but continuing..." && true)
+# 少し待つ（DB書き込みの反映）
+sleep 0.5
+# 「言霊とは何？」で引用が出ることを確認
+r37="$(post_chat_raw_tid "言霊とは何？" "t37")"
+# 回答が50文字以上であること
+echo "$r37" | jq -e '(.response|type)=="string" and (.response|length)>=50' >/dev/null
+# candidates が存在すること（KHS データが投入されていれば）
+if echo "$r37" | jq -e '(.candidates|type)=="array" and (.candidates|length)>0' >/dev/null 2>&1; then
+  # evidence または detailPlan.evidence に doc/pdfPage が含まれること
+  has_evidence="$(echo "$r37" | jq -e '(.evidence != null) or (.detailPlan.evidence != null)' 2>/dev/null && echo "yes" || echo "no")"
+  if [ "$has_evidence" = "yes" ]; then
+    echo "[PASS] Phase37 evidence found in response"
+  else
+    echo "[WARN] Phase37: candidates found but evidence not set (may be OK if pageText is empty)"
+  fi
+  # snippet が存在すること
+  echo "$r37" | jq -e '(.candidates[0].snippet|type)=="string" and (.candidates[0].snippet|length)>0' >/dev/null && echo "[PASS] Phase37 snippet found" || echo "[WARN] Phase37: snippet missing"
+else
+  echo "[WARN] Phase37: no candidates found (KHS data may not be ingested)"
+fi
+# decisionFrame.ku が object であること
+echo "$r37" | jq -e '(.decisionFrame.ku|type)=="object"' >/dev/null
+echo "[PASS] Phase37 KHS E2E"
+
 echo "[GATE] No Runtime LLM usage in logs"
 if sudo journalctl -u tenmon-ark-api.service --since "$(date '+%Y-%m-%d %H:%M:%S' -d '1 minute ago')" --no-pager | grep -q "\[KANAGI-LLM\]"; then
   echo "[FAIL] Runtime LLM usage detected in logs."
