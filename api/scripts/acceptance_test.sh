@@ -387,16 +387,45 @@ echo "[PASS] Phase37 KHS E2E"
 echo "[38] Phase38 kotodama tags (doc=KHS pdfPage=32 -> tags >= 1)"
 # doc=KHS pdfPage=32 を指定して tags が最低1つ出ることを確認
 r38="$(post_chat_raw_tid "doc=KHS pdfPage=32" "t38")"
-# candidates が存在すること
-if echo "$r38" | jq -e '(.candidates|type)=="array" and (.candidates|length)>0' >/dev/null 2>&1; then
-  # candidates[0] に tags が存在し、最低1つあること
-  echo "$r38" | jq -e '(.candidates[0].tags|type)=="array" and (.candidates[0].tags|length)>=1' >/dev/null || (echo "[FAIL] Phase38: tags not found or empty" && echo "$r38" | jq '.candidates[0]' && exit 1)
-  # tags が IKI/SHIHO/KAMI/HOSHI のいずれかであること
-  echo "$r38" | jq -e '(.candidates[0].tags|map(. as $tag | $tag == "IKI" or $tag == "SHIHO" or $tag == "KAMI" or $tag == "HOSHI")|all)' >/dev/null || (echo "[FAIL] Phase38: invalid tags" && echo "$r38" | jq '.candidates[0].tags' && exit 1)
-  echo "[PASS] Phase38 kotodama tags"
-else
-  echo "[WARN] Phase38: no candidates found (KHS data may not be ingested)"
+# candidates が存在すること（必須）
+if ! echo "$r38" | jq -e '(.candidates|type)=="array" and (.candidates|length)>0' >/dev/null 2>&1; then
+  echo "[FAIL] Phase38: no candidates found (KHS data may not be ingested)"
+  echo "$r38" | jq '.'
+  exit 1
 fi
+# candidates[0] に tags が存在し、最低1つあること
+echo "$r38" | jq -e '(.candidates[0].tags|type)=="array" and (.candidates[0].tags|length)>=1' >/dev/null || (echo "[FAIL] Phase38: tags not found or empty" && echo "$r38" | jq '.candidates[0]' && exit 1)
+# tags が IKI/SHIHO/KAMI/HOSHI のいずれかであること
+echo "$r38" | jq -e '(.candidates[0].tags|map(. as $tag | $tag == "IKI" or $tag == "SHIHO" or $tag == "KAMI" or $tag == "HOSHI")|all)' >/dev/null || (echo "[FAIL] Phase38: invalid tags" && echo "$r38" | jq '.candidates[0].tags' && exit 1)
+# candidates[0].snippet が存在し、長さ>0であること
+echo "$r38" | jq -e '(.candidates[0].snippet|type)=="string" and (.candidates[0].snippet|length)>0' >/dev/null || (echo "[FAIL] Phase38: snippet not found or empty" && echo "$r38" | jq '.candidates[0]' && exit 1)
+echo "[PASS] Phase38 kotodama tags"
+
+echo "[39] Phase39 corpus ingestion gate (doc=KHS count>=1, candidates.length>=1, snippet length>0)"
+# (a) kokuzo_pages に doc=KHS が 1件以上
+KHS_COUNT="$(sqlite3 "$DATA_DIR/kokuzo.sqlite" "SELECT COUNT(*) FROM kokuzo_pages WHERE doc='KHS';" 2>/dev/null || echo "0")"
+if [ "$KHS_COUNT" = "0" ]; then
+  echo "[FAIL] Phase39: kokuzo_pages has no doc='KHS' records"
+  exit 1
+fi
+echo "[PASS] Phase39: kokuzo_pages doc='KHS' count=$KHS_COUNT"
+# (b) /api/chat で "言霊とは？ #詳細" が candidates.length>=1
+r39="$(post_chat_raw_tid "言霊とは？ #詳細" "t39")"
+if ! echo "$r39" | jq -e '(.candidates|type)=="array" and (.candidates|length)>=1' >/dev/null 2>&1; then
+  echo "[FAIL] Phase39: candidates.length < 1 for '言霊とは？ #詳細'"
+  echo "$r39" | jq '.candidates'
+  exit 1
+fi
+echo "[PASS] Phase39: candidates.length >= 1"
+# (c) "doc=KHS pdfPage=32" が candidates[0].snippet を返す（length>0）
+r39_32="$(post_chat_raw_tid "doc=KHS pdfPage=32" "t39-32")"
+if ! echo "$r39_32" | jq -e '(.candidates|type)=="array" and (.candidates|length)>0 and (.candidates[0].snippet|type)=="string" and (.candidates[0].snippet|length)>0' >/dev/null 2>&1; then
+  echo "[FAIL] Phase39: doc=KHS pdfPage=32 did not return snippet with length>0"
+  echo "$r39_32" | jq '.candidates[0]'
+  exit 1
+fi
+echo "[PASS] Phase39: doc=KHS pdfPage=32 snippet length>0"
+echo "[PASS] Phase39 corpus ingestion gate"
 
 echo "[GATE] No Runtime LLM usage in logs"
 if sudo journalctl -u tenmon-ark-api.service --since "$(date '+%Y-%m-%d %H:%M:%S' -d '1 minute ago')" --no-pager | grep -q "\[KANAGI-LLM\]"; then
