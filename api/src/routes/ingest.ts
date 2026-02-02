@@ -183,11 +183,9 @@ router.post("/ingest/confirm", (req: Request, res: Response) => {
     }
 
     try {
-      // Python スクリプトで PDF→JSONL を生成
-      const pythonScript = `
-import sys
+      // Python スクリプトで PDF→JSONL を生成（execFileSync で実行）
+      const pythonScript = `import sys
 import json
-import io
 
 try:
     import PyPDF2
@@ -197,7 +195,6 @@ except ImportError:
         import pypdf
         has_pypdf2 = False
     except ImportError:
-        # pdftotext フォールバック
         import subprocess
         has_pypdf2 = None
 
@@ -207,22 +204,18 @@ jsonl_path = sys.argv[2]
 pages = []
 
 if has_pypdf2 is True:
-    # PyPDF2
     with open(pdf_path, "rb") as f:
         reader = PyPDF2.PdfReader(f)
         for i, page in enumerate(reader.pages, 1):
             text = page.extract_text() or ""
             pages.append({"pdfPage": i, "text": text})
 elif has_pypdf2 is False:
-    # pypdf
     with open(pdf_path, "rb") as f:
         reader = pypdf.PdfReader(f)
         for i, page in enumerate(reader.pages, 1):
             text = page.extract_text() or ""
             pages.append({"pdfPage": i, "text": text})
 else:
-    # pdftotext フォールバック
-    import subprocess
     page_num = 1
     while True:
         try:
@@ -237,12 +230,11 @@ else:
                 break
             pages.append({"pdfPage": page_num, "text": result.stdout.strip()})
             page_num += 1
-            if page_num > 10000:  # 安全制限
+            if page_num > 10000:
                 break
         except (subprocess.TimeoutExpired, FileNotFoundError):
             break
 
-# JSONL に書き出し
 with open(jsonl_path, "w", encoding="utf-8") as f:
     for page in pages:
         f.write(json.dumps(page, ensure_ascii=False) + "\\n")
@@ -256,7 +248,6 @@ print(f"Extracted {len(pages)} pages", file=sys.stderr)
         {
           encoding: "utf-8",
           maxBuffer: 50 * 1024 * 1024, // 50MB
-          stdio: ["pipe", "pipe", "pipe"],
         }
       );
     } catch (e) {
