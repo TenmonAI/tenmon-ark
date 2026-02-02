@@ -65,7 +65,7 @@ export type KokuzoCandidate = {
   pdfPage: number;
   snippet: string;
   score: number;
-  tags?: KotodamaTag[];
+  tags: KotodamaTag[];
 };
 
 /**
@@ -156,7 +156,7 @@ export function searchPagesForHybrid(docOrNull: string | null, query: string, li
             pdfPage: p,
             snippet: String(pageText?.snippet || "(fallback) page indexed"),
             score: 10,
-            tags: tags.length > 0 ? tags : [],
+            tags,
           };
           
           if (p === 1) {
@@ -402,7 +402,7 @@ export function searchPagesForHybrid(docOrNull: string | null, query: string, li
             pdfPage: Number(row.pdfPage),
             snippet: String(row.snippet || "(complement) page indexed"),
             score: 5, // 補完候補は低スコア
-            tags: tags.length > 0 ? tags : [],
+            tags,
           });
           existingKeys.add(key);
           if (complement.length >= limit) break;
@@ -444,7 +444,7 @@ export function searchPagesForHybrid(docOrNull: string | null, query: string, li
               pdfPage: p,
               snippet: String(pageText?.snippet || "(fallback) page indexed"),
               score: 10,
-              tags: tags.length > 0 ? tags : [],
+              tags,
             };
             
             if (p === 1) {
