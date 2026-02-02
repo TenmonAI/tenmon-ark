@@ -88,3 +88,19 @@ CREATE TRIGGER IF NOT EXISTS kokuzo_pages_au AFTER UPDATE ON kokuzo_pages BEGIN
   INSERT INTO kokuzo_pages_fts(rowid, text, doc, pdfPage)
   VALUES (new.rowid, new.text, new.doc, new.pdfPage);
 END;
+
+-- =========================================
+-- kokuzo_laws (Phase40/41: LawEntry storage)
+-- =========================================
+CREATE TABLE IF NOT EXISTS kokuzo_laws (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  threadId TEXT NOT NULL,
+  doc TEXT NOT NULL,
+  pdfPage INTEGER NOT NULL,
+  quote TEXT NOT NULL,
+  tags TEXT NOT NULL, -- JSON array of KotodamaTag
+  createdAt TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_kokuzo_laws_threadId ON kokuzo_laws(threadId);
+CREATE INDEX IF NOT EXISTS idx_kokuzo_laws_doc_page ON kokuzo_laws(doc, pdfPage);

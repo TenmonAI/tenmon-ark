@@ -427,6 +427,75 @@ fi
 echo "[PASS] Phase39: doc=KHS pdfPage=32 snippet length>0"
 echo "[PASS] Phase39 corpus ingestion gate"
 
+echo "[40] Phase40 law commit and list (doc=KHS pdfPage=32 -> commit -> list >= 1)"
+# doc=KHS pdfPage=32 を commit できる
+tid40="t40"
+commit_resp="$(curl -fsS "$BASE_URL/api/law/commit" -H "Content-Type: application/json" \
+  -d "{\"threadId\":\"$tid40\",\"doc\":\"KHS\",\"pdfPage\":32}")"
+if ! echo "$commit_resp" | jq -e '.ok==true and (.id|type)=="number"' >/dev/null 2>&1; then
+  echo "[FAIL] Phase40: commit failed"
+  echo "$commit_resp" | jq '.'
+  exit 1
+fi
+echo "[PASS] Phase40: commit succeeded"
+# list で 1件以上返る
+list_resp="$(curl -fsS "$BASE_URL/api/law/list?threadId=$tid40")"
+if ! echo "$list_resp" | jq -e '.ok==true and (.laws|type)=="array" and (.laws|length)>=1' >/dev/null 2>&1; then
+  echo "[FAIL] Phase40: list failed or empty"
+  echo "$list_resp" | jq '.'
+  exit 1
+fi
+# laws[0] に必要なフィールドが存在すること
+if ! echo "$list_resp" | jq -e '(.laws[0].doc=="KHS") and (.laws[0].pdfPage==32) and (.laws[0].quote|type)=="string" and (.laws[0].tags|type)=="array"' >/dev/null 2>&1; then
+  echo "[FAIL] Phase40: laws[0] missing required fields"
+  echo "$list_resp" | jq '.laws[0]'
+  exit 1
+fi
+echo "[PASS] Phase40 law commit and list"
+
+echo "[41] Phase41 law recall (same threadId -> list persists)"
+# 同一threadIdで list が継続して返る（最低限の recall）
+tid41="t41"
+# 最初の commit
+commit_resp_41_1="$(curl -fsS "$BASE_URL/api/law/commit" -H "Content-Type: application/json" \
+  -d "{\"threadId\":\"$tid41\",\"doc\":\"KHS\",\"pdfPage\":32}")"
+if ! echo "$commit_resp_41_1" | jq -e '.ok==true' >/dev/null 2>&1; then
+  echo "[FAIL] Phase41: first commit failed"
+  echo "$commit_resp_41_1" | jq '.'
+  exit 1
+fi
+# 最初の list
+list_resp_41_1="$(curl -fsS "$BASE_URL/api/law/list?threadId=$tid41")"
+count_1="$(echo "$list_resp_41_1" | jq -r '.laws|length' 2>/dev/null || echo "0")"
+if [ "$count_1" -lt 1 ]; then
+  echo "[FAIL] Phase41: first list failed or empty"
+  echo "$list_resp_41_1" | jq '.'
+  exit 1
+fi
+# 2回目の commit（別ページ）
+commit_resp_41_2="$(curl -fsS "$BASE_URL/api/law/commit" -H "Content-Type: application/json" \
+  -d "{\"threadId\":\"$tid41\",\"doc\":\"KHS\",\"pdfPage\":35}")"
+if ! echo "$commit_resp_41_2" | jq -e '.ok==true' >/dev/null 2>&1; then
+  echo "[FAIL] Phase41: second commit failed"
+  echo "$commit_resp_41_2" | jq '.'
+  exit 1
+fi
+# 2回目の list（継続して返る）
+list_resp_41_2="$(curl -fsS "$BASE_URL/api/law/list?threadId=$tid41")"
+count_2="$(echo "$list_resp_41_2" | jq -r '.laws|length' 2>/dev/null || echo "0")"
+if [ "$count_2" -lt 2 ]; then
+  echo "[FAIL] Phase41: second list should have >= 2 items (count=$count_2)"
+  echo "$list_resp_41_2" | jq '.laws'
+  exit 1
+fi
+# 最初のエントリが残っていること（recall）
+if ! echo "$list_resp_41_2" | jq -e '(.laws|map(select(.doc=="KHS" and .pdfPage==32))|length)>=1' >/dev/null 2>&1; then
+  echo "[FAIL] Phase41: first entry not found in recall (laws not persisted)"
+  echo "$list_resp_41_2" | jq '.laws'
+  exit 1
+fi
+echo "[PASS] Phase41 law recall"
+
 echo "[GATE] No Runtime LLM usage in logs"
 if sudo journalctl -u tenmon-ark-api.service --since "$(date '+%Y-%m-%d %H:%M:%S' -d '1 minute ago')" --no-pager | grep -q "\[KANAGI-LLM\]"; then
   echo "[FAIL] Runtime LLM usage detected in logs."

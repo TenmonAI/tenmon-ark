@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import auditRouter from "./routes/audit.js";
 import chatRouter from "./routes/chat.js";
+import lawRouter from "./routes/law.js";
 import kanagiRoutes from "./routes/kanagi.js";
 import tenmonRoutes from "./routes/tenmon.js";
 import { markListenReady } from "./health/readiness.js";
@@ -60,6 +61,7 @@ app.use(express.json());
 
 app.use("/api", auditRouter);
 app.use("/api", chatRouter);
+app.use("/api", lawRouter);
 app.use("/api/kanagi", kanagiRoutes);
 
 // 既存 tenmon
