@@ -98,6 +98,9 @@ body="${out#*$'\t'}"
 [ "$code" = "200" ] || (echo "[FAIL] audit not 200 (code=$code)" && echo "$body" && exit 1)
 LIVE_SHA="$(echo "$body" | jq -r '.gitSha // ""')"
 [ "$LIVE_SHA" = "$REPO_SHA" ] || (echo "[FAIL] audit gitSha mismatch (live=$LIVE_SHA repo=$REPO_SHA)" && exit 1)
+# readiness.dbReady.audit == true を確認
+echo "$body" | jq -e '(.readiness.dbReady.audit == true)' >/dev/null || (echo "[FAIL] audit dbReady.audit is not true" && echo "$body" | jq '.readiness' && exit 1)
+echo "[PASS] audit dbReady.audit == true"
 
 echo "[2-1] wait /api/chat (decisionFrame contract must be ready)"
 for i in $(seq 1 200); do
