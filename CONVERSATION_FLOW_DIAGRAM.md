@@ -113,3 +113,40 @@
    - 候補がある場合: pageText から生成
    - 候補がない場合: フォールバック回答
    - 50文字未満の場合は補足を追加
+
+4. **根拠情報の提示**
+   - 根拠がある場合: `evidence` と `detailPlan.evidence` に doc/pdfPage/quote を設定
+   - 根拠がない場合: `evidenceStatus="not_found"` と `evidenceHint` を設定
+
+## 会話フロー図（入口→pending→HYBRID→evidence）
+
+```
+[ユーザー入力: "言霊とは何？"]
+    ↓
+[chat.ts: router.post("/chat")]
+    ↓
+[ドメイン質問検出] (isDomainQuestion = true)
+    ↓
+[HYBRID 処理]
+    ├─ [searchPagesForHybrid()] → candidates
+    ├─ [candidates.length > 0?]
+    │   ├─ YES → [getPageText()] → pageText
+    │   │       ├─ [pageText あり?]
+    │   │       │   ├─ YES → [回答本文生成] + [evidence 設定]
+    │   │       │   │       ├─ evidenceDoc = top.doc
+    │   │       │   │       ├─ evidencePdfPage = top.pdfPage
+    │   │       │   │       └─ evidenceQuote = top.snippet
+    │   │       │   └─ NO  → [フォールバック回答]
+    │   │       └─ [evidence: {doc, pdfPage, quote}]
+    │   └─ NO  → [フォールバック回答] + [evidenceStatus="not_found"]
+    ↓
+[レスポンス組み立て]
+    ├─ response: 回答本文（50文字以上）
+    ├─ evidence: {doc, pdfPage, quote} または null
+    ├─ detailPlan.evidence: 同上
+    ├─ detailPlan.evidenceIds: [evidenceId] (根拠がある場合)
+    ├─ detailPlan.evidenceStatus: "not_found" (候補がない場合)
+    └─ detailPlan.evidenceHint: 投入方法のヒント
+    ↓
+[レスポンス返却]
+```
