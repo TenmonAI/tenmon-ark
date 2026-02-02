@@ -390,14 +390,19 @@ export function searchPagesForHybrid(docOrNull: string | null, query: string, li
       const complementRows = complementStmt.all(targetDoc) as any[];
       
       const complement: KokuzoCandidate[] = [];
+      const fullTextStmt = db.prepare(`SELECT text FROM kokuzo_pages WHERE doc = ? AND pdfPage = ?`);
       for (const row of complementRows) {
         const key = `${targetDoc}:${row.pdfPage}`;
         if (!existingKeys.has(key)) {
+          const fullTextRow = fullTextStmt.get(targetDoc, Number(row.pdfPage)) as any;
+          const fullText = String(fullTextRow?.text || "");
+          const tags = extractKotodamaTags(fullText);
           complement.push({
             doc: targetDoc,
             pdfPage: Number(row.pdfPage),
             snippet: String(row.snippet || "(complement) page indexed"),
             score: 5, // 補完候補は低スコア
+            tags: tags.length > 0 ? tags : [],
           });
           existingKeys.add(key);
           if (complement.length >= limit) break;
