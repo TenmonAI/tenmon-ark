@@ -514,13 +514,14 @@ function getSafeFallbackCandidates(docOrNull: string | null, limit: number): Kok
       });
     }
   } catch {
-    // DB が利用できない場合は tags なしで返す
+    // DB が利用できない場合は tags を空配列で返す
     for (let p = 2; p <= Math.min(11, limit + 1); p++) {
       candidates.push({
         doc,
         pdfPage: p,
         snippet: "(fallback) page indexed",
         score: 10,
+        tags: [],
       });
     }
   }
