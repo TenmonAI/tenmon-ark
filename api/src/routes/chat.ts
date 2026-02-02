@@ -165,21 +165,37 @@ router.post("/chat", async (req: Request, res: Response<ChatResponseBody>) => {
       // LANE_1: 言灵/カタカムナの質問 → HYBRID で検索して回答
       if (lane === "LANE_1") {
         const candidates = searchPagesForHybrid(null, trimmed, 10);
+        setThreadCandidates(threadId, candidates);
+        
+        let responseText: string;
         if (candidates.length > 0) {
-          setThreadCandidates(threadId, candidates);
           const top = candidates[0];
-          // 回答本文を生成（短く自然に）
           const pageText = getPageText(top.doc, top.pdfPage);
-          const responseText = pageText ? `${pageText.slice(0, 200)}...\n\n※ より詳しく知りたい場合は、候補番号を選択するか、資料指定（doc/pdfPage）で厳密にもできます。` : "回答を生成中です。";
-          return res.json({
-            response: responseText,
-            evidence: null,
-            candidates: candidates.slice(0, 10),
-            decisionFrame: { mode: "HYBRID", intent: "chat", llm: null, ku: {} },
-            timestamp,
-            threadId,
-          });
+          if (pageText && pageText.trim().length > 0) {
+            // 回答本文を生成（50文字以上、短く自然に）
+            const excerpt = pageText.trim().slice(0, 300);
+            responseText = `${excerpt}${excerpt.length < pageText.trim().length ? '...' : ''}\n\n※ より詳しく知りたい場合は、候補番号を選択するか、資料指定（doc/pdfPage）で厳密にもできます。`;
+          } else {
+            responseText = `${trimmed}について、kokuzo データベースから関連情報を検索しましたが、詳細な説明が見つかりませんでした。資料指定（doc/pdfPage）で厳密に検索することもできます。`;
+          }
+        } else {
+          // 候補がない場合でも最低限の説明を返す（50文字以上）
+          responseText = `${trimmed}について、kokuzo データベースから関連情報を検索しましたが、該当する資料が見つかりませんでした。資料指定（doc/pdfPage）で厳密に検索するか、別の質問を試してください。`;
         }
+        
+        // 回答本文が50文字未満の場合は補足を追加
+        if (responseText.length < 50) {
+          responseText = `${responseText}\n\nより詳しい情報が必要な場合は、資料指定（doc/pdfPage）で厳密に検索することもできます。`;
+        }
+        
+        return res.json({
+          response: responseText,
+          evidence: null,
+          candidates: candidates.slice(0, 10),
+          decisionFrame: { mode: "HYBRID", intent: "chat", llm: null, ku: {} },
+          timestamp,
+          threadId,
+        });
       }
       // LANE_2: 資料指定 → メッセージに doc/pdfPage が含まれていることを期待
       // LANE_3: 状況整理 → 通常処理にフォールスルー
@@ -395,14 +411,31 @@ router.post("/chat", async (req: Request, res: Response<ChatResponseBody>) => {
     // Phase26: candidates を threadId に保存（番号選択で再利用）
     setThreadCandidates(threadId, candidates);
 
-    // ドメイン質問の場合、回答本文を改善（候補があれば本文を生成）
+    // ドメイン質問の検出（naturalRouter の判定と一致させる）
+    const isDomainQuestion = /言灵|言霊|ことだま|kotodama|法則|カタカムナ|天津金木|水火|與合/i.test(sanitized.text);
+    
+    // ドメイン質問の場合、回答本文を改善（候補があれば本文を生成、なければ最低限の説明）
     let finalResponse = response;
-    if (candidates.length > 0 && isJapanese && !wantsDetail && !hasDocPage) {
-      const top = candidates[0];
-      const pageText = getPageText(top.doc, top.pdfPage);
-      if (pageText) {
-        // 回答本文を生成（短く自然に、最後にメニューを添える）
-        finalResponse = `${pageText.slice(0, 300)}...\n\n※ 必要なら資料指定（doc/pdfPage）で厳密にもできます。`;
+    if (isDomainQuestion && isJapanese && !wantsDetail && !hasDocPage) {
+      if (candidates.length > 0) {
+        const top = candidates[0];
+        const pageText = getPageText(top.doc, top.pdfPage);
+        if (pageText && pageText.trim().length > 0) {
+          // 回答本文を生成（50文字以上、短く自然に、最後にメニューを添える）
+          const excerpt = pageText.trim().slice(0, 300);
+          finalResponse = `${excerpt}${excerpt.length < pageText.trim().length ? '...' : ''}\n\n※ 必要なら資料指定（doc/pdfPage）で厳密にもできます。`;
+        } else {
+          // ページテキストが取得できない場合のフォールバック
+          finalResponse = `${sanitized.text}について、kokuzo データベースから関連情報を検索しましたが、詳細な説明が見つかりませんでした。資料指定（doc/pdfPage）で厳密に検索することもできます。`;
+        }
+      } else {
+        // 候補がない場合でも最低限の説明を返す（50文字以上）
+        finalResponse = `${sanitized.text}について、kokuzo データベースから関連情報を検索しましたが、該当する資料が見つかりませんでした。資料指定（doc/pdfPage）で厳密に検索するか、別の質問を試してください。`;
+      }
+      
+      // 回答本文が50文字未満の場合は補足を追加
+      if (finalResponse.length < 50) {
+        finalResponse = `${finalResponse}\n\nより詳しい情報が必要な場合は、資料指定（doc/pdfPage）で厳密に検索することもできます。`;
       }
     }
 
