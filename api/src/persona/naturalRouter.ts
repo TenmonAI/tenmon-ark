@@ -82,8 +82,20 @@ export function naturalRouter(input: { message: string; mode: string }): { handl
     };
   }
 
-  // other（会話の入口）— 1)2)3) は必須（Phase19維持）
+  // other（会話の入口）— ドメイン質問はデフォルトで回答に入る（メニューは補助に格下げ）
   if (ja) {
+    // ドメイン質問のキーワードをチェック（言灵、法則、カタカムナなど）
+    const isDomainQuestion = /言灵|言霊|ことだま|kotodama|法則|カタカムナ|天津金木|水火|與合/i.test(message);
+    
+    if (isDomainQuestion) {
+      // ドメイン質問の場合は、まず回答を試みる（メニューは最後に添える）
+      return {
+        handled: false, // handled=false で通常処理（HYBRID検索）にフォールスルー
+        responseText: "", // 空文字で通常処理を促す
+      };
+    }
+    
+    // ドメイン質問でない場合はメニューを表示（選択待ち状態を保存）
     return {
       handled: true,
       responseText:

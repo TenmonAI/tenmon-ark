@@ -264,6 +264,28 @@ echo "$r33" | jq -e 'has("detailPlan")' >/dev/null
 echo "$r33" | jq -e '(.detailPlan.kojikiTags|type)=="array"' >/dev/null
 echo "[PASS] Phase33 kojikiTags"
 
+echo "[36] Phase36 conversation flow (domain question -> answer, not menu only)"
+r36_1="$(post_chat_raw "言霊とは何？")"
+# ドメイン質問の場合はメニューだけではなく回答が含まれること
+echo "$r36_1" | jq -e '(.response|type)=="string" and (.response|length)>50' >/dev/null
+# メニューだけの場合は失敗
+if echo "$r36_1" | jq -r '.response' | grep -qE "^了解。どの方向で話しますか"; then
+  echo "[FAIL] Phase36: domain question returned menu only (should return answer)"
+  exit 1
+fi
+echo "[PASS] Phase36 domain question -> answer"
+
+echo "[36-1] Phase36-1 lane choice parsing (1/2/3 or keywords -> LANE)"
+r36_2="$(post_chat_raw "言霊とは何？")"
+# メニューを表示した後、選択を送る
+r36_3="$(post_chat_raw_tid "言灵/カタカムナ/天津金木の質問" "t36")"
+# LANE_1 の選択が正しく処理されること（メニューに戻らず回答に進む）
+if echo "$r36_3" | jq -r '.response' | grep -qE "^了解。どの方向で話しますか"; then
+  echo "[FAIL] Phase36-1: lane choice returned menu again (should proceed to answer)"
+  exit 1
+fi
+echo "[PASS] Phase36-1 lane choice parsing"
+
 echo "[GATE] No Runtime LLM usage in logs"
 if sudo journalctl -u tenmon-ark-api.service --since "$(date '+%Y-%m-%d %H:%M:%S' -d '1 minute ago')" --no-pager | grep -q "\[KANAGI-LLM\]"; then
   echo "[FAIL] Runtime LLM usage detected in logs."

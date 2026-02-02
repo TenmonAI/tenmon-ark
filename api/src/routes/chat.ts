@@ -12,7 +12,8 @@ import { applyVerifier } from "../kanagi/core/verifier.js";
 import { kokuzoRecall, kokuzoRemember } from "../kokuzo/recall.js";
 import { getPageText } from "../kokuzo/pages.js";
 import { searchPagesForHybrid } from "../kokuzo/search.js";
-import { setThreadCandidates, pickFromThread, clearThreadCandidates } from "../kokuzo/threadCandidates.js";
+import { setThreadCandidates, pickFromThread, clearThreadCandidates, setThreadPending, getThreadPending, clearThreadState } from "../kokuzo/threadCandidates.js";
+import { parseLaneChoice, type LaneChoice } from "../persona/laneChoice.js";
 import { getDb, dbPrepare } from "../db/index.js";
 import { extractLawCandidates } from "../kokuzo/lawCandidates.js";
 import { extractSaikihoLawsFromText } from "../kotodama/saikihoLawSet.js";
@@ -153,8 +154,40 @@ router.post("/chat", async (req: Request, res: Response<ChatResponseBody>) => {
 
   if (!message) return res.status(400).json({ response: "message required", error: "message required", timestamp, decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: {} } });
 
-  // Phase26: 番号選択（"1"〜"10"）で候補を選んで GROUNDED に合流
   const trimmed = message.trim();
+  
+  // 選択待ち状態の処理（pending state を優先）
+  const pending = getThreadPending(threadId);
+  if (pending === "LANE_PICK") {
+    const lane = parseLaneChoice(trimmed);
+    if (lane) {
+      clearThreadState(threadId);
+      // LANE_1: 言灵/カタカムナの質問 → HYBRID で検索して回答
+      if (lane === "LANE_1") {
+        const candidates = searchPagesForHybrid(null, trimmed, 10);
+        if (candidates.length > 0) {
+          setThreadCandidates(threadId, candidates);
+          const top = candidates[0];
+          // 回答本文を生成（短く自然に）
+          const pageText = getPageText(top.doc, top.pdfPage);
+          const responseText = pageText ? `${pageText.slice(0, 200)}...\n\n※ より詳しく知りたい場合は、候補番号を選択するか、資料指定（doc/pdfPage）で厳密にもできます。` : "回答を生成中です。";
+          return res.json({
+            response: responseText,
+            evidence: null,
+            candidates: candidates.slice(0, 10),
+            decisionFrame: { mode: "HYBRID", intent: "chat", llm: null, ku: {} },
+            timestamp,
+            threadId,
+          });
+        }
+      }
+      // LANE_2: 資料指定 → メッセージに doc/pdfPage が含まれていることを期待
+      // LANE_3: 状況整理 → 通常処理にフォールスルー
+      // ここでは一旦通常処理にフォールスルー（後で拡張可能）
+    }
+  }
+
+  // Phase26: 番号選択（"1"〜"10"）で候補を選んで GROUNDED に合流
   const numberMatch = trimmed.match(/^\d{1,2}$/);
   if (numberMatch) {
     const oneBasedIndex = parseInt(numberMatch[0], 10);
@@ -263,13 +296,24 @@ router.post("/chat", async (req: Request, res: Response<ChatResponseBody>) => {
 
   if (isJapanese && !wantsDetail && !hasDocPage) {
     const nat = naturalRouter({ message, mode: "NATURAL" });
-    return res.json({
-      response: nat.responseText,
-      evidence: null,
-      decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: {} },
-      timestamp,
-      threadId,
-    });
+    
+    // handled=false の場合は通常処理（HYBRID検索）にフォールスルー
+    if (!nat.handled) {
+      // ドメイン質問の場合は HYBRID で検索して回答
+      // この後ろの HYBRID 処理にフォールスルー
+    } else {
+      // メニューを表示する場合は pending state を保存
+      if (nat.responseText.includes("どの方向で話しますか")) {
+        setThreadPending(threadId, "LANE_PICK");
+      }
+      return res.json({
+        response: nat.responseText,
+        evidence: null,
+        decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: {} },
+        timestamp,
+        threadId,
+      });
+    }
   }
 
   // GROUNDED分岐: doc + pdfPage 指定時は必ず GROUNDED を返す
@@ -351,9 +395,20 @@ router.post("/chat", async (req: Request, res: Response<ChatResponseBody>) => {
     // Phase26: candidates を threadId に保存（番号選択で再利用）
     setThreadCandidates(threadId, candidates);
 
+    // ドメイン質問の場合、回答本文を改善（候補があれば本文を生成）
+    let finalResponse = response;
+    if (candidates.length > 0 && isJapanese && !wantsDetail && !hasDocPage) {
+      const top = candidates[0];
+      const pageText = getPageText(top.doc, top.pdfPage);
+      if (pageText) {
+        // 回答本文を生成（短く自然に、最後にメニューを添える）
+        finalResponse = `${pageText.slice(0, 300)}...\n\n※ 必要なら資料指定（doc/pdfPage）で厳密にもできます。`;
+      }
+    }
+
     // レスポンス形式（厳守）
     return res.json({
-      response,
+      response: finalResponse,
       trace,
       provisional: true,
       detailPlan,
