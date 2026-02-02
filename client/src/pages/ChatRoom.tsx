@@ -73,6 +73,9 @@ export default function ChatRoom() {
   const [laws, setLaws] = useState<any[]>([]);
   const [isLoadingLaws, setIsLoadingLaws] = useState(false);
   const [feedbackModalOpen, setFeedbackModalOpen] = useState(false);
+  const [uploadedFileForIngest, setUploadedFileForIngest] = useState<{ savedPath: string; fileName: string } | null>(null);
+  const [ingestRequest, setIngestRequest] = useState<{ ingestId: string; confirmText: string; doc: string } | null>(null);
+  const [isIngesting, setIsIngesting] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { t, i18n } = useTranslation();
@@ -285,8 +288,13 @@ export default function ChatRoom() {
             console.warn("[ChatRoom] Failed to log file upload:", error);
           }
 
-          // チャットに「保存完了」メッセージを表示（system メッセージとして）
-          // 注: 既存のメッセージシステムに追加する場合は、適切な方法で実装
+          // PDF ファイルの場合は「取り込む」ボタンを表示するために保存
+          if (file.name.toLowerCase().endsWith(".pdf")) {
+            setUploadedFileForIngest({
+              savedPath: data.savedPath,
+              fileName: data.fileName,
+            });
+          }
         } else {
           toast.error(`アップロードに失敗しました: ${data.error || "Unknown error"}`);
         }
@@ -1232,6 +1240,45 @@ export default function ChatRoom() {
                   <p className="text-sm text-muted-foreground">ここにドロップ（VPS保存）</p>
                   <p className="text-xs text-muted-foreground mt-1">またはクリックして選択</p>
                 </div>
+                {/* 取り込むボタン（PDFアップロード成功時のみ表示） */}
+                {uploadedFileForIngest && !ingestRequest && (
+                  <div className="mt-2">
+                    <Button
+                      onClick={handleIngestRequest}
+                      disabled={isIngesting || isStreaming}
+                      size="sm"
+                      variant="outline"
+                    >
+                      {isIngesting ? "処理中..." : "取り込む"}
+                    </Button>
+                  </div>
+                )}
+                {/* 確認ダイアログ（ingest request 成功時のみ表示） */}
+                {ingestRequest && (
+                  <div className="mt-2 p-3 border border-border rounded-lg bg-muted/50">
+                    <p className="text-sm text-foreground mb-2 whitespace-pre-line">{ingestRequest.confirmText}</p>
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={handleIngestConfirm}
+                        disabled={isIngesting || isStreaming}
+                        size="sm"
+                      >
+                        {isIngesting ? "取り込み中..." : "実行"}
+                      </Button>
+                      <Button
+                        onClick={() => {
+                          setIngestRequest(null);
+                          setUploadedFileForIngest(null);
+                        }}
+                        disabled={isIngesting || isStreaming}
+                        size="sm"
+                        variant="outline"
+                      >
+                        キャンセル
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
               {/* モード切替UI */}
               <div className="mb-3 flex justify-between items-center">
