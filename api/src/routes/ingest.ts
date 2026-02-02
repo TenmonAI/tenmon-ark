@@ -184,75 +184,89 @@ router.post("/ingest/confirm", (req: Request, res: Response) => {
 
     try {
       // Python スクリプトで PDF→JSONL を生成（execFileSync で実行）
+      // 既存の ingest_pdf_pages.sh の成功体験を踏襲
       const pythonScript = `import sys
 import json
-
-try:
-    import PyPDF2
-    has_pypdf2 = True
-except ImportError:
-    try:
-        import pypdf
-        has_pypdf2 = False
-    except ImportError:
-        import subprocess
-        has_pypdf2 = None
 
 pdf_path = sys.argv[1]
 jsonl_path = sys.argv[2]
 
 pages = []
 
-if has_pypdf2 is True:
+# PyPDF2 → pypdf → pdftotext の順で試行
+try:
+    import PyPDF2
     with open(pdf_path, "rb") as f:
         reader = PyPDF2.PdfReader(f)
         for i, page in enumerate(reader.pages, 1):
-            text = page.extract_text() or ""
+            try:
+                text = page.extract_text() or ""
+            except:
+                text = ""
             pages.append({"pdfPage": i, "text": text})
-elif has_pypdf2 is False:
-    with open(pdf_path, "rb") as f:
-        reader = pypdf.PdfReader(f)
-        for i, page in enumerate(reader.pages, 1):
-            text = page.extract_text() or ""
-            pages.append({"pdfPage": i, "text": text})
-else:
-    page_num = 1
-    while True:
-        try:
-            result = subprocess.run(
-                ["pdftotext", "-f", str(page_num), "-l", str(page_num), pdf_path, "-"],
-                capture_output=True,
-                text=True,
-                timeout=5,
-                check=False
-            )
-            if result.returncode != 0 or not result.stdout.strip():
+except ImportError:
+    try:
+        import pypdf
+        with open(pdf_path, "rb") as f:
+            reader = pypdf.PdfReader(f)
+            for i, page in enumerate(reader.pages, 1):
+                try:
+                    text = page.extract_text() or ""
+                except:
+                    text = ""
+                pages.append({"pdfPage": i, "text": text})
+    except ImportError:
+        # pdftotext フォールバック
+        import subprocess
+        page_num = 1
+        while page_num <= 10000:
+            try:
+                result = subprocess.run(
+                    ["pdftotext", "-f", str(page_num), "-l", str(page_num), pdf_path, "-"],
+                    capture_output=True,
+                    text=True,
+                    timeout=5,
+                    check=False
+                )
+                if result.returncode != 0:
+                    break
+                text = result.stdout.strip() if result.stdout else ""
+                if not text and page_num == 1:
+                    # 最初のページが空ならエラー
+                    break
+                pages.append({"pdfPage": page_num, "text": text})
+                page_num += 1
+            except (subprocess.TimeoutExpired, FileNotFoundError):
                 break
-            pages.append({"pdfPage": page_num, "text": result.stdout.strip()})
-            page_num += 1
-            if page_num > 10000:
-                break
-        except (subprocess.TimeoutExpired, FileNotFoundError):
-            break
 
+# 最低1ページは必要
+if len(pages) == 0:
+    sys.exit(1)
+
+# JSONL に書き出し
 with open(jsonl_path, "w", encoding="utf-8") as f:
     for page in pages:
         f.write(json.dumps(page, ensure_ascii=False) + "\\n")
 
-print(f"Extracted {len(pages)} pages", file=sys.stderr)
+sys.stderr.write(f"Extracted {len(pages)} pages\\n")
 `;
 
-      execFileSync(
+      const result = execFileSync(
         "python3",
         ["-c", pythonScript, filePath, tmpJsonl],
         {
           encoding: "utf-8",
           maxBuffer: 50 * 1024 * 1024, // 50MB
+          stdio: ["pipe", "pipe", "pipe"],
         }
       );
+      console.log(`[INGEST-CONFIRM] Python extraction output: ${result}`);
     } catch (e) {
       console.error("[INGEST-CONFIRM] Failed to extract PDF with Python:", e);
-      return res.status(500).json({ ok: false, error: `PDF extraction failed: ${e instanceof Error ? e.message : String(e)}` });
+      // エラーでも JSONL ファイルが存在する可能性があるので、続行
+      if (!fs.existsSync(tmpJsonl)) {
+        return res.status(500).json({ ok: false, error: `PDF extraction failed: ${e instanceof Error ? e.message : String(e)}` });
+      }
     }
 
     // JSONL を読み込んで kokuzo_pages に投入
