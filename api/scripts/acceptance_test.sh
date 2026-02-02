@@ -496,6 +496,75 @@ if ! echo "$list_resp_41_2" | jq -e '(.laws|map(select(.doc=="KHS" and .pdfPage=
 fi
 echo "[PASS] Phase41 law recall"
 
+echo "[42] Phase42 file upload (/api/upload -> ok==true, sha256, size, savedPath, file exists)"
+# 小さなファイル（数バイト）をmultipartで送って ok==true を確認
+TEST_FILE="/tmp/up_phase42.txt"
+printf "hello phase42" > "$TEST_FILE"
+UPLOAD_RESP="$(curl -fsS -F "file=@$TEST_FILE" "$BASE_URL/api/upload")"
+# ok==true を確認
+if ! echo "$UPLOAD_RESP" | jq -e '.ok==true' >/dev/null 2>&1; then
+  echo "[FAIL] Phase42: upload response ok!=true"
+  echo "$UPLOAD_RESP" | jq '.'
+  exit 1
+fi
+# sha256 が 64hex であること
+if ! echo "$UPLOAD_RESP" | jq -e '(.sha256|type)=="string" and (.sha256|length)==64 and (.sha256|test("^[0-9a-f]+$"))' >/dev/null 2>&1; then
+  echo "[FAIL] Phase42: sha256 is not 64 hex chars"
+  echo "$UPLOAD_RESP" | jq '.sha256'
+  exit 1
+fi
+# size が正しい
+EXPECTED_SIZE="$(wc -c < "$TEST_FILE" | tr -d ' ')"
+if ! echo "$UPLOAD_RESP" | jq -e "(.size|type)==\"number\" and .size==$EXPECTED_SIZE" >/dev/null 2>&1; then
+  echo "[FAIL] Phase42: size mismatch (expected=$EXPECTED_SIZE)"
+  echo "$UPLOAD_RESP" | jq '.size'
+  exit 1
+fi
+# savedPath が uploads/ で始まる
+if ! echo "$UPLOAD_RESP" | jq -e '(.savedPath|type)=="string" and (.savedPath|startswith("uploads/"))' >/dev/null 2>&1; then
+  echo "[FAIL] Phase42: savedPath does not start with uploads/"
+  echo "$UPLOAD_RESP" | jq '.savedPath'
+  exit 1
+fi
+# 実ファイルが TENMON_DATA_DIR/uploads/<name> に存在する
+SAVED_NAME="$(echo "$UPLOAD_RESP" | jq -r '.fileName')"
+if [ ! -f "$DATA_DIR/uploads/$SAVED_NAME" ]; then
+  echo "[FAIL] Phase42: file not found at $DATA_DIR/uploads/$SAVED_NAME"
+  exit 1
+fi
+echo "[PASS] Phase42 file upload"
+
+echo "[43] Phase43 alg commit + list gate (kokuzo_algorithms)"
+# POST /api/alg/commit で以下を保存できること
+ALG_COMMIT_BODY='{"threadId":"t43","title":"KHS Breath->Sound->50->Kana","steps":[{"text":"天地の息が動くと音が発する","doc":"KHS","pdfPage":549},{"text":"息の形が五十連となる","doc":"KHS","pdfPage":549}]}'
+ALG_COMMIT_RESP="$(curl -fsS "$BASE_URL/api/alg/commit" -H "Content-Type: application/json" -d "$ALG_COMMIT_BODY")"
+# commit が ok==true で id:number
+if ! echo "$ALG_COMMIT_RESP" | jq -e '.ok==true and (.id|type)=="number"' >/dev/null 2>&1; then
+  echo "[FAIL] Phase43: alg commit failed"
+  echo "$ALG_COMMIT_RESP" | jq '.'
+  exit 1
+fi
+# list が algorithms.length>=1
+ALG_LIST_RESP="$(curl -fsS "$BASE_URL/api/alg/list?threadId=t43")"
+if ! echo "$ALG_LIST_RESP" | jq -e '.ok==true and (.algorithms|type)=="array" and (.algorithms|length)>=1' >/dev/null 2>&1; then
+  echo "[FAIL] Phase43: alg list failed or empty"
+  echo "$ALG_LIST_RESP" | jq '.'
+  exit 1
+fi
+# algorithms[0].steps が配列に戻せる（JSON parse）
+if ! echo "$ALG_LIST_RESP" | jq -e '(.algorithms[0].steps|type)=="array" and (.algorithms[0].steps|length)>=1' >/dev/null 2>&1; then
+  echo "[FAIL] Phase43: algorithms[0].steps is not an array"
+  echo "$ALG_LIST_RESP" | jq '.algorithms[0].steps'
+  exit 1
+fi
+# algorithms[0].title が正しい
+if ! echo "$ALG_LIST_RESP" | jq -e '(.algorithms[0].title)=="KHS Breath->Sound->50->Kana"' >/dev/null 2>&1; then
+  echo "[FAIL] Phase43: algorithms[0].title mismatch"
+  echo "$ALG_LIST_RESP" | jq '.algorithms[0].title'
+  exit 1
+fi
+echo "[PASS] Phase43 alg commit + list gate"
+
 echo "[GATE] No Runtime LLM usage in logs"
 if sudo journalctl -u tenmon-ark-api.service --since "$(date '+%Y-%m-%d %H:%M:%S' -d '1 minute ago')" --no-pager | grep -q "\[KANAGI-LLM\]"; then
   echo "[FAIL] Runtime LLM usage detected in logs."

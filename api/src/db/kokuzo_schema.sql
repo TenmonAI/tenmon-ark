@@ -104,3 +104,18 @@ CREATE TABLE IF NOT EXISTS kokuzo_laws (
 
 CREATE INDEX IF NOT EXISTS idx_kokuzo_laws_threadId ON kokuzo_laws(threadId);
 CREATE INDEX IF NOT EXISTS idx_kokuzo_laws_doc_page ON kokuzo_laws(doc, pdfPage);
+
+-- =========================================
+-- kokuzo_algorithms (Phase43: Algorithm storage)
+-- =========================================
+CREATE TABLE IF NOT EXISTS kokuzo_algorithms (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  threadId TEXT NOT NULL,
+  title TEXT NOT NULL,
+  steps TEXT NOT NULL, -- JSON array
+  summary TEXT NOT NULL DEFAULT '',
+  createdAt TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_kokuzo_algorithms_threadId ON kokuzo_algorithms(threadId);
+CREATE INDEX IF NOT EXISTS idx_kokuzo_algorithms_createdAt ON kokuzo_algorithms(createdAt);

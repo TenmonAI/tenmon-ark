@@ -202,7 +202,7 @@ export default function ChatRoom() {
     }
   };
 
-  // ファイルアップロード処理
+  // ファイルアップロード処理（既存の tRPC 経由）
   const handleFileUpload = async (files: File[]) => {
     for (const file of files) {
       try {
@@ -244,6 +244,55 @@ export default function ChatRoom() {
         refetchFiles();
       } catch (error) {
         console.error("File upload error:", error);
+      }
+    }
+  };
+
+  // ファイルアップロード処理（新規 /api/upload エンドポイント使用）
+  const handleFileUploadToVPS = async (files: File[]) => {
+    for (const file of files) {
+      try {
+        const formData = new FormData();
+        formData.append("file", file);
+
+        const response = await fetch("/api/upload", {
+          method: "POST",
+          body: formData,
+        });
+
+        if (!response.ok) {
+          if (response.status === 413) {
+            toast.error(`ファイルサイズが200MBを超えています: ${file.name}`);
+          } else {
+            toast.error(`アップロードに失敗しました: ${file.name}`);
+          }
+          continue;
+        }
+
+        const data = await response.json();
+        
+        if (data.ok) {
+          toast.success(`ファイルを保存しました: ${data.fileName}`);
+          
+          // Event Log に記録（Local-first: ネットがあっても必ずLocalに書く）
+          try {
+            await logFileUploaded({
+              fileId: 0, // /api/upload は fileId を返さない
+              conversationId: currentRoomId || undefined,
+              fileName: data.fileName,
+            });
+          } catch (error) {
+            console.warn("[ChatRoom] Failed to log file upload:", error);
+          }
+
+          // チャットに「保存完了」メッセージを表示（system メッセージとして）
+          // 注: 既存のメッセージシステムに追加する場合は、適切な方法で実装
+        } else {
+          toast.error(`アップロードに失敗しました: ${data.error || "Unknown error"}`);
+        }
+      } catch (error) {
+        console.error("[ChatRoom] File upload to VPS error:", error);
+        toast.error(`アップロードに失敗しました: ${error instanceof Error ? error.message : "Unknown error"}`);
       }
     }
   };
