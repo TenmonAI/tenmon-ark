@@ -30,15 +30,23 @@ http_get_json() {
 echo "[1] deploy (NO_RESTART=1)"
 NO_RESTART=1 bash scripts/deploy_live.sh
 
-echo "[1-1] apply DB schema (bail) + ensure kokuzo_pages exists"
+echo "[1-1] apply DB schema (bail) + ensure kokuzo_pages and audit tables exist"
 command -v sqlite3 >/dev/null 2>&1 || (echo "[FAIL] sqlite3 missing. run: sudo apt-get install -y sqlite3" && exit 1)
 # dataDir が無ければ作成
 sudo mkdir -p "$DATA_DIR" || true
-# schema を dataDir の DB に適用
+
+# kokuzo schema を適用
 sqlite3 -bail "$DATA_DIR/kokuzo.sqlite" < "$REPO/src/db/kokuzo_schema.sql"
 has_pages="$(sqlite3 "$DATA_DIR/kokuzo.sqlite" "SELECT name FROM sqlite_master WHERE type='table' AND name='kokuzo_pages' LIMIT 1;")"
 test "$has_pages" = "kokuzo_pages" || (echo "[FAIL] kokuzo_pages missing after schema apply" && exit 1)
-echo "[PASS] DB schema ok (kokuzo_pages exists, dataDir=$DATA_DIR)"
+
+# audit schema を適用
+sqlite3 -bail "$DATA_DIR/audit.sqlite" < "$REPO/src/db/approval_schema.sql" 2>/dev/null || true
+sqlite3 -bail "$DATA_DIR/audit.sqlite" < "$REPO/src/db/audit_schema.sql" 2>/dev/null || true
+has_tool_audit="$(sqlite3 "$DATA_DIR/audit.sqlite" "SELECT name FROM sqlite_master WHERE type='table' AND name='tool_audit' LIMIT 1;" 2>/dev/null || echo "")"
+test "$has_tool_audit" = "tool_audit" || (echo "[FAIL] tool_audit missing after audit schema apply (has_tool_audit=$has_tool_audit)" && exit 1)
+
+echo "[PASS] DB schema ok (kokuzo_pages exists, tool_audit exists, dataDir=$DATA_DIR)"
 
 echo "[2] dist must match (repo vs live)"
 diff -qr /opt/tenmon-ark-repo/api/dist /opt/tenmon-ark-live/dist >/dev/null || (echo "[FAIL] dist mismatch (repo vs live)" && exit 1)

@@ -125,17 +125,48 @@ function applySchemas(database: DatabaseSync, kind: DbKind): void {
   // dist/db/index.js から見て dist/db/*.sql を読む
   const schemaDir = __dirname;
   
-  console.log(`[DB-SCHEMA] apply start kind=${kind} schemaDir=${schemaDir}`);
-  for (const f of schemaFilesFor(kind)) {
-    const full = path.join(schemaDir, f);
-    if (!fs.existsSync(full)) {
-      console.warn(`[DB] schema file not found: ${full}`);
-      continue;
+  const pid = process.pid;
+  const uptime = process.uptime();
+  console.log(`[DB-SCHEMA] apply start kind=${kind} schemaDir=${schemaDir} pid=${pid} uptime=${uptime}s`);
+  
+  try {
+    const files = schemaFilesFor(kind);
+    console.log(`[DB-SCHEMA] files to apply: ${files.join(", ")}`);
+    
+    for (const f of files) {
+      const full = path.join(schemaDir, f);
+      console.log(`[DB-SCHEMA] processing file: ${full}`);
+      
+      if (!fs.existsSync(full)) {
+        console.error(`[DB-SCHEMA] FATAL: schema file not found: ${full} pid=${pid} uptime=${uptime}s`);
+        throw new Error(`Schema file not found: ${full}`);
+      }
+      
+      try {
+        const sql = fs.readFileSync(full, "utf8");
+        if (!sql || sql.trim().length === 0) {
+          console.error(`[DB-SCHEMA] FATAL: schema file is empty: ${full} pid=${pid} uptime=${uptime}s`);
+          throw new Error(`Schema file is empty: ${full}`);
+        }
+        console.log(`[DB-SCHEMA] executing SQL from ${f} (${sql.length} chars) pid=${pid} uptime=${uptime}s`);
+        withRetry(() => database.exec(sql));
+        console.log(`[DB-SCHEMA] executed ${f} successfully pid=${pid} uptime=${uptime}s`);
+      } catch (e: any) {
+        const errorMsg = e?.message || String(e);
+        const errorCode = e?.code;
+        console.error(`[DB-SCHEMA] FATAL: failed to apply ${f} pid=${pid} uptime=${uptime}s error=${errorMsg} code=${errorCode}`);
+        console.error(`[DB-SCHEMA] stack:`, e?.stack);
+        throw e;
+      }
     }
-    const sql = fs.readFileSync(full, "utf8");
-    withRetry(() => database.exec(sql));
+    console.log(`[DB-SCHEMA] apply done kind=${kind} pid=${pid} uptime=${uptime}s`);
+  } catch (e: any) {
+    const errorMsg = e?.message || String(e);
+    const errorCode = e?.code;
+    console.error(`[DB-SCHEMA] FATAL: applySchemas failed for kind=${kind} pid=${pid} uptime=${uptime}s error=${errorMsg} code=${errorCode}`);
+    console.error(`[DB-SCHEMA] stack:`, e?.stack);
+    throw e;
   }
-  console.log(`[DB-SCHEMA] apply done kind=${kind}`);
 }
 
 export function getDb(kind: DbKind): DatabaseSync {

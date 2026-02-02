@@ -5,6 +5,7 @@ import chatRouter from "./routes/chat.js";
 import kanagiRoutes from "./routes/kanagi.js";
 import tenmonRoutes from "./routes/tenmon.js";
 import { markListenReady } from "./health/readiness.js";
+import { getDb } from "./db/index.js";
 
 // Debug: 未処理例外のハンドリング
 const pid = process.pid;
@@ -27,6 +28,32 @@ const PORT = process.env.PORT ? Number(process.env.PORT) : 3000;
 const startTime = Date.now();
 const uptime = process.uptime();
 console.log(`[SERVER-START] PID=${pid} uptime=${uptime}s startTime=${new Date().toISOString()}`);
+
+// Initialize all databases at startup
+console.log(`[DB-INIT] initializing databases at startup pid=${pid} uptime=${uptime}s`);
+try {
+  getDb("kokuzo");
+  console.log(`[DB-INIT] kokuzo ready pid=${pid} uptime=${uptime}s`);
+} catch (e: any) {
+  console.error(`[DB-INIT] FATAL: kokuzo init failed pid=${pid} uptime=${uptime}s:`, e);
+  process.exit(1);
+}
+
+try {
+  getDb("audit");
+  console.log(`[DB-INIT] audit ready pid=${pid} uptime=${uptime}s`);
+} catch (e: any) {
+  console.error(`[DB-INIT] FATAL: audit init failed pid=${pid} uptime=${uptime}s:`, e);
+  process.exit(1);
+}
+
+try {
+  getDb("persona");
+  console.log(`[DB-INIT] persona ready pid=${pid} uptime=${uptime}s`);
+} catch (e: any) {
+  console.error(`[DB-INIT] FATAL: persona init failed pid=${pid} uptime=${uptime}s:`, e);
+  process.exit(1);
+}
 
 app.use(cors());
 app.use(express.json());
