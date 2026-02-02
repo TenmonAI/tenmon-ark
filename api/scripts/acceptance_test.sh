@@ -13,6 +13,20 @@ cd "$SCRIPT_DIR/.."
 BASE_URL="${BASE_URL:-http://127.0.0.1:3000}"
 TEST_START_TIME="$(date '+%Y-%m-%d %H:%M:%S')"
 
+http_get_json() {
+  # usage: http_get_json URL [curl_opts...]  -> prints "CODE<TAB>BODY"
+  local url="$1"
+  shift
+  local tmp
+  tmp="$(mktemp)"
+  local code
+  code="$(curl -sS -m 1 -o "$tmp" -w '%{http_code}' "$@" "$url" || echo 000)"
+  local body
+  body="$(cat "$tmp" 2>/dev/null || true)"
+  rm -f "$tmp"
+  printf "%s\t%s" "$code" "$body"
+}
+
 echo "[1] deploy (NO_RESTART=1)"
 NO_RESTART=1 bash scripts/deploy_live.sh
 
@@ -51,66 +65,56 @@ sleep 0.4
 SINCE="$(date '+%Y-%m-%d %H:%M:%S')"
 echo "[1-0] SINCE=${SINCE}"
 
-wait_audit() {
-  local deadline=$((SECONDS + 90))
-  while [ $SECONDS -lt $deadline ]; do
-    # 503は仕様なので握りつぶす
-    out="$(curl -sS -m 1.5 http://127.0.0.1:3000/api/audit || true)"
-    # ok==true と gitSha が返るまで待つ
-    echo "$out" | jq -e '.ok == true and (.gitSha|type=="string") and (.gitSha|length>0)' >/dev/null 2>&1 && return 0
-    sleep 0.3
-  done
+echo "[2] wait /api/audit (ok==true + gitSha + readiness)"
+REPO_SHA="$(cd /opt/tenmon-ark-repo && git rev-parse --short HEAD)"
 
-  echo "[FAIL] /api/audit not ready"
-  sudo journalctl -u tenmon-ark-api.service --since "${SINCE}" --no-pager | tail -n 120
-  return 1
-}
+for i in $(seq 1 200); do
+  out="$(http_get_json "$BASE_URL/api/audit")"
+  code="${out%%$'\t'*}"
+  body="${out#*$'\t'}"
 
-wait_chat() {
-  local deadline=$((SECONDS + 90))
-  while [ $SECONDS -lt $deadline ]; do
-    out="$(curl -sS -m 2 http://127.0.0.1:3000/api/chat \
-      -H 'Content-Type: application/json' \
-      -d '{"threadId":"acc","message":"ping"}' || true)"
-
-    # decisionFrame contract（例：ku object必須、llm null）
-    echo "$out" | jq -e '.decisionFrame.ku|type=="object"' >/dev/null 2>&1 \
-      && echo "$out" | jq -e '.decisionFrame.llm == null' >/dev/null 2>&1 \
-      && return 0
-
-    sleep 0.4
-  done
-
-  echo "[FAIL] /api/chat not ready"
-  sudo journalctl -u tenmon-ark-api.service --since "${SINCE}" --no-pager | tail -n 120
-  return 1
-}
-
-echo "[2] wait /api/audit"
-wait_audit
-
-# [2-1] wait /api/chat ready (must return 200 and decisionFrame exists)
-echo "[2-1] wait /api/chat (must be HTTP 200)"
-for i in $(seq 1 150); do
-  code="$(curl -sS -o /tmp/_chat_probe.json -w "%{http_code}" \
-    "$BASE_URL/api/chat" -H "Content-Type: application/json" \
-    -d '{"threadId":"t-probe","message":"hello"}' || true)"
-  if [ "$code" = "200" ]; then
-    # decisionFrame が取れることまで確認してから PASS
-    if jq -e '.decisionFrame.llm==null and (.decisionFrame.ku|type)=="object" and (.response|type)=="string"' /tmp/_chat_probe.json >/dev/null 2>&1; then
-      echo "[PASS] chat ready"
+  if [ "$code" = "200" ] && echo "$body" | jq -e 'type=="object" and .ok==true' >/dev/null 2>&1; then
+    LIVE_SHA="$(echo "$body" | jq -r '.gitSha // ""')"
+    if [ -n "$LIVE_SHA" ] && [ "$LIVE_SHA" = "$REPO_SHA" ]; then
+      echo "[PASS] audit ready (gitSha=$LIVE_SHA)"
       break
     fi
   fi
   sleep 0.2
 done
 
-# 最終ゲート（ここでダメなら FAIL）
-code="$(curl -sS -o /tmp/_chat_probe.json -w "%{http_code}" \
-  "$BASE_URL/api/chat" -H "Content-Type: application/json" \
-  -d '{"threadId":"t-probe","message":"hello"}' || true)"
-test "$code" = "200" || (echo "[FAIL] /api/chat not ready (http=$code)" && exit 1)
-jq -e '.decisionFrame.llm==null and (.decisionFrame.ku|type)=="object" and (.response|type)=="string"' /tmp/_chat_probe.json >/dev/null \
+# 最終確認
+out="$(http_get_json "$BASE_URL/api/audit")"
+code="${out%%$'\t'*}"
+body="${out#*$'\t'}"
+[ "$code" = "200" ] || (echo "[FAIL] audit not 200 (code=$code)" && echo "$body" && exit 1)
+LIVE_SHA="$(echo "$body" | jq -r '.gitSha // ""')"
+[ "$LIVE_SHA" = "$REPO_SHA" ] || (echo "[FAIL] audit gitSha mismatch (live=$LIVE_SHA repo=$REPO_SHA)" && exit 1)
+
+echo "[2-1] wait /api/chat (decisionFrame contract must be ready)"
+for i in $(seq 1 200); do
+  out="$(http_get_json "$BASE_URL/api/chat" -H "Content-Type: application/json" -d '{"threadId":"t-probe","message":"hello"}')"
+  code="${out%%$'\t'*}"
+  body="${out#*$'\t'}"
+
+  if [ "$code" = "200" ] && echo "$body" | jq -e '
+    type=="object" and
+    .decisionFrame.llm==null and
+    (.decisionFrame.ku|type)=="object" and
+    (.response|type)=="string"
+  ' >/dev/null 2>&1; then
+    echo "[PASS] chat ready"
+    break
+  fi
+  sleep 0.2
+done
+
+# 最終確認
+out="$(http_get_json "$BASE_URL/api/chat" -H "Content-Type: application/json" -d '{"threadId":"t-probe","message":"hello"}')"
+code="${out%%$'\t'*}"
+body="${out#*$'\t'}"
+[ "$code" = "200" ] || (echo "[FAIL] chat not 200 (code=$code)" && echo "$body" && exit 1)
+echo "$body" | jq -e '.decisionFrame.llm==null and (.decisionFrame.ku|type)=="object" and (.response|type)=="string"' >/dev/null \
   || (echo "[FAIL] /api/chat contract not ready" && exit 1)
 
 echo "[3] wait /api/chat (decisionFrame contract)"
