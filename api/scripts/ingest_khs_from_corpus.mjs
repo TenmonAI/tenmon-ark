@@ -5,7 +5,8 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import Database from "better-sqlite3";
+import { createHash } from "node:crypto";
+import { DatabaseSync } from "node:sqlite";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -54,7 +55,7 @@ for (const line of lines) {
 console.log(`[INGEST] Loaded ${records.length} records`);
 
 // DB に接続
-const db = new Database(KOKUZO_DB);
+const db = new DatabaseSync(KOKUZO_DB);
 
 // テーブルが存在するか確認
 const tableExists = db
@@ -100,43 +101,37 @@ function generateSha(text) {
   return createHash("sha256").update(text).digest("hex").substring(0, 16);
 }
 
-// トランザクション開始
-const insertMany = db.transaction((records) => {
-  let inserted = 0;
-  for (const rec of records) {
-    const { doc, pdfPage, text } = rec;
-    
-    // SHA を生成
-    const sha = generateSha(text);
-    const now = new Date().toISOString();
-    
-    // kokuzo_pages に UPSERT
-    if (hasSha) {
-      upsertStmt.run(doc, pdfPage, text, sha, now);
-    } else {
-      upsertStmt.run(doc, pdfPage, text, now);
-    }
-    
-    // rowid を取得
-    const row = getRowidStmt.get(doc, pdfPage);
-    if (row) {
-      const rowid = row.rowid;
-      
-      // FTS5 を更新
-      ftsDeleteStmt.run(rowid);
-      ftsInsertStmt.run(rowid, doc, pdfPage, text);
-    }
-    
-    inserted++;
-    if (inserted % 100 === 0) {
-      console.log(`[INGEST] Inserted ${inserted}/${records.length} pages...`);
-    }
+// 投入実行（トランザクションなしで直接実行）
+let inserted = 0;
+for (const rec of records) {
+  const { doc, pdfPage, text } = rec;
+  
+  // SHA を生成
+  const sha = generateSha(text);
+  const now = new Date().toISOString();
+  
+  // kokuzo_pages に UPSERT
+  if (hasSha) {
+    upsertStmt.run(doc, pdfPage, text, sha, now);
+  } else {
+    upsertStmt.run(doc, pdfPage, text, now);
   }
-  return inserted;
-});
-
-// 投入実行
-const inserted = insertMany(records);
+  
+  // rowid を取得
+  const row = getRowidStmt.get(doc, pdfPage);
+  if (row) {
+    const rowid = row.rowid;
+    
+    // FTS5 を更新
+    ftsDeleteStmt.run(rowid);
+    ftsInsertStmt.run(rowid, doc, pdfPage, text);
+  }
+  
+  inserted++;
+  if (inserted % 100 === 0) {
+    console.log(`[INGEST] Inserted ${inserted}/${records.length} pages...`);
+  }
+}
 
 console.log(`[INGEST] Inserted ${inserted} pages`);
 
