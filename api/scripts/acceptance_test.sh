@@ -7,6 +7,7 @@ LIVE="/opt/tenmon-ark-live"
 SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
 cd "$SCRIPT_DIR/.."
 BASE_URL="${BASE_URL:-http://127.0.0.1:3000}"
+TEST_START_TIME="$(date '+%Y-%m-%d %H:%M:%S')"
 
 echo "[1] deploy"
 bash scripts/deploy_live.sh
@@ -65,14 +66,14 @@ if [ -z "$chat_ready" ]; then
   sudo ss -lptn 'sport = :3000' || true
   echo "---- systemctl status ----"
   sudo systemctl status tenmon-ark-api.service --no-pager -l || true
-  echo "---- journalctl (last 200) ----"
-  sudo journalctl -u tenmon-ark-api.service -n 200 --no-pager || true
+  echo "---- journalctl (since test start: $TEST_START_TIME) ----"
+  sudo journalctl -u tenmon-ark-api.service --since "$TEST_START_TIME" --no-pager || true
   exit 1
 fi
 
 echo "[3-1] wait /api/chat (contract ready)"
 for i in $(seq 1 120); do
-  chat="$(curl -fsS "$BASE_URL/api/chat" -H "Content-Type: application/json" \
+  chat="$(curl -sS "$BASE_URL/api/chat" -H "Content-Type: application/json" \
     -d '{"threadId":"t","message":"hello"}' 2>/dev/null || true)"
   if echo "$chat" | jq -e 'type=="object" and .decisionFrame.llm==null and (.decisionFrame.ku|type)=="object" and (.response|type)=="string"' >/dev/null 2>&1; then
     echo "[PASS] chat ready"
@@ -81,7 +82,7 @@ for i in $(seq 1 120); do
   sleep 0.2
 done
 
-# 最終確認（ここで取れなければFAIL）
+# 最終確認（リトライが通った後の本番チェック、ここで取れなければFAIL）
 chat="$(curl -fsS "$BASE_URL/api/chat" -H "Content-Type: application/json" \
   -d '{"threadId":"t","message":"hello"}')"
 echo "$chat" | jq -e '.decisionFrame.llm==null and (.decisionFrame.ku|type)=="object" and (.response|type)=="string"' >/dev/null
