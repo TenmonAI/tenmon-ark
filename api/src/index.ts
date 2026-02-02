@@ -5,6 +5,7 @@ import chatRouter from "./routes/chat.js";
 import lawRouter from "./routes/law.js";
 import uploadRouter from "./routes/upload.js";
 import algRouter from "./routes/alg.js";
+import ingestRouter from "./routes/ingest.js";
 import kanagiRoutes from "./routes/kanagi.js";
 import tenmonRoutes from "./routes/tenmon.js";
 import { markListenReady } from "./health/readiness.js";
@@ -66,6 +67,7 @@ app.use("/api", chatRouter);
 app.use("/api", lawRouter);
 app.use("/api", uploadRouter);
 app.use("/api", algRouter);
+app.use("/api", ingestRouter);
 app.use("/api/kanagi", kanagiRoutes);
 
 // 既存 tenmon

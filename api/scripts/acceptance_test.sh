@@ -565,6 +565,59 @@ if ! echo "$ALG_LIST_RESP" | jq -e '(.algorithms[0].title)=="KHS Breath->Sound->
 fi
 echo "[PASS] Phase43 alg commit + list gate"
 
+echo "[44] Phase44 ingest request/confirm gate"
+# Phase42で使う小ファイルアップロードを流用（uploads/xxx を得る）
+TEST_FILE_44="/tmp/up_phase44.txt"
+printf "hello phase44" > "$TEST_FILE_44"
+UPLOAD_RESP_44="$(curl -fsS -F "file=@$TEST_FILE_44" "$BASE_URL/api/upload")"
+SAVED_PATH_44="$(echo "$UPLOAD_RESP_44" | jq -r '.savedPath')"
+if [ -z "$SAVED_PATH_44" ] || [ "$SAVED_PATH_44" = "null" ]; then
+  echo "[FAIL] Phase44: upload failed (no savedPath)"
+  echo "$UPLOAD_RESP_44" | jq '.'
+  exit 1
+fi
+# /api/ingest/request → ok:true & ingestId string
+INGEST_REQUEST_BODY="{\"threadId\":\"t44\",\"savedPath\":\"$SAVED_PATH_44\",\"doc\":\"TEST44\"}"
+INGEST_REQUEST_RESP="$(curl -fsS "$BASE_URL/api/ingest/request" -H "Content-Type: application/json" -d "$INGEST_REQUEST_BODY")"
+if ! echo "$INGEST_REQUEST_RESP" | jq -e '.ok==true and (.ingestId|type)=="string" and (.ingestId|length)>0' >/dev/null 2>&1; then
+  echo "[FAIL] Phase44: ingest request failed"
+  echo "$INGEST_REQUEST_RESP" | jq '.'
+  exit 1
+fi
+INGEST_ID_44="$(echo "$INGEST_REQUEST_RESP" | jq -r '.ingestId')"
+# /api/ingest/confirm → ok:true & pagesInserted>=1 & emptyPages==0
+INGEST_CONFIRM_BODY="{\"ingestId\":\"$INGEST_ID_44\",\"confirm\":true}"
+INGEST_CONFIRM_RESP="$(curl -fsS "$BASE_URL/api/ingest/confirm" -H "Content-Type: application/json" -d "$INGEST_CONFIRM_BODY")"
+if ! echo "$INGEST_CONFIRM_RESP" | jq -e '.ok==true and (.pagesInserted|type)=="number" and .pagesInserted>=1 and (.emptyPages|type)=="number" and .emptyPages==0' >/dev/null 2>&1; then
+  echo "[FAIL] Phase44: ingest confirm failed"
+  echo "$INGEST_CONFIRM_RESP" | jq '.'
+  exit 1
+fi
+INGEST_DOC_44="$(echo "$INGEST_CONFIRM_RESP" | jq -r '.doc')"
+# DB確認：kokuzo_pages where doc=<doc> count>=1
+DOC_COUNT_44="$(sqlite3 "$DATA_DIR/kokuzo.sqlite" "SELECT COUNT(*) FROM kokuzo_pages WHERE doc='$INGEST_DOC_44';" 2>/dev/null || echo "0")"
+if [ "$DOC_COUNT_44" -lt 1 ]; then
+  echo "[FAIL] Phase44: kokuzo_pages has no entries for doc=$INGEST_DOC_44 (count=$DOC_COUNT_44)"
+  exit 1
+fi
+# FTS確認：kokuzo_pages_fts が存在し検索が落ちない
+FTS_COUNT_44="$(sqlite3 "$DATA_DIR/kokuzo.sqlite" "SELECT COUNT(*) FROM kokuzo_pages_fts WHERE doc='$INGEST_DOC_44';" 2>/dev/null || echo "0")"
+if [ "$FTS_COUNT_44" -lt 1 ]; then
+  echo "[FAIL] Phase44: kokuzo_pages_fts has no entries for doc=$INGEST_DOC_44 (count=$FTS_COUNT_44)"
+  exit 1
+fi
+echo "[PASS] Phase44 ingest request/confirm gate"
+
+echo "[45] Phase45 chat integration smoke (ingest後に /api/chat で doc=<doc> pdfPage=1 を叩いて snippet length>0 が返る)"
+# ingest後に /api/chat で doc=<doc> pdfPage=1 を叩いて snippet length>0 が返る
+CHAT_RESP_45="$(post_chat_raw_tid "doc=$INGEST_DOC_44 pdfPage=1" "t45")"
+if ! echo "$CHAT_RESP_45" | jq -e '(.candidates|type)=="array" and (.candidates|length)>0 and (.candidates[0].snippet|type)=="string" and (.candidates[0].snippet|length)>0' >/dev/null 2>&1; then
+  echo "[FAIL] Phase45: chat response after ingest did not return snippet"
+  echo "$CHAT_RESP_45" | jq '.candidates[0]'
+  exit 1
+fi
+echo "[PASS] Phase45 chat integration smoke"
+
 echo "[GATE] No Runtime LLM usage in logs"
 if sudo journalctl -u tenmon-ark-api.service --since "$(date '+%Y-%m-%d %H:%M:%S' -d '1 minute ago')" --no-pager | grep -q "\[KANAGI-LLM\]"; then
   echo "[FAIL] Runtime LLM usage detected in logs."
