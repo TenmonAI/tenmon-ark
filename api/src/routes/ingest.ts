@@ -147,6 +147,7 @@ router.post("/ingest/confirm", (req: Request, res: Response) => {
   const ingestId = req.body?.ingestId;
   try {
     const { ingestId: bodyIngestId, confirm } = req.body;
+    const ingestId = bodyIngestId;
 
     // バリデーション
     if (!ingestId || typeof ingestId !== "string") {
@@ -342,12 +343,9 @@ sys.stderr.write(f"Extracted {len(pages)} pages\\n")
       pagesInserted,
       emptyPages,
     });
-  } catch (error) {
-    console.error("[INGEST-CONFIRM] Error:", error);
-    return res.status(500).json({
-      ok: false,
-      error: error instanceof Error ? error.message : String(error),
-    });
+  } catch (e) {
+    console.error("[INGEST-CONFIRM][FAIL]", { ingestId, err: String(e), stack: (e && (e as any).stack) || undefined });
+    return res.status(500).json({ ok: false, error: "INGEST_CONFIRM_FAILED", detail: String(e) });
   }
 });
 
