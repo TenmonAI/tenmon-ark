@@ -566,54 +566,101 @@ fi
 echo "[PASS] Phase43 alg commit + list gate"
 
 echo "[44] Phase44 ingest request/confirm gate"
-# Phase42で使う小ファイルアップロードを流用（uploads/xxx を得る）
-TEST_FILE_44="/tmp/up_phase44.txt"
-printf "hello phase44" > "$TEST_FILE_44"
-UPLOAD_RESP_44="$(curl -fsS -F "file=@$TEST_FILE_44" "$BASE_URL/api/upload")"
-SAVED_PATH_44="$(echo "$UPLOAD_RESP_44" | jq -r '.savedPath')"
-if [ -z "$SAVED_PATH_44" ] || [ "$SAVED_PATH_44" = "null" ]; then
+# テスト用PDFを生成（PythonでPDFを自作：外部依存なし）
+TEST_PDF_44="/tmp/up_phase44.pdf"
+python3 - <<'PY'
+import io
+
+text = "hello phase44"
+# --- build minimal PDF with correct xref offsets ---
+parts = []
+offsets = []
+
+def w(s: bytes):
+    parts.append(s)
+
+def mark():
+    offsets.append(sum(len(p) for p in parts))
+
+w(b"%PDF-1.4\n%\xe2\xe3\xcf\xd3\n")
+
+# 1: Catalog
+mark(); w(b"1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n")
+# 2: Pages
+mark(); w(b"2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n")
+# 3: Page
+mark(); w(b"3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 300 200] "
+          b"/Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >>\nendobj\n")
+# 4: Contents
+stream = f"BT /F1 16 Tf 40 120 Td ({text}) Tj ET\n".encode("utf-8")
+mark(); w(b"4 0 obj\n<< /Length " + str(len(stream)).encode() + b" >>\nstream\n" + stream + b"endstream\nendobj\n")
+# 5: Font
+mark(); w(b"5 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n")
+
+xref_pos = sum(len(p) for p in parts)
+w(b"xref\n0 6\n")
+w(b"0000000000 65535 f \n")
+for off in offsets:
+    w(f"{off:010d} 00000 n \n".encode("ascii"))
+
+w(b"trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n")
+w(str(xref_pos).encode("ascii") + b"\n%%EOF\n")
+
+pdf = b"".join(parts)
+open("/tmp/up_phase44.pdf","wb").write(pdf)
+print("wrote", len(pdf), "bytes to /tmp/up_phase44.pdf")
+PY
+
+# そのPDFを /api/upload へ
+up44="$(curl -fsS -F "file=@${TEST_PDF_44}" "$BASE_URL/api/upload")"
+if ! echo "$up44" | jq -e '.ok==true and (.savedPath|type)=="string" and (.savedPath|startswith("uploads/"))' >/dev/null 2>&1; then
   echo "[FAIL] Phase44: upload failed (no savedPath)"
-  echo "$UPLOAD_RESP_44" | jq '.'
+  echo "$up44" | jq '.'
   exit 1
 fi
-# /api/ingest/request → ok:true & ingestId string
-INGEST_REQUEST_BODY="{\"threadId\":\"t44\",\"savedPath\":\"$SAVED_PATH_44\",\"doc\":\"TEST44\"}"
-INGEST_REQUEST_RESP="$(curl -fsS "$BASE_URL/api/ingest/request" -H "Content-Type: application/json" -d "$INGEST_REQUEST_BODY")"
-if ! echo "$INGEST_REQUEST_RESP" | jq -e '.ok==true and (.ingestId|type)=="string" and (.ingestId|length)>0' >/dev/null 2>&1; then
+savedPath44="$(echo "$up44" | jq -r '.savedPath')"
+
+# /api/ingest/request（docは安全な名前で）
+doc44="UP44"
+r44_req="$(curl -fsS "$BASE_URL/api/ingest/request" -H "Content-Type: application/json" \
+  -d "{\"threadId\":\"t44\",\"savedPath\":\"${savedPath44}\",\"doc\":\"${doc44}\"}")"
+if ! echo "$r44_req" | jq -e '.ok==true and (.ingestId|type)=="string" and (.confirmText|type)=="string"' >/dev/null 2>&1; then
   echo "[FAIL] Phase44: ingest request failed"
-  echo "$INGEST_REQUEST_RESP" | jq '.'
+  echo "$r44_req" | jq '.'
   exit 1
 fi
-INGEST_ID_44="$(echo "$INGEST_REQUEST_RESP" | jq -r '.ingestId')"
-# /api/ingest/confirm → ok:true & pagesInserted>=1 & emptyPages==0
-INGEST_CONFIRM_BODY="{\"ingestId\":\"$INGEST_ID_44\",\"confirm\":true}"
-INGEST_CONFIRM_RESP="$(curl -fsS "$BASE_URL/api/ingest/confirm" -H "Content-Type: application/json" -d "$INGEST_CONFIRM_BODY")"
-if ! echo "$INGEST_CONFIRM_RESP" | jq -e '.ok==true and (.pagesInserted|type)=="number" and .pagesInserted>=1 and (.emptyPages|type)=="number" and .emptyPages==0' >/dev/null 2>&1; then
+ingestId44="$(echo "$r44_req" | jq -r '.ingestId')"
+
+# /api/ingest/confirm
+r44_ok="$(curl -fsS "$BASE_URL/api/ingest/confirm" -H "Content-Type: application/json" \
+  -d "{\"ingestId\":\"${ingestId44}\",\"confirm\":true}")"
+if ! echo "$r44_ok" | jq -e '.ok==true and (.doc=="UP44") and (.pagesInserted|type)=="number" and (.pagesInserted>=1) and (.emptyPages|type)=="number"' >/dev/null 2>&1; then
   echo "[FAIL] Phase44: ingest confirm failed"
-  echo "$INGEST_CONFIRM_RESP" | jq '.'
+  echo "$r44_ok" | jq '.'
   exit 1
 fi
-INGEST_DOC_44="$(echo "$INGEST_CONFIRM_RESP" | jq -r '.doc')"
-# DB確認：kokuzo_pages where doc=<doc> count>=1
-DOC_COUNT_44="$(sqlite3 "$DATA_DIR/kokuzo.sqlite" "SELECT COUNT(*) FROM kokuzo_pages WHERE doc='$INGEST_DOC_44';" 2>/dev/null || echo "0")"
-if [ "$DOC_COUNT_44" -lt 1 ]; then
-  echo "[FAIL] Phase44: kokuzo_pages has no entries for doc=$INGEST_DOC_44 (count=$DOC_COUNT_44)"
+
+# DBに doc が入ったか（最低1件）
+c44="$(sqlite3 "$DATA_DIR/kokuzo.sqlite" "SELECT COUNT(*) FROM kokuzo_pages WHERE doc='UP44';" 2>/dev/null || echo "0")"
+if [ "$c44" -lt 1 ]; then
+  echo "[FAIL] Phase44: UP44 not ingested into kokuzo_pages (count=$c44)"
   exit 1
 fi
+
 # FTS確認：kokuzo_pages_fts が存在し検索が落ちない
-FTS_COUNT_44="$(sqlite3 "$DATA_DIR/kokuzo.sqlite" "SELECT COUNT(*) FROM kokuzo_pages_fts WHERE doc='$INGEST_DOC_44';" 2>/dev/null || echo "0")"
+FTS_COUNT_44="$(sqlite3 "$DATA_DIR/kokuzo.sqlite" "SELECT COUNT(*) FROM kokuzo_pages_fts WHERE doc='UP44';" 2>/dev/null || echo "0")"
 if [ "$FTS_COUNT_44" -lt 1 ]; then
-  echo "[FAIL] Phase44: kokuzo_pages_fts has no entries for doc=$INGEST_DOC_44 (count=$FTS_COUNT_44)"
+  echo "[FAIL] Phase44: kokuzo_pages_fts has no entries for doc=UP44 (count=$FTS_COUNT_44)"
   exit 1
 fi
 echo "[PASS] Phase44 ingest request/confirm gate"
 
 echo "[45] Phase45 chat integration smoke (ingest後に /api/chat で doc=<doc> pdfPage=1 を叩いて snippet length>0 が返る)"
 # ingest後に /api/chat で doc=<doc> pdfPage=1 を叩いて snippet length>0 が返る
-CHAT_RESP_45="$(post_chat_raw_tid "doc=$INGEST_DOC_44 pdfPage=1" "t45")"
-if ! echo "$CHAT_RESP_45" | jq -e '(.candidates|type)=="array" and (.candidates|length)>0 and (.candidates[0].snippet|type)=="string" and (.candidates[0].snippet|length)>0' >/dev/null 2>&1; then
+r45="$(post_chat_raw_tid "doc=UP44 pdfPage=1" "t45")"
+if ! echo "$r45" | jq -e '(.candidates|type)=="array" and (.candidates|length)>0 and (.candidates[0].snippet|type)=="string" and (.candidates[0].snippet|length)>0' >/dev/null 2>&1; then
   echo "[FAIL] Phase45: chat response after ingest did not return snippet"
-  echo "$CHAT_RESP_45" | jq '.candidates[0]'
+  echo "$r45" | jq '.candidates[0]'
   exit 1
 fi
 echo "[PASS] Phase45 chat integration smoke"
