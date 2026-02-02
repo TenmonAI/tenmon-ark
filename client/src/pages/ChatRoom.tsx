@@ -1197,12 +1197,41 @@ export default function ChatRoom() {
 
             {/* 入力エリア */}
             <div className="chatgpt-input-container">
-              {/* ファイルアップロードゾーン */}
+              {/* ファイルアップロードゾーン（既存の tRPC 経由） */}
               <div className="mb-3">
                 <FileUploadZone
                   onFilesSelected={handleFileUpload}
                   disabled={isStreaming}
                 />
+              </div>
+              {/* ファイルアップロードゾーン（新規 /api/upload 経由、VPS保存） */}
+              <div className="mb-3">
+                <div 
+                  className="border-2 border-dashed border-border rounded-lg p-4 text-center cursor-pointer hover:bg-muted transition-colors"
+                  onDragOver={(e) => { e.preventDefault(); }}
+                  onDrop={async (e) => {
+                    e.preventDefault();
+                    const files = Array.from(e.dataTransfer.files);
+                    if (files.length > 0) {
+                      await handleFileUploadToVPS(files);
+                    }
+                  }}
+                  onClick={() => {
+                    const input = document.createElement("input");
+                    input.type = "file";
+                    input.multiple = true;
+                    input.onchange = async (e) => {
+                      const files = Array.from((e.target as HTMLInputElement).files || []);
+                      if (files.length > 0) {
+                        await handleFileUploadToVPS(files);
+                      }
+                    };
+                    input.click();
+                  }}
+                >
+                  <p className="text-sm text-muted-foreground">ここにドロップ（VPS保存）</p>
+                  <p className="text-xs text-muted-foreground mt-1">またはクリックして選択</p>
+                </div>
               </div>
               {/* モード切替UI */}
               <div className="mb-3 flex justify-between items-center">
