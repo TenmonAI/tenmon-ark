@@ -156,7 +156,7 @@ export function searchPagesForHybrid(docOrNull: string | null, query: string, li
             pdfPage: p,
             snippet: String(pageText?.snippet || "(fallback) page indexed"),
             score: 10,
-            tags: tags.length > 0 ? tags : undefined,
+            tags: tags.length > 0 ? tags : [],
           };
           
           if (p === 1) {
@@ -350,7 +350,7 @@ export function searchPagesForHybrid(docOrNull: string | null, query: string, li
         pdfPage,
         snippet: sn,
         score: finalScore,
-        tags: tags.length > 0 ? tags : undefined,
+        tags: tags.length > 0 ? tags : [],
       };
     });
     
@@ -439,7 +439,7 @@ export function searchPagesForHybrid(docOrNull: string | null, query: string, li
               pdfPage: p,
               snippet: String(pageText?.snippet || "(fallback) page indexed"),
               score: 10,
-              tags: tags.length > 0 ? tags : undefined,
+              tags: tags.length > 0 ? tags : [],
             };
             
             if (p === 1) {
@@ -505,7 +505,7 @@ function getSafeFallbackCandidates(docOrNull: string | null, limit: number): Kok
         pdfPage: p,
         snippet: "(fallback) page indexed",
         score: 10,
-        tags: tags.length > 0 ? tags : undefined,
+        tags: tags.length > 0 ? tags : [],
       });
     }
   } catch {
