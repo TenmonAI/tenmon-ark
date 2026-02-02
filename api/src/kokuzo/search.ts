@@ -405,7 +405,7 @@ export function searchPagesForHybrid(docOrNull: string | null, query: string, li
       }
       
       // good + complement を先に、bad を後に
-      final = [...good, ...complement, ...bad].slice(0, limit);
+      final = [...good, ...complement, ...bad].slice(0, limit) as KokuzoCandidate[];
     }
     
     return final;
