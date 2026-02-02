@@ -24,6 +24,11 @@ if [ -d "$LIVE/dist" ]; then
 fi
 sudo mv "$LIVE/dist.new" "$LIVE/dist"
 
+if [ "${NO_RESTART:-}" = "1" ]; then
+  echo "[deploy] NO_RESTART=1 (skip start)"
+  exit 0
+fi
+
 echo "[deploy] start service"
 sudo systemctl start tenmon-ark-api.service
 sleep 0.3

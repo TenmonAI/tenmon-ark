@@ -9,38 +9,72 @@ cd "$SCRIPT_DIR/.."
 BASE_URL="${BASE_URL:-http://127.0.0.1:3000}"
 TEST_START_TIME="$(date '+%Y-%m-%d %H:%M:%S')"
 
-echo "[1] deploy"
-bash scripts/deploy_live.sh
-
-echo "[1-0] ensure single listener on :3000 (safe order)"
-sudo systemctl stop tenmon-ark-api.service || true
-sleep 0.2
-sudo systemctl start tenmon-ark-api.service
-sleep 0.6
+echo "[1] deploy (NO_RESTART=1)"
+NO_RESTART=1 bash scripts/deploy_live.sh
 
 echo "[1-1] apply DB schema (bail) + ensure kokuzo_pages exists"
-# NOTE: db path is in repo; service reads /opt/tenmon-ark-repo/api/db/*.sqlite
 command -v sqlite3 >/dev/null 2>&1 || (echo "[FAIL] sqlite3 missing. run: sudo apt-get install -y sqlite3" && exit 1)
 sqlite3 -bail "$REPO/db/kokuzo.sqlite" < "$REPO/src/db/kokuzo_schema.sql"
-# kokuzo_pages existence check (must be present even without FTS5)
 has_pages="$(sqlite3 "$REPO/db/kokuzo.sqlite" "SELECT name FROM sqlite_master WHERE type='table' AND name='kokuzo_pages' LIMIT 1;")"
 test "$has_pages" = "kokuzo_pages" || (echo "[FAIL] kokuzo_pages missing after schema apply" && exit 1)
 echo "[PASS] DB schema ok (kokuzo_pages exists)"
+
+echo "[1-2] start service (single authority)"
+sudo systemctl start tenmon-ark-api.service
+sleep 0.6
+
+echo "[1-3] verify listener"
+sudo ss -lptn 'sport = :3000' || true
 
 echo "[2] dist must match (repo vs live)"
 diff -qr /opt/tenmon-ark-repo/api/dist /opt/tenmon-ark-live/dist >/dev/null || (echo "[FAIL] dist mismatch (repo vs live)" && exit 1)
 echo "[PASS] dist synced"
 
-echo "[2] wait /api/audit (ok==true + gitSha + readiness)"
-for i in $(seq 1 80); do
-  j="$(curl -fsS "$BASE_URL/api/audit" 2>/dev/null || true)"
-  if echo "$j" | jq -e '.ok==true and (.gitSha|type)=="string" and (.readiness|type)=="object"' >/dev/null 2>&1; then
-    echo "[PASS] audit ready"
-    break
+echo "[2] wait /api/audit (200 + ok==true + readiness READY) x2"
+ok_count=0
+last_sha=""
+
+for i in $(seq 1 200); do
+  body="$(mktemp)"
+  code="$(curl -sS -o "$body" -w '%{http_code}' "$BASE_URL/api/audit" || true)"
+
+  if [ "$code" = "200" ]; then
+    if jq -e '
+      .ok==true and
+      (.gitSha|type)=="string" and
+      (.readiness|type)=="object" and
+      (.readiness.listenReady==true) and
+      (.readiness.dbReady.persona==true) and
+      (.readiness.dbReady.kokuzo==true) and
+      (.readiness.kokuzoVerified==true)
+    ' "$body" >/dev/null 2>&1; then
+      sha="$(jq -r '.gitSha' "$body")"
+      if [ "$sha" = "$last_sha" ]; then
+        ok_count=$((ok_count+1))
+      else
+        ok_count=1
+        last_sha="$sha"
+      fi
+
+      if [ "$ok_count" -ge 2 ]; then
+        echo "[PASS] audit ready stable (gitSha=$sha)"
+        rm -f "$body"
+        break
+      fi
+    else
+      ok_count=0
+      last_sha=""
+    fi
+  else
+    ok_count=0
+    last_sha=""
   fi
+
+  rm -f "$body"
   sleep 0.2
 done
-curl -fsS "$BASE_URL/api/audit" | jq -e '.ok==true and (.gitSha|type)=="string" and (.readiness|type)=="object"' >/dev/null
+
+test "$ok_count" -ge 2 || (echo "[FAIL] /api/audit not stable-ready" && exit 1)
 
 echo "[3-1] wait /api/chat ready"
 for i in $(seq 1 120); do
