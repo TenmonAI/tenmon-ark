@@ -47,16 +47,33 @@ has_tool_audit="$(sqlite3 "$DATA_DIR/audit.sqlite" "SELECT name FROM sqlite_mast
 test "$has_tool_audit" = "tool_audit" || (echo "[FAIL] tool_audit missing after audit schema apply (has_tool_audit=$has_tool_audit)" && exit 1)
 
 # kokuzo_pages count > 0 を確認（必須ゲート）
+# データが無い場合は自動投入を試みる（冪等）
 PAGES_COUNT="$(sqlite3 "$DATA_DIR/kokuzo.sqlite" "SELECT COUNT(*) FROM kokuzo_pages;" 2>/dev/null || echo "0")"
 if [ "$PAGES_COUNT" = "0" ]; then
-  echo "[FAIL] kokuzo_pages is empty (count=0). Must ingest data before proceeding."
-  echo ""
-  echo "To ingest KHS data, run:"
-  echo "  cd /opt/tenmon-ark-repo/api"
-  echo "  bash scripts/ingest_khs_from_pdf.sh  # Extract from PDF (pages 1-3)"
-  echo "  # OR"
-  echo "  bash scripts/ingest_khs_minimal.sh  # Use minimal sample data"
-  exit 1
+  echo "[INFO] kokuzo_pages is empty (count=0). Attempting to ingest from corpus..."
+  # まず corpus から投入を試みる
+  if [ -f "/opt/tenmon-corpus/db/khs_pages.jsonl" ] || [ -f "/opt/tenmon-corpus/db/khs_text.jsonl" ]; then
+    echo "[INFO] Found corpus jsonl, running ingest_khs_from_corpus.sh"
+    bash scripts/ingest_khs_from_corpus.sh || (echo "[WARN] corpus ingest failed, trying minimal sample" && bash scripts/ingest_khs_minimal.sh || true)
+  else
+    echo "[INFO] Corpus jsonl not found, trying minimal sample"
+    bash scripts/ingest_khs_minimal.sh || true
+  fi
+  sleep 0.5
+  # 再確認
+  PAGES_COUNT="$(sqlite3 "$DATA_DIR/kokuzo.sqlite" "SELECT COUNT(*) FROM kokuzo_pages;" 2>/dev/null || echo "0")"
+  if [ "$PAGES_COUNT" = "0" ]; then
+    echo "[FAIL] kokuzo_pages is still empty after ingestion attempt"
+    echo ""
+    echo "To manually ingest KHS data, run:"
+    echo "  cd /opt/tenmon-ark-repo/api"
+    echo "  bash scripts/ingest_khs_from_corpus.sh  # From corpus jsonl"
+    echo "  # OR"
+    echo "  bash scripts/ingest_khs_from_pdf.sh  # Extract from PDF (pages 1-3)"
+    echo "  # OR"
+    echo "  bash scripts/ingest_khs_minimal.sh  # Use minimal sample data"
+    exit 1
+  fi
 fi
 echo "[PASS] DB schema ok (kokuzo_pages exists, tool_audit exists, pages_count=$PAGES_COUNT, dataDir=$DATA_DIR)"
 
