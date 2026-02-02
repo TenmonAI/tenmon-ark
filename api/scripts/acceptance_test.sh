@@ -89,8 +89,29 @@ wait_chat() {
 echo "[2] wait /api/audit"
 wait_audit
 
-echo "[2-1] wait /api/chat"
-wait_chat
+# [2-1] wait /api/chat ready (must return 200 and decisionFrame exists)
+echo "[2-1] wait /api/chat (must be HTTP 200)"
+for i in $(seq 1 150); do
+  code="$(curl -sS -o /tmp/_chat_probe.json -w "%{http_code}" \
+    "$BASE_URL/api/chat" -H "Content-Type: application/json" \
+    -d '{"threadId":"t-probe","message":"hello"}' || true)"
+  if [ "$code" = "200" ]; then
+    # decisionFrame が取れることまで確認してから PASS
+    if jq -e '.decisionFrame.llm==null and (.decisionFrame.ku|type)=="object" and (.response|type)=="string"' /tmp/_chat_probe.json >/dev/null 2>&1; then
+      echo "[PASS] chat ready"
+      break
+    fi
+  fi
+  sleep 0.2
+done
+
+# 最終ゲート（ここでダメなら FAIL）
+code="$(curl -sS -o /tmp/_chat_probe.json -w "%{http_code}" \
+  "$BASE_URL/api/chat" -H "Content-Type: application/json" \
+  -d '{"threadId":"t-probe","message":"hello"}' || true)"
+test "$code" = "200" || (echo "[FAIL] /api/chat not ready (http=$code)" && exit 1)
+jq -e '.decisionFrame.llm==null and (.decisionFrame.ku|type)=="object" and (.response|type)=="string"' /tmp/_chat_probe.json >/dev/null \
+  || (echo "[FAIL] /api/chat contract not ready" && exit 1)
 
 echo "[3] wait /api/chat (decisionFrame contract)"
 chat_ready=""
