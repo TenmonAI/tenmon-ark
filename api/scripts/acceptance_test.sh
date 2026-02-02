@@ -332,12 +332,12 @@ echo "$r36_4" | jq -e '(.decisionFrame.ku|type)=="object"' >/dev/null
 echo "[PASS] Phase36-2 fallback response"
 
 echo "[37] Phase37 KHS minimal ingestion E2E (ingest -> query -> evidence)"
-# kokuzo_pages count > 0 を確認
+# kokuzo_pages count > 0 は Phase1-1 で既に確認済み（FAIL で終了するため、ここには到達しない）
+# 念のため再確認
 PAGES_COUNT="$(sqlite3 "$DATA_DIR/kokuzo.sqlite" "SELECT COUNT(*) FROM kokuzo_pages;" 2>/dev/null || echo "0")"
 if [ "$PAGES_COUNT" = "0" ]; then
-  echo "[INFO] kokuzo_pages is empty, running ingest_khs_minimal.sh"
-  bash scripts/ingest_khs_minimal.sh || (echo "[WARN] ingest failed, but continuing..." && true)
-  sleep 0.5
+  echo "[FAIL] Phase37: kokuzo_pages is empty (should have been caught in Phase1-1)"
+  exit 1
 fi
 # 「言霊とは何？」で引用が出ることを確認
 r37="$(post_chat_raw_tid "言霊とは何？" "t37")"
