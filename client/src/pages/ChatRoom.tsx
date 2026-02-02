@@ -38,6 +38,9 @@ import { OfflineStatusBar } from "@/components/ui/offline/OfflineStatusBar";
 import { FileUploadZone } from "@/components/fileUpload/FileUploadZone";
 import { FileList } from "@/components/fileUpload/FileList";
 import { toast } from "sonner";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { BookOpen, Save } from "lucide-react";
 import { logChatMessageAdded, logFileUploaded, logLearningToggled } from "@/lib/offline/eventLogClient";
 import { setupAutoSync } from "@/lib/offline/syncFabricClient";
 import { setupRestoreOnStartup } from "@/lib/offline/restoreFromSnapshot";
@@ -65,6 +68,11 @@ export default function ChatRoom() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [roomToDelete, setRoomToDelete] = useState<number | null>(null);
   const [showReasoning, setShowReasoning] = useState<number | null>(null);
+  const [deepAnalysis, setDeepAnalysis] = useState(false);
+  const [candidates, setCandidates] = useState<any[]>([]);
+  const [laws, setLaws] = useState<any[]>([]);
+  const [isLoadingLaws, setIsLoadingLaws] = useState(false);
+  const [feedbackModalOpen, setFeedbackModalOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { t, i18n } = useTranslation();
@@ -322,6 +330,36 @@ export default function ChatRoom() {
     loadMemory();
   }, []);
 
+  // 学習一覧を取得
+  const fetchLaws = async () => {
+    if (!currentRoomId) return;
+    
+    setIsLoadingLaws(true);
+    try {
+      const response = await fetch(`/api/law/list?threadId=room-${currentRoomId}`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const data = await response.json();
+      if (data.ok && data.laws) {
+        setLaws(data.laws);
+      }
+    } catch (error) {
+      console.error("[ChatRoom] Failed to fetch laws:", error);
+    } finally {
+      setIsLoadingLaws(false);
+    }
+  };
+
+  // ルーム変更時に学習一覧を取得
+  useEffect(() => {
+    if (currentRoomId) {
+      fetchLaws();
+    } else {
+      setLaws([]);
+    }
+  }, [currentRoomId]);
+
   // 新メッセージ時のみ自動スクロール（ユーザーが上にスクロールしている場合は無視）
   const [isUserScrolling, setIsUserScrolling] = useState(false);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -366,13 +404,18 @@ export default function ChatRoom() {
   const handleSendMessage = async () => {
     if (!inputMessage.trim()) return;
 
+    // 深層解析ONのとき、送信文字列の末尾に " #詳細" を付ける
+    const messageToSend = deepAnalysis 
+      ? `${inputMessage.trim()} #詳細`
+      : inputMessage.trim();
+
     // Personaを自動判定
     const isMobile = window.innerWidth < 768;
-    detectAndSetPersona(inputMessage.trim(), isMobile);
+    detectAndSetPersona(messageToSend, isMobile);
 
     // 虚空蔵ノード: 体験を記憶に保存（端末完結、中央サーバーには送信しない）
     try {
-      await storeExperience(inputMessage.trim());
+      await storeExperience(messageToSend);
     } catch (error) {
       console.warn("[ChatRoom] Failed to store experience:", error);
     }
@@ -383,30 +426,83 @@ export default function ChatRoom() {
         roomId: currentRoomId || 0,
         messageId: 0, // TODO: 実際のメッセージIDを取得
         role: "user",
-        content: inputMessage.trim(),
+        content: messageToSend,
         projectId: selectedProjectId, // プロジェクトIDをメタデータに付与
       });
     } catch (error) {
       console.warn("[ChatRoom] Failed to log user message:", error);
     }
 
-    // 記憶の要約を取得（中央API送信用、抽象データのみ）
-    let memorySummary: any[] = [];
-    try {
-      memorySummary = await getMemorySummaryForAPI(10);
-    } catch (error) {
-      console.warn("[ChatRoom] Failed to get memory summary:", error);
-    }
+    // 深層解析ONのとき、通常の /api/chat エンドポイントを使用して candidates を取得
+    if (deepAnalysis) {
+      try {
+        const response = await fetch("/api/chat", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            threadId: `room-${currentRoomId || 0}`,
+            message: messageToSend,
+          }),
+        });
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        // candidates を保存
+        if (data.candidates && Array.isArray(data.candidates)) {
+          setCandidates(data.candidates);
+        } else {
+          setCandidates([]);
+        }
+        
+        // ストリーミングメッセージも送信（通常の応答表示のため）
+        const memorySummary: any[] = [];
+        try {
+          const summary = await getMemorySummaryForAPI(10);
+          memorySummary.push(...summary);
+        } catch (error) {
+          console.warn("[ChatRoom] Failed to get memory summary:", error);
+        }
+        
+        setErrorMessage(null);
+        sendStreamingMessage({
+          roomId: currentRoomId || undefined,
+          message: messageToSend,
+          language: i18n.language,
+          persona: persona.current,
+          projectId: selectedProjectId,
+          memorySummary,
+        });
+      } catch (error) {
+        console.error("[ChatRoom] Failed to fetch candidates:", error);
+        setErrorMessage(error instanceof Error ? error.message : "Failed to fetch candidates");
+        setCandidates([]);
+      }
+    } else {
+      // 通常のストリーミング送信
+      const memorySummary: any[] = [];
+      try {
+        const summary = await getMemorySummaryForAPI(10);
+        memorySummary.push(...summary);
+      } catch (error) {
+        console.warn("[ChatRoom] Failed to get memory summary:", error);
+      }
 
-    setErrorMessage(null);
-    sendStreamingMessage({
-      roomId: currentRoomId || undefined,
-      message: inputMessage.trim(),
-      language: i18n.language,
-      persona: persona.current,
-      projectId: selectedProjectId,
-      memorySummary, // 抽象データのみを送信
-    });
+      setErrorMessage(null);
+      sendStreamingMessage({
+        roomId: currentRoomId || undefined,
+        message: messageToSend,
+        language: i18n.language,
+        persona: persona.current,
+        projectId: selectedProjectId,
+        memorySummary,
+      });
+    }
   };
 
   // Persona State
@@ -651,6 +747,63 @@ export default function ChatRoom() {
         />
       </div>
 
+      {/* 右サイドバー: 学習一覧 */}
+      {currentRoomId && (
+        <div className="w-64 border-l border-border hidden lg:block overflow-y-auto">
+          <div className="p-4 border-b border-border">
+            <h3 className="text-sm font-medium text-foreground">学習一覧</h3>
+          </div>
+          <div className="p-2 space-y-2">
+            {isLoadingLaws ? (
+              <div className="flex items-center justify-center py-4">
+                <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+              </div>
+            ) : laws.length === 0 ? (
+              <p className="text-xs text-muted-foreground text-center py-4">
+                学習した項目はありません
+              </p>
+            ) : (
+              laws.map((law) => (
+                <Card
+                  key={law.id}
+                  className="p-2 cursor-pointer hover:bg-muted transition-colors"
+                  onClick={() => {
+                    const pinMessage = `doc=${law.doc} pdfPage=${law.pdfPage}`;
+                    setInputMessage(pinMessage);
+                    setDeepAnalysis(true);
+                    setTimeout(() => {
+                      handleSendMessage();
+                    }, 100);
+                  }}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1 mb-1">
+                        <span className="text-xs font-medium text-foreground truncate">
+                          {law.doc} P{law.pdfPage}
+                        </span>
+                      </div>
+                      {law.tags && law.tags.length > 0 && (
+                        <div className="flex gap-1 mb-1 flex-wrap">
+                          {law.tags.map((tag: string, tagIdx: number) => (
+                            <Badge key={tagIdx} variant="outline" className="text-xs">
+                              {tag}
+                            </Badge>
+                          ))}
+                        </div>
+                      )}
+                      <p className="text-xs text-muted-foreground line-clamp-2">
+                        {law.quote}
+                      </p>
+                    </div>
+                  </div>
+                </Card>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+
       {/* 右メインエリア：会話履歴と入力欄 */}
       <div className="flex-1 flex flex-col h-screen w-full max-w-full overflow-x-hidden">
         {currentRoomId || isStreaming ? (
@@ -861,6 +1014,93 @@ export default function ChatRoom() {
               )}
 
               <div ref={messagesEndRef} />
+              
+              {/* Candidates 表示（深層解析ONのとき） */}
+              {candidates.length > 0 && (
+                <div className="max-w-4xl mx-auto px-4 py-3 space-y-3">
+                  <h3 className="text-sm font-medium text-foreground mb-2">検索候補</h3>
+                  {candidates.map((candidate, idx) => (
+                    <Card key={idx} className="p-3">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-xs font-medium text-foreground">
+                              {candidate.doc} P{candidate.pdfPage}
+                            </span>
+                            {candidate.tags && candidate.tags.length > 0 && (
+                              <div className="flex gap-1">
+                                {candidate.tags.map((tag: string, tagIdx: number) => (
+                                  <Badge key={tagIdx} variant="outline" className="text-xs">
+                                    {tag}
+                                  </Badge>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                          <p className="text-sm text-muted-foreground line-clamp-2">
+                            {candidate.snippet}
+                          </p>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              const pinMessage = `doc=${candidate.doc} pdfPage=${candidate.pdfPage}`;
+                              setInputMessage(pinMessage);
+                              setDeepAnalysis(true);
+                              setTimeout(() => {
+                                handleSendMessage();
+                              }, 100);
+                            }}
+                          >
+                            <BookOpen className="w-3 h-3 mr-1" />
+                            深掘り
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={async () => {
+                              try {
+                                const response = await fetch("/api/law/commit", {
+                                  method: "POST",
+                                  headers: {
+                                    "Content-Type": "application/json",
+                                  },
+                                  body: JSON.stringify({
+                                    threadId: `room-${currentRoomId || 0}`,
+                                    doc: candidate.doc,
+                                    pdfPage: candidate.pdfPage,
+                                  }),
+                                });
+                                
+                                if (!response.ok) {
+                                  throw new Error(`HTTP error! status: ${response.status}`);
+                                }
+                                
+                                const data = await response.json();
+                                if (data.ok) {
+                                  toast.success("学習を保存しました");
+                                  // 学習一覧を再取得
+                                  await fetchLaws();
+                                } else {
+                                  throw new Error(data.error || "Failed to commit law");
+                                }
+                              } catch (error) {
+                                console.error("[ChatRoom] Failed to commit law:", error);
+                                toast.error(error instanceof Error ? error.message : "学習の保存に失敗しました");
+                              }
+                            }}
+                          >
+                            <Save className="w-3 h-3 mr-1" />
+                            学習
+                          </Button>
+                        </div>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* プログレスバー */}
@@ -916,7 +1156,17 @@ export default function ChatRoom() {
                 />
               </div>
               {/* モード切替UI */}
-              <div className="mb-3 flex justify-end">
+              <div className="mb-3 flex justify-between items-center">
+                <div className="flex items-center gap-2">
+                  <Switch
+                    id="deep-analysis"
+                    checked={deepAnalysis}
+                    onCheckedChange={setDeepAnalysis}
+                  />
+                  <Label htmlFor="deep-analysis" className="text-sm cursor-pointer">
+                    深層解析
+                  </Label>
+                </div>
                 <PersonaModeSelector />
               </div>
               <div className="chatgpt-input-wrapper">
