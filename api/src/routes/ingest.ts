@@ -144,8 +144,9 @@ router.post("/ingest/request", (req: Request, res: Response) => {
  * Response: { ok: true, doc: string, pagesInserted: number, emptyPages: number }
  */
 router.post("/ingest/confirm", (req: Request, res: Response) => {
+  const ingestId = req.body?.ingestId;
   try {
-    const { ingestId, confirm } = req.body;
+    const { ingestId: bodyIngestId, confirm } = req.body;
 
     // バリデーション
     if (!ingestId || typeof ingestId !== "string") {
