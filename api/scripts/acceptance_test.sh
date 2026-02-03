@@ -702,3 +702,16 @@ if sudo journalctl -u tenmon-ark-api.service --since "$(date '+%Y-%m-%d %H:%M:%S
 fi
 echo "[PASS] No Runtime LLM usage detected."
 echo "[PASS] acceptance_test.sh"
+
+echo "[49] Phase49 IROHA seed gate"
+bash api/scripts/seed_iroha_principles_v1.sh
+
+RL49="$(curl -fsS "$BASE_URL/api/law/list?threadId=iroha-seed")"
+echo "$RL49" | jq -e '.ok==true' >/dev/null
+echo "$RL49" | jq -e '(.laws|type)=="array" and (.laws|length) >= 6' >/dev/null || {
+  echo "[FAIL] Phase49: iroha-seed laws < 6"
+  echo "$RL49" | jq .
+  exit 1
+}
+
+echo "[PASS] Phase49 IROHA seed gate"
