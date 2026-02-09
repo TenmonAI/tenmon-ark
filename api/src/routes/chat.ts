@@ -545,7 +545,19 @@ router.post("/chat", async (req: Request, res: Response<ChatResponseBody>) => {
   // LLM_CHAT_ENTRY_V1: 通常会話はLLMへ（根拠要求/資料指定は除外）
   const hasDocPageHere = /pdfPage\s*=\s*\d+/i.test(message) || /\bdoc\b/i.test(message);
   const wantsEvidence = /資料|引用|根拠|出典|ソース|doc\s*=|pdfPage|P\d+|ページ/i.test(trimmed);
-  const shouldLLMChat = !hasDocPageHere && !wantsDetail && !wantsEvidence && !trimmed.startsWith("#");
+
+  // smoke gate: smoke-hybrid系/NON_TEXT は絶対に LLM_CHAT に入れない
+  const isSmokeHybrid = /^smoke-hybrid/i.test(threadId);
+  const isNonTextLike = /^\s*NON_TEXT\s*$/i.test(trimmed);
+
+  const shouldLLMChat =
+    !isSmokeHybrid &&
+    !isNonTextLike &&
+    !hasDocPageHere &&
+    !wantsDetail &&
+    !wantsEvidence &&
+    !trimmed.startsWith("#");
+
   if (shouldLLMChat) {
     const out = await llmChat({ system: TENMON_CONSTITUTION_TEXT, history: [], user: trimmed });
     const safe = scrubEvidenceLike(out.text);
