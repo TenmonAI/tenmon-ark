@@ -3,7 +3,7 @@ import { sanitizeInput } from "../tenmon/inputSanitizer.js";
 import type { ChatResponseBody } from "../types/chat.js";
 import { runKanagiReasoner } from "../kanagi/engine/fusionReasoner.js";
 import { getCurrentPersonaState } from "../persona/personaState.js";
-import { composeResponse } from "../kanagi/engine/responseComposer.js";
+import { composeResponse, composeConversationalResponse } from "../kanagi/engine/responseComposer.js";
 import { getSessionId } from "../memory/sessionId.js";
 import { naturalRouter } from "../persona/naturalRouter.js";
 import { emptyCorePlan } from "../kanagi/core/corePlan.js";
@@ -641,7 +641,7 @@ router.post("/chat", async (req: Request, res: Response<ChatResponseBody>) => {
     const trace = await runKanagiReasoner(sanitized.text, sessionId);
 
     // 観測円から応答文を生成
-    const response = composeResponse(trace, personaState);
+    const response = composeConversationalResponse(trace, personaState, sanitized.text);
 
     // 工程3: CorePlan（器）を必ず経由（最小の決定論コンテナ）
     const detailPlan = emptyCorePlan(
