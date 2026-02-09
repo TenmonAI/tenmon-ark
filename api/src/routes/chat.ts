@@ -550,9 +550,13 @@ router.post("/chat", async (req: Request, res: Response<ChatResponseBody>) => {
   const isSmokeHybrid = /^smoke-hybrid/i.test(threadId);
   const isNonTextLike = /^\s*NON_TEXT\s*$/i.test(trimmed);
 
+
+  // acceptance gate: coreplan probe は必ず HYBRID へ流す（LLM_CHAT禁止）
+  const isCorePlanProbe = /\bcoreplan\b/i.test(trimmed);
   const shouldLLMChat =
     !isSmokeHybrid &&
     !isNonTextLike &&
+    !isCorePlanProbe &&
     !hasDocPageHere &&
     !wantsDetail &&
     !wantsEvidence &&
