@@ -35,3 +35,13 @@ sleep 0.3
 echo "[deploy] verify listener"
 sudo ss -lptn 'sport = :3000' || true
 sudo journalctl -u tenmon-ark-api.service -n 30 --no-pager || true
+echo "[deploy] audit gate"
+if command -v jq >/dev/null 2>&1; then
+  curl -fsS http://127.0.0.1:3000/api/audit | jq -e '.ok==true' >/dev/null
+  curl -fsS http://127.0.0.1:3000/api/audit | jq -e '.build.mark | contains("BUILD_MARK:DET_RECALL_V1")' >/dev/null
+else
+  curl -fsS http://127.0.0.1:3000/api/audit | grep -q 'BUILD_MARK:DET_RECALL_V1'
+fi
+
+echo "[deploy] smoke"
+bash /opt/tenmon-ark-repo/api/scripts/smoke.sh

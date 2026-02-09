@@ -20,7 +20,7 @@ export type ChatResponseBody = {
   decisionFrame?: {
     mode: string;
     intent: string;
-    llm: null;
+    llm: string | null;
     ku: Record<string, unknown>;
   };
 };

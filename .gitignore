@@ -110,3 +110,27 @@ api/0
 api/=
 api/GROUNDED
 api/answer
+
+# TENMON-ARK local backups / logs
+**/*.bak
+**/*.bak.*
+**/*.bak_*
+**/*.backup
+**/.backup/
+**/routes.bak.*/
+**/src/routes.bak.*/
+**/scripts/*.bak.*
+**/core/*.bak.*
+/tmp/*.log
+
+# TENMON-ARK local backups / logs
+**/*.bak
+**/*.bak.*
+**/*.bak_*
+**/*.backup
+**/.backup/
+**/routes.bak.*/
+**/src/routes.bak.*/
+**/scripts/*.bak.*
+**/core/*.bak.*
+/tmp/*.log

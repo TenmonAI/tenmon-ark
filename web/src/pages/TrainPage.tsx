@@ -28,7 +28,7 @@ export function TrainPage() {
           message: message.trim(),
           intent,
           importance,
-          session_id: sessionId,
+          threadId: sessionId,
         }),
       });
 
@@ -36,7 +36,7 @@ export function TrainPage() {
       if (data.success) {
         setResponse(data.response);
         setThinkingAxis(data.thinkingAxis);
-        setMessage(""); // Clear input after sending
+        setMessage(""); // Clear message after sending
       } else {
         setResponse(`Error: ${data.error}`);
       }
@@ -54,7 +54,7 @@ export function TrainPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          session_id: sessionId,
+          threadId: sessionId,
           commit_policy: policy,
         }),
       });
@@ -121,7 +121,7 @@ export function TrainPage() {
               <label className="text-sm font-medium text-gray-700 mb-1 block">
                 Importance: {importance}
               </label>
-              <input
+              <message
                 type="range"
                 min="1"
                 max="5"

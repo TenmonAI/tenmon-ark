@@ -38,3 +38,20 @@ Observe and describe only.
   }
 }
 
+export type LlmChatHistoryItem = { role: "user" | "assistant" | "system"; content: string };
+
+export async function llmChat(params: {
+  system: string;
+  history: LlmChatHistoryItem[];
+  user: string;
+}): Promise<{ text: string; provider: string }> {
+  const blocks: string[] = [];
+  blocks.push("SYSTEM:\n" + params.system.trim());
+  for (const m of params.history) {
+    blocks.push(`${m.role.toUpperCase()}:\n${m.content}`);
+  }
+  blocks.push("USER:\n" + params.user);
+  const prompt = blocks.join("\n\n").trim() + "\n\nASSISTANT:\n";
+  const out = await callLLM(prompt);
+  return { text: (out ?? "").trim(), provider: "llm" };
+}

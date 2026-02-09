@@ -695,12 +695,19 @@ if ! echo "$r46" | jq -e '(.candidates|type)=="array" and (.candidates|length)>0
 fi
 echo "[PASS] Phase46 TENMON_CORE core seed gate"
 
+# LLM_CHAT_GATE_V1: llmChat有効時は runtime-llm gate を許可（それ以外は従来通り禁止）
+LLMCHAT="$(curl -fsS http://127.0.0.1:3000/api/audit | jq -r '.build.features.llmChat // false' 2>/dev/null || echo false)"
+if [ "$LLMCHAT" = "true" ]; then
+  echo "[GATE] runtime LLM allowed (llmChat=true)"
+else
 echo "[GATE] No Runtime LLM usage in logs"
 if sudo journalctl -u tenmon-ark-api.service --since "$(date '+%Y-%m-%d %H:%M:%S' -d '1 minute ago')" --no-pager | grep -q "\[KANAGI-LLM\]"; then
   echo "[FAIL] Runtime LLM usage detected in logs."
   exit 1
 fi
 echo "[PASS] No Runtime LLM usage detected."
+fi
+
 echo "[PASS] acceptance_test.sh"
 
 echo "[49] Phase49 IROHA seed gate"
@@ -731,3 +738,13 @@ if [ "$KATA_LAWS" -lt 6 ] || [ "$KATA_ALGS" -lt 3 ]; then
   exit 1
 fi
 echo "[PASS] Phase50 KATAKAMUNA seed gate"
+# ---- TENMON_ACCEPTANCE_PROOF_V1: proof saved even if SSH disconnects ----
+PROOF="/tmp/tenmon_acceptance_last.txt"
+{
+  echo "timestamp=$(date -Iseconds)"
+  echo "exit=0"
+  echo -n "headSha="; git rev-parse --short HEAD 2>/dev/null || echo "unknown"
+  echo -n "auditSha="; curl -fsS http://127.0.0.1:3000/api/audit | jq -r '.gitSha' 2>/dev/null || echo "unknown"
+  echo -n "buildMark="; curl -fsS http://127.0.0.1:3000/api/audit | jq -r '.build.mark' 2>/dev/null || echo "unknown"
+} > "$PROOF"
+echo "[PASS] proof saved: $PROOF"

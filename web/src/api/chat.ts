@@ -8,8 +8,8 @@ export async function postChat(req: ChatRequest): Promise<ChatResponse> {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      input: req.message,
-      session_id: req.sessionId,
+      message: req.message,
+      threadId: req.sessionId,
     })
   });
 

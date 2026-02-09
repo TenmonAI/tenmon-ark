@@ -2,13 +2,18 @@ import { useEffect, useState } from "react";
 import { postChat } from "../api/chat";
 import type { Message } from "../types/chat";
 
-function getOrCreateSessionId(): string {
-  const key = "tenmon-ark.sessionId";
-  const existing = window.localStorage.getItem(key);
+const THREAD_ID_KEY = "tenmon_thread_id_v1";
+
+function getOrCreateThreadId(): string {
+  const existing = window.localStorage.getItem(THREAD_ID_KEY);
   if (existing && existing.trim().length > 0) return existing;
 
-  const created = typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`;
-  window.localStorage.setItem(key, created);
+  const created =
+    typeof crypto !== "undefined" && "randomUUID" in crypto
+      ? crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+
+  window.localStorage.setItem(THREAD_ID_KEY, created);
   return created;
 }
 
@@ -19,7 +24,7 @@ export function useChat() {
 
   useEffect(() => {
     try {
-      setSessionId(getOrCreateSessionId());
+      setSessionId(getOrCreateThreadId());
     } catch (e) {
       console.error(e);
       setSessionId("default");
@@ -35,24 +40,14 @@ export function useChat() {
     try {
       setLoading(true);
       const sid = sessionId || "default";
-      const res = await postChat({
-        message: content,
-        sessionId: sid,
-        persona: "tenmon"
-      });
+      const res = await postChat({ message: content, sessionId: sid });
       setMessages((prev) => [...prev, { role: "assistant", content: res.response }]);
     } catch (e) {
       console.error(e);
-      // UI停止禁止: 何もしない
     } finally {
       setLoading(false);
     }
   }
 
-  return {
-    sessionId,
-    messages,
-    loading,
-    sendMessage
-  };
+  return { sessionId, messages, loading, sendMessage };
 }

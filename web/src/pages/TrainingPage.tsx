@@ -76,7 +76,7 @@ export function TrainingPage() {
 
   const loadRules = async (sessionId: string) => {
     try {
-      const res = await fetch(`${API_BASE_URL}/api/training/rules?session_id=${sessionId}`);
+      const res = await fetch(`${API_BASE_URL}/api/training/rules?threadId=${sessionId}`);
       const data = await res.json();
       if (data.success) {
         setRules(data.rules);
@@ -119,7 +119,7 @@ export function TrainingPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          session_id: selectedSession,
+          threadId: selectedSession,
           dump_text: dumpText.trim(),
         }),
       });
@@ -150,7 +150,7 @@ export function TrainingPage() {
         <div className="bg-white rounded-lg shadow p-6 mb-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Create Session</h2>
           <div className="flex gap-4">
-            <input
+            <message
               type="text"
               className="flex-1 border border-gray-300 rounded px-3 py-2 text-sm"
               placeholder="Session title..."

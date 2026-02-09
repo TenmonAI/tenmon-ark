@@ -2,6 +2,7 @@ import { Router, type Request, type Response } from "express";
 import { getGitSha } from "../version.js";
 import { getReadiness } from "../health/readiness.js";
 
+import { BUILD_MARK, BUILD_FEATURES } from "../build/buildInfo.js";
 const router = Router();
 router.get("/audit", (_req: Request, res: Response) => {
   const handlerTime = Date.now();
@@ -21,7 +22,8 @@ router.get("/audit", (_req: Request, res: Response) => {
         pid,
         uptime: Math.floor(uptime),
         readiness: r,
-      });
+      build: { mark: BUILD_MARK, features: BUILD_FEATURES },
+        });
     }
     // Ready: 200 OK
     return res.json({
@@ -31,7 +33,8 @@ router.get("/audit", (_req: Request, res: Response) => {
       pid,
       uptime: Math.floor(uptime),
       readiness: r,
-    });
+    build: { mark: BUILD_MARK, features: BUILD_FEATURES },
+        });
   } catch (error) {
     // gitSha と readiness は取得を試みる（失敗時は空文字/null）
     let gitSha = "";

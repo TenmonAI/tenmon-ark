@@ -24,4 +24,20 @@ router.post("/memory/clear", (req: Request, res: Response<MemoryClearResponseBod
   });
 });
 
+/** POST /api/memory/seed — P2 gate (deterministic, LLM禁止) */
+router.post("/memory/seed", (req, res) => {
+  // 最小：契約だけ固定（後で本体を育てる）
+  return res.status(200).json({
+    ok: true,
+    seed: {
+      version: "TENMON_MEMORY_SEED_V1",
+      threadId: typeof req.body?.threadId === "string" ? req.body.threadId : "unknown",
+      digest: "stub",
+      tags: ["p2", "seed"],
+    },
+    decisionFrame: { mode: "DETERMINISTIC", llm: null },
+  });
+});
+
+
 export default router;

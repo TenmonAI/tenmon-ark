@@ -8,7 +8,7 @@ import { API_BASE_URL } from "../config/api.js";
 
 export default function KanagiPage() {
   const [trace, setTrace] = useState<KanagiTrace | null>(null);
-  const [input, setInput] = useState<string>("");
+  const [message, setInput] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
 
   async function run(userInput: string) {
@@ -19,7 +19,7 @@ export default function KanagiPage() {
       const res = await fetch(`${API_BASE_URL}/api/kanagi/reason`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ input: userInput, session_id: "ui-test" }),
+        body: JSON.stringify({ message: userInput, threadId: "ui-test" }),
       });
       const json = await res.json();
       setTrace(json.trace);
@@ -38,7 +38,7 @@ export default function KanagiPage() {
 
       <div style={{ marginBottom: "24px" }}>
         <textarea
-          value={input}
+          value={message}
           onChange={(e) => setInput(e.target.value)}
           placeholder="思考を回すための入力..."
           style={{
@@ -51,8 +51,8 @@ export default function KanagiPage() {
           }}
         />
         <button
-          onClick={() => run(input)}
-          disabled={loading || !input.trim()}
+          onClick={() => run(message)}
+          disabled={loading || !message.trim()}
           style={{
             marginTop: "12px",
             padding: "8px 16px",
@@ -60,8 +60,8 @@ export default function KanagiPage() {
             color: "white",
             border: "none",
             borderRadius: "6px",
-            cursor: loading || !input.trim() ? "not-allowed" : "pointer",
-            opacity: loading || !input.trim() ? 0.5 : 1,
+            cursor: loading || !message.trim() ? "not-allowed" : "pointer",
+            opacity: loading || !message.trim() ? 0.5 : 1,
           }}
         >
           {loading ? "思考中..." : "思考を回す"}

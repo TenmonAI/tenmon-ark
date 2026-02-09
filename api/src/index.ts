@@ -8,6 +8,7 @@ import algRouter from "./routes/alg.js";
 import ingestRouter from "./routes/ingest.js";
 import kanagiRoutes from "./routes/kanagi.js";
 import tenmonRoutes from "./routes/tenmon.js";
+import memoryRouter from "./routes/memory.js";
 import { markListenReady } from "./health/readiness.js";
 import { getDb } from "./db/index.js";
 
@@ -68,6 +69,7 @@ app.use("/api", lawRouter);
 app.use("/api", uploadRouter);
 app.use("/api", algRouter);
 app.use("/api", ingestRouter);
+app.use("/api", memoryRouter);
 app.use("/api/kanagi", kanagiRoutes);
 
 // 既存 tenmon

@@ -1,3 +1,4 @@
+import { SettingsPanel } from "./components/SettingsPanel";
 import { useEffect, useState, useRef } from "react";
 import { t } from "./i18n";
 import { KokuzoPage } from "./pages/KokuzoPage";
@@ -54,7 +55,21 @@ export function App() {
     return <KanagiPage />;
   }
 
-  const [health, setHealth] = useState<Health | null>(null);
+  
+  // P1_THREAD_ID_V1: threadId を固定（端末記憶とサーバーRecallを繋ぐ）
+  const [threadId, setThreadId] = useState<string>(() => {
+    const k = "tenmon_thread_id_v1";
+    const existing = localStorage.getItem(k);
+    if (existing && existing.length > 0) return existing;
+    const created =
+      (globalThis.crypto && "randomUUID" in globalThis.crypto)
+        ? (globalThis.crypto as any).randomUUID()
+        : `thread_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+    localStorage.setItem(k, created);
+    return created;
+  });
+
+const [health, setHealth] = useState<Health | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [persona, setPersona] = useState<Persona | null>(null);
   const [memory, setMemory] = useState<MemoryStats | null>(null);
@@ -64,6 +79,7 @@ export function App() {
   const composingRef = useRef<boolean>(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  const [showSettings, setShowSettings] = useState(false);
   useEffect(() => {
     fetch(`${API_BASE_URL}/api/health`)
       .then((res) => {
@@ -113,10 +129,7 @@ export function App() {
     fetch(`${API_BASE_URL}/api/chat`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ 
-        input: userMessage,
-        session_id: `session_${Date.now()}`,
-      }),
+      body: JSON.stringify({ threadId: threadId, message: userMessage }),
     })
       .then((res) => {
         if (!res.ok) throw new Error("chat api error");
@@ -135,6 +148,17 @@ export function App() {
   };
 
   return (
+
+    <>
+    <div style={{ display: "flex", justifyContent: "flex-end", padding: 8 }}>
+      <button onClick={() => setShowSettings(v => !v)} aria-label="settings">⚙</button>
+    </div>
+    {showSettings ? (
+      <div style={{ padding: 8 }}>
+        <SettingsPanel />
+      </div>
+    ) : null}
+
     <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
       {/* UI-Ω-1: 画面中央の孤独なカード（余白を広く） */}
       <div className="bg-white rounded-lg shadow-lg p-8 max-w-md w-full flex flex-col" style={{ maxHeight: "90vh" }}>
@@ -218,5 +242,6 @@ export function App() {
         </div>
       </div>
     </div>
+    </>
   );
 }

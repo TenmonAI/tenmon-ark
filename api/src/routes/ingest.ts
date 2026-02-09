@@ -5,7 +5,7 @@ import { Router, type Request, type Response } from "express";
 import fs from "node:fs";
 import path from "node:path";
 import { randomBytes, createHash } from "node:crypto";
-import { execSync } from "node:child_process";
+import { execSync, execFileSync } from "node:child_process";
 import { getTenmonDataDir, getDb, dbPrepare } from "../db/index.js";
 import { upsertPage } from "../kokuzo/pages.js";
 
