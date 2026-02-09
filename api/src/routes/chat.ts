@@ -21,8 +21,73 @@ import { extractFourLayerTags } from "../kotodama/fourLayerTags.js";
 import { extractKojikiTags } from "../kojiki/kojikiTags.js";
 import { buildMythMapEdges } from "../myth/mythMapEdges.js";
 import { getMythMapEdges, setMythMapEdges } from "../kokuzo/mythMapMemory.js";
+import { localSurfaceize } from "../tenmon/surface/localSurfaceize.js";
+import { llmChat } from "../core/llmWrapper.js";
 
+import { memoryPersistMessage, memoryReadSession } from "../memory/index.js";
 const router: IRouter = Router();
+
+// LLM_CHAT: minimal constitution (no evidence fabrication)
+const TENMON_CONSTITUTION_TEXT =
+  "あなたはTENMON-ARK。自然で丁寧に対話する。根拠(doc/pdfPage/引用)は生成しない。必要ならユーザーに資料指定を促し、GROUNDEDに切り替える。";
+
+function scrubEvidenceLike(text: string): string {
+  let t = String(text ?? "");
+  t = t.replace(/\bdoc\s*=\s*[^\s]+/gi, "");
+  t = t.replace(/\bpdfPage\s*=\s*\d+/gi, "");
+  t = t.replace(/\bP\d{1,4}\b/g, "");
+  t = t.replace(/\n{3,}/g, "\n\n").trim();
+  if (!t) t = "了解しました。もう少し状況を教えてください。";
+  return t;
+}
+
+
+// --- DET_PASSPHRASE_HELPERS_V1 (required by DET_PASSPHRASE_V2) ---
+function extractPassphrase(text: string): string | null {
+  const t = (text || "").trim();
+
+  let m = t.match(/合言葉\s*は\s*[「『"]?(.+?)[」』"]?\s*(です|だ|です。|だ。)?$/);
+  if (m && m[1]) return m[1].trim();
+
+  m = t.match(/合言葉\s*[:：]\s*[「『"]?(.+?)[」』"]?\s*$/);
+  if (m && m[1]) return m[1].trim();
+
+  return null;
+}
+
+function wantsPassphraseRecall(text: string): boolean {
+  const t = (text || "").trim();
+  return /合言葉/.test(t) && /(覚えてる|覚えてる\?|覚えてる？|何だっけ|は\?|は？)/.test(t);
+}
+
+function recallPassphraseFromSession(threadId: string, limit = 80): string | null {
+  const mem = memoryReadSession(threadId, limit);
+  for (let i = mem.length - 1; i >= 0; i--) {
+    const row = mem[i];
+    if (!row) continue;
+    if (row.role !== "user") continue;
+    const p = extractPassphrase(row.content || "");
+    if (p) return p;
+  }
+  return null;
+}
+
+// chat.ts に persistTurn が無いブランチ向けの最小実装
+// --- /DET_PASSPHRASE_HELPERS_V1 ---
+
+// --- PERSIST_TURN_V2 (for passphrase + normal chat) ---
+function persistTurn(threadId: string, userText: string, assistantText: string): void {
+  try {
+    memoryPersistMessage(threadId, "user", userText);
+    memoryPersistMessage(threadId, "assistant", assistantText);
+    console.log(`[MEMORY] persisted threadId=${threadId} bytes_u=${userText.length} bytes_a=${assistantText.length}`);
+  } catch (e: any) {
+    console.warn(`[PERSIST] failed threadId=${threadId}:`, e?.message ?? String(e));
+  }
+}
+// --- /PERSIST_TURN_V2 ---
+
+
 
 /**
  * GROUNDED レスポンスを生成する関数（doc/pdfPage 指定と番号選択の両方で再利用）
@@ -155,6 +220,130 @@ router.post("/chat", async (req: Request, res: Response<ChatResponseBody>) => {
   if (!message) return res.status(400).json({ response: "message required", error: "message required", timestamp, decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: {} } });
 
   const trimmed = message.trim();
+
+
+  // REPLY_SURFACE_V1: responseは必ずlocalSurfaceizeを通す（漏れ経路を潰す）
+  const reply = (payload: any) => {
+    const out = { ...payload };
+    if (typeof out.response === "string") {
+      out.response = localSurfaceize(out.response, trimmed);
+    }
+    return res.json(out);
+  };
+
+  // --- DET_NATURAL_STRESS_V1: 不安/過多はメニューに吸わせず相談テンプレへ ---
+  const tNat = trimmed;
+  const isStressShortJa =
+    /[ぁ-んァ-ン一-龯]/.test(tNat) &&
+    tNat.length <= 24 &&
+    !/#(menu|status|search|pin|talk)\b/i.test(tNat) &&
+    !/pdfPage\s*=\s*\d+/i.test(tNat) &&
+    !/\bdoc\b/i.test(tNat) &&
+    (/(不安|動けない|しんどい|つらい|焦り|詰んだ|多すぎ|やること|タスク|間に合わない|疲れた)/.test(tNat));
+
+  if (isStressShortJa) {
+    return reply({
+      response:
+        "了解。いまの状況を一言で言うと、どれに近い？\n\n" +
+        "1) 予定・タスクの整理\n" +
+        "2) 迷いの整理（選択肢がある）\n" +
+        "3) いまの気持ちを整えたい\n\n" +
+        "番号で答えてくれてもいいし、具体的に『いま困ってること』を1行で書いてもOK。",
+      evidence: null,
+      timestamp,
+      threadId,
+      decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: {} },
+    });
+  }
+  // --- /DET_NATURAL_STRESS_V1 ---
+
+
+  // --- DET_NATURAL_SHORT_JA_V1: 日本語の短文相談はNATURALで会話形に整える（Kanagiに入れない） ---
+  const isJa = /[ぁ-んァ-ン一-龯]/.test(trimmed);
+  const isShort = trimmed.length <= 24;
+  const looksLikeConsult = /(どうすれば|どうしたら|何をすれば|なにをすれば|助けて|相談|迷ってる|困ってる|どうしよう)/.test(trimmed);
+
+  // doc/pdfPage や # コマンド、番号選択はここで奪わない
+  const hasCmd = trimmed.startsWith("#");
+  const isNumberOnly = /^\d{1,2}$/.test(trimmed);
+  const hasDocPageNat = /pdfPage\s*=\s*\d+/i.test(trimmed) || /\bdoc\b/i.test(trimmed);
+
+  if (isJa && isShort && looksLikeConsult && !hasCmd && !isNumberOnly && !hasDocPageNat) {
+    return reply({
+      response:
+        "了解。いまの状況を一言で言うと、どれに近い？\n\n1) 予定・タスクの整理\n2) 迷いの整理（選択肢がある）\n3) いまの気持ちを整えたい\n\n番号で答えてくれてもいいし、具体的に『いま困ってること』を1行で書いてもOK。",
+      evidence: null,
+      timestamp,
+      threadId,
+      decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: {} },
+    });
+  }
+  // --- /DET_NATURAL_SHORT_JA_V1 ---
+
+  // --- DET_PASSPHRASE_V2: 合言葉は必ず決定論（LANE_PICK残留も無効化） ---
+  if (trimmed.includes("合言葉")) {
+    // レーン待ち状態が残っていても合言葉は優先
+    clearThreadState(threadId);
+
+    // 1) 想起
+    if (wantsPassphraseRecall(trimmed)) {
+      const p = recallPassphraseFromSession(threadId, 80);
+      const answer = p
+        ? `覚えています。合言葉は「${p}」です。`
+        : "まだ合言葉が登録されていません。先に『合言葉は◯◯です』と教えてください。";
+      persistTurn(threadId, trimmed, answer);
+      return reply({
+        response: answer,
+        evidence: null,
+        timestamp,
+        threadId,
+        decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: {} },
+      });
+    }
+
+    // 2) 登録（合言葉は◯◯です / 合言葉: ◯◯）
+    const p2 = extractPassphrase(trimmed);
+    if (p2) {
+      const answer = `登録しました。合言葉は「${p2}」です。`;
+      persistTurn(threadId, trimmed, answer);
+      return reply({
+        response: answer,
+        evidence: null,
+        timestamp,
+        threadId,
+        decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: {} },
+      });
+    }
+  }
+  // --- /DET_PASSPHRASE_V2 ---
+
+
+  // --- DET_LOW_SIGNAL_V2: ping/test等は必ずNATURALへ（Kanagiに入れない） ---
+  const low = trimmed.toLowerCase();
+  const isLowSignalPing =
+    low === "ping" ||
+    low === "test" ||
+    low === "ok" ||
+    low === "yes" ||
+    low === "no" ||
+    trimmed === "はい" ||
+    trimmed === "いいえ" ||
+    trimmed === "うん" ||
+    trimmed === "ううん" ||
+    (trimmed.length <= 3 && /^[a-zA-Z]+$/.test(trimmed));
+
+  if (isLowSignalPing) {
+    return reply({
+      response:
+        "了解しました。何かお手伝いできることはありますか？\n\n例：\n- 質問や相談\n- 資料の検索（doc/pdfPage で指定）\n- 会話の続き",
+      evidence: null,
+      timestamp,
+      threadId,
+      decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: {} },
+    });
+  }
+  // --- /DET_LOW_SIGNAL_V2 ---
+
   
   // 選択待ち状態の処理（pending state を優先）
   const pending = getThreadPending(threadId);
@@ -169,8 +358,55 @@ router.post("/chat", async (req: Request, res: Response<ChatResponseBody>) => {
         
         let responseText: string;
         if (candidates.length > 0) {
-          const top = candidates[0];
+          const usable = candidates.filter((c: any) => {
+          const t = (getPageText(c.doc, c.pdfPage) || "").trim();
+          if (!t) return false;
+          if (t.includes("[NON_TEXT_PAGE_OR_OCR_FAILED]")) return false;
+          // 日本語本文がない（文字化け/目次/数字だけ等）を除外
+          if (!/[ぁ-んァ-ン一-龯]/.test(t)) return false;
+          return true;
+        });
+        const top = (usable.length > 0 ? usable[0] : candidates[0]);
+// If all candidates are NON_TEXT pages, do not paste them to user.
+      if (usable.length === 0) {
+        const question = "いま一番困っているのは、(1) 情報の量、(2) 優先順位、(3) 期限の圧力――どれが一番近い？";
+        const responseText =
+          "いまは“資料の本文”が取れていない候補に当たっています。\\n" +
+          "ここは相談として整理してから、必要なら資料指定で精密化しましょう。\\n\\n" +
+          question;
+
+        // LOCAL_SURFACE_APPLIED_V1
+
+        const responseOut = localSurfaceize(responseText, trimmed);
+        return reply({
+          response: localSurfaceize(responseText, trimmed),
+          evidence: null,
+          candidates: candidates.slice(0, 10),
+          decisionFrame: { mode: "HYBRID", intent: "chat", llm: null, ku: {} },
+          timestamp,
+          threadId,
+        });
+      }
+
           const pageText = getPageText(top.doc, top.pdfPage);
+
+          // --- NON_TEXT_GUARD_V1: NON_TEXT を surface に出さない ---
+          if (!pageText || pageText.includes("[NON_TEXT_PAGE_OR_OCR_FAILED]")) {
+            const responseText =
+              "いま参照できる資料ページが文字として取れない状態でした。\n" +
+              "なので先に状況を整えたいです。いちばん困っているのは次のどれに近い？\n" +
+              "1) 優先順位が決められない\n2) 情報が多すぎて疲れた\n3) 何から手を付けるか迷う\n\n" +
+              "番号か、いま一番重いものを1行で教えてください。";
+            return reply({
+              response: localSurfaceize(responseText, trimmed),
+              evidence: null,
+              candidates: candidates.slice(0, 10),
+              decisionFrame: { mode: "HYBRID", intent: "chat", llm: null, ku: {} },
+              timestamp,
+              threadId,
+            });
+          }
+          // --- /NON_TEXT_GUARD_V1 ---
           if (pageText && pageText.trim().length > 0) {
             // 回答本文を生成（50文字以上、短く自然に）
             const excerpt = pageText.trim().slice(0, 300);
@@ -188,8 +424,8 @@ router.post("/chat", async (req: Request, res: Response<ChatResponseBody>) => {
           responseText = `${responseText}\n\nより詳しい情報が必要な場合は、資料指定（doc/pdfPage）で厳密に検索することもできます。`;
         }
         
-        return res.json({
-          response: responseText,
+        return reply({
+          response: localSurfaceize(responseText, trimmed),
           evidence: null,
           candidates: candidates.slice(0, 10),
           decisionFrame: { mode: "HYBRID", intent: "chat", llm: null, ku: {} },
@@ -227,7 +463,7 @@ router.post("/chat", async (req: Request, res: Response<ChatResponseBody>) => {
     const pagesCount = dbPrepare("kokuzo", "SELECT COUNT(*) as cnt FROM kokuzo_pages").get()?.cnt || 0;
     const chunksCount = dbPrepare("kokuzo", "SELECT COUNT(*) as cnt FROM kokuzo_chunks").get()?.cnt || 0;
     const filesCount = dbPrepare("kokuzo", "SELECT COUNT(*) as cnt FROM kokuzo_files").get()?.cnt || 0;
-    return res.json({
+    return reply({
       response: `【KOKUZO 状態】\n- kokuzo_pages: ${pagesCount}件\n- kokuzo_chunks: ${chunksCount}件\n- kokuzo_files: ${filesCount}件`,
       evidence: null,
       decisionFrame: { mode: "NATURAL", intent: "command", llm: null, ku: {} },
@@ -239,7 +475,7 @@ router.post("/chat", async (req: Request, res: Response<ChatResponseBody>) => {
   if (trimmed.startsWith("#search ")) {
     const query = trimmed.slice(7).trim();
     if (!query) {
-      return res.json({
+      return reply({
         response: "エラー: #search <query> の形式で検索語を指定してください",
         evidence: null,
         decisionFrame: { mode: "NATURAL", intent: "command", llm: null, ku: {} },
@@ -249,7 +485,7 @@ router.post("/chat", async (req: Request, res: Response<ChatResponseBody>) => {
     }
     const candidates = searchPagesForHybrid(null, query, 10);
     if (candidates.length === 0) {
-      return res.json({
+      return reply({
         response: `【検索結果】「${query}」に該当するページが見つかりませんでした。`,
         evidence: null,
         decisionFrame: { mode: "HYBRID", intent: "search", llm: null, ku: {} },
@@ -261,7 +497,7 @@ router.post("/chat", async (req: Request, res: Response<ChatResponseBody>) => {
     const results = candidates.slice(0, 5).map((c, i) => 
       `${i + 1}. ${c.doc} P${c.pdfPage}: ${c.snippet.slice(0, 100)}...`
     ).join("\n");
-    return res.json({
+    return reply({
       response: `【検索結果】「${query}」\n\n${results}\n\n※ 番号を選択すると詳細を表示します。`,
       evidence: null,
       decisionFrame: { mode: "HYBRID", intent: "search", llm: null, ku: {} },
@@ -274,7 +510,7 @@ router.post("/chat", async (req: Request, res: Response<ChatResponseBody>) => {
   if (trimmed.startsWith("#pin ")) {
     const pinMatch = trimmed.match(/doc\s*=\s*([^\s]+)\s+pdfPage\s*=\s*(\d+)/i);
     if (!pinMatch) {
-      return res.json({
+      return reply({
         response: "エラー: #pin doc=<filename> pdfPage=<number> の形式で指定してください",
         evidence: null,
         decisionFrame: { mode: "NATURAL", intent: "command", llm: null, ku: {} },
@@ -297,10 +533,26 @@ router.post("/chat", async (req: Request, res: Response<ChatResponseBody>) => {
   const t = message.trim().toLowerCase();
   if (t === "hello" || t === "date" || t === "help" || message.includes("おはよう")) {
     const nat = naturalRouter({ message, mode: "NATURAL" });
-    return res.json({
+    return reply({
       response: nat.responseText,
       evidence: null,
       decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: {} },
+      timestamp,
+      threadId,
+    });
+  }
+
+  // LLM_CHAT_ENTRY_V1: 通常会話はLLMへ（根拠要求/資料指定は除外）
+  const hasDocPageHere = /pdfPage\s*=\s*\d+/i.test(message) || /\bdoc\b/i.test(message);
+  const wantsEvidence = /資料|引用|根拠|出典|ソース|doc\s*=|pdfPage|P\d+|ページ/i.test(trimmed);
+  const shouldLLMChat = !hasDocPageHere && !wantsDetail && !wantsEvidence && !trimmed.startsWith("#");
+  if (shouldLLMChat) {
+    const out = await llmChat({ system: TENMON_CONSTITUTION_TEXT, history: [], user: trimmed });
+    const safe = scrubEvidenceLike(out.text);
+    return res.json({
+      response: safe,
+      evidence: null,
+      decisionFrame: { mode: "LLM_CHAT", intent: "chat", llm: out.provider || "llm", ku: {} },
       timestamp,
       threadId,
     });
@@ -322,7 +574,7 @@ router.post("/chat", async (req: Request, res: Response<ChatResponseBody>) => {
       if (nat.responseText.includes("どの方向で話しますか")) {
         setThreadPending(threadId, "LANE_PICK");
       }
-      return res.json({
+      return reply({
         response: nat.responseText,
         evidence: null,
         decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: {} },
@@ -473,7 +725,7 @@ router.post("/chat", async (req: Request, res: Response<ChatResponseBody>) => {
     }
 
     // レスポンス形式（厳守）
-    return res.json({
+    return reply({
       response: finalResponse,
       trace,
       provisional: true,
@@ -490,7 +742,7 @@ router.post("/chat", async (req: Request, res: Response<ChatResponseBody>) => {
     // エラー時も観測を返す（停止しない）
     const detailPlan = emptyCorePlan("ERROR_FALLBACK");
     detailPlan.chainOrder = ["ERROR_FALLBACK"];
-    return res.json({
+    return reply({
       response: "思考が循環状態にフォールバックしました。矛盾は保持され、旋回を続けています。",
       provisional: true,
       detailPlan,
