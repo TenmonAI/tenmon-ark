@@ -119,3 +119,16 @@ CREATE TABLE IF NOT EXISTS kokuzo_algorithms (
 
 CREATE INDEX IF NOT EXISTS idx_kokuzo_algorithms_threadId ON kokuzo_algorithms(threadId);
 CREATE INDEX IF NOT EXISTS idx_kokuzo_algorithms_createdAt ON kokuzo_algorithms(createdAt);
+
+-- =========================================
+-- kokuzo_learned_pages (Gardener: 学習済みページ記録)
+-- =========================================
+CREATE TABLE IF NOT EXISTS kokuzo_learned_pages (
+  doc TEXT NOT NULL,
+  pdfPage INTEGER NOT NULL,
+  reason TEXT, -- 'distill_failed', 'empty', 'parse_failed', 'http_error', etc.
+  createdAt TEXT NOT NULL DEFAULT (datetime('now')),
+  PRIMARY KEY (doc, pdfPage)
+);
+
+CREATE INDEX IF NOT EXISTS idx_kokuzo_learned_pages_createdAt ON kokuzo_learned_pages(createdAt);

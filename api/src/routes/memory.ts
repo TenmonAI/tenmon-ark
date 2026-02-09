@@ -24,4 +24,9 @@ router.post("/memory/clear", (req: Request, res: Response<MemoryClearResponseBod
   });
 });
 
+router.get("/memory/stats", (_req: Request, res: Response) => {
+  // 最小：UI表示が壊れない形だけ返す
+  return res.json({ session: 0, conversation: 0, kokuzo: 0 });
+});
+
 export default router;

@@ -4,6 +4,23 @@
 import { getDb, dbPrepare } from "../db/index.js";
 import type { KokuzoChunk, KokuzoSeed } from "./indexer.js";
 import { extractKotodamaTags, type KotodamaTag } from "../kotodama/tagger.js";
+import { getPageText, docAliases } from "./pages.js";
+
+const NON_TEXT_SENTINEL = "[NON_TEXT_PAGE_OR_OCR_FAILED]";
+const JP_RE = /[ぁ-んァ-ン一-龯]/g;
+
+/**
+ * 本文が使えるかチェック（NON_TEXT、mojibake、日本語量を確認）
+ */
+function isUsableText(text: string): boolean {
+  if (!text) return false;
+  if (text.includes(NON_TEXT_SENTINEL)) return false;
+  // reject obvious mojibake-like control chars (soft guard)
+  if (text.includes("\uFFFD")) return false;
+  const m = text.match(JP_RE);
+  const jpCount = m ? m.length : 0;
+  return jpCount >= 30;
+}
 
 /**
  * Phase31: snippet を正規化（\f 除去、空白圧縮、trim）
@@ -111,16 +128,44 @@ export function searchPagesForHybrid(docOrNull: string | null, query: string, li
       const pinDoc = pinMatch[1];
       const pinPdfPage = parseInt(pinMatch[2], 10);
       
-      // 直SQLで取得
-      const pinStmt = db.prepare(`SELECT doc, pdfPage, text FROM kokuzo_pages WHERE doc = ? AND pdfPage = ?`);
-      const pinRow = pinStmt.get(pinDoc, pinPdfPage) as { doc: string; pdfPage: number; text: string } | undefined;
+      // doc alias 展開対応（KHS/言霊秘書.pdf の重複を吸収）
+      const pinAliases = docAliases(pinDoc);
+      const placeholders = pinAliases.map(() => "?").join(",");
+      const pinStmt = db.prepare(`SELECT doc, pdfPage, text FROM kokuzo_pages WHERE doc IN (${placeholders}) AND pdfPage = ? LIMIT 1`);
+      const pinRow = pinStmt.get(...pinAliases, pinPdfPage) as { doc: string; pdfPage: number; text: string } | undefined;
       
       if (pinRow) {
         // 見つかったら candidates をその1件で返す（先頭固定）
         const fullText = String(pinRow.text || "");
-        const tags = extractKotodamaTags(fullText);
-        // snippet は text 先頭120文字（既存ルールに合わせる）
+        
+        // ピン指定でもフィルタリングを適用（finalizeCandidates の前に定義されているため直接チェック）
+        const isPlaceholder = (s: string) => s.includes("[NON_TEXT_PAGE_OR_OCR_FAILED]");
         const snippet = fullText.replace(/\f/g, '').slice(0, 120);
+        
+        // フィルタリングチェック
+        if (isPlaceholder(snippet) || isPlaceholder(fullText)) {
+          return []; // 汚染候補は返さない
+        }
+        
+        // getPageText で取得できるか確認（空でないか）
+        try {
+          const pageText = getPageText(pinDoc, pinPdfPage);
+          const pageTextStr = String(pageText || "");
+          if (pageTextStr.trim().length === 0 || isPlaceholder(pageTextStr)) {
+            return []; // 汚染候補は返さない
+          }
+          
+          // 日本語本文が一定量ない場合は除外（30文字未満）
+          const japaneseChars = pageTextStr.match(/[ぁ-んァ-ン一-龯]/g);
+          const japaneseCount = japaneseChars ? japaneseChars.length : 0;
+          if (japaneseCount < 30) {
+            return []; // 汚染候補は返さない
+          }
+        } catch (e) {
+          return []; // getPageText が失敗した場合は除外
+        }
+        
+        const tags = extractKotodamaTags(fullText);
         
         return [{
           doc: pinDoc,
@@ -207,6 +252,163 @@ export function searchPagesForHybrid(docOrNull: string | null, query: string, li
     return [];
   }
 
+  // Phase28-3: 生成鎖ピン留め判定（全経路で使用するため先に判定）
+  const shouldPinGenChain = (() => {
+    const d = String(docOrNull || "").toUpperCase();
+    if (d !== "" && d !== "KHS") return false;
+    const q = String(query || "");
+    // "生成鎖" または ("息" かつ "音" かつ ("五十連" または "形仮字"))
+    return (
+      q.includes("生成鎖") ||
+      (q.includes("息") && q.includes("音") && (q.includes("五十連") || q.includes("形仮字")))
+    );
+  })();
+  
+  // Phase28-3: pinned注入関数（rows経路とフォールバック経路の両方で使用）
+  const injectPinnedGenChainCandidates = (candidates: KokuzoCandidate[], pageTextStmtParam: any): KokuzoCandidate[] => {
+    if (!shouldPinGenChain) return candidates;
+    
+    const pinnedPages = [35, 119, 384, 402, 549];
+    const existingKeys = new Set(candidates.map(c => `${c.doc}|${c.pdfPage}`));
+    
+    for (let i = 0; i < pinnedPages.length; i++) {
+      const p = pinnedPages[i];
+      const row = pageTextStmtParam.get("KHS", p) as any;
+      const pageText = String(row?.pageText || "");
+      if (!pageText) continue;
+      if (pageText.includes("[NON_TEXT_PAGE_OR_OCR_FAILED]")) continue;
+      
+      const key = `KHS|${p}`;
+      if (existingKeys.has(key)) continue;
+      
+      const snippet = pageText.slice(0, 400);
+      const tags = extractKotodamaTags(pageText);
+      candidates.unshift({
+        doc: "KHS",
+        pdfPage: p,
+        snippet,
+        score: 900, // 混入した事実が候補に出るようにする
+        tags,
+      });
+      existingKeys.add(key);
+    }
+    
+    // doc+pdfPage で重複除去（先に入れた pinned を優先）
+    const seen = new Set<string>();
+    const deduped: KokuzoCandidate[] = [];
+    for (const c of candidates) {
+      const k = `${c.doc}|${c.pdfPage}`;
+      if (seen.has(k)) continue;
+      seen.add(k);
+      deduped.push(c);
+    }
+    
+    return deduped;
+  };
+
+  /**
+   * Phase28-2/28-3: 候補を最終化（placeholder除外、pinned注入、重複除去）
+   * rows>0 経路とフォールバック経路の両方で使用
+   * 注意: limit は呼び出し側で適用すること（ソート前後で limit を適用する必要があるため）
+   */
+  const finalizeCandidates = (
+    candidates: KokuzoCandidate[],
+    pageTextStmtParam: any
+  ): KokuzoCandidate[] => {
+    // Phase28-2: [NON_TEXT_PAGE_OR_OCR_FAILED] を含む候補を除外（snippetだけでなくページ本文も見て除外）
+    const isPlaceholder = (s: string) => s.includes("[NON_TEXT_PAGE_OR_OCR_FAILED]");
+    
+    // 日本語文字の最小閾値（/[ぁ-んァ-ン一-龯]/ のマッチ数が 30 未満なら除外）
+    const hasMinJapanese = (text: string): boolean => {
+      const japaneseChars = text.match(/[ぁ-んァ-ン一-龯]/g);
+      const japaneseCount = japaneseChars ? japaneseChars.length : 0;
+      return japaneseCount >= 30;
+    };
+    
+    let filtered = candidates.filter(c => {
+      const snippet = String(c.snippet || "");
+      if (isPlaceholder(snippet)) return false;
+      
+      // ページ本文を取得して検証
+      let pageText = "";
+      try {
+        const pageTextRow = pageTextStmtParam.get(c.doc, c.pdfPage) as any;
+        pageText = String(pageTextRow?.pageText || "");
+      } catch (e) {
+        // 取得失敗時は snippet のみで判定
+        pageText = snippet;
+      }
+      
+      // [NON_TEXT_PAGE_OR_OCR_FAILED] チェック
+      if (isPlaceholder(pageText)) return false;
+      
+      // getPageText で取得できるか確認（空でないか）
+      try {
+        const fullText = getPageText(c.doc, c.pdfPage);
+        const fullTextStr = String(fullText || "");
+        if (fullTextStr.trim().length === 0) return false;
+        if (isPlaceholder(fullTextStr)) return false;
+        
+        // 日本語本文がほぼ無い場合は除外
+        if (!hasMinJapanese(fullTextStr)) return false;
+      } catch (e) {
+        // getPageText が失敗した場合は除外
+        return false;
+      }
+      
+      return true;
+    });
+    
+    // Phase28-3: pinned注入（重複除去も含む）
+    filtered = injectPinnedGenChainCandidates(filtered, pageTextStmtParam);
+    
+    // doc単位の多様性制限: 上位10で同一docが過半を超える場合、同一docは最大3件までに制限
+    const top10 = filtered.slice(0, 10);
+    const docCounts = new Map<string, number>();
+    for (const c of top10) {
+      docCounts.set(c.doc, (docCounts.get(c.doc) || 0) + 1);
+    }
+    
+    // 過半を超えるdocがあるかチェック（10件中6件以上）
+    const hasDominantDoc = Array.from(docCounts.values()).some(count => count > 5);
+    
+    if (hasDominantDoc) {
+      // 同一docは最大3件までに制限
+      const limited: KokuzoCandidate[] = [];
+      const docLimits = new Map<string, number>();
+      
+      for (const c of filtered) {
+        const docCount = docLimits.get(c.doc) || 0;
+        if (docCount < 3) {
+          limited.push(c);
+          docLimits.set(c.doc, docCount + 1);
+        }
+        // limit に達したら終了
+        if (limited.length >= limit) break;
+      }
+      
+      // 残りを次点docから補充（既に追加されたdoc以外から）
+      const addedDocs = new Set(limited.map(c => c.doc));
+      for (const c of filtered) {
+        if (limited.length >= limit) break;
+        const docCount = docLimits.get(c.doc) || 0;
+        // まだ追加されていないdoc、または追加済みでも3件未満の場合
+        if (!addedDocs.has(c.doc) || docCount < 3) {
+          // 重複チェック
+          if (!limited.some(existing => existing.doc === c.doc && existing.pdfPage === c.pdfPage)) {
+            limited.push(c);
+            docLimits.set(c.doc, docCount + 1);
+            addedDocs.add(c.doc);
+          }
+        }
+      }
+      
+      return limited;
+    }
+    
+    return filtered;
+  };
+
   // 1) FTS5検索（Phase27: 全文検索で精度と速度を向上）
   // FTS5 があれば FTS、なければ LIKE、それも無理ならフォールバック
   const ftsQuery = normalizedQuery.split(/\s+/).filter(Boolean).join(" ");
@@ -217,15 +419,18 @@ export function searchPagesForHybrid(docOrNull: string | null, query: string, li
   if (hasFts) {
     try {
       if (docOrNull) {
+        // doc alias 展開対応
+        const docAliasList = docAliases(docOrNull);
+        const placeholders = docAliasList.map(() => "?").join(",");
         rows = db
           .prepare(
             `SELECT doc, pdfPage, substr(replace(text, char(12), ''), 1, 120) AS snippet, bm25(kokuzo_pages_fts) AS rank
              FROM kokuzo_pages_fts
-             WHERE doc = ? AND kokuzo_pages_fts MATCH ?
+             WHERE doc IN (${placeholders}) AND kokuzo_pages_fts MATCH ?
              ORDER BY rank ASC
              LIMIT ?`
           )
-          .all(docOrNull, ftsQuery, limit) as any[];
+          .all(...docAliasList, ftsQuery, limit) as any[];
       } else {
         rows = db
           .prepare(
@@ -252,14 +457,17 @@ export function searchPagesForHybrid(docOrNull: string | null, query: string, li
         const like = `%${normalizedQuery}%`;
         let likeRows: any[] = [];
         if (docOrNull) {
+          // doc alias 展開対応
+          const docAliasList = docAliases(docOrNull);
+          const placeholders = docAliasList.map(() => "?").join(",");
           likeRows = db
             .prepare(
               `SELECT doc, pdfPage, text
                FROM kokuzo_pages
-               WHERE doc = ? AND text LIKE ?
+               WHERE doc IN (${placeholders}) AND text LIKE ?
                LIMIT 60`
             )
-            .all(docOrNull, like) as any[];
+            .all(...docAliasList, like) as any[];
         } else {
           likeRows = db
             .prepare(
@@ -382,8 +590,16 @@ export function searchPagesForHybrid(docOrNull: string | null, query: string, li
       };
     });
     
+    // Phase28-2/28-3: 候補を最終化（placeholder除外、pinned注入、重複除去、limit適用）
+    let filtered = finalizeCandidates(scored, pageTextStmt);
+    
+    // フィルタ後に候補が0になった場合は、元の候補を返すのではなく「候補なし」として返す
+    if (filtered.length === 0) {
+      return [];
+    }
+    
     // score DESC でソート、同点なら P1 を後ろに送る tie-break
-    scored.sort((a, b) => {
+    filtered.sort((a, b) => {
       if (b.score !== a.score) {
         return b.score - a.score; // score DESC
       }
@@ -398,9 +614,44 @@ export function searchPagesForHybrid(docOrNull: string | null, query: string, li
     const isBadCover = (c: KokuzoCandidate) => {
       return c.pdfPage === 1 && /(全集|監修|校訂)/.test(String(c.snippet || ""));
     };
-    const good: KokuzoCandidate[] = scored.filter(c => !isBadCover(c));
-    const bad: KokuzoCandidate[] = scored.filter(c => isBadCover(c));
+    const good: KokuzoCandidate[] = filtered.filter(c => !isBadCover(c));
+    const bad: KokuzoCandidate[] = filtered.filter(c => isBadCover(c));
     let final: KokuzoCandidate[] = good.concat(bad).slice(0, limit);
+    
+    // Phase28-2: filtered が空になった場合、placeholder ではないページをDBから拾って候補を作る
+    if (final.length === 0 && docOrNull) {
+      try {
+        // doc alias 展開対応
+        const docAliasList = docAliases(docOrNull);
+        const placeholders = docAliasList.map(() => "?").join(",");
+        const fallbackStmt = db.prepare(`
+          SELECT pdfPage, substr(replace(text, char(12), ''), 1, 120) AS snippet, text
+          FROM kokuzo_pages
+          WHERE doc IN (${placeholders}) AND text NOT LIKE '%[NON_TEXT_PAGE_OR_OCR_FAILED]%'
+          ORDER BY pdfPage ASC
+          LIMIT ?
+        `);
+        const fallbackRows = fallbackStmt.all(...docAliasList, limit) as any[];
+        // getPageText を使う（alias 展開済み）
+        for (const row of fallbackRows) {
+          const fullText = getPageText(docOrNull, Number(row.pdfPage));
+          const fullTextStr = String(fullText || "");
+          const tags = extractKotodamaTags(fullTextStr);
+          final.push({
+            doc: docOrNull,
+            pdfPage: Number(row.pdfPage),
+            snippet: String(row.snippet || "(fallback) page indexed"),
+            score: 5,
+            tags,
+          });
+        }
+        // Phase28-2/28-3: フォールバック経路でも候補を最終化（placeholder除外、pinned注入、重複除去、limit適用）
+        const fallbackPageTextStmt2 = db.prepare(`SELECT substr(text, 1, 500) AS pageText FROM kokuzo_pages WHERE doc = ? AND pdfPage = ?`);
+        final = finalizeCandidates(final, fallbackPageTextStmt2);
+      } catch (e) {
+        console.warn("[KOKUZO-SEARCH] Fallback candidate fetch failed:", e);
+      }
+    }
     
     // Phase28: final[0] が bad cover の場合、補完候補を追加して cand0 を回避
     if (final.length > 0 && isBadCover(final[0])) {
@@ -441,6 +692,46 @@ export function searchPagesForHybrid(docOrNull: string | null, query: string, li
       final = [...good, ...complement, ...bad].slice(0, limit) as KokuzoCandidate[];
     }
     
+    // 返す直前に最終フィルタリングを適用（すべてのreturnパスで統一）
+    const finalPageTextStmt = db.prepare(`SELECT substr(text, 1, 500) AS pageText FROM kokuzo_pages WHERE doc = ? AND pdfPage = ?`);
+    final = finalizeCandidates(final, finalPageTextStmt);
+    
+    // フィルタ後に0件なら空配列を返す（汚染候補は返さない）
+    if (final.length === 0) {
+      return [];
+    }
+    
+    // Candidate Clean V1: usable優先でソート（本文が取れて日本語量があるものを上位に）
+    const enriched = final.map((c) => {
+      try {
+        const t = getPageText(c.doc, c.pdfPage);
+        const tStr = String(t || "");
+        const usable = isUsableText(tStr);
+        const len = tStr.length;
+        return { c, usable, len };
+      } catch (e) {
+        return { c, usable: false, len: 0 };
+      }
+    });
+    
+    const sorted = enriched
+      .slice()
+      .sort((a, b) => {
+        const au = a.usable ? 1 : 0;
+        const bu = b.usable ? 1 : 0;
+        if (au !== bu) return bu - au; // usable優先
+        const as = a.c.score ?? 0;
+        const bs = b.c.score ?? 0;
+        if (as !== bs) return bs - as; // score降順
+        return b.len - a.len; // 長い順
+      })
+      .map((x) => x.c);
+    
+    // usableが1つでもあればusable優先リストを返す、なければ元のfinalを返す
+    if (enriched.some((x) => x.usable)) {
+      return sorted;
+    }
+    
     return final;
   }
 
@@ -457,15 +748,19 @@ export function searchPagesForHybrid(docOrNull: string | null, query: string, li
       const maxP = Number(range?.maxP ?? 0);
 
       if (minP && maxP && maxP >= minP) {
-        const cand: KokuzoCandidate[] = [];
+        let cand: KokuzoCandidate[] = [];
         const pageOne: KokuzoCandidate[] = [];
         const snippetStmt = db.prepare(`SELECT substr(replace(text, char(12), ''), 1, 120) AS snippet, text AS fullText FROM kokuzo_pages WHERE doc = ? AND pdfPage = ?`);
         
-        // Phase28: まず p!=1 を limit 件まで詰める
+        // Phase28: まず p!=1 を limit 件まで詰める（placeholderをスキップ）
+        const isPlaceholder = (s: string) => s.includes("[NON_TEXT_PAGE_OR_OCR_FAILED]");
         for (let p = minP; p <= maxP; p++) {
           try {
             const pageText = snippetStmt.get(targetDoc, p) as any;
             const fullText = String(pageText?.fullText || "");
+            // placeholder をスキップ（非placeholderだけで limit を満たす）
+            if (isPlaceholder(fullText)) continue;
+            
             const tags = extractKotodamaTags(fullText);
             const candidate: KokuzoCandidate = {
               doc: targetDoc,
@@ -492,6 +787,13 @@ export function searchPagesForHybrid(docOrNull: string | null, query: string, li
         while (cand.length < limit && pageOne.length > 0) {
           cand.push(pageOne.shift()!);
         }
+        
+        // Phase28-2/28-3: フォールバック経路でも候補を最終化（placeholder除外、pinned注入、重複除去）
+        const fallbackPageTextStmt = db.prepare(`SELECT substr(text, 1, 500) AS pageText FROM kokuzo_pages WHERE doc = ? AND pdfPage = ?`);
+        cand = finalizeCandidates(cand, fallbackPageTextStmt);
+        
+        // limit で切る
+        cand = cand.slice(0, limit);
         
         // Phase25: 候補が1件以上あれば返す
         if (cand.length > 0) {

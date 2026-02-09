@@ -32,7 +32,10 @@ export function conversationAppend(sessionId: string, role: MemoryRole, content:
   const turnIndex = Number(next.next_turn);
   const createdAt = nowIso();
 
-  insertStmt.run(sessionId, turnIndex, role, content, createdAt);
+  const result = insertStmt.run(sessionId, turnIndex, role, content, createdAt) as { lastInsertRowid: number };
+  const rowid = Number(result.lastInsertRowid);
+
+  console.log(`[MEMORY] insert conversation_log ok session_id=${sessionId} rowid=${rowid}`);
 
   return { sessionId, turnIndex, role, content, createdAt };
 }

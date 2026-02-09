@@ -5,7 +5,10 @@ type RecallState = { centerClaim: string; updatedAt: string };
 const mem = new Map<string, RecallState>();
 
 export function kokuzoRecall(threadId: string): RecallState | null {
-  return mem.get(threadId) ?? null;
+  const result = mem.get(threadId) ?? null;
+  const hits = result ? 1 : 0;
+  console.log(`[RECALL] session_id=${threadId} hits=${hits} source=kokuzo_recall_map`);
+  return result;
 }
 
 export function kokuzoRemember(threadId: string, plan: CorePlan): void {

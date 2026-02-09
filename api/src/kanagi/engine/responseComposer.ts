@@ -103,6 +103,120 @@ export function composeResponse(
   // PersonaState に応じた語り口調整
   response = adjustToneByPersona(response, persona);
 
+  // UI_FALLBACK: 返答が「未解…」で止まる時、最低限の次質問を添える
+  const looksUnresolved = /未解(決)?/.test(response);
+  const looksLogLike = /(内集|外発|正中|圧縮|凝縮|発酵)/.test(response);
+
+  if (looksUnresolved && looksLogLike) {
+    // 返答が観測ログ寄りなら、ユーザー入力に"次の問い"を返す
+    response +=
+      "\n\n——\n次に、どれを進めますか？\n" +
+      "1) 目的を1行で（例：学習状況確認／資料の取り込み／会話品質改善）\n" +
+      "2) 具体の対象を指定（doc=XXX pdfPage=NN / #search キーワード）\n" +
+      "3) いま困っている症状を1つ（例：未解が多い／引用が薄い／応答が硬い）";
+  }
+
   return response;
 }
 
+/**
+ * ログ語彙を自然文に置換するマップ
+ */
+const LOG_TERM_REPLACEMENTS: Record<string, string> = {
+  "正中・保留・圧縮": "いまは答えをまとめている途中です",
+  "凝縮・内集・一点化": "いまは一点に集中している状態です",
+  "外発・貫通・方向性": "いまは行動に向かっている状態です",
+  "循環・拮抗": "いまはバランスを取っている状態です",
+  "正中": "中心",
+  "内集": "内側に集まる",
+  "外発": "外側に広がる",
+  "凝縮": "凝り固まる",
+  "圧縮": "圧し縮まる",
+  "未解決": "まだ決まっていない点",
+  "矛盾（保持中）": "異なる見方があります",
+  "観測中": "考えています",
+  "発酵中": "熟成中",
+};
+
+/**
+ * ログ語彙を自然文に置換
+ */
+function replaceLogTerms(text: string): string {
+  let result = text;
+  
+  // 長い語彙から順に置換（短い語彙に先にマッチさせないため）
+  const sortedTerms = Object.keys(LOG_TERM_REPLACEMENTS).sort((a, b) => b.length - a.length);
+  
+  for (const term of sortedTerms) {
+    const replacement = LOG_TERM_REPLACEMENTS[term];
+    // 語彙が含まれている場合のみ置換（部分一致を避ける）
+    const regex = new RegExp(term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g");
+    result = result.replace(regex, replacement);
+  }
+  
+  return result;
+}
+
+/**
+ * 会話形応答を生成（ログ語彙を自然文に置換）
+ * 
+ * 仕様:
+ * - trace/内部構造は維持（detailPlan/traceは壊さない）
+ * - 返答テキストだけ "会話に翻訳"
+ * - 禁止語彙（正中/内集/外発/凝縮/圧縮/未解/発酵中 など）が表に出る場合、自然文へ置換
+ * - 末尾は必ず「次の一手」を1問で終える
+ */
+export function composeConversationalResponse(
+  trace: KanagiTrace,
+  persona: PublicPersonaState,
+  userMessage?: string): string {
+  // まず通常の composeResponse を呼ぶ（内部構造は維持）
+  const rawResponse = composeResponse(trace, persona);
+  
+  // ログ語彙を自然文に置換
+  let conversational = replaceLogTerms(rawResponse);
+  
+  // 「未解決：」「矛盾（保持中）：」などの見出しを削除
+  conversational = conversational.replace(/未解決：\s*/g, "");
+  conversational = conversational.replace(/矛盾（保持中）：\s*/g, "");
+  conversational = conversational.replace(/観測中\s*/g, "");
+  
+  // 箇条書きを自然文に変換
+  conversational = conversational.replace(/^-\s*/gm, "");
+  conversational = conversational.replace(/\n\n\n+/g, "\n\n");
+  conversational = conversational.trim();
+
+  // 2〜6行程度にまとめる（長すぎる場合は要約）
+  const lines = conversational.split("\n").filter((line) => line.trim().length > 0);
+  if (lines.length > 6) {
+    // 最初の5行を保持（質問は最後に追加するので、ここでは5行まで）
+    conversational = lines.slice(0, 5).join("\n");
+  }
+
+  // 末尾が質問で終わっていない場合は質問を追加
+  const endsWithQuestion = /[？?]$/.test(conversational) || 
+    /(ですか|でしょうか|ますか|か？|か\?)$/.test(conversational);
+  
+  if (!endsWithQuestion) {
+    // 相談系の入力かどうかを判定（userMessage または traceから推測）
+    const userMsg = (userMessage || "").trim();
+    const isConsultation = /不安|動けない|やることが多すぎ|どうすれば|困って|迷って/i.test(userMsg);
+    const hasUnresolved = trace.observationCircle?.unresolved && trace.observationCircle.unresolved.length > 0;
+    const hasContradictions = trace.contradictions && trace.contradictions.length > 0;
+    
+    if (isConsultation || hasUnresolved || hasContradictions) {
+      // 未解決や矛盾がある場合は質問を追加
+      conversational += "\n\nいま一番困ってるのは何？";
+    } else {
+      // それ以外は一般的な質問を追加
+      conversational += "\n\n次の一手は何にしますか？";
+    }
+  }
+  
+  // 空文字の場合は最小限の応答を返す
+  if (conversational.trim().length === 0) {
+    conversational = "考えています。いま一番困ってるのは何？";
+  }
+  
+  return conversational;
+}

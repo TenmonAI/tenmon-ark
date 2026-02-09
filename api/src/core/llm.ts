@@ -1,14 +1,24 @@
 // LLM クライアント（OpenAI互換）
 
+type LLMConfig = {
+  apiKey: string;
+  baseUrl: string;
+  model: string;
+  timeoutMs: number;
+};
+
 /**
- * LLM呼び出しの設定
+ * LLM呼び出しの設定を取得（毎回 process.env から読み取る）
  */
-const LLM_CONFIG = {
-  apiKey: process.env.OPENAI_API_KEY || "",
-  baseUrl: process.env.OPENAI_BASE_URL || "https://api.openai.com/v1",
-  model: process.env.OPENAI_MODEL || "gpt-4o-mini",
-  timeout: 8000, // 8秒
-} as const;
+function getLLMConfig(): LLMConfig {
+  const timeoutMs = Number(process.env.LLM_TIMEOUT_MS || 8000);
+  return {
+    apiKey: String(process.env.OPENAI_API_KEY || "").trim(),
+    baseUrl: String(process.env.OPENAI_BASE_URL || "https://api.openai.com/v1").trim(),
+    model: String(process.env.OPENAI_MODEL || "gpt-4o-mini").trim(),
+    timeoutMs: Number.isFinite(timeoutMs) ? timeoutMs : 8000,
+  };
+}
 
 /**
  * LLMを呼び出す
@@ -17,60 +27,46 @@ const LLM_CONFIG = {
  * @returns LLMの応答（失敗時はnull）
  */
 export async function callLLM(prompt: string): Promise<string | null> {
-  // APIキーが無い場合は null を返す
-  if (!LLM_CONFIG.apiKey || LLM_CONFIG.apiKey.trim().length === 0) {
+  const cfg = getLLMConfig();
+
+  if (!cfg.apiKey) {
     console.log("[LLM] API key not configured, returning null");
     return null;
   }
 
   try {
-    // タイムアウト付きfetch
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), LLM_CONFIG.timeout);
+    const t = setTimeout(() => controller.abort(), cfg.timeoutMs);
 
-    const response = await fetch(`${LLM_CONFIG.baseUrl}/chat/completions`, {
+    const resp = await fetch(`${cfg.baseUrl}/chat/completions`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${LLM_CONFIG.apiKey}`,
+        "Authorization": `Bearer ${cfg.apiKey}`,
       },
       body: JSON.stringify({
-        model: LLM_CONFIG.model,
-        messages: [
-          {
-            role: "user",
-            content: prompt,
-          },
-        ],
-        temperature: 0.7,
-        max_tokens: 1000,
+        model: cfg.model,
+        messages: [{ role: "user", content: prompt }],
+        temperature: 0.2,
+        max_tokens: 800,
       }),
       signal: controller.signal,
     });
 
-    clearTimeout(timeoutId);
+    clearTimeout(t);
 
-    if (!response.ok) {
-      const errorText = await response.text().catch(() => "unknown error");
-      console.error(`[LLM] API error: ${response.status} ${errorText}`);
+    if (!resp.ok) {
+      const errorText = await resp.text().catch(() => "unknown error");
+      console.error(`[LLM] API error: ${resp.status} ${errorText}`);
       return null;
     }
 
-    const data = await response.json() as { choices?: Array<{ message?: { content?: string } }> };
-    const content = data.choices?.[0]?.message?.content;
-
-    if (!content || typeof content !== "string") {
-      console.error("[LLM] Invalid response format");
-      return null;
-    }
-
-    return content;
-  } catch (error) {
-    if (error instanceof Error && error.name === "AbortError") {
-      console.log("[LLM] Timeout");
-    } else {
-      console.error(`[LLM] Error: ${error instanceof Error ? error.message : String(error)}`);
-    }
+    const data: any = await resp.json();
+    const content = data?.choices?.[0]?.message?.content;
+    return typeof content === "string" && content.trim() ? content.trim() : null;
+  } catch (e: any) {
+    if (e?.name === "AbortError") console.log("[LLM] Timeout");
+    else console.error(`[LLM] Error: ${e?.message ?? String(e)}`);
     return null;
   }
 }

@@ -1,0 +1,39 @@
+diff --git a/api/src/routes/chat.ts b/api/src/routes/chat.ts
+index 0000000..1111111 100644
+--- a/api/src/routes/chat.ts
++++ b/api/src/routes/chat.ts
+@@ -25,6 +25,7 @@ import { extractManyoshuTags } from "../manyoshu/manyoshuTags.js";
+ import { extractDanshariTags } from "../danshari/danshariTags.js";
+ import { callLLM } from "../core/llm.js";
++import { memoryPersistMessage } from "../memory/index.js";
+ 
+ // === LLM_SURFACE ===
+ 
+@@ -67,6 +68,18 @@ async function surfaceize(text: string, userMsg: string): Promise<string> {
+ 
+ const router: IRouter = Router();
+ 
++// PERSIST_TURN_V1: conversation_log / session_memory へのINSERT helper
++function persistTurn(threadId: string, userText: string, assistantText: string): void {
++  try {
++    memoryPersistMessage(threadId, "user", userText);
++    memoryPersistMessage(threadId, "assistant", assistantText);
++  } catch (e: any) {
++    // INSERT失敗はログのみ（レスポンスは返す）
++    console.warn(`[PERSIST] failed to persist turn threadId=${threadId}:`, e?.message ?? String(e));
++  }
++}
++
+ /**
+  * GROUNDED レスポンスを生成する関数（doc/pdfPage 指定と番号選択の両方で再利用）
+  */
+@@ -878,6 +891,9 @@ router.post("/chat", async (req: Request, res: Response) => {
+     // レスポンス形式（厳守）
+     applyPersonaGovernor(detailPlan as any, { message: sanitized.text, trace: {} as any } as any);
+ 
++    // PERSIST_CALL_MAIN_V1: conversation_log / session_memory にINSERT
++    persistTurn(threadId, sanitized.text, finalText);
++
+     return res.json({
+       response: finalText,
+       trace,

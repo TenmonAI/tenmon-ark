@@ -19,7 +19,11 @@ const clearStmt = dbPrepare("kokuzo", "DELETE FROM session_memory WHERE session_
 
 export function sessionMemoryAdd(sessionId: string, role: MemoryRole, content: string): MemoryMessage {
   const ts = nowIso();
-  insertStmt.run(sessionId, role, content, ts);
+  const result = insertStmt.run(sessionId, role, content, ts) as { lastInsertRowid: number };
+  const key = Number(result.lastInsertRowid);
+
+  console.log(`[MEMORY] insert session_memory ok session_id=${sessionId} key=${key}`);
+
   return { role, content, ts };
 }
 

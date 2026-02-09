@@ -1,3 +1,5 @@
+import { searchPagesForHybrid } from "../kokuzo/search.js";
+
 export type NaturalType = "greeting" | "datetime" | "other";
 
 function pad2(n: number): string {
@@ -87,6 +89,13 @@ export function naturalRouter(input: { message: string; mode: string }): { handl
     // ドメイン質問のキーワードをチェック（言灵、法則、カタカムナなど）
     const isDomainQuestion = /言灵|言霊|ことだま|kotodama|法則|カタカムナ|天津金木|水火|與合/i.test(message);
     
+    // 相談用テンプレ（不安/過多系）— メニューを返さない（優先度: 高）
+    const isAnxietyLike = /不安|こわい|怖い|動けない|しんどい|つらい|辛い|無理|焦る|焦って|詰んだ/i.test(message);
+    const isOverwhelmedLike = /やることが多すぎ|やること.*多すぎ|多すぎる|終わらない|溜まって|詰んで|パンク|忙し/i.test(message);
+    
+    // メニュー返しは #menu または明示的な「メニュー」のみ（挨拶は greeting で処理済み）
+    const isExplicitMenu = /^メニュー$|^#menu$/i.test(message.trim());
+    
     if (isDomainQuestion) {
       // ドメイン質問の場合は、まず回答を試みる（メニューは最後に添える）
       return {
@@ -94,15 +103,39 @@ export function naturalRouter(input: { message: string; mode: string }): { handl
         responseText: "", // 空文字で通常処理を促す
       };
     }
-    
-    // ドメイン質問でない場合はメニューを表示（選択待ち状態を保存）
+
+    // 不安系の相談用テンプレ（メニューより優先）
+    if (isAnxietyLike) {
+      return {
+        handled: true,
+        responseText: "いま一番しんどいのは 体力 ？ 気持ち ？\n\n番号でOK / 1行でもOK",
+      };
+    }
+
+    // 過多系の相談用テンプレ（メニューより優先）
+    if (isOverwhelmedLike) {
+      return {
+        handled: true,
+        responseText: "いま 締切がある？ ない？\n\n番号でOK / 1行でもOK",
+      };
+    }
+
+    // 明示的なメニュー要求のみメニューを表示（#menu または「メニュー」）
+    if (isExplicitMenu) {
+      return {
+        handled: true,
+        responseText:
+          "了解。どの方向で話しますか？\n" +
+          "1) 言灵/カタカムナ/天津金木の質問\n" +
+          "2) 資料指定（doc/pdfPage）で厳密回答\n" +
+          "3) いまの状況整理（何を作りたいか）",
+      };
+    }
+
+    // それ以外の日本語は通常処理へフォールスルー（handled=false）
     return {
-      handled: true,
-      responseText:
-        "了解。どの方向で話しますか？\n" +
-        "1) 言灵/カタカムナ/天津金木の質問\n" +
-        "2) 資料指定（doc/pdfPage）で厳密回答\n" +
-        "3) いまの状況整理（何を作りたいか）",
+      handled: false,
+      responseText: "",
     };
   }
 
@@ -116,3 +149,115 @@ export function naturalRouter(input: { message: string; mode: string }): { handl
   };
 }
 
+/**
+ * 自然会話ルーティング（kokuzo統合版）
+ * 
+ * 仕様:
+ * - 短文相談は必ず質問で終わる
+ * - kokuzoの候補がある場合のみ「参考として」一文だけ織り込む（断言禁止）
+ * - LLMは既定OFF（決定論で組む）
+ */
+export async function routeNaturalConversation(
+  message: string,
+  threadId: string
+): Promise<{ handled: boolean; responseText: string }> {
+  const trimmed = String(message || "").trim();
+  const ja = isJapanese(trimmed);
+
+  // 短文相談判定（不安/過多/迷い/焦り/つらい/眠い 等）
+  const isAnxietyLike = /不安|こわい|怖い|動けない|しんどい|つらい|辛い|無理|焦る|焦って|詰んだ|眠い|疲れた/i.test(trimmed);
+  const isOverwhelmedLike = /やることが多すぎ|やること.*多すぎ|多すぎる|終わらない|溜まって|詰んで|パンク|忙し/i.test(trimmed);
+
+  // 短文一般判定（「今日は何をすればいい？」等）
+  const isShortGeneral = trimmed.length < 30 && /何|どう|いつ|どこ|誰|なぜ|なんで/i.test(trimmed);
+
+  // 短文相談: 不安系
+  if (isAnxietyLike) {
+    // kokuzo検索（optional、候補があれば1行だけ混ぜる）
+    let snippet = "";
+    try {
+      const candidates = searchPagesForHybrid(null, trimmed, 3);
+      if (candidates.length > 0 && candidates[0].snippet) {
+        const topSnippet = String(candidates[0].snippet).slice(0, 100).trim();
+        if (topSnippet.length > 0) {
+          snippet = `\n\n参考の視点: ${topSnippet}${topSnippet.length >= 100 ? "..." : ""}`;
+        }
+      }
+    } catch (e) {
+      // kokuzo検索失敗時は無視（決定論テンプレのみ返す）
+      console.warn("[routeNaturalConversation] kokuzo search failed:", e);
+    }
+
+    // 必ず質問で終わる（断言禁止）
+    const question = ja
+      ? "いま一番しんどいのは 体力 ？ 気持ち ？"
+      : "What's the main concern right now: physical or emotional?";
+    const nextStep = ja ? "\n\n次の1手を教えてください。" : "\n\nWhat's the next step you'd like to take?";
+
+    return {
+      handled: true,
+      responseText: `${question}${snippet}${nextStep}`,
+    };
+  }
+
+  // 短文相談: 過多系
+  if (isOverwhelmedLike) {
+    // kokuzo検索（optional、候補があれば1行だけ混ぜる）
+    let snippet = "";
+    try {
+      const candidates = searchPagesForHybrid(null, trimmed, 3);
+      if (candidates.length > 0 && candidates[0].snippet) {
+        const topSnippet = String(candidates[0].snippet).slice(0, 100).trim();
+        if (topSnippet.length > 0) {
+          snippet = `\n\n参考の視点: ${topSnippet}${topSnippet.length >= 100 ? "..." : ""}`;
+        }
+      }
+    } catch (e) {
+      // kokuzo検索失敗時は無視（決定論テンプレのみ返す）
+      console.warn("[routeNaturalConversation] kokuzo search failed:", e);
+    }
+
+    // 必ず質問で終わる（断言禁止）
+    const question = ja
+      ? "いま 締切がある？ ない？"
+      : "Do you have a deadline right now, or not?";
+    const nextStep = ja ? "\n\n次の1手を教えてください。" : "\n\nWhat's the next step you'd like to take?";
+
+    return {
+      handled: true,
+      responseText: `${question}${snippet}${nextStep}`,
+    };
+  }
+
+  // 短文一般（「今日は何をすればいい？」等）
+  if (isShortGeneral && ja) {
+    // kokuzo検索（optional、候補があれば1行だけ混ぜる）
+    let snippet = "";
+    try {
+      const candidates = searchPagesForHybrid(null, trimmed, 3);
+      if (candidates.length > 0 && candidates[0].snippet) {
+        const topSnippet = String(candidates[0].snippet).slice(0, 100).trim();
+        if (topSnippet.length > 0) {
+          snippet = `\n\n参考の視点: ${topSnippet}${topSnippet.length >= 100 ? "..." : ""}`;
+        }
+      }
+    } catch (e) {
+      // kokuzo検索失敗時は無視（決定論テンプレのみ返す）
+      console.warn("[routeNaturalConversation] kokuzo search failed:", e);
+    }
+
+    // 必ず質問で終わる（断言禁止）
+    const nextStep = "\n\n次の1手を教えてください。";
+
+    return {
+      handled: true,
+      responseText: `いま何をしたいですか？${snippet}${nextStep}`,
+    };
+  }
+
+  // それ以外は通常処理へフォールスルー
+  return {
+    handled: false,
+    responseText: "",
+  };
+}

@@ -150,6 +150,30 @@ npm run build
 # dist/index.js がエントリーポイントです
 ```
 
+## 🚀 デプロイ
+
+**⚠️ 重要：手打ちワンライナー禁止**
+
+デプロイは必ず以下のいずれかの方法を使用してください：
+
+```bash
+# 方法1: GitHub Actions（推奨・自動デプロイ）
+# main ブランチへの push で自動的にデプロイされます
+# .github/workflows/deploy.yml が実行されます
+
+# 方法2: Makefile を使用
+make deploy
+
+# 方法3: pnpm スクリプトを使用
+pnpm deploy:live
+
+# 方法4: 直接スクリプトを実行（緊急時のみ）
+bash scripts/deploy_live.sh
+```
+
+**GitHub Actions が正規のデプロイ経路です。**  
+**詳細は [デプロイガイド](../docs/DEPLOY.md) を参照してください。**
+
 ## 📦 依存関係
 
 ### 本番依存関係

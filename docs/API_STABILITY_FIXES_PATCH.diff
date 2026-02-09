@@ -1,0 +1,70 @@
+diff --git a/api/src/index.ts b/api/src/index.ts
+index 0000000..1111111 100644
+--- a/api/src/index.ts
++++ b/api/src/index.ts
+@@ -13,13 +13,8 @@ import { getDb } from "./db/index.js";
+ 
+-// Debug: 未処理例外のハンドリング
+-const pid = process.pid;
+-process.on("uncaughtException", (error) => {
+-  const uptime = process.uptime();
+-  console.error(`[FATAL] uncaughtException pid=${pid} uptime=${uptime}s:`, error);
+-  process.exit(1);
+-});
+-
+-process.on("unhandledRejection", (reason, promise) => {
+-  const uptime = process.uptime();
+-  console.error(`[FATAL] unhandledRejection pid=${pid} uptime=${uptime}s:`, reason);
+-  process.exit(1);
+-});
++// 例外でプロセスが落ちるのをログ化（Node）
++process.on("unhandledRejection", (e) => console.error("[FATAL] unhandledRejection", e));
++process.on("uncaughtException", (e) => console.error("[FATAL] uncaughtException", e));
+ 
+ const app = express();
+diff --git a/api/src/routes/chat.ts b/api/src/routes/chat.ts
+index 0000000..1111111 100644
+--- a/api/src/routes/chat.ts
++++ b/api/src/routes/chat.ts
+@@ -447,6 +447,12 @@ router.post("/chat", async (req: Request, res: Response) => {
+ 
+     console.log("[TALK_LLM] ok threadId=%s len=%d", threadId, finalText.length);
+ 
++    // decisionFrame.intent 汚染を遮断: trace から intent を除外（次の入力に取り込まない）
++    const sanitizedTrace = trace && typeof trace === "object" ? { ...trace } : trace;
++    if (sanitizedTrace && typeof sanitizedTrace === "object" && "intent" in sanitizedTrace) {
++      delete (sanitizedTrace as any).intent;
++    }
++
+     return res.json({
+       response: finalText,
+-      trace,
++      trace: sanitizedTrace,
+       provisional: true,
+       detailPlan,
+       candidates: [],
+       evidence: null,
+       timestamp: new Date().toISOString(),
+       decisionFrame: { mode: "HYBRID", intent: "chat", llm: null, ku: {} },
+     });
+@@ -892,6 +898,12 @@ router.post("/chat", async (req: Request, res: Response) => {
+     // PERSIST_CALL_MAIN_V1: conversation_log / session_memory にINSERT
+     persistTurn(threadId, sanitized.text, finalText);
+ 
++    // decisionFrame.intent 汚染を遮断: trace から intent を除外（次の入力に取り込まない）
++    const sanitizedTrace = trace && typeof trace === "object" ? { ...trace } : trace;
++    if (sanitizedTrace && typeof sanitizedTrace === "object" && "intent" in sanitizedTrace) {
++      delete (sanitizedTrace as any).intent;
++    }
++
+     return res.json({
+       response: finalText,
+-      trace,
++      trace: sanitizedTrace,
+       provisional: true,
+       detailPlan,
+       candidates,
+       evidence,
+       timestamp: new Date().toISOString(),
+       decisionFrame: { mode: "HYBRID", intent: "chat", llm: null, ku: {} },
+     });

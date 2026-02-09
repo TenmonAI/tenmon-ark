@@ -5,7 +5,7 @@ import { Router, type Request, type Response } from "express";
 import fs from "node:fs";
 import path from "node:path";
 import { randomBytes, createHash } from "node:crypto";
-import { execSync } from "node:child_process";
+import { execSync, execFileSync } from "node:child_process";
 import { getTenmonDataDir, getDb, dbPrepare } from "../db/index.js";
 import { upsertPage } from "../kokuzo/pages.js";
 
@@ -185,9 +185,10 @@ router.post("/ingest/confirm", (req: Request, res: Response) => {
     }
 
     try {
-      // Python スクリプトで PDF→JSONL を生成（execFileSync で実行）
-      // 既存の ingest_pdf_pages.sh の成功体験を踏襲
-      const pythonScript = `import sys
+      // Python スクリプトで PDF→JSONL を生成（一時ファイル方式で実改行を保証）
+      // python -c では \n が文字列として渡るため、一時ファイルに書き出して実行
+      const tmpPythonScript = path.join(getTenmonDataDir(), "db", `ingest_${ingestId}_extract.py`);
+      const pythonScriptContent = `import sys
 import json
 
 pdf_path = sys.argv[1]
@@ -195,51 +196,20 @@ jsonl_path = sys.argv[2]
 
 pages = []
 
-# PyPDF2 → pypdf → pdftotext の順で試行
+# pypdf のみを使用（PyPDF2 依存を削除）
 try:
-    import PyPDF2
+    from pypdf import PdfReader
     with open(pdf_path, "rb") as f:
-        reader = PyPDF2.PdfReader(f)
+        reader = PdfReader(f)
         for i, page in enumerate(reader.pages, 1):
             try:
                 text = page.extract_text() or ""
             except:
                 text = ""
             pages.append({"pdfPage": i, "text": text})
-except ImportError:
-    try:
-        import pypdf
-        with open(pdf_path, "rb") as f:
-            reader = pypdf.PdfReader(f)
-            for i, page in enumerate(reader.pages, 1):
-                try:
-                    text = page.extract_text() or ""
-                except:
-                    text = ""
-                pages.append({"pdfPage": i, "text": text})
-    except ImportError:
-        # pdftotext フォールバック
-        import subprocess
-        page_num = 1
-        while page_num <= 10000:
-            try:
-                result = subprocess.run(
-                    ["pdftotext", "-f", str(page_num), "-l", str(page_num), pdf_path, "-"],
-                    capture_output=True,
-                    text=True,
-                    timeout=5,
-                    check=False
-                )
-                if result.returncode != 0:
-                    break
-                text = result.stdout.strip() if result.stdout else ""
-                if not text and page_num == 1:
-                    # 最初のページが空ならエラー
-                    break
-                pages.append({"pdfPage": page_num, "text": text})
-                page_num += 1
-            except (subprocess.TimeoutExpired, FileNotFoundError):
-                break
+except (ImportError, Exception):
+    # pypdf が読めない場合は例外を投げる（TS側がcatchしてfallbackUpsertするため）
+    raise
 
 # 最低1ページは必要
 if len(pages) == 0:
@@ -253,9 +223,12 @@ with open(jsonl_path, "w", encoding="utf-8") as f:
 sys.stderr.write(f"Extracted {len(pages)} pages\\n")
 `;
 
+      // 一時ファイルに Python スクリプトを書き出し
+      fs.writeFileSync(tmpPythonScript, pythonScriptContent, "utf-8");
+
       const result = execFileSync(
         "python3",
-        ["-c", pythonScript, filePath, tmpJsonl],
+        [tmpPythonScript, filePath, tmpJsonl],
         {
           encoding: "utf-8",
           maxBuffer: 50 * 1024 * 1024, // 50MB
@@ -263,6 +236,13 @@ sys.stderr.write(f"Extracted {len(pages)} pages\\n")
         }
       );
       console.log(`[INGEST-CONFIRM] Python extraction output: ${result}`);
+
+      // 一時 Python スクリプトを削除
+      try {
+        fs.unlinkSync(tmpPythonScript);
+      } catch (e) {
+        console.warn("[INGEST-CONFIRM] Failed to delete temp Python script:", e);
+      }
     } catch (e) {
       console.error("[INGEST-CONFIRM] Failed to extract PDF with Python:", e);
       // エラーでも JSONL ファイルが存在する可能性があるので、続行
@@ -274,7 +254,7 @@ sys.stderr.write(f"Extracted {len(pages)} pages\\n")
         const pagesInserted = 1;
         const emptyPages = 1;
 
-        // FTS rebuild（失敗しても落とさない）
+        // FTS rebuild（最後に1回だけ）
         try {
           const db = getDb("kokuzo");
           const deleteStmt = dbPrepare("kokuzo", "DELETE FROM kokuzo_pages_fts WHERE doc = ?");
@@ -311,6 +291,7 @@ sys.stderr.write(f"Extracted {len(pages)} pages\\n")
       const pagesInserted = 1;
       const emptyPages = 1;
 
+      // FTS rebuild（最後に1回だけ）
       try {
         const db = getDb("kokuzo");
         const deleteStmt = dbPrepare("kokuzo", "DELETE FROM kokuzo_pages_fts WHERE doc = ?");
@@ -342,9 +323,12 @@ sys.stderr.write(f"Extracted {len(pages)} pages\\n")
         const pageData = JSON.parse(line) as { pdfPage: number; text: string };
         const { pdfPage, text: rawText } = pageData;
 
-        let text = rawText || "";
+        // Phase44: tiny PDF may yield empty extracted text.
+        // We still ingest the page row so corpus reflects the document existence.
+        const safeText = (typeof rawText === "string") ? rawText : "";
         
         // 空ページの場合は [NON_TEXT_PAGE_OR_OCR_FAILED] を入れて空ページゼロ化
+        let text = safeText;
         if (!text || text.trim().length === 0) {
           text = "[NON_TEXT_PAGE_OR_OCR_FAILED]";
           emptyPages++;
@@ -353,7 +337,7 @@ sys.stderr.write(f"Extracted {len(pages)} pages\\n")
         // SHA を生成
         const sha = createHash("sha256").update(text).digest("hex").substring(0, 16);
 
-        // kokuzo_pages に UPSERT
+        // kokuzo_pages に UPSERT（空でも必ず1行は入れる）
         upsertPage(request.doc, pdfPage, text, sha);
         pagesInserted++;
       } catch (e) {

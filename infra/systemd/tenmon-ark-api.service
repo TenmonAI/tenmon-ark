@@ -10,7 +10,7 @@ Environment=NODE_ENV=production
 EnvironmentFile=/opt/tenmon-ark/api/.env
 ExecStart=/usr/bin/node dist/index.js
 Restart=always
-RestartSec=10
+RestartSec=1
 StandardOutput=journal
 StandardError=journal
 

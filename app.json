@@ -1,0 +1,17 @@
+{
+  "expo": {
+    "name": "tenmon-ark-app",
+    "slug": "tenmon-ark-app",
+    "version": "1.0.0",
+    "scheme": "tenmon-ark",
+    "web": {
+      "bundler": "metro",
+      "output": "static"
+    },
+    "experiments": {
+      "typedRoutes": true,
+      "baseUrl": "/stg"
+    },
+    "plugins": ["expo-router"]
+  }
+}

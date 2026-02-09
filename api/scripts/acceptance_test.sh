@@ -1,5 +1,42 @@
 #!/usr/bin/env bash
+
+# NOTE: 推測修正ループを物理的に潰すため、FAIL時に必ず EvidencePack を吐く
 set -euo pipefail
+
+evidence_pack() {
+  local why="${1:-ERR}"
+  local ts
+  ts="$(date +%F_%H%M%S)"
+  echo
+  echo "===== [EVIDENCEPACK] ${ts} why=${why} ====="
+  echo "PWD=$(pwd)"
+  echo
+  echo "## git"
+  git rev-parse --short HEAD 2>/dev/null || true
+  git status --porcelain 2>/dev/null || true
+  echo
+  echo "## systemd status"
+  sudo systemctl status tenmon-ark-api.service --no-pager -l || true
+  echo
+  echo "## journal (last 200)"
+  sudo journalctl -u tenmon-ark-api.service -n 200 --no-pager || true
+  echo
+  echo "## listen ports (:3000)"
+  sudo ss -ltnp | grep -E '(:3000)\b' || true
+  echo
+  echo "## local audit"
+  curl -fsS http://127.0.0.1:3000/api/audit | jq . || true
+  echo "===== [EVIDENCEPACK END] ====="
+  echo
+}
+
+on_err() {
+  local rc=$?
+  # BASH_COMMAND は set -u により未定義になる場合があるので保守的に扱う
+  evidence_pack "rc=${rc} line=${LINENO}"
+  exit "${rc}"
+}
+trap on_err ERR
 
 REPO="/opt/tenmon-ark-repo/api"
 LIVE="/opt/tenmon-ark-live"
@@ -7,6 +44,9 @@ DATA_DIR="${TENMON_DATA_DIR:-/opt/tenmon-ark-data}"
 
 # DB参照先を data ディレクトリに統一
 export TENMON_DATA_DIR="$DATA_DIR"
+
+# LLM_SURFACE を強制OFF（acceptance では LLM を使用しない）
+export ENABLE_LLM_SURFACE=0
 
 SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
 cd "$SCRIPT_DIR/.."
@@ -29,16 +69,17 @@ http_get_json() {
 
 echo "[00] Phase00 build sha matches repo HEAD"
 HEAD_SHA="$(git rev-parse --short HEAD)"
-AUDIT_SHA="$(curl -fsS "$BASE_URL/api/audit" | jq -r '.gitSha // empty')"
+
+AUDIT_SHA=""
+for i in $(seq 1 25); do
+  AUDIT_SHA="$(curl -fsS -m 1 "$BASE_URL/api/audit" 2>/dev/null | jq -r '.gitSha // empty' 2>/dev/null || true)"
+  [ -n "$AUDIT_SHA" ] && break
+  sleep 0.2
+done
+
 echo "HEAD_SHA=$HEAD_SHA AUDIT_SHA=$AUDIT_SHA"
-if [ -z "$AUDIT_SHA" ]; then
-  echo "[FAIL] Phase00: /api/audit.gitSha is empty or missing"
-  exit 1
-fi
-if [ "$HEAD_SHA" != "$AUDIT_SHA" ]; then
-  echo "[FAIL] Phase00: build sha mismatch (HEAD=$HEAD_SHA, AUDIT=$AUDIT_SHA)"
-  exit 1
-fi
+[ -n "$AUDIT_SHA" ] || (echo "[FAIL] Phase00: /api/audit not ready" && exit 1)
+[ "$HEAD_SHA" = "$AUDIT_SHA" ] || (echo "[FAIL] Phase00: build sha mismatch (HEAD=$HEAD_SHA, AUDIT=$AUDIT_SHA)" && exit 1)
 echo "[PASS] Phase00 build sha matches"
 
 echo "[1] deploy (NO_RESTART=1)"
@@ -277,8 +318,9 @@ echo "[PASS] Phase23 Kokuzo recall"
 
 echo "[24] GROUNDED with evidenceIds (doc+pdfPage)"
 r24="$(post_chat_raw "言霊秘書.pdf pdfPage=6 テスト #詳細")"
-echo "$r24" | jq -e '.decisionFrame.mode=="GROUNDED"' >/dev/null
-echo "$r24" | jq -e '(.detailPlan.evidenceIds|type)=="array"' >/dev/null
+# here-string で stdin を確実に閉じる（pipe待ち事故回避）
+jq -e '.decisionFrame.mode=="GROUNDED"' <<<"$r24" >/dev/null
+jq -e '(.detailPlan.evidenceIds|type)=="array"' <<<"$r24" >/dev/null
 echo "[PASS] Phase24 GROUNDED evidenceIds"
 
 echo "[25] HYBRID candidates gate (#詳細 shows candidates)"
@@ -312,11 +354,85 @@ if echo "$cand0_snippet" | grep -qE "(監修|校訂|全集)"; then
 fi
 echo "[PASS] Phase28 ranking quality"
 
+echo "[28-2] Phase28-2 placeholder exclusion gate ([NON_TEXT_PAGE_OR_OCR_FAILED] not in candidates[0])"
+r28_2="$(post_chat_raw "言霊とは何？ #詳細")"
+if ! echo "$r28_2" | jq -e '(.candidates|type)=="array" and (.candidates|length)>0' >/dev/null 2>&1; then
+  echo "[FAIL] Phase28-2: candidates array is empty or missing"
+  exit 1
+fi
+cand0_snippet_28_2="$(echo "$r28_2" | jq -r '.candidates[0].snippet // ""')"
+if echo "$cand0_snippet_28_2" | grep -qF "[NON_TEXT_PAGE_OR_OCR_FAILED]"; then
+  echo "[FAIL] Phase28-2: candidates[0].snippet contains [NON_TEXT_PAGE_OR_OCR_FAILED]"
+  echo "$r28_2" | jq '.candidates[0]'
+  exit 1
+fi
+echo "[PASS] Phase28-2 placeholder exclusion"
+
+echo "[28-3] Phase28-3 generation-chain pinned pages gate (KHS 35/119/384/402/549)"
+r28_3="$(post_chat_raw "言霊秘書 生成鎖 息 音 五十連 形仮字 #詳細")"
+
+echo "$r28_3" | jq -e '
+  (.candidates|type)=="array" and
+  (.candidates|length)>0 and
+  ((.candidates[0].snippet // "") | tostring | contains("[NON_TEXT_PAGE_OR_OCR_FAILED]") | not) and
+  ( any(.candidates[]?;
+      .doc=="KHS" and
+      ( ([35,119,384,402,549] | index(.pdfPage)) != null )
+    )
+  )
+' >/dev/null 2>&1 || {
+  echo "[FAIL] Phase28-3 generation-chain pinned pages gate"
+  echo "$r28_3" | jq '{top:(.candidates[0]//null), sample:(.candidates[:8]//[])}'
+  exit 1
+}
+
+echo "[PASS] Phase28-3 generation-chain pinned pages gate"
+
+echo "[KHS_CHAIN] PhaseKHS_CHAIN 生成鎖クエリで KHS 重要ページが候補に含まれること"
+r_khs_chain="$(post_chat_raw "言霊秘書 生成鎖 息 音 五十連 形仮字 #詳細")"
+if ! echo "$r_khs_chain" | jq -e '(.candidates|type)=="array" and (.candidates|length)>0' >/dev/null 2>&1; then
+  echo "[FAIL] PhaseKHS_CHAIN: candidates array is empty or missing"
+  exit 1
+fi
+cand0_snippet_khs="$(echo "$r_khs_chain" | jq -r '.candidates[0].snippet // ""')"
+if echo "$cand0_snippet_khs" | grep -qF "[NON_TEXT_PAGE_OR_OCR_FAILED]"; then
+  echo "[FAIL] PhaseKHS_CHAIN: candidates[0].snippet contains [NON_TEXT_PAGE_OR_OCR_FAILED]"
+  echo "$r_khs_chain" | jq '.candidates[0]'
+  exit 1
+fi
+# candidates の中に (doc=='KHS' && pdfPage in {549,35,119,402,384}) が1つ以上あることを検証
+pinned_found_khs="$(echo "$r_khs_chain" | jq -e 'any(.candidates[]; .doc=="KHS" and (.pdfPage==549 or .pdfPage==35 or .pdfPage==119 or .pdfPage==402 or .pdfPage==384))' 2>/dev/null || echo "false")"
+if [ "$pinned_found_khs" != "true" ]; then
+  echo "[FAIL] PhaseKHS_CHAIN: No pinned pages (KHS 549/35/119/402/384) found in candidates"
+  echo "$r_khs_chain" | jq '.candidates[] | {doc, pdfPage}'
+  exit 1
+fi
+echo "[PASS] PhaseKHS_CHAIN gen-chain KHS pinned pages"
+
 echo "[33] Phase33 kojikiTags (detailPlan.kojikiTags is array)"
 r33="$(post_chat_raw "言霊とは何？ #詳細")"
 echo "$r33" | jq -e 'has("detailPlan")' >/dev/null
 echo "$r33" | jq -e '(.detailPlan.kojikiTags|type)=="array"' >/dev/null
 echo "[PASS] Phase33 kojikiTags"
+
+echo "[MAN/DAN] PhaseMAN_DAN tags array gate (#詳細 detailPlan.manyoshuTags/danshariTags are arrays)"
+r_man_dan="$(post_chat_raw_tid "言霊とは何？ #詳細" "t-man-dan")"
+echo "$r_man_dan" | jq -e 'has("detailPlan")' >/dev/null || {
+  echo "[FAIL] PhaseMAN_DAN: detailPlan missing"
+  echo "$r_man_dan" | jq '.'
+  exit 1
+}
+echo "$r_man_dan" | jq -e '(.detailPlan.manyoshuTags|type)=="array"' >/dev/null || {
+  echo "[FAIL] PhaseMAN_DAN: manyoshuTags is not array"
+  echo "$r_man_dan" | jq '.detailPlan.manyoshuTags'
+  exit 1
+}
+echo "$r_man_dan" | jq -e '(.detailPlan.danshariTags|type)=="array"' >/dev/null || {
+  echo "[FAIL] PhaseMAN_DAN: danshariTags is not array"
+  echo "$r_man_dan" | jq '.detailPlan.danshariTags'
+  exit 1
+}
+echo "[PASS] PhaseMAN_DAN tags array gate"
 
 echo "[36] Phase36 conversation flow (domain question -> answer, not menu only)"
 r36_1="$(post_chat_raw "言霊とは何？")"
@@ -382,15 +498,19 @@ else
 fi
 # candidates が存在すること（KHS データが投入されていれば）
 if echo "$r37" | jq -e '(.candidates|type)=="array" and (.candidates|length)>0' >/dev/null 2>&1; then
-  # evidence または detailPlan.evidence に doc/pdfPage が含まれること
-  has_evidence="$(echo "$r37" | jq -e '(.evidence != null) or (.detailPlan.evidence != null)' 2>/dev/null && echo "yes" || echo "no")"
-  if [ "$has_evidence" = "yes" ]; then
-    echo "[PASS] Phase37 evidence found in response"
-  else
-    echo "[WARN] Phase37: candidates found but evidence not set (may be OK if pageText is empty)"
-  fi
-  # snippet が存在すること
-  echo "$r37" | jq -e '(.candidates[0].snippet|type)=="string" and (.candidates[0].snippet|length)>0' >/dev/null && echo "[PASS] Phase37 snippet found" || echo "[WARN] Phase37: snippet missing"
+  # evidence に doc/pdfPage が含まれること（機械契約として必須）
+  echo "$r37" | jq -e '.evidence.doc=="KHS" and (.evidence.pdfPage|type)=="number" and .evidence.pdfPage>=1' >/dev/null || {
+    echo "[FAIL] Phase37: candidates found but evidence missing or invalid (expected doc=KHS, pdfPage>=1)"
+    echo "$r37" | jq '.evidence'
+    exit 1
+  }
+  # detailPlan.evidenceIds に KZPAGE エビデンスIDが最低1件あること
+  echo "$r37" | jq -e '(.detailPlan.evidenceIds|type)=="array" and (.detailPlan.evidenceIds|length)>0' >/dev/null || {
+    echo "[FAIL] Phase37: detailPlan.evidenceIds missing or empty despite candidates"
+    echo "$r37" | jq '.detailPlan.evidenceIds'
+    exit 1
+  }
+  echo "[PASS] Phase37 evidence + evidenceIds attached"
 else
   echo "[WARN] Phase37: no candidates found (KHS data may not be ingested)"
 fi
@@ -679,6 +799,64 @@ if ! echo "$r45" | jq -e '(.candidates|type)=="array" and (.candidates|length)>0
 fi
 echo "[PASS] Phase45 chat integration smoke"
 
+echo "[45-1] Phase45-1 HOKKE ingest gate (PDF extraction produces non-empty text)"
+# HOKKE PDF が存在する場合のみテスト（存在しない場合は SKIP）
+HOKKE_PDF=""
+if [ -f "/opt/tenmon-corpus/pdf/HOKKE.pdf" ]; then
+  HOKKE_PDF="/opt/tenmon-corpus/pdf/HOKKE.pdf"
+elif [ -f "$DATA_DIR/uploads/HOKKE.pdf" ]; then
+  HOKKE_PDF="$DATA_DIR/uploads/HOKKE.pdf"
+fi
+
+if [ -n "$HOKKE_PDF" ]; then
+  # HOKKE PDF を uploads にコピー（まだ無い場合）
+  if [ ! -f "$DATA_DIR/uploads/HOKKE.pdf" ]; then
+    cp "$HOKKE_PDF" "$DATA_DIR/uploads/HOKKE.pdf"
+  fi
+
+  # /api/upload で HOKKE.pdf をアップロード（既に存在する場合はスキップ）
+  HOKKE_UPLOAD="$(curl -fsS -F "file=@${DATA_DIR}/uploads/HOKKE.pdf" "$BASE_URL/api/upload" 2>/dev/null || echo '{"ok":false}')"
+  HOKKE_SAVED_PATH="$(echo "$HOKKE_UPLOAD" | jq -r '.savedPath // "uploads/HOKKE.pdf"')"
+
+  # /api/ingest/request
+  HOKKE_REQ="$(curl -fsS "$BASE_URL/api/ingest/request" -H "Content-Type: application/json" \
+    -d "{\"threadId\":\"t-hokke-ingest\",\"savedPath\":\"${HOKKE_SAVED_PATH}\",\"doc\":\"HOKKE\"}")"
+  HOKKE_INGEST_ID="$(echo "$HOKKE_REQ" | jq -r '.ingestId // empty')"
+
+  if [ -n "$HOKKE_INGEST_ID" ]; then
+    # /api/ingest/confirm
+    HOKKE_CONFIRM="$(curl -fsS "$BASE_URL/api/ingest/confirm" -H "Content-Type: application/json" \
+      -d "{\"ingestId\":\"${HOKKE_INGEST_ID}\",\"confirm\":true}")"
+
+    if echo "$HOKKE_CONFIRM" | jq -e '.ok==true and .doc=="HOKKE" and (.pagesInserted|type)=="number" and .pagesInserted>=1' >/dev/null 2>&1; then
+      # doc=HOKKE pdfPage=1 の text length > 0 を確認
+      HOKKE_TEXT_LEN="$(sqlite3 "$DATA_DIR/kokuzo.sqlite" "SELECT length(text) FROM kokuzo_pages WHERE doc='HOKKE' AND pdfPage=1;" 2>/dev/null || echo "0")"
+      if [ "$HOKKE_TEXT_LEN" -gt 0 ]; then
+        # [NON_TEXT_PAGE_OR_OCR_FAILED] プレースホルダーでないことを確認
+        HOKKE_TEXT="$(sqlite3 "$DATA_DIR/kokuzo.sqlite" "SELECT text FROM kokuzo_pages WHERE doc='HOKKE' AND pdfPage=1;" 2>/dev/null || echo "")"
+        if echo "$HOKKE_TEXT" | grep -qF "[NON_TEXT_PAGE_OR_OCR_FAILED]"; then
+          echo "[FAIL] Phase45-1: HOKKE P1 text is placeholder (extraction may have failed)"
+          exit 1
+        fi
+        echo "[PASS] Phase45-1 HOKKE ingest (text length=$HOKKE_TEXT_LEN, non-placeholder)"
+      else
+        echo "[FAIL] Phase45-1: HOKKE P1 text is empty (length=$HOKKE_TEXT_LEN)"
+        exit 1
+      fi
+    else
+      echo "[FAIL] Phase45-1: HOKKE ingest confirm failed"
+      echo "$HOKKE_CONFIRM" | jq '.'
+      exit 1
+    fi
+  else
+    echo "[FAIL] Phase45-1: HOKKE ingest request failed"
+    echo "$HOKKE_REQ" | jq '.'
+    exit 1
+  fi
+else
+  echo "[SKIP] Phase45-1: HOKKE.pdf not found (expected at /opt/tenmon-corpus/pdf/HOKKE.pdf or $DATA_DIR/uploads/HOKKE.pdf)"
+fi
+
 echo "[46] Phase46 TENMON_CORE_PACK_v1 core seed gate"
 echo "[46-1] seed TENMON_CORE_PACK_v1"
 bash scripts/seed_tenmon_core_pack_v1.sh
@@ -695,10 +873,282 @@ if ! echo "$r46" | jq -e '(.candidates|type)=="array" and (.candidates|length)>0
 fi
 echo "[PASS] Phase46 TENMON_CORE core seed gate"
 
+echo "== Phase47 IROHA flow gate (#詳細 -> pick -> GROUNDED) =="
+
+R47A="$(curl -fsS "$BASE_URL/api/chat" -H "Content-Type: application/json" \
+  -d '{"threadId":"t-iroha-gate","message":"天命とは？ #詳細"}')"
+echo "$R47A" | jq -e '.ok==true and (.candidates|type)=="array" and (.candidates|length)>=1' >/dev/null || {
+  echo "[FAIL] Phase47: IROHA candidates missing"
+  echo "$R47A" | jq '.'
+  exit 1
+}
+
+R47B="$(curl -fsS "$BASE_URL/api/chat" -H "Content-Type: application/json" \
+  -d '{"threadId":"t-iroha-gate","message":"1"}')"
+echo "$R47B" | jq -e '.ok==true and .decisionFrame.mode=="GROUNDED"' >/dev/null || {
+  echo "[FAIL] Phase47: IROHA pick did not reach GROUNDED"
+  echo "$R47B" | jq '.'
+  exit 1
+}
+echo "$R47B" | jq -e '(.detail|type)=="string" and (.detail|length)>0' >/dev/null || {
+  echo "[FAIL] Phase47: IROHA GROUNDED detail empty"
+  echo "$R47B" | jq '.'
+  exit 1
+}
+
+echo "[PASS] Phase47 IROHA flow gate"
+
+echo "[IROHA-FREEZE] PhaseIROHA_FREEZE いろは最終原稿の凍結検証"
+FROZEN_DIR="${TENMON_DATA_DIR:-/opt/tenmon-ark-data}/corpus/frozen/iroha"
+MANIFEST_FILE="$FROZEN_DIR/manifest.json"
+if [ ! -f "$MANIFEST_FILE" ]; then
+  echo "[SKIP] PhaseIROHA_FREEZE: manifest not found (run freeze_iroha_manuscript.sh first)"
+else
+  # manifest から sha256 を取得
+  FROZEN_SHA="$(jq -r '.files[0].sha256 // empty' "$MANIFEST_FILE" 2>/dev/null || echo "")"
+  if [ -z "$FROZEN_SHA" ]; then
+    echo "[SKIP] PhaseIROHA_FREEZE: no sha256 in manifest"
+  else
+    # 凍結ファイルの存在確認
+    FROZEN_FILE="$FROZEN_DIR/iroha_${FROZEN_SHA}.docx"
+    if [ ! -f "$FROZEN_FILE" ]; then
+      echo "[FAIL] PhaseIROHA_FREEZE: frozen file not found: $FROZEN_FILE"
+      exit 1
+    fi
+    # sha256検証
+    VERIFY_SHA="$(sha256sum "$FROZEN_FILE" | cut -d' ' -f1)"
+    if [ "$VERIFY_SHA" != "$FROZEN_SHA" ]; then
+      echo "[FAIL] PhaseIROHA_FREEZE: sha256 mismatch (expected=$FROZEN_SHA, got=$VERIFY_SHA)"
+      exit 1
+    fi
+    # 読み取り専用確認
+    if [ -w "$FROZEN_FILE" ]; then
+      echo "[FAIL] PhaseIROHA_FREEZE: frozen file is writable (should be read-only)"
+      exit 1
+    fi
+    echo "[PASS] PhaseIROHA_FREEZE frozen file verified (sha256=$FROZEN_SHA)"
+  fi
+fi
+
 echo "[GATE] No Runtime LLM usage in logs"
 if sudo journalctl -u tenmon-ark-api.service --since "$(date '+%Y-%m-%d %H:%M:%S' -d '1 minute ago')" --no-pager | grep -q "\[KANAGI-LLM\]"; then
   echo "[FAIL] Runtime LLM usage detected in logs."
   exit 1
 fi
 echo "[PASS] No Runtime LLM usage detected."
+
+echo "== Phase48 IROHA_KERNEL gate (detailPlan.iroha + chainOrder contains IROHA_KERNEL) =="
+
+R48="$(curl -fsS "$BASE_URL/api/chat" -H "Content-Type: application/json" \
+  -d '{"threadId":"t-iroha-kernel","message":"病はなぜ起きる？ #詳細"}')"
+
+echo "$R48" | jq -e '.ok==true' >/dev/null
+echo "$R48" | jq -e '.detailPlan.iroha.stage != null and (.detailPlan.iroha.principles|type)=="array"' >/dev/null
+echo "$R48" | jq -e '(.detailPlan.chainOrder|index("IROHA_KERNEL")) != null' >/dev/null || {
+  echo "[FAIL] Phase48: IROHA_KERNEL missing in chainOrder"
+  echo "$R48" | jq '.detailPlan'
+  exit 1
+}
+echo "[PASS] Phase48 IROHA_KERNEL"
+
+echo "== Phase49 IROHA law/alg seed gate =="
+
+bash api/scripts/seed_iroha_principles_v1.sh
+
+RL49="$(curl -fsS "$BASE_URL/api/law/list?threadId=iroha-seed")"
+echo "$RL49" | jq -e '.ok==true' >/dev/null
+echo "$RL49" | jq -e '(.laws|type)=="array" and (.laws|length) >= 6' >/dev/null || {
+  echo "[FAIL] Phase49: iroha-seed laws < 6"
+  echo "$RL49" | jq '.'
+  exit 1
+}
+echo "[PASS] Phase49 IROHA seed"
+
+echo "[49-1] Phase49-1 IROHA pin gate (doc/pdfPage must be GROUNDED)"
+BASE_URL="http://127.0.0.1:3000"
+
+R_PIN=$(curl -fsS "$BASE_URL/api/chat" -H "Content-Type: application/json" \
+  -d '{"threadId":"t-iroha-pin","message":"doc=IROHA pdfPage=1"}')
+
+echo "$R_PIN" | jq -e '.ok==true and .decisionFrame.mode=="GROUNDED" and (.detail|type)=="string" and (.detail|length)>0' >/dev/null \
+  || { echo "[FAIL] IROHA pin should be GROUNDED"; echo "$R_PIN" | jq .; exit 1; }
+
+R_PIN_D=$(curl -fsS "$BASE_URL/api/chat" -H "Content-Type: application/json" \
+  -d '{"threadId":"t-iroha-pin","message":"doc=IROHA pdfPage=1 #詳細"}')
+
+echo "$R_PIN_D" | jq -e '.ok==true and .decisionFrame.mode=="GROUNDED" and (.candidates|type)=="array" and (.candidates|length)>0 and .candidates[0].doc=="IROHA" and .candidates[0].pdfPage==1' >/dev/null \
+  || { echo "[FAIL] IROHA pin #詳細 should include candidates"; echo "$R_PIN_D" | jq .; exit 1; }
+
+echo "[PASS] Phase49-1 IROHA pin gate"
+
+echo "== Phase49-2 IROHA GROUNDED/HYBRID gate (doc=IROHA pdfPage=1 が必ず引ける) =="
+
+# 開発中確認用: kokuzo_pages_fts に IROHA が入っているか確認
+IROHA_FTS_COUNT="$(sqlite3 "$TENMON_DATA_DIR/kokuzo.sqlite" "SELECT COUNT(*) FROM kokuzo_pages_fts WHERE doc='IROHA';" 2>/dev/null || echo "0")"
+echo "[INFO] Phase49-2: kokuzo_pages_fts IROHA count=$IROHA_FTS_COUNT"
+
+# (a) GROUNDED: doc=IROHA pdfPage=1 → .detail length>0
+R49_2A="$(curl -fsS "$BASE_URL/api/chat" -H "Content-Type: application/json" \
+  -d '{"threadId":"t-iroha-gate","message":"doc=IROHA pdfPage=1"}')"
+
+if ! echo "$R49_2A" | jq -e '.ok==true' >/dev/null 2>&1; then
+  echo "[FAIL] Phase49-2: GROUNDED response ok!=true"
+  echo "$R49_2A" | jq '.'
+  exit 1
+fi
+
+DETAIL_LEN="$(echo "$R49_2A" | jq -r '.detail // "" | length')"
+if [ "$DETAIL_LEN" -lt 1 ]; then
+  echo "[FAIL] Phase49-2: GROUNDED detail empty (length=$DETAIL_LEN)"
+  echo "$R49_2A" | jq '.'
+  exit 1
+fi
+echo "[PASS] Phase49-2 GROUNDED (detail length=$DETAIL_LEN)"
+
+# (b) HYBRID: doc=IROHA pdfPage=1 #詳細 → .candidates length>0
+R49_2B="$(curl -fsS "$BASE_URL/api/chat" -H "Content-Type: application/json" \
+  -d '{"threadId":"t-iroha-gate","message":"doc=IROHA pdfPage=1 #詳細"}')"
+
+if ! echo "$R49_2B" | jq -e '.ok==true' >/dev/null 2>&1; then
+  echo "[FAIL] Phase49-2: HYBRID response ok!=true"
+  echo "$R49_2B" | jq '.'
+  exit 1
+fi
+
+CANDIDATES_LEN="$(echo "$R49_2B" | jq -r '.candidates // [] | length')"
+if [ "$CANDIDATES_LEN" -lt 1 ]; then
+  echo "[FAIL] Phase49-2: HYBRID candidates missing (length=$CANDIDATES_LEN)"
+  echo "$R49_2B" | jq '.'
+  exit 1
+fi
+echo "[PASS] Phase49-2 HYBRID (candidates length=$CANDIDATES_LEN)"
+
+echo "[PASS] Phase49-2 IROHA GROUNDED/HYBRID gate"
+
+echo "== Phase47-iroha-pin IROHA doc指定ゲート (doc=IROHA pdfPage=1 が必ず GROUNDED になり、#詳細 で candidates が返る) =="
+
+# (1) GROUNDED強制（doc=IROHA pdfPage=1）
+R47_IROHA_PIN="$(curl -fsS "$BASE_URL/api/chat" -H "Content-Type: application/json" \
+  -d '{"threadId":"t-iroha-pin","message":"doc=IROHA pdfPage=1"}')"
+
+if ! echo "$R47_IROHA_PIN" | jq -e '.ok==true and .decisionFrame.mode=="GROUNDED" and (.detail|type)=="string" and (.detail|length)>0 and (.decisionFrame.ku|type)=="object" and .decisionFrame.llm==null' >/dev/null 2>&1; then
+  echo "[FAIL] Phase47-iroha-pin: GROUNDED response failed"
+  echo "$R47_IROHA_PIN" | jq '.'
+  exit 1
+fi
+echo "[PASS] Phase47-iroha-pin GROUNDED (mode=GROUNDED, detail length>0, llm=null, ku=object)"
+
+# (2) #詳細で candidates が必ず返る（doc=IROHA pdfPage=1 #詳細）
+R47_IROHA_DETAIL="$(curl -fsS "$BASE_URL/api/chat" -H "Content-Type: application/json" \
+  -d '{"threadId":"t-iroha-pin","message":"doc=IROHA pdfPage=1 #詳細"}')"
+
+if ! echo "$R47_IROHA_DETAIL" | jq -e '.ok==true and (.candidates|type)=="array" and (.candidates|length)>0 and (.candidates[0].snippet|type)=="string" and (.candidates[0].snippet|length)>20 and .decisionFrame.llm==null and (.decisionFrame.ku|type)=="object"' >/dev/null 2>&1; then
+  echo "[FAIL] Phase47-iroha-pin: #詳細 candidates failed"
+  echo "$R47_IROHA_DETAIL" | jq '.'
+  exit 1
+fi
+echo "[PASS] Phase47-iroha-pin #詳細 (candidates length>0, snippet length>20, llm=null, ku=object)"
+
+echo "[PASS] Phase47-iroha-pin IROHA doc指定ゲート"
+
+echo "[50] Phase50 KATAKAMUNA corpus gate (doc count + candidates + grounded)"
+
+# DBに KATAKAMUNA が入っていること（>=1）
+KATA_N="$(sqlite3 "$TENMON_DATA_DIR/kokuzo.sqlite" "select count(*) from kokuzo_pages where doc='KATAKAMUNA';" 2>/dev/null || echo 0)"
+[ "${KATA_N:-0}" -ge 1 ] || { echo "[FAIL] KATAKAMUNA pages missing: $KATA_N"; exit 1; }
+echo "[PASS] Phase50-0 kokuzo_pages doc='KATAKAMUNA' count=$KATA_N"
+
+# #詳細 で candidates が出ること
+r50a="$(curl -fsS "$BASE_URL/api/chat" -H "Content-Type: application/json" \
+  -d '{"threadId":"t-katakamuna-gate","message":"doc=KATAKAMUNA #詳細 呼吸 ウタヒ 図象符 水火水 シホミツ"}')"
+
+echo "$r50a" | jq -e '
+  .ok==true and
+  (.candidates|type)=="array" and
+  (.candidates|length) > 0 and
+  ((.candidates[0].snippet // "") | tostring | length) > 20
+' >/dev/null || {
+  echo "[FAIL] Phase50-1 KATAKAMUNA candidates missing"
+  echo "$r50a" | jq '.candidates[:5]'
+  exit 1
+}
+echo "[PASS] Phase50-1 KATAKAMUNA candidates ok"
+
+# candidates[0] を直接 GROUNDED 指定（doc+pdfPage）して detail が返ること
+DOC="$(echo "$r50a" | jq -r '.candidates[0].doc')"
+P="$(echo "$r50a" | jq -r '.candidates[0].pdfPage')"
+
+r50b="$(curl -fsS "$BASE_URL/api/chat" -H "Content-Type: application/json" \
+  -d "{\"threadId\":\"t-katakamuna-gate\",\"message\":\"doc=${DOC} pdfPage=${P}\"}")"
+
+echo "$r50b" | jq -e '
+  .ok==true and
+  (.detail|type)=="string" and
+  (.detail|length) > 20
+' >/dev/null || {
+  echo "[FAIL] Phase50-2 KATAKAMUNA GROUNDED detail empty"
+  echo "$r50b" | jq .
+  exit 1
+}
+echo "[PASS] Phase50 KATAKAMUNA corpus gate"
+
+echo "[50] Phase50 KATAKAMUNA seed gate"
+
+KATA_TID="katakamuna-seed"
+
+# 1) check current state FIRST（十分なら seed 実行しない）
+KATA_LAWS="$(curl -fsS "$BASE_URL/api/law/list?threadId=$KATA_TID" | jq -r '.laws|length')"
+KATA_ALGS="$(curl -fsS "$BASE_URL/api/alg/list?threadId=$KATA_TID" | jq -r '.algorithms|length')"
+
+if [ "$KATA_LAWS" -lt 6 ] || [ "$KATA_ALGS" -lt 3 ]; then
+  echo "[WARN] Phase50: insufficient -> run seed (laws=$KATA_LAWS algs=$KATA_ALGS)"
+
+  SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  KATA_SEED="${SCRIPT_DIR}/seed_katakamuna_principles_v1.sh"
+
+  test -f "$KATA_SEED" || { echo "[FAIL] Phase50: seed missing ($KATA_SEED)"; exit 1; }
+  test -s "$KATA_SEED" || { echo "[FAIL] Phase50: seed empty"; exit 1; }
+
+  # wrapper/accidental overwrite guard（219 bytes等のラッパーを弾く）
+  [ "$(wc -c < "$KATA_SEED")" -ge 300 ] || { echo "[FAIL] Phase50: seed too small (likely wrapper)"; exit 1; }
+
+  bash -n "$KATA_SEED" || { echo "[FAIL] Phase50: seed syntax error"; exit 1; }
+
+  THREAD_ID="$KATA_TID" BASE_URL="$BASE_URL" bash "$KATA_SEED" >/dev/null
+
+  # re-check
+  KATA_LAWS="$(curl -fsS "$BASE_URL/api/law/list?threadId=$KATA_TID" | jq -r '.laws|length')"
+  KATA_ALGS="$(curl -fsS "$BASE_URL/api/alg/list?threadId=$KATA_TID" | jq -r '.algorithms|length')"
+fi
+
+if [ "$KATA_LAWS" -lt 6 ] || [ "$KATA_ALGS" -lt 3 ]; then
+  echo "[FAIL] Phase50: katakamuna-seed insufficient (laws=$KATA_LAWS algs=$KATA_ALGS)"
+  exit 1
+fi
+
+echo "[PASS] Phase50 KATAKAMUNA seed gate"
+
+echo "[51] Phase51 SUTRA seed gate"
+bash api/scripts/seed_sutra_pack_prajna_lotus_v1.sh
+SUTRA_LAWS="$(curl -fsS "$BASE_URL/api/law/list?threadId=sutra-seed" \
+  | jq -r 'if type=="array" then length elif has("laws") then (.laws|length) else 0 end')"
+SUTRA_ALGS="$(curl -fsS "$BASE_URL/api/alg/list?threadId=sutra-seed" \
+  | jq -r 'if type=="array" then length elif has("algorithms") then (.algorithms|length) else 0 end')"
+if [ "$SUTRA_LAWS" -lt 4 ] || [ "$SUTRA_ALGS" -lt 1 ]; then
+  echo "[FAIL] Phase51: sutra-seed insufficient (laws=$SUTRA_LAWS algs=$SUTRA_ALGS)"
+  exit 1
+fi
+echo "[PASS] Phase51 SUTRA seed gate"
+
 echo "[PASS] acceptance_test.sh"
+
+# ---- PhaseZZ: acceptance proof (append-only) ----
+PROOF="/tmp/tenmon_acceptance_last.txt"
+{
+  echo "timestamp=$(date -Iseconds)"
+  echo "exit=0"
+  echo -n "headSha="; git rev-parse --short HEAD 2>/dev/null || echo "unknown"
+  echo -n "auditSha="; curl -fsS http://127.0.0.1:3000/api/audit | jq -r '.gitSha' 2>/dev/null || echo "unknown"
+  echo -n "buildMark="; curl -fsS http://127.0.0.1:3000/api/audit | jq -r '.build.mark' 2>/dev/null || echo "unknown"
+} > "$PROOF"
+echo "[PASS] proof saved: $PROOF"
