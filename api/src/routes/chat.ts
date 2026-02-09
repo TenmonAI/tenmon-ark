@@ -553,10 +553,14 @@ router.post("/chat", async (req: Request, res: Response<ChatResponseBody>) => {
 
   // acceptance gate: coreplan probe は必ず HYBRID へ流す（LLM_CHAT禁止）
   const isCorePlanProbe = /\bcoreplan\b/i.test(trimmed);
+
+  // domain gate: 主要ドメイン語は LLM_CHAT を禁止（HYBRIDへ）
+  const isDomainLike = /言霊|言灵|カタカムナ|天津金木|古事記|法華経|真言|布斗麻邇|フトマニ|水穂伝|虚空蔵/i.test(message);
   const shouldLLMChat =
     !isSmokeHybrid &&
     !isNonTextLike &&
     !isCorePlanProbe &&
+    !isDomainLike &&
     !hasDocPageHere &&
     !wantsDetail &&
     !wantsEvidence &&
