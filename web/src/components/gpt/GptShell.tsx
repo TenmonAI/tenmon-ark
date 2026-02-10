@@ -5,6 +5,7 @@ import { ChatRoute } from "../../pages/ChatRoute";
 import { DashboardPage } from "../../pages/DashboardPage";
 import { ProfilePage } from "../../pages/ProfilePage";
 import { SettingsModal } from "./SettingsModal";
+import { APP_TITLE } from "../../config/app";
 
 export function GptShell() {
   const [view, setView] = useState<GptView>("chat");
@@ -15,6 +16,13 @@ export function GptShell() {
     window.location.reload();
   };
 
+  const title =
+    view === "chat"
+      ? APP_TITLE
+      : view === "dashboard"
+        ? "Dashboard"
+        : "Profile";
+
   return (
     <div className="gpt-shell">
       <Sidebar
@@ -24,7 +32,7 @@ export function GptShell() {
         onOpenSettings={() => setSettingsOpen(true)}
       />
       <main className="gpt-main">
-        <Topbar title={view === "chat" ? "Chat" : view === "dashboard" ? "Dashboard" : "Profile"} />
+        <Topbar title={title} />
         <div className="gpt-content">
           {view === "chat" && <ChatRoute />}
           {view === "dashboard" && <DashboardPage />}

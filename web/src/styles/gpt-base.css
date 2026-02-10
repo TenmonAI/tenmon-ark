@@ -284,6 +284,17 @@ body::before {
   color: var(--gpt-text-muted);
 }
 
+/* Brand mark image (TENMON-ARK) */
+.gpt-brand-mark {
+  width: 28px;
+  height: 28px;
+  border-radius: 9999px;
+  object-fit: cover;
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  display: block;
+}
+
 /* Topbar */
 .gpt-topbar {
   height: 52px;
