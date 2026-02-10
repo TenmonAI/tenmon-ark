@@ -47,11 +47,10 @@ export function Sidebar({ view, onView, onNewChat, onOpenSettings }: SidebarProp
         </button>
         <div className="gpt-sidebar-user">
           <div className="gpt-sidebar-avatar">
-            <img
-              src="brand/tenmon-ark-mark.png"
-              alt="TENMON-ARK"
-              className="gpt-brand-mark"
-            />
+            <div className="gpt-mark-wrap gpt-mark-wrap-lg" aria-hidden="true">
+              <img className="gpt-mark-img gpt-mark-img-back" src="brand/tenmon-ark-mark-ui.png" alt="" />
+              <img className="gpt-mark-img gpt-mark-img-front" src="brand/tenmon-ark-mark-ui.png" alt="TENMON-ARK" />
+            </div>
           </div>
           <div className="gpt-sidebar-user-lines">
             <div className="gpt-sidebar-user-line-main">{t("sidebar.brandLine1")}</div>

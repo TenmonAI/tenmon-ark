@@ -11,11 +11,10 @@ export function Topbar({ title = "TENMON-ARK 1.0" }: TopbarProps) {
   return (
     <header className="gpt-topbar">
       <div className="gpt-topbar-left">
-        <img
-          src="brand/tenmon-ark-mark.png"
-          alt="TENMON-ARK"
-          className="gpt-topbar-logo"
-        />
+        <span className="gpt-mark-wrap" aria-hidden="true">
+          <img className="gpt-mark-img gpt-mark-img-back" src="brand/tenmon-ark-mark-ui.png" alt="" />
+          <img className="gpt-mark-img gpt-mark-img-front" src="brand/tenmon-ark-mark-ui.png" alt="TENMON-ARK" />
+        </span>
         <span className="gpt-topbar-title">{title}</span>
       </div>
       <div>
