@@ -30,8 +30,12 @@ export function Topbar({ title = "TENMON-ARK 1.0", onOpenSidebar, isSidebarOpen 
         />
         <span className="gpt-topbar-title">{title}</span>
       </div>
-      <div>
-        <span className="gpt-topbar-meta">{t("topbar.chatMeta")}</span>
+      <div className="gpt-topbar-right">
+        <button type="button" className="gpt-account-btn" aria-label="Account menu">
+          <span className="gpt-account-avatar" aria-hidden="true">⦿</span>
+          <span className="gpt-account-name">{(typeof window !== "undefined" && window.localStorage.getItem("tenmon_user_display_v1")) || "Account"}</span>
+          <span className="gpt-account-caret" aria-hidden="true">▾</span>
+        </button>
       </div>
     </header>
   );

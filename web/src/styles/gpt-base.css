@@ -663,3 +663,60 @@ body::before {
   .gpt-main{ width:100vw; }
   .gpt-topbar{ position:sticky; top:0; z-index:1100; }
 }
+
+/* Topbar account button (Phase1 UI-only) */
+.gpt-topbar-right{
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+
+.gpt-account-btn{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding:6px 10px;
+  border-radius:12px;
+  border:1px solid rgba(0,0,0,0.10);
+  background:transparent;
+  color:var(--gpt-text-primary);
+  cursor:pointer;
+  font-size:var(--gpt-text-sm);
+}
+
+.gpt-account-btn:hover{
+  background:rgba(0,0,0,0.04);
+  border-color:rgba(0,0,0,0.14);
+}
+
+.gpt-account-avatar{
+  width:22px;
+  height:22px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  border-radius:999px;
+  border:2px solid #000;
+  position:relative;
+  background:#fff;
+  font-size:0; /* 文字でなく“丸”として扱う */
+}
+.gpt-account-avatar::after{
+  content:"";
+  width:10px;
+  height:10px;
+  border-radius:999px;
+  background:#C1121F;
+  display:block;
+}
+
+.gpt-account-name{
+  max-width:140px;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.gpt-account-caret{
+  opacity:0.7;
+}
