@@ -7,7 +7,7 @@ import { listMessagesByThread, replaceThreadMessages, upsertThread } from "./lib
 // NOTE: ルーター導入はしない。最小のタブ切替のみ。
 type Tab = "chat" | "dashboard" | "health";
 
-export default function App() {
+export function App() {
   const [tab, setTab] = useState<Tab>("chat");
   const [showSettings, setShowSettings] = useState(false);
 
