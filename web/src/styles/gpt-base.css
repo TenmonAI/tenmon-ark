@@ -243,9 +243,9 @@ body::before {
   margin-top: var(--gpt-space-sm);
 }
 .gpt-sidebar-avatar {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  border-radius: 0;
   background: transparent;
   color: inherit;
   display: flex;
@@ -284,51 +284,27 @@ body::before {
   color: var(--gpt-text-muted);
 }
 
-/* Brand mark image (TENMON-ARK) — shared wrapper */
-.gpt-mark-wrap{
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 18px;
-  height: 18px;
-  border-radius: 999px;
-
-  /* GPTっぽい“輪郭”：少し濃く */
-  border: 1px solid rgba(0,0,0,0.14);
-
-  /* 背景は白固定。紙白でも沈まない */
-  background: #fff;
-
-  box-sizing: border-box;
+/* Topbar logo */
+.gpt-topbar-logo{
+  width:32px;
+  height:32px;
+  object-fit:contain;
+  display:block;
+  opacity:1;
+  filter:none;
 }
 
-.gpt-mark-wrap-lg{
-  width: 28px;
-  height: 28px;
-  border-radius: 999px;
-}
-
-.gpt-mark-img{
-  position: absolute;
-  inset: 2px;
-  width: calc(100% - 4px);
-  height: calc(100% - 4px);
-  object-fit: contain;
-  display: block;
-}
-
-/* “縁取り”は強すぎると汚いので、薄く・シャープに */
-.gpt-mark-img-back{
-  filter: grayscale(1) contrast(2.2) brightness(0.18);
-  opacity: 0.22;
-  transform: translateY(0.2px);
-}
-
-/* 本体は「チャコール寄り」で線を残す */
-.gpt-mark-img-front{
-  filter: grayscale(1) contrast(1.65) brightness(0.45);
-  opacity: 0.98;
+/* Sidebar logo */
+.gpt-brand-mark{
+  width:32px;
+  height:32px;
+  object-fit:contain;
+  display:block;
+  opacity:1;
+  filter:none;
+  background:transparent;
+  border:none;
+  border-radius:0;
 }
 
 /* Topbar */
