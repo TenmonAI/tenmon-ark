@@ -824,6 +824,23 @@ let finalResponse = response;
       }
     }
 
+    // HYBRID_END_QUESTION_V1: 通常HYBRIDは必ず問いで閉じる（#詳細/根拠系は改変しない）
+    {
+      const wants = Boolean(wantsDetail);
+      const hasEvidenceSignals =
+        /(pdfPage=|doc=|evidenceIds|candidates|引用|出典|根拠|ソース|【|】)/.test(String(finalResponse));
+
+      if (!wants && !hasEvidenceSignals) {
+        let r = String(finalResponse ?? "").trim();
+        const endsQ = /[？?]\s*$/.test(r) || /(ですか|でしょうか|ますか)\s*$/.test(r);
+        if (!endsQ) {
+          r = `${r}\n\n次の一手は、どこから始めましょうか？`;
+        }
+        finalResponse = r;
+      }
+    }
+
+
     // レスポンス形式（厳守）
     return reply({
       response: finalResponse,
