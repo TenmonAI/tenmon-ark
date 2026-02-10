@@ -14,7 +14,7 @@ export function Topbar({ title = "TENMON-ARK 1.0" }: TopbarProps) {
         <img
           src="brand/tenmon-ark-mark.svg"
           alt="TENMON-ARK"
-          className="gpt-topbar-logo"
+          className="gpt-brand-mark"
         />
         <span className="gpt-topbar-title">{title}</span>
       </div>

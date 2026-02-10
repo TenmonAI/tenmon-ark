@@ -284,15 +284,6 @@ body::before {
   color: var(--gpt-text-muted);
 }
 
-/* Topbar logo */
-.gpt-topbar-logo{
-  width:24px;
-  height:24px;
-  object-fit:contain;
-  display:block;
-}
-
-/* Sidebar logo */
 .gpt-brand-mark{
   width:28px;
   height:28px;
