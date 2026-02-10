@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { SettingsPanel } from "../SettingsPanel";
+import { useI18n } from "../../i18n/useI18n";
 
 interface SettingsModalProps {
   open: boolean;
@@ -7,14 +8,16 @@ interface SettingsModalProps {
 }
 
 const SECTIONS = [
-  { id: "general", label: "General" },
-  { id: "appearance", label: "Appearance" },
-  { id: "data", label: "Data controls" },
-  { id: "about", label: "About" },
+  { id: "general", labelKey: "settings.section.general" },
+  { id: "appearance", labelKey: "settings.section.appearance" },
+  { id: "language", labelKey: "settings.section.language" },
+  { id: "data", labelKey: "settings.section.data" },
+  { id: "about", labelKey: "settings.section.about" },
 ] as const;
 
 export function SettingsModal({ open, onClose }: SettingsModalProps) {
   const [section, setSection] = useState<string>("general");
+  const { t, lang, setLang, supportedLangs } = useI18n();
 
   if (!open) return null;
 
@@ -29,21 +32,40 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
               className={`gpt-settings-nav-item ${section === s.id ? "gpt-sidebar-item-active" : ""}`}
               onClick={() => setSection(s.id)}
             >
-              {s.label}
+              {t(s.labelKey)}
             </button>
           ))}
         </nav>
         <div className="gpt-scroll gpt-settings-body">
           <div className="gpt-settings-header">
-            <h2 className="gpt-settings-title">Settings</h2>
+            <h2 className="gpt-settings-title">{t("settings.title")}</h2>
             <button type="button" className="gpt-btn" onClick={onClose}>
-              Close
+              {t("settings.close")}
             </button>
           </div>
           {section === "data" ? (
             <SettingsPanel open={true} onClose={onClose} onImported={() => window.location.reload()} />
+          ) : section === "language" ? (
+            <div className="gpt-page-card">
+              <h3 className="gpt-page-card-title">{t("settings.language.title")}</h3>
+              <p className="gpt-page-sub">{t("settings.language.subtitle")}</p>
+              <label className="gpt-page-card">
+                <span className="gpt-page-card-title">{t("settings.language.label")}</span>
+                <select
+                  value={lang}
+                  onChange={(e) => setLang(e.target.value)}
+                  style={{ marginTop: 6, padding: "6px 10px", fontSize: "14px" }}
+                >
+                  {supportedLangs.map((code) => (
+                    <option key={code} value={code}>
+                      {t(`settings.language.option.${code}`)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
           ) : (
-            <p className="gpt-page-sub">{section} — Coming soon</p>
+            <p className="gpt-page-sub">{t("settings.comingSoon")}</p>
           )}
         </div>
       </div>

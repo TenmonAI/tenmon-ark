@@ -14,6 +14,20 @@ body {
   color: var(--text);
   background: var(--bg);
   -webkit-font-smoothing: antialiased;
+  position: relative;
+}
+
+/* 紙ノイズ（極薄, 気づくかどうかのレベル） */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: -1;
+  background-image:
+    radial-gradient(circle at 1px 1px, rgba(0, 0, 0, 0.06) 0, transparent 1px);
+  background-size: 6px 6px;
+  opacity: 0.02;
 }
 
 /* Scrollbar（薄いグレー系・GPT寄せ） */
@@ -186,6 +200,7 @@ body {
   font-size: var(--gpt-text-sm);
   font-family: var(--gpt-font-sans);
   text-align: left;
+  position: relative;
 }
 .gpt-sidebar-item:hover {
   background: var(--hover);
@@ -194,6 +209,24 @@ body {
 .gpt-sidebar-item-active {
   background: var(--gpt-hover-bg-strong);
   color: var(--text);
+  z-index: 0;
+}
+.gpt-sidebar-item-active::before {
+  content: "";
+  position: absolute;
+  left: 6px;
+  top: 50%;
+  width: 160px;
+  height: 160px;
+  transform: translateY(-50%);
+  background: radial-gradient(
+    circle at left center,
+    rgba(47, 111, 94, 0.10) 0,
+    rgba(47, 111, 94, 0.0) 60%
+  );
+  opacity: 0.08;
+  pointer-events: none;
+  z-index: -1;
 }
 .gpt-sidebar-bottom {
   padding: var(--gpt-space-md);
@@ -220,10 +253,35 @@ body {
   justify-content: center;
   font-size: var(--gpt-text-sm);
   font-weight: var(--gpt-font-semibold);
+  position: relative;
+  overflow: hidden;
+}
+.gpt-sidebar-avatar-dot {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--ark-gold);
+  right: 3px;
+  bottom: 3px;
 }
 .gpt-sidebar-user-label {
   font-size: var(--gpt-text-sm);
   color: var(--gpt-text-secondary);
+}
+.gpt-sidebar-user-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.gpt-sidebar-user-line-main {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.gpt-sidebar-user-line-sub {
+  font-size: 10px;
+  color: var(--gpt-text-muted);
 }
 
 /* Topbar */
@@ -237,6 +295,19 @@ body {
   border-bottom: 1px solid var(--gpt-border);
   background: var(--gpt-bg-primary);
   flex-shrink: 0;
+}
+.gpt-topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.gpt-topbar-mark {
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  border: 1px solid var(--gpt-text-primary);
+  display: inline-block;
+  box-sizing: border-box;
 }
 .gpt-topbar-title {
   font-size: var(--gpt-text-sm);

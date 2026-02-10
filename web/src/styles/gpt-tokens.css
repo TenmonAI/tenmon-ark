@@ -1,15 +1,17 @@
 /* GPT-style Design Tokens — ライト (ChatGPT desktop light, 1px再現用) */
 :root {
-  /* 指定トークン（LIGHT基調固定） */
-  --bg: #ffffff;
+  /* 指定トークン（LIGHT基調固定 + Ark skin） */
+  --bg: #fafaf7; /* 紙白 */
   --sidebar-bg: #f7f7f8;
   --border: rgba(0, 0, 0, 0.08);
-  --text: #0f172a;
-  --muted: rgba(15, 23, 42, 0.65);
+  --text: #111827; /* 墨 */
+  --muted: rgba(17, 24, 39, 0.65);
   --hover: rgba(0, 0, 0, 0.04);
   --input-bg: #ffffff;
   --input-border: rgba(0, 0, 0, 0.12);
-  --shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+  --shadow: 0 6px 20px rgba(17, 24, 39, 0.06);
+  --ark-green: #2f6f5e; /* 深緑 */
+  --ark-gold: #c9a14a; /* 金（一点のみ） */
   --r-sm: 8px;
   --r-md: 12px;
   --r-lg: 16px;
@@ -44,8 +46,8 @@
   --gpt-text-primary: var(--text);
   --gpt-text-secondary: var(--text);
   --gpt-text-muted: var(--muted);
-  --gpt-accent: #10a37f;
-  --gpt-accent-hover: #0d8c6d;
+  --gpt-accent: var(--ark-green);
+  --gpt-accent-hover: #27594c;
   --gpt-focus-ring: 2px solid var(--gpt-accent);
   --gpt-shadow-sm: var(--shadow);
   --gpt-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);

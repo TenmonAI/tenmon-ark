@@ -1,4 +1,5 @@
 import React, { useState, useRef } from "react";
+import { useI18n } from "../../i18n/useI18n";
 
 interface ComposerProps {
   onSend: (text: string) => void;
@@ -8,6 +9,7 @@ interface ComposerProps {
 export function Composer({ onSend, loading }: ComposerProps) {
   const [text, setText] = useState("");
   const composingRef = useRef(false);
+  const { t } = useI18n();
 
   const submit = () => {
     const v = text.trim();
@@ -23,7 +25,7 @@ export function Composer({ onSend, loading }: ComposerProps) {
           className="gpt-input gpt-focus-ring gpt-composer-input"
           value={text}
           onChange={(e) => setText(e.target.value)}
-          placeholder="Message TENMON-ARK..."
+          placeholder={t("composer.placeholder")}
           disabled={loading}
           onCompositionStart={() => { composingRef.current = true; }}
           onCompositionEnd={() => { composingRef.current = false; }}
