@@ -687,7 +687,60 @@ router.post("/chat", async (req: Request, res: Response<ChatResponseBody>) => {
     const isDomainQuestion = /言灵|言霊|ことだま|kotodama|法則|カタカムナ|天津金木|水火|與合/i.test(sanitized.text);
     
     // ドメイン質問の場合、回答本文を改善（候補があれば本文を生成、なければ最低限の説明）
-    let finalResponse = response;
+    
+    // DETAIL_DOMAIN_EVIDENCE_V1: #詳細 + domain は「会話＋根拠（doc/pdfPage+引用）」に着地させる（捏造なし）
+    if (wantsDetail && isJapanese && !hasDocPage && isDomainQuestion) {
+      const usable = candidates.find((c: any) => {
+        const t = (getPageText(c.doc, c.pdfPage) || "").trim();
+        if (!t) return false;
+        if (t.includes("[NON_TEXT_PAGE_OR_OCR_FAILED]")) return false;
+        if (!/[ぁ-んァ-ン一-龯]/.test(t)) return false;
+        return true;
+      });
+
+      if (usable) {
+        const pageText = (getPageText(usable.doc, usable.pdfPage) || "").trim();
+        const quote = pageText.slice(0, 520);
+
+        const evidenceId = `KZPAGE:${usable.doc}:P${usable.pdfPage}`;
+        if (!detailPlan.evidenceIds) detailPlan.evidenceIds = [];
+        if (!detailPlan.evidenceIds.includes(evidenceId)) detailPlan.evidenceIds.push(evidenceId);
+
+        return reply({
+          response:
+            "いい問いです。根拠つきで短く押さえます。\n\n" +
+            `出典: ${usable.doc} P${usable.pdfPage}\n\n` +
+            "【引用】\n" +
+            `${quote}${pageText.length > quote.length ? "..." : ""}\n\n` +
+            "この引用のどの部分が、一番ひっかかりますか？",
+          trace,
+          provisional: true,
+          detailPlan,
+          candidates,
+          evidence: { doc: usable.doc, pdfPage: usable.pdfPage, quote: quote.slice(0, 140) },
+          timestamp: new Date().toISOString(),
+          decisionFrame: { mode: "HYBRID", intent: "chat", llm: null, ku: {} },
+        });
+      }
+
+      return reply({
+        response:
+          "候補は出ましたが、本文を取得できるページが見当たりませんでした。\n\n" +
+          "次のどれで進めますか？\n" +
+          "1) doc/pdfPage を指定して再検索\n" +
+          "2) 焦点を一言で（定義／作用／歴史／実践）\n\n" +
+          "どちらですか？",
+        trace,
+        provisional: true,
+        detailPlan,
+        candidates,
+        evidence: null,
+        timestamp: new Date().toISOString(),
+        decisionFrame: { mode: "HYBRID", intent: "chat", llm: null, ku: {} },
+      });
+    }
+
+let finalResponse = response;
     let evidenceDoc: string | null = null;
     let evidencePdfPage: number | null = null;
     let evidenceQuote: string | null = null;
