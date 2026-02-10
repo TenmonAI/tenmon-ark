@@ -13,7 +13,6 @@ export function GptShell() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isOverlayNav, setIsOverlayNav] = useState(false); // <=1024 drawer mode
 
-  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const handleNewChat = () => {
     setView("chat");
