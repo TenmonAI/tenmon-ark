@@ -285,17 +285,15 @@ body::before {
 }
 
 /* Brand mark image (TENMON-ARK) */
-.gpt-brand-mark {
-  width: 30px;
-  height: 30px;
-  border-radius: 9999px;
-  object-fit: contain;
-  display: block;
-  /* 潰れ防止：白背景＋薄枠 */
-  background: #ffffff;
-  border: 1px solid rgba(0, 0, 0, 0.10);
-  /* 金を沈める（Topbarより少し強めでもOK） */
-  filter: saturate(0.05) contrast(1.2) brightness(0.55);
+.gpt-brand-mark{
+  width:40px;
+  height:40px;
+  border-radius:0;
+  object-fit:contain;
+  background:transparent;
+  border:none;
+  filter:none;
+  opacity:1;
 }
 
 /* Topbar */
@@ -316,15 +314,14 @@ body::before {
   gap:10px;
 }
 
-/* ロゴは「見える」サイズに上げる */
+/* Topbarロゴは大きめ（実質 48px 級） */
 .gpt-topbar-logo{
-  width:22px;
-  height:22px;
+  width:48px;
+  height:48px;
   object-fit:contain;
   display:block;
-  /* 金を完全に殺さず、GPT風に“沈める” */
-  filter: saturate(0.1) contrast(1.15) brightness(0.55);
-  opacity: 0.92;
+  filter:none;
+  opacity:1;
 }
 .gpt-topbar-title {
   font-size: var(--gpt-text-sm);
