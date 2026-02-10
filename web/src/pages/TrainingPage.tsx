@@ -1,7 +1,6 @@
 // Training Chat: Learning Material Storage UI
 
 import { useState, useEffect } from "react";
-import { API_BASE_URL } from "../config/api.js";
 
 type TrainingSession = {
   id: string;
@@ -52,7 +51,7 @@ export function TrainingPage() {
 
   const loadSessions = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/api/training/sessions`);
+      const res = await fetch("/api/training/sessions");
       const data = await res.json();
       if (data.success) {
         setSessions(data.sessions);
@@ -64,7 +63,7 @@ export function TrainingPage() {
 
   const loadSession = async (sessionId: string) => {
     try {
-      const res = await fetch(`${API_BASE_URL}/api/training/session/${sessionId}`);
+      const res = await fetch(`/api/training/session/${sessionId}`);
       const data = await res.json();
       if (data.success) {
         setSessionData({ session: data.session, messages: data.messages });
@@ -76,7 +75,7 @@ export function TrainingPage() {
 
   const loadRules = async (sessionId: string) => {
     try {
-      const res = await fetch(`${API_BASE_URL}/api/training/rules?session_id=${sessionId}`);
+      const res = await fetch(`/api/training/rules?session_id=${sessionId}`);
       const data = await res.json();
       if (data.success) {
         setRules(data.rules);
@@ -90,7 +89,7 @@ export function TrainingPage() {
     if (!newSessionTitle.trim()) return;
 
     try {
-      const res = await fetch(`${API_BASE_URL}/api/training/session`, {
+      const res = await fetch("/api/training/session", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ title: newSessionTitle.trim() }),
@@ -115,7 +114,7 @@ export function TrainingPage() {
 
     setIngesting(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/api/training/ingest`, {
+      const res = await fetch("/api/training/ingest", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

@@ -59,7 +59,7 @@ export function ChatPage() {
         <ChatInput loading={loading} onSend={sendMessage} />
 
         <div style={{ fontSize: 12, opacity: 0.6 }}>
-          persona: tenmon / backend: /api/chat (fetch)
+          persona: tenmon / backend: /api/chat (same-origin)
         </div>
       </div>
 

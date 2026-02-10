@@ -1,6 +1,4 @@
-// API Base URL Configuration
-// 本番環境: VPS (162.43.90.247:3000)
-// 開発環境: localhost:3000 (環境変数で上書き可能)
-
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://162.43.90.247:3000";
+// 同一オリジン相対パスのみ（http://...:3000 は使わない。nginx location /api/ に統一）
+export const API_BASE_URL = "";
+export const API_CHAT_URL = API_BASE_URL + "/api/chat";
 

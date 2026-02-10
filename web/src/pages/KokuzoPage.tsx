@@ -1,7 +1,6 @@
 // KOKŪZŌ v1.1: Minimal UI for Persistent Wisdom Storage
 
 import { useState, useRef, useEffect } from "react";
-import { API_BASE_URL } from "../config/api.js";
 
 type KokuzoFile = {
   id: number;
@@ -30,7 +29,7 @@ export function KokuzoPage() {
 
   const loadFiles = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/api/kokuzo/files`);
+      const res = await fetch("/api/kokuzo/files");
       const data = await res.json();
       if (data.success) {
         setFiles(data.files);
@@ -42,7 +41,7 @@ export function KokuzoPage() {
 
   const loadSeeds = async (fileId: number) => {
     try {
-      const res = await fetch(`${API_BASE_URL}/api/kokuzo/seeds?file_id=${fileId}`);
+      const res = await fetch(`/api/kokuzo/seeds?file_id=${fileId}`);
       const data = await res.json();
       if (data.success) {
         setSeeds(data.seeds);
@@ -58,7 +57,7 @@ export function KokuzoPage() {
       const formData = new FormData();
       formData.append("file", file);
 
-      const res = await fetch(`${API_BASE_URL}/api/kokuzo/upload`, {
+      const res = await fetch("/api/kokuzo/upload", {
         method: "POST",
         body: formData,
       });
@@ -80,7 +79,7 @@ export function KokuzoPage() {
   const handleIndex = async (fileId: number) => {
     setIndexing(fileId);
     try {
-      const res = await fetch(`${API_BASE_URL}/api/kokuzo/index`, {
+      const res = await fetch("/api/kokuzo/index", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ file_id: fileId }),
