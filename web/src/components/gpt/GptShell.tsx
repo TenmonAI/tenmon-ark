@@ -66,28 +66,6 @@ const title =
       : view === "dashboard"
         ? "Dashboard"
         : "Profile";
-
-  useEffect(() => {
-    if (sidebarOpen) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "";
-    }
-  }, [sidebarOpen]);
-
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setSidebarOpen(false);
-      }
-    };
-
-    window.addEventListener("keydown", onKeyDown);
-    return () => {
-      window.removeEventListener("keydown", onKeyDown);
-    };
-  }, []);
-
   return (
     <div className={`gpt-shell ${isOverlayNav ? "gpt-shell--overlay" : ""} ${sidebarOpen ? "gpt-shell--open" : ""}`}>
       <div className="gpt-overlay" onClick={() => setSidebarOpen(false)} />
@@ -98,7 +76,7 @@ const title =
         onOpenSettings={handleOpenSettings}
       />
       <main className="gpt-main">
-        <Topbar title={title} onOpenSidebar={() => setSidebarOpen(true)} />
+        <Topbar title={title} onOpenSidebar={isOverlayNav ? () => setSidebarOpen(true) : undefined} isSidebarOpen={sidebarOpen} />
         <div className="gpt-content">
           {view === "chat" && <ChatRoute />}
           {view === "dashboard" && <DashboardPage />}
