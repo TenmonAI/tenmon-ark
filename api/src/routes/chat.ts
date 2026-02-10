@@ -841,6 +841,30 @@ let finalResponse = response;
     }
 
 
+
+    // HYBRID_END_QUESTION_V2: reply直前で確実に「問い閉じ」（内容は改変しない。末尾に1問だけ付与）
+    {
+      let r = String(finalResponse ?? "").trim();
+
+      const wants = Boolean(wantsDetail);
+
+      // 末尾が問いか判定（日本語の疑問終止も含む）
+      const endsQ =
+        /[？?]\s*$/.test(r) ||
+        /(ですか|でしょうか|ますか|か？|か\?)\s*$/.test(r);
+
+      if (!endsQ) {
+        const qNormal = "次の一手は、どこから始めましょうか？";
+        const qDetail = "この引用のどこを一番深掘りしますか？（語義／構文／水火（イキ）／天津金木）";
+        const q = wants ? qDetail : qNormal;
+
+        r = `${r}\n\n${q}`;
+      }
+
+      finalResponse = r;
+    }
+
+
     // レスポンス形式（厳守）
     return reply({
       response: finalResponse,
