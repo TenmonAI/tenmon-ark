@@ -1,0 +1,62 @@
+/* GPT-style Design Tokens — ライト (ChatGPT desktop light, 1px再現用) */
+:root {
+  /* 指定トークン（LIGHT基調固定） */
+  --bg: #ffffff;
+  --sidebar-bg: #f7f7f8;
+  --border: rgba(0, 0, 0, 0.08);
+  --text: #0f172a;
+  --muted: rgba(15, 23, 42, 0.65);
+  --hover: rgba(0, 0, 0, 0.04);
+  --input-bg: #ffffff;
+  --input-border: rgba(0, 0, 0, 0.12);
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 16px;
+  --font: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji", sans-serif;
+
+  /* Layout */
+  --gpt-sidebar-width: 280px;
+  --gpt-main-max-width: 768px;
+  --gpt-composer-radius: 22px;
+  --gpt-card-radius: var(--r-md);
+  --gpt-button-radius: var(--r-sm);
+
+  /* Spacing */
+  --gpt-space-xs: 4px;
+  --gpt-space-sm: 8px;
+  --gpt-space-md: 12px;
+  --gpt-space-lg: 16px;
+  --gpt-space-xl: 24px;
+  --gpt-space-2xl: 32px;
+  --gpt-composer-padding-x: 20px;
+  --gpt-composer-padding-y: 14px;
+
+  /* 既存参照用（トークンに寄せる） */
+  --gpt-bg-primary: var(--bg);
+  --gpt-bg-secondary: var(--sidebar-bg);
+  --gpt-bg-sidebar: var(--sidebar-bg);
+  --gpt-bg-input: var(--input-bg);
+  --gpt-bg-message-user: var(--sidebar-bg);
+  --gpt-bg-message-assistant: transparent;
+  --gpt-border: var(--border);
+  --gpt-border-strong: var(--input-border);
+  --gpt-text-primary: var(--text);
+  --gpt-text-secondary: var(--text);
+  --gpt-text-muted: var(--muted);
+  --gpt-accent: #10a37f;
+  --gpt-accent-hover: #0d8c6d;
+  --gpt-focus-ring: 2px solid var(--gpt-accent);
+  --gpt-shadow-sm: var(--shadow);
+  --gpt-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+  --gpt-hover-bg: var(--hover);
+  --gpt-hover-bg-strong: rgba(0, 0, 0, 0.06);
+  --gpt-font-sans: var(--font);
+  --gpt-text-body: 15px;
+  --gpt-text-sm: 14px;
+  --gpt-text-xs: 12px;
+  --gpt-line-height: 1.6;
+  --gpt-font-medium: 500;
+  --gpt-font-semibold: 600;
+  --gpt-font-bold: 700;
+}

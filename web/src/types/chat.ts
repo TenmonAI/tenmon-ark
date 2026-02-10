@@ -8,7 +8,6 @@ export type Message = {
 export type ChatRequest = {
   message: string;
   sessionId: string;
-  persona: "tenmon";
 };
 
 export type ChatResponse = {

@@ -1,0 +1,456 @@
+/* GPT-style base: body, scrollbar, buttons, inputs, layout (class-only) */
+@import "./gpt-tokens.css";
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font);
+  font-size: var(--gpt-text-body);
+  line-height: var(--gpt-line-height);
+  color: var(--text);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Scrollbar（薄いグレー系・GPT寄せ） */
+.gpt-scroll,
+.gpt-scroll * {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.15) transparent;
+}
+.gpt-scroll::-webkit-scrollbar,
+.gpt-scroll *::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.gpt-scroll::-webkit-scrollbar-track,
+.gpt-scroll *::-webkit-scrollbar-track {
+  background: transparent;
+}
+.gpt-scroll::-webkit-scrollbar-thumb,
+.gpt-scroll *::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 4px;
+}
+.gpt-scroll::-webkit-scrollbar-thumb:hover,
+.gpt-scroll *::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.25);
+}
+
+/* Buttons */
+.gpt-btn {
+  font-family: var(--gpt-font-sans);
+  font-size: var(--gpt-text-sm);
+  font-weight: var(--gpt-font-medium);
+  padding: var(--gpt-space-sm) var(--gpt-space-md);
+  border-radius: var(--gpt-button-radius);
+  border: 1px solid var(--gpt-border);
+  background: var(--gpt-bg-secondary);
+  color: var(--gpt-text-primary);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.gpt-btn:hover {
+  background: var(--gpt-hover-bg-strong);
+  border-color: var(--gpt-border-strong);
+}
+.gpt-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--gpt-bg-primary), var(--gpt-focus-ring);
+}
+.gpt-btn-primary {
+  background: var(--gpt-accent);
+  border-color: var(--gpt-accent);
+  color: #fff;
+}
+.gpt-btn-primary:hover:not(:disabled) {
+  background: var(--gpt-accent-hover);
+  border-color: var(--gpt-accent-hover);
+}
+
+/* Inputs */
+.gpt-input {
+  font-family: var(--font);
+  font-size: 15px;
+  padding: var(--gpt-composer-padding-y) var(--gpt-composer-padding-x);
+  border-radius: var(--gpt-composer-radius);
+  border: 1px solid var(--input-border);
+  background: var(--input-bg);
+  color: var(--text);
+  width: 100%;
+  box-sizing: border-box;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  box-shadow: var(--shadow);
+}
+.gpt-input::placeholder {
+  color: var(--muted);
+}
+.gpt-input:focus {
+  outline: none;
+  border-color: var(--input-border);
+  box-shadow: 0 0 0 1px var(--input-border);
+}
+
+.gpt-focus-ring:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--gpt-bg-primary), var(--gpt-focus-ring);
+}
+
+/* Shell layout */
+.gpt-shell {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+}
+.gpt-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  background: var(--bg);
+}
+.gpt-content {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Sidebar */
+.gpt-sidebar {
+  width: var(--gpt-sidebar-width);
+  min-width: var(--gpt-sidebar-width);
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--sidebar-bg);
+  border-right: 1px solid var(--border);
+}
+.gpt-sidebar-top {
+  padding: var(--gpt-space-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--gpt-space-sm);
+  flex-shrink: 0;
+}
+.gpt-sidebar-new-chat {
+  width: 100%;
+  justify-content: center;
+}
+.gpt-sidebar-search {
+  display: flex;
+  align-items: center;
+  gap: var(--gpt-space-sm);
+  padding: var(--gpt-space-sm) var(--gpt-space-md);
+  border: none;
+  border-radius: var(--gpt-button-radius);
+  background: transparent;
+  color: var(--gpt-text-secondary);
+  cursor: pointer;
+  font-size: var(--gpt-text-sm);
+  font-family: var(--gpt-font-sans);
+}
+.gpt-sidebar-search:hover {
+  background: var(--hover);
+  color: var(--text);
+}
+.gpt-sidebar-history {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--gpt-space-sm);
+  display: flex;
+  flex-direction: column;
+  gap: var(--gpt-space-xs);
+}
+.gpt-sidebar-section-label {
+  font-size: var(--gpt-text-xs);
+  color: var(--gpt-text-muted);
+  padding: var(--gpt-space-sm) var(--gpt-space-md);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.gpt-sidebar-item {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: var(--gpt-space-sm) var(--gpt-space-md);
+  border: none;
+  border-radius: var(--gpt-button-radius);
+  background: transparent;
+  color: var(--gpt-text-secondary);
+  cursor: pointer;
+  font-size: var(--gpt-text-sm);
+  font-family: var(--gpt-font-sans);
+  text-align: left;
+}
+.gpt-sidebar-item:hover {
+  background: var(--hover);
+  color: var(--text);
+}
+.gpt-sidebar-item-active {
+  background: var(--gpt-hover-bg-strong);
+  color: var(--text);
+}
+.gpt-sidebar-bottom {
+  padding: var(--gpt-space-md);
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: var(--gpt-space-xs);
+}
+.gpt-sidebar-user {
+  display: flex;
+  align-items: center;
+  gap: var(--gpt-space-sm);
+  padding: var(--gpt-space-sm) var(--gpt-space-md);
+  margin-top: var(--gpt-space-sm);
+}
+.gpt-sidebar-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--gpt-accent);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--gpt-text-sm);
+  font-weight: var(--gpt-font-semibold);
+}
+.gpt-sidebar-user-label {
+  font-size: var(--gpt-text-sm);
+  color: var(--gpt-text-secondary);
+}
+
+/* Topbar */
+.gpt-topbar {
+  height: 52px;
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--gpt-space-lg);
+  border-bottom: 1px solid var(--gpt-border);
+  background: var(--gpt-bg-primary);
+  flex-shrink: 0;
+}
+.gpt-topbar-title {
+  font-size: var(--gpt-text-sm);
+  font-weight: var(--gpt-font-semibold);
+  color: var(--gpt-text-primary);
+}
+.gpt-topbar-meta {
+  font-size: var(--gpt-text-xs);
+  color: var(--gpt-text-muted);
+}
+
+/* Chat layout */
+.gpt-chat-layout {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.gpt-message-list {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+.gpt-message-inner {
+  max-width: var(--gpt-main-max-width);
+  margin: 0 auto;
+  padding: var(--gpt-space-lg) 0 var(--gpt-space-2xl);
+}
+.gpt-message-row {
+  display: flex;
+  padding: var(--gpt-space-md) var(--gpt-space-lg);
+}
+.gpt-message-row-user {
+  justify-content: flex-end;
+}
+.gpt-message-row-assistant {
+  justify-content: flex-start;
+}
+.gpt-message-bubble {
+  padding: var(--gpt-space-md) var(--gpt-space-lg);
+  border-radius: var(--r-md);
+  border: 1px solid var(--border);
+  font-size: 15px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-width: min(85%, var(--gpt-main-max-width));
+}
+.gpt-message-bubble-user {
+  background: var(--gpt-bg-message-user);
+}
+.gpt-message-bubble-assistant {
+  background: var(--gpt-bg-message-assistant);
+}
+
+/* Composer */
+.gpt-composer-wrap {
+  padding: var(--gpt-space-lg);
+  background: var(--bg);
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.gpt-composer-inner {
+  max-width: var(--gpt-main-max-width);
+  margin: 0 auto;
+  display: flex;
+  gap: var(--gpt-space-sm);
+  align-items: flex-end;
+}
+.gpt-composer-input {
+  flex: 1;
+  min-height: 44px;
+}
+.gpt-composer-btn {
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* Typing indicator */
+.gpt-typing-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: var(--gpt-space-md) 0;
+}
+.gpt-typing-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--gpt-text-muted);
+  animation: gpt-typing-blink 1.4s ease-in-out infinite;
+}
+.gpt-typing-dot:nth-child(2) { animation-delay: 0.2s; }
+.gpt-typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes gpt-typing-blink {
+  0%, 60%, 100% { opacity: 0.3; transform: scale(0.9); }
+  30% { opacity: 1; transform: scale(1); }
+}
+@keyframes gpt-spin {
+  to { transform: rotate(360deg); }
+}
+
+.gpt-spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: gpt-spin 0.8s linear infinite;
+}
+
+/* Settings modal — GPT style: left sections, right content */
+.gpt-settings-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+.gpt-settings-panel {
+  width: min(720px, 92vw);
+  max-height: 85vh;
+  background: var(--gpt-bg-primary);
+  border: 1px solid var(--gpt-border);
+  border-radius: var(--gpt-card-radius);
+  box-shadow: var(--gpt-shadow-md);
+  display: flex;
+  flex-direction: row;
+  overflow: hidden;
+}
+.gpt-settings-nav {
+  width: 200px;
+  flex-shrink: 0;
+  padding: var(--gpt-space-lg);
+  border-right: 1px solid var(--gpt-border);
+  display: flex;
+  flex-direction: column;
+  gap: var(--gpt-space-xs);
+}
+.gpt-settings-nav-item {
+  padding: var(--gpt-space-sm) var(--gpt-space-md);
+  border-radius: var(--gpt-button-radius);
+  border: none;
+  background: transparent;
+  color: var(--gpt-text-secondary);
+  cursor: pointer;
+  font-size: var(--gpt-text-sm);
+  font-family: var(--gpt-font-sans);
+  text-align: left;
+}
+.gpt-settings-nav-item:hover {
+  background: var(--gpt-hover-bg);
+  color: var(--gpt-text-primary);
+}
+.gpt-settings-body {
+  flex: 1;
+  padding: var(--gpt-space-lg);
+  overflow-y: auto;
+}
+.gpt-settings-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--gpt-space-lg);
+  border-bottom: 1px solid var(--gpt-border);
+}
+.gpt-settings-title {
+  margin: 0;
+  font-size: var(--gpt-text-body);
+  font-weight: var(--gpt-font-semibold);
+  color: var(--gpt-text-primary);
+}
+
+/* Page frames (Dashboard / Profile) */
+.gpt-page-wrap {
+  padding: var(--gpt-space-xl);
+}
+.gpt-page-title {
+  font-size: 18px;
+  font-weight: var(--gpt-font-bold);
+  margin-bottom: var(--gpt-space-sm);
+  color: var(--gpt-text-primary);
+}
+.gpt-page-sub {
+  opacity: 0.8;
+  margin-bottom: var(--gpt-space-lg);
+  color: var(--gpt-text-secondary);
+}
+.gpt-page-card {
+  border: 1px solid var(--gpt-border);
+  border-radius: var(--gpt-card-radius);
+  padding: var(--gpt-space-lg);
+  background: var(--gpt-bg-secondary);
+  margin-bottom: var(--gpt-space-md);
+}
+.gpt-page-card-title {
+  font-weight: var(--gpt-font-semibold);
+  margin-bottom: var(--gpt-space-sm);
+  color: var(--gpt-text-secondary);
+  font-size: var(--gpt-text-sm);
+}
+.gpt-page-card p {
+  margin: 0;
+  font-size: var(--gpt-text-body);
+  color: var(--gpt-text-primary);
+}
+.gpt-page-card .gpt-page-sub {
+  font-size: var(--gpt-text-sm);
+}

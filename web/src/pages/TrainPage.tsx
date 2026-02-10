@@ -1,7 +1,6 @@
 // Training Chat: Minimal UI for Personality Formation
 
 import { useState, useEffect } from "react";
-import { API_BASE_URL } from "../config/api.js";
 
 type TrainingIntent = "teach" | "question" | "verify" | "correct";
 
@@ -21,14 +20,14 @@ export function TrainPage() {
     setResponse(null);
 
     try {
-      const res = await fetch(`${API_BASE_URL}/api/train/message`, {
+      const res = await fetch("/api/train/message", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           message: message.trim(),
           intent,
           importance,
-          threadId: sessionId,
+          session_id: sessionId,
         }),
       });
 
@@ -36,7 +35,7 @@ export function TrainPage() {
       if (data.success) {
         setResponse(data.response);
         setThinkingAxis(data.thinkingAxis);
-        setMessage(""); // Clear message after sending
+        setMessage(""); // Clear input after sending
       } else {
         setResponse(`Error: ${data.error}`);
       }
@@ -50,11 +49,11 @@ export function TrainPage() {
 
   const commitSession = async (policy: "save" | "compress" | "discard") => {
     try {
-      const res = await fetch(`${API_BASE_URL}/api/train/commit`, {
+      const res = await fetch("/api/train/commit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          threadId: sessionId,
+          session_id: sessionId,
           commit_policy: policy,
         }),
       });
@@ -121,7 +120,7 @@ export function TrainPage() {
               <label className="text-sm font-medium text-gray-700 mb-1 block">
                 Importance: {importance}
               </label>
-              <message
+              <input
                 type="range"
                 min="1"
                 max="5"

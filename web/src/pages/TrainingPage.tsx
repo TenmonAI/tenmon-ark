@@ -1,7 +1,6 @@
 // Training Chat: Learning Material Storage UI
 
 import { useState, useEffect } from "react";
-import { API_BASE_URL } from "../config/api.js";
 
 type TrainingSession = {
   id: string;
@@ -52,7 +51,7 @@ export function TrainingPage() {
 
   const loadSessions = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/api/training/sessions`);
+      const res = await fetch("/api/training/sessions");
       const data = await res.json();
       if (data.success) {
         setSessions(data.sessions);
@@ -64,7 +63,7 @@ export function TrainingPage() {
 
   const loadSession = async (sessionId: string) => {
     try {
-      const res = await fetch(`${API_BASE_URL}/api/training/session/${sessionId}`);
+      const res = await fetch(`/api/training/session/${sessionId}`);
       const data = await res.json();
       if (data.success) {
         setSessionData({ session: data.session, messages: data.messages });
@@ -76,7 +75,7 @@ export function TrainingPage() {
 
   const loadRules = async (sessionId: string) => {
     try {
-      const res = await fetch(`${API_BASE_URL}/api/training/rules?threadId=${sessionId}`);
+      const res = await fetch(`/api/training/rules?session_id=${sessionId}`);
       const data = await res.json();
       if (data.success) {
         setRules(data.rules);
@@ -90,7 +89,7 @@ export function TrainingPage() {
     if (!newSessionTitle.trim()) return;
 
     try {
-      const res = await fetch(`${API_BASE_URL}/api/training/session`, {
+      const res = await fetch("/api/training/session", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ title: newSessionTitle.trim() }),
@@ -115,11 +114,11 @@ export function TrainingPage() {
 
     setIngesting(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/api/training/ingest`, {
+      const res = await fetch("/api/training/ingest", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          threadId: selectedSession,
+          session_id: selectedSession,
           dump_text: dumpText.trim(),
         }),
       });
@@ -150,7 +149,7 @@ export function TrainingPage() {
         <div className="bg-white rounded-lg shadow p-6 mb-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Create Session</h2>
           <div className="flex gap-4">
-            <message
+            <input
               type="text"
               className="flex-1 border border-gray-300 rounded px-3 py-2 text-sm"
               placeholder="Session title..."
