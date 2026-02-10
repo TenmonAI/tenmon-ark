@@ -3,7 +3,7 @@ import { defineConfig } from "vite";
 import tailwindcss from "@tailwindcss/vite";
 
 export default defineConfig({
-  base: "/",
+  base: "/pwa/",
   plugins: [react(), tailwindcss()],
   build: {
     outDir: "dist",
