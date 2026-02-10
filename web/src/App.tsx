@@ -1,247 +1,112 @@
+import { useEffect, useMemo, useState } from "react";
 import { SettingsPanel } from "./components/SettingsPanel";
-import { useEffect, useState, useRef } from "react";
-import { t } from "./i18n";
+import { ChatPage } from "./pages/ChatPage";
 import { KokuzoPage } from "./pages/KokuzoPage";
-import { TrainPage } from "./pages/TrainPage";
-import { TrainingPage } from "./pages/TrainingPage";
-import KanagiPage from "./pages/KanagiPage";
-import { API_BASE_URL } from "./config/api.js";
+import { listMessagesByThread, replaceThreadMessages, upsertThread } from "./lib/db";
 
-type Health = {
-  status: string;
-  service: string;
-};
+// NOTE: ルーター導入はしない。最小のタブ切替のみ。
+type Tab = "chat" | "dashboard" | "health";
 
-type Persona = {
-  personaId: string;
-  ok: boolean;
-  state: {
-    mode?: string;
-    phase?: string;
-    inertia?: number;
-  };
-};
+export default function App() {
+  const [tab, setTab] = useState<Tab>("chat");
+  const [showSettings, setShowSettings] = useState(false);
 
-type MemoryStats = {
-  session: number;
-  conversation: number;
-  kokuzo: number;
-};
-
-// PHASE B: 会話履歴の型定義
-type Message = {
-  role: "user" | "tenmon";
-  content: string;
-};
-
-export function App() {
-  // KOKŪZŌ v1.1: Route to /kokuzo page
-  if (window.location.pathname === "/kokuzo") {
-    return <KokuzoPage />;
-  }
-
-  // Training Chat: Route to /train page
-  if (window.location.pathname === "/train") {
-    return <TrainPage />;
-  }
-
-  // Training Chat (Learning Material): Route to /training page
-  if (window.location.pathname === "/training") {
-    return <TrainingPage />;
-  }
-
-  // Kanagi Spiral Visualizer: Route to /kanagi page
-  if (window.location.pathname === "/kanagi") {
-    return <KanagiPage />;
-  }
-
-  
-  // P1_THREAD_ID_V1: threadId を固定（端末記憶とサーバーRecallを繋ぐ）
+  // 既存の threadId / restore ロジック（壊さない）
   const [threadId, setThreadId] = useState<string>(() => {
-    const k = "tenmon_thread_id_v1";
-    const existing = localStorage.getItem(k);
-    if (existing && existing.length > 0) return existing;
-    const created =
-      (globalThis.crypto && "randomUUID" in globalThis.crypto)
-        ? (globalThis.crypto as any).randomUUID()
-        : `thread_${Date.now()}_${Math.random().toString(16).slice(2)}`;
-    localStorage.setItem(k, created);
-    return created;
+    try {
+      const k = localStorage.getItem("tenmon_thread_id_v1");
+      return k && k.trim() ? k : `t_${Date.now()}`;
+    } catch {
+      return `t_${Date.now()}`;
+    }
   });
 
-const [health, setHealth] = useState<Health | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [persona, setPersona] = useState<Persona | null>(null);
-  const [memory, setMemory] = useState<MemoryStats | null>(null);
-  const [message, setMessage] = useState<string>("");
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [sending, setSending] = useState<boolean>(false);
-  const composingRef = useRef<boolean>(false);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  const [showSettings, setShowSettings] = useState(false);
   useEffect(() => {
-    fetch(`${API_BASE_URL}/api/health`)
-      .then((res) => {
-        if (!res.ok) throw new Error("API error");
-        return res.json();
-      })
-      .then((data) => setHealth(data))
-      .catch(() => setError("API unreachable"));
-  }, []);
+    try {
+      localStorage.setItem("tenmon_thread_id_v1", threadId);
+    } catch {}
+  }, [threadId]);
 
-  useEffect(() => {
-    fetch(`${API_BASE_URL}/api/persona`)
-      .then((res) => {
-        if (!res.ok) throw new Error("persona api error");
-        return res.json();
-      })
-      .then((data) => setPersona(data))
-      .catch(() => setPersona(null));
-  }, []);
+  const headerStyle = useMemo(
+    () => ({
+      display: "flex" as const,
+      alignItems: "center",
+      gap: 12,
+      padding: "12px 14px",
+      borderBottom: "1px solid rgba(255,255,255,0.08)",
+      position: "sticky" as const,
+      top: 0,
+      background: "rgba(10,10,10,0.75)",
+      backdropFilter: "blur(10px)",
+      zIndex: 10,
+    }),
+    []
+  );
 
-  useEffect(() => {
-    fetch(`${API_BASE_URL}/api/memory/stats`)
-      .then((res) => {
-        if (!res.ok) throw new Error("memory api error");
-        return res.json();
-      })
-      .then((data) => setMemory(data))
-      .catch(() => setMemory(null));
-  }, []);
-
-  // PHASE B: 新しいメッセージが来たら最下部にスクロール
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
-
-  const sendMessage = () => {
-    if (!message.trim() || sending) return;
-    
-    const userMessage = message.trim();
-    
-    // PHASE B: 送信したユーザー入力をmessagesに追加
-    setMessages((prev) => [...prev, { role: "user", content: userMessage }]);
-    setMessage("");
-    setSending(true);
-    
-    // PHASE B: API呼び出し
-    fetch(`${API_BASE_URL}/api/chat`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ threadId: threadId, message: userMessage }),
-    })
-      .then((res) => {
-        if (!res.ok) throw new Error("chat api error");
-        return res.json();
-      })
-      .then((data) => {
-        // PHASE B: 返ってきたoutputをmessagesに追加
-        const responseText = data.response || "TENMON-ARK did not respond.";
-        setMessages((prev) => [...prev, { role: "tenmon", content: responseText }]);
-      })
-      .catch(() => {
-        // PHASE B: エラー時もmessagesに追加
-        setMessages((prev) => [...prev, { role: "tenmon", content: "TENMON-ARK did not respond." }]);
-      })
-      .finally(() => setSending(false));
-  };
+  const tabBtn = (t: Tab, label: string) => (
+    <button
+      key={t}
+      onClick={() => setTab(t)}
+      style={{
+        padding: "8px 10px",
+        borderRadius: 10,
+        border: "1px solid rgba(255,255,255,0.10)",
+        background: tab === t ? "rgba(255,255,255,0.08)" : "transparent",
+        fontWeight: tab === t ? 700 : 500,
+      }}
+    >
+      {label}
+    </button>
+  );
 
   return (
+    <div style={{ minHeight: "100vh" }}>
+      <header style={headerStyle}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, flex: 1 }}>
+          <div style={{ fontWeight: 800, letterSpacing: 0.4 }}>TENMON-ARK</div>
+          <div style={{ display: "flex", gap: 8 }}>
+            {tabBtn("chat", "Chat")}
+            {tabBtn("dashboard", "Dashboard")}
+            {tabBtn("health", "Health")}
+          </div>
+        </div>
 
-    <>
-    <div style={{ display: "flex", justifyContent: "flex-end", padding: 8 }}>
-      <button onClick={() => setShowSettings(v => !v)} aria-label="settings">⚙</button>
+        <button onClick={() => setShowSettings((v) => !v)} aria-label="settings">
+          ⚙
+        </button>
+      </header>
+
+      <main style={{ padding: 14 }}>
+        {tab === "chat" ? (
+          <ChatPage />
+        ) : tab === "dashboard" ? (
+          <div style={{ marginTop: 12 }}>
+            <KokuzoPage />
+          </div>
+        ) : (
+          <HealthPanel threadId={threadId} setThreadId={setThreadId} />
+        )}
+      </main>
+
+      {showSettings ? (
+        <div style={{ position: "fixed", inset: 0, zIndex: 20 }}>
+          <SettingsPanel />
+        </div>
+      ) : null}
     </div>
-    {showSettings ? (
-      <div style={{ padding: 8 }}>
-        <SettingsPanel />
-      </div>
-    ) : null}
+  );
+}
 
-    <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
-      {/* UI-Ω-1: 画面中央の孤独なカード（余白を広く） */}
-      <div className="bg-white rounded-lg shadow-lg p-8 max-w-md w-full flex flex-col" style={{ maxHeight: "90vh" }}>
-        {/* UI-Ω-1: タイトル（font-bold はタイトルのみ） */}
-        <h1 className="text-2xl font-bold text-gray-900 mb-4">{t("title")}</h1>
-
-        {/* UI-Ω-1: 状態表示（静か・最小限） */}
-        <div className="mb-4 space-y-2 text-xs text-gray-500">
-          {health && (
-            <p>
-              {health.service} / {health.status}
-            </p>
-          )}
-          {persona && persona.state?.mode && (
-            <p>
-              {persona.state.mode} / {persona.state.phase}
-            </p>
-          )}
-        </div>
-
-        {/* PHASE B: 会話履歴を縦に積む（スクロール可能） */}
-        <div className="flex-1 overflow-y-auto mb-6 space-y-4 min-h-0">
-          {messages.length === 0 && (
-            <div className="text-sm text-gray-400 text-center py-8">
-              会話を始めてください
-            </div>
-          )}
-          {messages.map((msg, idx) => (
-            <div
-              key={idx}
-              className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
-            >
-              <div
-                className={`max-w-[80%] whitespace-pre-wrap leading-relaxed text-sm ${
-                  msg.role === "user"
-                    ? "text-gray-700"
-                    : "text-gray-900"
-                }`}
-              >
-                {msg.content}
-              </div>
-            </div>
-          ))}
-          {/* PHASE B: ロード中表示（最小限） */}
-          {sending && (
-            <div className="flex justify-start">
-              <div className="text-sm text-gray-400">……</div>
-            </div>
-          )}
-          {/* PHASE B: スクロール用のref */}
-          <div ref={messagesEndRef} />
-        </div>
-
-        {/* UI-Ω-1: 入力欄の上下に余白 */}
-        <div className="mt-auto">
-          <textarea
-            className="w-full border border-gray-300 rounded p-3 text-sm resize-none focus:outline-none focus:border-gray-400 transition-colors"
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            onCompositionStart={() => { composingRef.current = true; }}
-            onCompositionEnd={() => { composingRef.current = false; }}
-            onKeyDown={(e) => {
-              const isComposing = composingRef.current || (e.nativeEvent as any).isComposing;
-              if (e.key === "Enter" && !e.shiftKey && !isComposing) {
-                e.preventDefault();
-                sendMessage();
-              }
-            }}
-            placeholder="Message to TENMON-ARK..."
-            rows={3}
-          />
-          
-          {/* UI-Ω-1: ボタンは目立たない（hover演出控えめ、disabled視覚的） */}
-          <button
-            className="mt-3 px-6 py-2 bg-gray-900 text-white rounded text-sm hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-150"
-            onClick={sendMessage}
-            disabled={sending || !message.trim()}
-          >
-            {sending ? "送信中..." : "送る"}
-          </button>
-        </div>
+// 既存の “health表示”を壊さない：最低限の枠だけ残す（詳細はSettings/各ページ側へ）
+function HealthPanel(props: { threadId: string; setThreadId: (v: string) => void }) {
+  const { threadId } = props;
+  return (
+    <div style={{ opacity: 0.9 }}>
+      <div style={{ fontWeight: 800, fontSize: 18, marginBottom: 8 }}>UI build is alive</div>
+      <div style={{ fontSize: 12, opacity: 0.75 }}>threadId: {threadId}</div>
+      <div style={{ marginTop: 12, fontSize: 13, opacity: 0.9 }}>
+        /api/audit の表示や復元UIは、SettingsPanel 側（既存）で確認してください。
       </div>
     </div>
-    </>
   );
 }
