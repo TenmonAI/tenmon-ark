@@ -6,6 +6,9 @@
   "scripts": {
     "dev": "NODE_ENV=development tsx watch server/_core/index.ts",
     "build": "vite build && esbuild server/_core/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist",
+    "build:web": "pnpm -C web build",
+    "build:site": "pnpm -C site build",
+    "dev:site": "pnpm -C site dev --host 0.0.0.0 --port 5174",
     "start": "NODE_ENV=production node dist/index.js",
     "check": "tsc --noEmit",
     "format": "prettier --write .",

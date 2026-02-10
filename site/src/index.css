@@ -1,0 +1,14 @@
+/* Ark skin (簡易) — web のトーンに合わせた LP 用 */
+:root {
+  --ark-bg: #0f0f0f;
+  --ark-surface: #1a1a1a;
+  --ark-accent: #2f6f5e;
+  --ark-accent-hover: #3d8a76;
+  --ark-text: #e5e5e5;
+  --ark-muted: #888;
+}
+* { box-sizing: border-box; }
+body { margin: 0; font-family: system-ui, -apple-system, sans-serif; background: var(--ark-bg); color: var(--ark-text); }
+#root { min-height: 100vh; }
+a { color: var(--ark-accent); }
+a:hover { color: var(--ark-accent-hover); }
