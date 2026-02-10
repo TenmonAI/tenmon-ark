@@ -284,38 +284,46 @@ body::before {
   color: var(--gpt-text-muted);
 }
 
-/* Brand mark wrapper & images (TENMON-ARK) */
+/* --- Brand mark: GPT-level visibility (final) --- */
 .gpt-mark-wrap{
-  position:relative;
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  width:18px;
-  height:18px;
-  border-radius:999px;
-  border:1px solid rgba(0,0,0,0.14);
-  background:#fff;
-  box-sizing:border-box;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  border: 1px solid rgba(0,0,0,0.12);
+  background: #fff;
+  box-sizing: border-box;
 }
-.gpt-mark-wrap-lg{ width:28px; height:28px; border-radius:999px; }
+
+.gpt-mark-wrap-lg{
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+}
 
 .gpt-mark-img{
-  position:absolute;
-  inset:2px;
-  width:calc(100% - 4px);
-  height:calc(100% - 4px);
-  object-fit:contain;
-  display:block;
+  position: absolute;
+  inset: 2px;
+  width: calc(100% - 4px);
+  height: calc(100% - 4px);
+  object-fit: contain;
+  display: block;
+
+  /* PNG線画を“太く見せる”疑似ストローク */
+  filter:
+    drop-shadow( 1px  0px 0 rgba(0,0,0,.90))
+    drop-shadow(-1px  0px 0 rgba(0,0,0,.90))
+    drop-shadow( 0px  1px 0 rgba(0,0,0,.90))
+    drop-shadow( 0px -1px 0 rgba(0,0,0,.90));
+  opacity: 1;
 }
-.gpt-mark-img-back{
-  filter:grayscale(1) contrast(2.2) brightness(0.18);
-  opacity:0.22;
-  transform:translateY(0.2px);
-}
-.gpt-mark-img-front{
-  filter:grayscale(1) contrast(1.65) brightness(0.45);
-  opacity:0.98;
-}
+
+/* back/front はもう殺さない。二重でも単体でも見える */
+.gpt-mark-img-back{ opacity: .18; }
+.gpt-mark-img-front{ opacity: 1; }
 
 /* Topbar */
 .gpt-topbar {
