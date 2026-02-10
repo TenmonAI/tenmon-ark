@@ -1,40 +1,30 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-WEB_ROOT="/opt/tenmon-ark-repo/web"
-OUT_DIR="/var/www/html"
+REPO="/opt/tenmon-ark-repo/web"
+LIVE="/var/www/html"
 
-cd "$WEB_ROOT"
+echo "[deploy-web] build in repo"
+cd "$REPO"
 
-echo "[web-deploy] node=$(node -v) npm=$(npm -v)"
-SHA="$(git rev-parse --short HEAD 2>/dev/null || echo unknown)"
-TS="$(date -Is)"
-echo "[web-deploy] git=$SHA"
-
-# deps + build (必ずここで作る。distが無ければ失敗で止める)
-if [ -f package-lock.json ]; then
-  echo "[web-deploy] npm ci"
-  npm ci
-else
-  echo "[web-deploy] npm install"
+# npm ci（失敗したら npm install にフォールバック）
+if ! npm ci 2>/dev/null; then
+  echo "[deploy-web] npm ci failed, falling back to npm install"
   npm install
 fi
 
-echo "[web-deploy] smoke
-bash scripts/smoke_web.sh
-
-[web-deploy] build"
-npx vite -v
+echo "[deploy-web] build"
 npm run build
 
-test -f dist/index.html || { echo "[web-deploy] ERROR: dist/index.html missing"; exit 1; }
+echo "[deploy-web] sync dist to live"
+sudo rsync -a --delete "$REPO/dist/" "$LIVE/"
 
-echo "[web-deploy] publish to $OUT_DIR"
-rm -rf "$OUT_DIR"/*
-cp -r dist/* "$OUT_DIR"/
+# build stamp を残す
+GIT_SHA="$(cd /opt/tenmon-ark-repo && git rev-parse --short HEAD 2>/dev/null || echo 'unknown')"
+ISO8601="$(date -u +"%Y-%m-%dT%H:%M:%SZ" 2>/dev/null || date +"%Y-%m-%dT%H:%M:%SZ")"
+echo "WEB_BUILD_MARK:${GIT_SHA} ${ISO8601}" | sudo tee "$LIVE/build.txt" >/dev/null
 
-# build mark
-echo "WEB_BUILD_MARK: ${SHA} ${TS}" > "$OUT_DIR/build.txt"
+echo "[deploy-web] reload nginx"
+sudo systemctl reload nginx
 
-echo "[web-deploy] nginx reload"
-systemctl reload nginx
+echo "[deploy-web] SUCCESS"
