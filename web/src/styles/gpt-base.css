@@ -293,8 +293,13 @@ body::before {
   width: 18px;
   height: 18px;
   border-radius: 999px;
-  border: 1px solid rgba(0,0,0,0.10);
+
+  /* GPTっぽい“輪郭”：少し濃く */
+  border: 1px solid rgba(0,0,0,0.14);
+
+  /* 背景は白固定。紙白でも沈まない */
   background: #fff;
+
   box-sizing: border-box;
 }
 
@@ -313,15 +318,17 @@ body::before {
   display: block;
 }
 
+/* “縁取り”は強すぎると汚いので、薄く・シャープに */
 .gpt-mark-img-back{
-  filter: grayscale(1) contrast(1.8) brightness(0.25);
-  opacity: 0.35;
-  transform: translateY(0.3px);
+  filter: grayscale(1) contrast(2.2) brightness(0.18);
+  opacity: 0.22;
+  transform: translateY(0.2px);
 }
 
+/* 本体は「チャコール寄り」で線を残す */
 .gpt-mark-img-front{
-  filter: grayscale(1) contrast(1.35) brightness(0.55);
-  opacity: 0.95;
+  filter: grayscale(1) contrast(1.65) brightness(0.45);
+  opacity: 0.98;
 }
 
 /* Topbar */
