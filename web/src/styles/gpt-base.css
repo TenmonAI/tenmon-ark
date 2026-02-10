@@ -289,10 +289,16 @@ body::before {
   width: 28px;
   height: 28px;
   border-radius: 9999px;
-  object-fit: cover;
+  object-fit: contain;
   background: #ffffff;
   border: 1px solid rgba(0, 0, 0, 0.12);
   display: block;
+}
+
+/* UI用ロゴは単色（黒）にする */
+.gpt-topbar-logo,
+.gpt-brand-mark {
+  filter: grayscale(1) brightness(0);
 }
 
 /* Topbar */
@@ -308,17 +314,15 @@ body::before {
   flex-shrink: 0;
 }
 .gpt-topbar-left {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+  display:flex;
+  align-items:center;
+  gap:10px;
 }
-.gpt-topbar-mark {
-  width: 16px;
-  height: 16px;
-  border-radius: 999px;
-  border: 1px solid var(--gpt-text-primary);
-  display: inline-block;
-  box-sizing: border-box;
+.gpt-topbar-logo{
+  width:16px;
+  height:16px;
+  object-fit:contain;
+  display:block;
 }
 .gpt-topbar-title {
   font-size: var(--gpt-text-sm);
