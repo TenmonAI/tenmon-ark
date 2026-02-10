@@ -3,14 +3,25 @@ import { useI18n } from "../../i18n/useI18n";
 
 interface TopbarProps {
   title?: string;
+  onOpenSidebar?: () => void;
 }
 
-export function Topbar({ title = "TENMON-ARK 1.0" }: TopbarProps) {
+export function Topbar({ title = "TENMON-ARK 1.0", onOpenSidebar }: TopbarProps) {
   const { t } = useI18n();
 
   return (
     <header className="gpt-topbar">
       <div className="gpt-topbar-left">
+{onOpenSidebar ? (
+          <button
+            type="button"
+            className="gpt-topbar-hamburger"
+            onClick={onOpenSidebar}
+            aria-label="Open menu"
+          >
+            <span aria-hidden="true">☰</span>
+          </button>
+        ) : null}
         <img
           src="brand/tenmon-ark-mark.svg"
           alt="TENMON-ARK"

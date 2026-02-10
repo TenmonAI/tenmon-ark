@@ -444,6 +444,69 @@ body::before {
   animation: gpt-spin 0.8s linear infinite;
 }
 
+/* Mobile sidebar / topbar toggle */
+.gpt-topbar-hamburger{
+  display:none;
+  width:36px;
+  height:36px;
+  border-radius:10px;
+  border:1px solid var(--gpt-border);
+  background:transparent;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
+}
+
+.gpt-overlay{
+  display:none;
+}
+
+@media (max-width: 768px){
+  .gpt-shell{
+    position:relative;
+  }
+  .gpt-sidebar{
+    position:fixed;
+    top:0;
+    left:0;
+    height:100vh;
+    z-index:1200;
+    width:min(86vw, 320px);
+    min-width:unset;
+    transform: translateX(-105%);
+    transition: transform .18s ease;
+    box-shadow: 0 10px 30px rgba(0,0,0,.12);
+    border-right:1px solid var(--gpt-border);
+  }
+  .gpt-main{
+    width:100vw;
+  }
+  .gpt-topbar{
+    position:sticky;
+    top:0;
+    z-index:1100;
+  }
+  .gpt-topbar-left{
+    gap:8px;
+  }
+  .gpt-topbar-hamburger{
+    display:inline-flex;
+  }
+  .gpt-shell.gpt-shell--open .gpt-sidebar{
+    transform: translateX(0);
+  }
+  .gpt-overlay{
+    display:none;
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,.35);
+    z-index:1150;
+  }
+  .gpt-shell.gpt-shell--open .gpt-overlay{
+    display:block;
+  }
+}
+
 /* Settings modal — GPT style: left sections, right content */
 .gpt-settings-backdrop {
   position: fixed;
@@ -543,4 +606,60 @@ body::before {
 }
 .gpt-page-card .gpt-page-sub {
   font-size: var(--gpt-text-sm);
+}
+
+/* =========================================================
+   GPT-like Responsive Nav (mobile/tablet)
+   - <=1024px: sidebar becomes drawer with overlay
+   ========================================================= */
+
+.gpt-topbar-hamburger{
+  display:none;
+  width:36px;height:36px;
+  border-radius:10px;
+  border:1px solid var(--gpt-border);
+  background:transparent;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
+}
+
+.gpt-overlay{ display:none; }
+
+@media (max-width: 1024px){
+  .gpt-topbar-hamburger{ display:inline-flex; }
+
+  .gpt-shell.gpt-shell--overlay{ position:relative; }
+
+  .gpt-sidebar{
+    position:fixed;
+    top:0; left:0;
+    height:100vh;
+    z-index:1200;
+    width:min(86vw, 320px);
+    min-width:unset;
+    transform:translateX(-105%);
+    transition:transform .18s ease;
+    box-shadow:0 10px 30px rgba(0,0,0,.12);
+    border-right:1px solid var(--gpt-border);
+  }
+
+  .gpt-shell.gpt-shell--overlay.gpt-shell--open .gpt-sidebar{
+    transform:translateX(0);
+  }
+
+  .gpt-overlay{
+    display:none;
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,.35);
+    z-index:1150;
+  }
+
+  .gpt-shell.gpt-shell--overlay.gpt-shell--open .gpt-overlay{
+    display:block;
+  }
+
+  .gpt-main{ width:100vw; }
+  .gpt-topbar{ position:sticky; top:0; z-index:1100; }
 }
