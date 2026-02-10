@@ -242,18 +242,7 @@ router.post("/chat", async (req: Request, res: Response<ChatResponseBody>) => {
     (/(不安|動けない|しんどい|つらい|焦り|詰んだ|多すぎ|やること|タスク|間に合わない|疲れた)/.test(tNat));
 
   if (isStressShortJa) {
-
-        // 末尾を問いで閉じる
-        const endsQ = /[？?]\s*$/.test(r) || /(ですか|でしょうか|ますか)\s*$/.test(r);
-        if (!endsQ) {
-          r = `${r}\n\n${closer}`;
-        }
-
-        finalResponse = r;
-      }
-    }
-
-return reply({
+    return reply({
       response:
         "了解。いまの状況を一言で言うと、どれに近い？\n\n" +
         "1) 予定・タスクの整理\n" +
@@ -699,27 +688,6 @@ return reply({
     
     // ドメイン質問の場合、回答本文を改善（候補があれば本文を生成、なければ最低限の説明）
     let finalResponse = response;
-    
-    // HYBRID_TALK_WRAP_V1: 最終出力にだけ「断捨離の間合い」を薄く付与（根拠/詳細時は改変しない）
-    {
-      const wants = Boolean(wantsDetail);
-      const hasEvidenceSignals =
-        /(pdfPage=|doc=|evidenceIds|candidates|引用|出典|根拠|ソース|【|】)/.test(String(finalResponse));
-
-      if (!wants && !hasEvidenceSignals) {
-        let r = String(finalResponse ?? "").trim();
-
-        const opener = "いい問いです。いまの状況を一度、ほどいてみましょう。";
-        const closer = "いま一番ひっかかっている点は、どこですか？";
-
-        // すでに導入っぽい先頭なら二重にしない
-        const alreadyHasWarmOpener = /^(いい問い|焦らなくて|ここまで言葉)/.test(r);
-
-        // 短文にも効かせる（20文字以上）
-        if (!alreadyHasWarmOpener && r.length >= 20) {
-          r = `${opener}\n\n${r}`;
-        }
-
     let evidenceDoc: string | null = null;
     let evidencePdfPage: number | null = null;
     let evidenceQuote: string | null = null;
