@@ -2,11 +2,12 @@ import React from "react";
 import { useI18n } from "../../i18n/useI18n";
 
 interface TopbarProps {
+  isSidebarOpen?: boolean;
   title?: string;
   onOpenSidebar?: () => void;
 }
 
-export function Topbar({ title = "TENMON-ARK 1.0", onOpenSidebar }: TopbarProps) {
+export function Topbar({ title = "TENMON-ARK 1.0", onOpenSidebar, isSidebarOpen }: TopbarProps) {
   const { t } = useI18n();
 
   return (
@@ -19,7 +20,7 @@ export function Topbar({ title = "TENMON-ARK 1.0", onOpenSidebar }: TopbarProps)
             onClick={onOpenSidebar}
             aria-label="Open menu"
           >
-            <span aria-hidden="true">☰</span>
+            <span aria-hidden="true">{isSidebarOpen ? "×" : "☰"}</span>
           </button>
         ) : null}
         <img
