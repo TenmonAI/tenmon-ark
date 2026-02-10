@@ -744,6 +744,33 @@ router.post("/chat", async (req: Request, res: Response<ChatResponseBody>) => {
       (detailPlan as any).evidenceHint = "資料を投入するには scripts/ingest_kokuzo_sample.sh を実行してください";
     }
 
+    // HYBRID_TALK_WRAP_V2: 最終出力にだけ「断捨離の間合い」を薄く付与（#詳細/根拠系は改変しない）
+    {
+      const wants = Boolean(wantsDetail);
+      const hasEvidenceSignals =
+        /(pdfPage=|doc=|evidenceIds|candidates|引用|出典|根拠|ソース|【|】)/.test(String(finalResponse));
+
+      if (!wants && !hasEvidenceSignals) {
+        let r = String(finalResponse ?? "").trim();
+
+        const opener = "いい問いです。いまの状況を一度、ほどいてみましょう。";
+        const closer = "いま一番ひっかかっている点は、どこですか？";
+
+        const alreadyHasWarmOpener = /^(いい問い|焦らなくて|ここまで言葉)/.test(r);
+
+        if (!alreadyHasWarmOpener && r.length >= 20) {
+          r = `${opener}\n\n${r}`;
+        }
+
+        const endsQ = /[？?]\s*$/.test(r) || /(ですか|でしょうか|ますか)\s*$/.test(r);
+        if (!endsQ) {
+          r = `${r}\n\n${closer}`;
+        }
+
+        finalResponse = r;
+      }
+    }
+
     // レスポンス形式（厳守）
     return reply({
       response: finalResponse,
