@@ -16,10 +16,12 @@ import {
 import { Menu, Plus, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
+type IsoLike = string | Date;
+
 interface ChatRoom {
-  id: number;
+  id?: number;
   title: string;
-  updatedAt: Date;
+  updatedAt?: IsoLike;
 }
 
 interface ChatMenuSheetProps {
@@ -77,7 +79,7 @@ export function ChatMenuSheet({
           <div className="space-y-2 max-h-[60vh] overflow-y-auto">
             {rooms?.map((room) => (
               <Card
-                key={room.id}
+                key={room.id ?? room.title}
                 className={`p-3 cursor-pointer transition-all group ${
                   currentRoomId === room.id
                     ? "bg-amber-500/20 border-amber-500"
@@ -91,7 +93,7 @@ export function ChatMenuSheet({
                       {room.title}
                     </p>
                     <p className="text-xs text-slate-400 mt-1">
-                      {new Date(room.updatedAt).toLocaleDateString()}
+                      {room.updatedAt ? new Date(room.updatedAt).toLocaleDateString() : ""}
                     </p>
                   </div>
                   <Button

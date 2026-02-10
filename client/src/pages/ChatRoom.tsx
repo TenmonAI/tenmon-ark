@@ -30,13 +30,12 @@ import { ReasoningStepsViewer } from "@/components/chat/ReasoningStepsViewer";
 import { Badge } from "@/components/ui/badge";
 import { ALPHA_TRANSITION_DURATION } from "@/lib/mobileOS/alphaFlow";
 import { FeedbackModal } from "@/components/feedback/FeedbackModal";
-import { MessageSquarePlus } from "lucide-react";
 import { usePersonaState } from "@/state/persona/usePersonaState";
 import { PersonaBadge } from "@/components/chat/PersonaBadge";
 import { PersonaChatBubble } from "@/components/chat/PersonaChatBubble";
 import { OfflineStatusBar } from "@/components/ui/offline/OfflineStatusBar";
 import { FileUploadZone } from "@/components/fileUpload/FileUploadZone";
-import { FileList } from "@/components/fileUpload/FileList";
+import { FileList, FileItem } from "@/components/fileUpload/FileList";
 import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -77,7 +76,7 @@ export default function ChatRoom() {
   const [ingestRequest, setIngestRequest] = useState<{ ingestId: string; confirmText: string; doc: string } | null>(null);
   const [isIngesting, setIsIngesting] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const { t, i18n } = useTranslation();
 
   // Streaming Hook
@@ -142,10 +141,10 @@ export default function ChatRoom() {
 
   // ファイルアップロード
   const uploadFileMutation = trpc.fileUpload.uploadFile.useMutation({
-    onSuccess: (data) => {
+    onSuccess: (data: any) => {
       toast.success(`${data.fileId ? "ファイルをアップロードしました" : "アップロード完了"}`);
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error(`アップロードに失敗しました: ${error.message}`);
     },
   });
@@ -167,7 +166,7 @@ export default function ChatRoom() {
       refetchFiles();
       toast.success("ファイルを削除しました");
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error(`ファイルの削除に失敗しました: ${error.message}`);
     },
   });
@@ -178,7 +177,7 @@ export default function ChatRoom() {
       refetchFiles();
       toast.success("ファイルを処理しました");
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error(`ファイルの処理に失敗しました: ${error.message}`);
     },
   });
@@ -239,13 +238,13 @@ export default function ChatRoom() {
             conversationId: currentRoomId || undefined,
             fileName: file.name,
           });
-        } catch (error) {
+        } catch (error: any) {
           console.warn("[ChatRoom] Failed to log file upload:", error);
         }
 
         // Refetch files list
         refetchFiles();
-      } catch (error) {
+      } catch (error: any) {
         console.error("File upload error:", error);
       }
     }
@@ -284,7 +283,7 @@ export default function ChatRoom() {
               conversationId: currentRoomId || undefined,
               fileName: data.fileName,
             });
-          } catch (error) {
+          } catch (error: any) {
             console.warn("[ChatRoom] Failed to log file upload:", error);
           }
 
@@ -298,7 +297,7 @@ export default function ChatRoom() {
         } else {
           toast.error(`アップロードに失敗しました: ${data.error || "Unknown error"}`);
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error("[ChatRoom] File upload to VPS error:", error);
         toast.error(`アップロードに失敗しました: ${error instanceof Error ? error.message : "Unknown error"}`);
       }
@@ -323,12 +322,26 @@ export default function ChatRoom() {
     deleteFileMutation.mutate({ fileId });
   };
 
-  // Convert uploaded files to FilePreviewData
-  const filePreviewData =
-    uploadedFiles?.map((file) => ({
-      ...file,
-      createdAt: new Date(file.createdAt),
-    })) || [];
+  // Convert uploaded files to FileItem (UI型に正規化)
+  const normalizeFile = (f: any): FileItem => ({
+    ...f,
+    id: typeof f.id === "number" ? f.id : undefined,
+    fileName: f.fileName ?? "file",
+    fileSize: f.fileSize ?? 0,
+    fileType: f.fileType ?? "other",
+    fileUrl: f.fileUrl ?? "",
+    mimeType: f.mimeType ?? "",
+    isProcessed: f.isProcessed ?? 0,
+    isIntegratedToMemory: f.isIntegratedToMemory ?? 0,
+    extractedText: f.extractedText ?? "",
+    metadata: f.metadata ?? "",
+    createdAt:
+      f.createdAt instanceof Date ? f.createdAt : new Date(f.createdAt ?? Date.now()),
+    updatedAt: f.updatedAt ?? f.createdAt ?? new Date(),
+  });
+
+  const filePreviewData: FileItem[] =
+    (uploadedFiles ?? []).map((file: any) => normalizeFile(file));
 
   // 新規チャット作成
   const createRoomMutation = trpc.chat.createRoom.useMutation({
@@ -356,7 +369,7 @@ export default function ChatRoom() {
   // 最初のチャットルームを自動選択
   useEffect(() => {
     if (rooms && rooms.length > 0 && currentRoomId === null) {
-      setCurrentRoomId(rooms[0].id);
+      setCurrentRoomId(rooms[0]?.id ?? null);
     }
   }, [rooms, currentRoomId]);
 
@@ -401,7 +414,7 @@ export default function ChatRoom() {
       if (data.ok && data.laws) {
         setLaws(data.laws);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("[ChatRoom] Failed to fetch laws:", error);
     } finally {
       setIsLoadingLaws(false);
@@ -425,7 +438,7 @@ export default function ChatRoom() {
     const container = messagesContainerRef.current;
     if (!container) return;
 
-    let scrollTimeout: NodeJS.Timeout;
+    let scrollTimeout: ReturnType<typeof setTimeout>;
     const handleScroll = () => {
       setIsUserScrolling(true);
       clearTimeout(scrollTimeout);
@@ -567,7 +580,7 @@ export default function ChatRoom() {
 
   // GPT-Level IME Guard vΩ-FINAL - ネイティブイベント使用
   // IME変換中は送信を禁止、Ctrl/Cmd+Enterで送信
-  useImeGuard(textareaRef, handleSendMessage, currentRoomId);
+  useImeGuard(textareaRef as React.RefObject<HTMLTextAreaElement>, handleSendMessage, currentRoomId);
 
   // Whisper STT統合（音声入力）
   const [autoSendAfterVoice, setAutoSendAfterVoice] = useState(false);
@@ -582,7 +595,7 @@ export default function ChatRoom() {
     isProcessing,
   } = useSpeechInput({
     language: i18n.language,
-    onTranscriptionComplete: (result) => {
+    onTranscriptionComplete: (result: any) => {
       setInputMessage(result.text);
       // 自動送信オプションが有効な場合
       if (autoSendAfterVoice && result.text.trim()) {
@@ -600,7 +613,7 @@ export default function ChatRoom() {
         }, 300);
       }
     },
-    onError: (error) => {
+    onError: (error: any) => {
       setErrorMessage(error);
     },
   });
@@ -643,6 +656,16 @@ export default function ChatRoom() {
     }
   };
 
+  const handleIngestRequest = async () => {
+    // TODO: /api/ingest/request を実装（今はUI先行で止血）
+    toast.info("Ingestは準備中です（UI先行）");
+  };
+
+  const handleIngestConfirm = async () => {
+    // TODO: /api/ingest/confirm を実装
+    toast.info("Ingest confirmは準備中です（UI先行）");
+  };
+
   if (authLoading) {
     return (
       <div className="chatgpt-container">
@@ -653,11 +676,22 @@ export default function ChatRoom() {
     );
   }
 
+  const normalizeRoom = (r: any) => ({
+    ...r,
+    id: typeof r.id === "number" ? r.id : 0,
+    title:
+      typeof r.title === "string" && r.title.trim().length > 0 ? r.title : "Untitled",
+    createdAt: r.createdAt ?? new Date().toISOString(),
+    updatedAt: r.updatedAt ?? new Date().toISOString(),
+  });
+
+  const normalizedRooms = (rooms ?? []).map((r: any) => normalizeRoom(r));
+
   return (
     <div className="chat-page-container min-h-screen flex chatgpt-container w-full max-w-full overflow-x-hidden">
       {/* スマホ用メニュー */}
       <ChatMenuSheet
-        rooms={rooms || []}
+        rooms={normalizedRooms}
         currentRoomId={currentRoomId}
         onSelectRoom={setCurrentRoomId}
         onNewChat={handleNewChat}
@@ -681,7 +715,7 @@ export default function ChatRoom() {
         </div>
 
         <div className="flex-1 overflow-y-auto p-2 space-y-2">
-          {rooms?.map((room) => (
+          {normalizedRooms.map((room) => (
             <Card
               key={room.id}
               className={`p-3 cursor-pointer transition-all group ${

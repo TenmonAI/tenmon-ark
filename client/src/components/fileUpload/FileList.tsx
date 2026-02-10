@@ -14,17 +14,43 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
+type IsoLike = string | Date;
+
+export type FileItem = Omit<FilePreviewData, "id" | "createdAt"> & {
+  id?: number;
+  createdAt?: IsoLike;
+  updatedAt?: IsoLike;
+};
+
 interface FileListProps {
-  files: FilePreviewData[];
+  files: FileItem[];
   loading?: boolean;
   onDelete?: (fileId: number) => void;
-  onView?: (file: FilePreviewData) => void;
-  onDownload?: (file: FilePreviewData) => void;
+  onView?: (file: FileItem) => void;
+  onDownload?: (file: FileItem) => void;
   onToggleLearning?: (fileId: number, enabled: boolean) => void;
 }
 
 export function FileList({ files, loading, onDelete, onView, onDownload, onToggleLearning }: FileListProps) {
   const [deleteFileId, setDeleteFileId] = useState<number | null>(null);
+
+  const toPreviewData = (file: FileItem): FilePreviewData => ({
+    id: typeof file.id === "number" ? file.id : -1,
+    fileName: file.fileName ?? "file",
+    fileSize: file.fileSize ?? 0,
+    fileType: file.fileType ?? "other",
+    fileUrl: file.fileUrl ?? "",
+    mimeType: file.mimeType ?? "",
+    isProcessed: file.isProcessed ?? 0,
+    isIntegratedToMemory: file.isIntegratedToMemory ?? 0,
+    extractedText: file.extractedText ?? "",
+    metadata: file.metadata ?? "",
+    updatedAt: file.updatedAt ?? file.createdAt ?? new Date(),
+    createdAt:
+      file.createdAt instanceof Date
+        ? file.createdAt
+        : new Date(file.createdAt ?? Date.now()),
+  });
 
   const handleDelete = () => {
     if (deleteFileId && onDelete) {
@@ -53,9 +79,12 @@ export function FileList({ files, loading, onDelete, onView, onDownload, onToggl
     <>
       <div className="space-y-3">
         {files.map((file) => (
-          <div key={file.id} className="relative group">
+          <div
+            key={file.id ?? `${file.createdAt ?? "na"}:${file.fileName ?? "file"}`}
+            className="relative group"
+          >
             <FilePreview
-              file={file}
+              file={toPreviewData(file)}
               onClick={() => onView?.(file)}
             />
 
@@ -66,7 +95,7 @@ export function FileList({ files, loading, onDelete, onView, onDownload, onToggl
                 <Switch
                   checked={file.isIntegratedToMemory === 1}
                   onCheckedChange={(checked) => {
-                    onToggleLearning(file.id, checked);
+                    onToggleLearning(file.id ?? 0, checked);
                   }}
                   disabled={file.isProcessed === 0}
                   className="data-[state=checked]:bg-divine-gold"
@@ -124,7 +153,9 @@ export function FileList({ files, loading, onDelete, onView, onDownload, onToggl
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    setDeleteFileId(file.id);
+                    if (typeof file.id === "number") {
+                      setDeleteFileId(file.id);
+                    }
                   }}
                   className={cn(
                     "p-2 rounded-lg transition-colors duration-200",

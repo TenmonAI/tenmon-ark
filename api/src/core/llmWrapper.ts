@@ -38,9 +38,7 @@ Observe and describe only.
   }
 }
 
-export type LlmChatHistoryItem = { role: "user" | "assistant" | "system"; content: string };
-
-export async function llmChat(params: {
+export type LlmChatHistoryItem = { role: "user" | "assistant" | "system"; content: string };export async function llmChat(params: {
   system: string;
   history: LlmChatHistoryItem[];
   user: string;
