@@ -14,6 +14,7 @@ import { applyVerifier } from "../kanagi/core/verifier.js";
 import { kokuzoRecall, kokuzoRemember } from "../kokuzo/recall.js";
 import { getPageText } from "../kokuzo/pages.js";
 import { searchPagesForHybrid } from "../kokuzo/search.js";
+import { getCaps } from "../kokuzo/capsQueue.js";
 import { setThreadCandidates, pickFromThread, clearThreadCandidates, setThreadPending, getThreadPending, clearThreadState } from "../kokuzo/threadCandidates.js";
 import { parseLaneChoice, type LaneChoice } from "../persona/laneChoice.js";
 import { getDb, dbPrepare } from "../db/index.js";
@@ -108,7 +109,7 @@ function buildGroundedResponse(args: {
   const evidenceId = `KZPAGE:${doc}:P${pdfPage}`;
   
   let responseText = `（資料準拠）${doc} P${pdfPage} を指定として受け取りました。`;
-  if (pageText) {
+  if (pageText && !/\[NON_TEXT_PAGE_OR_OCR_FAILED\]/.test(String(pageText))) {
     const excerpt = pageText.slice(0, 400).trim();
     responseText += `\n\n【引用（先頭400文字）】\n${excerpt}${pageText.length > 400 ? "..." : ""}`;
   } else {
@@ -190,6 +191,7 @@ function buildGroundedResponse(args: {
     })(),
     timestamp,
     threadId,
+    caps: capsPayload ?? undefined,
     decisionFrame: { mode: "GROUNDED", intent: "chat", llm: null, ku: {} },
   };
   if (wantsDetail) {
@@ -205,7 +207,9 @@ function buildGroundedResponse(args: {
  */
 router.post("/chat", requireAuth, requireFounder, async(req: Request, res: Response<ChatResponseBody>) => {
   const handlerTime = Date.now();
-  const pid = process.pid;
+
+  let capsPayload: any = null;
+const pid = process.pid;
   const uptime = process.uptime();
   const { getReadiness } = await import("../health/readiness.js");
   const r = getReadiness();
@@ -217,7 +221,7 @@ router.post("/chat", requireAuth, requireFounder, async(req: Request, res: Respo
   const message = String(messageRaw ?? "").trim();
   const threadId = String(body.threadId ?? "default").trim();
   const timestamp = new Date().toISOString();
-  const wantsDetail = /#詳細/.test(message);
+const wantsDetail = /#詳細/.test(message);
 
   if (!message) return res.status(400).json({ response: "message required", error: "message required", timestamp, decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: {} } });
 
@@ -391,6 +395,22 @@ router.post("/chat", requireAuth, requireFounder, async(req: Request, res: Respo
       }
 
           const pageText = getPageText(top.doc, top.pdfPage);
+          const isNonText = !pageText || /\[NON_TEXT_PAGE_OR_OCR_FAILED\]/.test(String(pageText));
+          if (isNonText) {
+            const caps = getCaps(top.doc, top.pdfPage) || getCaps("KHS", top.pdfPage);
+            if (caps && typeof caps.caption === "string" && caps.caption.trim()) {
+              capsPayload = {
+                doc: caps.doc,
+                pdfPage: caps.pdfPage,
+                quality: caps.quality ?? [],
+                source: caps.source ?? "TENMON_AI_CAPS_V1",
+                updatedAt: caps.updatedAt ?? null,
+                caption: caps.caption,
+                caption_alt: caps.caption_alt ?? [],
+              };
+            }
+          }
+
 
           // --- NON_TEXT_GUARD_V1: NON_TEXT を surface に出さない ---
           if (!pageText || pageText.includes("[NON_TEXT_PAGE_OR_OCR_FAILED]")) {
@@ -751,6 +771,22 @@ let finalResponse = response;
       if (candidates.length > 0) {
         const top = candidates[0];
         const pageText = getPageText(top.doc, top.pdfPage);
+          const isNonText = !pageText || /\[NON_TEXT_PAGE_OR_OCR_FAILED\]/.test(String(pageText));
+          if (isNonText) {
+            const caps = getCaps(top.doc, top.pdfPage) || getCaps("KHS", top.pdfPage);
+            if (caps && typeof caps.caption === "string" && caps.caption.trim()) {
+              capsPayload = {
+                doc: caps.doc,
+                pdfPage: caps.pdfPage,
+                quality: caps.quality ?? [],
+                source: caps.source ?? "TENMON_AI_CAPS_V1",
+                updatedAt: caps.updatedAt ?? null,
+                caption: caps.caption,
+                caption_alt: caps.caption_alt ?? [],
+              };
+            }
+          }
+
         if (pageText && pageText.trim().length > 0) {
           // 回答本文を生成（50文字以上、短く自然に、最後にメニューを添える）
           const excerpt = pageText.trim().slice(0, 300);
@@ -775,7 +811,17 @@ let finalResponse = response;
     }
 
     // ドメイン質問で根拠がある場合、evidence と detailPlan に情報を追加
-    let evidence: { doc: string; pdfPage: number; quote: string } | null = null;
+    
+    if (capsPayload && capsPayload.caption) {
+      const alts = Array.isArray(capsPayload.caption_alt) ? capsPayload.caption_alt.slice(0, 3) : [];
+      const altText = alts.length ? "\n\n補助: " + alts.join(" / ") : "";
+      finalResponse =
+        `（補完キャプション: 天聞AI解析 / doc=${capsPayload.doc} pdfPage=${capsPayload.pdfPage}）\n` +
+        String(capsPayload.caption).trim() +
+        altText;
+    }
+
+let evidence: { doc: string; pdfPage: number; quote: string } | null = null;
     if (isDomainQuestion && evidenceDoc && evidencePdfPage !== null) {
       evidence = {
         doc: evidenceDoc,

@@ -23,4 +23,14 @@ export type ChatResponseBody = {
     llm: string | null;
     ku: Record<string, unknown>;
   };
+
+  caps?: {
+    doc: string;
+    pdfPage: number;
+    quality?: string[];
+    source?: string;
+    updatedAt?: string;
+    caption: string;
+    caption_alt?: string[];
+  };
 };
