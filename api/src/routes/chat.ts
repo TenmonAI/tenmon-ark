@@ -1,6 +1,4 @@
 import { Router, type IRouter, type Request, type Response } from "express";
-import { requireFounder } from "./auth.js";
-import { requireAuth } from "./auth.js";
 import { sanitizeInput } from "../tenmon/inputSanitizer.js";
 import type { ChatResponseBody } from "../types/chat.js";
 import { runKanagiReasoner } from "../kanagi/engine/fusionReasoner.js";
@@ -204,7 +202,7 @@ function buildGroundedResponse(args: {
  * 
  * 固定応答を廃止し、天津金木思考回路を通して観測を返す
  */
-router.post("/chat", requireAuth, requireFounder, async(req: Request, res: Response<ChatResponseBody>) => {
+router.post("/chat", async (req: Request, res: Response<ChatResponseBody>) => {
   const handlerTime = Date.now();
 
   let capsPayload: any = null;
@@ -220,20 +218,37 @@ const pid = process.pid;
   const message = String(messageRaw ?? "").trim();
   const threadId = String(body.threadId ?? "default").trim();
   const timestamp = new Date().toISOString();
-const wantsDetail = /#詳細/.test(message);
+  const wantsDetail = /#詳細/.test(message);
+
+  const auth = (req as any).auth ?? null;
+  const isAuthed = !!auth;
+  // P0_SAFE_GUEST: 未ログインはLLM_CHAT禁止（NATURAL/HYBRID/GROUNDEDはOK）
+  const shouldBlockLLMChatForGuest = !isAuthed;
 
   if (!message) return res.status(400).json({ response: "message required", error: "message required", timestamp, decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: {} } });
 
   const trimmed = message.trim();
 
 
-  // REPLY_SURFACE_V1: responseは必ずlocalSurfaceizeを通す（漏れ経路を潰す）
+  // REPLY_SURFACE_V1: responseは必ずlocalSurfaceizeを通す。返却は opts をそのまま形にし caps は body.caps のみ参照
   const reply = (payload: any) => {
-    const out = { ...payload };
-    if (typeof out.response === "string") {
-      out.response = localSurfaceize(out.response, trimmed);
-    }
-    return res.json(out);
+    const response =
+      typeof payload.response === "string"
+        ? localSurfaceize(payload.response, trimmed)
+        : payload.response;
+    return res.json({
+      response,
+      timestamp: payload.timestamp,
+      trace: payload.trace,
+      provisional: payload.provisional,
+      detailPlan: payload.detailPlan,
+      candidates: payload.candidates,
+      evidence: payload.evidence,
+      caps: payload?.caps ?? undefined,
+      decisionFrame: payload.decisionFrame,
+      threadId: payload.threadId,
+      error: payload.error,
+    });
   };
 
   // --- DET_NATURAL_STRESS_V1: 不安/過多はメニューに吸わせず相談テンプレへ ---
@@ -587,6 +602,15 @@ const wantsDetail = /#詳細/.test(message);
     !wantsEvidence &&
     !trimmed.startsWith("#");
 
+  if (shouldBlockLLMChatForGuest && shouldLLMChat) {
+    return res.status(200).json({
+      response: "ログイン前のため、会話は参照ベース（資料検索/整理）で動作します。/login からログインすると通常会話も有効になります。",
+      evidence: null,
+      decisionFrame: { mode: "GUEST", intent: "chat", llm: null, ku: {} },
+      timestamp: new Date().toISOString(),
+    } as any);
+  }
+
   if (shouldLLMChat) {
     const out = await llmChat({ system: TENMON_CONSTITUTION_TEXT, history: [], user: trimmed });
     const safe = scrubEvidenceLike(out.text);
@@ -770,32 +794,35 @@ let finalResponse = response;
       if (candidates.length > 0) {
         const top = candidates[0];
         const pageText = getPageText(top.doc, top.pdfPage);
-          const isNonText = !pageText || /\[NON_TEXT_PAGE_OR_OCR_FAILED\]/.test(String(pageText));
-          if (isNonText) {
-            const caps = getCaps(top.doc, top.pdfPage) || getCaps("KHS", top.pdfPage);
-            if (caps && typeof caps.caption === "string" && caps.caption.trim()) {
-              capsPayload = {
-                doc: caps.doc,
-                pdfPage: caps.pdfPage,
-                quality: caps.quality ?? [],
-                source: caps.source ?? "TENMON_AI_CAPS_V1",
-                updatedAt: caps.updatedAt ?? null,
-                caption: caps.caption,
-                caption_alt: caps.caption_alt ?? [],
-              };
-            }
-          }
-
-        if (pageText && pageText.trim().length > 0) {
+        const isNonText = !pageText || /\[NON_TEXT_PAGE_OR_OCR_FAILED\]/.test(String(pageText));
+        if (pageText && pageText.trim().length > 0 && !isNonText) {
           // 回答本文を生成（50文字以上、短く自然に、最後にメニューを添える）
           const excerpt = pageText.trim().slice(0, 300);
           finalResponse = `${excerpt}${excerpt.length < pageText.trim().length ? '...' : ''}\n\n※ 必要なら資料指定（doc/pdfPage）で厳密にもできます。`;
-          // 根拠情報を保存
           evidenceDoc = top.doc;
           evidencePdfPage = top.pdfPage;
           evidenceQuote = top.snippet || excerpt.slice(0, 100);
+        } else if (isNonText) {
+          // 本文が空 or NON_TEXT → caps で補完
+          const caps = getCaps(top.doc, top.pdfPage) || getCaps("KHS", top.pdfPage);
+          if (caps && typeof caps.caption === "string" && caps.caption.trim()) {
+            finalResponse =
+              `（補完キャプション: 天聞AI解析 / doc=${caps.doc} pdfPage=${caps.pdfPage}）\n` +
+              caps.caption.trim() +
+              (caps.caption_alt?.length ? `\n\n補助: ${caps.caption_alt.slice(0, 3).join(" / ")}` : "");
+            capsPayload = {
+              doc: caps.doc,
+              pdfPage: caps.pdfPage,
+              quality: caps.quality,
+              source: caps.source,
+              updatedAt: caps.updatedAt,
+              caption: caps.caption,
+              caption_alt: caps.caption_alt,
+            };
+          } else {
+            finalResponse = `${sanitized.text}について、kokuzo データベースから関連情報を検索しましたが、詳細な説明が見つかりませんでした。資料指定（doc/pdfPage）で厳密に検索することもできます。`;
+          }
         } else {
-          // ページテキストが取得できない場合のフォールバック
           finalResponse = `${sanitized.text}について、kokuzo データベースから関連情報を検索しましたが、詳細な説明が見つかりませんでした。資料指定（doc/pdfPage）で厳密に検索することもできます。`;
         }
       } else {
@@ -811,16 +838,7 @@ let finalResponse = response;
 
     // ドメイン質問で根拠がある場合、evidence と detailPlan に情報を追加
     
-    if (capsPayload && capsPayload.caption) {
-      const alts = Array.isArray(capsPayload.caption_alt) ? capsPayload.caption_alt.slice(0, 3) : [];
-      const altText = alts.length ? "\n\n補助: " + alts.join(" / ") : "";
-      finalResponse =
-        `（補完キャプション: 天聞AI解析 / doc=${capsPayload.doc} pdfPage=${capsPayload.pdfPage}）\n` +
-        String(capsPayload.caption).trim() +
-        altText;
-    }
-
-let evidence: { doc: string; pdfPage: number; quote: string } | null = null;
+    let evidence: { doc: string; pdfPage: number; quote: string } | null = null;
     if (isDomainQuestion && evidenceDoc && evidencePdfPage !== null) {
       evidence = {
         doc: evidenceDoc,
@@ -920,6 +938,7 @@ let evidence: { doc: string; pdfPage: number; quote: string } | null = null;
       detailPlan,
       candidates,
       evidence,
+      caps: capsPayload ?? undefined,
       timestamp: new Date().toISOString(),
       decisionFrame: { mode: "HYBRID", intent: "chat", llm: null, ku: {} },
     });
