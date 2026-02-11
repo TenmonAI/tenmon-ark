@@ -728,7 +728,12 @@ const pid = process.pid;
       // この後ろの HYBRID 処理にフォールスルー
     } else {
       // メニューを表示する場合は pending state を保存
-      if (nat.responseText.includes("どの方向で話しますか")) {
+      // M2-0-LANE_PICK_DETECT_V1: menu文言ゆれを吸収して pending を確実に立てる
+      if (
+        nat.responseText.includes("どの方向で話しますか") ||
+        nat.responseText.includes("いまの状況を一言で言うと") ||
+        nat.responseText.includes("1) 予定・タスクの整理")
+      ) {
         setThreadPending(threadId, "LANE_PICK");
       }
       return reply({
