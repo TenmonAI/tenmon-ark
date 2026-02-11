@@ -305,7 +305,6 @@ const pid = process.pid;
       candidates: payload.candidates,
       evidence: payload.evidence,
       caps: payload?.caps ?? undefined,
-      capsQueue: payload?.capsQueue ?? undefined,
       decisionFrame: payload.decisionFrame,
       threadId: payload.threadId,
       error: payload.error,
@@ -573,7 +572,6 @@ const pid = process.pid;
       decisionFrame: { mode: "NATURAL", intent: "command", llm: null, ku: {} },
       timestamp,
       threadId,
-      capsQueue: capsInfo,
     });
   }
 
