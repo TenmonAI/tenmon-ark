@@ -859,6 +859,36 @@ const pid = process.pid;
 
     const searchQuery1 = searchQuery0.replace(/言灵/g, "言霊");
     let candidates = searchPagesForHybrid(doc, searchQuery1, 10);
+    // M1-03_DOC_DIVERSIFY_FALLBACK_V1: candidates が単一docに偏る時、他docも試して母集団を増やす（削除ではなく追加）
+    // ルール: search.ts/DBは触らない。件数は維持し、最後にslice(0,10)。
+    try {
+      const uniqDocs = Array.from(new Set((candidates || []).map((c: any) => String(c?.doc ?? "")).filter(Boolean)));
+      const dominatedBySingleDoc = uniqDocs.length <= 1;
+      if (dominatedBySingleDoc) {
+        const tryDocs = ["KHS", "TENMON_CORE", "IROHA", "KATAKAMUNA"];
+        const extra: any[] = [];
+        for (const d of tryDocs) {
+          if (!d || uniqDocs.includes(d)) continue;
+          const add = searchPagesForHybrid(d, searchQuery1, 5) || [];
+          for (const c of add) extra.push(c);
+        }
+        // merge (doc+pageで重複排除)
+        const seen = new Set();
+        const merged: any[] = [];
+        for (const c of (candidates || []).concat(extra)) {
+          const key = `${String(c?.doc ?? "")}::${String(c?.pdfPage ?? "")}`;
+          if (seen.has(key)) continue;
+          seen.add(key);
+          merged.push(c);
+        }
+        // score desc
+        merged.sort((a: any, b: any) => (Number(b?.score ?? 0) || 0) - (Number(a?.score ?? 0) || 0));
+        candidates = merged.slice(0, 10);
+      }
+    } catch (e) {
+      // 失敗時は現状維持（必ず候補は落とさない）
+    }
+
 
     if (!candidates.length) {
       const q2 = searchQuery0.replace(/言灵|言霊/g, "ことだま");
