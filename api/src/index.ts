@@ -9,6 +9,8 @@ import ingestRouter from "./routes/ingest.js";
 import kanagiRoutes from "./routes/kanagi.js";
 import tenmonRoutes from "./routes/tenmon.js";
 import memoryRouter from "./routes/memory.js";
+import authRouter from "./routes/auth.js";
+import { meRouter } from "./routes/me.js";
 import { markListenReady } from "./health/readiness.js";
 import { getDb } from "./db/index.js";
 
@@ -63,6 +65,8 @@ try {
 app.use(cors());
 app.use(express.json());
 
+app.use("/api", authRouter);
+app.use("/api", meRouter);
 app.use("/api", auditRouter);
 app.use("/api", chatRouter);
 app.use("/api", lawRouter);
