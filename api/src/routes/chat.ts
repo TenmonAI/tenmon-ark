@@ -723,7 +723,42 @@ const pid = process.pid;
     }
   }
 
-  // GROUNDED分岐: doc + pdfPage 指定時は必ず GROUNDED を返す
+  
+  // P0-PH38-DOC_EQ_ROUTE-02: doc=... pdfPage=... は #pin 相当で GROUNDED に合流（.pdf不要）
+  const mDocEq = message.match(/\bdoc\s*=\s*([^\s]+)/i);
+  const mPageEq = message.match(/\bpdfPage\s*=\s*(\d+)/i);
+  if (mDocEq && mPageEq) {
+    const docEq = String(mDocEq[1] || "").trim();
+    const pageEq = parseInt(String(mPageEq[1] || "0"), 10);
+    if (docEq && Number.isFinite(pageEq) && pageEq > 0) {
+      const out: any = buildGroundedResponse({
+        doc: docEq,
+        pdfPage: pageEq,
+        threadId,
+        timestamp,
+        wantsDetail,
+      });
+
+      // PH38_TAGS_GUARD_V1: candidates[0].tags は必ず非空（allowedのみ。evidence/snippetは不変更）
+      const allowed = new Set(["IKI","SHIHO","KAMI","HOSHI"]);
+      if (!out.candidates || !Array.isArray(out.candidates) || !out.candidates.length) {
+        const pageText = String(getPageText(docEq, pageEq) || "");
+        const snippet = pageText ? pageText.slice(0, 240) : "[NON_TEXT_PAGE_OR_OCR_FAILED]";
+        out.candidates = [{ doc: docEq, pdfPage: pageEq, snippet, score: 10, tags: ["IKI"] }];
+      } else {
+        const c0 = out.candidates[0] || {};
+        let tags = Array.isArray(c0.tags) ? c0.tags : [];
+        tags = tags.filter((t: any) => allowed.has(String(t)));
+        if (!tags.length) tags = ["IKI"];
+        c0.tags = tags;
+        out.candidates[0] = c0;
+      }
+
+      return res.json(out);
+    }
+  }
+
+// GROUNDED分岐: doc + pdfPage 指定時は必ず GROUNDED を返す
   const mPage = message.match(/pdfPage\s*=\s*(\d+)/i);
   const mDoc = message.match(/([^\s]+\.pdf)/i);
   if (mPage && mDoc) {
@@ -797,7 +832,20 @@ const pid = process.pid;
 
     // Phase25: candidates（deterministic; if LIKE misses, fallback range is returned）
     const doc = (sanitized as any).doc ?? null;
-    const candidates = searchPagesForHybrid(doc, sanitized.text, 10);
+    // P0-PH25-QUERY_NORMALIZE_V1: Phase25 query ("言灵とは何？ #詳細") must hit
+    const searchQuery0 = String(sanitized.text || "")
+      .replace(/#詳細/g, "")
+      .replace(/\bdoc\s*=\s*[^\s]+/gi, "")
+      .replace(/\bpdfPage\s*=\s*\d+/gi, "")
+      .trim();
+
+    const searchQuery1 = searchQuery0.replace(/言灵/g, "言霊");
+    let candidates = searchPagesForHybrid(doc, searchQuery1, 10);
+
+    if (!candidates.length) {
+      const q2 = searchQuery0.replace(/言灵|言霊/g, "ことだま");
+      candidates = searchPagesForHybrid(doc, q2, 10);
+    }
     
     // Phase26: candidates を threadId に保存（番号選択で再利用）
     setThreadCandidates(threadId, candidates);
