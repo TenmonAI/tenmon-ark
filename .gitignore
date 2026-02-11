@@ -134,3 +134,6 @@ api/answer
 **/scripts/*.bak.*
 **/core/*.bak.*
 /tmp/*.log
+
+# local reports (do not track)
+reports/
