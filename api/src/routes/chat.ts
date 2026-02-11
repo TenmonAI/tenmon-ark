@@ -296,13 +296,31 @@ const pid = process.pid;
       typeof payload.response === "string"
         ? localSurfaceize(payload.response, trimmed)
         : payload.response;
+    // M1-01_GARBAGE_CANDIDATES_FILTER_V1: candidates を返却直前で統一フィルタ（cleanedが空なら元に戻す）
+    const rawCandidates = Array.isArray((payload as any)?.candidates) ? (payload as any).candidates : [];
+
+    const isGarbageSnippet = (snip: string): boolean => {
+      const t = String(snip ?? "");
+      if (!t) return true;
+      if (/\[NON_TEXT_PAGE_OR_OCR_FAILED\]/.test(t)) return true;
+      const bad = (t.match(/[�\u0000-\u001F]/g) || []).length;
+      if (bad >= 3) return true;
+      const hasJP = /[ぁ-んァ-ン一-龯]/.test(t);
+      if (!hasJP && t.length < 60) return true;
+      return false;
+    };
+
+    const cleaned = rawCandidates.filter((c: any) => !isGarbageSnippet(String((c as any)?.snippet ?? "")));
+    const finalCandidates = cleaned.length ? cleaned : rawCandidates;
+
+
     return res.json({
       response,
       timestamp: payload.timestamp,
       trace: payload.trace,
       provisional: payload.provisional,
       detailPlan: payload.detailPlan,
-      candidates: payload.candidates,
+      candidates: finalCandidates,
       evidence: payload.evidence,
       caps: payload?.caps ?? undefined,
       decisionFrame: payload.decisionFrame,
