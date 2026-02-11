@@ -301,6 +301,11 @@ export function searchPagesForHybrid(docOrNull: string | null, query: string, li
     }
   }
 
+  // doc指定が絶対に効く：docOrNull がある場合は結果を doc で強制フィルタ（FTS/LIKE 両方の後）
+  if (docOrNull && rows.length > 0) {
+    rows = rows.filter((r: any) => String(r.doc) === docOrNull);
+  }
+
   if (rows && rows.length) {
     // bm25() は小さいほど良いスコアなので、100 - rank で正規化（最大100点）
     // Phase28: ノイズ判定でランキング品質を改善（表紙/奥付を下げる）
@@ -357,6 +362,16 @@ export function searchPagesForHybrid(docOrNull: string | null, query: string, li
       // pdfPage が 1 の場合は大幅ペナルティ（表紙を必ず落とす）
       if (pdfPage === 1) {
         penalty += 300; // 表紙を必ず下げる（同点・僅差で表紙が勝つ余地を潰す）
+      }
+
+      const t = pageText500;
+      if (t.includes("[NON_TEXT_PAGE_OR_OCR_FAILED]")) {
+        penalty += 1000; // 強制的に下げる
+      }
+      const hasJa = /[ぁ-んァ-ン一-龯]/.test(t);
+      if (!hasJa) penalty += 200; // 文字化け（日本語がほぼ無い）
+      if ((t.match(/[^\x20-\x7Eぁ-んァ-ン一-龯]/g) || []).length > 40) {
+        penalty += 200; // 制御文字っぽいものが多い
       }
       
       const finalScore = Math.max(0, baseScore + bonus - penalty);

@@ -105,15 +105,78 @@ function buildGroundedResponse(args: {
   // Phase24: Kokuzo pages ingestion - ページ本文を取得
   const pageText = getPageText(doc, pdfPage);
   const evidenceId = `KZPAGE:${doc}:P${pdfPage}`;
-  
-  let responseText = `（資料準拠）${doc} P${pdfPage} を指定として受け取りました。`;
-  if (pageText && !/\[NON_TEXT_PAGE_OR_OCR_FAILED\]/.test(String(pageText))) {
-    const excerpt = pageText.slice(0, 400).trim();
-    responseText += `\n\n【引用（先頭400文字）】\n${excerpt}${pageText.length > 400 ? "..." : ""}`;
-  } else {
-    responseText += "\n\n※注意: このページは未投入です（ingest_pdf_pages.sh で投入してください）。";
+
+  // 3分岐（矛盾なし）: 1) 未投入 2) 非テキスト（caps補完 or 未登録） 3) 通常引用
+  if (pageText == null) {
+    const responseText = `（資料準拠）${doc} P${pdfPage} を指定として受け取りました。\n\n※注意: このページは未投入です（ingest_pdf_pages.sh で投入してください）。`;
+    const result = buildGroundedResultBody(doc, pdfPage, threadId, timestamp, wantsDetail, responseText, null, evidenceId);
+    if (wantsDetail) result.detail = `#詳細\n- doc: ${doc}\n- pdfPage: ${pdfPage}\n- 状態: 未投入（ingest_pdf_pages.sh で投入してください）`;
+    return result;
   }
-  
+
+  const isNonText = /\[NON_TEXT_PAGE_OR_OCR_FAILED\]/.test(String(pageText));
+  if (isNonText) {
+    const caps = getCaps(doc, pdfPage) || getCaps("KHS", pdfPage);
+    if (caps && typeof caps.caption === "string" && caps.caption.trim()) {
+      const responseText =
+        `（補完キャプション: 天聞AI解析 / doc=${caps.doc} pdfPage=${caps.pdfPage}）\n` +
+        String(caps.caption).trim() +
+        (Array.isArray(caps.caption_alt) && caps.caption_alt.length ? `\n\n補助: ${caps.caption_alt.slice(0, 3).join(" / ")}` : "");
+      const result = buildGroundedResultNonText(doc, pdfPage, threadId, timestamp, responseText, evidenceId);
+      if (wantsDetail) result.detail = `#詳細\n- doc: ${doc}\n- pdfPage: ${pdfPage}\n- 状態: 非テキスト（補完キャプションで表示）`;
+      return result;
+    }
+    const responseText = "このページは非テキスト扱いです（OCR/抽出不可）。caps が未登録のため補完できません。";
+    const result = buildGroundedResultNonText(doc, pdfPage, threadId, timestamp, responseText, evidenceId);
+    result.provisional = true;
+    if (wantsDetail) result.detail = `#詳細\n- doc: ${doc}\n- pdfPage: ${pdfPage}\n- 状態: 非テキスト（caps未登録）`;
+    return result;
+  }
+
+  const responseText = `（資料準拠）${doc} P${pdfPage} を指定として受け取りました。\n\n【引用（先頭400文字）】\n${pageText.slice(0, 400).trim()}${pageText.length > 400 ? "..." : ""}`;
+  const result: any = buildGroundedResultBody(doc, pdfPage, threadId, timestamp, wantsDetail, responseText, pageText, evidenceId);
+  if (wantsDetail) result.detail = `#詳細\n- doc: ${doc}\n- pdfPage: ${pdfPage}\n- 状態: 本文取得済み`;
+  return result;
+}
+
+function buildGroundedResultNonText(doc: string, pdfPage: number, threadId: string, timestamp: string, responseText: string, evidenceId: string): any {
+  const p = emptyCorePlan(`GROUNDED ${doc} P${pdfPage}`);
+  p.chainOrder = ["GROUNDED_SPECIFIED", "TRUTH_CORE", "VERIFIER"];
+  p.warnings = p.warnings ?? [];
+  p.evidenceIds = [evidenceId];
+  p.warnings.push("NON_TEXT");
+  applyTruthCore(p, { responseText: `GROUNDED ${doc} P${pdfPage}`, trace: undefined });
+  applyVerifier(p);
+  const prev = kokuzoRecall(threadId);
+  if (prev) {
+    if (!p.chainOrder.includes("KOKUZO_RECALL")) p.chainOrder.push("KOKUZO_RECALL");
+    p.warnings.push(`KOKUZO: recalled centerClaim=${prev.centerClaim.slice(0, 40)}`);
+  }
+  (p as any).lawCandidates = [];
+  (p as any).kojikiTags = [];
+  (p as any).mythMapEdges = buildMythMapEdges({ fourLayerTags: [], kojikiTags: [], evidenceIds: [evidenceId] });
+  kokuzoRemember(threadId, p);
+  return {
+    response: responseText,
+    evidence: { doc, pdfPage },
+    provisional: true,
+    detailPlan: p,
+    timestamp,
+    threadId,
+    decisionFrame: { mode: "GROUNDED", intent: "chat", llm: null, ku: {} },
+  };
+}
+
+function buildGroundedResultBody(
+  doc: string,
+  pdfPage: number,
+  threadId: string,
+  timestamp: string,
+  wantsDetail: boolean,
+  responseText: string,
+  pageText: string | null,
+  evidenceId: string
+): any {
   const result: any = {
     response: responseText,
     evidence: { doc, pdfPage },
@@ -191,9 +254,6 @@ function buildGroundedResponse(args: {
     threadId,
     decisionFrame: { mode: "GROUNDED", intent: "chat", llm: null, ku: {} },
   };
-  if (wantsDetail) {
-    result.detail = `#詳細\n- doc: ${doc}\n- pdfPage: ${pdfPage}\n- 状態: ${pageText ? "本文取得済み" : "未投入（ingest_pdf_pages.sh で投入してください）"}`;
-  }
   return result;
 }
 
@@ -508,21 +568,28 @@ const pid = process.pid;
     });
   }
 
-  if (trimmed.startsWith("#search ")) {
-    const query = trimmed.slice(7).trim();
-    if (!query) {
+  if (trimmed.startsWith("#search")) {
+    const raw = trimmed.replace(/^#search\s*/i, "").trim();
+    let docHint: string | null = null;
+    let q = raw;
+    const mDoc = q.match(/\bdoc\s*=\s*([A-Za-z0-9_.\-]+)\b/i);
+    if (mDoc) {
+      docHint = mDoc[1];
+      q = q.replace(mDoc[0], "").trim();
+    }
+    if (!q) {
       return reply({
-        response: "エラー: #search <query> の形式で検索語を指定してください",
+        response: "検索語が空です。#search doc=KHS 言霊 のように検索語も指定してください。",
         evidence: null,
         decisionFrame: { mode: "NATURAL", intent: "command", llm: null, ku: {} },
         timestamp,
         threadId,
       });
     }
-    const candidates = searchPagesForHybrid(null, query, 10);
+    const candidates = searchPagesForHybrid(docHint, q, 12);
     if (candidates.length === 0) {
       return reply({
-        response: `【検索結果】「${query}」に該当するページが見つかりませんでした。`,
+        response: `【検索結果】「${q}」に該当するページが見つかりませんでした。`,
         evidence: null,
         decisionFrame: { mode: "HYBRID", intent: "search", llm: null, ku: {} },
         candidates: [],
@@ -530,11 +597,11 @@ const pid = process.pid;
         threadId,
       });
     }
-    const results = candidates.slice(0, 5).map((c, i) => 
+    const results = candidates.slice(0, 5).map((c, i) =>
       `${i + 1}. ${c.doc} P${c.pdfPage}: ${c.snippet.slice(0, 100)}...`
     ).join("\n");
     return reply({
-      response: `【検索結果】「${query}」\n\n${results}\n\n※ 番号を選択すると詳細を表示します。`,
+      response: `【検索結果】「${q}」\n\n${results}\n\n※ 番号を選択すると詳細を表示します。`,
       evidence: null,
       decisionFrame: { mode: "HYBRID", intent: "search", llm: null, ku: {} },
       candidates: candidates.slice(0, 10),
