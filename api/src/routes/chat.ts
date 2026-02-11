@@ -12,7 +12,7 @@ import { applyVerifier } from "../kanagi/core/verifier.js";
 import { kokuzoRecall, kokuzoRemember } from "../kokuzo/recall.js";
 import { getPageText } from "../kokuzo/pages.js";
 import { searchPagesForHybrid } from "../kokuzo/search.js";
-import { getCaps } from "../kokuzo/capsQueue.js";
+import { getCaps, debugCapsPath, debugCapsQueue } from "../kokuzo/capsQueue.js";
 import { setThreadCandidates, pickFromThread, clearThreadCandidates, setThreadPending, getThreadPending, clearThreadState } from "../kokuzo/threadCandidates.js";
 import { parseLaneChoice, type LaneChoice } from "../persona/laneChoice.js";
 import { getDb, dbPrepare } from "../db/index.js";
@@ -305,6 +305,7 @@ const pid = process.pid;
       candidates: payload.candidates,
       evidence: payload.evidence,
       caps: payload?.caps ?? undefined,
+      capsQueue: payload?.capsQueue ?? undefined,
       decisionFrame: payload.decisionFrame,
       threadId: payload.threadId,
       error: payload.error,
@@ -559,12 +560,20 @@ const pid = process.pid;
     const pagesCount = dbPrepare("kokuzo", "SELECT COUNT(*) as cnt FROM kokuzo_pages").get()?.cnt || 0;
     const chunksCount = dbPrepare("kokuzo", "SELECT COUNT(*) as cnt FROM kokuzo_chunks").get()?.cnt || 0;
     const filesCount = dbPrepare("kokuzo", "SELECT COUNT(*) as cnt FROM kokuzo_files").get()?.cnt || 0;
+    const capsInfo = debugCapsQueue();
+    const text =
+      `【KOKUZO 状態】\n` +
+      `- kokuzo_pages: ${pagesCount}件\n` +
+      `- kokuzo_chunks: ${chunksCount}件\n` +
+      `- kokuzo_files: ${filesCount}件\n` +
+      `- capsQueue: ${capsInfo.path} (exists=${capsInfo.exists})`;
     return reply({
-      response: `【KOKUZO 状態】\n- kokuzo_pages: ${pagesCount}件\n- kokuzo_chunks: ${chunksCount}件\n- kokuzo_files: ${filesCount}件`,
+      response: text,
       evidence: null,
       decisionFrame: { mode: "NATURAL", intent: "command", llm: null, ku: {} },
       timestamp,
       threadId,
+      capsQueue: capsInfo,
     });
   }
 

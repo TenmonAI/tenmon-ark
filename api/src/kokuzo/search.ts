@@ -366,15 +366,20 @@ export function searchPagesForHybrid(docOrNull: string | null, query: string, li
 
       const t = pageText500;
       if (t.includes("[NON_TEXT_PAGE_OR_OCR_FAILED]")) {
-        penalty += 1000; // 強制的に下げる
+        penalty += 5000; // 強制除外に近づける
       }
       const hasJa = /[ぁ-んァ-ン一-龯]/.test(t);
-      if (!hasJa) penalty += 200; // 文字化け（日本語がほぼ無い）
+      if (!hasJa) penalty += 1000; // 日本語が無い
       if ((t.match(/[^\x20-\x7Eぁ-んァ-ン一-龯]/g) || []).length > 40) {
-        penalty += 200; // 制御文字っぽいものが多い
+        penalty += 2000; // 制御文字だらけ
       }
       
       const finalScore = Math.max(0, baseScore + bonus - penalty);
+      
+      // ゴミ候補を候補配列に残さない（penalty が一定以上なら除外）
+      if (penalty >= 2000) {
+        return { doc, pdfPage, snippet: "", score: -1, tags: [], _penalty: penalty };
+      }
       
       // Phase31: snippet を正規化（空なら pageText500n から生成）
       let sn = normalizeSnippet(r.snippet || "");
@@ -394,11 +399,17 @@ export function searchPagesForHybrid(docOrNull: string | null, query: string, li
         snippet: sn,
         score: finalScore,
         tags: tags.length > 0 ? tags : [],
+        _penalty: penalty,
       };
     });
     
+    // penalty >= 2000 のゴミ候補を除外してからソート
+    const filtered: KokuzoCandidate[] = scored
+      .filter((r: any) => (r._penalty ?? 0) < 2000)
+      .map(({ doc, pdfPage, snippet, score, tags }: any) => ({ doc, pdfPage, snippet, score, tags }));
+    
     // score DESC でソート、同点なら P1 を後ろに送る tie-break
-    scored.sort((a, b) => {
+    filtered.sort((a, b) => {
       if (b.score !== a.score) {
         return b.score - a.score; // score DESC
       }
@@ -413,8 +424,8 @@ export function searchPagesForHybrid(docOrNull: string | null, query: string, li
     const isBadCover = (c: KokuzoCandidate) => {
       return c.pdfPage === 1 && /(全集|監修|校訂)/.test(String(c.snippet || ""));
     };
-    const good: KokuzoCandidate[] = scored.filter(c => !isBadCover(c));
-    const bad: KokuzoCandidate[] = scored.filter(c => isBadCover(c));
+    const good: KokuzoCandidate[] = filtered.filter(c => !isBadCover(c));
+    const bad: KokuzoCandidate[] = filtered.filter(c => isBadCover(c));
     let final: KokuzoCandidate[] = good.concat(bad).slice(0, limit);
     
     // Phase28: final[0] が bad cover の場合、補完候補を追加して cand0 を回避
