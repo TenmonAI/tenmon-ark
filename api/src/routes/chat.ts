@@ -191,7 +191,6 @@ function buildGroundedResponse(args: {
     })(),
     timestamp,
     threadId,
-    caps: capsPayload ?? undefined,
     decisionFrame: { mode: "GROUNDED", intent: "chat", llm: null, ku: {} },
   };
   if (wantsDetail) {
