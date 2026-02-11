@@ -1,4 +1,6 @@
 import { Router, type IRouter, type Request, type Response } from "express";
+import { requireFounder } from "./auth.js";
+import { requireAuth } from "./auth.js";
 import { sanitizeInput } from "../tenmon/inputSanitizer.js";
 import type { ChatResponseBody } from "../types/chat.js";
 import { runKanagiReasoner } from "../kanagi/engine/fusionReasoner.js";
@@ -201,7 +203,7 @@ function buildGroundedResponse(args: {
  * 
  * 固定応答を廃止し、天津金木思考回路を通して観測を返す
  */
-router.post("/chat", async (req: Request, res: Response<ChatResponseBody>) => {
+router.post("/chat", requireAuth, requireFounder, async(req: Request, res: Response<ChatResponseBody>) => {
   const handlerTime = Date.now();
   const pid = process.pid;
   const uptime = process.uptime();
