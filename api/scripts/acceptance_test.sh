@@ -775,7 +775,7 @@ curl -fsS -X POST http://127.0.0.1:3000/api/training/ingest \
 # GUEST回避：wantsEvidence=true（あなたの現行分岐に合わせる）
 curl -fsS http://127.0.0.1:3000/api/chat \
   -H 'Content-Type: application/json' \
-  -d "$(jq -n --arg tid "$SID" '{threadId:$tid,message:"資料ベースで迷いを整理したい"}')" \
-| jq -e '(.decisionFrame.ku.learnedRulesAvailable|type=="number") and (.decisionFrame.ku.learnedRulesAvailable>=1)' >/dev/null
+  -d "$(jq -n --arg tid "$SID" '{threadId:$tid,message:"資料ベースで迷いを整理したい session_id=$SID"}')" \
+| jq -e '(.decisionFrame.ku.learnedRulesAvailable|type=="number") and (.decisionFrame.ku.learnedRulesAvailable>=1) and (.decisionFrame.ku.learnedRulesUsed|type=="array") and ((.decisionFrame.ku.learnedRulesUsed|length) >= 1)' >/dev/null
 
 echo "[PASS] Phase51"
