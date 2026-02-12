@@ -26,6 +26,7 @@ import { localSurfaceize } from "../tenmon/surface/localSurfaceize.js";
 import { llmChat } from "../core/llmWrapper.js";
 
 import { memoryPersistMessage, memoryReadSession } from "../memory/index.js";
+import { listRules } from "../training/storage.js";
 const router: IRouter = Router();
 
 // LLM_CHAT: minimal constitution (no evidence fabrication)
@@ -292,6 +293,26 @@ const pid = process.pid;
 
   // REPLY_SURFACE_V1: responseは必ずlocalSurfaceizeを通す。返却は opts をそのまま形にし caps は body.caps のみ参照
   const reply = (payload: any) => {
+  // M6-A1_LEARN_VISIBILITY_ALLMODES_V1: always expose training visibility in decisionFrame.ku (all modes)
+  try {
+    const df = (payload && payload.decisionFrame) ? payload.decisionFrame : null;
+    if (df) {
+      const ku = (df.ku && typeof df.ku === "object") ? df.ku : {};
+      let available = 0;
+      try {
+        const rules = listRules(String(payload.threadId || ""));
+        if (Array.isArray(rules)) available = rules.length;
+      } catch {}
+      const used = Array.isArray(ku.learnedRulesUsed) ? ku.learnedRulesUsed : [];
+      df.ku = {
+        ...ku,
+        learnedRulesAvailable: typeof ku.learnedRulesAvailable === "number" ? ku.learnedRulesAvailable : available,
+        learnedRulesUsed: used,
+      };
+      payload.decisionFrame = df;
+    }
+  } catch {}
+
     const response =
       typeof payload.response === "string"
         ? localSurfaceize(payload.response, trimmed)
