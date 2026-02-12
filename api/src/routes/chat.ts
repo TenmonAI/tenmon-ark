@@ -307,6 +307,23 @@ const pid = process.pid;
       const mSid = String(payload?.rawMessage || "").match(/\bsession_id\s*=\s*([A-Za-z0-9_]+)/);
       const sessionKey = (mSid && mSid[1]) ? String(mSid[1]) : String(payload.threadId || "");
       const rules = listRules(sessionKey);
+        // M6-B1_USED_ONE_RULE_V1: mark first rule as "used" (ku-only, no body change)
+        try {
+          if (Array.isArray(rules) && rules.length > 0) {
+            const r0: any = rules[0];
+            const used0 = {
+              id: String(r0?.id ?? ""),
+              title: String(r0?.title ?? ""),
+              type: String(r0?.type ?? "other"),
+              confidence: (typeof r0?.confidence === "number" ? r0.confidence : null),
+            };
+            const ok = (used0.id && used0.id.length > 0) || (used0.title && used0.title.length > 0);
+            if (ok) {
+              (ku as any).learnedRulesUsed = [used0];
+            }
+          }
+        } catch {}
+
         if (Array.isArray(rules)) available = rules.length;
       } catch {}
       const used = Array.isArray(ku.learnedRulesUsed) ? ku.learnedRulesUsed : [];
