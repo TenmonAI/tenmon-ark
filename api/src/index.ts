@@ -83,6 +83,7 @@ app.use("/api", trainRouter);
 app.use("/api", memoryRouter);
 app.use("/api", writerRouter);
 app.use("/api", writerVerifyRouter);
+app.use("/api", writerDraftRouter);
 app.use("/api", readerRouter);
 app.use("/api", seedRouter);
 app.use("/api/kanagi", kanagiRoutes);
@@ -105,3 +106,4 @@ app.listen(PORT, "0.0.0.0", () => {
 });
 import { writerRouter } from "./routes/writer.js";
 import { writerVerifyRouter } from "./routes/writerVerify.js";
+import { writerDraftRouter } from "./routes/writerDraft.js";
