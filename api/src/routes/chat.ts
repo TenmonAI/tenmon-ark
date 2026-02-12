@@ -467,7 +467,27 @@ const pid = process.pid;
         });
         const top = (usable.length > 0 ? usable[0] : candidates[0]);
 // If all candidates are NON_TEXT pages, do not paste them to user.
-      if (usable.length === 0) {
+      
+        // M2-2_LANE1_CAPS_BEFORE_EARLY_RETURN_V1: usableが空でもcapsを先に拾う（早期return前）
+        try {
+          const top0: any = (candidates && candidates.length) ? candidates[0] : null;
+          if (top0) {
+            const caps0: any = getCaps(top0.doc, top0.pdfPage) || getCaps("KHS", top0.pdfPage);
+            if (caps0 && typeof caps0.caption === "string" && caps0.caption.trim()) {
+              capsPayload = {
+                doc: caps0.doc,
+                pdfPage: caps0.pdfPage,
+                quality: caps0.quality ?? [],
+                source: caps0.source ?? "TENMON_AI_CAPS_V1",
+                updatedAt: caps0.updatedAt ?? null,
+                caption: caps0.caption,
+                caption_alt: caps0.caption_alt ?? [],
+              };
+            }
+          }
+        } catch {}
+
+if (usable.length === 0) {
         const question = "いま一番困っているのは、(1) 情報の量、(2) 優先順位、(3) 期限の圧力――どれが一番近い？";
         const responseText =
           "いまは“資料の本文”が取れていない候補に当たっています。\\n" +
