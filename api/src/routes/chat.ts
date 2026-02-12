@@ -725,7 +725,16 @@ if (usable.length === 0) {
     return res.status(200).json({
       response: "ログイン前のため、会話は参照ベース（資料検索/整理）で動作します。/login からログインすると通常会話も有効になります。",
       evidence: null,
-      decisionFrame: { mode: "GUEST", intent: "chat", llm: null, ku: {} },
+      // M6-A0_GUEST_KU_TRAINING_STATE_V1
+      decisionFrame: {
+        mode: "GUEST",
+        intent: "chat",
+        llm: null,
+        ku: {
+          training: { enabled: true, latestSessionId: null, latestRulesCount: 0 },
+          learnedRulesUsed: [],
+        },
+      },
       timestamp: new Date().toISOString(),
     } as any);
   }
