@@ -191,3 +191,20 @@ export async function dbClearAll(): Promise<void> {
     db.close();
   }
 }
+
+// PWA-MEM-01b: list all threads (export support)
+export async function dbGetAllThreads(): Promise<PersistThread[]> {
+  const db = await openDB();
+  try {
+    const tx = db.transaction(["threads"], "readonly");
+    const req = tx.objectStore("threads").getAll();
+    const rows = await new Promise<PersistThread[]>((resolve, reject) => {
+      req.onsuccess = () => resolve((req.result ?? []) as PersistThread[]);
+      req.onerror = () => reject(req.error);
+    });
+    await txDone(tx);
+    return rows;
+  } finally {
+    db.close();
+  }
+}
