@@ -818,7 +818,7 @@ echo "[PASS] Phase52-2 writer/outline"
 SECTIONS_JSON="$(echo "$R52_WO" | jq -c '.sections // []')"
 R52_DRAFT="$(curl -fsS "$BASE_URL/api/writer/draft" -H "Content-Type: application/json" \
   -d "{\"threadId\":\"writer-smoke\",\"mode\":\"research\",\"title\":\"test\",\"sections\":${SECTIONS_JSON}}")"
-if ! echo "$R52_DRAFT" | jq -e '.ok==true and (.draft|type)=="string" and (.draft|length)>=40' >/dev/null 2>&1; then
+if ! echo "$R52_DRAFT" | jq -e '.ok==true and (.draft|type)=="string" and (.draft|length)>=40 and (.stats.targetChars|type)=="number" and (.stats.actualChars|type)=="number" and (.stats.actualChars >= .stats.targetChars)' >/dev/null 2>&1; then
   echo "[FAIL] Phase52: writer/draft bad"
   echo "$R52_DRAFT" | jq '.'
   exit 1

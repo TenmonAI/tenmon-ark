@@ -2,57 +2,56 @@ import { Router, type Request, type Response } from "express";
 
 export const writerVerifyRouter = Router();
 
-type Section = { heading: string; goal?: string; evidenceRequired?: boolean };
+type VerifyBody = {
+  text?: unknown;
+  draft?: unknown;
+  content?: unknown;
+  evidenceRequired?: unknown;
+  evidencePolicy?: unknown; // "required" | "optional"
+  evidenceIds?: unknown;
+};
 
-function hasEvidenceHint(text: string): boolean {
-  const t = text || "";
-  return /(\bdoc=|\bpdfPage=|\bevidenceIds\b)/i.test(t);
-}
-
-function hasStrongClaim(text: string): boolean {
-  const t = text || "";
-  return /(絶対|必ず|唯一|確実|間違いない|断言する|100%)/.test(t);
-}
+function s(v: unknown): string { return typeof v === "string" ? v : ""; }
+function b(v: unknown): boolean | null { return typeof v === "boolean" ? v : null; }
 
 writerVerifyRouter.post("/writer/verify", (req: Request, res: Response) => {
   try {
-    const body = (req.body ?? {}) as any;
-    const threadId = String(body.threadId ?? "").trim();
-    const draft = typeof body.draft === "string" ? body.draft : "";
-    const sections = Array.isArray(body.sections) ? (body.sections as Section[]) : [];
+    const body = (req.body ?? {}) as VerifyBody;
 
-    if (!threadId) return res.status(400).json({ ok: false, error: "threadId required" });
-    if (!draft.trim()) return res.status(400).json({ ok: false, error: "draft required" });
+    const text = (s(body.text) || s(body.draft) || s(body.content)).trim();
+    if (!text) return res.status(400).json({ ok: false, error: "text required" });
 
-    const issues: Array<{ code: string; message: string }> = [];
-    const chars = draft.length;
+    const evReq =
+      b(body.evidenceRequired) ??
+      (s(body.evidencePolicy).toLowerCase() === "required" ? true : null) ??
+      false;
 
-    if (chars < 200) {
-      issues.push({ code: "TOO_SHORT", message: "本文が短すぎます（200文字未満）" });
-    }
+    const evidenceIds = Array.isArray(body.evidenceIds)
+      ? body.evidenceIds.filter((x) => typeof x === "string")
+      : [];
 
-    const evidenceNeeded = sections.some((s) => s && s.evidenceRequired === true);
-    const evidencePresent = hasEvidenceHint(draft);
+    const issues: { code: string; message: string }[] = [];
 
-    if (evidenceNeeded && !evidencePresent) {
-      issues.push({
-        code: "MISSING_EVIDENCE",
-        message: "根拠必須セクションがあるのに、本文に根拠痕跡（doc/pdfPage/evidenceIds）がありません",
-      });
-    }
+    const chars = text.length;
+    if (chars < 40) issues.push({ code: "TOO_SHORT", message: "text too short" });
 
-    if (hasStrongClaim(draft) && !evidencePresent) {
-      issues.push({
-        code: "STRONG_CLAIM_WITHOUT_EVIDENCE",
-        message: "強い断言があるのに根拠痕跡（doc/pdfPage/evidenceIds）がありません",
-      });
+    if (evReq && evidenceIds.length === 0) {
+      issues.push({ code: "MISSING_EVIDENCE", message: "evidence required but none provided" });
+      if (/(必ず|絶対|断言|証明)/.test(text)) {
+        issues.push({ code: "STRONG_CLAIM_WITHOUT_EVIDENCE", message: "strong claim without evidence" });
+      }
     }
 
     return res.json({
       ok: true,
-      threadId,
+      issuesCount: issues.length,
       issues,
-      stats: { chars, evidenceNeeded, evidencePresent },
+      codes: issues.map((i) => i.code),
+      stats: {
+        chars,
+        evidenceNeeded: evReq,
+        evidencePresent: evidenceIds.length > 0,
+      },
     });
   } catch (e: any) {
     return res.status(500).json({ ok: false, error: String(e?.message ?? e) });
