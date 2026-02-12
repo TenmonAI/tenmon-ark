@@ -1,5 +1,5 @@
 import React, { useRef, useState } from "react";
-import { exportAll, importAll } from "../lib/db";
+import { exportForDownload, importOverwrite } from "../lib/exportImport";
 
 interface SettingsPanelProps {
   open: boolean;
@@ -15,7 +15,7 @@ export function SettingsPanel({ open, onClose, onImported }: SettingsPanelProps)
 
   const handleExport = async () => {
     try {
-      const data = await exportAll();
+      const data = await exportForDownload();
       const json = JSON.stringify(data, null, 2);
       const blob = new Blob([json], { type: "application/json" });
       const url = URL.createObjectURL(blob);
@@ -54,7 +54,7 @@ export function SettingsPanel({ open, onClose, onImported }: SettingsPanelProps)
       });
 
       const data = JSON.parse(text);
-      await importAll(data);
+      await importOverwrite(data);
       setMessage({ type: "success", text: "Importしました。リロードします…" });
       setTimeout(() => location.reload(), 100);
     } catch (err) {
