@@ -293,6 +293,9 @@ const pid = process.pid;
 
   // REPLY_SURFACE_V1: responseは必ずlocalSurfaceizeを通す。返却は opts をそのまま形にし caps は body.caps のみ参照
   const reply = (payload: any) => {
+    // M6-B0_LIGHT_APPLY_SESSIONID_V1: keep raw message for session_id parsing
+    if (payload && payload.rawMessage == null) payload.rawMessage = message;
+
   // M6-A1_LEARN_VISIBILITY_ALLMODES_V1: always expose training visibility in decisionFrame.ku (all modes)
   try {
     const df = (payload && payload.decisionFrame) ? payload.decisionFrame : null;
@@ -300,7 +303,10 @@ const pid = process.pid;
       const ku = (df.ku && typeof df.ku === "object") ? df.ku : {};
       let available = 0;
       try {
-        const rules = listRules(String(payload.threadId || ""));
+        // M6-B0_LIGHT_APPLY_SESSIONID_V1: prefer session_id=... in message, fallback to threadId
+      const mSid = String(payload?.rawMessage || "").match(/\bsession_id\s*=\s*([A-Za-z0-9_]+)/);
+      const sessionKey = (mSid && mSid[1]) ? String(mSid[1]) : String(payload.threadId || "");
+      const rules = listRules(sessionKey);
         if (Array.isArray(rules)) available = rules.length;
       } catch {}
       const used = Array.isArray(ku.learnedRulesUsed) ? ku.learnedRulesUsed : [];
