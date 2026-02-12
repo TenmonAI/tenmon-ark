@@ -1,12 +1,14 @@
 // web/src/lib/exportImport.ts
-// PWA-MEM-01c: snapshot export + overwrite import (db.ts の現行APIに完全整合)
+// PWA-MEM-01c: snapshot export + overwrite import (no silent corruption)
 
 import {
-  upsertThread,
-  replaceThreadMessages,
+  dbGetAllThreads,
   listMessagesByThread,
   dbGetAllSeeds,
   dbPutSeeds,
+  dbClearAll,
+  upsertThread,
+  replaceThreadMessages,
   type PersistThread,
   type PersistMessage,
   type PersistSeed,
@@ -21,8 +23,7 @@ export type ExportPayloadV2 = {
 };
 
 export async function exportForDownload(): Promise<ExportPayloadV2> {
-  // NOTE: 現状 db.ts に「全threads取得」が無いので threads は空で返す（次カードで追加）
-  const threads: PersistThread[] = [];
+  const threads = await dbGetAllThreads();
   const seeds = await dbGetAllSeeds();
   const messages: Record<string, PersistMessage[]> = {};
 
@@ -41,7 +42,7 @@ export async function exportForDownload(): Promise<ExportPayloadV2> {
 
 /**
  * Overwrite import only. schemaVersion must be 2.
- * “atomic” は dbClearAll を追加したカードで完成（今は既存APIだけで上書き）
+ * NOTE: atomic overwrite uses dbClearAll (already present in db.ts)
  */
 export async function importOverwrite(data: unknown): Promise<void> {
   if (!data || typeof data !== "object") throw new Error("invalid json");
@@ -57,7 +58,7 @@ export async function importOverwrite(data: unknown): Promise<void> {
       : {};
   const seeds = Array.isArray(payload.seeds) ? (payload.seeds as PersistSeed[]) : [];
 
-  // PWA-MEM-01c: atomic overwrite (clear first)
+  // clear first (atomic overwrite)
   await dbClearAll();
 
   // threads
@@ -66,7 +67,7 @@ export async function importOverwrite(data: unknown): Promise<void> {
     await upsertThread({ id: t.id, title: t.title, updatedAt: t.updatedAt });
   }
 
-  // messages per thread（overwrite = replaceThreadMessages が delete+put を担う）
+  // messages per thread（overwrite）
   for (const threadId of Object.keys(messagesMap)) {
     const arr = messagesMap[threadId];
     if (!Array.isArray(arr)) continue;
@@ -90,7 +91,7 @@ export async function importOverwrite(data: unknown): Promise<void> {
     await replaceThreadMessages(threadId, msgs);
   }
 
-  // seeds（overwrite = dbPutSeeds が clear+put）
+  // seeds（overwrite）
   const ss: PersistSeed[] = [];
   for (const s of seeds) {
     const seed = s as PersistSeed;
@@ -98,4 +99,33 @@ export async function importOverwrite(data: unknown): Promise<void> {
     ss.push(seed);
   }
   await dbPutSeeds(ss);
+}
+
+export function downloadJson(filename: string, obj: any): void {
+  const json = JSON.stringify(obj, null, 2);
+  const blob = new Blob([json], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+export function readJsonFile(file: File): Promise<any> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const text = e.target?.result as string;
+        const obj = JSON.parse(text);
+        resolve(obj);
+      } catch (err) {
+        reject(err);
+      }
+    };
+    reader.onerror = () => reject(reader.error);
+    reader.readAsText(file);
+  });
 }
