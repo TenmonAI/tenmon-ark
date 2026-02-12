@@ -142,68 +142,7 @@ export async function listMessagesByThread(threadId: string): Promise<PersistMes
   }
 }
 
-export async function exportAll(): Promise<{ version: string; threads: PersistThread[]; messages: PersistMessage[] }> {
-  const db = await openDB();
-  try {
-    const tx = db.transaction(["threads", "messages"], "readonly");
-    const tReq = tx.objectStore("threads").getAll();
-    const mReq = tx.objectStore("messages").getAll();
 
-    const [threads, messages] = await Promise.all([
-      new Promise<PersistThread[]>((resolve, reject) => {
-        tReq.onsuccess = () => resolve((tReq.result ?? []) as PersistThread[]);
-        tReq.onerror = () => reject(tReq.error);
-      }),
-      new Promise<PersistMessage[]>((resolve, reject) => {
-        mReq.onsuccess = () => resolve((mReq.result ?? []) as PersistMessage[]);
-        mReq.onerror = () => reject(mReq.error);
-      }),
-    ]);
-
-    await txDone(tx);
-    return { version: "TENMON_PWA_EXPORT_V1", threads, messages };
-  } finally {
-    db.close();
-  }
-}
-
-export async function importAll(data: any): Promise<void> {
-  if (!data || typeof data !== "object") throw new Error("invalid json");
-  const threads = Array.isArray(data.threads) ? data.threads : [];
-  const messages = Array.isArray(data.messages) ? data.messages : [];
-
-  const db = await openDB();
-  try {
-    const tx = db.transaction(["threads", "messages"], "readwrite");
-    const tStore = tx.objectStore("threads");
-    const mStore = tx.objectStore("messages");
-
-    tStore.clear();
-    mStore.clear();
-
-    for (const t of threads) {
-      if (!t || typeof t.id !== "string") continue;
-      tStore.put({ id: t.id, title: t.title, updatedAt: t.updatedAt ?? Date.now() });
-    }
-    for (const m of messages) {
-      if (!m || typeof m.id !== "string") continue;
-      if (typeof m.threadId !== "string") continue;
-      if (m.role !== "user" && m.role !== "tenmon") continue;
-      if (typeof m.text !== "string") continue;
-      mStore.put({
-        id: m.id,
-        threadId: m.threadId,
-        role: m.role,
-        text: m.text,
-        createdAt: typeof m.createdAt === "number" ? m.createdAt : Date.now(),
-      });
-    }
-
-    await txDone(tx);
-  } finally {
-    db.close();
-  }
-}
 
 // --- PWA-MEM-01a-IDB-V2-STORE-V1: seeds APIs ---
 export async function dbPutSeeds(seeds: PersistSeed[]): Promise<void> {
