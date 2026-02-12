@@ -1,26 +1,39 @@
 // web/src/lib/exportImport.ts
-// PWA-MEM-01b-EXPORT-IMPORT-V2: export/import are separated from db.ts (overwrite only)
+// PWA-MEM-01c: snapshot export + overwrite import (db.ts の現行APIに完全整合)
 
-import { upsertThread, replaceThreadMessages, listMessagesByThread, dbGetAllSeeds, dbPutSeeds } from "./db";
+import {
+  upsertThread,
+  replaceThreadMessages,
+  listMessagesByThread,
+  dbGetAllSeeds,
+  dbPutSeeds,
+  type PersistThread,
+  type PersistMessage,
+  type PersistSeed,
+} from "./db";
 
 export type ExportPayloadV2 = {
   schemaVersion: 2;
   exportedAt: string;
-  threads?: PersistThread[];
+  threads: PersistThread[];
   messages: Record<string, PersistMessage[]>;
   seeds: PersistSeed[];
 };
 
 export async function exportForDownload(): Promise<ExportPayloadV2> {
+  // NOTE: 現状 db.ts に「全threads取得」が無いので threads は空で返す（次カードで追加）
+  const threads: PersistThread[] = [];
   const seeds = await dbGetAllSeeds();
   const messages: Record<string, PersistMessage[]> = {};
+
   for (const t of threads) {
-    messages[t.id] = await dbGetMessages(t.id);
+    messages[t.id] = await listMessagesByThread(t.id);
   }
+
   return {
     schemaVersion: 2,
     exportedAt: new Date().toISOString(),
-    
+    threads,
     messages,
     seeds,
   };
@@ -28,7 +41,7 @@ export async function exportForDownload(): Promise<ExportPayloadV2> {
 
 /**
  * Overwrite import only. schemaVersion must be 2.
- * This is intentionally strict to avoid silent corruption.
+ * “atomic” は dbClearAll を追加したカードで完成（今は既存APIだけで上書き）
  */
 export async function importOverwrite(data: unknown): Promise<void> {
   if (!data || typeof data !== "object") throw new Error("invalid json");
@@ -37,21 +50,24 @@ export async function importOverwrite(data: unknown): Promise<void> {
     throw new Error(`UNSUPPORTED_SCHEMA_VERSION:${String(payload.schemaVersion ?? "unknown")}`);
   }
 
-  const threads = Array.isArray(payload.threads) ? payload.threads : [];
-  const messagesMap = payload.messages && typeof payload.messages === "object" ? payload.messages : {};
-  const seeds = Array.isArray(payload.seeds) ? payload.seeds : [];
+  const threads = Array.isArray(payload.threads) ? (payload.threads as PersistThread[]) : [];
+  const messagesMap =
+    payload.messages && typeof payload.messages === "object"
+      ? (payload.messages as Record<string, PersistMessage[]>)
+      : {};
+  const seeds = Array.isArray(payload.seeds) ? (payload.seeds as PersistSeed[]) : [];
 
-  // overwrite strategy: clear+put via existing db APIs
   // threads
   for (const t of threads) {
     if (!t || typeof t.id !== "string") continue;
-    await dbPutThread({ id: t.id, title: t.title, updatedAt: t.updatedAt });
+    await upsertThread({ id: t.id, title: t.title, updatedAt: t.updatedAt });
   }
 
-  // messages per thread
-  for (const threadId of Object.keys(messagesMap as Record<string, any>)) {
-    const arr = (messagesMap as any)[threadId];
+  // messages per thread（overwrite = replaceThreadMessages が delete+put を担う）
+  for (const threadId of Object.keys(messagesMap)) {
+    const arr = messagesMap[threadId];
     if (!Array.isArray(arr)) continue;
+
     const msgs: PersistMessage[] = [];
     for (const m of arr) {
       const mm = m as PersistMessage;
@@ -67,10 +83,11 @@ export async function importOverwrite(data: unknown): Promise<void> {
         createdAt: typeof mm.createdAt === "number" ? mm.createdAt : Date.now(),
       });
     }
-    await dbPutMessages(threadId, msgs);
+
+    await replaceThreadMessages(threadId, msgs);
   }
 
-  // seeds
+  // seeds（overwrite = dbPutSeeds が clear+put）
   const ss: PersistSeed[] = [];
   for (const s of seeds) {
     const seed = s as PersistSeed;
