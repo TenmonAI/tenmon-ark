@@ -185,6 +185,9 @@ readerRouter.post("/reader/analyze", (req: Request, res: Response) => {
       inconsistencies,
       undefinedTerms,
       dependencies,
+      inc: inconsistencies.length,
+      undef: undefinedTerms.length,
+      dep: dependencies.length,
       mode: "DET",
     });
   } catch (e: any) {
