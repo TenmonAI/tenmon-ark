@@ -57,6 +57,9 @@ export async function importOverwrite(data: unknown): Promise<void> {
       : {};
   const seeds = Array.isArray(payload.seeds) ? (payload.seeds as PersistSeed[]) : [];
 
+  // PWA-MEM-01c: atomic overwrite (clear first)
+  await dbClearAll();
+
   // threads
   for (const t of threads) {
     if (!t || typeof t.id !== "string") continue;
