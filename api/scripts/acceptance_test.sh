@@ -779,3 +779,60 @@ curl -fsS http://127.0.0.1:3000/api/chat \
 | jq -e '(.decisionFrame.ku.learnedRulesAvailable|type=="number") and (.decisionFrame.ku.learnedRulesAvailable>=1) and (.decisionFrame.ku.learnedRulesUsed|type=="array") and ((.decisionFrame.ku.learnedRulesUsed|length) >= 1)' >/dev/null
 
 echo "[PASS] Phase51"
+
+# [52] Phase52 Writer pipeline smoke (Reader->Analyzer->Outline->Draft->Verify)
+echo "[52] Phase52 Writer pipeline smoke"
+BASE_URL="${BASE_URL:-http://127.0.0.1:3000}"
+
+# 52-0 reader/outline
+R52_OUT="$(curl -fsS "$BASE_URL/api/reader/outline" -H "Content-Type: application/json" \
+  -d '{"threadId":"writer-smoke","text":"これは長文のテストです。第一に目的を定義する。第二に根拠を示す。","mode":"research"}')"
+if ! echo "$R52_OUT" | jq -e '.ok==true and (.chunksCount|type)=="number" and .chunksCount>=1' >/dev/null 2>&1; then
+  echo "[FAIL] Phase52: reader/outline bad"
+  echo "$R52_OUT" | jq '.'
+  exit 1
+fi
+echo "[PASS] Phase52-0 reader/outline"
+
+# 52-1 reader/analyze
+R52_AN="$(curl -fsS "$BASE_URL/api/reader/analyze" -H "Content-Type: application/json" \
+  -d '{"threadId":"writer-smoke","text":"定義が曖昧な概念を含む文章。根拠の提示がない断言がある。","mode":"research"}')"
+if ! echo "$R52_AN" | jq -e '.ok==true and (.inc|type)=="number" and (.undef|type)=="number" and (.dep|type)=="number"' >/dev/null 2>&1; then
+  echo "[FAIL] Phase52: reader/analyze bad"
+  echo "$R52_AN" | jq '.'
+  exit 1
+fi
+echo "[PASS] Phase52-1 reader/analyze"
+
+# 52-2 writer/outline
+R52_WO="$(curl -fsS "$BASE_URL/api/writer/outline" -H "Content-Type: application/json" \
+  -d '{"threadId":"writer-smoke","mode":"research","topic":"言霊秘書の読解手順","constraints":["根拠必須","捏造禁止"]}')"
+if ! echo "$R52_WO" | jq -e '.ok==true and (.sectionsCount|type)=="number" and .sectionsCount>=2 and (.evidenceReqCount|type)=="number"' >/dev/null 2>&1; then
+  echo "[FAIL] Phase52: writer/outline bad"
+  echo "$R52_WO" | jq '.'
+  exit 1
+fi
+echo "[PASS] Phase52-2 writer/outline"
+
+# 52-3 writer/draft (use outline sections if present)
+SECTIONS_JSON="$(echo "$R52_WO" | jq -c '.sections // []')"
+R52_DRAFT="$(curl -fsS "$BASE_URL/api/writer/draft" -H "Content-Type: application/json" \
+  -d "{\"threadId\":\"writer-smoke\",\"mode\":\"research\",\"title\":\"test\",\"sections\":${SECTIONS_JSON}}")"
+if ! echo "$R52_DRAFT" | jq -e '.ok==true and (.draft|type)=="string" and (.draft|length)>=40' >/dev/null 2>&1; then
+  echo "[FAIL] Phase52: writer/draft bad"
+  echo "$R52_DRAFT" | jq '.'
+  exit 1
+fi
+echo "[PASS] Phase52-3 writer/draft"
+
+# 52-4 writer/verify (expect issues for missing evidence, etc.)
+R52_VER="$(curl -fsS "$BASE_URL/api/writer/verify" -H "Content-Type: application/json" \
+  -d '{"text":"断言します。","evidenceRequired":true,"evidenceIds":[]}' )"
+if ! echo "$R52_VER" | jq -e '.ok==true and (.issuesCount|type)=="number" and .issuesCount>=1' >/dev/null 2>&1; then
+  echo "[FAIL] Phase52: writer/verify bad"
+  echo "$R52_VER" | jq '.'
+  exit 1
+fi
+echo "[PASS] Phase52-4 writer/verify"
+
+echo "[PASS] Phase52 Writer pipeline smoke"
