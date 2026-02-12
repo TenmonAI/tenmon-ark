@@ -293,6 +293,22 @@ const pid = process.pid;
 
   // REPLY_SURFACE_V1: responseは必ずlocalSurfaceizeを通す。返却は opts をそのまま形にし caps は body.caps のみ参照
   const reply = (payload: any) => {
+    // M6-C0_DETAIL_SUFFIX_V1: append 1-line suffix only for #詳細 when learnedRulesUsed[0] exists
+    try {
+      if (wantsDetail && payload && typeof payload.response === "string") {
+        const df = payload.decisionFrame || null;
+        const ku = df && df.ku && typeof df.ku === "object" ? df.ku : null;
+        const used = ku && Array.isArray(ku.learnedRulesUsed) ? ku.learnedRulesUsed : [];
+        const title = used && used[0] && typeof used[0].title === "string" ? used[0].title : "";
+        if (title) {
+          // add exactly once
+          if (!payload.response.includes("（学習ルール適用:")) {
+            payload.response = payload.response + "\n\n（学習ルール適用: " + title + "）";
+          }
+        }
+      }
+    } catch {}
+
     // M6-B0_LIGHT_APPLY_SESSIONID_V1: keep raw message for session_id parsing
     if (payload && payload.rawMessage == null) payload.rawMessage = message;
 
