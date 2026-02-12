@@ -12,6 +12,7 @@ import trainRouter from "./routes/train.js";
 import kanagiRoutes from "./routes/kanagi.js";
 import tenmonRoutes from "./routes/tenmon.js";
 import memoryRouter from "./routes/memory.js";
+import { seedRouter } from "./routes/seed.js";
 import { authRouter } from "./routes/auth.js";import { meRouter } from "./routes/me.js";
 import { markListenReady } from "./health/readiness.js";
 import { getDb } from "./db/index.js";
@@ -79,6 +80,7 @@ app.use("/api", kokuzoRouter);
 app.use("/api", trainingRouter);
 app.use("/api", trainRouter);
 app.use("/api", memoryRouter);
+app.use("/api", seedRouter);
 app.use("/api/kanagi", kanagiRoutes);
 
 // 既存 tenmon
