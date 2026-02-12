@@ -137,3 +137,4 @@ api/answer
 
 # local reports (do not track)
 reports/
+api/web/
