@@ -451,6 +451,7 @@ const pid = process.pid;
       clearThreadState(threadId);
       // LANE_1: 言灵/カタカムナの質問 → HYBRID で検索して回答
       if (lane === "LANE_1") {
+        // M2-1_LANE1_CAPS_RETURN_ALL_V1
         const candidates = searchPagesForHybrid(null, trimmed, 10);
         setThreadCandidates(threadId, candidates);
         
@@ -480,6 +481,8 @@ const pid = process.pid;
           response: localSurfaceize(responseText, trimmed),
           evidence: null,
           candidates: candidates.slice(0, 10),
+              // M2-1_LANE1_CAPS_RETURN_ALL_V1
+              caps: capsPayload ?? undefined,
           decisionFrame: { mode: "HYBRID", intent: "chat", llm: null, ku: {} },
           timestamp,
           threadId,
@@ -515,6 +518,8 @@ const pid = process.pid;
               response: localSurfaceize(responseText, trimmed),
               evidence: null,
               candidates: candidates.slice(0, 10),
+              // M2-1_LANE1_CAPS_RETURN_ALL_V1
+              caps: capsPayload ?? undefined,
               decisionFrame: { mode: "HYBRID", intent: "chat", llm: null, ku: {} },
               timestamp,
               threadId,
@@ -542,6 +547,8 @@ const pid = process.pid;
           response: localSurfaceize(responseText, trimmed),
           evidence: null,
           candidates: candidates.slice(0, 10),
+              // M2-1_LANE1_CAPS_RETURN_ALL_V1
+              caps: capsPayload ?? undefined,
           decisionFrame: { mode: "HYBRID", intent: "chat", llm: null, ku: {} },
           timestamp,
           threadId,
