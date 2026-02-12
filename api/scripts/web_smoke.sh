@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
-cd /opt/tenmon-ark-repo
+REPO="/opt/tenmon-ark-repo"
+
+rm -rf "$REPO/api/web" 2>/dev/null || true
 
 pnpm -C web build
 bash api/scripts/deploy_web.sh
