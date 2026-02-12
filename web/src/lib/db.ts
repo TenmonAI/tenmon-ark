@@ -8,21 +8,69 @@ export type PersistMessage = {
   createdAt: number;
 };
 
+export type PersistSeed = {
+  id: string;
+  threadId?: string;
+  summary?: string;
+  tags?: string[];
+  createdAt?: number;
+  [k: string]: unknown;
+};
+
+export const SCHEMA_VERSION = "PWA_MEM_01a_IDB_V2";
+
+
 const DB_NAME = "tenmon_ark_pwa_v1";
-const DB_VER = 1;
+const DB_VER = 2;
 
 function openDB(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     const req = indexedDB.open(DB_NAME, DB_VER);
-    req.onupgradeneeded = () => {
+    req.onupgradeneeded = (event: IDBVersionChangeEvent) => {
       const db = req.result;
-      if (!db.objectStoreNames.contains("threads")) {
-        db.createObjectStore("threads", { keyPath: "id" });
+      const oldVersion = event.oldVersion;
+
+      // 新規 (0): threads/messages/seeds/meta を作成
+      if (oldVersion === 0) {
+        if (!db.objectStoreNames.contains("threads")) {
+          db.createObjectStore("threads", { keyPath: "id" });
+        }
+        if (!db.objectStoreNames.contains("messages")) {
+          const s = db.createObjectStore("messages", { keyPath: "id" });
+          s.createIndex("by_thread", "threadId", { unique: false });
+          s.createIndex("by_thread_createdAt", ["threadId", "createdAt"], { unique: false });
+        }
+        if (!db.objectStoreNames.contains("seeds")) {
+          db.createObjectStore("seeds", { keyPath: "id" });
+        }
+        if (!db.objectStoreNames.contains("meta")) {
+          const meta = db.createObjectStore("meta", { keyPath: "key" });
+          meta.put({ key: "schemaVersion", value: SCHEMA_VERSION });
+        } else {
+          // 念のため
+          const meta = (event.target as any).transaction.objectStore("meta");
+          meta.put({ key: "schemaVersion", value: SCHEMA_VERSION });
+        }
+        return;
       }
-      if (!db.objectStoreNames.contains("messages")) {
-        const s = db.createObjectStore("messages", { keyPath: "id" });
-        s.createIndex("by_thread", "threadId", { unique: false });
-        s.createIndex("by_thread_createdAt", ["threadId", "createdAt"], { unique: false });
+
+      // v1 -> v2: seeds/meta を追加（threads/messages はそのまま）
+      if (oldVersion < 2) {
+        if (!db.objectStoreNames.contains("seeds")) {
+          db.createObjectStore("seeds", { keyPath: "id" });
+        }
+        if (!db.objectStoreNames.contains("meta")) {
+          const meta = db.createObjectStore("meta", { keyPath: "key" });
+          meta.put({ key: "schemaVersion", value: SCHEMA_VERSION });
+        } else {
+          // upgrade tx があるときだけ put（存在しない環境では無視されてもOK）
+          try {
+            const meta = (event.target as any).transaction.objectStore("meta");
+            meta.put({ key: "schemaVersion", value: SCHEMA_VERSION });
+          } catch {
+            // ignore
+          }
+        }
       }
     };
     req.onsuccess = () => resolve(req.result);
@@ -152,6 +200,38 @@ export async function importAll(data: any): Promise<void> {
     }
 
     await txDone(tx);
+  } finally {
+    db.close();
+  }
+}
+
+// --- PWA-MEM-01a-IDB-V2-STORE-V1: seeds APIs ---
+export async function dbPutSeeds(seeds: PersistSeed[]): Promise<void> {
+  const db = await openDB();
+  try {
+    const tx = db.transaction(["seeds"], "readwrite");
+    const store = tx.objectStore("seeds");
+    store.clear();
+    for (const s of seeds) {
+      if (s && typeof s.id === "string") store.put({ ...s, id: s.id });
+    }
+    await txDone(tx);
+  } finally {
+    db.close();
+  }
+}
+
+export async function dbGetAllSeeds(): Promise<PersistSeed[]> {
+  const db = await openDB();
+  try {
+    const tx = db.transaction(["seeds"], "readonly");
+    const req = tx.objectStore("seeds").getAll();
+    const rows = await new Promise<PersistSeed[]>((resolve, reject) => {
+      req.onsuccess = () => resolve((req.result ?? []) as PersistSeed[]);
+      req.onerror = () => reject(req.error);
+    });
+    await txDone(tx);
+    return rows;
   } finally {
     db.close();
   }
