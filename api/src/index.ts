@@ -81,6 +81,7 @@ app.use("/api", kokuzoRouter);
 app.use("/api", trainingRouter);
 app.use("/api", trainRouter);
 app.use("/api", memoryRouter);
+app.use("/api", writerRouter);
 app.use("/api", readerRouter);
 app.use("/api", seedRouter);
 app.use("/api/kanagi", kanagiRoutes);
@@ -101,3 +102,4 @@ app.listen(PORT, "0.0.0.0", () => {
   markListenReady();
   console.log(`[READY] listenReady=true`);
 });
+import { writerRouter } from "./routes/writer.js";
