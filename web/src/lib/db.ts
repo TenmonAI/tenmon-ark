@@ -175,3 +175,19 @@ export async function dbGetAllSeeds(): Promise<PersistSeed[]> {
     db.close();
   }
 }
+
+
+
+// PWA-MEM-01c: clear all stores for atomic overwrite import
+export async function dbClearAll(): Promise<void> {
+  const db = await openDB();
+  try {
+    const tx = db.transaction(["threads", "messages", "seeds"], "readwrite");
+    tx.objectStore("threads").clear();
+    tx.objectStore("messages").clear();
+    tx.objectStore("seeds").clear();
+    await txDone(tx);
+  } finally {
+    db.close();
+  }
+}
