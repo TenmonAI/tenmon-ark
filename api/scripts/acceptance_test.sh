@@ -748,3 +748,34 @@ PROOF="/tmp/tenmon_acceptance_last.txt"
   echo -n "buildMark="; curl -fsS http://127.0.0.1:3000/api/audit | jq -r '.build.mark' 2>/dev/null || echo "unknown"
 } > "$PROOF"
 echo "[PASS] proof saved: $PROOF"
+
+# [51] Phase51 training -> chat visibility gate (M6-A1)
+echo "[51] Phase51 training -> chat visibility gate (M6-A1)"
+
+SID="$(curl -fsS -X POST http://127.0.0.1:3000/api/training/session \
+  -H 'Content-Type: application/json' \
+  -d '{"title":"acc-phase51"}' | jq -r '.session.id')"
+
+DUMP='[SESSION_TITLE]
+断捨離
+
+[LOG]
+User: 迷う
+Assistant: 基準を決める
+
+[RULE_CANDIDATES]
+- 迷ったら基準を先に作る
+'
+
+curl -fsS -X POST http://127.0.0.1:3000/api/training/ingest \
+  -H 'Content-Type: application/json' \
+  -d "$(jq -n --arg sid "$SID" --arg dump "$DUMP" '{session_id:$sid,dump_text:$dump}')" \
+| jq -e '.success==true and .rulesCount>=1' >/dev/null
+
+# GUEST回避：wantsEvidence=true（あなたの現行分岐に合わせる）
+curl -fsS http://127.0.0.1:3000/api/chat \
+  -H 'Content-Type: application/json' \
+  -d "$(jq -n --arg tid "$SID" '{threadId:$tid,message:"資料ベースで迷いを整理したい"}')" \
+| jq -e '(.decisionFrame.ku.learnedRulesAvailable|type=="number") and (.decisionFrame.ku.learnedRulesAvailable>=1)' >/dev/null
+
+echo "[PASS] Phase51"
