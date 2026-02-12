@@ -806,7 +806,7 @@ echo "[PASS] Phase52-1 reader/analyze"
 
 # 52-2 writer/outline
 R52_WO="$(curl -fsS "$BASE_URL/api/writer/outline" -H "Content-Type: application/json" \
-  -d '{"threadId":"writer-smoke","mode":"research","topic":"言霊秘書の読解手順","constraints":["根拠必須","捏造禁止"]}')"
+  -d '{"threadId":"writer-smoke","mode":"research","topic":"言霊秘書の読解手順","text":"言霊秘書の読解手順","constraints":["根拠必須","捏造禁止"]}')"
 if ! echo "$R52_WO" | jq -e '.ok==true and (.sectionsCount|type)=="number" and .sectionsCount>=2 and (.evidenceReqCount|type)=="number"' >/dev/null 2>&1; then
   echo "[FAIL] Phase52: writer/outline bad"
   echo "$R52_WO" | jq '.'
