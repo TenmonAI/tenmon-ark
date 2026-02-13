@@ -147,30 +147,33 @@ readerRouter.post("/reader/analyze", (req: Request, res: Response) => {
   try {
     const body = (req.body ?? {}) as any;
     const threadId = String(body.threadId ?? "").trim();
-    const text = typeof body.text === "string" ? body.text : "";
 
-    if (!threadId) return res.status(400).json({ ok: false, error: "threadId required" });
-    if (!text.trim()) return res.status(400).json({ ok: false, error: "text required" });
+    // text/message/input を統一
+    const raw =
+      (typeof body.text === "string" ? body.text : "") ||
+      (typeof body.message === "string" ? body.message : "") ||
+      (typeof body.input === "string" ? body.input : "");
+
+    const text = raw.trim();
+
+    if (!threadId) return res.status(400).json({ ok: false, schemaVersion: 1, error: "threadId required" });
+    if (!text) return res.status(400).json({ ok: false, schemaVersion: 1, error: "text required" });
 
     // --- minimal deterministic heuristics ---
     const inconsistencies: string[] = [];
     const undefinedTerms: string[] = [];
     const dependencies: string[] = [];
 
-    // naive contradiction cues
     const hasAlways = /必ず|絶対|常に/.test(text);
     const hasException = /ただし|例外|しかし/.test(text);
     if (hasAlways && hasException) inconsistencies.push("strong-claim-with-exception-cue");
 
-    // undefined term cues: 「〇〇とは」未出 / っぽいもの（超軽量）
     const termDefs = [...text.matchAll(/([一-龥ぁ-んァ-ヶA-Za-z0-9_]{2,12})とは/g)].map((m) => m[1]);
     for (const t of termDefs) {
-      // if term appears only once, definition likely incomplete
       const count = (text.match(new RegExp(t, "g")) ?? []).length;
       if (count <= 1) undefinedTerms.push(`${t} (defined-once)`);
     }
 
-    // dependency cues: "AによりB" "AのためB"
     const depMatches = [...text.matchAll(/(.{1,20})(により|のため|によって)(.{1,20})/g)];
     for (const m of depMatches.slice(0, 10)) {
       dependencies.push(`${m[1].trim()} -> ${m[3].trim()}`);
@@ -178,6 +181,7 @@ readerRouter.post("/reader/analyze", (req: Request, res: Response) => {
 
     return res.json({
       ok: true,
+      schemaVersion: 1,
       threadId,
       inconsistencies,
       undefinedTerms,
@@ -188,6 +192,7 @@ readerRouter.post("/reader/analyze", (req: Request, res: Response) => {
       mode: "DET",
     });
   } catch (e: any) {
-    return res.status(500).json({ ok: false, error: String(e?.message ?? e) });
+    console.error("[reader/analyze]", e);
+    return res.status(500).json({ ok: false, schemaVersion: 1, error: String(e?.message ?? e) });
   }
 });
