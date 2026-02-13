@@ -1,4 +1,5 @@
 import express from "express";
+import { pwaRouter } from "./routes/pwa.js";
 import cors from "cors";
 import auditRouter from "./routes/audit.js";
 import chatRouter from "./routes/chat.js";
@@ -82,6 +83,7 @@ app.use("/api", trainingRouter);
 app.use("/api", trainRouter);
 app.use("/api", memoryRouter);
 app.use("/api", writerRouter);
+app.use("/api", pwaRouter);
 app.use("/api", writerVerifyRouter);
 app.use("/api", writerDraftRouter);
 app.use("/api", readerRouter);
