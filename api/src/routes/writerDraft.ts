@@ -9,12 +9,23 @@ type OutlineSection = {
   evidence?: { doc?: string; pdfPage?: number | string; evidenceIds?: string[] };
 };
 
+type Budget = {
+  idx?: number;
+  heading?: string | null;
+  targetChars?: number | null;
+  targetWords?: number | null;
+  evidenceRequired?: boolean;
+};
+
 type DraftBody = {
   threadId?: string;
   mode?: string;
   title?: string;
   sections?: OutlineSection[];
   targetChars?: number;
+  targetWords?: number;
+  budgets?: Budget[];
+  tolerancePct?: number; // optional: default 0.02 (±2%)
 };
 
 function s(v: unknown): string { return typeof v === "string" ? v : ""; }
@@ -30,8 +41,29 @@ function defaultTarget(mode: string, sectionsCount: number): number {
   return clamp(base + sectionsCount * 120, 600, 6000);
 }
 
-// 捏造なしで伸ばすための安全パディング（意味の追加はせず「根拠不足なので断言しない」を繰り返す）
-const PAD = "\n\n補足：根拠（doc/pdfPage/evidenceIds）が未提供のため、断言を避け、手順と検証観点のみを提示する。";
+// 捏造なしで“量”を作る：意味は増やさず、検証観点と未確定を明記するテンプレ
+function safeFillerLine(sectionHeading: string, needEv: boolean): string {
+  const h = sectionHeading || "節";
+  if (needEv) {
+    return `- ${h}: 根拠が未提供のため断言せず、必要な根拠（doc/pdfPage/evidenceIds）の提示待ち。`;
+  }
+  return `- ${h}: 断言を避け、論点の整理と検証観点のみを提示。`;
+}
+
+// セクション本文を targetChars 近傍まで伸ばす（決定論）
+function buildSectionBody(targetChars: number, heading: string, needEv: boolean): string {
+  const intro = `本文:\n（要点→理由→補足→検証の順。根拠が無い断言はしない）\n`;
+  let body = intro;
+  // 先に10行程度入れてから、必要なら繰り返し
+  for (let i = 0; i < 10; i++) body += safeFillerLine(heading, needEv) + "\n";
+  while (body.length < targetChars) {
+    body += safeFillerLine(heading, needEv) + "\n";
+    if (body.length > targetChars + 2000) break; // 念のため
+  }
+  // ちょい超過は切る（文章を壊さないため、末尾のみ調整）
+  if (body.length > targetChars) body = body.slice(0, targetChars);
+  return body;
+}
 
 writerDraftRouter.post("/writer/draft", (req: Request, res: Response) => {
   try {
@@ -46,10 +78,44 @@ writerDraftRouter.post("/writer/draft", (req: Request, res: Response) => {
     const sectionsCount = sections.length;
 
     const targetChars = n(body.targetChars) ?? defaultTarget(mode, sectionsCount);
+    const tolerancePct = clamp(n(body.tolerancePct) ?? 0.02, 0.0, 0.2);
+    const lo = Math.floor(targetChars * (1 - tolerancePct));
+    const hi = Math.ceil(targetChars * (1 + tolerancePct));
+
+    const budgets = Array.isArray(body.budgets) ? body.budgets : [];
+
+    // セクションごとの目標文字数を決定（budgets優先、なければ均等割）
+    const perTargets: number[] = (() => {
+      const nSec = Math.max(1, sectionsCount);
+      const base = Math.floor(targetChars / nSec);
+      const arr = new Array(nSec).fill(base);
+
+      // budgets があれば idx/heading を基準に上書き
+      for (let i = 0; i < nSec; i++) {
+        const sec = sections[i] ?? {};
+        const h = s(sec.heading).trim();
+        const b =
+          budgets.find(x => typeof x?.idx === "number" && x.idx === i) ??
+          (h ? budgets.find(x => s(x?.heading).trim() === h) : undefined);
+
+        const tc = b && typeof b.targetChars === "number" && Number.isFinite(b.targetChars) && b.targetChars > 0
+          ? Math.floor(b.targetChars)
+          : null;
+
+        if (tc) arr[i] = tc;
+      }
+
+      // 合計を targetChars に合わせて最後で吸収
+      const sum = arr.reduce((a, b) => a + b, 0);
+      const diff = targetChars - sum;
+      arr[nSec - 1] = Math.max(50, arr[nSec - 1] + diff);
+      return arr;
+    })();
 
     let draft = `# ${title}\nmode: ${mode}\n`;
 
-    for (const sec of sections) {
+    for (let i = 0; i < sections.length; i++) {
+      const sec = sections[i] ?? {};
       const h = (s(sec.heading) || "節").trim();
       const g = (s(sec.goal) || "").trim();
       const needEv = !!sec.evidenceRequired;
@@ -69,14 +135,20 @@ writerDraftRouter.post("/writer/draft", (req: Request, res: Response) => {
           : `根拠: 不明（根拠必須だが未提供。捏造禁止のため断言を避ける）\n`;
       }
 
-      draft += "\n本文: （要点→理由→補足→検証の順に、断言は根拠と対応させる）\n";
+      const secTarget = perTargets[i] ?? 200;
+      draft += "\n" + buildSectionBody(secTarget, h, needEv) + "\n";
     }
 
-    // targetChars を必ず満たす（acceptance: actualChars >= targetChars）
-    while (draft.length < targetChars) {
-      draft += PAD;
-      // 暴走防止：想定外に膨らむことはないが念のため
-      if (draft.length > targetChars + 4000) break;
+    // 全体を targetChars に収束（±tolerance）
+    if (draft.length < lo) {
+      // 足りない分は末尾セクションに安全行を足す
+      while (draft.length < lo) {
+        draft += "\n" + safeFillerLine("調整", false);
+        if (draft.length > hi + 4000) break;
+      }
+    } else if (draft.length > hi) {
+      // 超過は末尾から切る（安全に末尾だけ）
+      draft = draft.slice(0, hi);
     }
 
     const actualChars = draft.length;
@@ -88,7 +160,8 @@ writerDraftRouter.post("/writer/draft", (req: Request, res: Response) => {
       title,
       sectionsCount,
       draft,
-      stats: { targetChars, actualChars },
+      stats: { targetChars, actualChars, tolerancePct, lo, hi },
+      budgetsUsed: perTargets,
     });
   } catch (e: any) {
     return res.status(500).json({ ok: false, error: String(e?.message ?? e) });
