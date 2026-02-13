@@ -228,3 +228,5 @@ app.use("/api", exampleRouter);
 
 MIT
 
+
+- **PDCA Dev Core**: [docs/PDCA_DEV_CORE.md](docs/PDCA_DEV_CORE.md)
