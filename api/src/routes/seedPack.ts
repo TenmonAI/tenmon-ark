@@ -14,14 +14,16 @@ type PackedItem = {
   pdfPage: number | null;
   snippet: string | null;
   evidenceIds: string[];
+  err?: string; // 監査用（500にしないための保険）
 };
 
 function s(v: unknown): string {
   return typeof v === "string" ? v : "";
 }
 
-function n(v: unknown): number | null {
-  return typeof v === "number" && Number.isFinite(v) ? v : null;
+function numOrNull(v: unknown): number | null {
+  const n = typeof v === "number" ? v : typeof v === "string" ? Number(v) : NaN;
+  return Number.isFinite(n) ? n : null;
 }
 
 function safeSnippet(text: string, max = 220): string {
@@ -29,60 +31,87 @@ function safeSnippet(text: string, max = 220): string {
   return t.length > max ? t.slice(0, max) + "…" : t;
 }
 
-/**
- * P2-1 最小実装：
- * seedId -> kokuzo_pages を「部分一致」で当て、最初の1件を返す。
- * - seedId と doc の対応表がまだ無い前提なので「doc LIKE」で暫定対応（後でP2-2で強化）
- * - doc/pdfPage/snippet/evidenceIds を payload.items に詰める
- */
+function parseEvidenceIds(v: unknown): string[] {
+  const raw = s(v);
+  if (!raw) return [];
+  if (raw.startsWith("[")) {
+    try {
+      const a = JSON.parse(raw);
+      return Array.isArray(a) ? a.filter((x) => typeof x === "string") : [];
+    } catch {
+      return [];
+    }
+  }
+  return raw.split(",").map((x) => x.trim()).filter(Boolean);
+}
+
 seedPackRouter.post("/seed/pack", (req: Request, res: Response) => {
   const body = (req.body ?? {}) as PackReq;
-  const seedIds = Array.isArray(body.seedIds) ? body.seedIds.filter((x) => typeof x === "string" && x.length > 0) : [];
-  const limitPages = typeof body.options?.limitPages === "number" ? Math.max(1, Math.min(50, body.options!.limitPages!)) : 1;
+  const seedIds = Array.isArray(body.seedIds)
+    ? body.seedIds.filter((x) => typeof x === "string" && x.length > 0)
+    : [];
+
+  const limitPages =
+    typeof body.options?.limitPages === "number"
+      ? Math.max(1, Math.min(50, body.options.limitPages))
+      : 1;
 
   const db = getDb("kokuzo");
 
   const items: PackedItem[] = [];
+
   for (const seedId of seedIds) {
-    // kokuzo_pages: columnsは環境差があるので「存在しそうなもの」だけ読む（NULL許容）
-    // doc は必ずあるはず、pdfPage は pdfPage or page のどちらかの場合があるので COALESCE。
-    const row = db.prepare(
-      `SELECT
-         doc as doc,
-         COALESCE(pdfPage, page, 0) as pdfPage,
-         COALESCE(snippet, text, '') as snippet,
-         COALESCE(evidenceIds, '') as evidenceIds
-       FROM kokuzo_pages
-       WHERE doc LIKE ?
-       ORDER BY COALESCE(pdfPage, page, 0) ASC
-       LIMIT ?`
-    ).get(`%${seedId}%`, limitPages) as any;
+    try {
+      // 列名差異で落ちないように SELECT * で拾う（P2-1の安全版）
+      const row = db
+        .prepare(
+          `SELECT * FROM kokuzo_pages
+           WHERE doc LIKE ?
+           ORDER BY rowid ASC
+           LIMIT ?`
+        )
+        .get(`%${seedId}%`, limitPages) as any;
 
-    if (!row) {
-      // 見つからない場合も item は返す（契約：落とさない）
-      items.push({ seedId, doc: null, pdfPage: null, snippet: null, evidenceIds: [] });
-      continue;
+      if (!row) {
+        items.push({ seedId, doc: null, pdfPage: null, snippet: null, evidenceIds: [] });
+        continue;
+      }
+
+      const doc = s(row.doc) || null;
+
+      // pdfPage候補（環境差対応）
+      const pdfPage =
+        numOrNull(row.pdfPage) ??
+        numOrNull(row.page) ??
+        numOrNull(row.pdf_page) ??
+        null;
+
+      const snippetSrc =
+        s(row.snippet) ||
+        s(row.text) ||
+        s(row.pageText) ||
+        s(row.content) ||
+        "";
+
+      const snippet = snippetSrc ? safeSnippet(snippetSrc) : null;
+
+      const evidenceIds =
+        parseEvidenceIds(row.evidenceIds) ||
+        parseEvidenceIds(row.evidence_ids) ||
+        [];
+
+      items.push({ seedId, doc, pdfPage, snippet, evidenceIds });
+    } catch (e: any) {
+      // 500にしない。失敗は item に封じ込める
+      items.push({
+        seedId,
+        doc: null,
+        pdfPage: null,
+        snippet: null,
+        evidenceIds: [],
+        err: e?.message ? String(e.message) : String(e),
+      });
     }
-
-    const evRaw = s(row.evidenceIds);
-    const evidenceIds =
-      evRaw.startsWith("[") ? (() => { try { const a = JSON.parse(evRaw); return Array.isArray(a) ? a.filter((x)=>typeof x==="string") : []; } catch { return []; } })()
-      : evRaw.length ? evRaw.split(",").map((x)=>x.trim()).filter(Boolean)
-      : [];
-
-    items.push({
-      seedId,
-      doc: s(row.doc) || null,
-      pdfPage: (() => {
-        const p = Number(row.pdfPage);
-        return Number.isFinite(p) && p > 0 ? p : null;
-      })(),
-      snippet: (() => {
-        const t = s(row.snippet);
-        return t ? safeSnippet(t) : null;
-      })(),
-      evidenceIds,
-    });
   }
 
   return res.json({
@@ -94,10 +123,7 @@ seedPackRouter.post("/seed/pack", (req: Request, res: Response) => {
   });
 });
 
-type UnpackReq = {
-  packId?: string;
-  payload?: any;
-};
+type UnpackReq = { packId?: string; payload?: any };
 
 seedPackRouter.post("/seed/unpack", (req: Request, res: Response) => {
   const body = (req.body ?? {}) as UnpackReq;
