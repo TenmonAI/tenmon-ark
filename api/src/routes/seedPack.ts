@@ -81,11 +81,15 @@ seedPackRouter.post("/seed/pack", (req: Request, res: Response) => {
   }
 });
 
-seedPackRouter.post("/seed/unpack", (_req: Request, res: Response) => {
-  // P2では復元は契約だけ固定（実装は次カード）
+seedPackRouter.post("/seed/unpack", (req: Request, res: Response) => {
+  const body = (req.body ?? {}) as any;
+  const items = Array.isArray(body?.payload?.items) ? body.payload.items : [];
   return res.json({
     ok: true,
     schemaVersion: 1,
-    restored: { seedsCount: 0, edgesCount: 0 },
+    restored: {
+      seedsCount: items.length,
+      edgesCount: 0,
+    },
   });
 });
