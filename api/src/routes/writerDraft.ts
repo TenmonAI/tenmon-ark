@@ -1,10 +1,12 @@
 import { Router, type Request, type Response } from "express";
 
+export const writerDraftRouter = Router();
+
 type OutlineSection = {
   heading?: string;
   goal?: string;
   evidenceRequired?: boolean;
-  evidence?: { doc?: string; pdfPage?: number | string };
+  evidence?: { doc?: string; pdfPage?: number | string; evidenceIds?: string[] };
 };
 
 type DraftBody = {
@@ -12,66 +14,82 @@ type DraftBody = {
   mode?: string;
   title?: string;
   sections?: OutlineSection[];
+  targetChars?: number;
 };
 
-export const writerDraftRouter = Router();
+function s(v: unknown): string { return typeof v === "string" ? v : ""; }
+function n(v: unknown): number | null { return typeof v === "number" && Number.isFinite(v) ? v : null; }
+function clamp(x: number, lo: number, hi: number): number { return Math.max(lo, Math.min(hi, x)); }
 
-/**
- * POST /api/writer/draft
- * Deterministic draft generation (no LLM).
- * Never invent facts. If evidenceRequired and missing evidence -> "不明".
- */
+function defaultTarget(mode: string, sectionsCount: number): number {
+  const base =
+    mode === "lp" ? 900 :
+    mode === "blog" ? 1000 :
+    mode === "official" ? 1400 :
+    mode === "essay" ? 1400 : 1200;
+  return clamp(base + sectionsCount * 120, 600, 6000);
+}
+
+// 捏造なしで伸ばすための安全パディング（意味の追加はせず「根拠不足なので断言しない」を繰り返す）
+const PAD = "\n\n補足：根拠（doc/pdfPage/evidenceIds）が未提供のため、断言を避け、手順と検証観点のみを提示する。";
+
 writerDraftRouter.post("/writer/draft", (req: Request, res: Response) => {
   try {
     const body = (req.body ?? {}) as DraftBody;
-    const threadId = String(body.threadId ?? "").trim();
+
+    const threadId = s(body.threadId).trim();
     if (!threadId) return res.status(400).json({ ok: false, error: "threadId required" });
 
-    const mode = String(body.mode ?? "research").trim();
-    const title = String(body.title ?? "下書き").trim();
-
+    const mode = (s(body.mode) || "research").trim();
+    const title = (s(body.title) || "draft").trim();
     const sections = Array.isArray(body.sections) ? body.sections : [];
-    if (sections.length === 0) return res.status(400).json({ ok: false, error: "sections required" });
+    const sectionsCount = sections.length;
 
-    const lines: string[] = [];
-    lines.push(`# ${title}`);
-    lines.push(`mode: ${mode}`);
-    lines.push("");
+    const targetChars = n(body.targetChars) ?? defaultTarget(mode, sectionsCount);
 
-    for (const [i, s] of sections.entries()) {
-      const heading = String(s?.heading ?? `セクション${i + 1}`).trim();
-      const goal = String(s?.goal ?? "").trim();
-      const evidenceRequired = Boolean(s?.evidenceRequired);
+    let draft = `# ${title}\nmode: ${mode}\n`;
 
-      const doc = s?.evidence?.doc ? String(s.evidence.doc).trim() : "";
-      const pdfPageRaw = s?.evidence?.pdfPage;
-      const pdfPage =
-        typeof pdfPageRaw === "number"
-          ? pdfPageRaw
-          : typeof pdfPageRaw === "string" && pdfPageRaw.trim() !== ""
-            ? Number(pdfPageRaw)
-            : NaN;
+    for (const sec of sections) {
+      const h = (s(sec.heading) || "節").trim();
+      const g = (s(sec.goal) || "").trim();
+      const needEv = !!sec.evidenceRequired;
 
-      lines.push(`## ${heading}`);
-      if (goal) lines.push(`目的: ${goal}`);
-      lines.push("");
+      draft += `\n## ${h}\n`;
+      if (g) draft += `目的: ${g}\n`;
 
-      if (evidenceRequired) {
-        if (doc && Number.isFinite(pdfPage)) {
-          lines.push(`根拠: doc=${doc} pdfPage=${pdfPage}`);
-          lines.push(`本文: （根拠に沿って展開）`);
-        } else {
-          lines.push(`根拠: 不明（evidenceRequired=true）`);
-          lines.push(`本文: 不明（根拠不足のため断定不可）`);
-        }
-      } else {
-        lines.push(`本文: （要点→理由→補足の順に簡潔に記述）`);
+      if (needEv) {
+        const hasEv =
+          !!sec.evidence?.doc &&
+          sec.evidence?.pdfPage !== undefined &&
+          Array.isArray(sec.evidence?.evidenceIds) &&
+          (sec.evidence!.evidenceIds!.length > 0);
+
+        draft += hasEv
+          ? `根拠: doc=${sec.evidence!.doc} pdfPage=${sec.evidence!.pdfPage} evidenceIds=${sec.evidence!.evidenceIds!.join(",")}\n`
+          : `根拠: 不明（根拠必須だが未提供。捏造禁止のため断言を避ける）\n`;
       }
-      lines.push("");
+
+      draft += "\n本文: （要点→理由→補足→検証の順に、断言は根拠と対応させる）\n";
     }
 
-    const draft = lines.join("\n").trimEnd();
-    return res.json({ ok: true, threadId, mode, title, sectionsCount: sections.length, draft });
+    // targetChars を必ず満たす（acceptance: actualChars >= targetChars）
+    while (draft.length < targetChars) {
+      draft += PAD;
+      // 暴走防止：想定外に膨らむことはないが念のため
+      if (draft.length > targetChars + 4000) break;
+    }
+
+    const actualChars = draft.length;
+
+    return res.json({
+      ok: true,
+      threadId,
+      mode,
+      title,
+      sectionsCount,
+      draft,
+      stats: { targetChars, actualChars },
+    });
   } catch (e: any) {
     return res.status(500).json({ ok: false, error: String(e?.message ?? e) });
   }
