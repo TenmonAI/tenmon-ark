@@ -115,6 +115,12 @@ writerRouter.post("/writer/outline", (req: Request, res: Response) => {
       modeTag: "DET",
       sectionsCount,
       evidenceReqCount,
+
+      // [W6-1] contract: expose budget + targets
+      targetChars: targetChars ?? null,
+      targetWords: targetWords ?? null,
+      budgets,
+      budgetsCount: budgets.length,
     });
   } catch (e: any) {
     return res.status(500).json({ ok: false, error: String(e?.message ?? e) });
