@@ -44,7 +44,7 @@ seedPackRouter.post("/seed/pack", (req: Request, res: Response) => {
 
     // NOTE: kokuzo_pages の列名に合わせる。無ければ例外→ok:falseで返す（500にしない）
     const stmt = db.prepare(`
-      SELECT doc, pdfPage, evidenceIds
+      SELECT doc, pdfPage, text
       FROM kokuzo_pages
       WHERE doc = ?
       ORDER BY pdfPage ASC
