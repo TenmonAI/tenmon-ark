@@ -109,9 +109,8 @@ readerRouter.post("/reader/outline", (req: Request, res: Response) => {
   try {
     const body = (req.body ?? {}) as any;
     const threadId = String(body.threadId ?? "").trim();
-    const text = typeof body.text === "string" ? body.text : "";
-
-    if (!threadId) return res.status(400).json({ ok: false, error: "threadId required" });
+    const text = String((body as any)?.text ?? (body as any)?.message ?? (body as any)?.input ?? "");
+if (!threadId) return res.status(400).json({ ok: false, error: "threadId required" });
     if (!text.trim()) return res.status(400).json({ ok: false, error: "text required" });
 
     const chunksRaw = splitChunks(text);
@@ -130,9 +129,7 @@ readerRouter.post("/reader/outline", (req: Request, res: Response) => {
       };
     });
 
-    return res.json({
-      ok: true,
-      threadId,
+    return res.json({ ok: true, schemaVersion: 1, threadId,
       chunksCount: chunks.length,
       chunks,
     });

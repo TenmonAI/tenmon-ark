@@ -18,8 +18,8 @@ writerVerifyRouter.post("/writer/verify", (req: Request, res: Response) => {
   try {
     const body = (req.body ?? {}) as VerifyBody;
 
-    const text = (s(body.text) || s(body.draft) || s(body.content)).trim();
-    if (!text) return res.status(400).json({ ok: false, error: "text required" });
+    const text = String((body as any)?.text ?? (body as any)?.message ?? (body as any)?.input ?? "");
+if (!text) return res.status(400).json({ ok: false, error: "text required" });
 
     const evReq =
       b(body.evidenceRequired) ??
@@ -42,9 +42,7 @@ writerVerifyRouter.post("/writer/verify", (req: Request, res: Response) => {
       }
     }
 
-    return res.json({
-      ok: true,
-      issuesCount: issues.length,
+    return res.json({ ok: true, schemaVersion: 1, issuesCount: issues.length,
       issues,
       codes: issues.map((i) => i.code),
       stats: {
