@@ -16,14 +16,6 @@ type PackedItem = {
   evidenceIds: string[];
 };
 
-function asStr(v: unknown): string | null {
-  return typeof v === "string" ? v : null;
-}
-
-function asNum(v: unknown): number | null {
-  return typeof v === "number" && Number.isFinite(v) ? v : null;
-}
-
 function parseEvidenceIds(v: unknown): string[] {
   if (Array.isArray(v)) return v.filter((x) => typeof x === "string");
   if (typeof v === "string") {
@@ -45,11 +37,12 @@ seedPackRouter.post("/seed/pack", (req: Request, res: Response) => {
       : [];
 
     const limitPagesRaw = body.options?.limitPages;
-    const limitPages = typeof limitPagesRaw === "number" && limitPagesRaw > 0 ? Math.min(20, Math.floor(limitPagesRaw)) : 1;
+    const limitPages =
+      typeof limitPagesRaw === "number" && limitPagesRaw > 0 ? Math.min(20, Math.floor(limitPagesRaw)) : 1;
 
     const db = getDb("kokuzo");
 
-    // kokuzo_pages: doc, pdfPage, snippet, evidenceIds の存在を前提（無ければ null-safe）
+    // NOTE: kokuzo_pages の列名に合わせる。無ければ例外→ok:falseで返す（500にしない）
     const stmt = db.prepare(`
       SELECT doc, pdfPage, snippet, evidenceIds
       FROM kokuzo_pages
@@ -68,9 +61,9 @@ seedPackRouter.post("/seed/pack", (req: Request, res: Response) => {
       for (const r of rows) {
         items.push({
           seedId,
-          doc: asStr(r?.doc) ?? seedId,
-          pdfPage: asNum(r?.pdfPage),
-          snippet: asStr(r?.snippet),
+          doc: typeof r?.doc === "string" ? r.doc : seedId,
+          pdfPage: typeof r?.pdfPage === "number" ? r.pdfPage : null,
+          snippet: typeof r?.snippet === "string" ? r.snippet : null,
           evidenceIds: parseEvidenceIds(r?.evidenceIds),
         });
       }
@@ -95,7 +88,6 @@ seedPackRouter.post("/seed/pack", (req: Request, res: Response) => {
 });
 
 seedPackRouter.post("/seed/unpack", (req: Request, res: Response) => {
-  // P2-2ではスタブ維持（暴走させない）
   const body = (req.body ?? {}) as any;
   const items = Array.isArray(body?.items) ? body.items : [];
   return res.json({

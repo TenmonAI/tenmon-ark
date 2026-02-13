@@ -5,7 +5,7 @@ BASE_URL="${BASE_URL:-http://127.0.0.1:3000}"
 echo "[P2] audit"
 curl -fsS "$BASE_URL/api/audit" >/dev/null
 
-echo "[P2] seed/pack (real items, must not 500)"
+echo "[P2] seed/pack (must not 500)"
 RES="$(curl -fsS "$BASE_URL/api/seed/pack" \
   -H "Content-Type: application/json" \
   -d '{"seedIds":["KHS"],"options":{"limitPages":1}}')"
