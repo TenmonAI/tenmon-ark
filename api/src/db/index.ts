@@ -113,7 +113,7 @@ function getDbPathByKind(kind: DbKind): string {
 }
 
 function schemaFilesFor(kind: DbKind): string[] {
-  if (kind === "kokuzo") return ["schema.sql", "kokuzo_schema.sql", "training_schema.sql"];
+  if (kind === "kokuzo") return ["schema.sql", "kokuzo_schema.sql", "training_schema.sql", "pwa_schema.sql"];
   if (kind === "persona") return ["persona_state.sql"];
   return ["approval_schema.sql", "audit_schema.sql"];
 }
