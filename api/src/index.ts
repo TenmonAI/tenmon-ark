@@ -1,4 +1,5 @@
 import express from "express";
+import { seedPackRouter } from "./routes/seedPack.js";
 import { pwaRouter } from "./routes/pwa.js";
 import cors from "cors";
 import auditRouter from "./routes/audit.js";
@@ -84,6 +85,7 @@ app.use("/api", trainRouter);
 app.use("/api", memoryRouter);
 app.use("/api", writerRouter);
 app.use("/api", pwaRouter);
+app.use("/api", seedPackRouter);
 app.use("/api", writerVerifyRouter);
 app.use("/api", writerDraftRouter);
 app.use("/api", readerRouter);
