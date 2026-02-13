@@ -3,72 +3,100 @@ import { Router, type Request, type Response } from "express";
 export const writerRouter = Router();
 
 type Mode = "blog" | "research" | "official" | "lp" | "essay";
+type OutlineSection = { heading: string; goal: string; evidenceRequired: boolean };
 
+function s(v: unknown): string { return typeof v === "string" ? v : ""; }
+
+function normalizeMode(v: unknown): Mode {
+  const m = s(v).trim() as Mode;
+  return (m === "blog" || m === "research" || m === "official" || m === "lp" || m === "essay")
+    ? m
+    : "research";
+}
+
+function buildSections(mode: Mode, topic: string, constraints: string[]): OutlineSection[] {
+  const needEvidence =
+    constraints.some((c) => c.includes("根拠")) ||
+    mode === "research" ||
+    mode === "official";
+
+  if (mode === "lp") {
+    return [
+      { heading: "読者の課題", goal: `${topic} の課題を定義する`, evidenceRequired: false },
+      { heading: "解決の要点", goal: `解決の要点（誇張せず）を整理する`, evidenceRequired: needEvidence },
+      { heading: "根拠と事例", goal: `根拠（doc/pdfPage等）に基づき説明する`, evidenceRequired: true },
+      { heading: "行動", goal: `次の一手を提示する`, evidenceRequired: false },
+    ];
+  }
+
+  if (mode === "blog") {
+    return [
+      { heading: "導入", goal: `${topic} を短く導入する`, evidenceRequired: false },
+      { heading: "要点", goal: `要点を整理する`, evidenceRequired: needEvidence },
+      { heading: "補足", goal: `誤解されやすい点を補足する`, evidenceRequired: needEvidence },
+      { heading: "まとめ", goal: `結論と次の一手をまとめる`, evidenceRequired: false },
+    ];
+  }
+
+  // research / official / essay
+  return [
+    { heading: "問題設定", goal: "問いと範囲を明確化する", evidenceRequired: false },
+    { heading: "先行整理", goal: "既知情報を構造化する", evidenceRequired: needEvidence },
+    { heading: "解析", goal: "法則・矛盾・依存を抽出する", evidenceRequired: true },
+    { heading: "結論", goal: "整合した結論を提示する", evidenceRequired: false },
+  ];
+}
+
+/**
+ * POST /api/writer/outline
+ * body:
+ *  - threadId: string (required)
+ *  - mode: blog|research|official|lp|essay
+ *  - topic?: string
+ *  - text?: string   (backward compat)
+ *  - title?: string  (backward compat)
+ *  - constraints?: string[] | string
+ */
 writerRouter.post("/writer/outline", (req: Request, res: Response) => {
   try {
     const body = (req.body ?? {}) as any;
-    const threadId = String(body.threadId ?? "").trim();
-    const mode = (String(body.mode ?? "research").trim() as Mode) || "research";
-    const text = typeof body.text === "string" ? body.text : "";
 
+    const threadId = s(body.threadId).trim();
     if (!threadId) return res.status(400).json({ ok: false, error: "threadId required" });
-    if (!text.trim()) return res.status(400).json({ ok: false, error: "text required" });
 
-    // Deterministic outline templates (P0). No LLM. No DB.
-    const baseTitle =
-      mode === "lp"
-        ? "提案の全体像"
-        : mode === "official"
-        ? "公式文書の骨格"
-        : mode === "blog"
-        ? "記事構成案"
-        : mode === "essay"
-        ? "随筆の章立て"
-        : "研究アウトライン";
+    const mode = normalizeMode(body.mode);
 
-    const sections =
-      mode === "lp"
-        ? [
-            { heading: "課題", goal: "現状の痛点を明確化する", evidenceRequired: true },
-            { heading: "解決策", goal: "方針と全体設計を提示する", evidenceRequired: true },
-            { heading: "根拠", goal: "引用・データで裏付ける", evidenceRequired: true },
-            { heading: "導入手順", goal: "次の一手を具体化する", evidenceRequired: false },
-          ]
-        : mode === "official"
-        ? [
-            { heading: "目的", goal: "文書の目的を明文化する", evidenceRequired: false },
-            { heading: "定義", goal: "用語と範囲を確定する", evidenceRequired: true },
-            { heading: "本文", goal: "規定・方針を記述する", evidenceRequired: true },
-            { heading: "付則", goal: "適用範囲・例外を整理する", evidenceRequired: false },
-          ]
-        : mode === "blog"
-        ? [
-            { heading: "導入", goal: "読者の関心を固定する", evidenceRequired: false },
-            { heading: "要点", goal: "結論と重要点を提示する", evidenceRequired: false },
-            { heading: "根拠", goal: "引用・具体で裏付ける", evidenceRequired: true },
-            { heading: "まとめ", goal: "次の行動へ繋げる", evidenceRequired: false },
-          ]
-        : mode === "essay"
-        ? [
-            { heading: "発端", goal: "問いの起点を示す", evidenceRequired: false },
-            { heading: "展開", goal: "観測と連想を繋ぐ", evidenceRequired: false },
-            { heading: "照合", goal: "法則・根拠へ照らす", evidenceRequired: true },
-            { heading: "結", goal: "余韻と結論を置く", evidenceRequired: false },
-          ]
-        : [
-            { heading: "問題設定", goal: "問いと範囲を明確化する", evidenceRequired: false },
-            { heading: "先行整理", goal: "既知情報を構造化する", evidenceRequired: true },
-            { heading: "解析", goal: "法則・矛盾・依存を抽出する", evidenceRequired: true },
-            { heading: "結論", goal: "整合した結論を提示する", evidenceRequired: false },
-          ];
+    // backward compatible: topic OR text OR title
+    const topic = (s(body.topic) || s(body.text) || s(body.title)).trim();
+    if (!topic) return res.status(400).json({ ok: false, error: "topic required (topic/text/title)" });
+
+    const constraintsRaw = body.constraints;
+    const constraints =
+      Array.isArray(constraintsRaw)
+        ? constraintsRaw.map((x: any) => s(x)).filter(Boolean)
+        : typeof constraintsRaw === "string"
+          ? [constraintsRaw]
+          : [];
+
+    const title =
+      mode === "research" ? "研究アウトライン" :
+      mode === "official" ? "公式文書アウトライン" :
+      mode === "lp" ? "LPアウトライン" :
+      mode === "essay" ? "エッセイアウトライン" : "記事アウトライン";
+
+    const sections = buildSections(mode, topic, constraints);
+    const sectionsCount = sections.length;
+    const evidenceReqCount = sections.filter((x) => x.evidenceRequired).length;
 
     return res.json({
       ok: true,
       threadId,
       mode,
-      title: baseTitle,
+      title,
       sections,
       modeTag: "DET",
+      sectionsCount,
+      evidenceReqCount,
     });
   } catch (e: any) {
     return res.status(500).json({ ok: false, error: String(e?.message ?? e) });
