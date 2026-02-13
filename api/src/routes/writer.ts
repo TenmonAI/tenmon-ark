@@ -88,6 +88,24 @@ writerRouter.post("/writer/outline", (req: Request, res: Response) => {
     const sectionsCount = sections.length;
     const evidenceReqCount = sections.filter((x) => x.evidenceRequired).length;
 
+    // [W6-1] length budget (targetChars/targetWords)
+    const targetChars = typeof body.targetChars === "number" ? body.targetChars
+      : (typeof body.targetChars === "string" && body.targetChars.trim() ? Number(body.targetChars) : null);
+    const targetWords = typeof body.targetWords === "number" ? body.targetWords
+      : (typeof body.targetWords === "string" && body.targetWords.trim() ? Number(body.targetWords) : null);
+
+    const totalUnits = Math.max(1, sectionsCount);
+    const baseChars = (targetChars && Number.isFinite(targetChars) && targetChars > 0) ? Math.floor(targetChars / totalUnits) : null;
+    const baseWords = (targetWords && Number.isFinite(targetWords) && targetWords > 0) ? Math.floor(targetWords / totalUnits) : null;
+
+    const budgets = sections.map((s: any, idx: number) => ({
+      idx,
+      heading: s.heading ?? s.title ?? null,
+      targetChars: baseChars,
+      targetWords: baseWords,
+      // evidenceRequired の節は後で加重配分したくなるが、今は最小diffで均等割り
+      evidenceRequired: !!s.evidenceRequired,
+    }));
     return res.json({
       ok: true,
       threadId,
