@@ -9,6 +9,8 @@ type VerifyBody = {
   evidenceRequired?: unknown;
   evidencePolicy?: unknown; // "required" | "optional"
   evidenceIds?: unknown;
+  targetChars?: unknown;
+  tolerancePct?: unknown; // optional (default 0.02)
 };
 
 function s(v: unknown): string { return typeof v === "string" ? v : ""; }
