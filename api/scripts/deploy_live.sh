@@ -45,3 +45,17 @@ fi
 
 echo "[deploy] smoke"
 bash /opt/tenmon-ark-repo/api/scripts/smoke.sh
+
+# [E0-DEPLOY-01] ensure live/node_modules symlink (prevent ERR_MODULE_NOT_FOUND)
+echo "[deploy] ensure live/node_modules symlink"
+LIVE_DIR="/opt/tenmon-ark-live"
+REPO_API_NODE_MODULES="/opt/tenmon-ark-repo/api/node_modules"
+
+if [ -d "$REPO_API_NODE_MODULES" ]; then
+  rm -rf "$LIVE_DIR/node_modules" 2>/dev/null || true
+  ln -sfn "$REPO_API_NODE_MODULES" "$LIVE_DIR/node_modules"
+  # quick sanity: express must be resolvable from live
+  (cd "$LIVE_DIR" && node -e "import('express').then(()=>console.log('[deploy] OK express')).catch(e=>{console.error(e);process.exit(1)})")
+else
+  echo "[deploy] WARN: repo/api/node_modules not found (skip symlink)"
+fi
