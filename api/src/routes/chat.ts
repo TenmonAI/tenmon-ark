@@ -683,7 +683,7 @@ if (usable.length === 0) {
     const picked = pickFromThread(threadId, oneBasedIndex);
     if (picked) {
       clearThreadCandidates(threadId);
-      return res.json(buildGroundedResponse({
+      return reply(buildGroundedResponse({
         doc: picked.doc,
         pdfPage: picked.pdfPage,
         threadId,
