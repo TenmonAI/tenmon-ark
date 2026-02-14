@@ -422,7 +422,29 @@ const pid = process.pid;
         } catch {}
       } catch {
         if (typeof (ku as any).appliedSeedsCount !== "number") (ku as any).appliedSeedsCount = 0;
+      }      // MK4_SEED_VISIBILITY_V2: appliedSeedsCount from kokuzo_seeds (sync, deterministic)
+      try {
+        const tId = String(payload?.threadId || "");
+        if (tId) {
+          const row = dbPrepare("kokuzo", "SELECT COUNT(*) AS cnt FROM kokuzo_seeds WHERE threadId = ?").get(tId) as any;
+          const cntRaw = row ? (row as any).cnt : 0;
+          const n = (typeof cntRaw === "number" ? cntRaw : parseInt(String(cntRaw || "0"), 10)) || 0;
+          (ku as any).appliedSeedsCount = n;
+
+          try {
+            const marks = Array.isArray((ku as any).memoryMarks) ? (ku as any).memoryMarks : [];
+            const next = marks.slice(0);
+            if (n > 0 && !next.includes("K2")) next.push("K2");
+            (ku as any).memoryMarks = next;
+          } catch {}
+        } else {
+          if (typeof (ku as any).appliedSeedsCount !== "number") (ku as any).appliedSeedsCount = 0;
+        }
+      } catch {
+        if (typeof (ku as any).appliedSeedsCount !== "number") (ku as any).appliedSeedsCount = 0;
       }
+
+
 
 
       // MK0_MERGE_KU_V1: preserve observability keys while setting learnedRulesAvailable/Used
