@@ -771,7 +771,7 @@ if (usable.length === 0) {
     }
     const doc = pinMatch[1];
     const pdfPage = parseInt(pinMatch[2], 10);
-    return res.json(buildGroundedResponse({
+    return reply(buildGroundedResponse({
       doc,
       pdfPage,
       threadId,
@@ -919,7 +919,7 @@ if (usable.length === 0) {
   if (mPage && mDoc) {
     const pdfPage = parseInt(mPage[1], 10);
     const doc = mDoc[1];
-    return res.json(buildGroundedResponse({
+    return reply(buildGroundedResponse({
       doc,
       pdfPage,
       threadId,
