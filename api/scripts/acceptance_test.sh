@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+
+# PDCA Guard: syntax must be valid before running
+bash -n "-e" || { echo "[FAIL] acceptance_test.sh: bash -n failed"; exit 2; }
+
 set -euo pipefail
 
 REPO="/opt/tenmon-ark-repo/api"
