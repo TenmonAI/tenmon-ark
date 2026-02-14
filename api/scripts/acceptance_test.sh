@@ -1040,3 +1040,17 @@ echo "$MK4_JSON" | jq -e '
 ' >/dev/null
 
 echo "[PASS] Phase58 MK4 seeds visibility gate"
+
+# [58] Phase58 MK4 seeds visibility gate (appliedSeedsCount + memoryMarks)
+echo "[58] Phase58 MK4 seeds visibility gate (appliedSeedsCount>=1 + memoryMarks has K2)"
+MK4_JSON="$(curl -fsS -X POST "$BASE_URL/api/chat" \
+  -H 'Content-Type: application/json' \
+  -d '{"threadId":"k1-smoke","message":"#詳細 K2 seed の骨格を呼び戻して要点だけ"}')"
+
+echo "$MK4_JSON" | jq -e '
+  (.decisionFrame.ku.appliedSeedsCount | tonumber) >= 1
+  and ((.decisionFrame.ku.memoryMarks // []) | index("K2") != null)
+  and (.decisionFrame | has("detailPlan"))
+' >/dev/null
+
+echo "[PASS] Phase58 MK4 seeds visibility gate"
