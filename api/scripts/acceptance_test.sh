@@ -1091,3 +1091,29 @@ OUT61="$(curl -fsS -X POST "$BASE_URL/api/chat" \
 echo "$OUT61" | jq -e '.decisionFrame.ku.llmProviderPlanned | type=="string"' >/dev/null
 echo "$OUT61" | jq -e '.decisionFrame.ku.llmIntentPlanned | type=="string"' >/dev/null
 echo "[PASS] Phase61 LLM router planning gate"
+
+# [62] Phase62 writer run store gate (writer_runs + writer_artifacts)
+echo "[62] Phase62 writer run store gate (latest run has artifacts)"
+
+# NOTE: 既に存在する threadId を使う（k1-smoke）
+OUT62="$(curl -fsS "$BASE_URL/api/writer/run/latest?threadId=k1-smoke")"
+
+# 契約：ok==true / run.id / run.threadId / artifacts は配列 / artifactsCount>=1（最低1つ）
+echo "$OUT62" | jq -e '
+  .ok == true
+  and (.run | has("id"))
+  and (.run.threadId == "k1-smoke")
+  and (.artifacts | type == "array")
+  and ((.artifacts | length) >= 1)
+' >/dev/null
+
+# 契約：artifacts[0] に最低限のキー（id/runId/kind/content/createdAt）
+echo "$OUT62" | jq -e '
+  (.artifacts[0] | has("id"))
+  and (.artifacts[0] | has("runId"))
+  and (.artifacts[0] | has("kind"))
+  and (.artifacts[0] | has("content"))
+  and (.artifacts[0] | has("createdAt"))
+' >/dev/null
+
+echo "[PASS] Phase62 writer run store gate"
