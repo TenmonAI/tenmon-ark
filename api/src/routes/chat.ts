@@ -385,6 +385,15 @@ const pid = process.pid;
       } as any;
 
       payload.decisionFrame = df;
+
+      // DF_DETAILPLAN_MIRROR_V1: always mirror top-level detailPlan into decisionFrame.detailPlan
+      try {
+        if (payload && payload.decisionFrame && typeof payload.decisionFrame === "object") {
+          if (!payload.decisionFrame.detailPlan && (payload as any).detailPlan) {
+            payload.decisionFrame.detailPlan = (payload as any).detailPlan;
+          }
+        }
+      } catch {}
     }
   } catch {}
 
