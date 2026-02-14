@@ -404,10 +404,10 @@ const pid = process.pid;
 
         if (Array.isArray(rules)) available = rules.length;
       } catch {}
-      const used = Array.isArray(ku.learnedRulesUsed) ? ku.learnedRulesUsed : [];      // MK4_SEED_VISIBILITY_V1: count seeds for this thread (deterministic, sync, safe)
+      const used = Array.isArray(ku.learnedRulesUsed) ? ku.learnedRulesUsed : [];      // MK4_SEED_VISIBILITY_V1: count seeds for this thread (deterministic, sync)
       try {
-        // dbPrepare is already available in this module (used elsewhere)
-        const row = (dbPrepare as any)("kokuzo",
+        const row = (dbPrepare as any)(
+          "kokuzo",
           "SELECT COUNT(*) AS cnt FROM kokuzo_seeds WHERE threadId = ?"
         ).get(String(payload.threadId || ""));
         const cntRaw = row ? (row as any).cnt : 0;
@@ -423,6 +423,7 @@ const pid = process.pid;
       } catch {
         if (typeof (ku as any).appliedSeedsCount !== "number") (ku as any).appliedSeedsCount = 0;
       }
+
 
       // MK0_MERGE_KU_V1: preserve observability keys while setting learnedRulesAvailable/Used
       df.ku = {
