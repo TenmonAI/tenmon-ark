@@ -880,7 +880,7 @@ W_OUT="$(curl -fsS "$BASE_URL/api/writer/outline" -H "Content-Type: application/
 BUDGETS="$(echo "$W_OUT" | jq -c '.budgets')"
 SECTIONS="$(echo "$W_OUT" | jq -c '.sections')"
 
-W_DRAFT="$(curl -fsS "$BASE_URL/api/writer/draft" -H "Content-Type: application/json" \
+W_DRAFT="$(timeout 20 curl -fsS --connect-timeout 2 -m 15 "$BASE_URL/api/writer/draft" -H "Content-Type: application/json" \
   -d "{\"threadId\":\"$THREAD_ID\",\"mode\":\"essay\",\"title\":\"draft\",\"sections\":$SECTIONS,\"targetChars\":400,\"tolerancePct\":0.02,\"budgets\":$BUDGETS}")"
 
 # sectionStats が存在するなら契約化（無いなら FAILして実装へ進む）
