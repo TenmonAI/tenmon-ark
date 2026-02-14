@@ -874,28 +874,55 @@ echo "[54] Phase54 writer sectionStats contract gate (W8-3)"
 THREAD_ID="rep"
 TEXT_IN="テストです。根拠は必要です。"
 
+# outline（失敗時に内容を出す）
 W_OUT="$(timeout 20 curl -fsS --connect-timeout 2 -m 15 "$BASE_URL/api/writer/outline" -H "Content-Type: application/json" \
-  -d "{\"threadId\":\"$THREAD_ID\",\"mode\":\"essay\",\"topic\":\"$TEXT_IN\",\"targetChars\":800}")"
+  -d "{\"threadId\":\"$THREAD_ID\",\"mode\":\"essay\",\"topic\":\"$TEXT_IN\",\"targetChars\":800}")" || {
+  echo "[FAIL] Phase54: writer/outline curl failed"
+  exit 1
+}
+
+# outline JSON sanity
+if ! echo "$W_OUT" | jq -e '.ok==true and (.budgets|type)=="array" and (.sections|type)=="array"' >/dev/null 2>&1; then
+  echo "[FAIL] Phase54: outline response invalid"
+  echo "$W_OUT" | jq '.'
+  exit 1
+fi
 
 BUDGETS="$(echo "$W_OUT" | jq -c '.budgets')"
 SECTIONS="$(echo "$W_OUT" | jq -c '.sections')"
 
+# draft（失敗時に内容を出す）
 W_DRAFT="$(timeout 20 curl -fsS --connect-timeout 2 -m 15 "$BASE_URL/api/writer/draft" -H "Content-Type: application/json" \
-  -d "{\"threadId\":\"$THREAD_ID\",\"mode\":\"essay\",\"title\":\"draft\",\"sections\":$SECTIONS,\"targetChars\":400,\"tolerancePct\":0.02,\"budgets\":$BUDGETS}")"
+  -d "{\"threadId\":\"$THREAD_ID\",\"mode\":\"essay\",\"title\":\"draft\",\"sections\":$SECTIONS,\"targetChars\":400,\"tolerancePct\":0.02,\"budgets\":$BUDGETS}")" || {
+  echo "[FAIL] Phase54: writer/draft curl failed"
+  exit 1
+}
 
-# sectionStats が存在するなら契約化（無いなら FAILして実装へ進む）
-echo "$W_DRAFT" | jq -e 'has("sectionStats") and (.sectionStats|type)=="array"' >/dev/null
-echo "$W_DRAFT" | jq -e '(.sectionsCount|type)=="number" and (.sectionStats|length)==(.sectionsCount)' >/dev/null
+# sectionStats contract checks（失敗時に全文を出す）
+if ! echo "$W_DRAFT" | jq -e 'has("sectionStats") and (.sectionStats|type)=="array"' >/dev/null 2>&1; then
+  echo "[FAIL] Phase54: missing sectionStats"
+  echo "$W_DRAFT" | jq '.'
+  exit 1
+fi
 
-# 各要素の最低キー（title/target/actual/delta）
-echo "$W_DRAFT" | jq -e '
+if ! echo "$W_DRAFT" | jq -e '(.sectionsCount|type)=="number" and (.sectionStats|length)==(.sectionsCount)' >/dev/null 2>&1; then
+  echo "[FAIL] Phase54: sectionStats length mismatch"
+  echo "$W_DRAFT" | jq '.'
+  exit 1
+fi
+
+if ! echo "$W_DRAFT" | jq -e '
   .sectionStats|all(
     (has("sectionTitle") and (.sectionTitle|type)=="string") and
     (has("targetChars") and (.targetChars|type)=="number") and
     (has("actualChars") and (.actualChars|type)=="number") and
     (has("deltaChars") and (.deltaChars|type)=="number")
   )
-' >/dev/null
+' >/dev/null 2>&1; then
+  echo "[FAIL] Phase54: sectionStats element keys mismatch"
+  echo "$W_DRAFT" | jq '.sectionStats'
+  exit 1
+fi
 
 echo "[PASS] Phase54 writer sectionStats contract gate"
 
