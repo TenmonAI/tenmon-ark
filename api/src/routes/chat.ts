@@ -909,7 +909,7 @@ if (usable.length === 0) {
         out.candidates[0] = c0;
       }
 
-      return res.json(out);
+      return reply(out);
     }
   }
 
