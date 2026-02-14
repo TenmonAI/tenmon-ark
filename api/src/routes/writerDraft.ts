@@ -128,7 +128,6 @@ writerDraftRouter.post("/writer/draft", (req: Request, res: Response) => {
     })();
 
     // SECTIONSTATS_NORMALIZE_V1
-    sectionStats = normalizeSectionStats(sectionStats);
     const sectionStats: { idx: number; heading: string; targetChars: number; actualChars: number; delta: number }[] = [];
 
 let draft = `# ${title}\nmode: ${mode}\n`;
@@ -188,7 +187,7 @@ let draft = `# ${title}\nmode: ${mode}\n`;
       draft,
       stats: { targetChars, actualChars, tolerancePct, lo, hi },
       budgetsUsed: perTargets,
-        sectionStats,
+        sectionStats: normalizeSectionStats(sectionStats),
     });
   } catch (e: any) {
     return res.status(500).json({ ok: false, error: String(e?.message ?? e) });
