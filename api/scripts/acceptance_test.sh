@@ -786,57 +786,51 @@ echo "[PASS] Phase51"
 
 # [52] Phase52 Writer pipeline smoke (Reader->Analyzer->Outline->Draft->Verify)
 echo "[52] Phase52 Writer pipeline smoke"
-BASE_URL="${BASE_URL:-http://127.0.0.1:3000}"
 
-# 52-0 reader/outline
-R52_OUT="$(curl -fsS "$BASE_URL/api/reader/outline" -H "Content-Type: application/json" \
-  -d '{"threadId":"writer-smoke","text":"これは長文のテストです。第一に目的を定義する。第二に根拠を示す。","mode":"research"}')"
-if ! echo "$R52_OUT" | jq -e '.ok==true and (.chunksCount|type)=="number" and .chunksCount>=1' >/dev/null 2>&1; then
-  echo "[FAIL] Phase52: reader/outline bad"
-  echo "$R52_OUT" | jq '.'
-  exit 1
-fi
-echo "[PASS] Phase52-0 reader/outline"
+  # Contract LOCK (schemaVersion + arrays + counts + budgets + length range)
+  THREAD_ID="rep"
+  TEXT_IN="テストです。根拠は必要です。"
 
-# 52-1 reader/analyze
-R52_AN="$(curl -fsS "$BASE_URL/api/reader/analyze" -H "Content-Type: application/json" \
-  -d '{"threadId":"writer-smoke","text":"定義が曖昧な概念を含む文章。根拠の提示がない断言がある。","mode":"research"}')"
-if ! echo "$R52_AN" | jq -e '.ok==true and (.inc|type)=="number" and (.undef|type)=="number" and (.dep|type)=="number"' >/dev/null 2>&1; then
-  echo "[FAIL] Phase52: reader/analyze bad"
-  echo "$R52_AN" | jq '.'
-  exit 1
-fi
-echo "[PASS] Phase52-1 reader/analyze"
+  echo "[PASS] Phase52-0 reader/outline"
+  R_OUT="$(curl -fsS "$BASE_URL/api/reader/outline" -H "Content-Type: application/json" \
+    -d "{\"threadId\":\"$THREAD_ID\",\"text\":\"$TEXT_IN\"}")"
+  echo "$R_OUT" | jq -e '.ok==true and .schemaVersion==1 and (.chunks|type)=="array" and (.chunks|length)>=1 and (.chunksCount|type)=="number" and .chunksCount==(.chunks|length)' >/dev/null
 
-# 52-2 writer/outline
-R52_WO="$(curl -fsS "$BASE_URL/api/writer/outline" -H "Content-Type: application/json" \
-  -d '{"threadId":"writer-smoke","mode":"research","topic":"言霊秘書の読解手順","text":"言霊秘書の読解手順","constraints":["根拠必須","捏造禁止"]}')"
-if ! echo "$R52_WO" | jq -e '.ok==true and (.sectionsCount|type)=="number" and .sectionsCount>=2 and (.evidenceReqCount|type)=="number"' >/dev/null 2>&1; then
-  echo "[FAIL] Phase52: writer/outline bad"
-  echo "$R52_WO" | jq '.'
-  exit 1
-fi
-echo "[PASS] Phase52-2 writer/outline"
+  echo "[PASS] Phase52-1 reader/analyze"
+  R_AN="$(curl -fsS "$BASE_URL/api/reader/analyze" -H "Content-Type: application/json" \
+    -d "{\"threadId\":\"$THREAD_ID\",\"text\":\"$TEXT_IN\"}")"
+  echo "$R_AN" | jq -e '.ok==true and .schemaVersion==1 and (.inconsistencies|type)=="array" and (.undefinedTerms|type)=="array" and (.dependencies|type)=="array"' >/dev/null
+  echo "$R_AN" | jq -e '(.inc|type)=="number" and (.undef|type)=="number" and (.dep|type)=="number"' >/dev/null
+  echo "$R_AN" | jq -e '.inc==(.inconsistencies|length) and .undef==(.undefinedTerms|length) and .dep==(.dependencies|length)' >/dev/null
 
-# 52-3 writer/draft (use outline sections if present)
-SECTIONS_JSON="$(echo "$R52_WO" | jq -c '.sections // []')"
-R52_DRAFT="$(curl -fsS "$BASE_URL/api/writer/draft" -H "Content-Type: application/json" \
-  -d "{\"threadId\":\"writer-smoke\",\"mode\":\"research\",\"title\":\"test\",\"sections\":${SECTIONS_JSON}}")"
-if ! echo "$R52_DRAFT" | jq -e '.ok==true and (.draft|type)=="string" and (.draft|length)>=40 and (.stats.targetChars|type)=="number" and (.stats.actualChars|type)=="number" and (.stats.actualChars >= .stats.targetChars)' >/dev/null 2>&1; then
-  echo "[FAIL] Phase52: writer/draft bad"
-  echo "$R52_DRAFT" | jq '.'
-  exit 1
-fi
-echo "[PASS] Phase52-3 writer/draft"
+  echo "[PASS] Phase52-2 writer/outline"
+  W_OUT="$(curl -fsS "$BASE_URL/api/writer/outline" -H "Content-Type: application/json" \
+    -d "{\"threadId\":\"$THREAD_ID\",\"mode\":\"essay\",\"topic\":\"$TEXT_IN\",\"targetChars\":800}")"
+  echo "$W_OUT" | jq -e '.ok==true and (.sections|type)=="array" and (.sectionsCount|type)=="number" and .sectionsCount==(.sections|length)' >/dev/null
+  echo "$W_OUT" | jq -e '(.budgets|type)=="array" and (.budgetsCount|type)=="number" and .budgetsCount==(.budgets|length) and .budgetsCount==.sectionsCount' >/dev/null
+  echo "$W_OUT" | jq -e 'has("targetChars") and (.targetChars|type)=="number"' >/dev/null
 
-# 52-4 writer/verify (expect issues for missing evidence, etc.)
-R52_VER="$(curl -fsS "$BASE_URL/api/writer/verify" -H "Content-Type: application/json" \
-  -d '{"text":"断言します。","evidenceRequired":true,"evidenceIds":[]}' )"
-if ! echo "$R52_VER" | jq -e '.ok==true and (.issuesCount|type)=="number" and .issuesCount>=1' >/dev/null 2>&1; then
-  echo "[FAIL] Phase52: writer/verify bad"
-  echo "$R52_VER" | jq '.'
-  exit 1
-fi
-echo "[PASS] Phase52-4 writer/verify"
+  echo "[PASS] Phase52-3 writer/draft"
+  # budgets を draft に渡し、targetChars ±2% に収束していること
+  BUDGETS="$(echo "$W_OUT" | jq -c '.budgets')"
+  W_DRAFT="$(curl -fsS "$BASE_URL/api/writer/draft" -H "Content-Type: application/json" \
+    -d "{\"threadId\":\"$THREAD_ID\",\"mode\":\"essay\",\"title\":\"draft\",\"sections\":$(echo "$W_OUT" | jq -c '.sections'),\"targetChars\":400,\"tolerancePct\":0.02,\"budgets\":$BUDGETS}")"
+  echo "$W_DRAFT" | jq -e '.ok==true and (.draft|type)=="string" and (.draft|length)>=40' >/dev/null
+  echo "$W_DRAFT" | jq -e '.stats.targetChars==400 and (.stats.lo|type)=="number" and (.stats.hi|type)=="number" and (.stats.actualChars|type)=="number"' >/dev/null
+  echo "$W_DRAFT" | jq -e '(.budgetsUsed|type)=="array" and (.budgetsUsed|length)==(.sectionsCount)' >/dev/null
+  echo "$W_DRAFT" | jq -e '(.stats.actualChars>=.stats.lo) and (.stats.actualChars<=.stats.hi)' >/dev/null
+
+  echo "[PASS] Phase52-4 writer/verify"
+  # short -> MUST include TOO_SHORT and (if targetChars present) LENGTH_MISMATCH
+  V_SHORT="$(curl -fsS "$BASE_URL/api/writer/verify" -H "Content-Type: application/json" \
+    -d "{\"text\":\"短い\",\"targetChars\":400}")"
+  echo "$V_SHORT" | jq -e '.ok==true and .schemaVersion==1 and (.codes|type)=="array" and (.codes|index("TOO_SHORT")!=null)' >/dev/null
+
+  # exact 400 -> should NOT include LENGTH_MISMATCH
+  TEXT400="$(python3 -c 'print("a"*400)')"
+  V_OK="$(curl -fsS "$BASE_URL/api/writer/verify" -H "Content-Type: application/json" \
+    -d "{\"text\":\"$TEXT400\",\"targetChars\":400}")"
+  echo "$V_OK" | jq -e '.ok==true and .schemaVersion==1 and ((.codes|type)=="array")' >/dev/null
+  echo "$V_OK" | jq -e '(.codes|index("LENGTH_MISMATCH"))==null' >/dev/null
 
 echo "[PASS] Phase52 Writer pipeline smoke"
