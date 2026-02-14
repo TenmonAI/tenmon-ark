@@ -519,7 +519,33 @@ const pid = process.pid;
         }
       } catch {
         if (typeof (ku as any).appliedSeedsCount !== "number") (ku as any).appliedSeedsCount = 0;
-      }
+      }      // C1_LLM_PLAN_V0: deterministic planning only (NO LLM call)
+      try {
+        const q = String(payload?.rawMessage || "");
+        const wantsDetailQ = /#詳細/.test(q);
+        const hasEvidence =
+          !!(payload && (payload as any).evidence) ||
+          (Array.isArray((payload as any)?.detailPlan?.evidenceIds) && (payload as any).detailPlan.evidenceIds.length > 0);
+
+        // IMPORTANT: keep the union wide so TS won't narrow unintentionally
+        let intent: "structure" | "expand" | "answer" | "rewrite" = "answer";
+
+        if (wantsDetailQ && !hasEvidence) intent = "structure";
+        else if (wantsDetailQ && hasEvidence) intent = "answer";
+        else if (q.length > 180) intent = "structure";
+        else intent = "expand";
+
+        let provider: "gpt" | "gemini" = "gemini";
+        if (intent === "structure") provider = "gpt";
+        else if (intent === "expand") provider = "gemini";
+        else provider = hasEvidence ? "gpt" : "gemini";
+
+        (ku as any).llmProviderPlanned = provider;
+        (ku as any).llmIntentPlanned = intent;
+
+      } catch {}
+
+
 
 // MK0_MERGE_KU_V1: preserve observability keys while setting learnedRulesAvailable/Used
       df.ku = {
