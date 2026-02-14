@@ -210,8 +210,12 @@ writerDraftRouter.post("/writer/refine", (req: Request, res: Response) => {
       if (len >= lo && len <= hi) break;
 
       if (len < lo) {
-        // add safe filler (deterministic)
-        draft += "\n" + safeFillerLine("refine", false);
+        // add safe filler (deterministic): fill in one shot
+        const shortfall = lo - len;
+        const line = "\n" + safeFillerLine("refine", false);
+        const per = Math.max(1, line.length);
+        const needLines = Math.min(2000, Math.ceil(shortfall / per));
+        draft += line.repeat(needLines);
       } else if (len > hi) {
         // trim from end only
         draft = draft.slice(0, hi);
