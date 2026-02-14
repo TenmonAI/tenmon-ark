@@ -112,13 +112,17 @@ writerDraftRouter.post("/writer/draft", (req: Request, res: Response) => {
       return arr;
     })();
 
-    let draft = `# ${title}\nmode: ${mode}\n`;
+    const sectionStats: { idx: number; heading: string; targetChars: number; actualChars: number; delta: number }[] = [];
+
+let draft = `# ${title}\nmode: ${mode}\n`;
 
     for (let i = 0; i < sections.length; i++) {
       const sec = sections[i] ?? {};
       const h = (s(sec.heading) || "節").trim();
       const g = (s(sec.goal) || "").trim();
       const needEv = !!sec.evidenceRequired;
+
+      const _startLen = draft.length;
 
       draft += `\n## ${h}\n`;
       if (g) draft += `目的: ${g}\n`;
@@ -137,6 +141,11 @@ writerDraftRouter.post("/writer/draft", (req: Request, res: Response) => {
 
       const secTarget = perTargets[i] ?? 200;
       draft += "\n" + buildSectionBody(secTarget, h, needEv) + "\n";
+
+      const _endLen = draft.length;
+      const _actual = Math.max(0, _endLen - _startLen);
+      const _target = secTarget;
+      sectionStats.push({ idx: i, heading: h, targetChars: _target, actualChars: _actual, delta: _actual - _target });
     }
 
     // 全体を targetChars に収束（±tolerance）
@@ -162,6 +171,7 @@ writerDraftRouter.post("/writer/draft", (req: Request, res: Response) => {
       draft,
       stats: { targetChars, actualChars, tolerancePct, lo, hi },
       budgetsUsed: perTargets,
+        sectionStats,
     });
   } catch (e: any) {
     return res.status(500).json({ ok: false, error: String(e?.message ?? e) });
