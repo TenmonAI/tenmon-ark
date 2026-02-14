@@ -1054,3 +1054,17 @@ echo "$MK4_JSON" | jq -e '
 ' >/dev/null
 
 echo "[PASS] Phase58 MK4 seeds visibility gate"
+
+# [59] Phase59 MK5 WRITER_SEED chainOrder gate
+echo "[59] Phase59 MK5 WRITER_SEED chainOrder gate"
+MK5_JSON="$(curl -fsS -X POST "$BASE_URL/api/chat" \
+  -H 'Content-Type: application/json' \
+  -d '{"threadId":"k1-smoke","message":"#詳細 K2 seed の骨格を呼び戻して要点だけ"}')"
+
+echo "$MK5_JSON" | jq -e '
+  (.decisionFrame.ku.appliedSeedsCount | tonumber) >= 1
+  and ((.decisionFrame.ku.memoryMarks // []) | index("K2") != null)
+  and ((.decisionFrame.detailPlan.chainOrder // []) | index("WRITER_SEED") != null)
+' >/dev/null
+
+echo "[PASS] Phase59 MK5 WRITER_SEED chainOrder gate"

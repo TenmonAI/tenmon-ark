@@ -352,6 +352,13 @@ const pid = process.pid;
             // put first (avoid dup)
             const exists = payload.candidates.some((c: any) => String(c?.seedId || "") == String(row.seedId));
             if (!exists) payload.candidates.unshift(cand as any);
+            // MK5_CHAINORDER_SEED_V1: mark seed usage in detailPlan.chainOrder (deterministic)
+            try {
+              const dp: any = (payload as any).detailPlan;
+              if (dp && Array.isArray(dp.chainOrder)) {
+                if (!dp.chainOrder.includes("WRITER_SEED")) dp.chainOrder.push("WRITER_SEED");
+              }
+            } catch {}
             // observability
             (ku as any).appliedSeedsCount = 1;
             const marks = Array.isArray((ku as any).memoryMarks) ? (ku as any).memoryMarks : [];
