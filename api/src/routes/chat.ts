@@ -339,7 +339,7 @@ const pid = process.pid;
       const rules = listRules(sessionKey);
       // MK3_SEED_RECALL_V1: if writer seeds exist for this thread, expose as candidate + observability (DET)
       try {
-        const tId = String(payload?.threadId || "" || "");
+        const tId = String((payload && (payload as any).threadId) || threadId || "");
         const q = String(payload?.rawMessage || "");
         const wantsSeed = /#詳細/.test(q) && /(K2|骨格|seed|WRITER)/i.test(q);
         if (wantsSeed) {
@@ -468,7 +468,30 @@ const pid = process.pid;
 
 
 
-      // MK0_MERGE_KU_V1: preserve observability keys while setting learnedRulesAvailable/Used
+      
+      // MK4_ALWAYS_SEEDSCOUNT_V1: always expose appliedSeedsCount from kokuzo_seeds (deterministic)
+      try {
+        const tId2 = String((payload && (payload as any).threadId) || threadId || "");
+        if (tId2) {
+          const row = dbPrepare("kokuzo", "SELECT COUNT(*) AS cnt FROM kokuzo_seeds WHERE threadId = ?").get(tId2) as any;
+          const cntRaw = row ? (row as any).cnt : 0;
+          const n2 = (typeof cntRaw === "number" ? cntRaw : parseInt(String(cntRaw || "0"), 10)) || 0;
+          (ku as any).appliedSeedsCount = n2;
+
+          try {
+            const mm = Array.isArray((ku as any).memoryMarks) ? (ku as any).memoryMarks : [];
+            const next = mm.slice(0);
+            if (n2 > 0 && !next.includes("K2")) next.push("K2");
+            (ku as any).memoryMarks = next;
+          } catch {}
+        } else {
+          if (typeof (ku as any).appliedSeedsCount !== "number") (ku as any).appliedSeedsCount = 0;
+        }
+      } catch {
+        if (typeof (ku as any).appliedSeedsCount !== "number") (ku as any).appliedSeedsCount = 0;
+      }
+
+// MK0_MERGE_KU_V1: preserve observability keys while setting learnedRulesAvailable/Used
       df.ku = {
         ...(ku as any),
         learnedRulesAvailable: (typeof (ku as any).learnedRulesAvailable === "number" ? (ku as any).learnedRulesAvailable : available),
