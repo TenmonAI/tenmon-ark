@@ -804,7 +804,7 @@ echo "[52] Phase52 Writer pipeline smoke"
   echo "$R_AN" | jq -e '.inc==(.inconsistencies|length) and .undef==(.undefinedTerms|length) and .dep==(.dependencies|length)' >/dev/null
 
   echo "[PASS] Phase52-2 writer/outline"
-  W_OUT="$(curl -fsS "$BASE_URL/api/writer/outline" -H "Content-Type: application/json" \
+  W_OUT="$(timeout 20 curl -fsS --connect-timeout 2 -m 15 "$BASE_URL/api/writer/outline" -H "Content-Type: application/json" \
     -d "{\"threadId\":\"$THREAD_ID\",\"mode\":\"essay\",\"topic\":\"$TEXT_IN\",\"targetChars\":800}")"
   echo "$W_OUT" | jq -e '.ok==true and (.sections|type)=="array" and (.sectionsCount|type)=="number" and .sectionsCount==(.sections|length)' >/dev/null
   echo "$W_OUT" | jq -e '(.budgets|type)=="array" and (.budgetsCount|type)=="number" and .budgetsCount==(.budgets|length) and .budgetsCount==.sectionsCount' >/dev/null
@@ -874,7 +874,7 @@ echo "[54] Phase54 writer sectionStats contract gate (W8-3)"
 THREAD_ID="rep"
 TEXT_IN="テストです。根拠は必要です。"
 
-W_OUT="$(curl -fsS "$BASE_URL/api/writer/outline" -H "Content-Type: application/json" \
+W_OUT="$(timeout 20 curl -fsS --connect-timeout 2 -m 15 "$BASE_URL/api/writer/outline" -H "Content-Type: application/json" \
   -d "{\"threadId\":\"$THREAD_ID\",\"mode\":\"essay\",\"topic\":\"$TEXT_IN\",\"targetChars\":800}")"
 
 BUDGETS="$(echo "$W_OUT" | jq -c '.budgets')"
