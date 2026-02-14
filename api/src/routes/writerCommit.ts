@@ -18,6 +18,10 @@ writerCommitRouter.post("/writer/commit", (req: Request, res: Response) => {
 
     const db = getDb("kokuzo");
 
+    // K2_2_SEEDID_UNIQUE_V1: ensure seedId uniqueness (best-effort)
+    try { db.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_kokuzo_seeds_seedId ON kokuzo_seeds(seedId)"); } catch {}
+
+
     // 1) pick runId
     let runId = runIdIn;
     if (!runId) {
@@ -42,7 +46,7 @@ writerCommitRouter.post("/writer/commit", (req: Request, res: Response) => {
     // existing table has NOT NULL essence. We'll set:
     // - essence = short title
     // - ruleset = JSON text (optional)
-    const seedId = `WRITER:${threadId || runId}:${Date.now()}`;
+    const seedId = `WRITER:${runId}`;
     const rowId = randomUUID();
     const title = body.title ? s(body.title).trim() : "WRITER_COMMIT";
     const kind = body.kind ? s(body.kind).trim() : "WRITER_RUN";
@@ -65,7 +69,15 @@ writerCommitRouter.post("/writer/commit", (req: Request, res: Response) => {
         'chat', 0,
         ?, ?,
         ?, ?, ?, ?, ?, ?, datetime('now')
-      )`
+      )
+      ON CONFLICT(seedId) DO UPDATE SET
+        threadId=excluded.threadId,
+        kind=excluded.kind,
+        title=excluded.title,
+        content=excluded.content,
+        ruleset=excluded.ruleset,
+        evidenceIds=excluded.evidenceIds,
+        createdAt=datetime('now')`
     ).run(title, ruleset, seedId, threadId || null, kind, title, content, evidenceIds);
 return res.json({ ok: true, seedId, runId, artifactsCount: artifacts.length });
   } catch (e: any) {
