@@ -867,3 +867,34 @@ echo "$REF_OUT" | jq -e '
 ' >/dev/null
 
 echo "[PASS] Phase53 writer/refine contract-strong gate"
+
+echo "[54] Phase54 writer sectionStats contract gate (W8-3)"
+
+# まず draft を作る（sections + budgets を使って targetChars を明示）
+THREAD_ID="rep"
+TEXT_IN="テストです。根拠は必要です。"
+
+W_OUT="$(curl -fsS "$BASE_URL/api/writer/outline" -H "Content-Type: application/json" \
+  -d "{\"threadId\":\"$THREAD_ID\",\"mode\":\"essay\",\"topic\":\"$TEXT_IN\",\"targetChars\":800}")"
+
+BUDGETS="$(echo "$W_OUT" | jq -c '.budgets')"
+SECTIONS="$(echo "$W_OUT" | jq -c '.sections')"
+
+W_DRAFT="$(curl -fsS "$BASE_URL/api/writer/draft" -H "Content-Type: application/json" \
+  -d "{\"threadId\":\"$THREAD_ID\",\"mode\":\"essay\",\"title\":\"draft\",\"sections\":$SECTIONS,\"targetChars\":400,\"tolerancePct\":0.02,\"budgets\":$BUDGETS}")"
+
+# sectionStats が存在するなら契約化（無いなら FAILして実装へ進む）
+echo "$W_DRAFT" | jq -e 'has("sectionStats") and (.sectionStats|type)=="array"' >/dev/null
+echo "$W_DRAFT" | jq -e '(.sectionsCount|type)=="number" and (.sectionStats|length)==(.sectionsCount)' >/dev/null
+
+# 各要素の最低キー（title/target/actual/delta）
+echo "$W_DRAFT" | jq -e '
+  .sectionStats|all(
+    (has("sectionTitle") and (.sectionTitle|type)=="string") and
+    (has("targetChars") and (.targetChars|type)=="number") and
+    (has("actualChars") and (.actualChars|type)=="number") and
+    (has("deltaChars") and (.deltaChars|type)=="number")
+  )
+' >/dev/null
+
+echo "[PASS] Phase54 writer sectionStats contract gate"
