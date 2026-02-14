@@ -442,7 +442,28 @@ const pid = process.pid;
         }
       } catch {
         if (typeof (ku as any).appliedSeedsCount !== "number") (ku as any).appliedSeedsCount = 0;
+      }      // MK4_SEED_COUNT_ALWAYS_V1: always count kokuzo_seeds for this thread (sync, deterministic)
+      try {
+        const tId = String(payload?.threadId ?? "");
+        if (tId) {
+          const row: any = dbPrepare("kokuzo", "SELECT COUNT(*) AS cnt FROM kokuzo_seeds WHERE threadId = ?").get(tId);
+          const cntRaw = row ? (row as any).cnt : 0;
+          const n = (typeof cntRaw === "number" ? cntRaw : parseInt(String(cntRaw || "0"), 10)) || 0;
+          (ku as any).appliedSeedsCount = n;
+
+          // memoryMarks: add K2 if any seeds exist
+          const marks = Array.isArray((ku as any).memoryMarks) ? (ku as any).memoryMarks : [];
+          const next = marks.slice(0);
+          if (n > 0 && !next.includes("K2")) next.push("K2");
+          (ku as any).memoryMarks = next;
+        } else {
+          if (typeof (ku as any).appliedSeedsCount !== "number") (ku as any).appliedSeedsCount = 0;
+        }
+      } catch {
+        if (typeof (ku as any).appliedSeedsCount !== "number") (ku as any).appliedSeedsCount = 0;
       }
+
+
 
 
 
