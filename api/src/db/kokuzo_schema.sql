@@ -119,3 +119,27 @@ CREATE TABLE IF NOT EXISTS kokuzo_algorithms (
 
 CREATE INDEX IF NOT EXISTS idx_kokuzo_algorithms_threadId ON kokuzo_algorithms(threadId);
 CREATE INDEX IF NOT EXISTS idx_kokuzo_algorithms_createdAt ON kokuzo_algorithms(createdAt);
+
+-- writer runs/artifacts (K1)
+CREATE TABLE IF NOT EXISTS writer_runs (
+  id TEXT PRIMARY KEY,
+  threadId TEXT NOT NULL,
+  mode TEXT,
+  title TEXT,
+  targetChars INTEGER,
+  tolerancePct REAL,
+  createdAt TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS writer_artifacts (
+  id TEXT PRIMARY KEY,
+  runId TEXT NOT NULL,
+  kind TEXT NOT NULL,
+  content TEXT NOT NULL,
+  proofJson TEXT NOT NULL DEFAULT '{}',
+  createdAt TEXT NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY(runId) REFERENCES writer_runs(id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_writer_runs_threadId ON writer_runs(threadId);
+CREATE INDEX IF NOT EXISTS idx_writer_artifacts_runId ON writer_artifacts(runId);
