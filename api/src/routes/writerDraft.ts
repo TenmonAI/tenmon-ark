@@ -2,6 +2,21 @@ import { Router, type Request, type Response } from "express";
 
 export const writerDraftRouter = Router();
 
+
+// SECTIONSTATS_NORMALIZE_V1: ensure backward+forward compatible keys
+function normalizeSectionStats(stats: any): any {
+  if (!Array.isArray(stats)) return stats;
+  return stats.map((x: any) => {
+    if (!x || typeof x !== "object") return x;
+    const heading = typeof x.heading === "string" ? x.heading : (typeof x.sectionTitle === "string" ? x.sectionTitle : "");
+    const delta = typeof x.delta === "number" ? x.delta : (typeof x.deltaChars === "number" ? x.deltaChars : null);
+    const out: any = { ...x };
+    if (!out.sectionTitle && heading) out.sectionTitle = heading; // required by Phase54
+    if (typeof out.deltaChars !== "number" && typeof delta === "number") out.deltaChars = delta; // required by Phase54
+    // keep old keys if present; do not delete
+    return out;
+  });
+}
 type OutlineSection = {
   heading?: string;
   goal?: string;
@@ -112,6 +127,8 @@ writerDraftRouter.post("/writer/draft", (req: Request, res: Response) => {
       return arr;
     })();
 
+    // SECTIONSTATS_NORMALIZE_V1
+    sectionStats = normalizeSectionStats(sectionStats);
     const sectionStats: { idx: number; heading: string; targetChars: number; actualChars: number; delta: number }[] = [];
 
 let draft = `# ${title}\nmode: ${mode}\n`;
