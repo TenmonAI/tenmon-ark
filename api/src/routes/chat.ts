@@ -337,6 +337,34 @@ const pid = process.pid;
       const mSid = String(payload?.rawMessage || "").match(/\bsession_id\s*=\s*([A-Za-z0-9_]+)/);
       const sessionKey = (mSid && mSid[1]) ? String(mSid[1]) : String(payload.threadId || "");
       const rules = listRules(sessionKey);
+
+      // MK0_OBSERVABILITY_V1: deterministic observability (no body change)
+      try {
+        const usedArr = Array.isArray((ku as any).learnedRulesUsed) ? (ku as any).learnedRulesUsed : [];
+        (ku as any).appliedRulesCount = usedArr.length;
+      } catch {
+        (ku as any).appliedRulesCount = 0;
+      }
+      (ku as any).appliedSeedsCount = 0;
+
+      try {
+        const co =
+          payload && payload.detailPlan && Array.isArray(payload.detailPlan.chainOrder)
+            ? payload.detailPlan.chainOrder
+            : [];
+        (ku as any).recallUsed = co.includes("KOKUZO_RECALL");
+      } catch {
+        (ku as any).recallUsed = false;
+      }
+
+      try {
+        const marks: string[] = [];
+        if (((ku as any).appliedRulesCount || 0) > 0) marks.push("M6");
+        if ((ku as any).recallUsed) marks.push("KOKUZO_RECALL");
+        (ku as any).memoryMarks = marks;
+      } catch {
+        (ku as any).memoryMarks = [];
+      }
         // M6-B1_USED_ONE_RULE_V1: mark first rule as "used" (ku-only, no body change)
         try {
           if (Array.isArray(rules) && rules.length > 0) {
