@@ -834,3 +834,17 @@ echo "[52] Phase52 Writer pipeline smoke"
   echo "$V_OK" | jq -e '(.codes|index("LENGTH_MISMATCH"))==null' >/dev/null
 
 echo "[PASS] Phase52 Writer pipeline smoke"
+
+echo "[53] Phase53 writer/refine smoke (W8 contract-lite)"
+REF_IN='{"threadId":"rep","mode":"essay","draft":"短い","targetChars":400,"tolerancePct":0.02,"maxRefineLoops":3}'
+REF_OUT="$(curl -fsS "$BASE_URL/api/writer/refine" -H "Content-Type: application/json" -d "$REF_IN")"
+
+# minimal contract (only things we know exist)
+echo "$REF_OUT" | jq -e '.ok==true and .schemaVersion==1' >/dev/null
+echo "$REF_OUT" | jq -e '(.refineLoopsUsed|type)=="number" and .refineLoopsUsed>=0 and .refineLoopsUsed<=3' >/dev/null
+echo "$REF_OUT" | jq -e '(.draft|type)=="string" and (.draft|length)>=200' >/dev/null
+
+# warnings is optional but if present must be array
+echo "$REF_OUT" | jq -e '((has("warnings")|not) or ((.warnings|type)=="array"))' >/dev/null
+
+echo "[PASS] Phase53 writer/refine smoke"
