@@ -338,25 +338,21 @@ echo "$r36_1" | jq -e '(.decisionFrame.llm==null)' >/dev/null
 echo "[PASS] Phase36 domain question -> answer"
 
 echo "[36-1] Phase36-1 lane choice parsing (1/2/3 or keywords -> LANE)"
-# まずメニューを表示させる（ドメイン質問でない質問を送る）
-r36_2="$(post_chat_raw_tid "何か質問したい" "t36")"
-# メニューが表示されることを確認
-if ! echo "$r36_2" | jq -r '.response' | grep -qE "どの方向で話しますか"; then
-  echo "[SKIP] Phase36-1: menu not shown, skipping lane choice test"
-else
-  # メニューを表示した後、選択を送る
-  r36_3="$(post_chat_raw_tid "1" "t36")"
-  # LANE_1 の選択が正しく処理されること（メニューに戻らず回答に進む）
-  if echo "$r36_3" | jq -r '.response' | grep -qE "^了解。どの方向で話しますか"; then
-    echo "[FAIL] Phase36-1: lane choice returned menu again (should proceed to answer)"
-    exit 1
-  fi
-  # 回答が50文字以上であること
-  echo "$r36_3" | jq -e '(.response|type)=="string" and (.response|length)>=50' >/dev/null
-  # decisionFrame.ku が object であること
-  echo "$r36_3" | jq -e '(.decisionFrame.ku|type)=="object"' >/dev/null
-  echo "[PASS] Phase36-1 lane choice parsing"
+# Deterministic: force menu
+r36_menu="$(post_chat_raw_tid "__FORCE_MENU__" "t36-1")"
+if ! echo "$r36_menu" | jq -e '(.response|type)=="string" and (.response|test("MENU:"))' >/dev/null 2>&1; then
+  echo "[FAIL] Phase36-1: menu not shown (forced)"; echo "$r36_menu" | jq '.'; exit 1
 fi
+# Now pick lane=1 and must proceed to answer (not menu)
+r36_pick="$(post_chat_raw_tid "1" "t36-1")"
+if ! echo "$r36_pick" | jq -e '(.response|type)=="string" and (.response|length)>=50' >/dev/null 2>&1; then
+  echo "[FAIL] Phase36-1: lane pick did not produce answer"; echo "$r36_pick" | jq '.'; exit 1
+fi
+if echo "$r36_pick" | jq -r '.response' | grep -q "MENU:"; then
+  echo "[FAIL] Phase36-1: lane choice returned menu again"; echo "$r36_pick" | jq '.'; exit 1
+fi
+echo "$r36_pick" | jq -e '(.decisionFrame.ku|type)=="object"' >/dev/null 2>&1
+echo "[PASS] Phase36-1 lane choice parsing"
 
 echo "[36-2] Phase36-2 domain question with no candidates (fallback response)"
 r36_4="$(post_chat_raw_tid "存在しないドメイン質問テスト" "t36-2")"

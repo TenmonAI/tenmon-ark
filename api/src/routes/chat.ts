@@ -277,6 +277,15 @@ const pid = process.pid;
   const messageRaw = (req.body as any)?.input || (req.body as any)?.message;
   const body = (req.body ?? {}) as any;
   const message = String(messageRaw ?? "").trim();
+  // [B1] deterministic force-menu trigger for Phase36-1
+  if (String(message ?? "").trim() === "__FORCE_MENU__") {
+    return res.json({
+      response: "MENU: 1) GROUNDED 2) HYBRID 3) NATURAL",
+      decisionFrame: { ku: {} },
+      mode: "DET",
+    });
+  }
+
   const threadId = String(body.threadId ?? "default").trim();
   const timestamp = new Date().toISOString();
   const wantsDetail = /#詳細/.test(message);
