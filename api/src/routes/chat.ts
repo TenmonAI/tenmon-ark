@@ -387,6 +387,17 @@ const pid = process.pid;
             const ok = (used0.id && used0.id.length > 0) || (used0.title && used0.title.length > 0);
             if (ok) {
               (ku as any).learnedRulesUsed = [used0];
+              // MK0_FINALIZE_V1: compute observability after learnedRulesUsed is set
+              try {
+                const usedArr2 = Array.isArray((ku as any).learnedRulesUsed) ? (ku as any).learnedRulesUsed : [];
+                (ku as any).appliedRulesCount = usedArr2.length;
+                if (typeof (ku as any).appliedSeedsCount !== "number") (ku as any).appliedSeedsCount = 0;
+
+                const marks2: string[] = [];
+                if (usedArr2.length > 0) marks2.push("M6");
+                if ((ku as any).recallUsed) marks2.push("KOKUZO_RECALL");
+                (ku as any).memoryMarks = marks2;
+              } catch {}
             }
           }
         } catch {}
@@ -394,11 +405,13 @@ const pid = process.pid;
         if (Array.isArray(rules)) available = rules.length;
       } catch {}
       const used = Array.isArray(ku.learnedRulesUsed) ? ku.learnedRulesUsed : [];
+      // MK0_MERGE_KU_V1: preserve observability keys while setting learnedRulesAvailable/Used
       df.ku = {
-        ...ku,
-        learnedRulesAvailable: typeof ku.learnedRulesAvailable === "number" ? ku.learnedRulesAvailable : available,
+        ...(ku as any),
+        learnedRulesAvailable: (typeof (ku as any).learnedRulesAvailable === "number" ? (ku as any).learnedRulesAvailable : available),
         learnedRulesUsed: used,
-      };
+      } as any;
+
       payload.decisionFrame = df;
     }
   } catch {}
