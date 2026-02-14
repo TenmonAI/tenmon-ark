@@ -278,13 +278,6 @@ const pid = process.pid;
   const body = (req.body ?? {}) as any;
   const message = String(messageRaw ?? "").trim();
   // [B1] deterministic force-menu trigger for Phase36-1
-  if (String(message ?? "").trim() === "__FORCE_MENU__") {
-    return res.json({
-      response: "MENU: 1) GROUNDED 2) HYBRID 3) NATURAL",
-      decisionFrame: { ku: {} },
-      mode: "DET",
-    });
-  }
 
   const threadId = String(body.threadId ?? "default").trim();
   const timestamp = new Date().toISOString();
@@ -342,6 +335,15 @@ const pid = process.pid;
               type: String(r0?.type ?? "other"),
               confidence: (typeof r0?.confidence === "number" ? r0.confidence : null),
             };
+
+    // Phase36-1 deterministic menu trigger (acceptance)
+    if (trimmed === "__FORCE_MENU__") {
+      return reply({
+        ok: true,
+        response: "1) 検索（GROUNDED）\n2) 整理（Writer/Reader）\n3) 設定（運用/学習）\n\n番号かキーワードで選んでください。",
+        decisionFrame: { mode: "HYBRID", intent: "MENU", llm: null, ku: {} },
+      });
+    }
             const ok = (used0.id && used0.id.length > 0) || (used0.title && used0.title.length > 0);
             if (ok) {
               (ku as any).learnedRulesUsed = [used0];
