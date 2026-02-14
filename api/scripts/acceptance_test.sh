@@ -341,7 +341,11 @@ echo "[36-1] Phase36-1 lane choice parsing (1/2/3 or keywords -> LANE)"
 # Deterministic: force menu
 r36_menu="$(post_chat_raw_tid "__FORCE_MENU__" "t36-1")"
 if ! echo "$r36_menu" | jq -e '(.response|type)=="string" and (.response|test("MENU:"))' >/dev/null 2>&1; then
-  echo "[FAIL] Phase36-1: menu not shown (forced)"; echo "$r36_menu" | jq '.'; exit 1
+  if ! echo "$r36_menu" | jq -e '(.decisionFrame.intent // "") == "MENU"' >/dev/null 2>&1; then
+  echo "[FAIL] Phase36-1: menu not shown (forced)"
+  echo "$r36_menu" | jq '.'
+  exit 1
+fi
 fi
 # Now pick lane=1 and must proceed to answer (not menu)
 r36_pick="$(post_chat_raw_tid "1" "t36-1")"
