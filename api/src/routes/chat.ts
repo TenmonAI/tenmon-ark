@@ -404,7 +404,26 @@ const pid = process.pid;
 
         if (Array.isArray(rules)) available = rules.length;
       } catch {}
-      const used = Array.isArray(ku.learnedRulesUsed) ? ku.learnedRulesUsed : [];
+      const used = Array.isArray(ku.learnedRulesUsed) ? ku.learnedRulesUsed : [];      // MK4_SEED_VISIBILITY_V1: count seeds for this thread (deterministic, sync, safe)
+      try {
+        // dbPrepare is already available in this module (used elsewhere)
+        const row = (dbPrepare as any)("kokuzo",
+          "SELECT COUNT(*) AS cnt FROM kokuzo_seeds WHERE threadId = ?"
+        ).get(String(payload.threadId || ""));
+        const cntRaw = row ? (row as any).cnt : 0;
+        const n = (typeof cntRaw === "number" ? cntRaw : parseInt(String(cntRaw || "0"), 10)) || 0;
+        (ku as any).appliedSeedsCount = n;
+
+        try {
+          const mm = Array.isArray((ku as any).memoryMarks) ? (ku as any).memoryMarks : [];
+          const next = mm.slice(0);
+          if (n > 0 && !next.includes("K2")) next.push("K2");
+          (ku as any).memoryMarks = next;
+        } catch {}
+      } catch {
+        if (typeof (ku as any).appliedSeedsCount !== "number") (ku as any).appliedSeedsCount = 0;
+      }
+
       // MK0_MERGE_KU_V1: preserve observability keys while setting learnedRulesAvailable/Used
       df.ku = {
         ...(ku as any),
