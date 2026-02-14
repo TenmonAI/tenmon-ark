@@ -1005,3 +1005,24 @@ if [ "${N56:-0}" -lt 1 ]; then
 fi
 
 echo "[PASS] Phase56 K2 writer/commit -> kokuzo_seeds gate"
+
+
+echo "[57] Phase57 df.detailPlan mirror gate (MK3)"
+# 直近の #詳細 で detailPlan が返る応答を叩き、decisionFrame.detailPlan が存在することを契約化
+T57="t57-mk3-$(date +%s)"
+R57="$(post_chat_raw_tid "#詳細 前回のK2骨格を3点で" "$T57")"
+
+# top-level に detailPlan がある前提（無ければ FAIL。ここで仕様が揺れたことを即検知）
+echo "$R57" | jq -e 'has("detailPlan") and (.detailPlan|type)=="object"' >/dev/null \
+  || { echo "[FAIL] Phase57: top-level detailPlan missing"; echo "$R57" | jq '.'; exit 1; }
+
+# decisionFrame.detailPlan が存在することを契約化
+echo "$R57" | jq -e '(.decisionFrame|type)=="object" and (.decisionFrame.detailPlan|type)=="object"' >/dev/null \
+  || { echo "[FAIL] Phase57: decisionFrame.detailPlan missing"; echo "$R57" | jq '.'; exit 1; }
+
+# chainOrder が一致していること（完全一致までは縛らず、少なくとも配列であること）
+echo "$R57" | jq -e '(.detailPlan.chainOrder|type)=="array" and (.decisionFrame.detailPlan.chainOrder|type)=="array"' >/dev/null \
+  || { echo "[FAIL] Phase57: chainOrder missing"; echo "$R57" | jq '.'; exit 1; }
+
+echo "[PASS] Phase57 df.detailPlan mirror gate"
+
