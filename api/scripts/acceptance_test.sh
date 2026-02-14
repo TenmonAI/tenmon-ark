@@ -898,3 +898,61 @@ echo "$W_DRAFT" | jq -e '
 ' >/dev/null
 
 echo "[PASS] Phase54 writer sectionStats contract gate"
+
+echo "[55] Phase55 M6 training ingest -> chat visibility gate"
+
+S55="$(curl -fsS -X POST "$BASE_URL/api/training/session" -H "Content-Type: application/json" -d '{"threadId":"m6-acc","title":"m6 gate"}')"
+SID55="$(echo "$S55" | jq -r '.session.id // ""')"
+if [ -z "$SID55" ] || [ "$SID55" = "null" ]; then
+  echo "[FAIL] Phase55: session id missing"
+  echo "$S55" | jq '.'
+  exit 1
+fi
+
+D55="/tmp/m6_dump_${SID55}.txt"
+cat > "$D55" <<'DUMP'
+[SESSION_TITLE]
+M6_gate
+
+[CONTEXT]
+目的: 即時学習が次の会話から効くことを機械確認
+禁止: 根拠無しの断言
+
+[LOG]
+User: 次からは断言を避け、根拠か条件を添える。
+Assistant: 了解。以後、根拠または条件を添える。
+
+[RULE_CANDIDATES]
+- ルール: 断言するときは必ず根拠または条件を添える
+- 禁止: 根拠無しの断言
+DUMP
+
+P55="$(jq -n --arg session_id "$SID55" --rawfile dump_text "$D55" '{session_id:$session_id, dump_text:$dump_text}')"
+ING55="$(curl -fsS -X POST "$BASE_URL/api/training/ingest" -H "Content-Type: application/json" -d "$P55")"
+if ! echo "$ING55" | jq -e '.success==true and (.rulesCount|type)=="number" and .rulesCount>=1' >/dev/null 2>&1; then
+  echo "[FAIL] Phase55: ingest failed"
+  echo "$ING55" | jq '.'
+  exit 1
+fi
+
+R55="$(curl -fsS "$BASE_URL/api/training/rules?session_id=$SID55")"
+if ! echo "$R55" | jq -e '.success==true and (.rules|type)=="array" and (.rules|length)>=1' >/dev/null 2>&1; then
+  echo "[FAIL] Phase55: rules not stored"
+  echo "$R55" | jq '.'
+  exit 1
+fi
+
+C55="$(curl -fsS -X POST "$BASE_URL/api/chat" -H "Content-Type: application/json" -d "{\"threadId\":\"m6-acc\",\"message\":\"session_id=$SID55 言霊とは？\"}")"
+if ! echo "$C55" | jq -e '(.decisionFrame.ku.learnedRulesAvailable|type)=="number" and .decisionFrame.ku.learnedRulesAvailable>=1' >/dev/null 2>&1; then
+  echo "[FAIL] Phase55: learnedRulesAvailable not reflected"
+  echo "$C55" | jq '.decisionFrame'
+  exit 1
+fi
+if ! echo "$C55" | jq -e '(.decisionFrame.ku.learnedRulesUsed|type)=="array" and (.decisionFrame.ku.learnedRulesUsed|length)>=1' >/dev/null 2>&1; then
+  echo "[FAIL] Phase55: learnedRulesUsed not set"
+  echo "$C55" | jq '.decisionFrame'
+  exit 1
+fi
+
+echo "[PASS] Phase55 M6 training ingest -> chat visibility gate"
+
