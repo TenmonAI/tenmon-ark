@@ -167,3 +167,84 @@ writerDraftRouter.post("/writer/draft", (req: Request, res: Response) => {
     return res.status(500).json({ ok: false, error: String(e?.message ?? e) });
   }
 });
+
+// --- W6-4: refine loop (deterministic) ---
+type RefineBody = {
+  threadId?: string;
+  draft?: string;
+  targetChars?: number;
+  tolerancePct?: number; // default 0.02
+  maxRefineLoops?: number; // default 3
+};
+
+function clamp01(x: number): number { return Math.max(0, Math.min(1, x)); }
+
+writerDraftRouter.post("/writer/refine", (req: Request, res: Response) => {
+  try {
+    const body = (req.body ?? {}) as RefineBody;
+
+    const threadId = s(body.threadId).trim();
+    if (!threadId) return res.status(400).json({ ok: false, error: "threadId required" });
+
+    let draft = String((body as any)?.draft ?? "");
+    if (!draft) return res.status(400).json({ ok: false, error: "draft required" });
+
+    const targetChars = n(body.targetChars) ?? draft.length; // fallback: keep length
+    const tolerancePct = clamp(n(body.tolerancePct) ?? 0.02, 0.0, 0.2);
+    const lo = Math.floor(targetChars * (1 - tolerancePct));
+    const hi = Math.ceil(targetChars * (1 + tolerancePct));
+    const maxLoops = clamp(Math.floor(n(body.maxRefineLoops) ?? 3), 0, 8);
+
+    const issuesBefore: string[] = [];
+    const issuesAfter: string[] = [];
+    const warnings: string[] = [];
+
+    const beforeLen = draft.length;
+    if (beforeLen < lo) issuesBefore.push("TOO_SHORT");
+    if (beforeLen > hi) issuesBefore.push("TOO_LONG");
+    if (beforeLen < lo || beforeLen > hi) issuesBefore.push("LENGTH_MISMATCH");
+
+    let loops = 0;
+    while (loops < maxLoops) {
+      const len = draft.length;
+      if (len >= lo && len <= hi) break;
+
+      if (len < lo) {
+        // add safe filler (deterministic)
+        draft += "\n" + safeFillerLine("refine", false);
+      } else if (len > hi) {
+        // trim from end only
+        draft = draft.slice(0, hi);
+      }
+      loops++;
+    }
+
+    const afterLen = draft.length;
+    const okLen = afterLen >= lo && afterLen <= hi;
+
+    if (!okLen) warnings.push("NOT_CONVERGED");
+
+    if (afterLen < lo) issuesAfter.push("TOO_SHORT");
+    if (afterLen > hi) issuesAfter.push("TOO_LONG");
+    if (!okLen) issuesAfter.push("LENGTH_MISMATCH");
+
+    // simple lengthScore: 1 if within range, else decreases by normalized distance
+    const dist = okLen ? 0 : Math.min(Math.abs(afterLen - lo), Math.abs(afterLen - hi));
+    const lengthScore = okLen ? 1 : clamp01(1 - dist / Math.max(1, targetChars));
+
+    return res.json({
+      ok: true,
+      schemaVersion: 1,
+      threadId,
+      refineLoopsUsed: loops,
+      draft,
+      stats: { targetChars, actualChars: afterLen, tolerancePct, lo, hi, lengthScore },
+      issuesBefore,
+      issuesAfter,
+      warnings,
+      modeTag: "DET",
+    });
+  } catch (e: any) {
+    return res.status(500).json({ ok: false, error: String(e?.message ?? e) });
+  }
+});
