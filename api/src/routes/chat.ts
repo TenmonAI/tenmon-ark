@@ -337,6 +337,34 @@ const pid = process.pid;
       const mSid = String(payload?.rawMessage || "").match(/\bsession_id\s*=\s*([A-Za-z0-9_]+)/);
       const sessionKey = (mSid && mSid[1]) ? String(mSid[1]) : String(payload.threadId || "");
       const rules = listRules(sessionKey);
+      // MK3_SEED_RECALL_V1: if writer seeds exist for this thread, expose as candidate + observability (DET)
+      try {
+        const tId = String(payload?.threadId || "" || "");
+        const q = String(payload?.rawMessage || "");
+        const wantsSeed = /#詳細/.test(q) && /(K2|骨格|seed|WRITER)/i.test(q);
+        if (wantsSeed) {
+          const row = dbPrepare("kokuzo", "SELECT seedId, title, content FROM kokuzo_seeds WHERE threadId = ? AND kind = 'WRITER_RUN' ORDER BY COALESCE(createdAt, created_at) DESC LIMIT 1").get(tId) as any;
+          if (row && row.seedId) {
+            const content = String(row.content || "");
+            const snippet = content ? content.slice(0, 240) : String(row.title || "");
+            const cand = { doc: "WRITER_SEED", pdfPage: 0, snippet, score: 999, tags: ["SEED"], seedId: String(row.seedId), kind: "WRITER_RUN" };
+            if (!payload.candidates || !Array.isArray(payload.candidates)) payload.candidates = [];
+            // put first (avoid dup)
+            const exists = payload.candidates.some((c: any) => String(c?.seedId || "") == String(row.seedId));
+            if (!exists) payload.candidates.unshift(cand as any);
+            // observability
+            (ku as any).appliedSeedsCount = 1;
+            const marks = Array.isArray((ku as any).memoryMarks) ? (ku as any).memoryMarks : [];
+            if (!marks.includes("K2")) marks.push("K2");
+            (ku as any).memoryMarks = marks;
+          } else {
+            if (typeof (ku as any).appliedSeedsCount !== "number") (ku as any).appliedSeedsCount = 0;
+          }
+        } else {
+          if (typeof (ku as any).appliedSeedsCount !== "number") (ku as any).appliedSeedsCount = 0;
+        }
+      } catch {}
+
       // M6-B1_USED_ONE_RULE_V1: mark first rule as "used" (ku-only, no body change)
         try {
           if (Array.isArray(rules) && rules.length > 0) {
