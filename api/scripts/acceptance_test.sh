@@ -1082,3 +1082,12 @@ echo "$MK6_JSON" | jq -e '
 ' >/dev/null
 
 echo "[PASS] Phase60 MK6 seed skeleton in response gate"
+
+
+echo "[61] Phase61 LLM router planning gate (ku.llmProviderPlanned/llmIntentPlanned)"
+OUT61="$(curl -fsS -X POST "$BASE_URL/api/chat" \
+  -H 'Content-Type: application/json' \
+  -d '{"threadId":"phase61","message":"#詳細 言灵とは何？"}')"
+echo "$OUT61" | jq -e '.decisionFrame.ku.llmProviderPlanned | type=="string"' >/dev/null
+echo "$OUT61" | jq -e '.decisionFrame.ku.llmIntentPlanned | type=="string"' >/dev/null
+echo "[PASS] Phase61 LLM router planning gate"
