@@ -359,6 +359,29 @@ const pid = process.pid;
                 if (!dp.chainOrder.includes("WRITER_SEED")) dp.chainOrder.push("WRITER_SEED");
               }
             } catch {}
+
+            // MK6_SEED_SUMMARY_V1: append deterministic 3-bullet seed skeleton to response (no LLM)
+            try {
+              if (payload && typeof payload.response === "string") {
+                const hdr = "【K2骨格】";
+                if (!payload.response.includes(hdr)) {
+                  const lines = String(content || "")
+                    .split(/\r?\n/)
+                    .map((x) => x.trim())
+                    .filter((x) => x && x.length >= 6)
+                    .slice(0, 3);
+
+                  const fallback = String(snippet || "").trim();
+                  const bullets = (lines.length ? lines : (fallback ? [fallback] : []))
+                    .slice(0, 3)
+                    .map((x) => "- " + x);
+
+                  if (bullets.length) {
+                    payload.response = payload.response + "\n\n" + hdr + "\n" + bullets.join("\n");
+                  }
+                }
+              }
+            } catch {}
             // observability
             (ku as any).appliedSeedsCount = 1;
             const marks = Array.isArray((ku as any).memoryMarks) ? (ku as any).memoryMarks : [];
