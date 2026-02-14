@@ -983,3 +983,25 @@ fi
 
 echo "[PASS] Phase55 M6 training ingest -> chat visibility gate"
 
+
+echo "[56] Phase56 K2 writer/commit -> kokuzo_seeds gate"
+
+C56="$(curl -fsS -X POST "$BASE_URL/api/writer/commit" \
+  -H "Content-Type: application/json" \
+  -d '{"threadId":"k1-smoke","title":"K2_gate","kind":"WRITER_RUN"}')"
+
+if ! echo "$C56" | jq -e '.ok==true and (.seedId|type)=="string" and (.seedId|length)>0' >/dev/null 2>&1; then
+  echo "[FAIL] Phase56: /api/writer/commit failed"
+  echo "$C56" | jq '.'
+  exit 1
+fi
+
+DB56="/opt/tenmon-ark-data/kokuzo.sqlite"
+N56="$(sqlite3 "$DB56" "SELECT COUNT(*) FROM kokuzo_seeds;")"
+if [ "${N56:-0}" -lt 1 ]; then
+  echo "[FAIL] Phase56: kokuzo_seeds count is still 0"
+  sqlite3 "$DB56" ".schema kokuzo_seeds" || true
+  exit 1
+fi
+
+echo "[PASS] Phase56 K2 writer/commit -> kokuzo_seeds gate"
