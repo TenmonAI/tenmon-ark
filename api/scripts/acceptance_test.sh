@@ -835,16 +835,35 @@ echo "[52] Phase52 Writer pipeline smoke"
 
 echo "[PASS] Phase52 Writer pipeline smoke"
 
-echo "[53] Phase53 writer/refine smoke (W8 contract-lite)"
+echo "[53] Phase53 writer/refine contract-strong gate (W8-2)"
 REF_IN='{"threadId":"rep","mode":"essay","draft":"短い","targetChars":400,"tolerancePct":0.02,"maxRefineLoops":3}'
 REF_OUT="$(curl -fsS "$BASE_URL/api/writer/refine" -H "Content-Type: application/json" -d "$REF_IN")"
 
-# minimal contract (only things we know exist)
-echo "$REF_OUT" | jq -e '.ok==true and .schemaVersion==1' >/dev/null
-echo "$REF_OUT" | jq -e '(.refineLoopsUsed|type)=="number" and .refineLoopsUsed>=0 and .refineLoopsUsed<=3' >/dev/null
-echo "$REF_OUT" | jq -e '(.draft|type)=="string" and (.draft|length)>=200' >/dev/null
+# top-level contract
+echo "$REF_OUT" | jq -e '
+  .ok==true and
+  .schemaVersion==1 and
+  (.threadId|type)=="string" and
+  (.refineLoopsUsed|type)=="number" and
+  (.draft|type)=="string" and
+  (.stats|type)=="object" and
+  (.issuesBefore|type)=="array" and
+  (.issuesAfter|type)=="array" and
+  (.warnings|type)=="array" and
+  (has("modeTag"))
+' >/dev/null
 
-# warnings is optional but if present must be array
-echo "$REF_OUT" | jq -e '((has("warnings")|not) or ((.warnings|type)=="array"))' >/dev/null
+# stats contract (must exist; numeric types)
+echo "$REF_OUT" | jq -e '
+  (.stats.targetChars|type)=="number" and
+  (.stats.actualChars|type)=="number" and
+  (.stats.lo|type)=="number" and
+  (.stats.hi|type)=="number"
+' >/dev/null
 
-echo "[PASS] Phase53 writer/refine smoke"
+# range sanity
+echo "$REF_OUT" | jq -e '
+  (.stats.actualChars>=.stats.lo) and (.stats.actualChars<=.stats.hi)
+' >/dev/null
+
+echo "[PASS] Phase53 writer/refine contract-strong gate"
