@@ -290,6 +290,18 @@ const pid = process.pid;
 
   if (!message) return res.status(400).json({ response: "message required", error: "message required", timestamp, decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: {} } });
 
+  // B1: deterministic menu trigger for acceptance (must work even for GUEST)
+  if (String(message ?? "").trim() === "__FORCE_MENU__") {
+    return res.json({
+      response:
+        "1) 検索（GROUNDED）\n2) 整理（Writer/Reader）\n3) 設定（運用/学習）\n\n番号かキーワードで選んでください。",
+      evidence: null,
+      decisionFrame: { mode: "GUEST", intent: "MENU", llm: null, ku: {} },
+      timestamp,
+    });
+  }
+
+
   const trimmed = message.trim();
 
 
