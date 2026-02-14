@@ -337,35 +337,7 @@ const pid = process.pid;
       const mSid = String(payload?.rawMessage || "").match(/\bsession_id\s*=\s*([A-Za-z0-9_]+)/);
       const sessionKey = (mSid && mSid[1]) ? String(mSid[1]) : String(payload.threadId || "");
       const rules = listRules(sessionKey);
-
-      // MK0_OBSERVABILITY_V1: deterministic observability (no body change)
-      try {
-        const usedArr = Array.isArray((ku as any).learnedRulesUsed) ? (ku as any).learnedRulesUsed : [];
-        (ku as any).appliedRulesCount = usedArr.length;
-      } catch {
-        (ku as any).appliedRulesCount = 0;
-      }
-      (ku as any).appliedSeedsCount = 0;
-
-      try {
-        const co =
-          payload && payload.detailPlan && Array.isArray(payload.detailPlan.chainOrder)
-            ? payload.detailPlan.chainOrder
-            : [];
-        (ku as any).recallUsed = co.includes("KOKUZO_RECALL");
-      } catch {
-        (ku as any).recallUsed = false;
-      }
-
-      try {
-        const marks: string[] = [];
-        if (((ku as any).appliedRulesCount || 0) > 0) marks.push("M6");
-        if ((ku as any).recallUsed) marks.push("KOKUZO_RECALL");
-        (ku as any).memoryMarks = marks;
-      } catch {
-        (ku as any).memoryMarks = [];
-      }
-        // M6-B1_USED_ONE_RULE_V1: mark first rule as "used" (ku-only, no body change)
+      // M6-B1_USED_ONE_RULE_V1: mark first rule as "used" (ku-only, no body change)
         try {
           if (Array.isArray(rules) && rules.length > 0) {
             const r0: any = rules[0];
@@ -985,6 +957,40 @@ if (usable.length === 0) {
       typeof response === "string" ? response.slice(0, 80) : ""
     );
     detailPlan.chainOrder = ["KANAGI_TRACE", "COMPOSE_RESPONSE"];
+    // M6_INJECTION_V1: inject training rules into detailPlan (deterministic, capped)
+    try {
+      const mSid = String(message || "").match(/\bsession_id\s*=\s*([A-Za-z0-9_]+)/);
+      const sessionKey = (mSid && mSid[1]) ? String(mSid[1]) : "";
+      if (sessionKey) {
+        // listRules is already imported/available in this module
+        const rules = listRules(sessionKey) || [];
+        const maxRules = 8;
+        const maxChars = 1200;
+
+        const picked = [];
+        let usedChars = 0;
+
+        for (const r of rules.slice(0, maxRules)) {
+          const title = String((r as any)?.title ?? "");
+          const text  = String((r as any)?.rule_text ?? (r as any)?.text ?? "");
+          const line = title ? `${title}` : text;
+          if (!line) continue;
+
+          const addLen = line.length + 1;
+          if (usedChars + addLen > maxChars) break;
+
+          picked.push({ title: line, text }); usedChars += addLen;
+
+        }
+
+        if (!(detailPlan as any).injections) (detailPlan as any).injections = {};
+        (detailPlan as any).injections.trainingRules = picked;
+
+        // also surface deterministic counters in ku (if present later)
+        (detailPlan as any).appliedRulesCount = picked.length;
+      }
+    } catch {}
+
     if (trace && Array.isArray((trace as any).violations) && (trace as any).violations.length) {
       detailPlan.warnings = (trace as any).violations.map((v: any) => String(v));
     }
