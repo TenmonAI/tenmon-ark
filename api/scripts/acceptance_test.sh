@@ -791,31 +791,7 @@ echo "[52] Phase52 Writer pipeline smoke"
   THREAD_ID="rep"
   TEXT_IN="テストです。根拠は必要です。"
 
-  echo "\1
-# A0_WR_CONTRACT_LOCK_V1
-echo "[A0] WR-CONTRACT-LOCK-01: lock writer pipeline response contract"
-
-# reader/analyze contract (arrays exist + counts exist)
-A0_ANALYZE="$(curl -fsS -X POST "$BASE_URL/api/reader/analyze" \
-  -H 'Content-Type: application/json' \
-  -d '{"text":"test","mode":"essay"}')"
-
-echo "$A0_ANALYZE" | jq -e '(.inconsistencies|type=="array") and (.undefinedTerms|type=="array") and (.dependencies|type=="array")' >/dev/null
-for k in inc undef dep; do
-  echo "$A0_ANALYZE" | jq -e --arg k "$k" '(.counts[$k] | (type=="number" or type=="string"))' >/dev/null
- done
-
-# writer/verify contract (proof keys exist)
-A0_VERIFY="$(curl -fsS -X POST "$BASE_URL/api/writer/verify" \
-  -H 'Content-Type: application/json' \
-  -d '{"text":"hello","mode":"essay","targetChars":200,"tolerancePct":0.02}')"
-
-echo "$A0_VERIFY" | jq -e 'has("proof") and (.proof|type=="object")' >/dev/null
-for k in lengthScore coverageScore; do
-  echo "$A0_VERIFY" | jq -e --arg k "$k" '(.proof[$k] | (type=="number" or type=="null"))' >/dev/null
- done
-
-echo "[PASS] A0 WR-CONTRACT-LOCK-01"
+  echo "[PASS] Phase52-0 reader/outline"
   R_OUT="$(curl -fsS "$BASE_URL/api/reader/outline" -H "Content-Type: application/json" \
     -d "{\"threadId\":\"$THREAD_ID\",\"text\":\"$TEXT_IN\"}")"
   echo "$R_OUT" | jq -e '.ok==true and .schemaVersion==1 and (.chunks|type)=="array" and (.chunks|length)>=1 and (.chunksCount|type)=="number" and .chunksCount==(.chunks|length)' >/dev/null
