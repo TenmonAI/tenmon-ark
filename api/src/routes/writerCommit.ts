@@ -58,13 +58,16 @@ writerCommitRouter.post("/writer/commit", (req: Request, res: Response) => {
     // NOTE: keep legacy columns compatible (doc/pdfPage likely exist; we leave them NULL)
     db.prepare(
       `INSERT INTO kokuzo_seeds(
-        id, essence, ruleset, seedId, threadId, kind, title, content, evidenceIds, createdAt
+        source_type, source_id,
+        essence, ruleset,
+        seedId, threadId, kind, title, content, evidenceIds, createdAt
       ) VALUES (
-        ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now')
+        'chat', 0,
+        ?, ?,
+        ?, ?, ?, ?, ?, ?, datetime('now')
       )`
-    ).run(rowId, title, ruleset, seedId, threadId || null, kind, title, content, evidenceIds);
-
-    return res.json({ ok: true, seedId, runId, artifactsCount: artifacts.length });
+    ).run(title, ruleset, seedId, threadId || null, kind, title, content, evidenceIds);
+return res.json({ ok: true, seedId, runId, artifactsCount: artifacts.length });
   } catch (e: any) {
     return res.status(500).json({ ok: false, error: String(e?.message ?? e) });
   }
