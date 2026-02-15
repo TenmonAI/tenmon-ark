@@ -22,7 +22,7 @@ import { extractFourLayerTags } from "../kotodama/fourLayerTags.js";
 import { extractKojikiTags } from "../kojiki/kojikiTags.js";
 import { buildMythMapEdges } from "../myth/mythMapEdges.js";
 import { getMythMapEdges, setMythMapEdges } from "../kokuzo/mythMapMemory.js";
-import { listThreadLaws } from "../kokuzo/laws.js";
+import { listThreadLaws, dedupLawsByDocPage } from "../kokuzo/laws.js";
 
 import { localSurfaceize } from "../tenmon/surface/localSurfaceize.js";
 import { llmChat } from "../core/llmWrapper.js";
@@ -564,7 +564,9 @@ const pid = process.pid;
         const laws = listThreadLaws(threadId, 20).filter(
           (x: any) => !!x.name && !!x.definition && Array.isArray(x.evidenceIds) && x.evidenceIds.length > 0
         );
-        // C4_2_KU_LAWS_DEDUP_V1: dedup injected laws by (doc,pdfPage) to avoid duplicates in free chat hints
+        
+        const lawsDeduped = dedupLawsByDocPage(laws as any);
+// C4_2_KU_LAWS_DEDUP_V1: dedup injected laws by (doc,pdfPage) to avoid duplicates in free chat hints
         const score = (x: any): number => {
           const hasName = !!x?.name;
           const hasDef = !!x?.definition;
