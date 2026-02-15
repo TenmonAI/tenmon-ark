@@ -973,6 +973,8 @@ if (usable.length === 0) {
   }
 
   // LLM_CHAT_ENTRY_V1: 通常会話はLLMへ（根拠要求/資料指定は除外）
+  // C1-1_TWO_STAGE_LLMCHAT_ONLY_V1: expose twoStage flag (scaffold)
+
   const hasDocPageHere = /pdfPage\s*=\s*\d+/i.test(message) || /\bdoc\b/i.test(message);
   const wantsEvidence = /資料|引用|根拠|出典|ソース|doc\s*=|pdfPage|P\d+|ページ/i.test(trimmed);
 
@@ -1030,7 +1032,7 @@ if (usable.length === 0) {
     return res.json({
       response: safe,
       evidence: null,
-      decisionFrame: { mode: "LLM_CHAT", intent: "chat", llm: out.provider || "llm", ku: {} },
+      decisionFrame: { mode: "LLM_CHAT", intent: "chat", llm: out.provider || "llm", ku: { twoStage: true } },
       timestamp,
       threadId,
     });
