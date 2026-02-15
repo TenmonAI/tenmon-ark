@@ -1032,7 +1032,12 @@ if (usable.length === 0) {
     return res.json({
       response: safe,
       evidence: null,
-      decisionFrame: { mode: "LLM_CHAT", intent: "chat", llm: out.provider || "llm", ku: { twoStage: true } },
+      decisionFrame: { mode: "LLM_CHAT", intent: "chat", llm: out.provider || "llm", ku: {
+        twoStage: true,
+        // C1-1_LLMCHAT_PLANNED_V1: deterministic planned fields for observability (no payload reference)
+        llmIntentPlanned: (trimmed.length > 180 ? "structure" : "expand"),
+        llmProviderPlanned: (trimmed.length > 180 ? "gpt" : "gemini"),
+      } },
       timestamp,
       threadId,
     });
