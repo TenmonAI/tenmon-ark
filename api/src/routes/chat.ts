@@ -1126,17 +1126,88 @@ if (usable.length === 0) {
   }
 
   if (shouldLLMChat) {
-    const out = await llmChat({ system: TENMON_CONSTITUTION_TEXT, history: [], user: trimmed });
-    const safe = scrubEvidenceLike(out.text);
+    // C1_1_TWO_STAGE_LLMCHAT_V1: two-stage generation (plan JSON -> final) inside LLM_CHAT only
+    // evidence is always null (no fabrication). If anything fails, fallback to single-stage output.
+    const system = TENMON_CONSTITUTION_TEXT;
+
+    const userMsg = trimmed;
+
+    // Stage1: plan (JSON only)
+    let planText = "";
+    try {
+      const stage1 = await llmChat({
+        system,
+        history: [],
+        user: [
+          "Return ONLY valid JSON. No prose.",
+          "Goal: create a short plan for the final answer.",
+          "Constraints:",
+          "- Do not invent citations, sources, doc/pdfPage, evidenceIds. evidence is always null.",
+          "- Keep it concise.",
+          "",
+          "Schema:",
+          "{",
+          '  "intent": "advice" | "explain" | "list" | "steps" | "other",',
+          '  "bullets": string[],',
+          '  "cautions": string[],',
+          '  "nextSteps": string[]',
+          "}",
+          "",
+          "User:",
+          userMsg,
+        ].join("\n"),
+      });
+
+      planText = (stage1?.text ?? "").trim();
+    } catch {
+      planText = "";
+    }
+
+    // Stage2: final answer (follow plan)
+    let finalText = "";
+    try {
+      const stage2 = await llmChat({
+        system,
+        history: [],
+        user: [
+          "You are TENMON-ARK LLM_CHAT.",
+          "Write the final answer for the user.",
+          "Rules:",
+          "- Do not invent citations/sources/doc/pdfPage/evidenceIds.",
+          "- Keep tone calm and practical.",
+          "- If a JSON plan is provided, follow it.",
+          "",
+          "PLAN_JSON (may be empty):",
+          planText,
+          "",
+          "User:",
+          userMsg,
+        ].join("\n"),
+      });
+
+      finalText = (stage2?.text ?? "").trim();
+      if (!finalText) throw new Error("empty-final");
+    } catch {
+      // fallback single-stage
+      try {
+        const out = await llmChat({ system, history: [], user: userMsg });
+        finalText = (out?.text ?? "").trim();
+      } catch {
+        finalText = "";
+      }
+    }
+
+    const safe = scrubEvidenceLike(finalText);
+
     return res.json({
       response: safe,
       evidence: null,
-      decisionFrame: { mode: "LLM_CHAT", intent: "chat", llm: out.provider || "llm", ku: {
-        twoStage: true,
-        // C1-1_LLMCHAT_PLANNED_V1: deterministic planned fields for observability (no payload reference)
-        llmIntentPlanned: (trimmed.length > 180 ? "structure" : "expand"),
-        llmProviderPlanned: (trimmed.length > 180 ? "gpt" : "gemini"),
-      } },
+      decisionFrame: {
+        mode: "LLM_CHAT",
+        intent: "chat",
+        llm: "llm",
+        ku: { twoStage: true, twoStagePlanJson: planText ? true : false },
+      },
       timestamp,
       threadId,
     });
