@@ -1105,4 +1105,3 @@ echo "$OUT" | jq -e '.decisionFrame.ku.twoStage==true' >/dev/null
 echo "$OUT" | jq -e '(.decisionFrame.ku.llmProviderPlanned=="gpt" or .decisionFrame.ku.llmProviderPlanned=="gemini")' >/dev/null
 echo "$OUT" | jq -e '(.decisionFrame.ku.llmIntentPlanned=="structure" or .decisionFrame.ku.llmIntentPlanned=="expand" or .decisionFrame.ku.llmIntentPlanned=="answer" or .decisionFrame.ku.llmIntentPlanned=="rewrite")' >/dev/null
 echo "[PASS] Phase62 LLM_CHAT planned contract"
-"
