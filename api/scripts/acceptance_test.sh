@@ -5,6 +5,26 @@ bash -n "$0" || { echo "[FAIL] acceptance_test.sh: bash -n failed"; exit 2; }
 
 set -euo pipefail
 
+
+curl_retry() {
+  # usage: curl_retry <curl args...>
+  # retries on connection refused / transient restart
+  local n=0
+  local max=25
+  local sleep_s=0.2
+  while true; do
+    if curl -fsS "$@"; then
+      return 0
+    fi
+    n=$((n+1))
+    if [ "$n" -ge "$max" ]; then
+      echo "[FAIL] curl_retry exhausted: $*" >&2
+      return 1
+    fi
+    sleep "$sleep_s"
+  done
+}
+
 REPO="/opt/tenmon-ark-repo/api"
 LIVE="/opt/tenmon-ark-live"
 DATA_DIR="${TENMON_DATA_DIR:-/opt/tenmon-ark-data}"
@@ -748,8 +768,8 @@ PROOF="/tmp/tenmon_acceptance_last.txt"
   echo "timestamp=$(date -Iseconds)"
   echo "exit=0"
   echo -n "headSha="; git rev-parse --short HEAD 2>/dev/null || echo "unknown"
-  echo -n "auditSha="; curl -fsS http://127.0.0.1:3000/api/audit | jq -r '.gitSha' 2>/dev/null || echo "unknown"
-  echo -n "buildMark="; curl -fsS http://127.0.0.1:3000/api/audit | jq -r '.build.mark' 2>/dev/null || echo "unknown"
+  echo -n "auditSha="; curl_retry http://127.0.0.1:3000/api/audit | jq -r '.gitSha' 2>/dev/null || echo "unknown"
+  echo -n "buildMark="; curl_retry http://127.0.0.1:3000/api/audit | jq -r '.build.mark' 2>/dev/null || echo "unknown"
 } > "$PROOF"
 echo "[PASS] proof saved: $PROOF"
 
