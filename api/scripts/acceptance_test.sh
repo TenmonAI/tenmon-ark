@@ -1093,7 +1093,7 @@ echo "$OUT61" | jq -e '.decisionFrame.ku.llmIntentPlanned | type=="string"' >/de
 echo "[PASS] Phase61 LLM router planning gate"
 
 
-[62] Phase62 LLM_CHAT planned contract (local-test header bypass)
+echo "[62] Phase62 LLM_CHAT planned contract (local-test header bypass)"
 # NOTE: this does NOT enable LLM_CHAT for guests in production. It is only for local acceptance.
 OUT="$(curl -fsS -X POST http://127.0.0.1:3000/api/chat \
   -H 'Content-Type: application/json' \
