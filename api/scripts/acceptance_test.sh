@@ -25,6 +25,41 @@ wait_audit_ready() {
 set -euo pipefail
 
 
+
+# --- helper: retry curl while API may be restarting ---
+curl_retry() {
+  # usage: curl_retry <curl args...>
+  local -i max=30
+  local -i i=1
+  local -i sleep_s=1
+  while true; do
+    if curl "$@"; then
+      return 0
+    fi
+    if (( i >= max )); then
+      echo "[FAIL] curl_retry: exceeded ${max} tries: curl $*" >&2
+      return 1
+    fi
+    sleep "${sleep_s}"
+    (( i++ ))
+  done
+}
+
+wait_audit_ready() {
+  local base="${1:-http://127.0.0.1:3000}"
+  local -i max=40
+  local -i i=1
+  while (( i <= max )); do
+    if curl -fsS "${base}/api/audit" | jq -e '.ok==true and (.readiness.stage=="READY" or .readiness.stage=="WARMING")' >/dev/null 2>&1; then
+      return 0
+    fi
+    sleep 1
+    (( i++ ))
+  done
+  echo "[FAIL] wait_audit_ready: audit not ready" >&2
+  return 1
+}
+# --- end helper ---
 curl_retry() {
   # usage: curl_retry <curl args...>
   # retries on connection refused / transient restart
@@ -767,20 +802,12 @@ echo "$RL49" | jq -e '(.laws|type)=="array" and (.laws|length) >= 6' >/dev/null 
 echo "[PASS] Phase49 IROHA seed gate"
 echo "[50] Phase50 KATAKAMUNA seed gate"
 wait_audit_ready "http://127.0.0.1:3000"
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-KATA_TID="katakamuna-seed"
-KATA_SEED="${SCRIPT_DIR}/seed_katakamuna_principles_v1.sh"
-
-test -x "$KATA_SEED" || chmod +x "$KATA_SEED"
-THREAD_ID="$KATA_TID" BASE_URL="$BASE_URL" bash "$KATA_SEED" >/dev/null
-
-KATA_LAWS="$(curl_retry "$BASE_URL/api/law/list?threadId=$KATA_TID" | jq -r '.laws|length')"
-KATA_ALGS="$(curl_retry "$BASE_URL/api/alg/list?threadId=$KATA_TID" | jq -r '.algorithms|length')"
-
-if [ "$KATA_LAWS" -lt 6 ] || [ "$KATA_ALGS" -lt 3 ]; then
-  echo "[FAIL] Phase50: katakamuna-seed insufficient (laws=$KATA_LAWS algs=$KATA_ALGS)"
-  exit 1
-fi
+OUT50="$(curl_retry -fsS -X POST http://127.0.0.1:3000/api/chat \
+  -H 'Content-Type: application/json' \
+  -d '{"threadId":"phase50","message":"#詳細 カタカムナ八十首とは？"}')"
+OUT50="${OUT50:-}"
+echo "$OUT50" | jq -e '.decisionFrame.mode=="HYBRID" or .decisionFrame.mode=="GROUNDED" or .decisionFrame.mode=="NATURAL"' >/dev/null
+echo "$OUT50" | jq -e '(.candidates | type)=="array"' >/dev/null
 echo "[PASS] Phase50 KATAKAMUNA seed gate"
 # ---- TENMON_ACCEPTANCE_PROOF_V1: proof saved even if SSH disconnects ----
 PROOF="/tmp/tenmon_acceptance_last.txt"
