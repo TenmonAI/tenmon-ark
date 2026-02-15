@@ -694,13 +694,25 @@ const pid = process.pid;
               const laws = listThreadLaws(threadId, 20).filter(
                 (x: any) => x && typeof x === "object" && x.name && x.definition && Array.isArray(x.evidenceIds) && x.evidenceIds.length > 0
               );
-              const freeChatHints = laws.slice(0, 6).map((x: any) => ({
-                name: String(x.name),
-                definition: String(x.definition),
-                evidenceIds: x.evidenceIds,
-                doc: x.doc,
-                pdfPage: x.pdfPage,
-              }));
+              const freeChatHints = (() => {
+              const seen = new Set<string>();
+              const out: any[] = [];
+              for (const x of laws) {
+                const name = String((x as any)?.name ?? "").trim();
+                if (!name) continue;
+                if (seen.has(name)) continue;
+                seen.add(name);
+                out.push({
+                  name,
+                  definition: (x as any)?.definition ?? null,
+                  evidenceIds: Array.isArray((x as any)?.evidenceIds) ? (x as any).evidenceIds : [],
+                  doc: (x as any)?.doc ?? null,
+                  pdfPage: (x as any)?.pdfPage ?? null,
+                });
+                if (out.length >= 6) break;
+              }
+              return out;
+            })() /* FREECHAT_HINTS_LIMIT6_NAMEDEDUP_V1 */;
               return { freeChatHints };
             } catch {
               return { freeChatHints: [] };
