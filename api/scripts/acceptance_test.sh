@@ -1084,24 +1084,25 @@ echo "$MK6_JSON" | jq -e '
 echo "[PASS] Phase60 MK6 seed skeleton in response gate"
 
 
-echo "[61] Phase61 LLM router planning gate (ku.llmProviderPlanned/llmIntentPlanned)"
+echo "[PASS] Phase61 LLM router planning gate"
 OUT61="$(curl -fsS -X POST "$BASE_URL/api/chat" \
   -H 'Content-Type: application/json' \
   -d '{"threadId":"phase61","message":"#詳細 言灵とは何？"}')"
 echo "$OUT61" | jq -e '.decisionFrame.ku.llmProviderPlanned | type=="string"' >/dev/null
 echo "$OUT61" | jq -e '.decisionFrame.ku.llmIntentPlanned | type=="string"' >/dev/null
-echo "[PASS] Phase61 LLM router planning gate
+echo "[PASS] Phase61 LLM router planning gate"
+
 
 [62] Phase62 LLM_CHAT planned contract (local-test header bypass)
-# NOTE: this does NOT enable LLM_CHAT for guests in production. It's only for local acceptance.
+# NOTE: this does NOT enable LLM_CHAT for guests in production. It is only for local acceptance.
 OUT="$(curl -fsS -X POST http://127.0.0.1:3000/api/chat \
   -H 'Content-Type: application/json' \
   -H 'x-tenmon-local-test: 1' \
   -d '{"threadId":"test-llmchat","message":"I feel tired lately. What should I do today?"}')"
-
 OUT="${OUT:-}"
 echo "$OUT" | jq -e '.decisionFrame.mode=="LLM_CHAT"' >/dev/null
 echo "$OUT" | jq -e '.decisionFrame.ku.twoStage==true' >/dev/null
 echo "$OUT" | jq -e '(.decisionFrame.ku.llmProviderPlanned=="gpt" or .decisionFrame.ku.llmProviderPlanned=="gemini")' >/dev/null
 echo "$OUT" | jq -e '(.decisionFrame.ku.llmIntentPlanned=="structure" or .decisionFrame.ku.llmIntentPlanned=="expand" or .decisionFrame.ku.llmIntentPlanned=="answer" or .decisionFrame.ku.llmIntentPlanned=="rewrite")' >/dev/null
 echo "[PASS] Phase62 LLM_CHAT planned contract"
+
