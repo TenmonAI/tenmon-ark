@@ -579,7 +579,25 @@ function getSafeFallbackCandidates(docOrNull: string | null, limit: number): Kok
       });
     }
   }
-  return candidates;
+
+  // C3-1_CANDIDATES_QUALITY_FILTER_V2: filter garbage snippets BEFORE returning candidates (fallback keeps originals)
+  const isGarbageSnippet = (snip: string): boolean => {
+    const t = String(snip ?? "");
+    if (!t) return true;
+    // keep same philosophy as chat.ts: NON_TEXT/OCR fail markers are garbage
+    if (/\[NON_TEXT_PAGE_OR_OCR_FAILED\]/.test(t)) return true;
+    const bad = (t.match(/[�\u0000-\u001F]/g) || []).length;
+    if (bad >= 3) return true;
+    const hasJP = /[ぁ-んァ-ン一-龯]/.test(t);
+    if (!hasJP && t.length < 60) return true;
+    return false;
+  };
+
+  const rawCandidates = Array.isArray(candidates) ? candidates : [];
+  const cleaned = rawCandidates.filter((c: any) => !isGarbageSnippet(String((c as any)?.snippet ?? "")));
+  const finalCandidates = cleaned.length ? cleaned : rawCandidates;
+  return finalCandidates;
+
 }
 
 // --- Backward compatible exports for src/routes/kokuzo.ts ---
