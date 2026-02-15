@@ -996,7 +996,17 @@ if (usable.length === 0) {
     !wantsEvidence &&
     !trimmed.startsWith("#");
 
-  if (shouldBlockLLMChatForGuest && shouldLLMChat) {
+  
+  // LOCAL_TEST_BYPASS_V1: localhost + header のときだけ guest-block を回避（外部は不可）
+  const isLocal =
+    req.ip === "127.0.0.1" ||
+    req.ip === "::1" ||
+    String((req as any).socket?.remoteAddress || "").includes("127.0.0.1") ||
+    String((req as any).socket?.remoteAddress || "").includes("::1");
+
+  const isLocalTestBypass = isLocal && req.headers["x-tenmon-local-test"] === "1";
+
+  if (shouldBlockLLMChatForGuest && shouldLLMChat && !isLocalTestBypass) {
     return res.status(200).json({
       response: "ログイン前のため、会話は参照ベース（資料検索/整理）で動作します。/login からログインすると通常会話も有効になります。",
       evidence: null,
