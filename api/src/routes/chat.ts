@@ -1029,6 +1029,9 @@ if (usable.length === 0) {
   }
 
   // LLM_CHAT_ENTRY_V1: 通常会話はLLMへ（根拠要求/資料指定は除外）
+  // GUEST_BLOCK_SKIP_JA_V1: Japanese free chat should not be routed to LLM_CHAT (so guests won't be blocked)
+  const isJapaneseForLLM = /[ぁ-んァ-ン一-龯]/.test(message);
+
   // C1-1_TWO_STAGE_LLMCHAT_ONLY_V1: expose twoStage flag (scaffold)
 
   const hasDocPageHere = /pdfPage\s*=\s*\d+/i.test(message) || /\bdoc\b/i.test(message);
@@ -1052,6 +1055,7 @@ if (usable.length === 0) {
     !hasDocPageHere &&
     !wantsDetail &&
     !wantsEvidence &&
+    !isJapaneseForLLM &&
     !trimmed.startsWith("#");
 
   
