@@ -661,7 +661,27 @@ const pid = process.pid;
       evidence: null,
       timestamp,
       threadId,
-      decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: {} },
+      decisionFrame: { 
+          mode: "NATURAL", intent: "chat", llm: null,
+          // FREECHAT_HINTS_NATURAL_V1: expose compact hints in NATURAL responses (read-only, no fabrication)
+          ku: (() => {
+            try {
+              const laws = listThreadLaws(threadId, 20).filter(
+                (x: any) => x && typeof x === "object" && x.name && x.definition && Array.isArray(x.evidenceIds) && x.evidenceIds.length > 0
+              );
+              const freeChatHints = laws.slice(0, 6).map((x: any) => ({
+                name: String(x.name),
+                definition: String(x.definition),
+                evidenceIds: x.evidenceIds,
+                doc: x.doc,
+                pdfPage: x.pdfPage,
+              }));
+              return { freeChatHints };
+            } catch {
+              return { freeChatHints: [] };
+            }
+          })()
+        },
     });
   }
   // --- /DET_NATURAL_STRESS_V1 ---
