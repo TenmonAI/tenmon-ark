@@ -17,7 +17,8 @@ const router = Router();
  */
 router.post("/law/commit", (req: Request, res: Response) => {
   try {
-    const { doc, pdfPage, threadId } = req.body;
+    const { doc, pdfPage, threadId, name, definition, evidenceIds } = req.body;
+    // LAW_COMMIT_EXT_V1
     
     // バリデーション
     if (!doc || typeof doc !== "string") {
@@ -30,6 +31,18 @@ router.post("/law/commit", (req: Request, res: Response) => {
       return res.status(400).json({ ok: false, error: "threadId is required and must be a string" });
     }
     
+    
+    // LAW_COMMIT_EXT_V1: optional fields validation
+    if (name != null && typeof name !== "string") {
+      return res.status(400).json({ ok: false, error: "name must be a string" });
+    }
+    if (definition != null && typeof definition !== "string") {
+      return res.status(400).json({ ok: false, error: "definition must be a string" });
+    }
+    if (evidenceIds != null && !Array.isArray(evidenceIds)) {
+      return res.status(400).json({ ok: false, error: "evidenceIds must be an array of strings" });
+    }
+
     // kokuzo_pages から直取得（捏造ゼロ）
     const pageText = getPageText(doc, pdfPage);
     if (!pageText) {
@@ -46,9 +59,18 @@ router.post("/law/commit", (req: Request, res: Response) => {
     const db = getDb("kokuzo");
     const stmt = dbPrepare(
       "kokuzo",
-      "INSERT INTO kokuzo_laws (threadId, doc, pdfPage, quote, tags) VALUES (?, ?, ?, ?, ?)"
+      "INSERT INTO kokuzo_laws (threadId, doc, pdfPage, quote, tags, name, definition, evidenceIds) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
     );
-    const result = stmt.run(threadId, doc, pdfPage, quote, JSON.stringify(tags));
+    const result = stmt.run(
+      threadId,
+      doc,
+      pdfPage,
+      quote,
+      JSON.stringify(tags),
+      (name ?? null),
+      (definition ?? null),
+      (evidenceIds ? JSON.stringify(evidenceIds) : null)
+    );
     
     const id = (result as any).lastInsertRowid;
     if (!id) {
@@ -82,7 +104,7 @@ router.get("/law/list", (req: Request, res: Response) => {
     const db = getDb("kokuzo");
     const stmt = dbPrepare(
       "kokuzo",
-      "SELECT id, threadId, doc, pdfPage, quote, tags, createdAt FROM kokuzo_laws WHERE threadId = ? ORDER BY createdAt DESC"
+      "SELECT id, threadId, doc, pdfPage, quote, tags, name, definition, evidenceIds, createdAt FROM kokuzo_laws WHERE threadId = ? ORDER BY createdAt DESC"
     );
     const rows = stmt.all(threadId) as Array<{
       id: number;
@@ -101,6 +123,9 @@ router.get("/law/list", (req: Request, res: Response) => {
       pdfPage: row.pdfPage,
       quote: row.quote,
       tags: JSON.parse(row.tags) as string[],
+      name: (row as any).name ?? null,
+      definition: (row as any).definition ?? null,
+      evidenceIds: (row as any).evidenceIds ? JSON.parse((row as any).evidenceIds) : [],
       createdAt: row.createdAt,
     }));
     

@@ -48,6 +48,19 @@ console.log(`[SERVER-START] PID=${pid} uptime=${uptime}s startTime=${new Date().
 console.log(`[DB-INIT] initializing databases at startup pid=${pid} uptime=${uptime}s`);
 try {
   getDb("kokuzo");
+  // ENSURE_KOKUZO_LAWS_COLUMNS_V1: add optional columns safely (idempotent)
+  try {
+    const db = getDb("kokuzo") as any;
+    const cols = (db.prepare("PRAGMA table_info('kokuzo_laws')").all() as any[]).map((r: any) => String(r.name));
+    const has = (name: string) => cols.includes(name);
+
+    if (!has("name")) db.prepare("ALTER TABLE kokuzo_laws ADD COLUMN name TEXT").run();
+    if (!has("definition")) db.prepare("ALTER TABLE kokuzo_laws ADD COLUMN definition TEXT").run();
+    if (!has("evidenceIds")) db.prepare("ALTER TABLE kokuzo_laws ADD COLUMN evidenceIds TEXT").run(); // JSON array
+  } catch (e) {
+    console.error("[DB] ENSURE_KOKUZO_LAWS_COLUMNS_V1 failed:", e);
+  }
+
   console.log(`[DB-INIT] kokuzo ready pid=${pid} uptime=${uptime}s`);
 } catch (e: any) {
   console.error(`[DB-INIT] FATAL: kokuzo init failed pid=${pid} uptime=${uptime}s:`, e);
