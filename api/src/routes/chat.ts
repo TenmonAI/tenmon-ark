@@ -564,15 +564,40 @@ const pid = process.pid;
         const laws = listThreadLaws(threadId, 20).filter(
           (x: any) => !!x.name && !!x.definition && Array.isArray(x.evidenceIds) && x.evidenceIds.length > 0
         );
-        (payload.decisionFrame.ku as any).kokuzoLaws = laws.map((x: any) => ({
+        // C4_2_KU_LAWS_DEDUP_V1: dedup injected laws by (doc,pdfPage) to avoid duplicates in free chat hints
+        const score = (x: any): number => {
+          const hasName = !!x?.name;
+          const hasDef = !!x?.definition;
+          const hasEvi = Array.isArray(x?.evidenceIds) && x.evidenceIds.length > 0;
+          const qlen = typeof x?.quote === "string" ? x.quote.length : 0;
+          return (hasName ? 1000 : 0) + (hasDef ? 500 : 0) + (hasEvi ? 300 : 0) + Math.min(200, qlen);
+        };
+
+        const byKey = new Map<string, any>();
+        for (const x of laws) {
+          const k = String(x?.doc ?? "") + "#" + String(x?.pdfPage ?? "");
+          const cur = byKey.get(k);
+          if (!cur) { byKey.set(k, x); continue; }
+          const a = score(cur);
+          const b = score(x);
+          if (b > a) byKey.set(k, x);
+          else if (b === a) {
+            const ca = String(cur?.createdAt ?? "");
+            const cb = String(x?.createdAt ?? "");
+            if (cb > ca) byKey.set(k, x);
+          }
+        }
+
+        const uniq = Array.from(byKey.values());
+
+        (payload.decisionFrame.ku as any).kokuzoLaws = uniq.map((x: any) => ({
           name: x.name,
           definition: x.definition,
           evidenceIds: x.evidenceIds,
           doc: x.doc,
           pdfPage: x.pdfPage,
         }));
-      
-        // FREECHAT_HINTS_V1: expose a compact hint list for free chat UI/enrichment (DET, no response text change)
+// FREECHAT_HINTS_V1: expose a compact hint list for free chat UI/enrichment (DET, no response text change)
         // NOTE: derived from kokuzoLaws only (no fabrication, no LLM).
         try {
           const hints = (payload.decisionFrame.ku as any).kokuzoLaws;
