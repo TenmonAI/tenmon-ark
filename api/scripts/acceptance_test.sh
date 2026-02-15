@@ -1122,6 +1122,12 @@ echo "$OUT63" | jq -e '(.decisionFrame.ku.freeChatHints | length) >= 1' >/dev/nu
 echo "$OUT63" | jq -e '(.decisionFrame.ku.freeChatHints[0].name | type=="string")' >/dev/null
 echo "$OUT63" | jq -e '(.decisionFrame.ku.freeChatHints[0].evidenceIds | type=="array")' >/dev/null
 echo "[PASS] Phase63 freeChatHints gate"
+echo "[64] Phase64 self-improve list gate"
+OUT64="$(curl -fsS -X GET "$BASE_URL/api/self/improve/list")"
+echo "$OUT64" | jq -e '.ok==true' >/dev/null
+echo "$OUT64" | jq -e '(.items | type)=="array"' >/dev/null
+echo "[PASS] Phase64 self-improve list gate"
+
 
 
 

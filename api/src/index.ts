@@ -18,6 +18,7 @@ import { readerRouter } from "./routes/reader.js";
 import { writerStoreRouter } from "./routes/writerStore.js";
 import { writerCommitRouter } from "./routes/writerCommit.js";
 import { seedRouter } from "./routes/seed.js";
+import { selfImproveRouter } from "./routes/selfImprove.js";
 import { authRouter } from "./routes/auth.js";import { meRouter } from "./routes/me.js";
 import { markListenReady } from "./health/readiness.js";
 import { getDb } from "./db/index.js";
@@ -107,6 +108,7 @@ app.use("/api", writerStoreRouter);
 app.use("/api", writerCommitRouter);
 app.use("/api", readerRouter);
 app.use("/api", seedRouter);
+app.use("/api", selfImproveRouter);
 app.use("/api/kanagi", kanagiRoutes);
 
 // 既存 tenmon
