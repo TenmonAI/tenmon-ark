@@ -1131,3 +1131,30 @@ echo "[PASS] Phase64 self-improve list gate"
 
 
 
+
+echo "[66] Phase66 council run gate (DET skeleton)"
+BASE="http://127.0.0.1:3000"
+
+OUT66="$(curl -fsS -X POST "$BASE/api/council/run" \
+  -H 'Content-Type: application/json' \
+  -d '{"threadId":"council-smoke","question":"Define the decision protocol."}')"
+
+echo "$OUT66" | jq -e '.ok==true' >/dev/null
+echo "$OUT66" | jq -e '.kind=="COUNCIL_RUN_DET_V1"' >/dev/null
+echo "$OUT66" | jq -e '(.thesis|type)=="string"' >/dev/null
+echo "$OUT66" | jq -e '(.antithesis|type)=="string"' >/dev/null
+echo "$OUT66" | jq -e '(.synthesis|type)=="string"' >/dev/null
+echo "$OUT66" | jq -e '(.judgement.status|type)=="string"' >/dev/null
+
+# commit proposal + list must show >=1
+OUT66C="$(curl -fsS -X POST "$BASE/api/council/commit" \
+  -H 'Content-Type: application/json' \
+  -d "$(jq -nc --arg tid "council-smoke" --argjson payload "$(echo "$OUT66" | jq '.')" '{threadId:$tid,payload:$payload}')")"
+echo "$OUT66C" | jq -e '.ok==true' >/dev/null
+
+OUT66L="$(curl -fsS "$BASE/api/council/list")"
+echo "$OUT66L" | jq -e '.ok==true' >/dev/null
+echo "$OUT66L" | jq -e '(.items|type)=="array"' >/dev/null
+echo "$OUT66L" | jq -e '(.items|length) >= 1' >/dev/null
+
+echo "[PASS] Phase66 council run gate"
