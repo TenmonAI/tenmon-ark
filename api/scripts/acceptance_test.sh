@@ -1106,3 +1106,17 @@ echo "$OUT" | jq -e '(.decisionFrame.ku.llmProviderPlanned=="gpt" or .decisionFr
 echo "$OUT" | jq -e '(.decisionFrame.ku.llmIntentPlanned=="structure" or .decisionFrame.ku.llmIntentPlanned=="expand" or .decisionFrame.ku.llmIntentPlanned=="answer" or .decisionFrame.ku.llmIntentPlanned=="rewrite")' >/dev/null
 echo "[PASS] Phase62 LLM_CHAT planned contract"
 
+echo "[63] Phase63 freeChatHints gate (bible-smoke thread)"
+OUT63="$(curl -fsS -X POST "$BASE_URL/api/chat" \
+  -H 'Content-Type: application/json' \
+  -d '{"threadId":"bible-smoke","message":"今日はどんな学びがある？"}')"
+
+# freeChatHints は配列で、最低1件（bible-smokeにlawsがある前提）
+echo "$OUT63" | jq -e '(.decisionFrame.ku.freeChatHints | type=="array")' >/dev/null
+echo "$OUT63" | jq -e '(.decisionFrame.ku.freeChatHints | length) >= 1' >/dev/null
+echo "$OUT63" | jq -e '(.decisionFrame.ku.freeChatHints[0].name | type=="string")' >/dev/null
+echo "$OUT63" | jq -e '(.decisionFrame.ku.freeChatHints[0].evidenceIds | type=="array")' >/dev/null
+echo "[PASS] Phase63 freeChatHints gate"
+
+
+

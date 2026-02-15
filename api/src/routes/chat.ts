@@ -571,7 +571,27 @@ const pid = process.pid;
           doc: x.doc,
           pdfPage: x.pdfPage,
         }));
-      } catch {}
+      
+        // FREECHAT_HINTS_V1: expose a compact hint list for free chat UI/enrichment (DET, no response text change)
+        // NOTE: derived from kokuzoLaws only (no fabrication, no LLM).
+        try {
+          const hints = (payload.decisionFrame.ku as any).kokuzoLaws;
+          if (Array.isArray(hints)) {
+            (payload.decisionFrame.ku as any).freeChatHints = hints.slice(0, 6).map((h: any) => ({
+              name: String(h?.name ?? ""),
+              definition: String(h?.definition ?? ""),
+              evidenceIds: Array.isArray(h?.evidenceIds) ? h.evidenceIds : [],
+              doc: String(h?.doc ?? ""),
+              pdfPage: typeof h?.pdfPage === "number" ? h.pdfPage : null,
+            }));
+          } else {
+            (payload.decisionFrame.ku as any).freeChatHints = [];
+          }
+        } catch {
+          (payload.decisionFrame.ku as any).freeChatHints = [];
+        }
+
+} catch {}
       // DF_DETAILPLAN_MIRROR_V1: always mirror top-level detailPlan into decisionFrame.detailPlan
       try {
         if (payload && payload.decisionFrame && typeof payload.decisionFrame === "object") {
