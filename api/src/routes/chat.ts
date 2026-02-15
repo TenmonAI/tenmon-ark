@@ -22,6 +22,8 @@ import { extractFourLayerTags } from "../kotodama/fourLayerTags.js";
 import { extractKojikiTags } from "../kojiki/kojikiTags.js";
 import { buildMythMapEdges } from "../myth/mythMapEdges.js";
 import { getMythMapEdges, setMythMapEdges } from "../kokuzo/mythMapMemory.js";
+import { listThreadLaws } from "../kokuzo/laws.js";
+
 import { localSurfaceize } from "../tenmon/surface/localSurfaceize.js";
 import { llmChat } from "../core/llmWrapper.js";
 
@@ -556,6 +558,20 @@ const pid = process.pid;
 
       payload.decisionFrame = df;
 
+
+      // C2_LAW_INJECT_V1: attach thread laws (name/definition/evidenceIds) to ku for Kanagi
+      try {
+        const laws = listThreadLaws(threadId, 20).filter(
+          (x: any) => !!x.name && !!x.definition && Array.isArray(x.evidenceIds) && x.evidenceIds.length > 0
+        );
+        (payload.decisionFrame.ku as any).kokuzoLaws = laws.map((x: any) => ({
+          name: x.name,
+          definition: x.definition,
+          evidenceIds: x.evidenceIds,
+          doc: x.doc,
+          pdfPage: x.pdfPage,
+        }));
+      } catch {}
       // DF_DETAILPLAN_MIRROR_V1: always mirror top-level detailPlan into decisionFrame.detailPlan
       try {
         if (payload && payload.decisionFrame && typeof payload.decisionFrame === "object") {
