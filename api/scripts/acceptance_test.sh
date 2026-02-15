@@ -1102,8 +1102,13 @@ OUT="$(curl -fsS -X POST http://127.0.0.1:3000/api/chat \
 OUT="${OUT:-}"
 echo "$OUT" | jq -e '.decisionFrame.mode=="LLM_CHAT"' >/dev/null
 echo "$OUT" | jq -e '.decisionFrame.ku.twoStage==true' >/dev/null
-echo "$OUT" | jq -e '(.decisionFrame.ku.llmProviderPlanned=="gpt" or .decisionFrame.ku.llmProviderPlanned=="gemini")' >/dev/null
-echo "$OUT" | jq -e '(.decisionFrame.ku.llmIntentPlanned=="structure" or .decisionFrame.ku.llmIntentPlanned=="expand" or .decisionFrame.ku.llmIntentPlanned=="answer" or .decisionFrame.ku.llmIntentPlanned=="rewrite")' >/dev/null
+
+# Phase62: APIキー無しでもOK。planned は null 許容（計画のみ・呼び出し不能の場合がある）
+echo "$OUT" | jq -e '(.decisionFrame.ku.llmProviderPlanned==null or .decisionFrame.ku.llmProviderPlanned=="gpt" or .decisionFrame.ku.llmProviderPlanned=="gemini")' >/dev/null
+echo "$OUT" | jq -e '(.decisionFrame.ku.llmIntentPlanned==null or .decisionFrame.ku.llmIntentPlanned=="structure" or .decisionFrame.ku.llmIntentPlanned=="expand" or .decisionFrame.ku.llmIntentPlanned=="answer" or .decisionFrame.ku.llmIntentPlanned=="rewrite")' >/dev/null
+
+# twoStagePlanJson は boolean を期待（true/falseどちらでもOK）
+echo "$OUT" | jq -e '(.decisionFrame.ku.twoStagePlanJson | type)=="boolean"' >/dev/null
 echo "[PASS] Phase62 LLM_CHAT planned contract"
 
 echo "[63] Phase63 freeChatHints gate (bible-smoke thread)"
