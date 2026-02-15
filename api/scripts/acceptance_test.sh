@@ -1099,6 +1099,7 @@ OUT="$(curl -fsS -X POST http://127.0.0.1:3000/api/chat \
   -H 'x-tenmon-local-test: 1' \
   -d '{"threadId":"test-llmchat","message":"I feel tired lately. What should I do today?"}')"
 
+OUT="${OUT:-}"
 echo "$OUT" | jq -e '.decisionFrame.mode=="LLM_CHAT"' >/dev/null
 echo "$OUT" | jq -e '.decisionFrame.ku.twoStage==true' >/dev/null
 echo "$OUT" | jq -e '(.decisionFrame.ku.llmProviderPlanned=="gpt" or .decisionFrame.ku.llmProviderPlanned=="gemini")' >/dev/null
