@@ -1323,6 +1323,10 @@ if (usable.length === 0) {
     const detailPlan = emptyCorePlan(
       typeof response === "string" ? response.slice(0, 80) : ""
     );
+    // --- S3_DEBUG_BOX_V1 ---
+    (detailPlan as any).debug = { ...(detailPlan as any).debug };
+    // --- /S3_DEBUG_BOX_V1 ---
+
     detailPlan.chainOrder = ["KANAGI_TRACE", "COMPOSE_RESPONSE"];
     // M6_INJECTION_V1: inject training rules into detailPlan (deterministic, capped)
     try {
