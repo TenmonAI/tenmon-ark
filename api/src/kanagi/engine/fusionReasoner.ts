@@ -48,14 +48,13 @@ export async function runKanagiReasoner(
   sessionId?: string
 ): Promise<KanagiTrace> {
   // --- S2_KANAGI_HARDCAP_V2 ---
-  // hardcap: 事故防止（型を壊さない：早期returnしない）
+  // hardcap: 型を壊さない（早期returnしない）。入力をtruncateして継続。
   const HARD_MAX_INPUT = 4000;
   const __text = String(input ?? "");
   if (__text.length > HARD_MAX_INPUT) {
     input = __text.slice(0, HARD_MAX_INPUT);
   }
   // --- /S2_KANAGI_HARDCAP_V2 ---
-
   // --- KANAGI_HARDCAP_V2: prevent runaway (time/steps). No trace/depth assumptions. ---
   const __t0 = Date.now();
   const __maxMs = Number(process.env.KANAGI_MAX_MS || "1800");      // 1.8s
