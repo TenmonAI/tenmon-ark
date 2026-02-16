@@ -5,6 +5,7 @@ import { getDb, dbPrepare } from "../db/index.js";
 import type { KokuzoChunk, KokuzoSeed } from "./indexer.js";
 import { extractKotodamaTags, type KotodamaTag } from "../kotodama/tagger.js";
 import { getPageText } from "./pages.js";
+import { getCaps } from "./capsQueue.js";
 
 /**
  * Phase31: snippet を正規化（\f 除去、空白圧縮、trim）
@@ -478,6 +479,17 @@ export function searchPagesForHybrid(docOrNull: string | null, query: string, li
     const full = getPageText(doc, pdfPage);
     const head = String(full || "").replace(/\f/g, "").trim().slice(0, 200);
     if (head.length >= 40) (c as any).snippet = head;
+
+    // --- S3_8_CAPS_BACKFILL_V1 ---
+    // 本文が空の場合は caps（補完キャプション）から決定論で補完
+    if (head.length < 40) {
+      const caps: any = getCaps(doc, pdfPage);
+      const capText = String(
+        caps?.text ?? caps?.caption ?? caps?.cap ?? caps?.snippet ?? ""
+      ).replace(/\f/g, "").trim().slice(0, 200);
+      if (capText.length >= 40) (c as any).snippet = capText;
+    }
+    // --- /S3_8_CAPS_BACKFILL_V1 ---
   }
   // --- /S3_7_SNIPPET_BACKFILL_V1 ---
 
