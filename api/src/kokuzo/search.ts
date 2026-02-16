@@ -516,6 +516,42 @@ export function searchPagesForHybrid(docOrNull: string | null, query: string, li
     console.warn("[S3_11] hybrid top5=", JSON.stringify(top5));
   } catch (e) { console.warn("[S3_11] observe failed", e); }
   // --- /S3_11_OBSERVE_TOP5_V1 ---
+
+  // --- S3_12_FINAL_NONEMPTY_V1 ---
+  // 観測: final の中身と空理由をログに出す（決定論・LLM禁止）
+  try {
+    const top5 = (final || []).slice(0, 5).map((c: any) => ({
+      doc: c?.doc,
+      pdfPage: c?.pdfPage,
+      snipLen: String(c?.snippet || "").trim().length,
+      snipHead: String(c?.snippet || "").replace(/\f/g, "").trim().slice(0, 80),
+    }));
+    console.warn("[S3_12] hybrid finalLen=", (final || []).length, "top5=", JSON.stringify(top5));
+  } catch (e) { console.warn("[S3_12] observe failed", e); }
+
+  // フォールバック: final が空なら kokuzo_pages から「本文が長いページ」を1件返す（決定論）
+  if (!final || final.length === 0) {
+    try {
+      const pickDoc = String(docOrNull || "KHS");
+      const stmt = db.prepare(
+        "SELECT doc, pdfPage, substr(replace(text, char(12), ''), 1, 200) AS snippet " +
+        "FROM kokuzo_pages WHERE doc = ? AND length(text) >= 200 " +
+        "ORDER BY length(text) DESC, pdfPage ASC LIMIT 1"
+      );
+      const row: any = stmt.get(pickDoc);
+      if (row && row.doc && row.pdfPage) {
+        final = [{
+          doc: String(row.doc),
+          pdfPage: Number(row.pdfPage),
+          snippet: String(row.snippet || "").trim(),
+          score: 0,
+          tags: [],
+        }] as any;
+        console.warn("[S3_12] fallback injected doc=", row.doc, "pdfPage=", row.pdfPage);
+      }
+    } catch (e) { console.warn("[S3_12] fallback failed", e); }
+  }
+  // --- /S3_12_FINAL_NONEMPTY_V1 ---
     return final;
   }
 
