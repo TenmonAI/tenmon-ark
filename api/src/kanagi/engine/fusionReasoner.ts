@@ -47,19 +47,6 @@ export async function runKanagiReasoner(
   input: string,
   sessionId?: string
 ): Promise<KanagiTrace> {
-  // --- S2_KANAGI_HARDCAP_V1 ---
-  // hardcap: 事故防止。上限超えは即STOP（型を壊さず violations に残す）
-  const HARD_MAX_DEPTH = 24;
-  const HARD_MAX_LOOP  = 6;
-  const HARD_MAX_INPUT = 4000;
-
-  // 入力が極端に長い場合は先に抑制（ログ暴走対策）
-  const __text = String(input ?? "");
-  if (__text.length > HARD_MAX_INPUT) {
-    return { input: __text.slice(0, HARD_MAX_INPUT), steps: [], violations: ["HARD_INPUT_TOO_LONG"] };
-  }
-  // --- /S2_KANAGI_HARDCAP_V1 ---
-
   // --- KANAGI_HARDCAP_V2: prevent runaway (time/steps). No trace/depth assumptions. ---
   const __t0 = Date.now();
   const __maxMs = Number(process.env.KANAGI_MAX_MS || "1800");      // 1.8s
@@ -177,12 +164,6 @@ ${input}
 
       if (loopInfo.loopDetected) {
         // 思考停止ではなく「正中へ戻す」
-
-  // --- S2_KANAGI_HARDCAP_V1_LOOP ---
-  if (typeof loopCount === "number" && loopCount >= HARD_MAX_LOOP) {
-    return { input: __text, steps: [], violations: ["HARD_CAP_REACHED_LOOP"] };
-  }
-  // --- /S2_KANAGI_HARDCAP_V1_LOOP ---
         console.log(`[KANAGI] Loop detected (count: ${loopInfo.count}), forcing CENTER`);
       }
     }
@@ -326,12 +307,6 @@ ${input}
     },
       contradictions, // LLM で生成された矛盾（過去の矛盾も保持）
       centerProcess: phase.center
-
-  // --- S2_KANAGI_HARDCAP_V1_DEPTH ---
-  if (typeof depth === "number" && depth >= HARD_MAX_DEPTH) {
-    return { input: __text, steps: [], violations: ["HARD_CAP_REACHED_DEPTH"] };
-  }
-  // --- /S2_KANAGI_HARDCAP_V1_DEPTH ---
         ? { stage: "COMPRESS", depth: 1 }
         : undefined,
       observationCircle: {
