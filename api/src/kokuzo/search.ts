@@ -505,6 +505,17 @@ export function searchPagesForHybrid(docOrNull: string | null, query: string, li
     console.log("[S3-10] candidates top3:", JSON.stringify(top3));
   } catch {}
   // --- /S3_10_CANDIDATE_OBSERVE_V1 ---
+  // --- S3_11_OBSERVE_TOP5_V1 ---
+  try {
+    const top5 = (final || []).slice(0, 5).map((c: any) => ({
+      doc: c?.doc,
+      pdfPage: c?.pdfPage,
+      snipLen: String(c?.snippet || "").trim().length,
+      snipHead: String(c?.snippet || "").replace(/\f/g, "").trim().slice(0, 80),
+    }));
+    console.warn("[S3_11] hybrid top5=", JSON.stringify(top5));
+  } catch (e) { console.warn("[S3_11] observe failed", e); }
+  // --- /S3_11_OBSERVE_TOP5_V1 ---
     return final;
   }
 
