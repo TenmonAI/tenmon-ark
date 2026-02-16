@@ -1,3 +1,4 @@
+// S3_9_SYNTH_TAG_V1
 // S3_SYNTH_TS_RESEAL_V1
 // Deterministic synthesis for HYBRID candidates (no LLM). Safe + stable.
 
@@ -36,9 +37,10 @@ export function synthHybridResponseV1(args: {
   const doc = (top as any).doc ? String((top as any).doc) : null;
   const page = typeof (top as any).pdfPage === "number" ? (top as any).pdfPage : null;
   const cite = doc && page ? `（根拠: doc=${doc} pdfPage=${page}）\n` : "";
+  const meta = `[SYNTH_USED doc=${doc ?? ''} pdfPage=${page ?? ''} snipLen=${snip.length}]\n`;
 
   return {
-    text: String(baseResponse || "").trim() + "\n\n" + cite + snip.slice(0, 800),
+    text: meta + String(baseResponse || "").trim() + "\n\n" + cite + snip.slice(0, 800),
     used: true,
   };
 }
