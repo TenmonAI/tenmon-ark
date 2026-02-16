@@ -24,6 +24,17 @@ wait_audit_ready() {
 
 set -euo pipefail
 
+# PHASE00_BASEURL_LOCK_V1
+BASE_URL="${BASE_URL:-http://127.0.0.1:3000}"
+export BASE_URL
+# wait audit (restart直後の瞬断対策)
+for i in 1 2 3 4 5 6 7 8 9 10; do
+  curl -fsS "$BASE_URL/api/audit" >/dev/null && break
+  sleep 0.2
+done
+# /PHASE00_BASEURL_LOCK_V1
+
+
 
 
 # --- helper: retry curl while API may be restarting ---
@@ -802,7 +813,7 @@ echo "$RL49" | jq -e '(.laws|type)=="array" and (.laws|length) >= 6' >/dev/null 
 echo "[PASS] Phase49 IROHA seed gate"
 echo "[50] Phase50 KATAKAMUNA seed gate"
 wait_audit_ready "http://127.0.0.1:3000"
-OUT50="$(curl_retry -fsS -X POST http://127.0.0.1:3000/api/chat \
+OUT50="$(curl_retry -fsS -X POST $BASE_URL/api/chat \
   -H 'Content-Type: application/json' \
   -d '{"threadId":"phase50","message":"#詳細 カタカムナ八十首とは？"}')"
 OUT50="${OUT50:-}"
@@ -844,7 +855,7 @@ curl -fsS -X POST http://127.0.0.1:3000/api/training/ingest \
 | jq -e '.success==true and .rulesCount>=1' >/dev/null
 
 # GUEST回避：wantsEvidence=true（あなたの現行分岐に合わせる）
-curl -fsS http://127.0.0.1:3000/api/chat \
+curl -fsS $BASE_URL/api/chat \
   -H 'Content-Type: application/json' \
   -d "$(jq -n --arg tid "$SID" '{threadId:$tid,message:"資料ベースで迷いを整理したい session_id=$SID"}')" \
 | jq -e '(.decisionFrame.ku.learnedRulesAvailable|type=="number") and (.decisionFrame.ku.learnedRulesAvailable>=1) and (.decisionFrame.ku.learnedRulesUsed|type=="array") and ((.decisionFrame.ku.learnedRulesUsed|length) >= 1)' >/dev/null
@@ -1162,7 +1173,7 @@ echo "[PASS] Phase61 LLM router planning gate"
 
 echo "[62] Phase62 LLM_CHAT planned contract (local-test header bypass)"
 # NOTE: this does NOT enable LLM_CHAT for guests in production. It is only for local acceptance.
-OUT="$(curl -fsS -X POST http://127.0.0.1:3000/api/chat \
+OUT="$(curl -fsS -X POST $BASE_URL/api/chat \
   -H 'Content-Type: application/json' \
   -H 'x-tenmon-local-test: 1' \
   -d '{"threadId":"test-llmchat","message":"I feel tired lately. What should I do today?"}')"
