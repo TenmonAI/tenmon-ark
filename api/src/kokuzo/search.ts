@@ -4,6 +4,7 @@
 import { getDb, dbPrepare } from "../db/index.js";
 import type { KokuzoChunk, KokuzoSeed } from "./indexer.js";
 import { extractKotodamaTags, type KotodamaTag } from "../kotodama/tagger.js";
+import { getPageText } from "./pages.js";
 
 /**
  * Phase31: snippet を正規化（\f 除去、空白圧縮、trim）
@@ -466,6 +467,20 @@ export function searchPagesForHybrid(docOrNull: string | null, query: string, li
       // good + complement を先に、bad を後に
       final = [...good, ...complement, ...bad].slice(0, limit) as KokuzoCandidate[];
     }
+  // --- S3_7_SNIPPET_BACKFILL_V1 ---
+  // snippet が空/弱い場合に、doc/pdfPage から本文先頭を決定論で補完する（LLM禁止）
+  for (const c of final) {
+    const sn = String((c as any)?.snippet ?? "").trim();
+    if (sn.length >= 40) continue;
+    const doc = String((c as any)?.doc ?? "");
+    const pdfPage = Number((c as any)?.pdfPage ?? 0);
+    if (!doc || !pdfPage) continue;
+    const full = getPageText(doc, pdfPage);
+    const head = String(full || "").replace(/\f/g, "").trim().slice(0, 200);
+    if (head.length >= 40) (c as any).snippet = head;
+  }
+  // --- /S3_7_SNIPPET_BACKFILL_V1 ---
+
     
     return final;
   }
