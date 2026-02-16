@@ -22,6 +22,7 @@ export async function callLLM(prompt: string): Promise<string | null> {
     console.log("[LLM] API key not configured, returning null");
 
   // H1A_NO_NULL_FALLBACK_V1
+  // H1B_NO_NULL_ALL_ERRORS_V1
   console.log("[LLM] API key not configured, returning fallback text");
   return "（LLM未設定のため、検索結果ベースで応答します。#詳細 または doc=... pdfPage=... を指定してください）";
 }
@@ -56,15 +57,15 @@ export async function callLLM(prompt: string): Promise<string | null> {
     if (!response.ok) {
       const errorText = await response.text().catch(() => "unknown error");
       console.error(`[LLM] API error: ${response.status} ${errorText}`);
-      return null;
-    }
+      return "（LLM接続に失敗したため、検索結果ベースで応答します。#詳細 または doc=... pdfPage=... を指定してください）";
+  }
 
     const data = await response.json() as { choices?: Array<{ message?: { content?: string } }> };
     const content = data.choices?.[0]?.message?.content;
 
     if (!content || typeof content !== "string") {
       console.error("[LLM] Invalid response format");
-      return null;
+    return "（LLM接続に失敗したため、検索結果ベースで応答します。#詳細 または doc=... pdfPage=... を指定してください）";
     }
 
     return content;
@@ -74,10 +75,9 @@ export async function callLLM(prompt: string): Promise<string | null> {
     } else {
       console.error(`[LLM] Error: ${error instanceof Error ? error.message : String(error)}`);
     }
-    return null;
+    return "（LLM接続に失敗したため、検索結果ベースで応答します。#詳細 または doc=... pdfPage=... を指定してください）";
   }
 }
-
 /**
  * LLMにJSON形式で応答させる
  * 
