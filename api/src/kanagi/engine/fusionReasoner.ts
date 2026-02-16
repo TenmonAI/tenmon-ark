@@ -47,25 +47,28 @@ export async function runKanagiReasoner(
   input: string,
   sessionId?: string
 ): Promise<KanagiTrace> {
+  // --- S2_KANAGI_HARDCAP_V2 ---
+  // hardcap: 事故防止（式途中へは挿入しない／冒頭のみ）
+  // 型を壊さない：早期returnはせず、入力をtruncateして処理を続行する
+  const HARD_MAX_INPUT = 4000;
+  const __text = String(input ?? "");
+  if (__text.length > HARD_MAX_INPUT) {
+    input = __text.slice(0, HARD_MAX_INPUT);
+  }
+  // --- /S2_KANAGI_HARDCAP_V2 ---
   // --- KANAGI_HARDCAP_V2: prevent runaway (time/steps). No trace/depth assumptions. ---
   const __t0 = Date.now();
   const __maxMs = Number(process.env.KANAGI_MAX_MS || "1800");      // 1.8s
   const __maxSteps = Number(process.env.KANAGI_MAX_STEPS || "12"); // 12 steps
   let __steps = 0;
+
   const __guard = (): "MAX_STEPS" | "MAX_MS" | null => {
     __steps++;
     if (__steps > __maxSteps) return "MAX_STEPS";
     if (Date.now() - __t0 > __maxMs) return "MAX_MS";
-    const __g: "MAX_STEPS" | "MAX_MS" | null = __guard();
-    if (__g) {
-      return ({ ok: true, mode: "CENTER", reason: `KANAGI_STOP:${__g}`, text: input } as any);
-    }
-
     return null;
   };
   // --- /KANAGI_HARDCAP_V2 ---
-
-
   // 螺旋の再注入 (Spiral Injection) - エラーハンドリングでも使用するため外で定義
   let injectedInput = input;
   let currentDepth = 0;
