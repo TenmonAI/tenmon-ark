@@ -1234,3 +1234,16 @@ test -f "web/src/components/SettingsPanel.tsx"
 grep -nE '(Export JSON|Import JSON|tenmon-ark-backup|schemaVersion)' "web/src/components/SettingsPanel.tsx" >/dev/null
 echo "[PASS] PhaseP1-2a PWA export/import static gate"
 
+
+
+echo "[P1-2c] PhaseP1-2c PWA window hook gate"
+HOOK_FILE="/opt/tenmon-ark-repo/web/src/_core/p1_hooks.ts"
+test -f "$HOOK_FILE" || (echo "[FAIL] missing: $HOOK_FILE" && exit 1)
+
+# sealed window hook names
+grep -RIn --line-number "window\.tenmonP1Dump"   "$HOOK_FILE" >/dev/null || (echo "[FAIL] missing window hook: tenmonP1Dump" && exit 1)
+grep -RIn --line-number "window\.tenmonP1Export" "$HOOK_FILE" >/dev/null || (echo "[FAIL] missing window hook: tenmonP1Export" && exit 1)
+grep -RIn --line-number "window\.tenmonP1Import" "$HOOK_FILE" >/dev/null || (echo "[FAIL] missing window hook: tenmonP1Import" && exit 1)
+
+echo "[PASS] PhaseP1-2c PWA window hook gate"
+
