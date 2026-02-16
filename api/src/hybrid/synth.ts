@@ -12,7 +12,8 @@ export function synthHybridResponseV1(args: {
   const { baseResponse, candidates } = args;
   if (!Array.isArray(candidates) || candidates.length === 0) return { text: baseResponse, used: false };
 
-  const top = candidates[0] || {};
+  // S3_SYNTH_PICK_FALLBACK_V1
+  const top = (candidates.find((c) => (c?.snippet || "").trim().length > 0) || candidates[0] || {});
   const snip = (top.snippet || "").trim();
   if (!snip) return { text: baseResponse, used: false };
 
