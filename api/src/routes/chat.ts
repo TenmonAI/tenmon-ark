@@ -1,3 +1,4 @@
+import { synthHybridResponseV1 } from "../hybrid/synth.js";
 import { Router, type IRouter, type Request, type Response } from "express";
 import { sanitizeInput } from "../tenmon/inputSanitizer.js";
 import type { ChatResponseBody } from "../types/chat.js";
@@ -1576,6 +1577,20 @@ let finalResponse = response;
         /(pdfPage=|doc=|evidenceIds|candidates|引用|出典|根拠|ソース|【|】)/.test(String(finalResponse));
 
       if (!wants && !hasEvidenceSignals) {
+
+        // --- S3_HYBRID_SYNTH_V1 ---
+        try {
+          const synth = synthHybridResponseV1({
+            userMessage: sanitized.text,
+            baseResponse: String(finalResponse ?? ""),
+            candidates: candidates as any,
+          });
+          if (synth.used) finalResponse = synth.text;
+        } catch (e) {
+          // never fail chat because of synth
+        }
+        // --- /S3_HYBRID_SYNTH_V1 ---
+
         let r = String(finalResponse ?? "").trim();
 
         const opener = "いい問いです。いまの状況を一度、ほどいてみましょう。";
