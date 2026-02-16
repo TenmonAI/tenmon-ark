@@ -494,6 +494,17 @@ export function searchPagesForHybrid(docOrNull: string | null, query: string, li
   // --- /S3_7_SNIPPET_BACKFILL_V1 ---
 
     
+  // --- S3_10_CANDIDATE_OBSERVE_V1 ---
+  try {
+    const top3 = (final || []).slice(0, 3).map((c: any) => ({
+      doc: c?.doc,
+      pdfPage: c?.pdfPage,
+      snipLen: String(c?.snippet ?? "").trim().length,
+      snipHead: String(c?.snippet ?? "").replace(/\s+/g, " ").trim().slice(0, 80),
+    }));
+    console.log("[S3-10] candidates top3:", JSON.stringify(top3));
+  } catch {}
+  // --- /S3_10_CANDIDATE_OBSERVE_V1 ---
     return final;
   }
 
