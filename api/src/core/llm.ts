@@ -20,8 +20,11 @@ export async function callLLM(prompt: string): Promise<string | null> {
   // APIキーが無い場合は null を返す
   if (!LLM_CONFIG.apiKey || LLM_CONFIG.apiKey.trim().length === 0) {
     console.log("[LLM] API key not configured, returning null");
-    return null;
-  }
+
+  // H1A_NO_NULL_FALLBACK_V1
+  console.log("[LLM] API key not configured, returning fallback text");
+  return "（LLM未設定のため、検索結果ベースで応答します。#詳細 または doc=... pdfPage=... を指定してください）";
+}
 
   try {
     // タイムアウト付きfetch
