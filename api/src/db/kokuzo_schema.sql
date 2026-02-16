@@ -143,3 +143,35 @@ CREATE TABLE IF NOT EXISTS writer_artifacts (
 
 CREATE INDEX IF NOT EXISTS idx_writer_runs_threadId ON writer_runs(threadId);
 CREATE INDEX IF NOT EXISTS idx_writer_artifacts_runId ON writer_artifacts(runId);
+
+-- KAMU-GAKARI: OCR/QC storage (do NOT overwrite kokuzo_pages.text automatically)
+CREATE TABLE IF NOT EXISTS kokuzo_ocr_pages (
+  doc TEXT NOT NULL,
+  pdfPage INTEGER NOT NULL,
+  engine TEXT NOT NULL,                 -- tesseract / gpt4o / gemini / claude / custom
+  text_raw TEXT,
+  text_norm TEXT,
+  qc_json TEXT,                         -- JSON: mojibakeRate/jpRate/missingRate/confidence/etc
+  createdAt TEXT NOT NULL,
+  PRIMARY KEY (doc, pdfPage, engine)
+);
+
+CREATE INDEX IF NOT EXISTS idx_kokuzo_ocr_pages_doc_page
+  ON kokuzo_ocr_pages(doc, pdfPage);
+
+CREATE TABLE IF NOT EXISTS kokuzo_restore_suggestions (
+  id TEXT PRIMARY KEY,                  -- UUID/ULID
+  doc TEXT NOT NULL,
+  pdfPage INTEGER NOT NULL,
+  span TEXT,                            -- range/line/regex etc
+  suggestion TEXT NOT NULL,
+  basis_evidenceIds TEXT,               -- JSON array string
+  method TEXT NOT NULL,                 -- regex / kotodama-law / fts-neighbor / llm-assist
+  confidence REAL NOT NULL DEFAULT 0,
+  status TEXT NOT NULL DEFAULT 'proposed', -- proposed/accepted/rejected
+  createdAt TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_kokuzo_restore_doc_page
+  ON kokuzo_restore_suggestions(doc, pdfPage);
+

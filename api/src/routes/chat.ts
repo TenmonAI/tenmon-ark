@@ -1,6 +1,7 @@
 import { synthHybridResponseV1 } from "../hybrid/synth.js";
 import { Router, type IRouter, type Request, type Response } from "express";
 import { sanitizeInput } from "../tenmon/inputSanitizer.js";
+import { qcTextV1 } from "../kokuzo/qc.js";
 import type { ChatResponseBody } from "../types/chat.js";
 import { runKanagiReasoner } from "../kanagi/engine/fusionReasoner.js";
 import { getCurrentPersonaState } from "../persona/personaState.js";
@@ -137,7 +138,24 @@ function buildGroundedResponse(args: {
     return result;
   }
 
-  const responseText = `（資料準拠）${doc} P${pdfPage} を指定として受け取りました。\n\n【引用（先頭400文字）】\n${pageText.slice(0, 400).trim()}${pageText.length > 400 ? "..." : ""}`;
+    // --- KAMU_0_MOJIBAKE_GUARD_V1 ---
+  const head400 = String(pageText || "").slice(0, 400).trim();
+  const qc = qcTextV1(head400);
+  const responseText = qc.mojibakeLikely
+    ? `（候補提示：正文は文字化けの可能性あり / doc=${doc} pdfPage=${pdfPage}）
+QC: jpRate=${qc.jpRate.toFixed(3)} ctrlRate=${qc.ctrlRate.toFixed(3)}
+
+このページは文字コード不整合の疑いがあるため、正文としては表示せず、復号処理（KAMU-GAKARI）対象として扱います。
+
+次のどれで進めますか？
+1) このページを復号して再保存（候補→承認）
+2) 別ページ（doc/pdfPage）を指定
+`
+    : `（資料準拠）${doc} P${pdfPage} を指定として受け取りました。
+
+【引用（先頭400文字）】
+${head400}${String(pageText||"").length > 400 ? "..." : ""}`;
+  // --- /KAMU_0_MOJIBAKE_GUARD_V1 ---
   const result: any = buildGroundedResultBody(doc, pdfPage, threadId, timestamp, wantsDetail, responseText, pageText, evidenceId);
   if (wantsDetail) result.detail = `#詳細\n- doc: ${doc}\n- pdfPage: ${pdfPage}\n- 状態: 本文取得済み`;
   return result;
