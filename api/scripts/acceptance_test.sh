@@ -1310,3 +1310,12 @@ if [ "${LEN_KHS:-0}" -le 0 ]; then
   exit 1
 fi
 echo "[PASS] KG4-2 apply target lock gate"
+
+echo "[KG5] ocr_pages gate (tesseract placeholder ok)"
+DB="/opt/tenmon-ark-data/kokuzo.sqlite"
+C="$(sqlite3 "$DB" "SELECT COUNT(*) FROM kokuzo_ocr_pages WHERE doc='KHS' AND pdfPage=132 AND engine='tesseract';")"
+if [ "${C:-0}" -lt 1 ]; then
+  echo "[FAIL] KG5: missing kokuzo_ocr_pages KHS P132 tesseract"
+  exit 1
+fi
+echo "[PASS] KG5 ocr_pages gate"
