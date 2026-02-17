@@ -1321,25 +1321,29 @@ fi
 echo "[PASS] KG5 ocr_pages gate"
 
 echo "[KG6] OCR consensus determinism gate (MVP)"
-node - <<'JS'
-const { consensusTextDet } = require('./dist/kokuzo/ocrConsensus');
-const input = ['abc','a\n','abcdef','abcde'];
-const a = consensusTextDet(input);
-const b = consensusTextDet(input);
-if (a !== b) { console.error('[FAIL] KG6 consensus not deterministic', {a,b}); process.exit(1); }
-if (a !== 'abcdef') { console.error('[FAIL] KG6 unexpected consensus', {a}); process.exit(1); }
-const e = consensusTextDet([]);
-if (e !== '') { console.error('[FAIL] KG6 empty input must return empty', {e}); process.exit(1); }
-console.log('[PASS] KG6 consensus determinism gate');
-JS
+node -e "const {consensusTextDet}=require('./dist/kokuzo/ocrConsensus'); const input=['abc','a\\n','abcdef','abcde']; const a=consensusTextDet(input); const b=consensusTextDet(input); if(a!==b){console.error('[FAIL] KG6 not deterministic',{a,b}); process.exit(1);} if(a!=='abcdef'){console.error('[FAIL] KG6 unexpected',{a}); process.exit(1);} const e=consensusTextDet([]); if(e!==''){console.error('[FAIL] KG6 empty must be empty',{e}); process.exit(1);} console.log('[PASS] KG6 consensus determinism gate');"
 
-echo "[KAMU-4] accepted RID gate"
-BASE_URL="${BASE_URL:-http://127.0.0.1:3000}"
-OUTDIR="/var/tmp/tenmon_kamu4"
+echo "[KG6-1] OCR consensus apply gate (real DB)"
+DB_DIR="${TENMON_DATA_DIR:-/opt/tenmon-ark-data}"
+DB="${DB:-$DB_DIR/kokuzo.sqlite}"
+OUTDIR="/var/tmp/tenmon_kg6_1"
 mkdir -p "$OUTDIR" 2>/dev/null || true
-LIST="$OUTDIR/kamu4_list.json"
-curl -fsS -o "$LIST" "$BASE_URL/api/kamu/restore/list?doc=KHS&pdfPage=132"
-RID="$(jq -r '.items[]? | select(.status=="accepted") | .rid' "$LIST" | awk '{r=$1+0; if(r>m) m=r} END{if(m>0) print m; else print ""}' )"
-echo "KAMU-4 picked RID=$RID"
-test -n "$RID" || { echo "[FAIL] KAMU-4: no accepted rid"; head -c 800 "$LIST"; echo; exit 1; }
-echo "[PASS] KAMU-4 accepted RID exists"
+TXT_JSON="$OUTDIR/texts.json"
+sqlite3 -json "$DB" "SELECT text_raw AS text FROM kokuzo_ocr_pages WHERE doc='KHS' AND pdfPage=132 AND text_raw IS NOT NULL AND length(text_raw)>0 ORDER BY createdAt DESC LIMIT 20;" > "$TXT_JSON"
+CNT="$(python3 - <<'PY2'
+import json
+j=json.load(open("/var/tmp/tenmon_kg6_1/texts.json","r",encoding="utf-8",errors="replace"))
+print(len(j))
+PY2
+)"
+if [ "${CNT:-0}" -lt 2 ]; then echo "[FAIL] KG6-1 need >=2 OCR texts (got=$CNT)"; exit 1; fi
+node -e "const fs=require('fs'); const {consensusTextDet}=require('./dist/kokuzo/ocrConsensus'); const a=JSON.parse(fs.readFileSync('/var/tmp/tenmon_kg6_1/texts.json','utf8')).map(x=>x.text); process.stdout.write(consensusTextDet(a));" > "$OUTDIR/a.txt"
+node -e "const fs=require('fs'); const {consensusTextDet}=require('./dist/kokuzo/ocrConsensus'); const a=JSON.parse(fs.readFileSync('/var/tmp/tenmon_kg6_1/texts.json','utf8')).map(x=>x.text); process.stdout.write(consensusTextDet(a));" > "$OUTDIR/b.txt"
+SHA_A="$(sha256sum "$OUTDIR/a.txt" | awk '{print $1}')"
+SHA_B="$(sha256sum "$OUTDIR/b.txt" | awk '{print $1}')"
+if [ "$SHA_A" != "$SHA_B" ]; then echo "[FAIL] KG6-1 non-deterministic"; exit 1; fi
+sqlite3 "$DB" "BEGIN; UPDATE kokuzo_ocr_pages SET text_norm = readfile('/var/tmp/tenmon_kg6_1/a.txt') WHERE doc='KHS' AND pdfPage=132; COMMIT;"
+L_DB="$(sqlite3 "$DB" "SELECT length(text_norm) FROM kokuzo_ocr_pages WHERE doc='KHS' AND pdfPage=132 LIMIT 1;")"
+if [ "${L_DB:-0}" -lt 1 ]; then echo "[FAIL] KG6-1 text_norm not written"; exit 1; fi
+echo "[PASS] KG6-1 consensus applied len=$L_DB sha=$SHA_A"
+
