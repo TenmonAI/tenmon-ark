@@ -1396,6 +1396,19 @@ if (usable.length === 0) {
       warnings: (detailPlan as any).warnings || [],
       kanaPhysicsMapOk: true,
     };
+  // K7 debug: link ufk summary into koshiki (no response text change)
+  try {
+    const dbg: any = (detailPlan as any).debug || {};
+    const ufk: any = dbg.ufk || null;
+    if (dbg.koshiki && typeof dbg.koshiki === 'object') {
+      (dbg.koshiki as any).ufkLink = ufk ? {
+        modeHint: ufk.modeHint ?? null,
+        class24: ufk.class24 ?? ufk.class ?? null,
+        ufkCellsCount: ufk.ufkCellsCount ?? ufk.cellsCount ?? null,
+      } : null;
+    }
+    (detailPlan as any).debug = dbg;
+  } catch (_e) {}
   } catch (_e) {
     if (!(detailPlan as any).debug) (detailPlan as any).debug = {};
     (detailPlan as any).debug.koshiki = { cellsCount: 0, breathCycle: (detailPlan as any).debug?.breathCycle || [], warnings: (detailPlan as any).warnings || [], kanaPhysicsMapOk: false };
