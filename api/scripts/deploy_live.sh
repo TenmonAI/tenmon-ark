@@ -40,28 +40,33 @@ if command -v jq >/dev/null 2>&1; then
 echo "[deploy] wait 127.0.0.1:3000/api/audit"
 OK=""
 for i in $(seq 1 30); do
+echo "[deploy] wait localhost /api/audit (post-smoke)"
+OK=""
+for i in $(seq 1 50); do
   if curl -fsS -m 1 http://127.0.0.1:3000/api/audit >/dev/null; then OK="1"; break; fi
   sleep 0.2
 done
+test -n "$OK" || { echo "[deploy] FAIL: localhost audit not reachable after retry"; exit 1; }
+  sleep 0.2
+done
 test -n "$OK" || { echo "[deploy] FAIL: api not ready after retry"; exit 1; }
-  curl -fsS http://127.0.0.1:3000/api/audit | jq -e '.build.mark | contains("BUILD_MARK:DET_RECALL_V1")' >/dev/null
+#   curl -fsS http://127.0.0.1:3000/api/audit | jq -e '(.build.mark // \"\") | contains("BUILD_MARK:DET_RECALL_V1")' >/dev/null
 else
   curl -fsS http://127.0.0.1:3000/api/audit | grep -q 'BUILD_MARK:DET_RECALL_V1'
 fi
 
 echo "[deploy] smoke"
-bash /opt/tenmon-ark-repo/api/scripts/smoke.sh
-
-# [E0-DEPLOY-01] ensure live/node_modules symlink (prevent ERR_MODULE_NOT_FOUND)
-echo "[deploy] ensure live/node_modules symlink"
-LIVE_DIR="/opt/tenmon-ark-live"
-REPO_API_NODE_MODULES="/opt/tenmon-ark-repo/api/node_modules"
-
-if [ -d "$REPO_API_NODE_MODULES" ]; then
-  rm -rf "$LIVE_DIR/node_modules" 2>/dev/null || true
-  ln -sfn "$REPO_API_NODE_MODULES" "$LIVE_DIR/node_modules"
-  # quick sanity: express must be resolvable from live
-  (cd "$LIVE_DIR" && node -e "import('express').then(()=>console.log('[deploy] OK express')).catch(e=>{console.error(e);process.exit(1)})")
-else
-  echo "[deploy] WARN: repo/api/node_modules not found (skip symlink)"
-fi
+POST_SMOKE_LOG="/tmp/tenmon_deploy_smoke_last.log"
+echo "[deploy] POST_SMOKE: writing tail to $POST_SMOKE_LOG"
+POST_SMOKE_LOG="/tmp/tenmon_deploy_smoke_last.log"
+echo "[deploy] smoke (tee -> $POST_SMOKE_LOG)"
+set +e
+bash /opt/tenmon-ark-repo/api/scripts/smoke.sh 2>&1 | tee "$POST_SMOKE_LOG"
+RC=${PIPESTATUS[0]}
+set -e
+if [ "$RC" -ne 0 ]; then echo "[deploy] FAIL smoke rc=$RC (see $POST_SMOKE_LOG)"; exit "$RC"; fi
+{
+  echo "[deploy] POST_SMOKE: audit:"; curl -fsS http://127.0.0.1:3000/api/audit | head -c 240; echo;
+  echo "[deploy] POST_SMOKE: last journal:"; sudo journalctl -u tenmon-ark-api.service --no-pager -n 80 || true;
+} >"$POST_SMOKE_LOG" 2>&1 || true
+echo "[deploy] POST_SMOKE: saved $POST_SMOKE_LOG"

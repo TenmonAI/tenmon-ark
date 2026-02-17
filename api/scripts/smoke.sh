@@ -8,7 +8,8 @@ A="$(curl -fsS "$BASE/api/audit")"
 if command -v jq >/dev/null 2>&1; then
   echo "$A" | jq -e '.ok==true' >/dev/null
   echo "$A" | jq -e '.build != null' >/dev/null
-  echo "$A" | jq -e '.build.mark | contains("BUILD_MARK:")' >/dev/null
+echo "[smoke] audit build mark"
+curl -fsS http://127.0.0.1:3000/api/audit | grep -q "BUILD_MARK:DET_RECALL_V1" || { echo "[smoke] FAIL: build mark missing"; curl -fsS http://127.0.0.1:3000/api/audit | head -c 500; echo; exit 1; }
 else
   echo "$A" | grep -q '"ok":true'
   echo "$A" | grep -q 'BUILD_MARK:'

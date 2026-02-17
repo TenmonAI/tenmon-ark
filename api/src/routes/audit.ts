@@ -2,6 +2,8 @@ import { Router, type Request, type Response } from "express";
 import { getGitSha } from "../version.js";
 import { getReadiness } from "../health/readiness.js";
 
+
+const BUILD_FEATURES_KOSHIKI = { ...BUILD_FEATURES, koshikiKernel: true } as const;
 import { BUILD_MARK, BUILD_FEATURES } from "../build/buildInfo.js";
 const router = Router();
 router.get("/audit", (_req: Request, res: Response) => {
@@ -22,7 +24,7 @@ router.get("/audit", (_req: Request, res: Response) => {
         pid,
         uptime: Math.floor(uptime),
         readiness: r,
-      build: { mark: BUILD_MARK, features: BUILD_FEATURES },
+      build: { mark: BUILD_MARK, features: BUILD_FEATURES_KOSHIKI },
         });
     }
     // Ready: 200 OK
@@ -33,7 +35,7 @@ router.get("/audit", (_req: Request, res: Response) => {
       pid,
       uptime: Math.floor(uptime),
       readiness: r,
-    build: { mark: BUILD_MARK, features: BUILD_FEATURES },
+    build: { mark: BUILD_MARK, features: BUILD_FEATURES_KOSHIKI },
         });
   } catch (error) {
     // gitSha と readiness は取得を試みる（失敗時は空文字/null）

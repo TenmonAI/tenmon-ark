@@ -1366,3 +1366,15 @@ node -e "(async()=>{const r=await fetch('http://127.0.0.1:3000/api/chat',{method
 
 echo "[K7] koshiki/ufk debug link gate"
 node -e "(async()=>{const r=await fetch('http://127.0.0.1:3000/api/chat',{method:'POST',headers:{'Content-Type':'application/json','x-local-test':'1'},body:JSON.stringify({threadId:'k7',message:'#詳細 アト'})}); const j=await r.json(); const k=j.detailPlan?.debug?.koshiki; if(!k){console.error('[FAIL] K7 missing koshiki', j.detailPlan?.debug); process.exit(1);} if(!('ufkLink' in k)){console.error('[FAIL] K7 missing ufkLink', k); process.exit(1);} console.log('[PASS] K7 koshiki/ufk debug link gate');})();"
+
+echo "[AK-System] audit.features koshikiKernel gate"
+AUDIT_JSON="/tmp/ak_system_audit.json"
+curl -fsS http://127.0.0.1:3000/api/audit -o "$AUDIT_JSON"
+python3 - <<'PY2'
+import json
+j=json.load(open('/tmp/ak_system_audit.json','r',encoding='utf-8',errors='replace'))
+b=j.get('build') or {}
+f=b.get('features') or {}
+assert f.get('koshikiKernel') is True, f
+print('[PASS] AK-System koshikiKernel feature present')
+PY2
