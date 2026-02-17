@@ -1351,5 +1351,8 @@ echo "[K1] KanaPhysicsMap evidenceIds gate (MVP)"
 node -e "const m=require('./dist/koshiki/kanaPhysicsMap'); m.assertKanaPhysicsMap(m.KANA_PHYSICS_MAP_MVP); console.log('[PASS] K1 KanaPhysicsMap evidenceIds gate');"
 
 echo "[K2] Itsura parser determinism gate"
+
+echo "[K3] breathCycle debug gate"
+node -e "const fetch=global.fetch; (async()=>{ const r=await fetch('http://127.0.0.1:3000/api/chat',{method:'POST',headers:{'Content-Type':'application/json','x-local-test':'1'},body:JSON.stringify({threadId:'k3',message:'#詳細 test'})}); const j=await r.json(); const bc=j.detailPlan?.debug?.breathCycle; if(!Array.isArray(bc)||bc.length<1){console.error('[FAIL] K3 breathCycle missing', j.detailPlan?.debug); process.exit(1);} console.log('[PASS] K3 breathCycle debug gate'); })();"
 node -e "const {parseItsura}=require('./dist/koshiki/itsura'); const a=parseItsura('ab\nC'); const b=parseItsura('ab\nC'); if(JSON.stringify(a)!==JSON.stringify(b)) { console.error('[FAIL] K2 nondeterministic'); process.exit(1);} if(a.length!==3) { console.error('[FAIL] K2 length', a.length); process.exit(1);} if(a[0].row!==0||a[0].col!==0||a[2].row!==1||a[2].col!==0) { console.error('[FAIL] K2 coords', a); process.exit(1);} console.log('[PASS] K2 Itsura parser determinism gate');"
 
