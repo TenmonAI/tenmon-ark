@@ -49,11 +49,11 @@ if [ "$L" -lt 20 ]; then
   exit 1
 fi
 
-QC_JSON="$(python3 -c 'import json,sys; t=sys.stdin.read(); jp=sum(1 for ch in t if "\u3040"<=ch<="\u30ff" or "\u4e00"<=ch<="\u9fff"); total=max(1,len(t)); print(json.dumps({"schemaVersion":1,"engine":"tesseract","psm":6,"prep":"neg_thr70","jpRate":jp/total,"len":len(t),"empty":len(t)==0}, ensure_ascii=False))' <<<"$TEXT_NORM")"
+QC_JSON="$(python3 -c 'import os; engine=os.environ.get("OCR_ENGINE","tesseract"); import json,sys; t=sys.stdin.read(); jp=sum(1 for ch in t if "\u3040"<=ch<="\u30ff" or "\u4e00"<=ch<="\u9fff"); total=max(1,len(t)); print(json.dumps({"schemaVersion":1,"engine":"tesseract","psm":6,"prep":"neg_thr70","jpRate":jp/total,"len":len(t),"empty":len(t)==0}, ensure_ascii=False))' <<<"$TEXT_NORM")"
 
 # DB save (python source fixed; OCR text goes via stdin only)
 DOC_ENV="$DOC" PDFPAGE_ENV="$PDFPAGE" DB_ENV="$DB" QC_ENV="$QC_JSON" \
-python3 -c '
+python3 -c 'import os; engine=os.environ.get("OCR_ENGINE","tesseract"); 
 import os, sqlite3, sys
 db=os.environ["DB_ENV"]
 doc=os.environ["DOC_ENV"]
@@ -71,7 +71,7 @@ ON CONFLICT(doc,pdfPage,engine) DO UPDATE SET
   text_norm=excluded.text_norm,
   qc_json=excluded.qc_json,
   createdAt=CURRENT_TIMESTAMP
-""",(doc,pdfPage,"tesseract",text_raw,text_norm,qc))
+""",(doc,pdfPage,engine,text_raw,text_norm,qc))
 con.commit()
 con.close()
 print(f"[OK] saved kokuzo_ocr_pages doc={doc} pdfPage={pdfPage} len={len(text_norm)}")
