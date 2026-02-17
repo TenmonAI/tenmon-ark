@@ -1357,5 +1357,8 @@ node -e "const fetch=global.fetch; (async()=>{ const r=await fetch('http://127.0
 
 echo "[K4] TeNiWoHa warnings gate"
 node -e "(async()=>{const r=await fetch('http://127.0.0.1:3000/api/chat',{method:'POST',headers:{'Content-Type':'application/json','x-local-test':'1'},body:JSON.stringify({threadId:'k4',message:'#詳細 これはテスト'})}); const j=await r.json(); const w=j.detailPlan?.warnings; if(!Array.isArray(w)){console.error('[FAIL] K4 warnings not array', w); process.exit(1);} console.log('[PASS] K4 TeNiWoHa warnings gate');})();"
+
+echo "[K5] koshiki debug connect gate"
+node -e "(async()=>{const r=await fetch('http://127.0.0.1:3000/api/chat',{method:'POST',headers:{'Content-Type':'application/json','x-local-test':'1'},body:JSON.stringify({threadId:'k5',message:'#詳細 あ'})}); const j=await r.json(); const k=j.detailPlan?.debug?.koshiki; if(!k||typeof k.cellsCount!=='number'||k.cellsCount<1){console.error('[FAIL] K5 koshiki debug missing', j.detailPlan?.debug); process.exit(1);} console.log('[PASS] K5 koshiki debug connect gate');})();"
 node -e "const {parseItsura}=require('./dist/koshiki/itsura'); const a=parseItsura('ab\nC'); const b=parseItsura('ab\nC'); if(JSON.stringify(a)!==JSON.stringify(b)) { console.error('[FAIL] K2 nondeterministic'); process.exit(1);} if(a.length!==3) { console.error('[FAIL] K2 length', a.length); process.exit(1);} if(a[0].row!==0||a[0].col!==0||a[2].row!==1||a[2].col!==0) { console.error('[FAIL] K2 coords', a); process.exit(1);} console.log('[PASS] K2 Itsura parser determinism gate');"
 

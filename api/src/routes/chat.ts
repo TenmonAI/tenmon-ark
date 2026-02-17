@@ -29,6 +29,8 @@ import { projectCandidateToCell } from "../kanagi/ufk/projector.js";
 import { buildGenesisPlan } from "../kanagi/ufk/genesisPlan.js";
 import { computeBreathCycle } from "../koshiki/breathEngine.js";
 import { teniwohaWarnings } from "../koshiki/teniwoha.js";
+import { parseItsura } from "../koshiki/itsura.js";
+import { assertKanaPhysicsMap, KANA_PHYSICS_MAP_MVP } from "../koshiki/kanaPhysicsMap.js";
 
 import { localSurfaceize } from "../tenmon/surface/localSurfaceize.js";
 import { llmChat } from "../core/llmWrapper.js";
@@ -1380,6 +1382,22 @@ if (usable.length === 0) {
   // K3 debug: breathCycle (no response text change)
   if (!(detailPlan as any).debug) (detailPlan as any).debug = {};
   (detailPlan as any).debug.breathCycle = computeBreathCycle(String(message || ""));
+  // K5 debug: koshiki summary (no response text change)
+  try {
+    const cells = parseItsura(String(message || ""));
+    // evidenceIds presence in KanaPhysicsMap is enforced by K1 gate
+    assertKanaPhysicsMap(KANA_PHYSICS_MAP_MVP);
+    if (!(detailPlan as any).debug) (detailPlan as any).debug = {};
+    (detailPlan as any).debug.koshiki = {
+      cellsCount: Array.isArray(cells) ? cells.length : 0,
+      breathCycle: (detailPlan as any).debug?.breathCycle || [],
+      warnings: (detailPlan as any).warnings || [],
+      kanaPhysicsMapOk: true,
+    };
+  } catch (_e) {
+    if (!(detailPlan as any).debug) (detailPlan as any).debug = {};
+    (detailPlan as any).debug.koshiki = { cellsCount: 0, breathCycle: (detailPlan as any).debug?.breathCycle || [], warnings: (detailPlan as any).warnings || [], kanaPhysicsMapOk: false };
+  }
   // K4 warnings: TeNiWoHa (warnings only)
   const wK4 = teniwohaWarnings(String(message || ""));
   if (!Array.isArray((detailPlan as any).warnings)) (detailPlan as any).warnings = [];
