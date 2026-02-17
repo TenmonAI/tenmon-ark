@@ -1347,3 +1347,6 @@ L_DB="$(sqlite3 "$DB" "SELECT length(text_norm) FROM kokuzo_ocr_pages WHERE doc=
 if [ "${L_DB:-0}" -lt 1 ]; then echo "[FAIL] KG6-1 text_norm not written"; exit 1; fi
 echo "[PASS] KG6-1 consensus applied len=$L_DB sha=$SHA_A"
 
+echo "[K1] KanaPhysicsMap evidenceIds gate (MVP)"
+node -e "const m=require('./dist/koshiki/kanaPhysicsMap'); m.assertKanaPhysicsMap(m.KANA_PHYSICS_MAP_MVP); console.log('[PASS] K1 KanaPhysicsMap evidenceIds gate');"
+
