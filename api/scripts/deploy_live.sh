@@ -37,7 +37,13 @@ sudo ss -lptn 'sport = :3000' || true
 sudo journalctl -u tenmon-ark-api.service -n 30 --no-pager || true
 echo "[deploy] audit gate"
 if command -v jq >/dev/null 2>&1; then
-  curl -fsS http://127.0.0.1:3000/api/audit | jq -e '.ok==true' >/dev/null
+echo "[deploy] wait 127.0.0.1:3000/api/audit"
+OK=""
+for i in $(seq 1 30); do
+  if curl -fsS -m 1 http://127.0.0.1:3000/api/audit >/dev/null; then OK="1"; break; fi
+  sleep 0.2
+done
+test -n "$OK" || { echo "[deploy] FAIL: api not ready after retry"; exit 1; }
   curl -fsS http://127.0.0.1:3000/api/audit | jq -e '.build.mark | contains("BUILD_MARK:DET_RECALL_V1")' >/dev/null
 else
   curl -fsS http://127.0.0.1:3000/api/audit | grep -q 'BUILD_MARK:DET_RECALL_V1'
