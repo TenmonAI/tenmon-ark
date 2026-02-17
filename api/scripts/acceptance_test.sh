@@ -1286,3 +1286,8 @@ if (!cell || cell.content !== "x") process.exit(1);
 if (!cell.meta || !Array.isArray(cell.meta.evidenceIds) || cell.meta.evidenceIds.length !== 1) process.exit(1);
 console.log("[PASS] AK5 projector");
 NODE
+
+echo "[AK6] genesisPlan gate"
+OUT="$(curl -fsS -X POST "${BASE_URL}/api/chat" -H 'Content-Type: application/json' -d '{"threadId":"ak6-smoke","message":"#詳細"}')"
+echo "$OUT" | jq -e '.decisionFrame.detailPlan.debug.genesisPlan | type=="array" and length>=3' >/dev/null
+echo "[PASS] AK6 genesisPlan gate"

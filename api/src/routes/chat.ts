@@ -26,6 +26,7 @@ import { buildMythMapEdges } from "../myth/mythMapEdges.js";
 import { getMythMapEdges, setMythMapEdges } from "../kokuzo/mythMapMemory.js";
 import { listThreadLaws, dedupLawsByDocPage } from "../kokuzo/laws.js";
 import { projectCandidateToCell } from "../kanagi/ufk/projector.js";
+import { buildGenesisPlan } from "../kanagi/ufk/genesisPlan.js";
 
 import { localSurfaceize } from "../tenmon/surface/localSurfaceize.js";
 import { llmChat } from "../core/llmWrapper.js";
@@ -640,6 +641,17 @@ const pid = process.pid;
 
 } catch {}
       // DF_DETAILPLAN_MIRROR_V1: always mirror top-level detailPlan into decisionFrame.detailPlan
+
+    // AK6_GENESISPLAN_DEBUG_V1: attach genesisPlan template (debug-only, deterministic)
+    try {
+      const dp: any = (payload as any)?.detailPlan;
+      if (dp) {
+        dp.debug = dp.debug ?? {};
+        dp.debug.genesisPlan = buildGenesisPlan();
+      }
+    } catch (_e) {
+      // debug only
+    }
 
     // AK5_2_UFK_DEBUG_INJECT_V1: project top candidate into detailPlan.debug (deterministic, debug-only)
     try {
