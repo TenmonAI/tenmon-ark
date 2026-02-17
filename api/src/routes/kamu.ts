@@ -88,6 +88,20 @@ kamuRouter.get("/kamu/restore/list", (req: Request, res: Response) => {
  *   restore_suggestions に method="neighbor" で提案を積む（正文は不変）
  */
 kamuRouter.post("/kamu/restore/auto", (req: Request, res: Response) => {
+  // KAMU_DBG_V1: deterministic trace (no behavior change)
+  const __kamuDbg = {
+    v: 1,
+    route: "kamu/restore/auto",
+    at: new Date().toISOString(),
+    ip: String(req.ip || ""),
+    ua: String(req.get("user-agent") || ""),
+    bodyKeys: Object.keys((req.body || {}) as any),
+    doc: (req.body as any)?.doc ?? null,
+    pdfPage: (req.body as any)?.pdfPage ?? null,
+    threadId: (req.body as any)?.threadId ?? null,
+  };
+  console.log("[KAMU_DBG]", JSON.stringify(__kamuDbg));
+
   try {
     const body: any = req.body || {};
     const doc = String(body.doc || "").trim();
@@ -179,6 +193,19 @@ kamuRouter.post("/kamu/restore/auto", (req: Request, res: Response) => {
  * - 原本（kokuzo_pages.text）は触らない。
  */
 kamuRouter.post("/kamu/restore/accept", (req: Request, res: Response) => {
+  // KAMU_DBG_V1: deterministic trace (no behavior change)
+  const __kamuDbg = {
+    v: 1,
+    route: "kamu/restore/accept",
+    at: new Date().toISOString(),
+    ip: String(req.ip || ""),
+    ua: String(req.get("user-agent") || ""),
+    bodyKeys: Object.keys((req.body || {}) as any),
+    rid: (req.body as any)?.rid ?? null,
+    threadId: (req.body as any)?.threadId ?? null,
+  };
+  console.log("[KAMU_DBG]", JSON.stringify(__kamuDbg));
+
   try {
     const body: any = req.body || {};
     const rid = Number(body.rid || 0);
