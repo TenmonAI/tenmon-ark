@@ -1241,8 +1241,8 @@ echo "[P1-2a] PhaseP1-2a PWA IDB export/import static gate"
 echo "[P1-2a] DB name must be tenmon_ark_pwa_v1"
 grep -RIn --line-number 'const DB_NAME = "tenmon_ark_pwa_v1"' /opt/tenmon-ark-repo/web/src/lib/db.ts >/dev/null
 echo "[P1-2a] export/import hints must exist (source)"
-test -f "web/src/components/SettingsPanel.tsx"
-grep -nE '(Export JSON|Import JSON|tenmon-ark-backup|schemaVersion)' "web/src/components/SettingsPanel.tsx" >/dev/null
+test -f "/opt/tenmon-ark-repo/web/src/components/SettingsPanel.tsx"
+grep -nE '(Export JSON|Import JSON|tenmon-ark-backup|schemaVersion)' "/opt/tenmon-ark-repo/web/src/components/SettingsPanel.tsx" >/dev/null
 echo "[PASS] PhaseP1-2a PWA export/import static gate"
 
 
