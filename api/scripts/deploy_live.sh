@@ -40,8 +40,8 @@ if command -v jq >/dev/null 2>&1; then
 echo "[deploy] wait 127.0.0.1:3000/api/audit"
 OK=""
 for i in $(seq 1 30); do
-echo "[deploy] wait localhost /api/audit (post-smoke)"
 OK=""
+echo "[deploy] wait localhost /api/audit (post-smoke)"
 for i in $(seq 1 50); do
   if curl -fsS -m 1 http://127.0.0.1:3000/api/audit >/dev/null; then OK="1"; break; fi
   sleep 0.2
