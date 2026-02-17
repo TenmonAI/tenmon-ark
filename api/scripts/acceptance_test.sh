@@ -1257,3 +1257,15 @@ if (detectModeHint("ェ") !== "WHITEHOLE_OUT") process.exit(1);
 if (detectModeHint("x") !== null) process.exit(1);
 console.log("[PASS] AK3 modeHint");
 NODE
+
+echo "[AK4] 24-classifier gate"
+node - <<'NODE'
+import { classifyPermutation } from "./dist/kanagi/ufk/classifier24.js";
+const A = classifyPermutation(["LEFT_IN","LEFT_OUT","RIGHT_IN","RIGHT_OUT"]);
+const C = classifyPermutation(["RIGHT_OUT","RIGHT_IN","LEFT_OUT","LEFT_IN"]);
+const B = classifyPermutation([]);
+if (A.ufkClass !== "A") process.exit(1);
+if (C.ufkClass !== "C") process.exit(1);
+if (B.ufkClass !== "B") process.exit(1);
+console.log("[PASS] AK4 classifier");
+NODE
