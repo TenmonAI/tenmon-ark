@@ -206,6 +206,14 @@ SINCE="$(date '+%Y-%m-%d %H:%M:%S')"
 echo "[1-0] SINCE=${SINCE}"
 
 echo "[2] wait /api/audit (ok==true + gitSha + readiness)"
+
+# AUDIT_RETRY_V1: connection refused can happen right after restart. retry explicitly.
+for _i in 1 2 3 4 5; do
+  if curl -fsS -m 2 "${BASE_URL}/api/audit" >/dev/null 2>&1; then
+    break
+  fi
+  sleep 1
+done
 REPO_SHA="$(cd /opt/tenmon-ark-repo && git rev-parse --short HEAD)"
 
 for i in $(seq 1 200); do
