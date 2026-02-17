@@ -67,7 +67,7 @@ kamuRouter.get("/kamu/restore/list", (req: Request, res: Response) => {
 
     const db = getDb("kokuzo");
     const rows = db.prepare(
-      `SELECT *
+      `SELECT rowid AS rid, *
          FROM kokuzo_restore_suggestions
         WHERE doc = ? AND pdfPage = ?
         ORDER BY createdAt DESC
@@ -161,6 +161,44 @@ kamuRouter.post("/kamu/restore/auto", (req: Request, res: Response) => {
     });
   } catch (e: any) {
     console.error("[kamu/restore/auto]", e);
+    return res.status(500).json({ ok: false, error: String(e?.message ?? e) });
+  }
+});
+
+
+/**
+ * POST /api/kamu/restore/accept
+ * body: { rid?: number, id?: string }
+ * - 既存データに id が無い場合があるため、rowid(rid) を主キーとして受ける。
+ */
+
+/**
+ * POST /api/kamu/restore/accept
+ * body: { rid: number }
+ * - id列が空の個体があるため、rowid(rid)で accepted 化する。
+ * - 原本（kokuzo_pages.text）は触らない。
+ */
+kamuRouter.post("/kamu/restore/accept", (req: Request, res: Response) => {
+  try {
+    const body: any = req.body || {};
+    const rid = Number(body.rid || 0);
+    if (!Number.isFinite(rid) || rid <= 0) {
+      return res.status(400).json({ ok: false, error: "rid required" });
+    }
+
+    const db = getDb("kokuzo");
+    const info = db.prepare(
+      `UPDATE kokuzo_restore_suggestions
+          SET status='accepted'
+        WHERE rowid = ?`
+    ).run(rid);
+
+    const changes = (info as any)?.changes ?? 0;
+    if (changes <= 0) return res.status(404).json({ ok: false, error: "not found" });
+
+    return res.json({ ok: true, schemaVersion: 1, rid, status: "accepted" });
+  } catch (e: any) {
+    console.error("[kamu/restore/accept]", e);
     return res.status(500).json({ ok: false, error: String(e?.message ?? e) });
   }
 });

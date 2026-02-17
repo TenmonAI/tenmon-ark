@@ -1275,3 +1275,17 @@ OUTK2="$(curl -fsS -X POST "${BASE_URL}/api/kamu/restore/auto" -H 'Content-Type:
 echo "$OUTK2" | jq -e '.ok==true and .schemaVersion==1 and .doc=="KHS" and .pdfPage==132 and (.inserted|type)=="number"' >/dev/null
 curl -fsS "${BASE_URL}/api/kamu/restore/list?doc=KHS&pdfPage=132" | jq -e '.ok==true and (.items|type)=="array"' >/dev/null
 echo "[PASS] KAMU-2 restore auto neighbor gate"
+
+echo "[KAMU-3] restore accept gate (rid)"
+OUTL="$(curl -fsS "${BASE_URL}/api/kamu/restore/list?doc=KHS&pdfPage=132")"
+RID="$(echo "$OUTL" | jq -r '.items[0].rid // 0')"
+test "$RID" -ge 1 || (echo "[FAIL] missing rid in list items[0]" && exit 1)
+
+curl -fsS -X POST "${BASE_URL}/api/kamu/restore/accept" \
+  -H 'Content-Type: application/json' \
+  -d "{\"rid\":${RID}}" \
+| jq -e '.ok==true and .schemaVersion==1 and .status=="accepted"' >/dev/null
+
+OUTL2="$(curl -fsS "${BASE_URL}/api/kamu/restore/list?doc=KHS&pdfPage=132")"
+echo "$OUTL2" | jq -e '([.items[].status] | index("accepted")) != null' >/dev/null
+echo "[PASS] KAMU-3 restore accept gate (rid)"
