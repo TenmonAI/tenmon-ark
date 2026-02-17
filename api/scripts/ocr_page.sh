@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
+
+ENGINE="${OCR_ENGINE:-tesseract}"
 set +H
 
 DOC="${1:-}"
