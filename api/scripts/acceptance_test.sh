@@ -1302,3 +1302,16 @@ if (JSON.stringify(a) !== JSON.stringify(b)) {
 }
 console.log("[PASS] AK1 deterministic");
 NODE
+
+echo "[AK1] applyMotion determinism gate"
+node - <<'NODE'
+import { applyMotion } from "./dist/kanagi/ufk/transition.js";
+
+const a = applyMotion({ fire: 0, water: 0 }, "RIGHT_IN", "abc").next;
+const b = applyMotion({ fire: 0, water: 0 }, "RIGHT_IN", "abc").next;
+if (JSON.stringify(a) !== JSON.stringify(b)) {
+  console.error("NOT deterministic", a, b);
+  process.exit(1);
+}
+console.log("[PASS] AK1 deterministic");
+NODE
