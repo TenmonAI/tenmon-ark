@@ -30,7 +30,7 @@ mkdir -p "$TMPDIR"
 PRE_IMG="$TMPDIR/prep.png"
 OUT_BASE="$TMPDIR/out"
 
-# tuned winner: neg + thr70 + psm6
+# tuned winner: gray + normalize + negate + threshold70, psm6
 convert "$IMG" -colorspace Gray -normalize -negate -threshold 70% "$PRE_IMG"
 [ -s "$PRE_IMG" ] || { echo "[FAIL] preprocess output missing: $PRE_IMG"; exit 1; }
 
@@ -47,41 +47,52 @@ if [ "$L" -lt 20 ]; then
   exit 1
 fi
 
-QC_JSON="$(python3 - <<'PY' <<<"$TEXT_NORM"
+QC_JSON="$(
+  python3 - <<'PY' <<<"$TEXT_NORM"
 import json,sys
 t=sys.stdin.read()
-jp=sum(1 for ch in t if "\u3040"<=ch<="\u30ff" or "\u4e00"<=ch<="\u9fff")
+jp=sum(1 for ch in t if ("\u3040"<=ch<="\u30ff") or ("\u4e00"<=ch<="\u9fff"))
 total=max(1,len(t))
-print(json.dumps({"schemaVersion":1,"engine":"tesseract","psm":6,"prep":"neg_thr70","jpRate":jp/total,"len":len(t),"empty":len(t)==0}))
+print(json.dumps({
+  "schemaVersion":1,
+  "engine":"tesseract",
+  "psm":6,
+  "prep":"neg_thr70",
+  "jpRate": jp/total,
+  "len": len(t),
+  "empty": (len(t)==0)
+}, ensure_ascii=False))
 PY
 )"
 
-# DB save: createdAt is generated in Python (no sqlite datetime('now') risk)
+# DB save is done in python heredoc.
+# IMPORTANT: OCR text must never appear inside python source; pass via stdin only.
 DOC_ENV="$DOC" PDFPAGE_ENV="$PDFPAGE" DB_ENV="$DB" QC_ENV="$QC_JSON" \
 python3 - <<'PY' <<<"$TEXT_RAW"
-import os,sqlite3,sys,datetime
+import os, sqlite3, sys
 db=os.environ["DB_ENV"]
 doc=os.environ["DOC_ENV"]
 pdfPage=int(os.environ["PDFPAGE_ENV"])
 qc=os.environ["QC_ENV"]
+
 text_raw=sys.stdin.read()
 text_norm=text_raw.replace("\r","")
-createdAt=datetime.datetime.utcnow().isoformat(timespec="seconds")+"Z"
 
 con=sqlite3.connect(db)
 cur=con.cursor()
 cur.execute("""
 INSERT INTO kokuzo_ocr_pages(doc,pdfPage,engine,text_raw,text_norm,qc_json,createdAt)
-VALUES(?,?,?,?,?,?,?)
+VALUES(?,?,?,?,?,?,datetime('now'))
 ON CONFLICT(doc,pdfPage,engine) DO UPDATE SET
   text_raw=excluded.text_raw,
   text_norm=excluded.text_norm,
   qc_json=excluded.qc_json,
-  createdAt=excluded.createdAt
-""",(doc,pdfPage,"tesseract",text_raw,text_norm,qc,createdAt))
+  createdAt=datetime('now')
+""",(doc,pdfPage,"tesseract",text_raw,text_norm,qc))
 con.commit()
 con.close()
-print("[OK] saved kokuzo_ocr_pages doc=%s pdfPage=%s len=%d" % (doc,pdfPage,len(text_norm)))
+
+print(f"[OK] saved kokuzo_ocr_pages doc={doc} pdfPage={pdfPage} len={len(text_norm)}")
 PY
 
 echo "[PASS] OCR ok len=$L"
