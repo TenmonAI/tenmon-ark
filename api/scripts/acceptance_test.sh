@@ -459,6 +459,11 @@ echo "$r36_4" | jq -e '(.response|type)=="string" and (.response|length)>=50' >/
 echo "$r36_4" | jq -e '(.decisionFrame.ku|type)=="object"' >/dev/null
 echo "[PASS] Phase36-2 fallback response"
 
+
+# HCURL_V1: curl wrapper for flaky local TCP resets during acceptance
+hcurl() {
+  hcurl --retry 5 --retry-all-errors --max-time 30 ""
+}
 echo "[37] Phase37 KHS minimal ingestion E2E (ingest -> query -> evidence)"
 # kokuzo_pages count > 0 は Phase1-1 で既に確認済み（FAIL で終了するため、ここには到達しない）
 # 念のため再確認
