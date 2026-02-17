@@ -1269,3 +1269,12 @@ if (C.ufkClass !== "C") process.exit(1);
 if (B.ufkClass !== "B") process.exit(1);
 console.log("[PASS] AK4 classifier");
 NODE
+
+echo "[AK5] projector gate"
+node - <<'NODE'
+import { projectCandidateToCell } from "./dist/kanagi/ufk/projector.js";
+const cell = projectCandidateToCell({ snippet: "x", evidenceIds: ["doc=A#pdfPage=1"] });
+if (!cell || cell.content !== "x") process.exit(1);
+if (!cell.meta || !Array.isArray(cell.meta.evidenceIds) || cell.meta.evidenceIds.length !== 1) process.exit(1);
+console.log("[PASS] AK5 projector");
+NODE
