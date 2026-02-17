@@ -1320,7 +1320,7 @@ if [ "${C:-0}" -lt 1 ]; then
 fi
 echo "[PASS] KG5 ocr_pages gate"
 
-echo "[KAMU-4] restore apply gate"
+echo "[KAMU-4] accepted RID gate"
 BASE_URL="${BASE_URL:-http://127.0.0.1:3000}"
 OUTDIR="/var/tmp/tenmon_kamu4"
 mkdir -p "$OUTDIR" 2>/dev/null || true
