@@ -56,7 +56,7 @@ print(json.dumps({"schemaVersion":1,"engine":"tesseract","psm":6,"prep":"neg_thr
 PY
 )"
 
-# DB save: createdAt is generated in Python (no sqlite datetime('now') to break)
+# DB save: createdAt is generated in Python (no sqlite datetime('now') risk)
 DOC_ENV="$DOC" PDFPAGE_ENV="$PDFPAGE" DB_ENV="$DB" QC_ENV="$QC_JSON" \
 python3 - <<'PY' <<<"$TEXT_RAW"
 import os,sqlite3,sys,datetime
