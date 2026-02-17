@@ -1320,6 +1320,19 @@ if [ "${C:-0}" -lt 1 ]; then
 fi
 echo "[PASS] KG5 ocr_pages gate"
 
+echo "[KG6] OCR consensus determinism gate (MVP)"
+node - <<'JS'
+const { consensusTextDet } = require('./dist/kokuzo/ocrConsensus');
+const input = ['abc','a\n','abcdef','abcde'];
+const a = consensusTextDet(input);
+const b = consensusTextDet(input);
+if (a !== b) { console.error('[FAIL] KG6 consensus not deterministic', {a,b}); process.exit(1); }
+if (a !== 'abcdef') { console.error('[FAIL] KG6 unexpected consensus', {a}); process.exit(1); }
+const e = consensusTextDet([]);
+if (e !== '') { console.error('[FAIL] KG6 empty input must return empty', {e}); process.exit(1); }
+console.log('[PASS] KG6 consensus determinism gate');
+JS
+
 echo "[KAMU-4] accepted RID gate"
 BASE_URL="${BASE_URL:-http://127.0.0.1:3000}"
 OUTDIR="/var/tmp/tenmon_kamu4"
