@@ -42,10 +42,14 @@ OK=""
 for i in $(seq 1 30); do
 OK=""
 echo "[deploy] wait localhost /api/audit (post-smoke)"
+OK=""
+ATTEMPTS=0
 for i in $(seq 1 50); do
-  if curl -fsS -m 1 http://127.0.0.1:3000/api/audit >/dev/null; then OK="1"; break; fi
+  ATTEMPTS=$i
+  if curl -fsS -m 1 http://127.0.0.1:3000/api/audit >/dev/null 2>&1; then OK="1"; break; fi
   sleep 0.2
 done
+echo "[deploy] post-smoke audit ready after attempts=${ATTEMPTS}"
 test -n "$OK" || { echo "[deploy] FAIL: localhost audit not reachable after retry"; exit 1; }
   sleep 0.2
 done
