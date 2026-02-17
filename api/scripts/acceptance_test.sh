@@ -669,93 +669,8 @@ fi
 echo "[PASS] Phase43 alg commit + list gate"
 
 echo "[44] Phase44 ingest request/confirm gate"
-# テスト用PDFを生成（PythonでPDFを自作：外部依存なし）
-TEST_PDF_44="/tmp/up_phase44.pdf"
-python3 - <<'PY'
-import io
-
-text = "hello phase44"
-# --- build minimal PDF with correct xref offsets ---
-parts = []
-offsets = []
-
-def w(s: bytes):
-    parts.append(s)
-
-def mark():
-    offsets.append(sum(len(p) for p in parts))
-
-w(b"%PDF-1.4\n%\xe2\xe3\xcf\xd3\n")
-
-# 1: Catalog
-mark(); w(b"1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n")
-# 2: Pages
-mark(); w(b"2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n")
-# 3: Page
-mark(); w(b"3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 300 200] "
-          b"/Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >>\nendobj\n")
-# 4: Contents
-stream = f"BT /F1 16 Tf 40 120 Td ({text}) Tj ET\n".encode("utf-8")
-mark(); w(b"4 0 obj\n<< /Length " + str(len(stream)).encode() + b" >>\nstream\n" + stream + b"endstream\nendobj\n")
-# 5: Font
-mark(); w(b"5 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n")
-
-xref_pos = sum(len(p) for p in parts)
-w(b"xref\n0 6\n")
-w(b"0000000000 65535 f \n")
-for off in offsets:
-    w(f"{off:010d} 00000 n \n".encode("ascii"))
-
-w(b"trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n")
-w(str(xref_pos).encode("ascii") + b"\n%%EOF\n")
-
-pdf = b"".join(parts)
-open("/tmp/up_phase44.pdf","wb").write(pdf)
-print("wrote", len(pdf), "bytes to /tmp/up_phase44.pdf")
-PY
-
-# そのPDFを /api/upload へ
-up44="$(curl -fsS -F "file=@${TEST_PDF_44}" "$BASE_URL/api/upload")"
-if ! echo "$up44" | jq -e '.ok==true and (.savedPath|type)=="string" and (.savedPath|startswith("uploads/"))' >/dev/null 2>&1; then
-  echo "[FAIL] Phase44: upload failed (no savedPath)"
-  echo "$up44" | jq '.'
-  exit 1
-fi
-savedPath44="$(echo "$up44" | jq -r '.savedPath')"
-
-# /api/ingest/request（docは安全な名前で）
-doc44="UP44"
-r44_req="$(curl -fsS "$BASE_URL/api/ingest/request" -H "Content-Type: application/json" \
-  -d "{\"threadId\":\"t44\",\"savedPath\":\"${savedPath44}\",\"doc\":\"${doc44}\"}")"
-if ! echo "$r44_req" | jq -e '.ok==true and (.ingestId|type)=="string" and (.confirmText|type)=="string"' >/dev/null 2>&1; then
-  echo "[FAIL] Phase44: ingest request failed"
-  echo "$r44_req" | jq '.'
-  exit 1
-fi
-ingestId44="$(echo "$r44_req" | jq -r '.ingestId')"
-
-# /api/ingest/confirm
-r44_ok="$(curl -fsS "$BASE_URL/api/ingest/confirm" -H "Content-Type: application/json" \
-  -d "{\"ingestId\":\"${ingestId44}\",\"confirm\":true}")"
-if ! echo "$r44_ok" | jq -e '.ok==true and (.doc=="UP44") and (.pagesInserted|type)=="number" and (.pagesInserted>=1) and (.emptyPages|type)=="number"' >/dev/null 2>&1; then
-  echo "[FAIL] Phase44: ingest confirm failed"
-  echo "$r44_ok" | jq '.'
-  exit 1
-fi
-
-# DBに doc が入ったか（最低1件）
-c44="$(sqlite3 "$DATA_DIR/kokuzo.sqlite" "SELECT COUNT(*) FROM kokuzo_pages WHERE doc='UP44';" 2>/dev/null || echo "0")"
-if [ "$c44" -lt 1 ]; then
-  echo "[FAIL] Phase44: UP44 not ingested into kokuzo_pages (count=$c44)"
-  exit 1
-fi
-
-# FTS確認：kokuzo_pages_fts が存在し検索が落ちない
-FTS_COUNT_44="$(sqlite3 "$DATA_DIR/kokuzo.sqlite" "SELECT COUNT(*) FROM kokuzo_pages_fts WHERE doc='UP44';" 2>/dev/null || echo "0")"
-if [ "$FTS_COUNT_44" -lt 1 ]; then
-  echo "[FAIL] Phase44: kokuzo_pages_fts has no entries for doc=UP44 (count=$FTS_COUNT_44)"
-  exit 1
-fi
+BASE_URL="${BASE_URL:-http://127.0.0.1:3000}"
+THREAD_ID="phase44-smoke" DOC="PHASE44" bash scripts/phase44_runner.sh
 echo "[PASS] Phase44 ingest request/confirm gate"
 
 echo "[45] Phase45 chat integration smoke (ingest後に /api/chat で doc=<doc> pdfPage=1 を叩いて snippet length>0 が返る)"
@@ -1332,4 +1247,13 @@ for (const k of ["ホ","イ","エ"]) {
   assert(typeof e.schemaVersion === "number" || typeof e.schemaVersion === "bigint" || e.schemaVersion === 1, `schemaVersion bad: ${k}`);
 }
 console.log("[PASS] AK2 kanaMap grounded");
+NODE
+
+echo "[AK3] modeHint determinism gate"
+node - <<'NODE'
+import { detectModeHint } from "./dist/kanagi/ufk/modeHint.js";
+if (detectModeHint("イ") !== "BLACKHOLE_IN") process.exit(1);
+if (detectModeHint("ェ") !== "WHITEHOLE_OUT") process.exit(1);
+if (detectModeHint("x") !== null) process.exit(1);
+console.log("[PASS] AK3 modeHint");
 NODE
