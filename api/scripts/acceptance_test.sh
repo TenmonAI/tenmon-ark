@@ -1315,3 +1315,21 @@ if (JSON.stringify(a) !== JSON.stringify(b)) {
 }
 console.log("[PASS] AK1 deterministic");
 NODE
+
+echo "[AK2] kanaMap grounded gate"
+node - <<'NODE'
+import { KANA_MAP } from "./dist/kanagi/ufk/kanaMap.js";
+
+function assert(cond, msg){ if(!cond){ console.error(msg); process.exit(1); } }
+
+assert(typeof KANA_MAP === "object" && KANA_MAP, "KANA_MAP missing");
+
+for (const k of ["ホ","イ","エ"]) {
+  const e = KANA_MAP[k];
+  assert(e && e.kana === k, `entry missing: ${k}`);
+  assert(Array.isArray(e.motionSeq) && e.motionSeq.length >= 1, `motionSeq missing: ${k}`);
+  assert(Array.isArray(e.sourceEvidenceIds) && e.sourceEvidenceIds.length >= 1, `sourceEvidenceIds missing: ${k}`);
+  assert(typeof e.schemaVersion === "number" || typeof e.schemaVersion === "bigint" || e.schemaVersion === 1, `schemaVersion bad: ${k}`);
+}
+console.log("[PASS] AK2 kanaMap grounded");
+NODE
