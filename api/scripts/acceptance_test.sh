@@ -1319,3 +1319,69 @@ if [ "${C:-0}" -lt 1 ]; then
   exit 1
 fi
 echo "[PASS] KG5 ocr_pages gate"
+
+echo "[KAMU-4] "restore apply gate
+
+# KAMU4_VNEXT_V21: stable rid picker + env defaults (do not remove)
+KAMU4_BASE_URL="${BASE_URL:-http://127.0.0.1:3000}"
+KAMU4_DOC="${KAMU4_DOC:-KHS}"
+KAMU4_PAGE="${KAMU4_PAGE:-132}"
+KAMU4_LIST="/tmp/kamu_list.json"
+rm -f "$KAMU4_LIST" 2>/dev/null || true
+curl -sS --max-time 10 -o "$KAMU4_LIST" "$KAMU4_BASE_URL/api/kamu/restore/list?doc=$KAMU4_DOC&pdfPage=$KAMU4_PAGE" || true
+RID="$(python3 - "$KAMU4_LIST" <<'PY2'
+import json,sys
+p=sys.argv[1]
+try:
+  raw=open(p,"rb").read()
+except Exception:
+  print(""); sys.exit(0)
+if not raw.strip():
+  print(""); sys.exit(0)
+try:
+  j=json.loads(raw.decode("utf-8","replace"))
+except Exception:
+  print(""); sys.exit(0)
+items=j.get("items") or []
+acc=[int(it.get("rid")) for it in items if it.get("status")=="accepted" and str(it.get("rid","")).isdigit()]
+print(max(acc) if acc else "")
+PY2
+)"
+echo "KAMU-4 picked RID=${RID:-}"
+test -n "${RID:-}"
+
+JSON_LIST="$(curl -fsS "$BASE_URL/api/kamu/restore/list?doc=KHS&pdfPage=132" || true)"
+RID="$(python3 - <<PY
+import json,sys
+j=json.loads(sys.stdin.read() or "{}")
+items=j.get("items") or j.get("rows") or j.get("data") or []
+rid=""
+for it in items:
+  if isinstance(it, dict) and str(it.get("status","")) in ("accepted","applied"):
+    cand=it.get("rid", it.get("rowid", it.get("id")))
+    if isinstance(cand,(int,float)) and int(cand)>0:
+      rid=str(int(cand)); break
+print(rid)
+PY
+<<<"$JSON_LIST")"
+
+if [ -z "$RID" ]; then
+  echo "[FAIL] KAMU-4: no accepted rid"
+  echo "$JSON_LIST" | head -c 2000 || true
+  exit 1
+fi
+
+curl -fsS -X POST "$BASE_URL/api/kamu/restore/apply" -H "Content-Type: application/json" -d "{\"rid\":$RID}" >/tmp/kamu_apply.json
+python3 - <<PY
+import json
+j=json.load(open("/tmp/kamu_apply.json","r",encoding="utf-8"))
+assert j.get("ok") is True, j
+PY
+echo "[PASS] KAMU-4 apply ok rid=$RID"
+
+L="$(sqlite3 "$DB" "SELECT length(text) FROM kokuzo_pages WHERE doc=KHS_UTF8 AND pdfPage=132;" || true)"
+if [ "${L:-0}" -lt 10 ]; then
+  echo "[FAIL] KAMU-4: KHS_UTF8 P132 not updated len=$L"
+  exit 1
+fi
+echo "[PASS] KAMU-4 upsert verified len=$L"
