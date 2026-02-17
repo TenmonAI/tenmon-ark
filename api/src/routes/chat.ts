@@ -1307,6 +1307,11 @@ if (usable.length === 0) {
         timestamp,
         wantsDetail,
       });
+      // Phase37 WARN fix: always attach evidenceId when docEq/pageEq known
+      const evidenceIdEq = `KZPAGE:${docEq}:P${pageEq}`;
+      if (!(out as any).detailPlan) (out as any).detailPlan = {};
+      if (!Array.isArray((out as any).detailPlan.evidenceIds)) (out as any).detailPlan.evidenceIds = [];
+      if (!(out as any).detailPlan.evidenceIds.includes(evidenceIdEq)) (out as any).detailPlan.evidenceIds.push(evidenceIdEq);
 
       // PH38_TAGS_GUARD_V1: candidates[0].tags は必ず非空（allowedのみ。evidence/snippetは不変更）
       const allowed = new Set(["IKI","SHIHO","KAMI","HOSHI"]);
