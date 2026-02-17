@@ -25,6 +25,7 @@ import { extractKojikiTags } from "../kojiki/kojikiTags.js";
 import { buildMythMapEdges } from "../myth/mythMapEdges.js";
 import { getMythMapEdges, setMythMapEdges } from "../kokuzo/mythMapMemory.js";
 import { listThreadLaws, dedupLawsByDocPage } from "../kokuzo/laws.js";
+import { projectCandidateToCell } from "../kanagi/ufk/projector.js";
 
 import { localSurfaceize } from "../tenmon/surface/localSurfaceize.js";
 import { llmChat } from "../core/llmWrapper.js";
@@ -639,6 +640,22 @@ const pid = process.pid;
 
 } catch {}
       // DF_DETAILPLAN_MIRROR_V1: always mirror top-level detailPlan into decisionFrame.detailPlan
+
+    // AK5_2_UFK_DEBUG_INJECT_V1: project top candidate into detailPlan.debug (deterministic, debug-only)
+    try {
+      const dp: any = (payload as any)?.detailPlan;
+      if (dp) {
+        const c0: any = Array.isArray((payload as any)?.candidates) ? (payload as any).candidates[0] : null;
+        const cell = c0
+          ? projectCandidateToCell({ snippet: c0.snippet ?? "", evidenceIds: c0.evidenceIds ?? [] })
+          : null;
+        dp.debug = dp.debug ?? {};
+        dp.debug.ufkCellsCount = cell ? 1 : 0;
+        dp.debug.ufkCellsTop1 = cell;
+      }
+    } catch (_e) {
+      // debug only
+    }
       try {
         if (payload && payload.decisionFrame && typeof payload.decisionFrame === "object") {
           if (!payload.decisionFrame.detailPlan && (payload as any).detailPlan) {
