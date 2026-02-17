@@ -1258,3 +1258,14 @@ grep -RIn --line-number "window\.tenmonP1Import" "$HOOK_FILE" >/dev/null || (ech
 
 echo "[PASS] PhaseP1-2c PWA window hook gate"
 
+
+echo "[KAMU-1] kamu restore propose/list gate"
+curl -fsS -X POST "${BASE_URL}/api/kamu/restore/propose" \
+  -H 'Content-Type: application/json' \
+  -d '{"doc":"KHS","pdfPage":132,"span":"P132:head","suggestion":"(decode candidate placeholder)","method":"manual","confidence":0.5,"basis_evidenceIds":["KZPAGE:KHS:P132"]}' \
+| jq -e '.ok==true and .schemaVersion==1 and .doc=="KHS" and .pdfPage==132 and .status=="proposed"' >/dev/null
+
+curl -fsS "${BASE_URL}/api/kamu/restore/list?doc=KHS&pdfPage=132" \
+| jq -e '.ok==true and .schemaVersion==1 and .doc=="KHS" and .pdfPage==132 and (.items|type=="array") and (.items|length)>=1 and .items[0].doc=="KHS" and .items[0].pdfPage==132 and .items[0].status=="proposed"' >/dev/null
+
+echo "[PASS] KAMU-1 propose/list gate"

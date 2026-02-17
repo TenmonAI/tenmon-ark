@@ -1,5 +1,6 @@
 import express from "express";
 import { seedPackRouter } from "./routes/seedPack.js";
+import { kamuRouter } from "./routes/kamu.js";
 import { pwaRouter } from "./routes/pwa.js";
 import cors from "cors";
 import auditRouter from "./routes/audit.js";
@@ -87,6 +88,7 @@ try {
 
 app.use(cors());
 app.use(express.json());
+app.use("/api", kamuRouter);
 
 app.use("/api", authRouter);
 app.use("/api", meRouter);
