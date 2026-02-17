@@ -27,6 +27,8 @@ import { getMythMapEdges, setMythMapEdges } from "../kokuzo/mythMapMemory.js";
 import { listThreadLaws, dedupLawsByDocPage } from "../kokuzo/laws.js";
 import { projectCandidateToCell } from "../kanagi/ufk/projector.js";
 import { buildGenesisPlan } from "../kanagi/ufk/genesisPlan.js";
+import { computeBreathCycle } from "../koshiki/breathEngine.js";
+import { teniwohaWarnings } from "../koshiki/teniwoha.js";
 
 import { localSurfaceize } from "../tenmon/surface/localSurfaceize.js";
 import { llmChat } from "../core/llmWrapper.js";
@@ -1375,6 +1377,13 @@ if (usable.length === 0) {
     const detailPlan = emptyCorePlan(
       typeof response === "string" ? response.slice(0, 80) : ""
     );
+  // K3 debug: breathCycle (no response text change)
+  if (!(detailPlan as any).debug) (detailPlan as any).debug = {};
+  (detailPlan as any).debug.breathCycle = computeBreathCycle(String(message || ""));
+  // K4 warnings: TeNiWoHa (warnings only)
+  const wK4 = teniwohaWarnings(String(message || ""));
+  if (!Array.isArray((detailPlan as any).warnings)) (detailPlan as any).warnings = [];
+  for (const x of wK4) { if (!(detailPlan as any).warnings.includes(x)) (detailPlan as any).warnings.push(x); }
     // --- S3_DEBUG_BOX_V1 ---
     (detailPlan as any).debug = { ...(detailPlan as any).debug };
     // --- /S3_DEBUG_BOX_V1 ---
