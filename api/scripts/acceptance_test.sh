@@ -1289,3 +1289,16 @@ curl -fsS -X POST "${BASE_URL}/api/kamu/restore/accept" \
 OUTL2="$(curl -fsS "${BASE_URL}/api/kamu/restore/list?doc=KHS&pdfPage=132")"
 echo "$OUTL2" | jq -e '([.items[].status] | index("accepted")) != null' >/dev/null
 echo "[PASS] KAMU-3 restore accept gate (rid)"
+
+echo "[AK1] applyMotion determinism gate"
+node - <<'NODE'
+import { applyMotion } from "./dist/kanagi/ufk/transition.js";
+
+const a = applyMotion({ fire: 0, water: 0 }, "RIGHT_IN", "abc").next;
+const b = applyMotion({ fire: 0, water: 0 }, "RIGHT_IN", "abc").next;
+if (JSON.stringify(a) !== JSON.stringify(b)) {
+  console.error("NOT deterministic", a, b);
+  process.exit(1);
+}
+console.log("[PASS] AK1 deterministic");
+NODE
