@@ -1269,3 +1269,9 @@ curl -fsS "${BASE_URL}/api/kamu/restore/list?doc=KHS&pdfPage=132" \
 | jq -e '.ok==true and .schemaVersion==1 and .doc=="KHS" and .pdfPage==132 and (.items|type=="array") and (.items|length)>=1 and .items[0].doc=="KHS" and .items[0].pdfPage==132 and .items[0].status=="proposed"' >/dev/null
 
 echo "[PASS] KAMU-1 propose/list gate"
+
+echo "[KAMU-2] restore auto neighbor gate"
+OUTK2="$(curl -fsS -X POST "${BASE_URL}/api/kamu/restore/auto" -H 'Content-Type: application/json' -d '{"doc":"KHS","pdfPage":132,"radius":2}')"
+echo "$OUTK2" | jq -e '.ok==true and .schemaVersion==1 and .doc=="KHS" and .pdfPage==132 and (.inserted|type)=="number"' >/dev/null
+curl -fsS "${BASE_URL}/api/kamu/restore/list?doc=KHS&pdfPage=132" | jq -e '.ok==true and (.items|type)=="array"' >/dev/null
+echo "[PASS] KAMU-2 restore auto neighbor gate"
