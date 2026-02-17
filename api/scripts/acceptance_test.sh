@@ -1350,3 +1350,6 @@ echo "[PASS] KG6-1 consensus applied len=$L_DB sha=$SHA_A"
 echo "[K1] KanaPhysicsMap evidenceIds gate (MVP)"
 node -e "const m=require('./dist/koshiki/kanaPhysicsMap'); m.assertKanaPhysicsMap(m.KANA_PHYSICS_MAP_MVP); console.log('[PASS] K1 KanaPhysicsMap evidenceIds gate');"
 
+echo "[K2] Itsura parser determinism gate"
+node -e "const {parseItsura}=require('./dist/koshiki/itsura'); const a=parseItsura('ab\nC'); const b=parseItsura('ab\nC'); if(JSON.stringify(a)!==JSON.stringify(b)) { console.error('[FAIL] K2 nondeterministic'); process.exit(1);} if(a.length!==3) { console.error('[FAIL] K2 length', a.length); process.exit(1);} if(a[0].row!==0||a[0].col!==0||a[2].row!==1||a[2].col!==0) { console.error('[FAIL] K2 coords', a); process.exit(1);} console.log('[PASS] K2 Itsura parser determinism gate');"
+
