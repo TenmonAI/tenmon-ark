@@ -1291,3 +1291,17 @@ echo "[AK6] genesisPlan gate"
 OUT="$(curl -fsS -X POST "${BASE_URL}/api/chat" -H 'Content-Type: application/json' -d '{"threadId":"ak6-smoke","message":"#詳細"}')"
 echo "$OUT" | jq -e '.decisionFrame.detailPlan.debug.genesisPlan | type=="array" and length>=3' >/dev/null
 echo "[PASS] AK6 genesisPlan gate"
+
+echo "[KG4-2] apply target lock gate (KHS_UTF8 must exist, KHS must not change length)"
+DB="/opt/tenmon-ark-data/kokuzo.sqlite"
+LEN_UTF8="$(sqlite3 "$DB" "SELECT length(text) FROM kokuzo_pages WHERE doc='KHS_UTF8' AND pdfPage=132;" || echo 0)"
+LEN_KHS="$(sqlite3 "$DB" "SELECT length(text) FROM kokuzo_pages WHERE doc='KHS' AND pdfPage=132;" || echo 0)"
+if [ "${LEN_UTF8:-0}" -le 0 ]; then
+  echo "[FAIL] KG4-2: missing KHS_UTF8 P132"
+  exit 1
+fi
+if [ "${LEN_KHS:-0}" -le 0 ]; then
+  echo "[FAIL] KG4-2: missing KHS P132"
+  exit 1
+fi
+echo "[PASS] KG4-2 apply target lock gate"
