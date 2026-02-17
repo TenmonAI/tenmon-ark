@@ -30,7 +30,7 @@ mkdir -p "$TMPDIR"
 PRE_IMG="$TMPDIR/prep.png"
 OUT_BASE="$TMPDIR/out"
 
-# tuned: gray + normalize + negate + thr70, psm6
+# tuned winner: neg + thr70 + psm6
 convert "$IMG" -colorspace Gray -normalize -negate -threshold 70% "$PRE_IMG"
 [ -s "$PRE_IMG" ] || { echo "[FAIL] preprocess output missing: $PRE_IMG"; exit 1; }
 
@@ -47,50 +47,32 @@ if [ "$L" -lt 20 ]; then
   exit 1
 fi
 
-# QC json: python code is fixed, text is stdin only (no mixing, no em-dash crash)
-QC_JSON="$(python3 - <<'PY' <<<"$TEXT_NORM"
-import json,sys
-t=sys.stdin.read()
-jp=sum(1 for ch in t if ("\u3040"<=ch<="\u30ff") or ("\u4e00"<=ch<="\u9fff"))
-total=max(1,len(t))
-print(json.dumps({
-  "schemaVersion":1,
-  "engine":"tesseract",
-  "psm":6,
-  "prep":"neg_thr70",
-  "jpRate":jp/total,
-  "len":len(t),
-  "empty":len(t)==0
-}, ensure_ascii=False))
-PY
-)"
+QC_JSON="$(python3 -c 'import json,sys; t=sys.stdin.read(); jp=sum(1 for ch in t if "\u3040"<=ch<="\u30ff" or "\u4e00"<=ch<="\u9fff"); total=max(1,len(t)); print(json.dumps({"schemaVersion":1,"engine":"tesseract","psm":6,"prep":"neg_thr70","jpRate":jp/total,"len":len(t),"empty":len(t)==0}, ensure_ascii=False))' <<<"$TEXT_NORM")"
 
-# DB save: do createdAt in python (never datetime(now) token issues)
+# DB save (python source fixed; OCR text goes via stdin only)
 DOC_ENV="$DOC" PDFPAGE_ENV="$PDFPAGE" DB_ENV="$DB" QC_ENV="$QC_JSON" \
-python3 - <<'PY' <<<"$TEXT_RAW"
-import os,sqlite3,sys,datetime
+python3 -c '
+import os, sqlite3, sys
 db=os.environ["DB_ENV"]
 doc=os.environ["DOC_ENV"]
 pdfPage=int(os.environ["PDFPAGE_ENV"])
 qc=os.environ["QC_ENV"]
 text_raw=sys.stdin.read()
 text_norm=text_raw.replace("\r","")
-createdAt=datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
-
 con=sqlite3.connect(db)
 cur=con.cursor()
 cur.execute("""
 INSERT INTO kokuzo_ocr_pages(doc,pdfPage,engine,text_raw,text_norm,qc_json,createdAt)
-VALUES(?,?,?,?,?,?,?)
+VALUES(?,?,?,?,?,?,CURRENT_TIMESTAMP)
 ON CONFLICT(doc,pdfPage,engine) DO UPDATE SET
   text_raw=excluded.text_raw,
   text_norm=excluded.text_norm,
   qc_json=excluded.qc_json,
-  createdAt=excluded.createdAt
-""",(doc,pdfPage,"tesseract",text_raw,text_norm,qc,createdAt))
+  createdAt=CURRENT_TIMESTAMP
+""",(doc,pdfPage,"tesseract",text_raw,text_norm,qc))
 con.commit()
 con.close()
 print(f"[OK] saved kokuzo_ocr_pages doc={doc} pdfPage={pdfPage} len={len(text_norm)}")
-PY
+' <<<"$TEXT_RAW"
 
 echo "[PASS] OCR ok len=$L"
