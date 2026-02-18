@@ -1168,7 +1168,10 @@ return res.json({
   
   // 選択待ち状態の処理（pending state を優先）
   const pending = getThreadPending(threadId);
-  if (pending === "LANE_PICK") {
+
+  // CARDD_SPINE_PRIORITY_V1: if Card1 step is pending, do NOT consume LANE_PICK (avoid template lock)
+  const __p2 = pending;
+  if (pending === "LANE_PICK" && __p2 === "LANE_PICK" && !((getThreadPending(threadId) === "DANSHARI_STEP1") || (getThreadPending(threadId) === "CASUAL_STEP1"))) {
     const lane = parseLaneChoice(trimmed);
     if (lane) {
       clearThreadState(threadId);
