@@ -419,7 +419,8 @@ const pid = process.pid;
         const msg = (obj as any)?.detailPlan?.input
           ?? (obj as any)?.input
           ?? (obj as any)?.message
-          ?? "";
+          ?? message ?? "";
+  // CARDG2_LENGTH_INTENT_FIX_V3
         const resp = (obj as any).response;
         
         // CARDG_LENGTH_INTENT_V3: length intent observability (NO body change)
