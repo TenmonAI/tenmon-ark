@@ -424,7 +424,7 @@ const pid = process.pid;
         
         // CARDG_LENGTH_INTENT_V3: length intent observability (NO body change)
         try {
-          const raw = String(msg || "");
+          const raw = String((obj as any)?.rawMessage ?? (obj as any)?.message ?? msg ?? "");  // CARDG_LENGTH_INTENT_V4
           const lower = raw.toLowerCase();
 
           let intent = "MED";
