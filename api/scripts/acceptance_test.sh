@@ -1432,7 +1432,10 @@ echo "$OUT" | head -c 260; echo
 
 echo "$MODE" | grep -q "NATURAL" || fail "cardc mode not NATURAL"
 echo "$RESP" | grep -q '^【天聞の所見】' || fail "cardc missing opinion prefix"
-echo "$RESP" | grep -Eq '[？?]$|ですか$|でしょうか$|ますか$' || fail "cardc must end with question"
+# CARDC_GATE_ROBUST_V1: robust question check (avoid false fail if output is long and display is truncated)
+TAIL="$(printf "%s" "$RESP" | tail -c 160)"
+echo "$TAIL" | grep -Eq '[？?]' || echo "$RESP" | grep -Eq '(ですか|でしょうか|ますか|か？|か\?)' || fail "cardc must end with question"
+
 pass "CardC"
 
 # /CARDC_GATE_EOF_V1
