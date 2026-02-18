@@ -422,6 +422,20 @@ const pid = process.pid;
           ?? "";
         const resp = (obj as any).response;
         obj = { ...(obj as any), response: __sanitizeOut(msg, resp) };
+        // CARDB_WIRE_VOICE_GUARD_SINGLE_EXIT_V3: observability-only (NO behavior change)
+        // Record whether voice hooks SHOULD run for this request, using CardA unified guard.
+        try {
+          const tid = String((obj as any)?.threadId ?? threadId ?? "");
+          const rawMsg = String((obj as any)?.rawMessage ?? (obj as any)?.message ?? "");
+          const g = __voiceGuard(rawMsg, tid);
+          const df = (obj as any)?.decisionFrame;
+          if (df && typeof df === "object") {
+            df.ku = (df.ku && typeof df.ku === "object") ? df.ku : {};
+            (df.ku as any).voiceGuard = g.reason;
+            (df.ku as any).voiceGuardAllow = g.allow;
+          }
+        } catch {}
+
       }
     } catch {}
     return __origJson(obj);
