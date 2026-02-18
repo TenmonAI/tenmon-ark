@@ -24,6 +24,7 @@ import { councilRouter } from "./routes/council.js";
 import { authRouter } from "./routes/auth.js";import { meRouter } from "./routes/me.js";
 import { markListenReady } from "./health/readiness.js";
 import { getDb } from "./db/index.js";
+import koshikiConsoleRouter from "./routes/koshikiConsole.js";
 
 // Debug: 未処理例外のハンドリング
 const pid = process.pid;
@@ -123,6 +124,7 @@ app.get("/health", (_, res) => {
   res.json({ status: "ok" });
 });
 
+app.use(koshikiConsoleRouter);
 app.listen(PORT, "0.0.0.0", () => {
   const listenTime = Date.now();
   const elapsed = listenTime - startTime;
