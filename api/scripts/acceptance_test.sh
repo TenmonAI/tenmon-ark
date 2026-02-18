@@ -1556,3 +1556,15 @@ printf "%s" "$RESP" | grep -q "【天聞の所見】" \
   || fail "Card5 must include a handoff (opinion/question)"
 pass "Card5"
 # /CARD5_GATE_V4
+
+
+# [Card6a] rewrite-only plumbing gate (default OFF: TENMON_REWRITE_ONLY unset)
+echo "[Card6a] rewrite-only plumbing gate (default OFF)"
+OUT=$(curl -fsS -X POST "${BASE_URL}/api/chat" -H 'Content-Type: application/json' \
+  -d '{"threadId":"card6a-off","message":"短く答えて：自分の生き方"}')
+RESP=$(echo "$OUT" | jq -r '.response // ""')
+echo "$OUT" | head -c 220; echo
+# must not leak evidence-like tokens
+echo "$RESP" | grep -Eq 'doc=|pdfPage=|evidenceIds|【引用】' && fail "Card6a must not leak evidence tokens" || true
+pass "Card6a"
+# CARD6A_GATE_V2

@@ -36,6 +36,7 @@ import { applyKanaPhysicsToCell } from "../koshiki/kanaPhysicsMap.js";
 
 import { localSurfaceize } from "../tenmon/surface/localSurfaceize.js";
 import { llmChat } from "../core/llmWrapper.js";
+import { rewriteOnlyTenmon } from "../core/rewriteOnly.js";
 
 import { memoryPersistMessage, memoryReadSession } from "../memory/index.js";
 import { listRules } from "../training/storage.js";
@@ -1696,6 +1697,36 @@ if (usable.length === 0) {
   const t = message.trim().toLowerCase();
   if (t === "hello" || t === "date" || t === "help" || message.includes("おはよう")) {
     const nat = naturalRouter({ message, mode: "NATURAL" });
+    // CARD6B_REWRITE_ONLY_V1: rewrite-only (DEFAULT OFF) - apply in NATURAL handled replies only
+    try {
+      const enabled = String(process.env.TENMON_REWRITE_ONLY || "") === "1";
+      if (enabled) {
+        const tid = String(threadId || "");
+        const raw = String(message || "");
+        // strict excludes
+        const isSmoke = /^smoke/i.test(tid);
+        const wantsDetailHere = /#詳細/.test(raw);
+        const hasDocHere = /\bdoc\b/i.test(raw) || /pdfPage\s*=\s*\d+/i.test(raw);
+        const isCmd = raw.trim().startsWith("#");
+        const low = raw.trim().toLowerCase();
+        const isLow = (low==="ping"||low==="test"||low==="ok"||low==="yes"||low==="no"||raw.trim()==="はい"||raw.trim()==="いいえ"||raw.trim()==="うん"||raw.trim()==="ううん");
+        // voice guard (if present)
+        let vgAllow = true;
+        try {
+          const g = (typeof __voiceGuard === "function") ? __voiceGuard(raw, tid) : null;
+          vgAllow = g ? !!g.allow : true;
+        } catch {}
+        if (!isSmoke && vgAllow && !wantsDetailHere && !hasDocHere && !isCmd && !isLow) {
+          if (typeof nat.responseText === "string" && nat.responseText.trim().length >= 8) {
+            const r = await rewriteOnlyTenmon(nat.responseText, raw);
+            if (r && r.used) {
+              nat.responseText = r.text;
+            }
+          }
+        }
+      }
+    } catch {}
+
     return reply({
       response: nat.responseText,
       evidence: null,
