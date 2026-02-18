@@ -740,6 +740,21 @@ const pid = process.pid;
             }
           }
         } catch {}
+        // CARD6C_FORCE_KU_V3: ensure decisionFrame.ku carries rewriteUsed/rewriteDelta (never empty)
+        try {
+          if (obj && typeof obj === "object") {
+            const df = (obj as any).decisionFrame;
+            if (df && typeof df === "object") {
+              df.ku = (df.ku && typeof df.ku === "object") ? df.ku : {};
+              // Prefer explicit ku values, else fall back to top-level or false/0
+              const ru = (df.ku as any).rewriteUsed;
+              const rd = (df.ku as any).rewriteDelta;
+              if (ru === undefined) (df.ku as any).rewriteUsed = !!((obj as any).rewriteUsed ?? false);
+              if (rd === undefined) (df.ku as any).rewriteDelta = Number((obj as any).rewriteDelta ?? 0) || 0;
+            }
+          }
+        } catch {}
+
 
 
     return __origJson(obj);
