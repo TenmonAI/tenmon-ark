@@ -1987,8 +1987,15 @@ if (usable.length === 0) {
         if (__rewriteReq && __allow && !__isSmoke && !__isCmd && !__hasDocLocal && !__wantsDetailLocal && !__isLowSignal) {
           const draft = String(nat.responseText || "").trim();
           if (draft.startsWith("【天聞の所見】")) {
-            const out = await rewriteOnlyTenmon(draft, __raw);
-            if (typeof out === "string" && out.trim()) nat.responseText = out.trim();
+            
+          // CARD6C_REWRITE_USED_OBS_V2: compute rewriteUsed/rewriteDelta (observability)
+          const __before = String(draft || "").trim();
+          const out = await rewriteOnlyTenmon(__before, __raw);
+          const __after = String(out || "").trim();
+          const __used = (__after && __after !== __before);
+          const __delta = (__after.length - __before.length);
+          try { (nat as any).rewriteUsed = __used; (nat as any).rewriteDelta = __delta; } catch {}
+if (typeof out === "string" && out.trim()) nat.responseText = out.trim();
           }
         }
       } catch {}
@@ -1997,7 +2004,7 @@ if (usable.length === 0) {
       return reply({
         response: nat.responseText,
         evidence: null,
-        decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: {} },
+        decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: { rewriteUsed: (nat as any).rewriteUsed ?? false, rewriteDelta: (nat as any).rewriteDelta ?? 0 } },
         timestamp,
         threadId,
       });

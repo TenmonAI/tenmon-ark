@@ -1586,3 +1586,21 @@ echo "$RESP" | grep -Eq '[？?]$' || fail "Card6b must end with a question mark"
 echo "$RESP" | grep -Eq '(doc=|pdfPage|evidenceIds|KZPAGE:|【引用】|出典:)' && fail "Card6b must not inject evidence tokens"
 pass "Card6b"
 # CARD6B_GATE_CLEAN_V1
+
+
+# [Card6c] rewriteUsed/rewriteDelta observability gate
+echo "[Card6c] rewriteUsed/rewriteDelta gate"
+OUT=$(curl -fsS -X POST "${BASE_URL}/api/chat" \
+  -H 'Content-Type: application/json' \
+  -H 'x-tenmon-rewrite-only: 1' \
+  -d '{"threadId":"card6c","message":"君は何を考えているの？"}')
+USED=$(echo "$OUT" | jq -r '.decisionFrame.ku.rewriteUsed // ""')
+DELTA=$(echo "$OUT" | jq -r '.decisionFrame.ku.rewriteDelta // ""')
+MODE=$(echo "$OUT" | jq -r '.decisionFrame.mode // ""')
+
+echo "$OUT" | head -c 260; echo
+echo "$MODE" | grep -q "NATURAL" || fail "Card6c mode not NATURAL"
+echo "$USED" | grep -Eq '^(true|false)$' || fail "Card6c rewriteUsed must be boolean (got=$USED)"
+echo "$DELTA" | grep -Eq '^-?[0-9]+$' || fail "Card6c rewriteDelta must be int (got=$DELTA)"
+pass "Card6c"
+# CARD6C_GATE_V2
