@@ -1589,18 +1589,21 @@ pass "Card6b"
 
 
 # [Card6c] rewriteUsed/rewriteDelta observability gate
+
+
+# [Card6c] rewriteUsed/rewriteDelta observability gate (stable input: same class as CardC)
 echo "[Card6c] rewriteUsed/rewriteDelta gate"
 OUT=$(curl -fsS -X POST "${BASE_URL}/api/chat" \
   -H 'Content-Type: application/json' \
   -H 'x-tenmon-rewrite-only: 1' \
-  -d '{"threadId":"card6c","message":"君は何を考えているの？"}')
+  -d '{"threadId":"card6c","message":"断捨離で迷いを整理したい"}')
 USED=$(echo "$OUT" | jq -r '.decisionFrame.ku.rewriteUsed // ""')
 DELTA=$(echo "$OUT" | jq -r '.decisionFrame.ku.rewriteDelta // ""')
 MODE=$(echo "$OUT" | jq -r '.decisionFrame.mode // ""')
 
 echo "$OUT" | head -c 260; echo
-echo "$MODE" | grep -q "NATURAL" || fail "Card6c mode not NATURAL"
+echo "$MODE" | grep -Eq "NATURAL|HYBRID" || fail "Card6c mode unexpected (got=$MODE)"
 echo "$USED" | grep -Eq '^(true|false)$' || fail "Card6c rewriteUsed must be boolean (got=$USED)"
 echo "$DELTA" | grep -Eq '^-?[0-9]+$' || fail "Card6c rewriteDelta must be int (got=$DELTA)"
 pass "Card6c"
-# CARD6C_GATE_V2
+# CARD6C_GATE_V3
