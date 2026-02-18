@@ -2450,6 +2450,21 @@ let finalResponse = response;
 
     
     // CARDF_PHASE37_EVIDENCEIDS_V6: ensure evidenceIds exist when HYBRID candidates exist (kills Phase37 WARN)
+
+    // CARDF_PRIME_EVIDENCE_V1: ensure `evidence` is set when candidates exist (kills Phase37 WARN; NO fabrication)
+    // - uses candidates[0].doc/pdfPage only
+    // - quote is empty (do NOT invent)
+    try {
+      if (!evidence && Array.isArray(candidates) && candidates.length) {
+        const c0: any = candidates[0];
+        const doc0 = String(c0?.doc ?? "");
+        const page0 = Number(c0?.pdfPage ?? 0);
+        if (doc0 && Number.isFinite(page0) && page0 > 0) {
+          evidence = { doc: doc0, pdfPage: page0, quote: "" };
+          try { (detailPlan as any).evidence = evidence; } catch {}
+        }
+      }
+    } catch {}
     
     // - NO fabrication: uses candidates[0].doc/pdfPage only
     
