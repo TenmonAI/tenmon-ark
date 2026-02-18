@@ -441,7 +441,45 @@ const pid = process.pid;
           const df = (obj as any).decisionFrame;
           if (df && typeof df === "object") {
             df.ku = (df.ku && typeof df.ku === "object") ? df.ku : {};
-            (df.ku as any).lengthIntent = intent;
+            
+          // CARDG2_LENGTH_INTENT_FIX_V2: keyword-based override (observability only; NO body change)
+          // Prefer user raw message if present; fall back to msg
+          try {
+            const raw2 =
+              String((obj as any)?.rawMessage ?? "") ||
+              String((obj as any)?.detailPlan?.input ?? "") ||
+              String((obj as any)?.input ?? "") ||
+              String((obj as any)?.message ?? "") ||
+              String(msg ?? "");
+
+            const q2 = String(raw2 || "").trim();
+            const lower2 = q2.toLowerCase();
+
+            // DETAIL
+            if (/#詳細/.test(q2)) {
+              intent = "DETAIL"; minChars = 0; maxChars = 999999;
+            } else {
+              // SHORT signals
+              if (/(短く|一行|要点|結論だけ|tl;dr|tldr|箇条書きだけ)/.test(q2)) {
+                intent = "SHORT"; minChars = 60; maxChars = 180;
+              }
+              // LONG signals
+              else if (/(詳しく|丁寧に|背景|根拠|出典|手順|設計|仕様|提案|完全版|網羅)/.test(q2)) {
+                intent = "LONG"; minChars = 450; maxChars = 900;
+              }
+              // Long message bias
+              else if (q2.length >= 220) {
+                intent = "LONG"; minChars = 450; maxChars = 900;
+              }
+            }
+
+            // debug-only (short)
+            if (df && typeof df === "object") {
+              df.ku = (df.ku && typeof df.ku === "object") ? df.ku : {};
+              (df.ku as any).lengthIntentRaw = q2.slice(0, 180);
+            }
+          } catch {}
+(df.ku as any).lengthIntent = intent;
             (df.ku as any).lengthTarget = { minChars, maxChars };
           }
         } catch {}
