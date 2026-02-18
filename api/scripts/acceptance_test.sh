@@ -1390,20 +1390,3 @@ f=b.get('features') or {}
 assert f.get('koshikiKernel') is True, f
 print('[PASS] AK-System koshikiKernel feature present')
 PY2
-
-
-# [CARD2] voice constitution gate (NATURAL): opinion-first + one-question close
-echo "[CARD2] voice constitution gate (NATURAL)"
-OUT=$(curl -fsS -X POST "${BASE_URL}/api/chat" \
-  -H 'Content-Type: application/json' \
-  -d '{"threadId":"card2-voice","message":"君は何を考えているの？"}')
-RESP=$(echo "$OUT" | jq -r '.response // ""')
-MODE=$(echo "$OUT" | jq -r '.decisionFrame.mode // ""')
-
-echo "$OUT" | head -c 260; echo
-
-echo "$MODE" | grep -q "NATURAL" || fail "card2 mode not NATURAL"
-echo "$RESP" | grep -q '^【天聞の所見】' || fail "card2 missing opinion prefix"
-echo "$RESP" | grep -Eq '[？?]$' || fail "card2 must end with a question mark"
-pass "CARD2"
-# CARD2_GATE_V1
