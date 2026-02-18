@@ -1492,3 +1492,17 @@ echo "$R2" | grep -q '^【整理】' || fail "CardH LONG must rewrite generic fa
 
 pass "CardH"
 # CARDH_GATE_V1
+
+
+# [CardH] lengthIntent APPLY gate (SHORT must rewrite generic fallback)
+echo "[CardH] lengthIntent APPLY gate"
+OUT=$(curl -fsS -X POST "${BASE_URL}/api/chat" -H 'Content-Type: application/json' \
+  -d '{"threadId":"cardh-short","message":"短く答えて：自分の生き方"}')
+RESP=$(echo "$OUT" | jq -r '.response // ""')
+INTENT=$(echo "$OUT" | jq -r '.decisionFrame.ku.lengthIntent // ""')
+
+echo "$OUT" | head -c 240; echo
+echo "$INTENT" | grep -q "SHORT" || fail "CardH intent must be SHORT"
+echo "$RESP" | grep -q '^【天聞の所見】' || fail "CardH SHORT must rewrite generic fallback"
+pass "CardH"
+# CARDH_GATE_V2

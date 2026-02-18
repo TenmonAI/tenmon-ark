@@ -530,7 +530,69 @@ const pid = process.pid;
             // MED: keep as-is
           }
         } catch {}
-obj = { ...(obj as any), response: __sanitizeOut(msg, resp) };
+
+        // CARDH_APPLY_LENGTHINTENT_GENERIC_V2: apply lengthIntent ONLY to NATURAL generic fallback (no evidence fabrication)
+        try {
+          const cleaned = __sanitizeOut(msg, resp);
+
+          // default: keep existing behavior
+          let nextResp: any = cleaned;
+
+          const df = (obj as any).decisionFrame;
+          const ku = df && typeof df === "object" ? (df.ku && typeof df.ku === "object" ? df.ku : null) : null;
+
+          const mode = String(df?.mode ?? "");
+          const tid = String((obj as any)?.threadId ?? "");
+
+          // must respect voiceGuard (smoke/low-signal/doc/#detail/cmd/menu-asked are blocked there)
+          const rawMsg =
+            String((obj as any)?.rawMessage ?? "") ||
+            String((obj as any)?.message ?? "") ||
+            String(msg ?? "");
+
+          const g = __voiceGuard(rawMsg, tid);
+
+          // apply only when allowed + NATURAL
+          if (g.allow && mode === "NATURAL" && typeof cleaned === "string") {
+            const t = String(cleaned || "").trim();
+
+            // apply only to "generic fallback" (exactly this UX string family)
+            const isGenericFallback =
+              t === "了解。何でも話して。必要なら「#詳細」や「doc=... pdfPage=...」で深掘りできるよ。" ||
+              /必要なら「#詳細」や「doc=\.\.\. pdfPage=\.\.\.」で深掘りできるよ。$/.test(t);
+
+            if (isGenericFallback) {
+              const intent = String((ku as any)?.lengthIntent ?? "MED");
+
+              if (intent === "SHORT") {
+                nextResp =
+                  "【天聞の所見】いまは焦点が一点に定まっていないだけです。まず軸を1つ立てます。\n\n" +
+                  "一点質問：いま一番ほしいのは、結論（すぐ決める）と整理（ほどく）のどちら？";
+              } else if (intent === "LONG") {
+                nextResp =
+                  "【天聞の所見】いまは“問いの核”がまだ見えていない状態です。核が見えると、会話は一気に生きます。\n\n" +
+                  "いま起きていることを3つに分けます。\n" +
+                  "1) 事実（何が起きている）\n" +
+                  "2) 感情（何が重い）\n" +
+                  "3) 願い（どうなりたい）\n\n" +
+                  "この3つのうち、いま一番先に言葉にしたいのはどれですか？";
+              } else {
+                // MED/DETAIL/XL etc -> no change (safe)
+              }
+
+              // ensure question ending
+              if (typeof nextResp === "string") {
+                const endsQ = /[？?]\s*$/.test(nextResp) || /(ですか|でしょうか|ますか|か？|か\?)\s*$/.test(nextResp);
+                if (!endsQ) nextResp = nextResp + "？";
+              }
+            }
+          }
+
+          obj = { ...(obj as any), response: nextResp };
+        } catch {
+          obj = { ...(obj as any), response: __sanitizeOut(msg, resp) };
+        }
+
         // CARDB_WIRE_VOICE_GUARD_SINGLE_EXIT_V3: observability-only (NO behavior change)
         // Record whether voice hooks SHOULD run for this request, using CardA unified guard.
         try {
