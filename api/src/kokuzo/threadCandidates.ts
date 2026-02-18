@@ -11,7 +11,7 @@ type ThreadPickState = {
 };
 
 type ThreadState = {
-  pending?: "LANE_PICK" | null;
+  pending?: "LANE_PICK" | "DANSHARI_STEP1" | "CASUAL_STEP1" | null;
   updatedAt: string;
 };
 
@@ -38,11 +38,11 @@ export function clearThreadCandidates(threadId: string): void {
 }
 
 // Thread state management (pending state)
-export function setThreadPending(threadId: string, pending: "LANE_PICK" | null): void {
+export function setThreadPending(threadId: string, pending: "LANE_PICK" | "DANSHARI_STEP1" | "CASUAL_STEP1" | null): void {
   stateMem.set(threadId, { pending, updatedAt: new Date().toISOString() });
 }
 
-export function getThreadPending(threadId: string): "LANE_PICK" | null | undefined {
+export function getThreadPending(threadId: string): "LANE_PICK" | "DANSHARI_STEP1" | "CASUAL_STEP1" | null | undefined {
   return stateMem.get(threadId)?.pending;
 }
 

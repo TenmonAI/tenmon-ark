@@ -415,6 +415,18 @@ echo "$r33" | jq -e 'has("detailPlan")' >/dev/null
 echo "$r33" | jq -e '(.detailPlan.kojikiTags|type)=="array"' >/dev/null
 echo "[PASS] Phase33 kojikiTags"
 
+
+
+echo "[CARD1] step state machine gate (DANSHARI)"
+node -e "(async()=>{const url='http://127.0.0.1:3000/api/chat'; const h={'Content-Type':'application/json','x-local-test':'1'}; 
+  const tid='card1-danshari'; 
+  const r1=await fetch(url,{method:'POST',headers:h,body:JSON.stringify({threadId:tid,message:'断捨離で迷いを整理したい'})});
+  const j1=await r1.json(); const t1=String(j1.response||''); 
+  if(!/番号で答えてください/.test(t1)){console.error('[FAIL] card1 step1 not asked', t1.slice(0,200)); process.exit(1);}
+  const r2=await fetch(url,{method:'POST',headers:h,body:JSON.stringify({threadId:tid,message:'1'})});
+  const j2=await r2.json(); const t2=String(j2.response||''); 
+  if(!/【天聞の所見】/.test(t2)){console.error('[FAIL] card1 step1 answer no opinion', t2.slice(0,200)); process.exit(1);}
+  console.log('[PASS] CARD1');})();"
 echo "[36] Phase36 conversation flow (domain question -> answer, not menu only)"
 r36_1="$(post_chat_raw "言霊とは何？")"
 # ドメイン質問の場合はメニューだけではなく回答が含まれること（50文字以上）

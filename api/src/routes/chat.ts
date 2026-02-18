@@ -1,3 +1,4 @@
+/* CARD1_SEAL_V1 */
 import { synthHybridResponseV1 } from "../hybrid/synth.js";
 import { Router, type IRouter, type Request, type Response } from "express";
 import { sanitizeInput } from "../tenmon/inputSanitizer.js";
@@ -333,6 +334,22 @@ const pid = process.pid;
   const trimmed = message.trim();
 
 
+
+  // CARD1_SEAL_V1: Card1 trigger + pending flags
+  const __card1Trigger =
+    /(断捨離|だんしゃり|手放す|捨てる|片づけ|片付け|執着)/i.test(trimmed) ||
+    /^(会話できる|話せる|今どんな気分|元気|どう思う|君は何を考えて|雑談|自分の生き方|天聞アークとは何)/.test(trimmed);
+
+  const __card1Pending = (() => {
+    try {
+      const p = getThreadPending(threadId);
+      return p === "DANSHARI_STEP1" || p === "CASUAL_STEP1";
+    } catch {
+      return false;
+    }
+  })();
+
+  const __isCard1Flow = __card1Trigger || __card1Pending;
   // REPLY_SURFACE_V1: responseは必ずlocalSurfaceizeを通す。返却は opts をそのまま形にし caps は body.caps のみ参照
   const reply = (payload: any) => {
     
@@ -763,6 +780,65 @@ const pid = process.pid;
     });
   };
 
+
+  // CARD1_STEP1_MACHINE_V1: start Card1 with opinion + choice and set pending
+  const __isSmoke_CARD1 = /^smoke-/i.test(String(threadId || ""));
+  const __hasDocPage_CARD1 = /pdfPage\s*=\s*\d+/i.test(trimmed) || /\bdoc\b/i.test(trimmed);
+  const __isCmd_CARD1 = trimmed.startsWith("#");
+
+  const __isDanshari_CARD1 =
+    /(断捨離|だんしゃり|手放す|捨てる|片づけ|片付け|執着)/i.test(trimmed);
+
+  const __isCasual_CARD1 =
+    /^(会話できる|話せる|今どんな気分|元気|どう思う|君は何を考えて|雑談|自分の生き方|天聞アークとは何)/.test(trimmed);
+
+  if (!__isSmoke_CARD1 && !wantsDetail && !__hasDocPage_CARD1 && !__isCmd_CARD1 && (__isDanshari_CARD1 || __isCasual_CARD1)) {
+    const __pending = getThreadPending(threadId);
+    if (!__pending) {
+      const __dp = emptyCorePlan(__isDanshari_CARD1 ? "CARD1_DANSHARI_STEP1" : "CARD1_CASUAL_STEP1");
+      __dp.chainOrder = ["CARD1_STEP", "TRUTH_CORE", "VERIFIER"];
+      __dp.warnings = (__dp.warnings ?? []).concat(["CARD1_STEP1 start"]);
+      applyTruthCore(__dp, { responseText: "CARD1_STEP1", trace: undefined });
+      applyVerifier(__dp);
+
+      if (__isDanshari_CARD1) {
+        setThreadPending(threadId, "DANSHARI_STEP1");
+        return reply({
+          response:
+            "【天聞の所見】断捨離は“片づけ”ではなく、滞りの場所を特定して流す作業です。\n\n" +
+            "まず分類だけ決めます。いま一番『手放したいのに手放せない』対象はどれに近いですか？\n" +
+            "1) モノ（物・書類・部屋）\n" +
+            "2) 習慣（行動・時間の使い方）\n" +
+            "3) 人間関係\n\n" +
+            "番号で答えてください。",
+          evidence: null,
+          candidates: [],
+          detailPlan: __dp,
+          decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: {} },
+          timestamp,
+          threadId,
+        });
+      }
+
+      setThreadPending(threadId, "CASUAL_STEP1");
+      return reply({
+        response:
+          "【天聞の所見】いまは“言葉にする前の詰まり”が少しあります。先に軸を一つだけ立てます。\n\n" +
+          "いちばん近いのはどれですか？\n" +
+          "1) 優先順位が決められない\n" +
+          "2) 情報が多すぎて疲れた\n" +
+          "3) 何から手を付けるか迷う\n\n" +
+          "番号で答えてください。",
+        evidence: null,
+        candidates: [],
+        detailPlan: __dp,
+        decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: {} },
+        timestamp,
+        threadId,
+      });
+    }
+  }
+
   // --- DET_NATURAL_STRESS_V1: 不安/過多はメニューに吸わせず相談テンプレへ ---
   const tNat = trimmed;
   const isStressShortJa =
@@ -1163,6 +1239,62 @@ if (usable.length === 0) {
     });
   }
 
+
+  // CARD1_STEP2_PREEMPT_V1: pending step2 must preempt LLM_CHAT (deterministic)
+  try {
+    const __isSmoke_CARD1P = /^smoke-/i.test(String(threadId || ""));
+    const __hasDocPage_CARD1P = /pdfPage\s*=\s*\d+/i.test(trimmed) || /\bdoc\b/i.test(trimmed);
+    const __isCmd_CARD1P = trimmed.startsWith("#");
+
+    if (!__isSmoke_CARD1P && !wantsDetail && !__hasDocPage_CARD1P && !__isCmd_CARD1P) {
+      const __p = getThreadPending(threadId);
+
+      if (__p === "DANSHARI_STEP1" || __p === "CASUAL_STEP1") {
+        clearThreadState(threadId);
+
+        const __isDanshari = (__p === "DANSHARI_STEP1");
+        const __choice = String(trimmed || "").trim();
+
+        let __topic = "未確定";
+        if (__isDanshari) {
+          if (__choice === "1") __topic = "モノ（物・書類・部屋）";
+          else if (__choice === "2") __topic = "習慣（行動・時間の使い方）";
+          else if (__choice === "3") __topic = "人間関係";
+        } else {
+          if (__choice === "1") __topic = "優先順位";
+          else if (__choice === "2") __topic = "情報過多";
+          else if (__choice === "3") __topic = "着手迷い";
+        }
+
+        const __dp = emptyCorePlan(__isDanshari ? "CARD1_DANSHARI_STEP2" : "CARD1_CASUAL_STEP2");
+        __dp.chainOrder = ["CARD1_STEP", "TRUTH_CORE", "VERIFIER"];
+        __dp.warnings = (__dp.warnings ?? []).concat([`CARD1_STEP2 topic=${__topic}`]);
+        applyTruthCore(__dp, { responseText: "CARD1_STEP2", trace: undefined });
+        applyVerifier(__dp);
+
+        const __op =
+          __isDanshari
+            ? `【天聞の所見】いまの迷いは「${__topic}」に触れています。ここは“捨て方”より先に“滞りの場所”を決めると進みます。`
+            : `【天聞の所見】いまの詰まりは「${__topic}」に寄っています。まず一手だけ軽くして流れを作ります。`;
+
+        const __q =
+          __isDanshari
+            ? `一点だけ伺います。「${__topic}」で、最初に“手放す候補”として思い浮かぶ具体名は何ですか？（1つだけ）`
+            : `一点だけ伺います。「${__topic}」で、いま一番重い“具体物”は何ですか？（タスク名/案件名/場所など1つだけ）`;
+
+        return reply({
+          response: `${__op}\n\n${__q}`,
+          evidence: null,
+          candidates: [],
+          detailPlan: __dp,
+          decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: {} },
+          timestamp,
+          threadId,
+        });
+      }
+    }
+  } catch {}
+
   // LLM_CHAT_ENTRY_V1: 通常会話はLLMへ（根拠要求/資料指定は除外）
   // GUEST_BLOCK_SKIP_JA_V1: Japanese free chat should not be routed to LLM_CHAT (so guests won't be blocked)
   const isJapaneseForLLM = /[ぁ-んァ-ン一-龯]/.test(message);
@@ -1183,6 +1315,7 @@ if (usable.length === 0) {
   // domain gate: 主要ドメイン語は LLM_CHAT を禁止（HYBRIDへ）
   const isDomainLike = /言霊|言灵|カタカムナ|天津金木|古事記|法華経|真言|布斗麻邇|フトマニ|水穂伝|虚空蔵/i.test(message);
   const shouldLLMChat =
+    !__isCard1Flow &&
     !isSmokeHybrid &&
     !isNonTextLike &&
     !isCorePlanProbe &&
@@ -1203,7 +1336,7 @@ if (usable.length === 0) {
 
   const isLocalTestBypass = isLocal && req.headers["x-tenmon-local-test"] === "1";
 
-  if (shouldBlockLLMChatForGuest && shouldLLMChat && !isLocalTestBypass) {
+  if (shouldBlockLLMChatForGuest && shouldLLMChat && !isLocalTestBypass && !__isCard1Flow) {
     return res.status(200).json({
       response: "ログイン前のため、会話は参照ベース（資料検索/整理）で動作します。/login からログインすると通常会話も有効になります。",
       evidence: null,
