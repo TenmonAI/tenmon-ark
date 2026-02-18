@@ -335,6 +335,40 @@ const pid = process.pid;
 
 
 
+
+  // CARDA_VOICE_GUARD_UNIFY_V1: single source of truth for "voice hooks" exclusions
+  const __voiceGuard = (rawMsg: string, tid: string): { allow: boolean; reason: string } => {
+    const m2 = String(rawMsg ?? "").trim();
+    const t2 = String(tid ?? "");
+
+    // strict contract: never touch smoke threads (smoke / smoke-hybrid / smoke-*)
+    if (/^smoke/i.test(t2)) return { allow: false, reason: "smoke" };
+
+    // never touch grounded / detail / commands
+    if (/#詳細/.test(m2)) return { allow: false, reason: "detail" };
+    if (/\bdoc\b/i.test(m2) || /pdfPage\s*=\s*\d+/i.test(m2)) return { allow: false, reason: "doc" };
+    if (m2.startsWith("#")) return { allow: false, reason: "cmd" };
+
+    // never touch menu-asked turns (user intentionally wants menu)
+    if (/(メニュー|方向性|どの方向で|選択肢|1\)|2\)|3\))/i.test(m2)) return { allow: false, reason: "menu" };
+
+    // strict low-signal (keep existing NATURAL fallback contracts)
+    const low = m2.toLowerCase();
+    const isLow =
+      low === "ping" ||
+      low === "test" ||
+      low === "ok" ||
+      low === "yes" ||
+      low === "no" ||
+      m2 === "はい" ||
+      m2 === "いいえ" ||
+      m2 === "うん" ||
+      m2 === "ううん";
+
+    if (isLow) return { allow: false, reason: "low_signal" };
+
+    return { allow: true, reason: "ok" };
+  };
   // CARD1_SEAL_V1: Card1 trigger + pending flags
   const __card1Trigger =
     /(断捨離|だんしゃり|手放す|捨てる|片づけ|片付け|執着)/i.test(trimmed) ||
