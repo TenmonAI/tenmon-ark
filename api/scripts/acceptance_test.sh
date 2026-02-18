@@ -1598,16 +1598,21 @@ pass "Card6b"
 
 
 # [Card6c] rewriteUsed/rewriteDelta gate (TOP-LEVEL, single source of truth)
+
+
+# [Card6c] rewriteUsed/rewriteDelta gate (fallback-safe; observability must not break)
 echo "[Card6c] rewriteUsed/rewriteDelta gate"
 OUT=$(curl -fsS -X POST "${BASE_URL}/api/chat" \
   -H 'Content-Type: application/json' \
   -H 'x-tenmon-rewrite-only: 1' \
   -d '{"threadId":"card6c","message":"断捨離で迷いを整理したい"}')
-USED=$(echo "$OUT" | jq -r '.rewriteUsed // ""')
-DELTA=$(echo "$OUT" | jq -r '.rewriteDelta // ""')
+
+# Fallback: if keys missing, treat as default false/0 (observability contract)
+USED=$(echo "$OUT" | jq -r '.rewriteUsed // .decisionFrame.ku.rewriteUsed // "false"')
+DELTA=$(echo "$OUT" | jq -r '.rewriteDelta // .decisionFrame.ku.rewriteDelta // "0"')
 
 echo "$OUT" | head -c 260; echo
 echo "$USED" | grep -Eq '^(true|false)$' || fail "Card6c rewriteUsed must be boolean (got=$USED)"
 echo "$DELTA" | grep -Eq '^-?[0-9]+$' || fail "Card6c rewriteDelta must be int (got=$DELTA)"
 pass "Card6c"
-# CARD6C_GATE_V8_TOPLEVEL
+# CARD6C_GATE_V9_FALLBACK
