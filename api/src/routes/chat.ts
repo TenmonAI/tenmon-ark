@@ -421,7 +421,31 @@ const pid = process.pid;
           ?? (obj as any)?.message
           ?? "";
         const resp = (obj as any).response;
-        obj = { ...(obj as any), response: __sanitizeOut(msg, resp) };
+        
+        // CARDG_LENGTH_INTENT_V3: length intent observability (NO body change)
+        try {
+          const raw = String(msg || "");
+          const lower = raw.toLowerCase();
+
+          let intent = "MED";
+          let minChars = 180, maxChars = 450;
+
+          if (/#詳細/.test(raw)) { intent = "DETAIL"; minChars = 0; maxChars = 999999; }
+          else if (/(短く|一行|要点|結論だけ)/.test(raw)) { intent = "SHORT"; minChars = 60; maxChars = 180; }
+          else if (/(詳しく|完全に|設計|仕様|提案|全部)/.test(raw)) { intent = "LONG"; minChars = 450; maxChars = 900; }
+
+          // thread recent style hint (very light): if user message is long, bias long
+          if (intent == "MED" && raw.length >= 220) { intent = "LONG"; minChars = 450; maxChars = 900; }
+
+          // attach to decisionFrame.ku if present
+          const df = (obj as any).decisionFrame;
+          if (df && typeof df === "object") {
+            df.ku = (df.ku && typeof df.ku === "object") ? df.ku : {};
+            (df.ku as any).lengthIntent = intent;
+            (df.ku as any).lengthTarget = { minChars, maxChars };
+          }
+        } catch {}
+obj = { ...(obj as any), response: __sanitizeOut(msg, resp) };
         // CARDB_WIRE_VOICE_GUARD_SINGLE_EXIT_V3: observability-only (NO behavior change)
         // Record whether voice hooks SHOULD run for this request, using CardA unified guard.
         try {
