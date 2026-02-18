@@ -1474,3 +1474,21 @@ echo "$I1" | grep -q "SHORT" || fail "CardG2 short should be SHORT"
 echo "$I2" | grep -q "LONG"  || fail "CardG2 long should be LONG"
 pass "CardG2"
 # /CARDG2_GATE_V1
+
+
+# [CardH] lengthIntent APPLY gate (generic fallback changes only)
+echo "[CardH] lengthIntent APPLY gate"
+OUT1=$(curl -fsS -X POST "${BASE_URL}/api/chat" -H 'Content-Type: application/json' \
+  -d '{"threadId":"cardh-short","message":"短く答えて：自分の生き方"}')
+R1=$(echo "$OUT1" | jq -r '.response // ""')
+echo "$OUT1" | head -c 220; echo
+echo "$R1" | grep -q '^【要点】' || fail "CardH SHORT must rewrite generic fallback"
+
+OUT2=$(curl -fsS -X POST "${BASE_URL}/api/chat" -H 'Content-Type: application/json' \
+  -d '{"threadId":"cardh-long","message":"詳しく教えて：自分の生き方"}')
+R2=$(echo "$OUT2" | jq -r '.response // ""')
+echo "$OUT2" | head -c 220; echo
+echo "$R2" | grep -q '^【整理】' || fail "CardH LONG must rewrite generic fallback"
+
+pass "CardH"
+# CARDH_GATE_V1

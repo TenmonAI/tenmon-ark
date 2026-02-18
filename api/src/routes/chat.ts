@@ -484,6 +484,52 @@ const pid = process.pid;
             (df.ku as any).lengthTarget = { minChars, maxChars };
           }
         } catch {}
+
+        // CARDH_LENGTH_INTENT_APPLY_V1: apply lengthIntent to NATURAL generic fallback only (NO fabrication)
+        try {
+          const df: any = (obj as any).decisionFrame;
+          const mode = String(df?.mode ?? "");
+          if (mode !== "NATURAL") throw 0;
+
+          const ku: any = (df && typeof df === "object") ? ((df.ku && typeof df.ku === "object") ? df.ku : (df.ku = {})) : null;
+          if (!ku) throw 0;
+
+          const raw = String(msg || "");
+          const lower = raw.toLowerCase();
+          const tid = String((obj as any)?.threadId ?? "");
+
+          // strict exclusions
+          if (/^smoke/i.test(tid)) throw 0;
+          if (/#詳細/.test(raw)) throw 0;
+          if (/\bdoc\b/i.test(raw) || /pdfPage\s*=\s*\d+/i.test(raw)) throw 0;
+          if (raw.trim().startsWith("#")) throw 0;
+          if (/(メニュー|方向性|どの方向で|選択肢|1\)|2\)|3\))/i.test(raw)) throw 0;
+
+          // low-signal preserve
+          const isLow =
+            lower === "ping" || lower === "test" || lower === "ok" || lower === "yes" || lower === "no" ||
+            raw === "はい" || raw === "いいえ" || raw === "うん" || raw === "ううん";
+          if (isLow) throw 0;
+
+          // Only touch the generic fallback text
+          const cur = String((obj as any).response ?? "");
+          const generic = /了解。何でも話して。必要なら「#詳細」や「doc=\.\.\. pdfPage=\.\.\.」で深掘りできるよ。/.test(cur);
+          if (!generic) throw 0;
+
+          const intent = String(ku.lengthIntent ?? "MED");
+          if (intent === "SHORT") {
+            (obj as any).response = "【要点】いま一番の論点を1つだけ教えて。\n\n一点質問：何を優先したい？";
+          } else if (intent === "LONG") {
+            (obj as any).response =
+              "【整理】いまの話を“3点”に分けて進めます。\n" +
+              "1) 目的（何を達成したい？）\n" +
+              "2) 制約（時間/資金/人手）\n" +
+              "3) 次の一手（最小diff）\n\n" +
+              "一点質問：まず1)目的を一行で。";
+          } else {
+            // MED: keep as-is
+          }
+        } catch {}
 obj = { ...(obj as any), response: __sanitizeOut(msg, resp) };
         // CARDB_WIRE_VOICE_GUARD_SINGLE_EXIT_V3: observability-only (NO behavior change)
         // Record whether voice hooks SHOULD run for this request, using CardA unified guard.
