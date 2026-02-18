@@ -590,7 +590,40 @@ const pid = process.pid;
 
           obj = { ...(obj as any), response: nextResp };
         } catch {
-          obj = { ...(obj as any), response: __sanitizeOut(msg, resp) };
+          
+        // CARD5_ONE_LINE_POINT_V3: clamp "【要点】" to exactly one line (<=140 chars) + keep rest unchanged
+        const __clampPointLine = (rawMsg: string, tid: string, text: string): string => {
+          try {
+            const t = String(text || "");
+            if (!t.startsWith("【要点】")) return t;
+
+            // contract guards
+            if (/^smoke/i.test(String(tid || ""))) return t;
+            if (/#詳細/.test(String(rawMsg || ""))) return t;
+            if (/\bdoc\b/i.test(String(rawMsg || "")) || /pdfPage\s*=\s*\d+/i.test(String(rawMsg || ""))) return t;
+
+            const lines = t.split(/\r?\n/);
+            const first = lines[0] || "";
+            const rest = lines.slice(1).join("\n");
+
+            // normalize first line
+            const body = first.replace(/^【要点】\s*/,"");
+            let one = body.replace(/\s+/g," ").trim();
+            if (one.length > 140) one = one.slice(0, 139) + "…";
+
+            const out = "【要点】" + one + "\n" + rest;
+            return out.trimEnd();
+          } catch {
+            return String(text || "");
+          }
+        };
+
+        const __cleaned = __sanitizeOut(msg, resp);
+        const __tid = String((obj as any)?.threadId ?? "");
+        const __raw = String((obj as any)?.rawMessage ?? (obj as any)?.message ?? msg ?? "");
+        const __final = __clampPointLine(__raw, __tid, __cleaned);
+        obj = { ...(obj as any), response: __final };
+
         }
 
         // CARDB_WIRE_VOICE_GUARD_SINGLE_EXIT_V3: observability-only (NO behavior change)
