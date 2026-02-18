@@ -415,6 +415,18 @@ const pid = process.pid;
   // wrap res.json so ANY {response: "..."} is sanitized before leaving the server
   const __origJson = (res as any).json.bind(res);
   (res as any).json = (obj: any) => {
+    // CARD6C_FORCE_KU_RESJSON_V5: always ensure decisionFrame.ku exists + has rewriteUsed/rewriteDelta defaults
+    try {
+      if (obj && typeof obj === "object") {
+        const df = (obj as any).decisionFrame;
+        if (df && typeof df === "object") {
+          df.ku = (df.ku && typeof df.ku === "object") ? df.ku : {};
+          if ((df.ku as any).rewriteUsed === undefined) (df.ku as any).rewriteUsed = false;
+          if ((df.ku as any).rewriteDelta === undefined) (df.ku as any).rewriteDelta = 0;
+        }
+      }
+    } catch {}
+
     try {
       if (obj && typeof obj === "object" && ("response" in obj)) {
         const msg = (obj as any)?.detailPlan?.input
