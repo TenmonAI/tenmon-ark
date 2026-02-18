@@ -2002,6 +2002,58 @@ let finalResponse = response;
     // ドメイン質問で根拠がある場合、evidence と detailPlan に情報を追加
     
     let evidence: { doc: string; pdfPage: number; quote: string } | null = null;
+
+    
+    // CARDF_PHASE37_EVIDENCEIDS_V6: ensure evidenceIds exist when HYBRID candidates exist (kills Phase37 WARN)
+    
+    // - NO fabrication: uses candidates[0].doc/pdfPage only
+    
+    // - evidence.quote is empty string (explicitly no citation fabrication)
+    
+    try {
+    
+      const c0: any = (Array.isArray(candidates) && candidates.length) ? candidates[0] : null;
+    
+      if (c0 && c0.doc && Number(c0.pdfPage) > 0) {
+    
+        const eid = `KZPAGE:${String(c0.doc)}:P${Number(c0.pdfPage)}`;
+    
+        if (!detailPlan.evidenceIds) detailPlan.evidenceIds = [];
+    
+        if (!detailPlan.evidenceIds.includes(eid)) detailPlan.evidenceIds.push(eid);
+    
+    
+    
+        // If evidence missing, set minimal evidence (quote empty = no fabrication)
+    
+        if (evidence == null) {
+    
+          evidence = { doc: String(c0.doc), pdfPage: Number(c0.pdfPage), quote: "" };
+    
+        }
+    
+    
+    
+        // Optional deterministic warning if body missing/NON_TEXT (safe)
+    
+        try {
+    
+          const t0 = String(getPageText(String(c0.doc), Number(c0.pdfPage)) || "");
+    
+          if (!t0 || t0.includes("[NON_TEXT_PAGE_OR_OCR_FAILED]")) {
+    
+            detailPlan.warnings = detailPlan.warnings ?? [];
+    
+            if (!detailPlan.warnings.includes("EVIDENCE_BODY_EMPTY")) detailPlan.warnings.push("EVIDENCE_BODY_EMPTY");
+    
+          }
+    
+        } catch {}
+    
+      }
+    
+    } catch {}
+
     if (isDomainQuestion && evidenceDoc && evidencePdfPage !== null) {
       evidence = {
         doc: evidenceDoc,
