@@ -699,6 +699,47 @@ const pid = process.pid;
             }
           }
         } catch {}
+        // CARD6A_REWRITE_ONLY_PLUMBING_V2: rewrite-only hook (SYNC, default OFF)
+        // - NO behavior change unless TENMON_REWRITE_ONLY=1
+        // - MUST remain synchronous (no await) to keep wrapper shape safe
+        // - NEVER touch smoke/#detail/doc/pdfPage/cmd/low-signal
+        try {
+          const enabled = String(process.env.TENMON_REWRITE_ONLY || "") === "1";
+          if (enabled) {
+            const df = (obj as any).decisionFrame;
+            const ku = (df && typeof df === "object")
+              ? ((df.ku && typeof df.ku === "object") ? df.ku : (df.ku = {}))
+              : null;
+
+            const tid = String((obj as any)?.threadId ?? "");
+            const rawMsg =
+              String((obj as any)?.rawMessage ?? "") ||
+              String((obj as any)?.message ?? "") ||
+              String((obj as any)?.input ?? "");
+
+            const isSmoke = /^smoke/i.test(tid);
+            const wantsDetail = /#詳細/.test(rawMsg);
+            const hasDoc = /\bdoc\b/i.test(rawMsg) || /pdfPage\s*=\s*\d+/i.test(rawMsg);
+            const isCmd = rawMsg.trim().startsWith("#");
+            const low = rawMsg.trim().toLowerCase();
+            const isLow =
+              low === "ping" || low === "test" || low === "ok" || low === "yes" || low === "no" ||
+              rawMsg.trim() === "はい" || rawMsg.trim() === "いいえ" || rawMsg.trim() === "うん" || rawMsg.trim() === "ううん";
+
+            const mode = String(df?.mode ?? "");
+            const allowVoice = !!(ku as any)?.voiceGuardAllow;
+
+            // sync-only rewrite: only trim redundant whitespace when SHORT intent
+            const intent = String((ku as any)?.lengthIntent ?? "");
+            if (mode === "NATURAL" && allowVoice && !isSmoke && !wantsDetail && !hasDoc && !isCmd && !isLow) {
+              const r0 = String((obj as any).response ?? "");
+              if (intent === "SHORT") {
+                (obj as any).response = r0.replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
+              }
+            }
+          }
+        } catch {}
+
 
     return __origJson(obj);
   };
