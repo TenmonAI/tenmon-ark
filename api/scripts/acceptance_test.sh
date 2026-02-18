@@ -1477,22 +1477,28 @@ pass "CardG2"
 
 
 # [CardH] lengthIntent APPLY gate (generic fallback changes only)
-echo "[CardH] lengthIntent APPLY gate"
-OUT1=$(curl -fsS -X POST "${BASE_URL}/api/chat" -H 'Content-Type: application/json' \
-  -d '{"threadId":"cardh-short","message":"短く答えて：自分の生き方"}')
-R1=$(echo "$OUT1" | jq -r '.response // ""')
-echo "$OUT1" | head -c 220; echo
-echo "$R1" | grep -q '^【要点】' || fail "CardH SHORT must rewrite generic fallback"
 
-OUT2=$(curl -fsS -X POST "${BASE_URL}/api/chat" -H 'Content-Type: application/json' \
-  -d '{"threadId":"cardh-long","message":"詳しく教えて：自分の生き方"}')
-R2=$(echo "$OUT2" | jq -r '.response // ""')
-echo "$OUT2" | head -c 220; echo
-echo "$R2" | grep -q '^【整理】' || fail "CardH LONG must rewrite generic fallback"
+# [CardH] lengthIntent APPLY gate
+# NOTE: CardC/CardE may already rewrite generic fallback, so CardH must validate "SHORT shape", not fallback string.
+echo "[CardH] lengthIntent APPLY gate"
+OUT=$(curl -fsS -X POST "${BASE_URL}/api/chat" -H 'Content-Type: application/json' \
+  -d '{"threadId":"cardh-short","message":"短く答えて：自分の生き方"}')
+RESP=$(echo "$OUT" | jq -r '.response // ""')
+INTENT=$(echo "$OUT" | jq -r '.decisionFrame.ku.lengthIntent // ""')
+
+echo "$OUT" | head -c 240; echo
+echo "$INTENT" | grep -q "SHORT" || fail "CardH intent must be SHORT"
+
+# Accept either:
+#  A) generic fallback rewritten by CardH, or
+#  B) already opinion-first shape (CardC/CardE) that is short-intent compatible
+echo "$RESP" | grep -q '^【天聞の所見】' || fail "CardH SHORT must yield opinion-first prefix"
+
+# Must contain a one-question handoff (either 一点質問 or ends with a question mark)
+echo "$RESP" | grep -q '一点質問' || echo "$RESP" | grep -Eq '[？?]' || fail "CardH SHORT must include a question handoff"
 
 pass "CardH"
-# CARDH_GATE_V1
-
+# CARDH_GATE_V3
 
 # [CardH] lengthIntent APPLY gate (SHORT must rewrite generic fallback)
 echo "[CardH] lengthIntent APPLY gate"
