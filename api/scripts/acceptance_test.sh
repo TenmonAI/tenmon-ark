@@ -1512,3 +1512,19 @@ echo "$INTENT" | grep -q "SHORT" || fail "CardH intent must be SHORT"
 echo "$RESP" | grep -q '^【天聞の所見】' || fail "CardH SHORT must rewrite generic fallback"
 pass "CardH"
 # CARDH_GATE_V2
+
+
+# [Card5] Kokuzo seasoning gate (HYBRID normal -> point+opinion+oneQ)
+echo "[Card5] Kokuzo seasoning gate"
+OUT=$(curl -fsS -X POST "${BASE_URL}/api/chat" -H 'Content-Type: application/json' \
+  -d '{"threadId":"card5-season","message":"言霊とは何？"}')
+RESP=$(echo "$OUT" | jq -r '.response // ""')
+MODE=$(echo "$OUT" | jq -r '.decisionFrame.mode // ""')
+
+echo "$OUT" | head -c 240; echo
+echo "$MODE" | grep -q "HYBRID" || fail "Card5 must run on HYBRID"
+echo "$RESP" | grep -q '^要点:' || fail "Card5 must begin with 1-line point"
+echo "$RESP" | grep -q '【天聞の所見】' || fail "Card5 must include opinion"
+echo "$RESP" | grep -q '一点質問：' || fail "Card5 must include one-question handoff"
+pass "Card5"
+# CARD5_GATE_V1

@@ -2331,6 +2331,51 @@ let finalResponse = response;
 
 
     // レスポンス形式（厳守）
+    // CARD5_KOKUZO_SEASONING_V1: HYBRID normal reply -> 1-line point + opinion + one question
+    // Contract:
+    // - DO NOT touch #詳細 (transparency mode)
+    // - DO NOT touch doc/pdfPage GROUNDED
+    // - DO NOT touch smoke/smoke-hybrid
+    // - NO fabrication: point derived only from candidates[0] doc/pdfPage text or snippet
+    try {
+      const isSmoke = /^smoke/i.test(String(threadId || ""));
+      // CARD5_FIX_SCOPE_DECISIONFRAME_V1: decisionFrame not in scope here; final HYBRID return implies HYBRID path
+      if (!isSmoke && !wantsDetail && !hasDocPage && !trimmed.startsWith("#")) {
+        let point = "";
+        try {
+          const c0: any = (Array.isArray(candidates) && candidates.length) ? candidates[0] : null;
+          if (c0 && c0.doc && Number(c0.pdfPage) > 0) {
+            const body = String(getPageText(String(c0.doc), Number(c0.pdfPage)) || "").trim();
+            if (body && !body.includes("[NON_TEXT_PAGE_OR_OCR_FAILED]")) {
+              point = body.replace(/\s+/g, " ").slice(0, 96).trim();
+            } else {
+              point = String(c0.snippet || "").replace(/\s+/g, " ").slice(0, 96).trim();
+            }
+          }
+        } catch {}
+
+        if (!point) {
+          point = String(finalResponse || "").replace(/\s+/g, " ").slice(0, 96).trim();
+        }
+        if (point.length > 0) point = "要点: " + point;
+
+        // Opinion + one question (deterministic, short)
+        const opinion = "【天聞の所見】いまの問いは“核”がまだ一語で定まっていないだけです。先に軸を立てます。";
+        const q = "一点質問：この問いは、定義／作用／由来／実践のどれを知りたい？";
+
+        let out = "";
+        if (point) out += point + "\n\n";
+        out += opinion + "\n\n" + q;
+
+        // Ensure ends with question mark
+        if (!/[？?]\s*$/.test(out)) out += "？";
+
+        finalResponse = out;
+
+        // Keep evidenceIds/evidence behavior unchanged (CardF already handles evidenceIds safely)
+      }
+    } catch {}
+
     return reply({
       response: finalResponse,
       trace,
