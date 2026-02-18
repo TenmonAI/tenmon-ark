@@ -1,3 +1,4 @@
+/* UNBLOCK_LLMCHAT_V2 */
 export type NaturalType = "greeting" | "datetime" | "other";
 
 function pad2(n: number): string {
@@ -69,7 +70,7 @@ export function naturalRouter(input: { message: string; mode: string }): { handl
 
   if (typ === "greeting") {
     return {
-      handled: true,
+      handled: false,
       responseText: ja ? "おはようございます。天聞アークです。" : "Hello. How can I help you today?",
     };
   }

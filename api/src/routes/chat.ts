@@ -343,7 +343,12 @@ const pid = process.pid;
     const wantsDetail = /#詳細/.test(mstr);
     const askedMenu = /(メニュー|方向性|どの方向で|選択肢|1\)|2\)|3\))/i.test(mstr);
     const hasMenu = /どの方向で話しますか/.test(t);
-    if (hasMenu && !askedMenu) {
+    // FREECHAT_SANITIZE_GUARD_V2
+
+    const hasTodo = /SYNTH_USED|TODO:|プレースホルダ|PLACEHOLDER/i.test(t);
+    const shouldSanitize = (hasMenu || hasTodo) && !askedMenu;
+
+    if (shouldSanitize) {
       t = "了解。何でも話して。必要なら「#詳細」や「doc=... pdfPage=...」で深掘りできるよ。";
     }
     if (!wantsDetail) {
