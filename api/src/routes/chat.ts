@@ -425,7 +425,7 @@ const pid = process.pid;
         
         // CARDG_LENGTH_INTENT_V3: length intent observability (NO body change)
         try {
-          const raw = String((obj as any)?.rawMessage ?? (obj as any)?.message ?? msg ?? "");  // CARDG_LENGTH_INTENT_V4
+          const raw = String((obj as any)?.rawMessage ?? (obj as any)?.message ?? "");  // CARDG_LENGTH_INTENT_V4
           const lower = raw.toLowerCase();
 
           let intent = "MED";
@@ -609,6 +609,64 @@ const pid = process.pid;
 
       }
     } catch {}
+        // CARD5_KOKUZO_SEASONING_V2: HYBRID normal reply -> 1-line point + (existing voiced text) + one question
+        // Contract:
+        // - DO NOT touch #詳細 (transparency)
+        // - DO NOT touch doc/pdfPage / commands
+        // - DO NOT touch smoke threads
+        // - NO fabrication: point uses candidates[0] doc/pdfPage/snippet only
+        try {
+          const df = (obj as any)?.decisionFrame;
+          const mode = String(df?.mode ?? "");
+          const tid = String((obj as any)?.threadId ?? "");
+          const raw = String((obj as any)?.rawMessage ?? (obj as any)?.message ?? "");
+
+          const isSmoke = /^smoke/i.test(tid);
+          const wantsDetail = /#詳細/.test(raw);
+          const hasDoc = /\bdoc\b/i.test(raw) || /pdfPage\s*=\s*\d+/i.test(raw);
+          const isCmd = raw.trim().startsWith("#");
+
+          if (!isSmoke && mode === "HYBRID" && !wantsDetail && !hasDoc && !isCmd) {
+            const cands = (obj as any)?.candidates;
+            const c0 = (Array.isArray(cands) && cands.length) ? cands[0] : null;
+
+            if (c0 && c0.doc && Number(c0.pdfPage) > 0) {
+              const doc = String(c0.doc);
+              const page = Number(c0.pdfPage);
+
+              let snippet = "";
+              try { snippet = String(c0.snippet ?? ""); } catch {}
+              snippet = snippet.replace(/\s+/g, " ").trim();
+              if (!snippet || /\[NON_TEXT_PAGE_OR_OCR_FAILED\]/.test(snippet)) snippet = "";
+
+              // 1-line point (<= 90 chars after doc/page)
+              let point = `【要点】${doc} P${page}`;
+              if (snippet) {
+                const cut = snippet.slice(0, 70);
+                point = point + `: ${cut}${snippet.length > cut.length ? "…" : ""}`;
+              } else {
+                point = point + ": （候補先頭ページ）";
+              }
+
+              const cur = String((obj as any).response ?? "").trim();
+              if (cur) {
+                let out = cur;
+
+                // ensure one-question handoff at end
+                const endsQ = /[？?]\s*$/.test(out) || /(ですか|でしょうか|ますか|か？|か\?)\s*$/.test(out);
+                if (!endsQ) out = out + "\n\n一点質問：いま一番ひっかかっている点はどこ？";
+
+                // add point line ONLY if not already present
+                if (!out.startsWith("【要点】")) {
+                  out = point + "\n\n" + out;
+                }
+
+                (obj as any).response = out;
+              }
+            }
+          }
+        } catch {}
+
     return __origJson(obj);
   };
 
