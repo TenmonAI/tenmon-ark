@@ -1021,6 +1021,7 @@ return res.json({
   }
 
   // --- DET_NATURAL_STRESS_V1: 不安/過多はメニューに吸わせず相談テンプレへ ---
+  // CARDE_TEMPLATE_OPINION_PREFIX_SAFE_V1: opinion-first template
   const tNat = trimmed;
   const isStressShortJa =
     /[ぁ-んァ-ン一-龯]/.test(tNat) &&
@@ -1033,58 +1034,29 @@ return res.json({
   if (isStressShortJa) {
     return reply({
       response:
-        "了解。いまの状況を一言で言うと、どれに近い？\n\n" +
+        "【天聞の所見】いまは“中心の軸”がまだ決まっていないだけです。先に1つだけ立てます。\n\n" +
+        "一点質問：いちばん近いのはどれですか？\n" +
         "1) 予定・タスクの整理\n" +
         "2) 迷いの整理（選択肢がある）\n" +
         "3) いまの気持ちを整えたい\n\n" +
-        "番号で答えてくれてもいいし、具体的に『いま困ってること』を1行で書いてもOK。",
+        "番号でもOK。具体的に『いま困ってること』を1行でもOK。",
       evidence: null,
       timestamp,
       threadId,
-      decisionFrame: { 
-          mode: "NATURAL", intent: "chat", llm: null,
-          // FREECHAT_HINTS_NATURAL_V1: expose compact hints in NATURAL responses (read-only, no fabrication)
-          ku: (() => {
-            try {
-              const laws = listThreadLaws(threadId, 20).filter(
-                (x: any) => x && typeof x === "object" && x.name && x.definition && Array.isArray(x.evidenceIds) && x.evidenceIds.length > 0
-              );
-              const freeChatHints = (() => {
-              const seen = new Set<string>();
-              const out: any[] = [];
-              for (const x of laws) {
-                const name = String((x as any)?.name ?? "").trim();
-                if (!name) continue;
-                if (seen.has(name)) continue;
-                seen.add(name);
-                out.push({
-                  name,
-                  definition: (x as any)?.definition ?? null,
-                  evidenceIds: Array.isArray((x as any)?.evidenceIds) ? (x as any).evidenceIds : [],
-                  doc: (x as any)?.doc ?? null,
-                  pdfPage: (x as any)?.pdfPage ?? null,
-                });
-                if (out.length >= 6) break;
-              }
-              return out;
-            })() /* FREECHAT_HINTS_LIMIT6_NAMEDEDUP_V1 */;
-              return { freeChatHints };
-            } catch {
-              return { freeChatHints: [] };
-            }
-          })()
-        },
+      decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: {} },
     });
   }
   // --- /DET_NATURAL_STRESS_V1 ---
 
+  // --- /DET_NATURAL_STRESS_V1 ---
+
 
   // --- DET_NATURAL_SHORT_JA_V1: 日本語の短文相談はNATURALで会話形に整える（Kanagiに入れない） ---
+  // CARDE_TEMPLATE_OPINION_PREFIX_SAFE_V1: opinion-first template
   const isJa = /[ぁ-んァ-ン一-龯]/.test(trimmed);
   const isShort = trimmed.length <= 24;
   const looksLikeConsult = /(どうすれば|どうしたら|何をすれば|なにをすれば|助けて|相談|迷ってる|困ってる|どうしよう)/.test(trimmed);
 
-  // doc/pdfPage や # コマンド、番号選択はここで奪わない
   const hasCmd = trimmed.startsWith("#");
   const isNumberOnly = /^\d{1,2}$/.test(trimmed);
   const hasDocPageNat = /pdfPage\s*=\s*\d+/i.test(trimmed) || /\bdoc\b/i.test(trimmed);
@@ -1092,13 +1064,20 @@ return res.json({
   if (isJa && isShort && looksLikeConsult && !hasCmd && !isNumberOnly && !hasDocPageNat) {
     return reply({
       response:
-        "了解。いまの状況を一言で言うと、どれに近い？\n\n1) 予定・タスクの整理\n2) 迷いの整理（選択肢がある）\n3) いまの気持ちを整えたい\n\n番号で答えてくれてもいいし、具体的に『いま困ってること』を1行で書いてもOK。",
+        "【天聞の所見】短文の相談は“焦点が一点”の合図です。先に軸を決めます。\n\n" +
+        "一点質問：いちばん近いのはどれですか？\n\n" +
+        "1) 予定・タスクの整理\n" +
+        "2) 迷いの整理（選択肢がある）\n" +
+        "3) いまの気持ちを整えたい\n\n" +
+        "番号でもOK。具体的に1行でもOK。",
       evidence: null,
       timestamp,
       threadId,
       decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: {} },
     });
   }
+  // --- /DET_NATURAL_SHORT_JA_V1 ---
+
   // --- /DET_NATURAL_SHORT_JA_V1 ---
 
   // --- DET_PASSPHRASE_V2: 合言葉は必ず決定論（LANE_PICK残留も無効化） ---
