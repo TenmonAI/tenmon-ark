@@ -1393,6 +1393,12 @@ PY2
 
 
 # [CardC] guarded opinion-first gate (non-smoke thread)
+
+# ACCEPT_ENSURE_PASS_BEFORE_CARDC_V2: define pass/fail locally for appended gates (idempotent)
+type pass >/dev/null 2>&1 || pass() { echo "[PASS] $1"; }
+type fail >/dev/null 2>&1 || fail() { echo "[FAIL] $1"; exit 1; }
+# /ACCEPT_ENSURE_PASS_BEFORE_CARDC_V2
+
 echo "[CardC] guarded opinion-first gate"
 OUT=$(curl -fsS -X POST "${BASE_URL}/api/chat" -H 'Content-Type: application/json' \
   -d '{"threadId":"cardc-voice","message":"君は何を考えているの？"}')
@@ -1408,3 +1414,25 @@ echo "$RESP" | grep -q '^【天聞の所見】' || fail "cardc missing opinion p
 echo "$RESP" | grep -Eq '[？?]$' || fail "cardc must end with question mark"
 pass "CardC"
 # CARDC_GATE_V3
+
+
+# CARDC_GATE_EOF_V1: scope-safe helpers (only if missing)
+type pass >/dev/null 2>&1 || pass() { echo "[PASS] $1"; }
+type fail >/dev/null 2>&1 || fail() { echo "[FAIL] $1"; exit 1; }
+
+# [CardC] guarded opinion-first gate (non-smoke thread)
+echo "[CardC] guarded opinion-first gate"
+OUT=$(curl -fsS -X POST "${BASE_URL}/api/chat" \
+  -H 'Content-Type: application/json' \
+  -d '{"threadId":"cardc-voice","message":"会話できる？"}')
+RESP=$(echo "$OUT" | jq -r '.response // ""')
+MODE=$(echo "$OUT" | jq -r '.decisionFrame.mode // ""')
+
+echo "$OUT" | head -c 260; echo
+
+echo "$MODE" | grep -q "NATURAL" || fail "cardc mode not NATURAL"
+echo "$RESP" | grep -q '^【天聞の所見】' || fail "cardc missing opinion prefix"
+echo "$RESP" | grep -Eq '[？?]$|ですか$|でしょうか$|ますか$' || fail "cardc must end with question"
+pass "CardC"
+
+# /CARDC_GATE_EOF_V1
