@@ -1264,6 +1264,16 @@ try {
         }
       }
     } catch {}
+    // CARD6C_REPLY_DEFAULT_V4: ensure rewriteUsed/rewriteDelta always exist in decisionFrame.ku (default false/0)
+    try {
+      payload.decisionFrame = payload.decisionFrame || { mode: "NATURAL", intent: "chat", llm: null, ku: {} };
+      payload.decisionFrame.ku = (payload.decisionFrame.ku && typeof payload.decisionFrame.ku === "object") ? payload.decisionFrame.ku : {};
+      const ku: any = payload.decisionFrame.ku;
+
+      if (ku.rewriteUsed === undefined) ku.rewriteUsed = false;
+      if (ku.rewriteDelta === undefined) ku.rewriteDelta = 0;
+    } catch {}
+
 
 return res.json({
       response,
