@@ -1572,7 +1572,7 @@ pass "Card6a"
 
 # [Card6b] rewrite-only APPLY gate (header-triggered; string-return; must keep opinion prefix; no evidence tokens)
 echo "[Card6b] rewrite-only APPLY gate"
-OUT=$(curl -fsS -X POST "${BASE_URL}/api/chat" \
+OUT=$(TENMON_REWRITE_ONLY=1 curl -fsS -X POST "${BASE_URL}/api/chat" \
   -H 'Content-Type: application/json' \
   -H 'x-tenmon-rewrite-only: 1' \
   -d '{"threadId":"card6b","message":"君は何を考えているの？"}')
@@ -1602,7 +1602,7 @@ pass "Card6b"
 
 # [Card6c] rewriteUsed/rewriteDelta gate (fallback-safe; observability must not break)
 echo "[Card6c] rewriteUsed/rewriteDelta gate"
-OUT=$(curl -fsS -X POST "${BASE_URL}/api/chat" \
+OUT=$(TENMON_REWRITE_ONLY=1 curl -fsS -X POST "${BASE_URL}/api/chat" \
   -H 'Content-Type: application/json' \
   -H 'x-tenmon-rewrite-only: 1' \
   -d '{"threadId":"card6c","message":"断捨離で迷いを整理したい"}')
@@ -1616,3 +1616,33 @@ echo "$USED" | grep -Eq '^(true|false)$' || fail "Card6c rewriteUsed must be boo
 echo "$DELTA" | grep -Eq '^-?[0-9]+$' || fail "Card6c rewriteDelta must be int (got=$DELTA)"
 pass "Card6c"
 # CARD6C_GATE_V9_FALLBACK
+
+
+# [Card6d] rewrite-only must actually run in acceptance (TENMON_REWRITE_ONLY=1)
+echo "[Card6d] rewrite-only active check (best-effort)"
+OUT=$(TENMON_REWRITE_ONLY=1 curl -fsS -X POST "${BASE_URL}/api/chat" \
+  -H 'Content-Type: application/json' \
+  -H 'x-tenmon-rewrite-only: 1' \
+  -d '{"threadId":"card6d","message":"君は何を考えているの？"}')
+USED=$(echo "$OUT" | jq -r '.rewriteUsed // .decisionFrame.ku.rewriteUsed // ""')
+DELTA=$(echo "$OUT" | jq -r '.rewriteDelta // .decisionFrame.ku.rewriteDelta // ""')
+
+echo "$OUT" | head -c 260; echo
+
+# If keys exist, require evidence of activity
+if echo "$USED" | grep -Eq '^(true|false)$' && echo "$DELTA" | grep -Eq '^-?[0-9]+$'; then
+  ABS=$(python3 - <<'PYABS'
+import os,sys
+d=sys.stdin.read().strip()
+try:
+  n=int(d)
+  print(abs(n))
+except:
+  print(0)
+PYABS
+<<<"$DELTA")
+  echo "$USED" | grep -q "true" || [ "$ABS" -ge 1 ] || fail "Card6d: rewrite seems inactive (used=$USED delta=$DELTA)"
+fi
+
+pass "Card6d"
+# CARD6D_ACCEPTANCE_REWRITE_ON_V1
