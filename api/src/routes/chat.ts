@@ -294,6 +294,31 @@ function buildGroundedResultBody(
  * 固定応答を廃止し、天津金木思考回路を通して観測を返す
  */
 router.post("/chat", async (req: Request, res: Response<ChatResponseBody>) => {
+  // CARD6C_HANDLER_RESJSON_WRAP_V7: wrap res.json ONCE per request so ALL paths get top-level rewriteUsed/rewriteDelta defaults
+  // (covers direct res.json returns that bypass reply())
+  try {
+    if (!(res as any).__TENMON_JSON_WRAP_V7) {
+      (res as any).__TENMON_JSON_WRAP_V7 = true;
+      const __origJsonTop = (res as any).json.bind(res);
+      (res as any).json = (obj: any) => {
+        try {
+          if (obj && typeof obj === "object") {
+            if (obj.rewriteUsed === undefined) obj.rewriteUsed = false;
+            if (obj.rewriteDelta === undefined) obj.rewriteDelta = 0;
+            // also ensure decisionFrame.ku is object when decisionFrame exists (non-breaking)
+            const df = obj.decisionFrame;
+            if (df && typeof df === "object") {
+              if (!df.ku || typeof df.ku !== "object") df.ku = {};
+              if (df.ku.rewriteUsed === undefined) df.ku.rewriteUsed = obj.rewriteUsed;
+              if (df.ku.rewriteDelta === undefined) df.ku.rewriteDelta = obj.rewriteDelta;
+            }
+          }
+        } catch {}
+        return __origJsonTop(obj);
+      };
+    }
+  } catch {}
+
   const handlerTime = Date.now();
 
   let capsPayload: any = null;
