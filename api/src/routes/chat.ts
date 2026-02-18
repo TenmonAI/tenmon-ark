@@ -387,7 +387,56 @@ const pid = process.pid;
           ?? (obj as any)?.message
           ?? "";
         const resp = (obj as any).response;
-        obj = { ...(obj as any), response: __sanitizeOut(msg, resp) };
+        
+                // CARD2_JSONHOOK_OPINION_FIRST_V1: voice constitution at single exit (NATURAL only)
+                const __opinionFirstify = (rawMsg: string, txt: string, mode: string, tid: string): string => {
+                  const m2 = String(rawMsg ?? "");
+                  let t2 = String(txt ?? "").trim();
+
+                  // contract guards
+                  const isSmoke = /^smoke-/i.test(String(tid || ""));
+                  const wantsDetail = /#詳細/.test(m2);
+                  const hasDoc = /\bdoc\b/i.test(m2) || /pdfPage\s*=\s*\d+/i.test(m2);
+                  const isCmd = m2.trim().startsWith("#");
+                  const askedMenu = /(メニュー|方向性|どの方向で|選択肢|1\)|2\)|3\))/i.test(m2);
+
+                  if (isSmoke || wantsDetail || hasDoc || isCmd || askedMenu) return t2;
+                  if (String(mode || "") !== "NATURAL") return t2; // Card2 scope: NATURAL only
+                  if (t2.startsWith("【天聞の所見】")) return t2;
+
+                  // only upgrade flat/menu-ish/generic short outputs
+                  const short = t2.length < 220;
+                  const menuish = /どの方向で話しますか|番号かキーワードで選んでください|選択肢を選んでください/.test(t2);
+                  const generic = /了解。何でも話して。必要なら「#詳細」/.test(t2);
+                  if (!(short || menuish || generic)) return t2;
+
+                  let opinion = "いまは“整理”より先に、中心を一言で定める段階です。";
+                  let q = "いま一番ほしいのは、結論（すぐ決める）と整理（ほどく）のどちら？";
+
+                  if (/(断捨離|だんしゃり|手放す|片づけ|片付け|執着)/i.test(m2)) {
+                    opinion = "断捨離は“片づけ”ではなく、滞りの核を1つ特定して流す作業です。";
+                    q = "手放したいのに手放せない対象は、モノ・習慣・人間関係のどれが近い？";
+                  } else if (/生き方/.test(m2)) {
+                    opinion = "生き方の迷いは、価値の優先順位が未確定なサインです。";
+                    q = "いま一番守りたいのは、自由・安定・成長のどれ？";
+                  } else if (/君は何を考えている|何を考えてる/.test(m2)) {
+                    opinion = "僕は、君の中の“言葉になる前の核”を見つけて前へ運ぶことを考えています。";
+                    q = "いま聞きたいのは、僕の結論？それとも君の整理の手順？";
+                  }
+
+                  t2 = `【天聞の所見】${opinion}\n\n一点質問：${q}`;
+                  // ensure it ends with a question mark (Japanese/ASCII)
+                  if (!/[？?]\s*$/.test(t2)) t2 = t2 + "？";
+                  return t2;
+                };
+
+                const __mode = String((obj as any)?.decisionFrame?.mode ?? "");
+                const __tid = String((obj as any)?.threadId ?? "");
+                const __rawMsg = String((obj as any)?.detailPlan?.input ?? (obj as any)?.input ?? (obj as any)?.message ?? "");
+                const __cleaned = __sanitizeOut(__rawMsg, resp);
+                const __voiced = __opinionFirstify(__rawMsg, __cleaned, __mode, __tid);
+                obj = { ...(obj as any), response: __voiced };
+
       }
     } catch {}
     return __origJson(obj);
@@ -1314,8 +1363,7 @@ if (usable.length === 0) {
 
   // domain gate: 主要ドメイン語は LLM_CHAT を禁止（HYBRIDへ）
   const isDomainLike = /言霊|言灵|カタカムナ|天津金木|古事記|法華経|真言|布斗麻邇|フトマニ|水穂伝|虚空蔵/i.test(message);
-  const shouldLLMChat =
-    !__isCard1Flow &&
+  const shouldLLMChat = isAuthed && !__isCard1Flow &&
     !isSmokeHybrid &&
     !isNonTextLike &&
     !isCorePlanProbe &&
