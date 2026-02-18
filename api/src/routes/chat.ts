@@ -415,6 +415,14 @@ const pid = process.pid;
   // wrap res.json so ANY {response: "..."} is sanitized before leaving the server
   const __origJson = (res as any).json.bind(res);
   (res as any).json = (obj: any) => {
+    // CARD6C_TOPLEVEL_WRAPPER_ONLY_V6: ensure top-level rewriteUsed/rewriteDelta always exist (robust)
+    try {
+      if (obj && typeof obj === "object") {
+        if ((obj as any).rewriteUsed === undefined) (obj as any).rewriteUsed = false;
+        if ((obj as any).rewriteDelta === undefined) (obj as any).rewriteDelta = 0;
+      }
+    } catch {}
+
     // CARD6C_FORCE_KU_RESJSON_V5: always ensure decisionFrame.ku exists + has rewriteUsed/rewriteDelta defaults
     try {
       if (obj && typeof obj === "object") {
