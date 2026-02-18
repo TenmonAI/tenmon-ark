@@ -811,9 +811,133 @@ const pid = process.pid;
 
     const cleaned = rawCandidates.filter((c: any) => !isGarbageSnippet(String((c as any)?.snippet ?? "")));
     const finalCandidates = cleaned.length ? cleaned : rawCandidates;
+    // CARDC_INSTALL_GUARDED_OPINION_FIRST_V3: guarded opinion-first (single-exit). No behavior change unless __voiceGuard.allow and NATURAL and short/menu-ish.
+    const __applyGuardedOpinionFirst = (rawMsg: string, txt: any, df: any, tid: string): any => {
+      try {
+        const g = __voiceGuard(rawMsg, tid);
+        // observability (CardB style)
+        try {
+          if (df && typeof df === "object") {
+            df.ku = (df.ku && typeof df.ku === "object") ? df.ku : {};
+            (df.ku as any).voiceGuard = g.reason;
+            (df.ku as any).voiceGuardAllow = !!g.allow;
+          }
+        } catch {}
+
+        if (!g.allow) return txt;
+
+        const mode = String(df?.mode ?? "");
+        if (mode !== "NATURAL") return txt;
+        if (typeof txt !== "string") return txt;
+
+        const t = String(txt || "").trim();
+        if (t.startsWith("【天聞の所見】") || t.startsWith("所見：")) return t;
+
+        const short = t.length < 220;
+        const menuish = /どの方向で話しますか|番号かキーワードで選んでください|選択肢を選んでください/.test(t);
+        const generic = /了解。何でも話して。必要なら「#詳細」/.test(t);
+        if (!(short || menuish || generic)) return t;
+
+        let opinion = "いまは“整理”より先に、中心を一言で定める段階です。";
+        let q = "いま一番ほしいのは、結論（すぐ決める）と整理（ほどく）のどちら？";
+
+        if (/(断捨離|だんしゃり|手放す|片づけ|片付け|執着)/i.test(rawMsg)) {
+          opinion = "断捨離は“片づけ”ではなく、滞りの核を1つ特定して流す作業です。";
+          q = "手放したいのに手放せない対象は、モノ・習慣・人間関係のどれが近い？";
+        } else if (/生き方/.test(rawMsg)) {
+          opinion = "生き方の迷いは、価値の優先順位が未確定なサインです。";
+          q = "いま一番守りたいのは、自由・安定・成長のどれ？";
+        } else if (/君は何を考えている|何を考えてる/.test(rawMsg)) {
+          opinion = "僕は、君の中の“言葉になる前の核”を見つけて前へ運ぶことを考えています。";
+          q = "いま聞きたいのは、僕の結論？それとも君の整理の手順？";
+        }
+
+        let out = `【天聞の所見】${opinion}\n\n一点質問：${q}`;
+        if (!/[？?]\s*$/.test(out)) out = out + "？";
+        try {
+          if (df && typeof df === "object") {
+            df.ku = (df.ku && typeof df.ku === "object") ? df.ku : {};
+            (df.ku as any).opinionFirst = true;
+          }
+        } catch {}
+        return out;
+      } catch {
+        return txt;
+      }
+    };
+
+    try {
+      const __raw = String(payload?.rawMessage ?? trimmed ?? "");
+      const __tid = String(payload?.threadId ?? threadId ?? "");
+      const __df = payload?.decisionFrame ?? null;
+    // (disabled) v3 out assignment removed (out may not exist in this reply shape)
+    } catch {}
 
 
-    return res.json({
+
+
+    
+    // CARDC_PAYLOAD_OPINION_BEFORE_RETURN_V5: guarded opinion-first by rewriting payload.response right before return (no out/const response dependency)
+    try {
+      const __df: any = payload?.decisionFrame ?? null;
+      const __tid = String(payload?.threadId ?? threadId ?? "");
+      const __raw = String(payload?.rawMessage ?? trimmed ?? "");
+
+      const g = __voiceGuard(__raw, __tid);
+
+      // observability (no text change by itself)
+      try {
+        if (__df && typeof __df === "object") {
+          __df.ku = (__df.ku && typeof __df.ku === "object") ? __df.ku : {};
+          (__df.ku as any).voiceGuard = g.reason;
+          (__df.ku as any).voiceGuardAllow = !!g.allow;
+        }
+      } catch {}
+
+      if (g.allow) {
+        const mode = String(__df?.mode ?? "");
+        if (mode === "NATURAL" && typeof payload?.response === "string") {
+          const t = String(payload.response || "").trim();
+
+          // skip if already voiced
+          if (!t.startsWith("【天聞の所見】") && !t.startsWith("所見：")) {
+            // only upgrade flat replies (avoid changing rich content)
+            const short = t.length < 220;
+            const menuish = /どの方向で話しますか|番号かキーワードで選んでください|選択肢を選んでください/.test(t);
+            const generic = /了解。何でも話して。必要なら「#詳細」/.test(t);
+
+            if (short || menuish || generic) {
+              let opinion = "いまは“整理”より先に、中心を一言で定める段階です。";
+              let q = "いま一番ほしいのは、結論（すぐ決める）と整理（ほどく）のどちら？";
+
+              if (/(断捨離|だんしゃり|手放す|片づけ|片付け|執着)/i.test(__raw)) {
+                opinion = "断捨離は“片づけ”ではなく、滞りの核を1つ特定して流す作業です。";
+                q = "手放したいのに手放せない対象は、モノ・習慣・人間関係のどれが近い？";
+              } else if (/生き方/.test(__raw)) {
+                opinion = "生き方の迷いは、価値の優先順位が未確定なサインです。";
+                q = "いま一番守りたいのは、自由・安定・成長のどれ？";
+              } else if (/君は何を考えている|何を考えてる/.test(__raw)) {
+                opinion = "僕は、君の中の“言葉になる前の核”を見つけて前へ運ぶことを考えています。";
+                q = "いま聞きたいのは、僕の結論？それとも君の整理の手順？";
+              }
+
+              let out2 = `【天聞の所見】${opinion}\n\n一点質問：${q}`;
+              if (!/[？?]\s*$/.test(out2)) out2 = out2 + "？";
+              payload.response = out2;
+
+              try {
+                if (__df && typeof __df === "object") {
+                  __df.ku = (__df.ku && typeof __df.ku === "object") ? __df.ku : {};
+                  (__df.ku as any).opinionFirst = true;
+                }
+              } catch {}
+            }
+          }
+        }
+      }
+    } catch {}
+
+return res.json({
       response,
       timestamp: payload.timestamp,
       trace: payload.trace,

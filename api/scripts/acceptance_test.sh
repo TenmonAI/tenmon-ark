@@ -1390,3 +1390,21 @@ f=b.get('features') or {}
 assert f.get('koshikiKernel') is True, f
 print('[PASS] AK-System koshikiKernel feature present')
 PY2
+
+
+# [CardC] guarded opinion-first gate (non-smoke thread)
+echo "[CardC] guarded opinion-first gate"
+OUT=$(curl -fsS -X POST "${BASE_URL}/api/chat" -H 'Content-Type: application/json' \
+  -d '{"threadId":"cardc-voice","message":"君は何を考えているの？"}')
+MODE=$(echo "$OUT" | jq -r '.decisionFrame.mode // ""')
+ALLOW=$(echo "$OUT" | jq -r '.decisionFrame.ku.voiceGuardAllow // ""')
+RESP=$(echo "$OUT" | jq -r '.response // ""')
+
+echo "$OUT" | head -c 280; echo
+
+echo "$MODE" | grep -q "NATURAL" || fail "cardc mode not NATURAL"
+echo "$ALLOW" | grep -q "true" || fail "cardc voiceGuardAllow must be true"
+echo "$RESP" | grep -q '^【天聞の所見】' || fail "cardc missing opinion prefix"
+echo "$RESP" | grep -Eq '[？?]$' || fail "cardc must end with question mark"
+pass "CardC"
+# CARDC_GATE_V3
