@@ -1527,15 +1527,18 @@ type fail >/dev/null 2>&1 || fail() { echo "[FAIL] $1"; exit 1; }
 type pass >/dev/null 2>&1 || pass() { echo "[PASS] $1"; }
 type fail >/dev/null 2>&1 || fail() { echo "[FAIL] $1"; exit 1; }
 
+# CARD5_GATE_V4: Card5 gate (force HYBRID via #search; one-line point + handoff; truncation-safe)
+type pass >/dev/null 2>&1 || pass() { echo "[PASS] $1"; }
+type fail >/dev/null 2>&1 || fail() { echo "[FAIL] $1"; exit 1; }
+
 echo "[Card5] Kokuzo seasoning gate"
-# Force HYBRID route deterministically: use #search (HYBRID intent=search) then reuse same thread for normal message
-OUT1=$(curl -fsS -X POST "${BASE_URL}/api/chat" -H 'Content-Type: application/json' \
-  -d '{"threadId":"card5-season","message":"#search doc=IROHA 生き方"}')
-# Now a plain follow-up in same thread (should stay in HYBRID flow in most builds)
-OUT2=$(curl -fsS -X POST "${BASE_URL}/api/chat" -H 'Content-Type: application/json' \
-  -d '{"threadId":"card5-season","message":"生き方"}')
-RESP=$(echo "$OUT2" | jq -r '.response // ""')
-echo "$OUT2" | head -c 260; echo
+# Force HYBRID deterministically via #search (NATURAL must not steal this)
+OUT=$(curl -fsS -X POST "${BASE_URL}/api/chat" -H 'Content-Type: application/json' \
+  -d '{"threadId":"card5-season","message":"#search 言霊 水火 イキ"}')
+MODE=$(echo "$OUT" | jq -r '.decisionFrame.mode // ""')
+RESP=$(echo "$OUT" | jq -r '.response // ""')
+echo "$OUT" | head -c 260; echo
+echo "$MODE" | grep -q "HYBRID" || fail "Card5 must run in HYBRID (got mode=$MODE)"
 FIRST=$(printf "%s" "$RESP" | head -n 1 | tr -d '\r')
 LEN=$(python3 - <<'PYLEN'
 import sys
@@ -1545,11 +1548,11 @@ PYLEN
 <<<"$FIRST")
 printf "%s" "$FIRST" | grep -q '^【要点】' || fail "Card5 must begin with 1-line point (first line must start with 【要点】)"
 [ "$LEN" -le 160 ] || fail "Card5 point line too long (len=$LEN, must be <=160)"
-# must include handoff somewhere (opinion or one question marker or ? near tail)
+# handoff: must include opinion or question somewhere (tail-safe)
 TAIL="$(printf "%s" "$RESP" | tail -c 240)"
 printf "%s" "$RESP" | grep -q "【天聞の所見】" \
   || printf "%s" "$RESP" | grep -q "一点質問" \
   || printf "%s" "$TAIL" | grep -Eq "[？?]" \
   || fail "Card5 must include a handoff (opinion/question)"
 pass "Card5"
-# /CARD5_GATE_V3
+# /CARD5_GATE_V4
