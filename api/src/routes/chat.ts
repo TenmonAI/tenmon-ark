@@ -335,7 +335,45 @@ const pid = process.pid;
 
   // REPLY_SURFACE_V1: responseは必ずlocalSurfaceizeを通す。返却は opts をそのまま形にし caps は body.caps のみ参照
   const reply = (payload: any) => {
-    // M6-C0_DETAIL_SUFFIX_V1: append 1-line suffix only for #詳細 when learnedRulesUsed[0] exists
+    
+  // FREECHAT_SANITIZE_V2B: last-mile sanitizer (works for ALL reply paths)
+  const __sanitizeOut = (msg: any, txt: any): string => {
+    let t = String(txt ?? "");
+    const mstr = String(msg ?? "");
+    const wantsDetail = /#詳細/.test(mstr);
+    const askedMenu = /(メニュー|方向性|どの方向で|選択肢|1\)|2\)|3\))/i.test(mstr);
+    const hasMenu = /どの方向で話しますか/.test(t);
+    if (hasMenu && !askedMenu) {
+      t = "了解。何でも話して。必要なら「#詳細」や「doc=... pdfPage=...」で深掘りできるよ。";
+    }
+    if (!wantsDetail) {
+      t = t.replace(/^\[SYNTH_USED[^\n]*\n?/gm, "")
+           .replace(/^TODO:[^\n]*\n?/gmi, "")
+           .replace(/現在はプレースホルダ[^\n]*\n?/gmi, "")
+           .trim();
+    }
+    return t;
+  };
+
+  // wrap res.json so ANY {response: "..."} is sanitized before leaving the server
+  const __origJson = (res as any).json.bind(res);
+  (res as any).json = (obj: any) => {
+    try {
+      if (obj && typeof obj === "object" && ("response" in obj)) {
+        const msg = (obj as any)?.detailPlan?.input
+          ?? (obj as any)?.input
+          ?? (obj as any)?.message
+          ?? "";
+        const resp = (obj as any).response;
+        obj = { ...(obj as any), response: __sanitizeOut(msg, resp) };
+      }
+    } catch {}
+    return __origJson(obj);
+  };
+
+  // marker
+  const __FREECHAT_SANITIZE_V2B = true;
+// M6-C0_DETAIL_SUFFIX_V1: append 1-line suffix only for #詳細 when learnedRulesUsed[0] exists
     try {
       if (wantsDetail && payload && typeof payload.response === "string") {
         const df = payload.decisionFrame || null;
@@ -1592,6 +1630,24 @@ if (usable.length === 0) {
     }
 
 let finalResponse = response;
+  // FREECHAT_SANITIZE_V1: UX hardening
+  // - menu prompt must not appear unless user explicitly requests it
+  // - internal synth/TODO placeholder must not appear unless #詳細
+  const __wantsDetail = /#詳細/.test(String(message || ""));
+  const __askedMenu = /(メニュー|方向性|どの方向で|選択肢|1\)|2\)|3\))/i.test(String(message || ""));
+  const __hasMenu = /どの方向で話しますか/.test(String(finalResponse || ""));
+  if (__hasMenu && !__askedMenu) {
+    finalResponse = "了解。何でも話して。必要なら「#詳細」や「doc=... pdfPage=...」で深掘りできるよ。";
+  }
+  if (!__wantsDetail) {
+    // hide internal placeholders that break UX
+    finalResponse = String(finalResponse || "")
+      .replace(/^\[SYNTH_USED[^\n]*\n?/gm, "")
+      .replace(/^TODO:[^\n]*\n?/gmi, "")
+      .replace(/現在はプレースホルダ[^\n]*\n?/gmi, "")
+      .trim();
+  }
+
     let evidenceDoc: string | null = null;
     let evidencePdfPage: number | null = null;
     let evidenceQuote: string | null = null;
