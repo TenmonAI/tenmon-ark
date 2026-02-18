@@ -1568,3 +1568,21 @@ echo "$OUT" | head -c 220; echo
 echo "$RESP" | grep -Eq 'doc=|pdfPage=|evidenceIds|【引用】' && fail "Card6a must not leak evidence tokens" || true
 pass "Card6a"
 # CARD6A_GATE_V2
+
+
+# [Card6b] rewrite-only APPLY gate (header-triggered; string-return; must keep opinion prefix; no evidence tokens)
+echo "[Card6b] rewrite-only APPLY gate"
+OUT=$(curl -fsS -X POST "${BASE_URL}/api/chat" \
+  -H 'Content-Type: application/json' \
+  -H 'x-tenmon-rewrite-only: 1' \
+  -d '{"threadId":"card6b","message":"君は何を考えているの？"}')
+RESP=$(echo "$OUT" | jq -r '.response // ""')
+MODE=$(echo "$OUT" | jq -r '.decisionFrame.mode // ""')
+
+echo "$OUT" | head -c 260; echo
+echo "$MODE" | grep -q "NATURAL" || fail "Card6b mode not NATURAL"
+echo "$RESP" | grep -q '^【天聞の所見】' || fail "Card6b must keep opinion prefix"
+echo "$RESP" | grep -Eq '[？?]$' || fail "Card6b must end with a question mark"
+echo "$RESP" | grep -Eq '(doc=|pdfPage|evidenceIds|KZPAGE:|【引用】|出典:)' && fail "Card6b must not inject evidence tokens"
+pass "Card6b"
+# CARD6B_GATE_CLEAN_V1

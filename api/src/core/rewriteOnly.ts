@@ -1,65 +1,50 @@
 import { llmChat } from "./llmWrapper.js";
 
-type LengthIntent = "SHORT" | "MED" | "LONG";
-
-function inferIntentFromMessage(raw: string): LengthIntent {
-  const q = String(raw || "").trim();
-  if (/(短く|一行|要点|結論だけ|tl;dr|tldr|箇条書きだけ)/i.test(q)) return "SHORT";
-  if (/(詳しく|完全に|設計|仕様|提案|全部|長め)/i.test(q)) return "LONG";
-  return "MED";
-}
-
-function contaminated(text: string): string | null {
-  const t = String(text || "");
-  const bad = [
-    "doc=", "pdfPage=", "evidenceIds", "引用", "出典", "ソース", "Source:",
-    "http://", "https://",
-    "私はAIです", "I am an AI"
-  ];
-  for (const w of bad) if (t.includes(w)) return w;
-  return null;
-}
-
-export async function rewriteOnlyTenmon(
-  draft: string,
-  rawUserMessage: string
-): Promise<{ text: string; used: boolean; rejectedBy?: string }> {
+/**
+ * rewriteOnlyTenmon:
+ * - 決定論で確定した draft を「表現だけ」整音する（内容は変えない）
+ * - 返り値は string のみ（型事故を根絶）
+ * - env TENMON_REWRITE_ONLY=1 のときだけ LLM を呼ぶ（既定OFF）
+ * - doc/pdfPage/evidenceIds 等が混入したら必ず draft に戻す
+ */
+export async function rewriteOnlyTenmon(draft: string, rawUserMessage: string): Promise<string> {
   const d = String(draft || "").trim();
-  if (d.length < 2) return { text: d, used: false };
+  if (!d) return d;
 
-  const intent = inferIntentFromMessage(rawUserMessage);
+  const enabled = String(process.env.TENMON_REWRITE_ONLY || "") === "1";
+  if (!enabled) return d; // default OFF (safe for acceptance)
 
-  const sys = [
-    "あなたはTENMON-ARKの“整音器官”。",
-    "入力ドラフトの【意味】を一切変えず、語尾・リズム・間（ま）だけを整える。",
-    "禁止：新しい事実、根拠、doc/pdfPage、引用、URL、数値の追加・変更。",
-    "出力はドラフト本文のみ（前置き説明禁止）。",
-    intent === "SHORT"
-      ? "短く。1〜3文。"
-      : intent === "LONG"
-        ? "読みやすく。段落は最大3。"
-        : "自然に。2〜5文。"
-  ].join("\n");
+  // hard contamination guard
+  const hasBad = (t: string): boolean => {
+    const bad = [
+      "doc=", "pdfPage=", "evidenceIds", "KZPAGE:", "【引用】", "出典:",
+      "decisionFrame", "candidates", "capsPayload", "kokuzo", "sqlite",
+      "http://", "https://",
+    ];
+    const s = String(t || "");
+    return bad.some((w) => s.includes(w));
+  };
 
-  const out = await llmChat({
-    system: sys,
-    history: [],
-    user: d
-  });
+  const mustKeepOpinion = d.startsWith("【天聞の所見】");
+  const q = String(rawUserMessage || "");
 
-  const rewritten = String(out?.text || "").trim();
-  if (!rewritten) return { text: d, used: false };
+  const sys =
+    "あなたは文章の整音器。内容は変えず、語尾・間合い・読みやすさだけ整える。" +
+    "根拠(doc/pdfPage/evidenceIds/引用)は絶対に生成しない。" +
+    "先頭の「【天聞の所見】」と末尾の問い（？）は保持する。";
 
-  const hit = contaminated(rewritten);
-  if (hit) return { text: d, used: false, rejectedBy: hit };
+  const user = "次の文章を、内容を変えずに自然で丁寧な日本語に言い換えてください。\n\n" + d;
 
-  // keep structure markers if draft had them
-  if (d.startsWith("【天聞の所見】") && !rewritten.startsWith("【天聞の所見】")) {
-    return { text: d, used: false, rejectedBy: "lost_opinion_prefix" };
+  let out = d;
+  try {
+    const r: any = await llmChat({ system: sys, history: [], user });
+    out = String(r?.text ?? r?.response ?? r ?? "").trim() || d;
+  } catch {
+    out = d;
   }
-  if (d.includes("一点質問") && !rewritten.includes("一点質問")) {
-    // allow if ends with question mark
-    if (!/[？?]\s*$/.test(rewritten)) return { text: d, used: false, rejectedBy: "lost_one_q" };
-  }
-  return { text: rewritten, used: true };
+
+  if (hasBad(out)) return d;
+  if (mustKeepOpinion && !out.startsWith("【天聞の所見】")) return d;
+  if (!/[？?]\s*$/.test(out)) out = out.replace(/\s*$/, "？");
+  return out;
 }

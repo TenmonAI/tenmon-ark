@@ -1719,9 +1719,10 @@ if (usable.length === 0) {
         if (!isSmoke && vgAllow && !wantsDetailHere && !hasDocHere && !isCmd && !isLow) {
           if (typeof nat.responseText === "string" && nat.responseText.trim().length >= 8) {
             const r = await rewriteOnlyTenmon(nat.responseText, raw);
-            if (r && r.used) {
-              nat.responseText = r.text;
-            }
+                        // FIX_REWRITE_STRING_RETURN_V1: rewriteOnly returns string (or text); avoid r.used/r.text type errors
+            const __t = (typeof r === "string") ? r : String((r as any)?.text ?? "");
+            if (__t) { nat.responseText = __t; }
+
           }
         }
       }
@@ -1960,6 +1961,39 @@ if (usable.length === 0) {
       ) {
         setThreadPending(threadId, "LANE_PICK");
       }
+      // CARD6B_REWRITE_ONLY_APPLY_CLEAN_V1: rewrite-only apply (header-triggered; safe guards; returns string only)
+      try {
+        const __rewriteReq = String(req.headers["x-tenmon-rewrite-only"] ?? "") === "1";
+        const __tid = String(threadId || "");
+        const __raw = String(trimmed || "");
+        const __isSmoke = /^smoke/i.test(__tid);
+        const __isCmd = __raw.startsWith("#");
+        const __hasDocLocal = /\bdoc\b/i.test(__raw) || /pdfPage\s*=\s*\d+/i.test(__raw);
+        const __wantsDetailLocal = /#詳細/.test(__raw);
+
+        const low = __raw.toLowerCase().trim();
+        const __isLowSignal = (low === "ping" || low === "test" || low === "ok" || low === "yes" || low === "no"
+          || __raw === "はい" || __raw === "いいえ" || __raw === "うん" || __raw === "ううん");
+
+        // obey voiceGuard if available
+        let __allow = true;
+        try {
+          if (typeof __voiceGuard === "function") {
+            const g = __voiceGuard(__raw, __tid);
+            __allow = !!g.allow;
+          }
+        } catch {}
+
+        if (__rewriteReq && __allow && !__isSmoke && !__isCmd && !__hasDocLocal && !__wantsDetailLocal && !__isLowSignal) {
+          const draft = String(nat.responseText || "").trim();
+          if (draft.startsWith("【天聞の所見】")) {
+            const out = await rewriteOnlyTenmon(draft, __raw);
+            if (typeof out === "string" && out.trim()) nat.responseText = out.trim();
+          }
+        }
+      } catch {}
+
+
       return reply({
         response: nat.responseText,
         evidence: null,
