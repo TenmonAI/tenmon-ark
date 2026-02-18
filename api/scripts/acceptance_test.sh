@@ -1455,3 +1455,22 @@ echo "$MIN" | grep -Eq '^[0-9]+$' || fail "CardG minChars missing"
 echo "$MAX" | grep -Eq '^[0-9]+$' || fail "CardG maxChars missing"
 pass "CardG"
 # CARDG_GATE_V3
+
+
+# CARDG2_GATE_V1: lengthIntent should react to short/long keywords (observability only)
+echo "[CardG2] lengthIntent keyword reaction gate"
+OUT1=$(curl -fsS -X POST "${BASE_URL}/api/chat" -H 'Content-Type: application/json' \
+  -d '{"threadId":"cardg2-short","message":"短く答えて：自分の生き方"}')
+I1=$(echo "$OUT1" | jq -r '.decisionFrame.ku.lengthIntent // ""')
+
+OUT2=$(curl -fsS -X POST "${BASE_URL}/api/chat" -H 'Content-Type: application/json' \
+  -d '{"threadId":"cardg2-long","message":"詳しく教えて：自分の生き方"}')
+I2=$(echo "$OUT2" | jq -r '.decisionFrame.ku.lengthIntent // ""')
+
+echo "$OUT1" | head -c 180; echo
+echo "$OUT2" | head -c 180; echo
+
+echo "$I1" | grep -q "SHORT" || fail "CardG2 short should be SHORT"
+echo "$I2" | grep -q "LONG"  || fail "CardG2 long should be LONG"
+pass "CardG2"
+# /CARDG2_GATE_V1
