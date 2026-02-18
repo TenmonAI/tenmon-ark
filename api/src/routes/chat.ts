@@ -925,7 +925,16 @@ const pid = process.pid;
               if (!/[？?]\s*$/.test(out2)) out2 = out2 + "？";
               payload.response = out2;
 
-              try {
+              
+        // CARDC_FORCE_QUESTION_END_V1: ensure response ends with a question (acceptance contract)
+        try {
+          const cur = String(payload.response || "").trim();
+          const endsQ = /[？?]\s*$/.test(cur) || /(ですか|でしょうか|ますか)\s*$/.test(cur);
+          if (!endsQ) {
+            payload.response = cur + "\n\n一点だけ。どこを確かめますか？";
+          }
+        } catch {}
+try {
                 if (__df && typeof __df === "object") {
                   __df.ku = (__df.ku && typeof __df.ku === "object") ? __df.ku : {};
                   (__df.ku as any).opinionFirst = true;
