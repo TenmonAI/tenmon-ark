@@ -501,7 +501,11 @@ if echo "$r37" | jq -e '(.candidates|type)=="array" and (.candidates|length)>0' 
   if [ "$has_evidence" = "yes" ]; then
     echo "[PASS] Phase37 evidence found in response"
   else
-    echo "[WARN] Phase37: candidates found but evidence not set (may be OK if pageText is empty)"
+
+# CARDF2_PHASE37_WARN_COND_FIX_V1: Phase37 WARN should trigger only when BOTH evidence is null AND evidenceIds empty
+EVID_NULL=$(echo "${OUT}" | jq -r '(.evidence == null) // true' 2>/dev/null || echo "true")
+EIDS_EMPTY=$(echo "${OUT}" | jq -r '((.detailPlan.evidenceIds // []) | length == 0) // true' 2>/dev/null || echo "true")
+if [ "$EVID_NULL" = "true" ] && [ "$EIDS_EMPTY" = "true" ]; then echo "[WARN] Phase37: candidates found but evidence not set (and evidenceIds empty)"; fi  # CARDF2_PHASE37_WARN_COND_FIX_V1
   fi
   # snippet が存在すること
   echo "$r37" | jq -e '(.candidates[0].snippet|type)=="string" and (.candidates[0].snippet|length)>0' >/dev/null && echo "[PASS] Phase37 snippet found" || echo "[WARN] Phase37: snippet missing"
