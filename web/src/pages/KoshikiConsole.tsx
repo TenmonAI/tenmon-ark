@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
+import { DebugPanel } from "../components/DebugPanel";
+
 type AnyObj = Record<string, any>;
 function safeJsonParse(t: string): any { try { return JSON.parse(t); } catch { return { _raw: t }; } }
 function pickText(resp: any): string {
@@ -14,6 +16,13 @@ function pickText(resp: any): string {
 function getDP(resp: any): AnyObj { return (resp && (resp.detailPlan || resp.dp)) || {}; }
 
 export default function KoshikiConsolePage() {
+  // UI1P_PWA_KOSHIKI_DEBUG_V3: debug toggle + last payload (no body rendering change)
+  const [debugOpen, setDebugOpen] = useState(false);
+  const lastPayload = useMemo(
+    () => ((Array.isArray(msgs) ? msgs : []).slice().reverse().find((m: any) => m?._payload)?._payload ?? null),
+    [msgs]
+  );
+
   const [apiBase, setApiBase] = useState<string>(() => localStorage.getItem("TENMON_API_BASE") || "");
   const [threadId, setThreadId] = useState<string>(() => localStorage.getItem("TENMON_THREAD_ID") || `pwa-koshiki-${Date.now().toString(36)}`);
   const [input, setInput] = useState("");
@@ -172,6 +181,12 @@ export default function KoshikiConsolePage() {
           {tab==="ufk" && <pre style={{margin:0}}>{ufk ? JSON.stringify(ufk, null, 2) : "ufk debug missing (try #詳細 / 分類系の入力)"}</pre>}
         </div>
       </div>
-    </div>
+    
+      {debugOpen ? (
+        <div style={{ padding: 12, maxHeight: 280, overflow: "auto" }}>
+          <DebugPanel payload={lastPayload} />
+        </div>
+      ) : null}
+</div>
   );
 }
