@@ -649,6 +649,35 @@ const pid = process.pid;
             if (/\bdoc\b/i.test(String(rawMsg || "")) || /pdfPage\s*=\s*\d+/i.test(String(rawMsg || ""))) return t;
 
             const lines = t.split(/\r?\n/);
+            // CARD5_PRIME_NON_TEXT_POINT_HOLD_V3: NON_TEXT/body-missing -> honest point-hold (short, non-deceptive)
+            try {
+              const bodyAll = lines.slice(1).join("\n");
+              const nonTextLike =
+                /\[NON_TEXT_PAGE_OR_OCR_FAILED\]/.test(bodyAll) ||
+                /非テキスト/.test(bodyAll) ||
+                /OCR\/抽出不可/.test(bodyAll) ||
+                /文字として取り出せない/.test(bodyAll) ||
+                /本文.*取れない/.test(bodyAll);
+
+              if (nonTextLike) {
+                let doc = "";
+                let page = 0;
+                try {
+                  const ev = (obj as any)?.evidence;
+                  if (ev && ev.doc) { doc = String(ev.doc); page = Number(ev.pdfPage||0); }
+                } catch {}
+                try {
+                  if (!doc) {
+                    const c0 = Array.isArray((obj as any)?.candidates) ? (obj as any).candidates[0] : null;
+                    if (c0 && c0.doc) { doc = String(c0.doc); page = Number(c0.pdfPage||0); }
+                  }
+                } catch {}
+                const hint = (doc && page>0) ? (` doc=${doc} P${page}`) : "";
+                const first = (`【要点】（本文未抽出のため要点保留）${hint}`).slice(0, 160);
+                return (first + "\n" + bodyAll).trimEnd();
+              }
+            } catch {}
+
             const first = lines[0] || "";
             const rest = lines.slice(1).join("\n");
 

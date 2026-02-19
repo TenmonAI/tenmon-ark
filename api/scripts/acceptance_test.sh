@@ -1650,3 +1650,19 @@ fi
 
 pass "Card6d"
 # CARD6D_ACCEPTANCE_REWRITE_ON_V1
+
+
+# [Card5’] NON_TEXT point must be honest hold (if body says it couldn't extract text)
+echo "[Card5’] non-text point-hold gate"
+OUT=$(curl -fsS -X POST "${BASE_URL}/api/chat" -H 'Content-Type: application/json' \
+  -d '{"threadId":"card5p","message":"#search 言霊"}')
+RESP=$(echo "$OUT" | jq -r '.response // ""')
+FIRST=$(printf "%s" "$RESP" | head -n 1 | tr -d '\r')
+BODY=$(printf "%s" "$RESP" | tail -n +2)
+
+# If response body indicates non-text extraction failure, first line must contain 要点保留
+if echo "$BODY" | grep -Eq '(文字として取り出せない|非テキスト|\[NON_TEXT_PAGE_OR_OCR_FAILED\]|OCR/抽出不可|本文.*取れない)'; then
+  echo "$FIRST" | grep -q '要点保留' || fail "Card5’ must use point-hold when body indicates NON_TEXT"
+fi
+pass "Card5’"
+# CARD5_PRIME_GATE_V1
