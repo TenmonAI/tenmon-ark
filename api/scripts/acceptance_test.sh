@@ -503,6 +503,8 @@ if echo "$r37" | jq -e '(.candidates|type)=="array" and (.candidates|length)>0' 
   else
 
 # CARDF2_PHASE37_WARN_COND_FIX_V1: Phase37 WARN should trigger only when BOTH evidence is null AND evidenceIds empty
+# ACCEPTANCE_NOISE_OUT_GUARD_V1: OUT may be undefined under set -u; guard it
+OUT=${OUT:-}
 EVID_NULL=$(echo "${OUT}" | jq -r '(.evidence == null) // true' 2>/dev/null || echo "true")
 EIDS_EMPTY=$(echo "${OUT}" | jq -r '((.detailPlan.evidenceIds // []) | length == 0) // true' 2>/dev/null || echo "true")
 if [ "$EVID_NULL" = "true" ] && [ "$EIDS_EMPTY" = "true" ]; then echo "[WARN] Phase37: candidates found but evidence not set (and evidenceIds empty)"; fi  # CARDF2_PHASE37_WARN_COND_FIX_V1
