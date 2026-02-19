@@ -4,7 +4,13 @@ import { ChatWindow } from "../components/ChatWindow";
 import { useChat } from "../hooks/useChat";
 import { SettingsPanel } from "../components/SettingsPanel";
 
+import { DebugPanel } from "../components/chat/DebugPanel";
+
+// UI1_CHATPAGE_DEBUGTOGGLE_V1
+
 export function ChatPage() {
+  const [__debugOpen, __setDebugOpen] = useState(false);
+
   const { messages, sendMessage, loading, sessionId } = useChat();
   const [settingsOpen, setSettingsOpen] = useState(false);
 
@@ -19,6 +25,19 @@ export function ChatPage() {
   };
 
   return (
+      <div style={{ display: "flex", justifyContent: "flex-end", margin: "8px 0" }}>
+        <button type="button" onClick={() => __setDebugOpen(v => !v)} style={{ opacity: 0.85 }}>
+          {__debugOpen ? "Debug: ON" : "Debug: OFF"}
+        </button>
+      </div>
+      {__debugOpen ? (
+        <DebugPanel
+          payload={
+            (Array.isArray((messages as any)) ? (messages as any) : []).slice().reverse().find((m: any) => m?.role === "assistant")?._payload
+          }
+        />
+      ) : null}
+
     <>
       <div
         style={{

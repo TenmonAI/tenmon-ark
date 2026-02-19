@@ -1,3 +1,4 @@
+// UI1_USECHAT_PAYLOAD_V1
 import { useEffect, useState, useRef } from "react";
 import { postChat } from "../api/chat";
 import { listMessagesByThread, replaceThreadMessages, upsertThread } from "../lib/db";
@@ -84,7 +85,7 @@ export function useChat() {
       setLoading(true);
       const sid = sessionId || "default";
       const res = await postChat({ message: content, sessionId: sid });
-      setMessages((prev) => [...prev, { role: "assistant", content: res.response }]);
+      setMessages((prev) => [...prev, { role: "assistant", content: res.response , _payload: (res as any) }]);
     } catch (e) {
       console.error(e);
     } finally {
