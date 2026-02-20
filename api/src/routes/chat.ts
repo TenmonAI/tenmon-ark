@@ -454,6 +454,11 @@ const pid = process.pid;
         const df = (obj as any).decisionFrame;
         if (df && typeof df === "object") {
           df.ku = (df.ku && typeof df.ku === "object") ? df.ku : {};
+
+          // CARD_R1_ROUTE_REASON_V2_MIN: routeReason mirror (observability; NO behavior change)
+          try {
+            if ((df.ku as any).routeReason === undefined) (df.ku as any).routeReason = String(df.mode ?? "");
+          } catch {}
           if ((df.ku as any).rewriteUsed === undefined) (df.ku as any).rewriteUsed = false;
           if ((df.ku as any).rewriteDelta === undefined) (df.ku as any).rewriteDelta = 0;
         }
