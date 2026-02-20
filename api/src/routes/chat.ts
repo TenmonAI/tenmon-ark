@@ -604,6 +604,41 @@ const pid = process.pid;
               }
             }
           } catch {}
+
+          // CARD_C4_SMALLTALK_WARM_ONE_QUESTION_V1: warm smalltalk response (empathy + support + one question), avoid questionnaire tone
+          try {
+            const df6: any = df;
+            const mode6 = String(df6?.mode ?? "");
+            const tid6 = String(threadId ?? "");
+            const userMsg6 = String((obj as any)?.rawMessage ?? (obj as any)?.message ?? message ?? "").trim();
+
+            const isTestTid6 = /^(smoke|accept|core-seed|bible-smoke)/i.test(tid6);
+            const askedMenu6 = /^\s*(?:\/menu|menu)\b/i.test(userMsg6) || /^\s*メニュー\b/.test(userMsg6);
+            const looksSmalltalk6 =
+              /^(雑談|疲れ|つかれ|励まして|元気|しんどい|眠い|だるい|話して|きいて)/.test(userMsg6) ||
+              /疲れ|しんどい|だるい|落ち込|不安|つらい/.test(userMsg6) ||
+              userMsg6.length <= 28;
+
+            if (!isTestTid6 && !askedMenu6 && mode6 === "NATURAL" && looksSmalltalk6 && typeof (obj as any).response === "string") {
+              let t = String((obj as any).response);
+
+              // never touch Card1 contract script
+              if (/まず分類だけ決めます/.test(t)) {
+                // skip
+              } else {
+                const hasNumberList = /\n\s*\d{1,2}\)\s*/m.test(t);
+                const hasThreeChoiceQuote = /いま一番近いのは「.+」「.+」「.+」のどれですか/.test(t);
+
+                // if response still looks like a questionnaire, replace with warm one-question form
+                if (hasNumberList || hasThreeChoiceQuote) {
+                  const head = "【天聞の所見】疲れている時は、まず回復を優先して大丈夫です。";
+                  const body = "いまは“答えを出す”より、負担を一つ減らして流れを戻します。";
+                  const q = "いま一番しんどいのは、(A)判断し続けること、(B)情報を浴び続けること、どちらに近いですか？（言葉でOK）";
+                  (obj as any).response = `${head}\n\n${body}\n\n${q}`;
+                }
+              }
+            }
+          } catch {}
           if ((df.ku as any).rewriteUsed === undefined) (df.ku as any).rewriteUsed = false;
           if ((df.ku as any).rewriteDelta === undefined) (df.ku as any).rewriteDelta = 0;
         }
