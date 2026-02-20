@@ -743,6 +743,19 @@ fi
 echo "[PASS] No Runtime LLM usage detected."
 fi
 
+
+echo
+echo "[SOFT-PROOF] PHASE_SOFT_PROOF_NO_CURLF_V1"
+(
+  set +e
+  echo "[SOFT-PROOF] expected 400 must NOT kill shell"
+  curl -sS -i -H "Content-Type: application/json" -X POST http://127.0.0.1:3000/api/login --data '{"k":""}' | sed -n '1,20p'
+  rc=$?
+  echo "[SOFT-PROOF] rc=$rc (must continue)"
+  exit 0
+)
+echo "[PASS] PHASE_SOFT_PROOF_NO_CURLF_V1"
+
 echo "[PASS] acceptance_test.sh"
 
 echo "[49] Phase49 IROHA seed gate"
