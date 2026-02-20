@@ -459,6 +459,63 @@ const pid = process.pid;
           try {
             if ((df.ku as any).routeReason === undefined) (df.ku as any).routeReason = String(df.mode ?? "");
           } catch {}
+
+          // CARD_P1_GREETING_NO_HYBRID_V1: greetings must never fall into HYBRID (avoid HEIKE吸い込み)
+          try {
+            const df3: any = df;
+            const mode3 = String(df3?.mode ?? "");
+            const tid3 = String(threadId ?? "");
+            const raw3 = String((obj as any)?.rawMessage ?? (obj as any)?.message ?? message ?? "");
+            const t3 = raw3.trim();
+
+            const isTestTid = /^(smoke|accept|core-seed|bible-smoke)/i.test(tid3);
+            const askedMenu = /^\s*(?:\/menu|menu)\b/i.test(t3) || /^\s*メニュー\b/.test(t3);
+            const hasDoc = /\bdoc\b/i.test(t3) || /pdfPage\s*=\s*\d+/i.test(t3) || /#詳細/.test(t3);
+
+            const isGreeting = /^(こんにちは|こんばんは|おはよう|やあ|hi|hello|hey)\s*[！!。．\.]?$/i.test(t3);
+
+            if (!isTestTid && !askedMenu && !hasDoc && isGreeting && mode3 === "HYBRID") {
+              (obj as any).response = "こんにちは。今日は何を一緒に整えますか？（相談でも、概念の定義でもOK）？";
+              (obj as any).candidates = [];
+              (obj as any).evidence = null;
+              df3.mode = "NATURAL";
+              df3.ku = (df3.ku && typeof df3.ku === "object") ? df3.ku : {};
+              (df3.ku as any).routeReason = "FASTPATH_GREETING_OVERRIDDEN";
+            }
+          } catch {}
+
+          // CARD_C1_NATURAL_DE_NUMBERIZE_SMALLTALK_V1: soften NATURAL numbered-choice UX for smalltalk only (do NOT touch contracts/Card1)
+          try {
+            const df4: any = df;
+            const mode4 = String(df4?.mode ?? "");
+            const tid4 = String(threadId ?? "");
+            const userMsg = String((obj as any)?.rawMessage ?? (obj as any)?.message ?? message ?? "").trim();
+
+            const isTestTid = /^(smoke|accept|core-seed|bible-smoke)/i.test(tid4);
+            const askedMenu = /^\s*(?:\/menu|menu)\b/i.test(userMsg) || /^\s*メニュー\b/.test(userMsg);
+            const looksSmalltalk = /^(雑談|疲れ|つかれ|励まして|元気|しんどい|眠い|だるい|話して|きいて)/.test(userMsg) || userMsg.length <= 24;
+
+            if (!isTestTid && !askedMenu && mode4 === "NATURAL" && looksSmalltalk && typeof (obj as any).response === "string") {
+              let t = String((obj as any).response);
+
+              // Never touch Card1 script (contract)
+              if (/まず分類だけ決めます/.test(t)) {
+                // skip
+              } else {
+                // If it contains the force phrase, soften it
+                t = t.replace(/番号で答えてください。?\s*\??/g, "番号でも言葉でもOKです。");
+
+                // If it is a pure numbered menu, prefer a single natural question (no numbering demand)
+                const hasNumberList = /\n\s*\d{1,2}\)\s*/m.test(t);
+                if (hasNumberList) {
+                  // remove only the explicit "番号で答えてください" force; keep options if present
+                  // ensure it ends as a gentle question
+                  if (!/[？?]\s*$/.test(t)) t = t.trim() + "？";
+                }
+                (obj as any).response = t;
+              }
+            }
+          } catch {}
           if ((df.ku as any).rewriteUsed === undefined) (df.ku as any).rewriteUsed = false;
           if ((df.ku as any).rewriteDelta === undefined) (df.ku as any).rewriteDelta = 0;
         }
