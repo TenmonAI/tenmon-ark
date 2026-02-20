@@ -29,8 +29,8 @@ export function registerFounderAuth(app: Router) {
       (req as any).body = b;
     } catch {}
 
-    const key = String(req.body?.founderKey ?? "");
-    if (!key) return res.status(400).json({ ok: false, error: "BAD_REQUEST", detail: "founderKey required" });
+    const key = String(req.body?.k ?? req.body?.founderKey ?? "");
+    if (!key) return res.status(400).json({ ok: false, error: "BAD_REQUEST", detail: "k or founderKey required" });
     if (key !== founderKey()) return res.status(401).json({ ok: false, error: "UNAUTHORIZED", detail: "invalid founderKey" });
     res.cookie("tenmon_founder", "1", cookieOpts());
     return res.json({ ok: true, founder: true });
