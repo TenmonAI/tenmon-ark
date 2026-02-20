@@ -1,4 +1,5 @@
 import express from "express";
+import cookieParser from "cookie-parser";
 import { seedPackRouter } from "./routes/seedPack.js";
 import { kamuRouter } from "./routes/kamu.js";
 import { pwaRouter } from "./routes/pwa.js";
@@ -21,7 +22,9 @@ import { writerCommitRouter } from "./routes/writerCommit.js";
 import { seedRouter } from "./routes/seed.js";
 import { selfImproveRouter } from "./routes/selfImprove.js";
 import { councilRouter } from "./routes/council.js";
-import { authRouter } from "./routes/auth.js";import { meRouter } from "./routes/me.js";
+import { authRouter } from "./routes/auth.js";
+import { meRouter } from "./routes/me.js";
+import { registerFounderAuth } from "./routes/auth_founder.js";
 import { markListenReady } from "./health/readiness.js";
 import { getDb } from "./db/index.js";
 import koshikiConsoleRouter from "./routes/koshikiConsole.js";
@@ -89,7 +92,11 @@ try {
 
 app.use(cors());
 app.use(express.json());
+app.use(cookieParser());
+
 app.use("/api", kamuRouter);
+// Founder auth endpoints (additive)
+registerFounderAuth(app);
 
 app.use("/api", authRouter);
 app.use("/api", meRouter);

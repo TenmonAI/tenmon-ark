@@ -1933,7 +1933,10 @@ if (usable.length === 0) {
 
   const isLocalTestBypass = isLocal && req.headers["x-tenmon-local-test"] === "1";
 
-  if (shouldBlockLLMChatForGuest && shouldLLMChat && !isLocalTestBypass && !__isCard1Flow) {
+  // FOUNDER_GUEST_COND_V1: unlock guest lock when founder cookie is present
+  const isFounder = (req as any).cookies?.tenmon_founder === "1";
+
+  if (shouldBlockLLMChatForGuest && shouldLLMChat && !isLocalTestBypass && !__isCard1Flow && !isFounder) {
     return res.status(200).json({
       response: "ログイン前のため、会話は参照ベース（資料検索/整理）で動作します。/login からログインすると通常会話も有効になります。",
       evidence: null,
@@ -2432,6 +2435,41 @@ let finalResponse = response;
         const top = candidates[0];
         const pageText = getPageText(top.doc, top.pdfPage);
         const isNonText = !pageText || /\[NON_TEXT_PAGE_OR_OCR_FAILED\]/.test(String(pageText));
+        // CARD3_NON_TEXT_ESCALATE_TO_KAMU_V1: if top evidence is NON_TEXT, do NOT inject caps fallback; guide to KAMU/specify instead (no fabrication)
+        if (isNonText) {
+          try {
+            // surface deterministic flags for observability
+            const df = (body as any)?.decisionFrame ?? null;
+            // we can't rely on df here; we'll attach in reply payload below
+          } catch {}
+          return reply({
+            response:
+              "（候補は見つかりましたが、先頭候補のページが非テキスト/復号失敗でした）\n\n" +
+              `候補: doc=${String(top?.doc ?? "")} pdfPage=${String(top?.pdfPage ?? "")}\n\n` +
+              "次のどれで進めますか？\n" +
+              "1) KAMU-GAKARIで復号して再保存（候補→承認）\n" +
+              "2) 別ページを指定（doc=... pdfPage=...）\n\n" +
+              "番号で答えてください？",
+            trace,
+            provisional: true,
+            detailPlan,
+            candidates,
+            evidence: null,
+            caps: undefined,
+            timestamp: new Date().toISOString(),
+            threadId,
+            decisionFrame: {
+              mode: "HYBRID",
+              intent: "chat",
+              llm: null,
+              ku: {
+                hybridAllNonText: true,
+                nextActions: ["kamu_restore", "specify_doc_pdfpage"],
+              },
+            },
+          });
+        }
+
         if (pageText && pageText.trim().length > 0 && !isNonText) {
           // 回答本文を生成（50文字以上、短く自然に、最後にメニューを添える）
           const excerpt = pageText.trim().slice(0, 300);
