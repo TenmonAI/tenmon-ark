@@ -2413,8 +2413,11 @@ let finalResponse = response;
   // - internal synth/TODO placeholder must not appear unless #詳細
   const __wantsDetail = /#詳細/.test(String(message || ""));
   const __askedMenu = /(メニュー|方向性|どの方向で|選択肢|1\)|2\)|3\))/i.test(String(message || ""));
-  const __hasMenu = /どの方向で話しますか/.test(String(finalResponse || ""));
-  if (__hasMenu && !__askedMenu) {
+    const __choosePrompt = /どの方向で話しますか|いちばん近いのはどれ|次のどれで進めますか|どちらですか|番号で|番号か|選択肢|選んで(?:ください)?|進めますか/.test(String(finalResponse || ""));
+  const __numberList = /\n\s*\d{1,2}\)\s*/m.test(String(finalResponse || ""));
+  const __hasMenu = __choosePrompt && __numberList; // CARD_S1_FIX_FREECHAT_SANITIZE_V2
+
+if (__hasMenu && !__askedMenu) {
     finalResponse = "了解。何でも話して。必要なら「#詳細」や「doc=... pdfPage=...」で深掘りできるよ。";
   }
   if (!__wantsDetail) {
