@@ -45,7 +45,14 @@ export default function App() {
 
   return (
     <I18nProvider>
-      <GptShell />
+      
+{/* KOSHIKI_ROUTE_WIRING_V1: /pwa/koshiki renders KoshikiConsolePage */}
+      {
+        (typeof window !== "undefined" && window.location.pathname.startsWith("/pwa/koshiki"))
+          ? <KoshikiConsolePage />
+          : <GptShell />
+      }
+    
     </I18nProvider>
   );
 }
