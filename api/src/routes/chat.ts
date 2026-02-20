@@ -516,6 +516,56 @@ const pid = process.pid;
               }
             }
           } catch {}
+
+          // CARD_C2_COLLAPSE_NUMBER_LIST_SMALLTALK_V2: collapse numbered list into one natural question (smalltalk only; keep contracts)
+          try {
+            const df5: any = df;
+            const mode5 = String(df5?.mode ?? "");
+            const tid5 = String(threadId ?? "");
+            const userMsg5 = String((obj as any)?.rawMessage ?? (obj as any)?.message ?? message ?? "").trim();
+
+            const isTestTid5 = /^(smoke|accept|core-seed|bible-smoke)/i.test(tid5);
+            const askedMenu5 = /^\s*(?:\/menu|menu)\b/i.test(userMsg5) || /^\s*メニュー\b/.test(userMsg5);
+            const looksSmalltalk5 =
+              /^(雑談|疲れ|つかれ|励まして|元気|しんどい|眠い|だるい|話して|きいて)/.test(userMsg5) ||
+              userMsg5.length <= 24;
+
+            if (!isTestTid5 && !askedMenu5 && mode5 === "NATURAL" && looksSmalltalk5 && typeof (obj as any).response === "string") {
+              let t = String((obj as any).response);
+
+              // never touch Card1 contract script
+              if (/まず分類だけ決めます/.test(t)) {
+                // skip
+              } else {
+                const lines = t.split(/\r?\n/);
+                const opts: string[] = [];
+                for (const ln of lines) {
+                  const m = ln.match(/^\s*\d{1,2}\)\s*(.+)\s*$/);
+                  if (m && m[1]) opts.push(String(m[1]).trim());
+                }
+
+                // only if it really is a 3-choice list
+                if (opts.length >= 3) {
+                  // keep non-numbered lines as prefix
+                  const kept = lines.filter((ln) => !/^\s*\d{1,2}\)\s*/.test(ln));
+                  let prefix = kept.join("\n").trim();
+
+                  // remove the generic "いちばん近いのはどれですか" line if present (we'll replace with q)
+                  prefix = prefix.replace(/^.*いちばん近いのはどれですか[？?]?\s*$/m, "").trim();
+
+                  const a0 = opts[0], b0 = opts[1], c0 = opts[2];
+                  const q = `いま一番近いのは「${a0}」「${b0}」「${c0}」のどれですか？（言葉でOK）`;
+
+                  let out = prefix ? `${prefix}\n\n${q}` : q;
+
+                  // also remove any leftover "番号でも言葉でもOKです" line (C1)
+                  out = out.replace(/^.*番号でも言葉でもOKです。?\s*$/m, "").trim();
+
+                  (obj as any).response = out;
+                }
+              }
+            }
+          } catch {}
           if ((df.ku as any).rewriteUsed === undefined) (df.ku as any).rewriteUsed = false;
           if ((df.ku as any).rewriteDelta === undefined) (df.ku as any).rewriteDelta = 0;
         }
