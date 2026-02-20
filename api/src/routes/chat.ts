@@ -614,10 +614,10 @@ const pid = process.pid;
 
             const isTestTid6 = /^(smoke|accept|core-seed|bible-smoke)/i.test(tid6);
             const askedMenu6 = /^\s*(?:\/menu|menu)\b/i.test(userMsg6) || /^\s*メニュー\b/.test(userMsg6);
-            const looksSmalltalk6 =
+                        const looksSmalltalk6 =
               /^(雑談|疲れ|つかれ|励まして|元気|しんどい|眠い|だるい|話して|きいて)/.test(userMsg6) ||
-              /疲れ|しんどい|だるい|落ち込|不安|つらい/.test(userMsg6) ||
-              userMsg6.length <= 28;
+              /疲れ|しんどい|だるい|落ち込|不安|つらい/.test(userMsg6);
+            // CARD_C5A_NARROW_SMALLTALK_TRIGGER_V1: removed length<=28 broad trigger
 
             if (!isTestTid6 && !askedMenu6 && mode6 === "NATURAL" && looksSmalltalk6 && typeof (obj as any).response === "string") {
               let t = String((obj as any).response);
