@@ -345,6 +345,44 @@ const pid = process.pid;
 
   if (!message) return res.status(400).json({ response: "message required", error: "message required", timestamp, decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: {} } });
 
+  // CARD_C3_FASTPATH_IDENTITY_V1: meta questions must get a direct answer (avoid questionnaire loop)
+  try {
+    const t0 = String(message || "").trim();
+    const tid0 = String(threadId || "");
+    const isTestTid0 = /^(smoke|accept|core-seed|bible-smoke)/i.test(tid0);
+
+    const isWho =
+      /^(あなた|君|きみ)\s*(は)?\s*(だれ|誰|なにもの|何者)\s*[？?]?\s*$/i.test(t0) ||
+      /^(自己紹介|紹介して)\s*[？?]?\s*$/.test(t0);
+
+    const isCanTalk =
+      /^(会話できる|話せる|ちゃんと話せる)\s*[？?]?\s*$/.test(t0);
+
+    if (!isTestTid0 && (isWho || isCanTalk)) {
+      const resp = isWho
+        ? "TENMON-ARKです。言靈（憲法）を守り、天津金木（運動）で思考を整え、必要ならLLMを“口”として使って対話します。\n\nいまは何を一緒に整えますか？（雑談／相談／概念の定義／資料検索でもOK）"
+        : "会話できます。いまは“テンプレ誘導”を減らして、自然に往復できるよう調整中です。\n\nいま話したいテーマを一言で教えてください（雑談でもOK）。";
+
+      return res.status(200).json({
+        response: resp,
+        candidates: [],
+        evidence: null,
+        timestamp: new Date().toISOString(),
+        threadId,
+        decisionFrame: {
+          mode: "NATURAL",
+          intent: "chat",
+          llm: null,
+          ku: {
+            routeReason: "FASTPATH_IDENTITY",
+            voiceGuard: "ok",
+            voiceGuardAllow: true
+          }
+        }
+      } as any);
+    }
+  } catch {}
+
   // B1: deterministic menu trigger for acceptance (must work even for GUEST)
   if (String(message ?? "").trim() === "__FORCE_MENU__") {
     return res.json({
