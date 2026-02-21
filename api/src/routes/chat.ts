@@ -3722,9 +3722,34 @@ function __tenmonGeneralGateSoft(out: string): string {
   const hasBad = badPhrases.some(w => t.includes(w)) || /ましょう/.test(t);
 
   // If response drifts into preach OR violates strict shape, overwrite with fixed seed.
+  // If response drifts into preach OR violates strict shape, CLAMP (do not overwrite with fixed seed).
   if (hasBad || qcount !== 1 || qpos === -1 || lines.length > 4 || t.length > 220) {
-    return "【天聞の所見】いま必要なのは正解探しではなく、今日の一点を決めることです。\n"
-         + "一番削りたい不安は何で、代わりに残したい一手は何ですか？";
+    // keep content; reshape only
+    let u = String(t || "").replace(/\r/g, "").trim();
+
+    // remove bullet/numbered lines
+    u = u.replace(/^\s*\d+[.)].*$/gm, "").replace(/^\s*[-*•]\s+.*$/gm, "").trim();
+
+    // keep at most 4 non-empty lines
+    const ls = u.split("\n").map(x => String(x || "").trim()).filter(Boolean);
+    u = ls.slice(0, 4).join("\n").trim();
+
+    // keep exactly one question at end if exists; otherwise add one
+    const qpos2 = Math.max(u.lastIndexOf("？"), u.lastIndexOf("?"));
+    if (qpos2 !== -1) u = u.slice(0, qpos2 + 1).trim();
+    else u = u.replace(/[。、\s　]+$/g, "") + "？";
+
+    // cap length
+    if (u.length > 220) u = u.slice(0, 220).replace(/[。、\s　]+$/g, "") + "？";
+
+    // if preach-y, soften but keep the user's question ending
+    if (hasBad) {
+      u = "【天聞の所見】いまの言葉を“次の一歩”に落とします。\n" + u.replace(/^【天聞の所見】/, "").trim();
+      const qpos3 = Math.max(u.lastIndexOf("？"), u.lastIndexOf("?"));
+      if (qpos3 !== -1) u = u.slice(0, qpos3 + 1).trim();
+    }
+
+    return u.startsWith("【天聞の所見】") ? u : ("【天聞の所見】" + u);
   }
 
   return t;
@@ -3838,3 +3863,4 @@ function __tenmonSupportSanitizeV1(out: string): string {
 // CARD_E0A9C_SMOKE_PING_CONTRACT_V1
 // CARD_P31_KAMIYO_SYNAPSE_GEN_SYSTEM_V1
 // CARD_E0A10B_SMOKE_PASSPHRASE_VIA_CONVERSATION_LOG_V1
+// CARD_P32_RELAX_GENERAL_GATE_V2
