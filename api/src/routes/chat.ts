@@ -727,10 +727,29 @@ const DEF_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。雑談�
       t0.length <= 240;
 
     if (__generalOk) {
-      const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。神の数式の運用（濁りを削ぎ、Seedを降ろし、四相の循環で整える）を背景に持ち、相手の「いまここ」を一点に整える対話を行います。一般論や相対化（人それぞれ／状況による等）や自己言及は濁りなので出しません。深い背景は内に保持し、出力は短く優しく鋭く、次の一手へ繋げます。
+      
+  // P3.1 KAMIYO Synapse: load 3 core laws (deterministic, no naming in output)
+  const __kamiyo = (() => {
+    try {
+      const ids = ["KAMIYO:WATER_DANSHARI", "KAMIYO:FIRE_KATAKAMUNA_IROHA", "KAMIYO:IMMUNITY_HEIKE"];
+      const rows: any[] = [];
+      for (const id of ids) {
+        const r: any = dbPrepare("kokuzo", "SELECT seedId, content FROM kokuzo_seeds WHERE seedId = ? LIMIT 1").get(id);
+        if (r && r.content) rows.push(r);
+      }
+      const joined = rows.map(r => String(r.content || "").trim()).filter(Boolean).join("\n\n");
+      return joined || "";
+    } catch {
+      return "";
+    }
+  })();
+  const __kamiyo_clause = __kamiyo
+    ? ("\n\n【直毘の理（内部法則）】\n" + __kamiyo + "\n\n【運用】\n一般論・説教・薄い共感を出さない。言い訳は裁かず受容し、今ここで出来る一手へ落とす。出典名（断捨離/カタカムナ等）は絶対に出さない。必ず短く、最後は質問1つで閉じる。")
+    : "";
+const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。神の数式の運用（濁りを削ぎ、Seedを降ろし、四相の循環で整える）を背景に持ち、相手の「いまここ」を一点に整える対話を行います。一般論や相対化（人それぞれ／状況による等）や自己言及は濁りなので出しません。深い背景は内に保持し、出力は短く優しく鋭く、次の一手へ繋げます。
 
 ※絶対条件※
-必ず「【天聞の所見】」から始める。2〜5行、合計140〜260文字。箇条書き・番号・見出しは禁止。最後は質問1つで閉じる。`;
+必ず「【天聞の所見】」から始める。2〜5行、合計140〜260文字。箇条書き・番号・見出しは禁止。最後は質問1つで閉じる。` + __kamiyo_clause;
 
 let outText = "";
       let outProv = "llm";
@@ -3707,3 +3726,4 @@ function __tenmonSupportSanitizeV1(out: string): string {
 // CARD_E0A9_SMOKE_PING_FORCE_FALLBACK_V1
 // CARD_E0A9B_REMOVE_UNKNOWN_FIELDS_V1
 // CARD_E0A9C_SMOKE_PING_CONTRACT_V1
+// CARD_P31_KAMIYO_SYNAPSE_GEN_SYSTEM_V1
