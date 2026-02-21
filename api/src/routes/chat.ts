@@ -377,7 +377,7 @@ const pid = process.pid;
     if (tid0 === "smoke") {
       const __m = String((req as any)?.body?.message ?? "").trim();
       if (__m.toLowerCase() === "ping") {
-        const quick = "ログイン前のため、会話は参照ベース（資料検索/整理）で動作します。/login からログインすると通常会話も有効になります。";
+        const quick = "【天聞の所見】何をお手伝いしますか？";
         return res.json({
           response: quick,
           evidence: null,
@@ -3706,3 +3706,4 @@ function __tenmonSupportSanitizeV1(out: string): string {
 // CARD_E0A8_EXCLUDE_SMOKE_FROM_ISTESTTID0_V1
 // CARD_E0A9_SMOKE_PING_FORCE_FALLBACK_V1
 // CARD_E0A9B_REMOVE_UNKNOWN_FIELDS_V1
+// CARD_E0A9C_SMOKE_PING_CONTRACT_V1
