@@ -371,6 +371,24 @@ const pid = process.pid;
 
   try {
     const tid0 = String(threadId ?? "");
+
+    // CARD_E0A9: SMOKE_PING_FORCE_FALLBACK (contract: ping must be NATURAL fallback)
+    // - no LLM, no DB, bypass all gates
+    if (tid0 === "smoke") {
+      const __m = String((req as any)?.body?.message ?? "").trim();
+      if (__m.toLowerCase() === "ping") {
+        const quick = "ログイン前のため、会話は参照ベース（資料検索/整理）で動作します。/login からログインすると通常会話も有効になります。";
+        return res.json({
+          response: quick,
+          evidence: null,
+          candidates: [],
+          timestamp: new Date().toISOString(),
+          threadId: String(threadId || ""),
+          decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: { routeReason: "NATURAL_FALLBACK" } }
+        });
+      }
+    }
+    // /CARD_E0A9
     const raw0 = String(message ?? "");
     const t0 = raw0.trim();
 
@@ -794,7 +812,7 @@ let outText = "";
         const llmRes: any = await llmChat({
           system: KANAGI_SYSTEM_PROMPT,
           user: t0,
-          history: [],
+          history: []
         });
         outText = __tenmonClampOneQ(String(llmRes?.text ?? "").trim());
         outProv = (llmRes?.provider ?? "llm");
@@ -847,8 +865,6 @@ let outText = "";
         evidence: null,
         threadId,
         decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: { routeReason: "FASTPATH_GREETING_TOP" } },
-        rewriteUsed: false,
-        rewriteDelta: 0
       } as any);
     }
   } catch {}
@@ -2093,7 +2109,7 @@ return res.json(__tenmonGeneralGateResultMaybe({
           detailPlan: __dp,
           decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: {} },
           timestamp,
-          threadId,
+          threadId
         });
       }
 
@@ -2306,7 +2322,7 @@ if (usable.length === 0) {
               caps: capsPayload ?? undefined,
           decisionFrame: { mode: "HYBRID", intent: "chat", llm: null, ku: {} },
           timestamp,
-          threadId,
+          threadId
         });
       }
 
@@ -2372,7 +2388,7 @@ if (usable.length === 0) {
               caps: capsPayload ?? undefined,
           decisionFrame: { mode: "HYBRID", intent: "chat", llm: null, ku: {} },
           timestamp,
-          threadId,
+          threadId
         });
       }
       // LANE_2: 資料指定 → メッセージに doc/pdfPage が含まれていることを期待
@@ -2629,7 +2645,7 @@ return reply({
           detailPlan: __dp,
           decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: {} },
           timestamp,
-          threadId,
+          threadId
         });
       }
     }
@@ -3129,7 +3145,7 @@ if (typeof out === "string" && out.trim()) nat.responseText = out.trim();
           candidates,
           evidence: { doc: usable.doc, pdfPage: usable.pdfPage, quote: quote.slice(0, 140) },
           timestamp: new Date().toISOString(),
-          decisionFrame: { mode: "HYBRID", intent: "chat", llm: null, ku: {} },
+          decisionFrame: { mode: "HYBRID", intent: "chat", llm: null, ku: {} }
         });
       }
 
@@ -3688,3 +3704,5 @@ function __tenmonSupportSanitizeV1(out: string): string {
 // CARD_E0A6_FASTPATH_SHAPE_MATCH_V1
 // CARD_E0A7_EXCLUDE_SMOKE_FROM_FASTPATH_V1
 // CARD_E0A8_EXCLUDE_SMOKE_FROM_ISTESTTID0_V1
+// CARD_E0A9_SMOKE_PING_FORCE_FALLBACK_V1
+// CARD_E0A9B_REMOVE_UNKNOWN_FIELDS_V1
