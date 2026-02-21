@@ -3649,7 +3649,21 @@ function __tenmonSupportSanitizeV1(out: string): string {
   // cap length
   if (t.length > 220) t = t.slice(0, 220).replace(/[。、\s　]+$/g, "") + "？";
 
+
+  // remove soft-imperatives / offers
+  t = t.replace(/してみませんか/g, "ですか")
+       .replace(/しませんか/g, "ですか")
+       .replace(/してみてください/g, "")
+       .replace(/してください/g, "")
+       .replace(/しましょう/g, "")
+       .replace(/どうでしょう/g, "");
+
+  // force end with 1 neutral question if missing
+  const q2 = Math.max(t.indexOf("？"), t.indexOf("?"));
+  if (q2 === -1) t = t.replace(/[。．\.]+$/g, "") + "？";
+
   return t;
 }
 // --- /H2B ---
 // CARD_H2B_BUDDHA_SYNAPSE_STABILIZE_V1
+// CARD_H2C_SUPPORT_DEIMPERATIVE_V1
