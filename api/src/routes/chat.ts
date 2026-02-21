@@ -1,5 +1,6 @@
 /* CARD1_SEAL_V1 */
 import { synthHybridResponseV1 } from "../hybrid/synth.js";
+import { heartModelV1 } from "../core/heartModel.js";
 import { Router, type IRouter, type Request, type Response } from "express";
 import { sanitizeInput } from "../tenmon/inputSanitizer.js";
 import { qcTextV1 } from "../kokuzo/qc.js";
@@ -302,6 +303,14 @@ function buildGroundedResultBody(
  * 固定応答を廃止し、天津金木思考回路を通して観測を返す
  */
 router.post("/chat", async (req: Request, res: Response<ChatResponseBody>) => {
+  // HEART observe (deterministic; no behavior change)
+  const __heart = (() => { try {
+    const b: any = (req as any)?.body || {};
+    const raw = String(b.message ?? b.text ?? b.input ?? "");
+    return heartModelV1(raw);
+  } catch { return { state: "neutral", entropy: 0.25 }; } })();
+  console.log(`[HEART] state=${__heart.state} entropy=${Number(__heart.entropy).toFixed(2)}`);
+
   // CARD6C_HANDLER_RESJSON_WRAP_V7: wrap res.json ONCE per request so ALL paths get top-level rewriteUsed/rewriteDelta defaults
   // (covers direct res.json returns that bypass reply())
   try {
@@ -3576,3 +3585,5 @@ function __tenmonGeneralGateResultMaybe(x: any): any {
 // CARD_C21G1C_GENERAL_GATE_SOFT_V1
 // CARD_C21B3_FIX_NEED_CONTEXT_CLAMP_V3\n// CARD_C21G2_GENERAL_GATE_PATTERNS_V2\n
 // CARD_H1_HEART_MODEL_MOCK_V1
+// CARD_H1B_HEART_OBSERVE_V2
+// FIX_H1Bv2_IMPORT_EXT_V1
