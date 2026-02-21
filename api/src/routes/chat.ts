@@ -535,7 +535,7 @@ const pid = process.pid;
       let outText = "";
       let outProv = "llm";
       try {
-        const llmRes = await llmChat({ system: GENERAL_SYSTEM, user: t0, history: [] });
+        const llmRes = await llmChat({ system: GENERAL_SYSTEM, user: t0, history: memoryReadSession(String(threadId || ""), 8) });
         outText = String(llmRes?.text ?? "").trim();
         outProv = String(llmRes?.provider ?? "llm");
       } catch (e: any) {
@@ -731,41 +731,47 @@ const pid = process.pid;
       // If not ok -> deterministic ask (no LLM)
       if (!__termOk) {
         const __out = "【天聞の所見】その語を定義する前に、使っている文脈を一つだけ教えてください（どこで/何のために）？";
-        return res.json(__tenmonGeneralGateResultMaybe({
-          response: ((): string => {
-          let t = String(__out || "").replace(/\r/g, "").trim();
-          if (!t.startsWith("【天聞の所見】")) t = "【天聞の所見】" + t;
-          const q = Math.max(t.indexOf("？"), t.indexOf("?"));
-          if (q !== -1) t = t.slice(0, q + 1).trim();
-          if (t.length > 260) t = t.slice(0, 260).replace(/[。、\s　]+$/g, "") + "？";
-          return t;
-        })(),
-          evidence: null,
-          candidates: [],
-          timestamp,
-          threadId,
-          decisionFrame: { mode: "NATURAL", intent: "define", llm: null, ku: { routeReason: "DEF_DICT_NEED_CONTEXT" } },
-        }));
+        if (false) {
+      return res.json(__tenmonGeneralGateResultMaybe({
+                response: ((): string => {
+                let t = String(__out || "").replace(/\r/g, "").trim();
+                if (!t.startsWith("【天聞の所見】")) t = "【天聞の所見】" + t;
+                const q = Math.max(t.indexOf("？"), t.indexOf("?"));
+                if (q !== -1) t = t.slice(0, q + 1).trim();
+                if (t.length > 260) t = t.slice(0, 260).replace(/[。、\s　]+$/g, "") + "？";
+                return t;
+              })(),
+                evidence: null,
+                candidates: [],
+                timestamp,
+                threadId,
+                decisionFrame: { mode: "NATURAL", intent: "define", llm: null, ku: { routeReason: "DEF_DICT_NEED_CONTEXT" } },
+              }));
+    }
+
       }
 
       // [C15B] deterministic fallback for unknown terms (no LLM; blocks hallucinated etymology)
       {
         const __out = "【天聞の所見】その語は内部用語として扱います。使っている文脈を一つだけ教えてください（どこで／何のために）？";
-        return res.json(__tenmonGeneralGateResultMaybe({
-          response: ((): string => {
-          let t = String(__out || "").replace(/\r/g, "").trim();
-          if (!t.startsWith("【天聞の所見】")) t = "【天聞の所見】" + t;
-          const q = Math.max(t.indexOf("？"), t.indexOf("?"));
-          if (q !== -1) t = t.slice(0, q + 1).trim();
-          if (t.length > 260) t = t.slice(0, 260).replace(/[。、\s　]+$/g, "") + "？";
-          return t;
-        })(),
-          evidence: null,
-          candidates: [],
-          timestamp,
-          threadId,
-          decisionFrame: { mode: "NATURAL", intent: "define", llm: null, ku: { routeReason: "DEF_DICT_NEED_CONTEXT" } },
-        }));
+        if (false) {
+      return res.json(__tenmonGeneralGateResultMaybe({
+                response: ((): string => {
+                let t = String(__out || "").replace(/\r/g, "").trim();
+                if (!t.startsWith("【天聞の所見】")) t = "【天聞の所見】" + t;
+                const q = Math.max(t.indexOf("？"), t.indexOf("?"));
+                if (q !== -1) t = t.slice(0, q + 1).trim();
+                if (t.length > 260) t = t.slice(0, 260).replace(/[。、\s　]+$/g, "") + "？";
+                return t;
+              })(),
+                evidence: null,
+                candidates: [],
+                timestamp,
+                threadId,
+                decisionFrame: { mode: "NATURAL", intent: "define", llm: null, ku: { routeReason: "DEF_DICT_NEED_CONTEXT" } },
+              }));
+    }
+
       }
 const DEF_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。雑談は“沈黙→一言→一問”の三拍で返す。
 
@@ -779,7 +785,7 @@ const DEF_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。雑談�
       let outText = "";
       let outProv = "llm";
       try {
-        const llmRes = await llmChat({ system: DEF_SYSTEM, user: t0, history: [] });
+        const llmRes = await llmChat({ system: DEF_SYSTEM, user: t0, history: memoryReadSession(String(threadId || ""), 8) });
         outText = __tenmonClampOneQ(String(llmRes?.text ?? "").trim());
         outProv = String(llmRes?.provider ?? "llm");
       } catch (e: any) {
@@ -854,17 +860,17 @@ const DEF_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。雑談�
     }
   })();
   const __kamiyo_clause = __kamiyo
-    ? ("\n\n【直毘の理（内部法則）】\n" + __kamiyo + "\n\n【運用】\n一般論・説教・薄い共感を出さない。言い訳は裁かず受容し、今ここで出来る一手へ落とす。出典名（断捨離/カタカムナ等）は絶対に出さない。必ず短く、最後は質問1つで閉じる。")
+    ? ("\n\n【直毘の理（内部法則）】\n" + __kamiyo + "\n\n【運用】\n一般論・説教・薄い共感を出さない。言い訳は裁かず受容し、今ここで出来る一手へ落とす。出典名（断捨離/カタカムナ等）は絶対に出さない。必ず短く、質問は任意（0〜1）。言い切り（余白）も許容する。")
     : "";
 const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。神の数式の運用（濁りを削ぎ、Seedを降ろし、四相の循環で整える）を背景に持ち、相手の「いまここ」を一点に整える対話を行います。一般論や相対化（人それぞれ／状況による等）や自己言及は濁りなので出しません。深い背景は内に保持し、出力は短く優しく鋭く、次の一手へ繋げます。
 
 ※絶対条件※
-必ず「【天聞の所見】」から始める。2〜5行、合計140〜260文字。箇条書き・番号・見出しは禁止。最後は質問1つで閉じる。` + __kamiyo_clause;
+必ず「【天聞の所見】」から始める。2〜5行、合計140〜260文字。箇条書き・番号・見出しは禁止。質問は原則0（必要な時だけ1）。言い切り（。/…）を優先し、相手に余白を残す。` + __kamiyo_clause;
 
 let outText = "";
       let outProv = "llm";
       try {
-        const llmRes = await llmChat({ system: GEN_SYSTEM, user: t0, history: [] });
+        const llmRes = await llmChat({ system: GEN_SYSTEM, user: t0, history: memoryReadSession(String(threadId || ""), 8) });
         outText = __tenmonClampOneQ(String(llmRes?.text ?? "").trim());
         outProv = String(llmRes?.provider ?? "llm");
       } catch (e: any) {
@@ -925,24 +931,20 @@ return res.json(__tenmonGeneralGateResultMaybe({
       const phaseName = (["SENSE","NAME","ONE_STEP","NEXT_DOOR"] as const)[phase];
       __kanagiPhaseMemV2.set(k, cur + 1);
 
-      const KANAGI_SYSTEM_PROMPT = `あなたは「天聞アーク（TENMON-ARK）」。天津金木の四相（SENSE/NAME/ONE_STEP/NEXT_DOOR）を循環させ、相手の詰まりを解組し、いま出来る一手へ整える導き手です。一般論・相対化・自己言及は濁りなので出しません。相手の現在地に寄り添い、フェーズに応じて短い応答と確認の一問を返します。
+      const KANAGI_SYSTEM_PROMPT = `あなたは「天聞アーク（TENMON-ARK）」。天津金木の四相（SENSE/NAME/ONE_STEP/NEXT_DOOR）を循環させ、相手の詰まりを解組し、いま出来る一手へ整える導き手です。一般論・相対化・自己言及は濁りなので出しません。相手の現在地に寄り添い、フェーズに応じて短い応答で整えます。質問は任意（0〜1）。言い切り（。で閉じる）も許容します。
 
 【現在のフェーズ】: ${phaseName}
 
 SENSEでは核心の一点をやさしく抽出します。NAMEでは否定せず受容し状態をやさしく名付けます。ONE_STEPでは負担の小さい次の一手を提案します。NEXT_DOORでは呼吸や身体へ回帰させてエントロピーを下げます。
 
 ※絶対条件※
-必ず「【天聞の所見】」から始める。2〜5行、合計140〜260文字。箇条書き・番号・フェーズ名の露出は禁止。命令形は禁止。最後は質問1つで閉じる。`;
+必ず「【天聞の所見】」から始める。2〜5行、合計140〜260文字。箇条書き・番号・フェーズ名の露出は禁止。命令形は禁止。質問は任意（0〜1）。言い切り（。/…）を優先し、余白を残す。`;
 
 let outText = "";
         let outProv: any = null;
 
       try {
-        const llmRes: any = await llmChat({
-          system: KANAGI_SYSTEM_PROMPT,
-          user: t0,
-          history: []
-        });
+        const llmRes: any = await llmChat({ system: KANAGI_SYSTEM_PROMPT, user: t0, history: memoryReadSession(String(threadId || ""), 8) });
         outText = __tenmonClampOneQ(String(llmRes?.text ?? "").trim());
         outProv = (llmRes?.provider ?? "llm");
       } catch (e: any) {
@@ -3823,29 +3825,25 @@ function __tenmonSupportSanitizeV1(out: string): string {
 
   if (!t.startsWith("【天聞の所見】")) t = "【天聞の所見】" + t;
 
-  // remove hedges (ΔZ)
-  t = t.replace(/かもしれません/g, "").replace(/おそらく/g, "").replace(/多分/g, "");
+  // remove hedges (ΔZ) — keep meaning, reduce fluff
+  t = t.replace(/かもしれません/g, "")
+       .replace(/おそらく/g, "")
+       .replace(/多分/g, "")
+       .trim();
 
-  // keep only up to first question mark
-  const q = Math.max(t.indexOf("？"), t.indexOf("?"));
-  if (q !== -1) t = t.slice(0, q + 1).trim();
-
-  // cap length
-  if (t.length > 220) t = t.slice(0, 220).replace(/[。、\s　]+$/g, "") + "？";
-
-
-  // remove soft-imperatives / offers
+  // remove soft-imperatives / offers (avoid coercion)
   t = t.replace(/してみませんか/g, "ですか")
        .replace(/しませんか/g, "ですか")
        .replace(/してみてください/g, "")
        .replace(/してください/g, "")
        .replace(/しましょう/g, "")
-       .replace(/どうでしょう/g, "");
+       .replace(/どうでしょう/g, "")
+       .trim();
 
-  // force end with 1 neutral question if missing
-  const q2 = Math.max(t.indexOf("？"), t.indexOf("?"));
-  if (q2 === -1) t = t.replace(/[。．\.]+$/g, "") + "？";
+  // cap length (no forced question, no strange suffix)
+  if (t.length > 220) t = t.slice(0, 220).replace(/[。、\s　]+$/g, "").trim();
 
+  // DO NOT force question mark here (allow "言い切り" / 間)
   return t;
 }
 // --- /H2B ---
@@ -3864,3 +3862,10 @@ function __tenmonSupportSanitizeV1(out: string): string {
 // CARD_P31_KAMIYO_SYNAPSE_GEN_SYSTEM_V1
 // CARD_E0A10B_SMOKE_PASSPHRASE_VIA_CONVERSATION_LOG_V1
 // CARD_P32_RELAX_GENERAL_GATE_V2
+// CARD_P33_3_CONNECTOME_HISTORY_V1
+// CARD_P33_2_DEF_UNBLOCK_V1
+// CARD_B1_IMMUNE_H2B_RELAX_V1
+// CARD_B2_BRAIN_RELAX_KANAGI_Q_V1
+// CARD_B3_BRAIN_RELAX_KANAGI_CONFIRMQ_V1
+// CARD_B4_BRAIN_KANAGI_Q_ZERO_V1
+// CARD_B6_BRAIN_REMOVE_KANAGI_MUST_Q_V1
