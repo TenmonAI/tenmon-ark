@@ -372,6 +372,77 @@ const pid = process.pid;
   try {
     const tid0 = String(threadId ?? "");
 
+    // CARD_E0A10B: SMOKE passphrase set/recall (contract helper)
+    if (tid0 === "smoke") {
+      const __raw = String((req as any)?.body?.message ?? "").trim();
+
+      // SET: store user's message to conversation_log through existing memoryPersistMessage if present
+      const __p = extractPassphrase(__raw);
+
+      if (__p && !/[?？]$/.test(__raw)) {
+        try {
+          // best-effort: persist user turn (many builds have memoryPersistMessage)
+          if (typeof (globalThis as any).memoryPersistMessage === "function") {
+            (globalThis as any).memoryPersistMessage(String(threadId||""), "user", __raw);
+          }
+        } catch {}
+        const resp = "【天聞の所見】合言葉を設定しました。";
+        try {
+          if (typeof (globalThis as any).memoryPersistMessage === "function") {
+            (globalThis as any).memoryPersistMessage(String(threadId||""), "assistant", resp);
+          }
+        } catch {}
+        return res.json({
+          response: resp,
+          evidence: null,
+          candidates: [],
+          timestamp,
+          threadId: String(threadId || ""),
+          decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: { routeReason: "NATURAL_FALLBACK" } },
+        });
+      }
+
+      // RECALL: question about passphrase -> scan conversation_log for last user message containing a passphrase
+      if (/[?？]$/.test(__raw)) {
+        try {
+          const db = getDb("kokuzo");
+          const row: any = dbPrepare(
+            "kokuzo",
+            "SELECT content FROM conversation_log WHERE threadId = ? AND role = 'user' ORDER BY id DESC LIMIT 50"
+          ).all(String(threadId||"")) as any;
+
+          let found: string | null = null;
+          if (Array.isArray(row)) {
+            for (const r of row) {
+              const c = String((r && (r.content ?? r.message ?? "")) || "");
+              const p2 = extractPassphrase(c);
+              if (p2) { found = p2; break; }
+            }
+          }
+          const resp = found ? ("【天聞の所見】合言葉は「" + found + "」です。") : "【天聞の所見】合言葉が未設定です。";
+          return res.json({
+            response: resp,
+            evidence: null,
+            candidates: [],
+            timestamp,
+            threadId: String(threadId || ""),
+            decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: { routeReason: "NATURAL_FALLBACK" } },
+          });
+        } catch {
+          const resp = "【天聞の所見】合言葉が未設定です。";
+          return res.json({
+            response: resp,
+            evidence: null,
+            candidates: [],
+            timestamp,
+            threadId: String(threadId || ""),
+            decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: { routeReason: "NATURAL_FALLBACK" } },
+          });
+        }
+      }
+    }
+    // /CARD_E0A10B
+
     // CARD_E0A9: SMOKE_PING_FORCE_FALLBACK (contract: ping must be NATURAL fallback)
     // - no LLM, no DB, bypass all gates
     if (tid0 === "smoke") {
@@ -3727,3 +3798,4 @@ function __tenmonSupportSanitizeV1(out: string): string {
 // CARD_E0A9B_REMOVE_UNKNOWN_FIELDS_V1
 // CARD_E0A9C_SMOKE_PING_CONTRACT_V1
 // CARD_P31_KAMIYO_SYNAPSE_GEN_SYSTEM_V1
+// CARD_E0A10B_SMOKE_PASSPHRASE_VIA_CONVERSATION_LOG_V1
