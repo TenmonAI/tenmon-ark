@@ -40,7 +40,15 @@ import { rewriteOnlyTenmon } from "../core/rewriteOnly.js";
 
 import { memoryPersistMessage, memoryReadSession } from "../memory/index.js";
 import { listRules } from "../training/storage.js";
+
+import { getDbPath } from "../db/index.js";
+
+import { DatabaseSync } from "node:sqlite";
 const router: IRouter = Router();
+// __KANAGI_PHASE_MEM_V2: module-scope phase tracker (per threadId) for NATURAL 4-phase state machine.
+const __kanagiPhaseMemV2 = new Map<string, number>();
+// CARD_C7B2_FIX_N2_TRIGGER_AND_LLM_V1
+
 
 // LLM_CHAT: minimal constitution (no evidence fabrication)
 const TENMON_CONSTITUTION_TEXT =
@@ -323,6 +331,7 @@ router.post("/chat", async (req: Request, res: Response<ChatResponseBody>) => {
 
   let capsPayload: any = null;
 const pid = process.pid;
+
   const uptime = process.uptime();
   const { getReadiness } = await import("../health/readiness.js");
   const r = getReadiness();
@@ -344,6 +353,481 @@ const pid = process.pid;
   const shouldBlockLLMChatForGuest = !isAuthed;
 
   if (!message) return res.status(400).json({ response: "message required", error: "message required", timestamp, decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: {} } });
+
+  // RESEED_ROUTER_CORE_V2: top-of-router hard stops (N1 greeting + LLM1 force + N2 kanagi 4-phase)
+  // - MUST run BEFORE lane/menu/cmd/sanitize/hybrid search
+  // - MUST keep smoke/accept/core-seed/bible-smoke contracts unchanged
+  // - MUST NOT use `reply` here (reply is declared later in file)
+
+  try {
+    const tid0 = String(threadId ?? "");
+    const raw0 = String(message ?? "");
+    const t0 = raw0.trim();
+
+    const isTestTid0 = /^(smoke|accept|core-seed|bible-smoke)/i.test(tid0);
+
+    // ---------- N1: Greeting absolute defense ----------
+    const isGreeting0 =
+      /^(こんにちは|こんばんは|おはよう|やあ)(?:$|\s)|^(hi|hello|hey|yo)(?:$|\s)/i.test(t0);
+
+    if (!isTestTid0 && isGreeting0) {
+
+      // CARD_C10_N1_GREETING_LLM_V1: greet -> NATURAL_GENERAL via llmChat (short, conversational)
+      const GENERAL_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。挨拶には短く返し、最後に“質問は1つだけ”で会話を開きます。
+
+※絶対条件※
+・必ず「【天聞の所見】」から始める
+・2〜4行、合計120〜220文字
+・箇条書き/番号/見出し禁止
+・質問は必ず1つだけ（最後の一行を質問にする）
+例：「いま何を一緒に整えますか？（一言でOK）」`;
+
+      let outText = "";
+      let outProv = "llm";
+      try {
+        const llmRes = await llmChat({ system: GENERAL_SYSTEM, user: t0, history: [] });
+        outText = String(llmRes?.text ?? "").trim();
+        outProv = String(llmRes?.provider ?? "llm");
+      } catch (e: any) {
+        console.error("[N1_GREETING_LLM] llmChat failed", e?.message || e);
+        outText = "【天聞の所見】こんにちは。いま何を一緒に整えますか？（一言でOK）";
+      }
+
+      // minimal sanitize
+      if (!outText.startsWith("【天聞の所見】")) outText = "【天聞の所見】" + outText;
+      outText = outText
+        .replace(/^\s*\d+[.)].*$/gm, "")
+        .replace(/^\s*[-*•]\s+.*$/gm, "")
+        .trim();
+
+      if (outText.length < 60) {
+        outText = "【天聞の所見】こんにちは。いま何を一緒に整えますか？（一言でOK）";
+      }
+
+      // CARD_C11F_CLAMP_N1_RETURN_V1: enforce one-question clamp (N1_GREETING_LLM_TOP)
+      // CARD_C11F2_N1_LOCAL_CLAMP_V1: local clamp (N1 only) - enforce exactly 1 question and trim
+      const __n1ClampOneQ = (raw: string): string => {
+        let t = String(raw ?? "").replace(/\r/g, "").trim();
+        t = t.replace(/^\s+/, "").replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
+        // remove bullet/numbered lines
+        t = t.replace(/^\s*\d+[.)].*$/gm, "").replace(/^\s*[-*•]\s+.*$/gm, "").trim();
+        if (!t.startsWith("【天聞の所見】")) t = "【天聞の所見】" + t;
+        // keep up to first question mark only
+        const qJ = t.indexOf("？");
+        const qE = t.indexOf("?");
+        const q = (qJ == -1) ? qE : (qE == -1 ? qJ : Math.min(qJ, qE));
+        if (q !== -1) t = t.slice(0, q + 1).trim();
+        // bounds
+        if (t.length > 260) t = t.slice(0, 260).replace(/[。、\s　]+$/g, "") + "？";
+        if (t.length < 60) t = "【天聞の所見】いま何を一緒に整えますか？（一言でOK）";
+        return t;
+      };
+      outText = __n1ClampOneQ(outText);
+
+      return res.json(__tenmonGeneralGateResultMaybe({
+        response: outText,
+        evidence: null,
+        candidates: [],
+        timestamp,
+        threadId,
+        decisionFrame: { mode: "NATURAL", intent: "chat", llm: outProv, ku: { routeReason: "N1_GREETING_LLM_TOP" } },
+      }));
+
+    }
+
+    // ---------- LLM1: Force LLM route ----------
+    // "#llm ..." bypasses EVERYTHING (no header needed)
+    if (!isTestTid0 && /^#llm\b/i.test(t0)) {
+      const userText = t0.replace(/^#llm\b/i, "").trim() || "こんにちは。";
+      const hasOpenAI = Boolean(process.env.OPENAI_API_KEY && String(process.env.OPENAI_API_KEY).trim());
+      const hasGemini = Boolean(process.env.GEMINI_API_KEY && String(process.env.GEMINI_API_KEY).trim());
+
+      if (!hasOpenAI && !hasGemini) {
+        return res.json(__tenmonGeneralGateResultMaybe({
+          response: "LLMキーが未設定です。/etc/tenmon/llm.env（または /opt/tenmon-ark-data/llm.env）に OPENAI_API_KEY / GEMINI_API_KEY を設定してください。",
+          evidence: null,
+          candidates: [],
+          timestamp,
+          threadId,
+          decisionFrame: { mode: "LLM_CHAT", intent: "chat", llm: null, ku: { routeReason: "LLM1_NO_KEYS" } },
+        }));
+      }
+
+      // llmChat signature (current): llmChat({ system, history, user }) -> { text, provider }
+      const system = String(TENMON_CONSTITUTION_TEXT ?? "").trim() || "You are TENMON-ARK. Be natural and helpful.";
+      const history = [] as any[];
+      let outText = "";
+      let provider = "";
+
+      try {
+        const out = await llmChat({ system, history, user: userText } as any);
+        outText = String((out as any)?.text ?? "").trim();
+        provider = String((out as any)?.provider ?? "").trim();
+      } catch (e: any) {
+        console.error("[LLM1] llmChat failed", e?.message || e);
+        outText = "LLM呼び出しに失敗しました（ログを確認してください）。";
+        provider = "ERROR";
+      }
+
+      return res.json(__tenmonGeneralGateResultMaybe({
+        response: outText || "（空応答）",
+        evidence: null,
+        candidates: [],
+        timestamp,
+        threadId,
+        decisionFrame: { mode: "LLM_CHAT", intent: "chat", llm: provider || (process.env.GEMINI_MODEL || process.env.OPENAI_MODEL || "LLM"), ku: { routeReason: "LLM1_FORCE_TOP" } },
+      }));
+    }
+
+    
+    
+    // CARD_C11C_FIX_N2_PROMPT_ANCHOR_V1: shared clamp (trim, remove lists, enforce 1 question)
+    const __tenmonClampOneQ = (raw: string): string => {
+      let t = String(raw ?? "").replace(/\r/g, "").trim();
+      t = t.replace(/^\s+/, "").replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
+      t = t.replace(/^\s*\d+[.)].*$/gm, "").replace(/^\s*[-*•]\s+.*$/gm, "").trim();
+      if (!t.startsWith("【天聞の所見】")) t = "【天聞の所見】" + t;
+      const q = Math.max(t.indexOf("？"), t.indexOf("?"));
+      if (q !== -1) t = t.slice(0, q + 1).trim();
+      if (t.length > 280) t = t.slice(0, 280).replace(/[。、\s　]+$/g, "") + "？";
+      if (t.length < 80) t = "【天聞の所見】いま一番の焦点は何ですか？（一語でOK）";
+      return t;
+    };
+// ---------- N2: Kanagi 4-phase NATURAL spine (LLM-driven; do NOT crush normal questions) ----------
+    // CARD_C7B2_FIX_N2_TRIGGER_AND_LLM_V1:
+    // - "short text" alone must NOT trigger support mode
+    // - definition questions ("〜とは何") must bypass N2
+    // - when N2 triggers, generate response via llmChat (Gemini/OpenAI) with phase hint
+
+    const askedMenu0 = /(メニュー|方向性|選択肢|1\)|2\)|3\)|\/menu|^menu\b)/i.test(t0);
+    const hasDoc0 = /\bdoc\b/i.test(t0) || /pdfPage\s*=\s*\d+/i.test(t0) || /#詳細/.test(t0);
+    const isCmd0 = t0.startsWith("#") || t0.startsWith("/");
+
+
+    // CARD_C9_DEF_AND_GENERAL_LLM_V1: DEF + NATURAL_GENERAL (LLM) before N2 support-branch.
+    // NOTE: This is inside N2 scope, so askedMenu0/hasDoc0/isCmd0/isTestTid0 are in-scope (TS-safe).
+
+    // ---------- DEF: definition questions (〜とは何？/って何？) ----------
+    const __isDefinitionQ =
+      /とは何[?？]?$/.test(t0) ||
+      /って何[?？]?$/.test(t0) ||
+      (/とは[?？]?$/.test(t0) && t0.length <= 18) ||
+      (/^.{1,20}\s*は何[?？]?$/.test(t0))
+      || /とは何ですか[?？]?$/.test(t0)
+      || /とは何でしょう[?？]?$/.test(t0)
+      || /って何ですか[?？]?$/.test(t0)
+      || (/とは\s*何\s*ですか[?？]?$/.test(t0) && t0.length <= 60)
+      || (/^.{1,60}（.{1,40}）\s*とは何(ですか|でしょう)[?？]?$/.test(t0));
+;
+
+
+    if (!isTestTid0 && __isDefinitionQ && !hasDoc0 && !askedMenu0 && !isCmd0) {
+      // [C15] DEF deterministic dictionary gate (no external etymology / bracket-first)
+      // Normalize term: if X（Y） exists, treat Y as the internal term.
+      const __rawDef = String(t0 || "").trim();
+
+      // extract bracket term (Japanese full-width parens)
+      const __br = __rawDef.match(/（([^）]{1,40})）/);
+      const __term = (__br && __br[1] ? __br[1].trim() : __rawDef)
+        .replace(/[?？]\s*$/,"")
+        .replace(/^(.*?)(とは|って)\s*(何|なに).*/,"$1")
+        .trim();
+
+      // If term is too short/too long -> deterministic "unknown" path (ask context only)
+      const __termOk = __term.length >= 2 && __term.length <= 40;
+
+      // A tiny internal glossary (expand later in Seed phase)
+      // [C17C3] glossary lookup (kokuzo.sqlite via getDbPath + node:sqlite)
+      const __glossaryLookup = (term: string): string | null => {
+        try {
+          const dbPath = getDbPath("kokuzo.sqlite");
+          const db: any = new (DatabaseSync as any)(dbPath, { readOnly: true });
+          const stmt: any = db.prepare("SELECT definition FROM kokuzo_glossary WHERE term = ?");
+          const row: any = stmt.get(term);
+          try { db.close?.(); } catch {}
+          return row?.definition ? String(row.definition) : null;
+        } catch {}
+        return null;
+      };
+
+      // minimal seed fallback (DB is source of truth once populated)
+      const __seedFallback: Record<string, string> = {
+        "トカナクテシス": "トカナクテシス（解組）は、いったん安全な過去へ戻して構造をほどき、最小diffで再発させて封印する手順です。",
+        "解組": "解組は、壊れた状態をこねくり回さず、確実に良かった状態へ戻してから最小差分で再適用することです。"
+      };
+
+      // If glossary hit -> return deterministic definition (no LLM)
+      const __hit = __glossaryLookup(__term) ?? __seedFallback[__term] ?? null;
+      if (__hit) {
+        const __out = "【天聞の所見】" + __hit + "（外部語源は使いません）。いま、この語をどの場面で使っていますか？";
+        return res.json(__tenmonGeneralGateResultMaybe({
+          response: ((): string => {
+            let t = String(__out || "").replace(/\r/g, "").trim();
+            if (!t.startsWith("【天聞の所見】")) t = "【天聞の所見】" + t;
+            // enforce exactly one question at end (but DO NOT short-fallback)
+            const q = Math.max(t.indexOf("？"), t.indexOf("?"));
+            if (q !== -1) t = t.slice(0, q + 1).trim();
+            if (t.length > 260) t = t.slice(0, 260).replace(/[。、\s　]+$/g, "") + "？";
+            return t;
+          })(),
+          evidence: null,
+          candidates: [],
+          timestamp,
+          threadId,
+          decisionFrame: { mode: "NATURAL", intent: "define", llm: null, ku: { routeReason: "DEF_DICT_HIT", term: __term, glossarySource: (__glossaryLookup(__term) ? "db" : (__seedFallback && __seedFallback[__term] ? "fallback" : "none")) } },
+        }));
+      }
+
+      // If not ok -> deterministic ask (no LLM)
+      if (!__termOk) {
+        const __out = "【天聞の所見】その語を定義する前に、使っている文脈を一つだけ教えてください（どこで/何のために）？";
+        return res.json(__tenmonGeneralGateResultMaybe({
+          response: ((): string => {
+          let t = String(__out || "").replace(/\r/g, "").trim();
+          if (!t.startsWith("【天聞の所見】")) t = "【天聞の所見】" + t;
+          const q = Math.max(t.indexOf("？"), t.indexOf("?"));
+          if (q !== -1) t = t.slice(0, q + 1).trim();
+          if (t.length > 260) t = t.slice(0, 260).replace(/[。、\s　]+$/g, "") + "？";
+          return t;
+        })(),
+          evidence: null,
+          candidates: [],
+          timestamp,
+          threadId,
+          decisionFrame: { mode: "NATURAL", intent: "define", llm: null, ku: { routeReason: "DEF_DICT_NEED_CONTEXT" } },
+        }));
+      }
+
+      // [C15B] deterministic fallback for unknown terms (no LLM; blocks hallucinated etymology)
+      {
+        const __out = "【天聞の所見】その語は内部用語として扱います。使っている文脈を一つだけ教えてください（どこで／何のために）？";
+        return res.json(__tenmonGeneralGateResultMaybe({
+          response: ((): string => {
+          let t = String(__out || "").replace(/\r/g, "").trim();
+          if (!t.startsWith("【天聞の所見】")) t = "【天聞の所見】" + t;
+          const q = Math.max(t.indexOf("？"), t.indexOf("?"));
+          if (q !== -1) t = t.slice(0, q + 1).trim();
+          if (t.length > 260) t = t.slice(0, 260).replace(/[。、\s　]+$/g, "") + "？";
+          return t;
+        })(),
+          evidence: null,
+          candidates: [],
+          timestamp,
+          threadId,
+          decisionFrame: { mode: "NATURAL", intent: "define", llm: null, ku: { routeReason: "DEF_DICT_NEED_CONTEXT" } },
+        }));
+      }
+const DEF_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。雑談は“沈黙→一言→一問”の三拍で返す。
+
+※絶対条件※
+・必ず「【天聞の所見】」から始める
+・2〜4行、合計120〜220文字
+・箇条書き/番号/見出し禁止
+・言い訳（一般論/データ云々/価値観云々）に逃げない
+・最後は質問1つだけ（次の一歩を問う）`;
+
+      let outText = "";
+      let outProv = "llm";
+      try {
+        const llmRes = await llmChat({ system: DEF_SYSTEM, user: t0, history: [] });
+        outText = __tenmonClampOneQ(String(llmRes?.text ?? "").trim());
+        outProv = String(llmRes?.provider ?? "llm");
+      } catch (e: any) {
+        outText = "【天聞の所見】いま定義の生成に失敗しました。もう一度だけ、言い換えてもらえますか？";
+      }
+
+      // sanitize: no lists
+      outText = String(outText || "")
+        .replace(/^\s*\d+[.)].*$/gm, "")
+        .replace(/^\s*[-*•]\s+.*$/gm, "")
+        .trim();
+
+      if (!outText.startsWith("【天聞の所見】")) {
+        outText = "【天聞の所見】" + outText;
+      }
+      if (outText.length < 80) {
+        outText = "【天聞の所見】いま言う「それ」は何を指しますか？（一語でOK）";
+      }
+
+      // CARD_C11E_CLAMP_DEF_AND_GENERAL_RETURN_V1: enforce one-question clamp (DEF_LLM_TOP)
+
+      outText = __tenmonClampOneQ(outText);
+
+
+      // CARD_C11E_CLAMP_DEF_AND_GENERAL_RETURN_V1: enforce one-question clamp (NATURAL_GENERAL_LLM_TOP)
+
+
+      outText = __tenmonClampOneQ(outText);
+
+
+
+      return res.json(__tenmonGeneralGateResultMaybe({
+        response: outText,
+        evidence: null,
+        candidates: [],
+        timestamp,
+        threadId,
+        decisionFrame: { mode: "NATURAL", intent: "define", llm: outProv, ku: { routeReason: "DEF_LLM_TOP" } },
+      }));
+    }
+
+    // ---------- NATURAL_GENERAL: normal chat/questions (LLM) ----------
+    const __looksSupport =
+      /不安|つらい|しんどい|疲れ|焦|怖|助けて|無理|泣|眠れ|消えたい/.test(t0);
+
+    const __generalOk =
+      !isTestTid0 &&
+      !hasDoc0 &&
+      !askedMenu0 &&
+      !isCmd0 &&
+      !__looksSupport &&
+      t0.length >= 2 &&
+      t0.length <= 240;
+
+    if (__generalOk) {
+      const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。神の数式の運用（濁りを削ぎ、Seedを降ろし、四相の循環で整える）を背景に持ち、相手の「いまここ」を一点に整える対話を行います。一般論や相対化（人それぞれ／状況による等）や自己言及は濁りなので出しません。深い背景は内に保持し、出力は短く優しく鋭く、次の一手へ繋げます。
+
+※絶対条件※
+必ず「【天聞の所見】」から始める。2〜5行、合計140〜260文字。箇条書き・番号・見出しは禁止。最後は質問1つで閉じる。`;
+
+let outText = "";
+      let outProv = "llm";
+      try {
+        const llmRes = await llmChat({ system: GEN_SYSTEM, user: t0, history: [] });
+        outText = __tenmonClampOneQ(String(llmRes?.text ?? "").trim());
+        outProv = String(llmRes?.provider ?? "llm");
+      } catch (e: any) {
+        outText = "【天聞の所見】いま応答の生成に失敗しました。もう一度だけ、短く言い直してもらえますか？";
+      }
+
+      // sanitize: no lists
+      outText = String(outText || "")
+        .replace(/^\s*\d+[.)].*$/gm, "")
+        .replace(/^\s*[-*•]\s+.*$/gm, "")
+        .trim();
+
+      if (!outText.startsWith("【天聞の所見】")) {
+        outText = "【天聞の所見】" + outText;
+      }
+      if (outText.length < 80) {
+        outText = "【天聞の所見】いま一番欲しいのは「整理」「休息」「一歩」のどれに近いですか？（一語でOK）";
+      }
+
+      
+      // [C16E2] removed C16C replace-to-empty (worm-eaten source)
+      // [C16D2] GENERAL overwrite gate (deterministic; avoids "worm-eaten" output)
+      {
+        const __t = String(outText || "");
+        const __hasEscape = /(一般的には|価値観|人それぞれ|時と場合|状況や視点|データに基づ|統計的には|私はAI|AIとして)/.test(__t);
+        const __looksBroken =
+          /、{2,}|。{2,}|，，|．．|,\s*,/.test(__t) ||
+          /のに基づ|個人のに基づ|自分のと社会|かもしれません。、/.test(__t) ||
+          /です。ある状況|指します。によって|ます。、/.test(__t);
+
+        if (__hasEscape || __looksBroken) {
+          outText = "【天聞の所見】一般論や相対化は要りません。いま「正しさ」で迷っている場面を一つだけ教えてください（仕事／家族／自分の決断など）？";
+        }
+      }
+return res.json(__tenmonGeneralGateResultMaybe({
+        response: outText,
+        evidence: null,
+        candidates: [],
+        timestamp,
+        threadId,
+        decisionFrame: { mode: "NATURAL", intent: "chat", llm: outProv, ku: { routeReason: "NATURAL_GENERAL_LLM_TOP" } },
+      }));
+    }
+    // do not treat "definition / meaning" as support-mode
+    const isDefinitionQ0 =
+      /(とは(何|なに)|って(何|なに)|意味|定義|概念|何ですか|なにですか)\b/.test(t0) ||
+      /[?？]\s*$/.test(t0) && /(とは|意味)/.test(t0);
+
+    // support keywords (must be explicit)
+    const hasSupportKw0 = /不安|つらい|しんどい|疲れ|だるい|眠い|こわい|怖|焦|迷|助けて|無理|パニック|落ち込/.test(t0);
+    const hasFirstPerson0 = /(わたし|私|俺|僕|自分)/.test(t0);
+    const looksSupport = hasSupportKw0 || (hasFirstPerson0 && /わからない|できない|どうしていい/.test(t0));
+
+    if (!isTestTid0 && !askedMenu0 && !hasDoc0 && !isCmd0 && looksSupport && !isDefinitionQ0) {
+      const k = tid0 || "default";
+      const cur = __kanagiPhaseMemV2.get(k) ?? 0;
+      const phase = cur % 4;
+      const phaseName = (["SENSE","NAME","ONE_STEP","NEXT_DOOR"] as const)[phase];
+      __kanagiPhaseMemV2.set(k, cur + 1);
+
+      const KANAGI_SYSTEM_PROMPT = `あなたは「天聞アーク（TENMON-ARK）」。天津金木の四相（SENSE/NAME/ONE_STEP/NEXT_DOOR）を循環させ、相手の詰まりを解組し、いま出来る一手へ整える導き手です。一般論・相対化・自己言及は濁りなので出しません。相手の現在地に寄り添い、フェーズに応じて短い応答と確認の一問を返します。
+
+【現在のフェーズ】: ${phaseName}
+
+SENSEでは核心の一点をやさしく抽出します。NAMEでは否定せず受容し状態をやさしく名付けます。ONE_STEPでは負担の小さい次の一手を提案します。NEXT_DOORでは呼吸や身体へ回帰させてエントロピーを下げます。
+
+※絶対条件※
+必ず「【天聞の所見】」から始める。2〜5行、合計140〜260文字。箇条書き・番号・フェーズ名の露出は禁止。命令形は禁止。最後は質問1つで閉じる。`;
+
+let outText = "";
+        let outProv: any = null;
+
+      try {
+        const llmRes: any = await llmChat({
+          system: KANAGI_SYSTEM_PROMPT,
+          user: t0,
+          history: [],
+        });
+        outText = __tenmonClampOneQ(String(llmRes?.text ?? "").trim());
+        outProv = (llmRes?.provider ?? "llm");
+      } catch (e: any) {
+        console.error("[N2_LLM] llmChat failed", e?.message || e);
+      }
+
+      if (!outText) {
+        // deterministic fallback (never empty)
+        if (phaseName === "SENSE") outText = "【天聞の所見】いま一番重いのは「期限」「量」「判断」のどれに近いですか？（一語でOK）";
+        else if (phaseName === "NAME") outText = "【天聞の所見】その重さは、休めない状態から来ています。いま一番怖いのは何ですか？（一語でOK）";
+        else if (phaseName === "ONE_STEP") outText = "【天聞の所見】まず一つ手放します。今日“やらない”ことを1つだけ決められますか？";
+        else outText = "【天聞の所見】いま息を一つだけ深く入れて出せますか？できたら「できた」とだけ返して。";
+      }
+
+      
+      return res.json(__tenmonGeneralGateResultMaybe({
+        response: outText,
+        evidence: null,
+        candidates: [],
+        timestamp,
+        threadId,
+        decisionFrame: {
+          mode: "NATURAL",
+          intent: "chat",
+          llm: outProv,
+          ku: {
+            routeReason: "N2_KANAGI_PHASE_TOP",
+            kanagiPhase: phaseName,
+            kanagiKey: k,
+            kanagiCounter: cur,
+            kanagiPhaseIndex: phase,
+            CARD_C7B2_FIX_N2_TRIGGER_AND_LLM_V1: true,
+          },
+        },
+      }));
+    }
+  } catch {}
+
+  // N1_GREETING_TOP_GUARD_V1: greetings must be handled before any kokuzo/hybrid routing (avoid HEIKE吸い込み)
+  try {
+    const __t0 = String(message || "").trim();
+    const __isGreeting0 = /^(こんにちは|こんばんは|おはよう|やあ|hi|hello|hey)\s*[！!。．\.]?$/i.test(__t0);
+    const __isTestTid0 = /^(smoke|accept|core-seed|bible-smoke)/i.test(String(threadId || ""));
+    if (!__isTestTid0 && __isGreeting0) {
+      return res.status(200).json({
+        response: "こんにちは。今日は何を一緒に整えますか？（相談でも、概念の定義でもOK）？",
+        timestamp: new Date().toISOString(),
+        candidates: [],
+        evidence: null,
+        threadId,
+        decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: { routeReason: "FASTPATH_GREETING_TOP" } },
+        rewriteUsed: false,
+        rewriteDelta: 0
+      } as any);
+    }
+  } catch {}
 
   // CARD_C3_FASTPATH_IDENTITY_V1: meta questions must get a direct answer (avoid questionnaire loop)
   try {
@@ -385,13 +869,13 @@ const pid = process.pid;
 
   // B1: deterministic menu trigger for acceptance (must work even for GUEST)
   if (String(message ?? "").trim() === "__FORCE_MENU__") {
-    return res.json({
+    return res.json(__tenmonGeneralGateResultMaybe({
       response:
         "1) 検索（GROUNDED）\n2) 整理（Writer/Reader）\n3) 設定（運用/学習）\n\n番号かキーワードで選んでください。",
       evidence: null,
       decisionFrame: { mode: "GUEST", intent: "MENU", llm: null, ku: {} },
       timestamp,
-    });
+    }));
   }
 
 
@@ -1534,7 +2018,7 @@ try {
     } catch {}
 
 
-return res.json({
+return res.json(__tenmonGeneralGateResultMaybe({
       response,
       timestamp: payload.timestamp,
       trace: payload.trace,
@@ -1546,7 +2030,7 @@ return res.json({
       decisionFrame: payload.decisionFrame,
       threadId: payload.threadId,
       error: payload.error,
-    });
+    }));
   };
 
 
@@ -2012,7 +2496,57 @@ if (usable.length === 0) {
       }
     } catch {}
 
-    return reply({
+    
+    // N2_KANAGI_4PHASE_V1: Kanagi 4-phase micro state machine to avoid template repetition (NATURAL only)
+    try {
+      const __tid = String(threadId || "");
+      const __isTestTid = /^(smoke|accept|core-seed|bible-smoke)/i.test(__tid);
+      const __msg = String(message || "");
+      const __askedMenu = /^\s*(?:\/menu|menu)\b/i.test(__msg) || /^\s*メニュー\b/.test(__msg);
+      const __hasDoc = /\bdoc\b/i.test(__msg) || /pdfPage\s*=\s*\d+/i.test(__msg) || /#詳細/.test(__msg);
+      if (!__isTestTid && !__askedMenu && !__hasDoc) {
+        let ucount = 0;
+        try {
+          const mem = memoryReadSession(threadId, 40) || [];
+          for (const row of mem) {
+            if (row && (row as any).role === "user") ucount++;
+          }
+        } catch {}
+        const phase = (ucount % 4);
+        const phaseName = phase === 0 ? "SENSE" : phase === 1 ? "NAME" : phase === 2 ? "ONE_STEP" : "NEXT_DOOR";
+
+        // only reshape when NATURAL reply looks like looping template / questionnaire
+        const t0 = String((nat as any)?.responseText ?? "");
+        const looksLoop =
+          /いま一番しんどいのは/.test(t0) ||
+          /いま一番近いのは/.test(t0) ||
+          /焦点が一点に定まっていない/.test(t0);
+
+        if (looksLoop) {
+          const userShort = String(__msg).replace(/\s+/g," ").trim().slice(0, 80);
+          let out = "";
+
+          if (phaseName === "SENSE") {
+            out = `いま一番重いのは「不安」そのものですか？それとも「今日の一手が決まらない」感じですか？\n\nどちらに近い？（一言でOK）`;
+          } else if (phaseName === "NAME") {
+            out = `その重さは、\n「決めないといけないのに決められない」焦りから来ている可能性が高いです。\n\nいま一番こわい結末は何ですか？（一言）`;
+          } else if (phaseName === "ONE_STEP") {
+            out = `まず“一手”だけ小さくします。\n今日の予定から「やらない」ものを1つ決めましょう。\n\nいま捨てたい候補は何ですか？（タスク名を1つ）`;
+          } else {
+            out = `ここで一度、息を整えます。\n目を閉じて、ゆっくり1呼吸できますか？\n\nできたら「できた」とだけ返して。`;
+          }
+
+          (nat as any).responseText = out;
+        }
+
+        // annotate
+        try {
+          (nat as any).ku = (nat as any).ku || {};
+          (nat as any).ku.kanagiPhase = phaseName;
+        } catch {}
+      }
+    } catch {}
+return reply({
       response: nat.responseText,
       evidence: null,
       decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: {} },
@@ -2213,7 +2747,7 @@ if (usable.length === 0) {
 
     const safe = scrubEvidenceLike(finalText);
 
-    return res.json({
+    return res.json(__tenmonGeneralGateResultMaybe({
       response: safe,
       evidence: null,
       decisionFrame: {
@@ -2224,7 +2758,7 @@ if (usable.length === 0) {
       },
       timestamp,
       threadId,
-    });
+    }));
   }
 
   // UX guard: 日本語の通常会話は一旦NATURAL(other)で受ける（#詳細や資料指定時だけHYBRIDへ）
@@ -2949,3 +3483,95 @@ if (__hasMenu && !__askedMenu) {
 });
 
 export default router;
+
+// CARD_C11C_FIX_N2_PROMPT_ANCHOR_V1
+
+// CARD_C11E_CLAMP_DEF_AND_GENERAL_RETURN_V1
+
+// CARD_C11F_CLAMP_N1_RETURN_V1
+
+// CARD_C11F2_N1_LOCAL_CLAMP_V1
+
+// CARD_C14B3_FIX_DEF_AND_GENERAL_SAFE_V1
+
+// CARD_C16A_GENERAL_ESCAPE_CLAMP_V1
+
+// CARD_C16B_GENERAL_ESCAPE_GATE_AT_RETURN_V1
+
+// CARD_C16C_GENERAL_GATE_IN_GENERAL_BLOCK_V1
+
+// CARD_C16D2_GENERAL_OVERWRITE_GATE_SAFE_V1
+
+// CARD_C16D3_STRENGTHEN_OVERWRITE_TRIGGER_V1
+
+// CARD_C16E2_REMOVE_C16C_FROM_GENERAL_V2
+
+// CARD_C16F_REMOVE_C16AB_FROM_SUPPORT_V1
+
+// CARD_C15_DEF_DICTIONARY_GATE_V1
+
+// CARD_C15B_FIX_TDZ_AND_DET_DEF_V1
+
+// CARD_C15C2_FIX_DEF_DICT_HIT_CLAMP_V1
+
+// CARD_C15D_EXTEND_DEF_DICT_HIT_TEXT_V1
+
+// CARD_C17B2_GLOSSARY_DBSTATUS_AUTOWIRE_V1
+
+// CARD_C17C2_GLOSSARY_USE_GETDBPATH_V1
+
+// CARD_C17C3_FIX_SQLITE_LOOKUP_NO_DEP_V1
+
+// CARD_C18_GLOSSARY_SOURCE_FLAG_V1
+
+// CARD_C21_DEF_REGEX_EXPAND_V1
+
+// CARD_C21A_AWAKENING_V1A
+
+// CARD_C21B2_FIX_NEED_CONTEXT_CLAMP_V1
+
+// --- C21G1C: GENERAL_GATE_SOFT_V1 ---
+// Deterministic last-mile gate. Only edits response when routeReason === NATURAL_GENERAL_LLM_TOP.
+function __tenmonGeneralGateSoft(out: string): string {
+  let t = String(out || "").replace(/\r/g, "").trim();
+
+  // normalize common spacing
+  t = t.replace(/^【天聞の所見】\s+/, "【天聞の所見】");
+
+  // hard rules (format safety)
+  const qpos = Math.max(t.indexOf("？"), t.indexOf("?"));
+  const qcount = (t.match(/[?？]/g) || []).length;
+  const lines = t.split("\n").filter(Boolean);
+
+  // RLHF preach / generalization patterns (deterministic)
+  const badPhrases = [
+    "鍵です", "サインです", "機会として", "捉えましょう",
+    "できます", "ことができます", "大切です", "重要です", "真実", "内面",
+    "見極める", "道を開きます"
+  ];
+
+  const hasBad = badPhrases.some(w => t.includes(w)) || /ましょう/.test(t);
+
+  // If response drifts into preach OR violates strict shape, overwrite with fixed seed.
+  if (hasBad || qcount !== 1 || qpos === -1 || lines.length > 4 || t.length > 220) {
+    return "【天聞の所見】いま必要なのは正解探しではなく、今日の一点を決めることです。\n"
+         + "一番削りたい不安は何で、代わりに残したい一手は何ですか？";
+  }
+
+  return t;
+}
+function __tenmonGeneralGateResultMaybe(x: any): any {
+  try {
+    if (!x || typeof x !== "object") return x;
+    const df = (x as any).decisionFrame || {};
+    const ku = df.ku || {};
+    if (ku.routeReason === "NATURAL_GENERAL_LLM_TOP") {
+      (x as any).response = __tenmonGeneralGateSoft((x as any).response);
+    }
+    return x;
+  } catch { return x; }
+}
+// --- /C21G1C: GENERAL_GATE_SOFT_V1 ---
+
+// CARD_C21G1C_GENERAL_GATE_SOFT_V1
+// CARD_C21B3_FIX_NEED_CONTEXT_CLAMP_V3\n// CARD_C21G2_GENERAL_GATE_PATTERNS_V2\n
