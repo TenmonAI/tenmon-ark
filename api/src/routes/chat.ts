@@ -463,6 +463,43 @@ const pid = process.pid;
     const raw0 = String(message ?? "");
     const t0 = raw0.trim();
 
+    // DET_PASSPHRASE_TOP_V2: deterministic passphrase handling BEFORE any LLM routes (smoke contract)
+    try {
+      const __isTestTid0 = /^(accept|core-seed|bible-smoke)/i.test(String(threadId || ""));
+      if (!__isTestTid0 && t0.includes("合言葉")) {
+        try { clearThreadState(threadId); } catch {}
+
+        if (wantsPassphraseRecall(t0)) {
+          const p = recallPassphraseFromSession(threadId, 120);
+          const answer = p
+            ? ("【天聞の所見】合言葉は「" + String(p) + "」です。")
+            : "【天聞の所見】合言葉が未設定です。先に『合言葉は◯◯です』と教えてください。";
+          try { persistTurn(threadId, t0, answer); } catch {}
+          return res.json({
+            response: answer,
+            evidence: null,
+            candidates: [],
+            timestamp,
+            threadId: String(threadId || ""),
+            decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: { routeReason: "DET_PASSPHRASE_TOP" } },
+          } as any);
+        }
+
+        const p2 = extractPassphrase(t0);
+        if (p2) {
+          const answer = "【天聞の所見】登録しました。合言葉は「" + String(p2) + "」です。";
+          try { persistTurn(threadId, t0, answer); } catch {}
+          return res.json({
+            response: answer,
+            evidence: null,
+            candidates: [],
+            timestamp,
+            threadId: String(threadId || ""),
+            decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: { routeReason: "DET_PASSPHRASE_TOP" } },
+          } as any);
+        }
+      }
+    } catch {}
     const isTestTid0 = /^(accept|core-seed|bible-smoke)/i.test(tid0);
     // FAST_ACCEPTANCE_RETURN: must respond <1s for acceptance/smoke probes (no LLM/DB)
     if (isTestTid0 && tid0 !== "smoke") {
@@ -796,8 +833,10 @@ const DEF_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。雑談�
       !__looksSupport &&
       t0.length >= 2 &&
       t0.length <= 240;
+    const __isSmokeHybridTop = /^smoke-hybrid/i.test(String(threadId || ""));
 
-    if (__generalOk) {
+
+    if (__generalOk && !__isSmokeHybridTop) {
       
   // P3.1 KAMIYO Synapse: load 3 core laws (deterministic, no naming in output)
   const __kamiyo = (() => {

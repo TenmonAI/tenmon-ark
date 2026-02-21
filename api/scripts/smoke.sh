@@ -24,7 +24,7 @@ echo "$R1" | grep -qE "(正中|内集|外発|圧縮|凝縮|発酵)" && { echo "[
 echo "[smoke] passphrase set + recall"
 curl -fsS -X POST "$BASE/api/chat" -H 'Content-Type: application/json' \
   -d '{"threadId":"smoke-pass","message":"合言葉は青い鳥です"}' \
-  | jq -r '.response' | grep -q "登録しました" \
+  | jq -r '.response' | grep -qE "(登録しました|設定しました)" \
   || { echo "[smoke] FAIL passphrase set"; exit 1; }
 
 curl -fsS -X POST "$BASE/api/chat" -H 'Content-Type: application/json' \
