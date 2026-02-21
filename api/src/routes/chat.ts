@@ -310,6 +310,7 @@ router.post("/chat", async (req: Request, res: Response<ChatResponseBody>) => {
     return heartModelV1(raw);
   } catch { return { state: "neutral", entropy: 0.25 }; } })();
   console.log(`[HEART] state=${__heart.state} entropy=${Number(__heart.entropy).toFixed(2)}`);
+  __tenmonLastHeart = __heart;
 
   // CARD6C_HANDLER_RESJSON_WRAP_V7: wrap res.json ONCE per request so ALL paths get top-level rewriteUsed/rewriteDelta defaults
   // (covers direct res.json returns that bypass reply())
@@ -3574,6 +3575,13 @@ function __tenmonGeneralGateResultMaybe(x: any): any {
     if (!x || typeof x !== "object") return x;
     const df = (x as any).decisionFrame || {};
     const ku = df.ku || {};
+
+    try {
+      const h = __tenmonLastHeart;
+      if (h && typeof h === "object") {
+        (ku as any).heart = { state: String(h.state || "neutral"), entropy: Number(h.entropy ?? 0.25) };
+      }
+    } catch {}
     if (ku.routeReason === "NATURAL_GENERAL_LLM_TOP") {
       (x as any).response = __tenmonGeneralGateSoft((x as any).response);
     }
@@ -3587,3 +3595,8 @@ function __tenmonGeneralGateResultMaybe(x: any): any {
 // CARD_H1_HEART_MODEL_MOCK_V1
 // CARD_H1B_HEART_OBSERVE_V2
 // FIX_H1Bv2_IMPORT_EXT_V1
+
+// --- H1C: lastHeart bridge (process-local) ---
+let __tenmonLastHeart: any = null;
+// --- /H1C: lastHeart bridge ---
+// CARD_H1C_ATTACH_HEART_TO_DECISIONFRAME_V1
