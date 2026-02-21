@@ -376,7 +376,7 @@ const pid = process.pid;
 
     const isTestTid0 = /^(smoke|accept|core-seed|bible-smoke)/i.test(tid0);
     // FAST_ACCEPTANCE_RETURN: must respond <1s for acceptance/smoke probes (no LLM/DB)
-    if (isTestTid0) {
+    if (isTestTid0 && tid0 !== "smoke") {
       const quick = "【天聞の所見】ログイン前のため、会話は参照ベース（資料検索/整理）で動作します。/login からログインすると通常会話も有効になります？";
       return res.json({
         response: quick,
@@ -3686,3 +3686,4 @@ function __tenmonSupportSanitizeV1(out: string): string {
 // CARD_E0A3_FASTPATH_END_WITH_1Q_V1
 // CARD_E0A4_FASTPATH_EXACT_SMOKE_FALLBACK_V1
 // CARD_E0A6_FASTPATH_SHAPE_MATCH_V1
+// CARD_E0A7_EXCLUDE_SMOKE_FROM_FASTPATH_V1
