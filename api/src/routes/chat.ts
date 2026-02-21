@@ -3575,6 +3575,15 @@ function __tenmonGeneralGateResultMaybe(x: any): any {
     if (!x || typeof x !== "object") return x;
     const df = (x as any).decisionFrame || {};
     const ku = df.ku || {};
+    // H2: compassion wrap for SUPPORT only (routeReason from ku)
+    try {
+      const rr2 = (ku as any).routeReason || "";
+      if (rr2 === "N2_KANAGI_PHASE_TOP") {
+        const h = (ku as any).heart || __tenmonLastHeart || {};
+        (x as any).response = __tenmonCompassionWrapV2((x as any).response, h);
+        (x as any).response = __tenmonSupportSanitizeV1((x as any).response);
+      }
+    } catch {}
 
     try {
       const h = __tenmonLastHeart;
@@ -3600,3 +3609,47 @@ function __tenmonGeneralGateResultMaybe(x: any): any {
 let __tenmonLastHeart: any = null;
 // --- /H1C: lastHeart bridge ---
 // CARD_H1C_ATTACH_HEART_TO_DECISIONFRAME_V1
+
+// --- H2: BUDDHA_SYNAPSE_SAFE_V2 ---
+function __tenmonCompassionPrefixV2(heart: any): string {
+  const st = String(heart?.state || "neutral");
+  if (st === "exhausted" || st === "tired") return "疲れが強い状態です。";
+  if (st === "confused" || st === "anxious") return "迷いが強い状態です。";
+  if (st === "angry") return "怒りが強い状態です。";
+  if (st === "sad" || st === "depressed") return "痛みが強い状態です。";
+  return "";
+}
+function __tenmonCompassionWrapV2(out: string, heart: any): string {
+  let t = String(out || "").replace(/\r/g, "").trim();
+  if (!t) return t;
+  if (!t.startsWith("【天聞の所見】")) t = "【天聞の所見】" + t;
+  const body = t.replace(/^【天聞の所見】\s*/, "");
+  const pref = __tenmonCompassionPrefixV2(heart);
+  if (!pref) return "【天聞の所見】" + body;
+  return "【天聞の所見】" + pref + body;
+}
+// --- /H2 ---
+
+// CARD_H2_BUDDHA_SYNAPSE_SAFE_V2
+
+// --- H2B: SUPPORT_SANITIZE_V1 ---
+function __tenmonSupportSanitizeV1(out: string): string {
+  let t = String(out || "").replace(/\r/g, "").trim();
+  if (!t) return t;
+
+  if (!t.startsWith("【天聞の所見】")) t = "【天聞の所見】" + t;
+
+  // remove hedges (ΔZ)
+  t = t.replace(/かもしれません/g, "").replace(/おそらく/g, "").replace(/多分/g, "");
+
+  // keep only up to first question mark
+  const q = Math.max(t.indexOf("？"), t.indexOf("?"));
+  if (q !== -1) t = t.slice(0, q + 1).trim();
+
+  // cap length
+  if (t.length > 220) t = t.slice(0, 220).replace(/[。、\s　]+$/g, "") + "？";
+
+  return t;
+}
+// --- /H2B ---
+// CARD_H2B_BUDDHA_SYNAPSE_STABILIZE_V1

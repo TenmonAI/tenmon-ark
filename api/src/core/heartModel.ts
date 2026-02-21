@@ -16,7 +16,7 @@ export function heartModelV1(userText: string): HeartScore {
   const t = String(userText || "").replace(/\r/g, "").trim();
 
   // very small deterministic heuristic (no ML)
-  const exhausted = ["疲れた", "しんどい", "もう無理", "限界", "眠い", "消えたい"];
+  const exhausted = ["疲れた", "しんどい", "もう無理", "限界", "眠い", "消えたい", "疲れ", "疲労", "疲弊", "だるい", "何もしたくない", "やる気が出ない"];
   const confused = ["わからない", "どうしたら", "迷う", "混乱", "詰まってる", "正しさって何"];
   const angry = ["ムカつく", "腹立つ", "許せない", "最悪", "うざい", "不快"];
   const sad = ["悲しい", "つらい", "苦しい", "寂しい", "泣きたい"];
@@ -47,3 +47,4 @@ export function compassionPrefixV1(h: HeartScore): string {
       return "";
   }
 }
+// CARD_H2B_BUDDHA_SYNAPSE_STABILIZE_V1
