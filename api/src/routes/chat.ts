@@ -374,7 +374,7 @@ const pid = process.pid;
     const raw0 = String(message ?? "");
     const t0 = raw0.trim();
 
-    const isTestTid0 = /^(smoke|accept|core-seed|bible-smoke)/i.test(tid0);
+    const isTestTid0 = /^(accept|core-seed|bible-smoke)/i.test(tid0);
     // FAST_ACCEPTANCE_RETURN: must respond <1s for acceptance/smoke probes (no LLM/DB)
     if (isTestTid0 && tid0 !== "smoke") {
       const quick = "【天聞の所見】ログイン前のため、会話は参照ベース（資料検索/整理）で動作します。/login からログインすると通常会話も有効になります？";
@@ -838,7 +838,7 @@ let outText = "";
   try {
     const __t0 = String(message || "").trim();
     const __isGreeting0 = /^(こんにちは|こんばんは|おはよう|やあ|hi|hello|hey)\s*[！!。．\.]?$/i.test(__t0);
-    const __isTestTid0 = /^(smoke|accept|core-seed|bible-smoke)/i.test(String(threadId || ""));
+    const __isTestTid0 = /^(accept|core-seed|bible-smoke)/i.test(String(threadId || ""));
     if (!__isTestTid0 && __isGreeting0) {
       return res.status(200).json({
         response: "こんにちは。今日は何を一緒に整えますか？（相談でも、概念の定義でもOK）？",
@@ -857,7 +857,7 @@ let outText = "";
   try {
     const t0 = String(message || "").trim();
     const tid0 = String(threadId || "");
-    const isTestTid0 = /^(smoke|accept|core-seed|bible-smoke)/i.test(tid0);
+    const isTestTid0 = /^(accept|core-seed|bible-smoke)/i.test(tid0);
 
     const isWho =
       /^(あなた|君|きみ)\s*(は)?\s*(だれ|誰|なにもの|何者)\s*[？?]?\s*$/i.test(t0) ||
@@ -1014,7 +1014,7 @@ let outText = "";
             const raw3 = String((obj as any)?.rawMessage ?? (obj as any)?.message ?? message ?? "");
             const t3 = raw3.trim();
 
-            const isTestTid = /^(smoke|accept|core-seed|bible-smoke)/i.test(tid3);
+            const isTestTid = /^(accept|core-seed|bible-smoke)/i.test(tid3);
             const askedMenu = /^\s*(?:\/menu|menu)\b/i.test(t3) || /^\s*メニュー\b/.test(t3);
             const hasDoc = /\bdoc\b/i.test(t3) || /pdfPage\s*=\s*\d+/i.test(t3) || /#詳細/.test(t3);
 
@@ -1037,7 +1037,7 @@ let outText = "";
             const tid4 = String(threadId ?? "");
             const userMsg = String((obj as any)?.rawMessage ?? (obj as any)?.message ?? message ?? "").trim();
 
-            const isTestTid = /^(smoke|accept|core-seed|bible-smoke)/i.test(tid4);
+            const isTestTid = /^(accept|core-seed|bible-smoke)/i.test(tid4);
             const askedMenu = /^\s*(?:\/menu|menu)\b/i.test(userMsg) || /^\s*メニュー\b/.test(userMsg);
             const looksSmalltalk = /^(雑談|疲れ|つかれ|励まして|元気|しんどい|眠い|だるい|話して|きいて)/.test(userMsg) || userMsg.length <= 24;
 
@@ -1070,7 +1070,7 @@ let outText = "";
             const tid5 = String(threadId ?? "");
             const userMsg5 = String((obj as any)?.rawMessage ?? (obj as any)?.message ?? message ?? "").trim();
 
-            const isTestTid5 = /^(smoke|accept|core-seed|bible-smoke)/i.test(tid5);
+            const isTestTid5 = /^(accept|core-seed|bible-smoke)/i.test(tid5);
             const askedMenu5 = /^\s*(?:\/menu|menu)\b/i.test(userMsg5) || /^\s*メニュー\b/.test(userMsg5);
             const looksSmalltalk5 =
               /^(雑談|疲れ|つかれ|励まして|元気|しんどい|眠い|だるい|話して|きいて)/.test(userMsg5) ||
@@ -1120,7 +1120,7 @@ let outText = "";
             const tid6 = String(threadId ?? "");
             const userMsg6 = String((obj as any)?.rawMessage ?? (obj as any)?.message ?? message ?? "").trim();
 
-            const isTestTid6 = /^(smoke|accept|core-seed|bible-smoke)/i.test(tid6);
+            const isTestTid6 = /^(accept|core-seed|bible-smoke)/i.test(tid6);
             const askedMenu6 = /^\s*(?:\/menu|menu)\b/i.test(userMsg6) || /^\s*メニュー\b/.test(userMsg6);
                         const looksSmalltalk6 =
               /^(雑談|疲れ|つかれ|励まして|元気|しんどい|眠い|だるい|話して|きいて)/.test(userMsg6) ||
@@ -2524,7 +2524,7 @@ if (usable.length === 0) {
     // N2_KANAGI_4PHASE_V1: Kanagi 4-phase micro state machine to avoid template repetition (NATURAL only)
     try {
       const __tid = String(threadId || "");
-      const __isTestTid = /^(smoke|accept|core-seed|bible-smoke)/i.test(__tid);
+      const __isTestTid = /^(accept|core-seed|bible-smoke)/i.test(__tid);
       const __msg = String(message || "");
       const __askedMenu = /^\s*(?:\/menu|menu)\b/i.test(__msg) || /^\s*メニュー\b/.test(__msg);
       const __hasDoc = /\bdoc\b/i.test(__msg) || /pdfPage\s*=\s*\d+/i.test(__msg) || /#詳細/.test(__msg);
@@ -3687,3 +3687,4 @@ function __tenmonSupportSanitizeV1(out: string): string {
 // CARD_E0A4_FASTPATH_EXACT_SMOKE_FALLBACK_V1
 // CARD_E0A6_FASTPATH_SHAPE_MATCH_V1
 // CARD_E0A7_EXCLUDE_SMOKE_FROM_FASTPATH_V1
+// CARD_E0A8_EXCLUDE_SMOKE_FROM_ISTESTTID0_V1
