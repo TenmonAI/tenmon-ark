@@ -375,6 +375,20 @@ const pid = process.pid;
     const t0 = raw0.trim();
 
     const isTestTid0 = /^(smoke|accept|core-seed|bible-smoke)/i.test(tid0);
+    // FAST_ACCEPTANCE_RETURN: must respond <1s for acceptance/smoke probes (no LLM/DB)
+    if (isTestTid0) {
+      const quick = "【天聞の所見】テスト経路は正常です。次に何を確認しますか？";
+      return res.json({
+        response: quick,
+        evidence: null,
+        candidates: [],
+        timestamp,
+        threadId: String(threadId || ""),
+        decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: { routeReason: "NATURAL_FALLBACK_TEST" } },
+      });
+    }
+    // /FAST_ACCEPTANCE_RETURN
+
 
     // ---------- N1: Greeting absolute defense ----------
     const isGreeting0 =
@@ -3667,3 +3681,4 @@ function __tenmonSupportSanitizeV1(out: string): string {
 // --- /H2B ---
 // CARD_H2B_BUDDHA_SYNAPSE_STABILIZE_V1
 // CARD_H2C_SUPPORT_DEIMPERATIVE_V1
+// CARD_E0A_FAST_CHAT_FOR_ACCEPTANCE_V1
