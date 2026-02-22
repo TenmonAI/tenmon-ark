@@ -1,0 +1,15 @@
+cat >"/Users/sarutahiko/DOMAIN_GLOSSARY_KHS_v1.tsv" <<'TSV'
+termKey	term	reading	short_def	long_def	tags	sourceRef
+khs_meta	国学第一の書	こくがくだいいちのしょ	仮名のみで万象を解く学	引書に依らず仮名のみで万象を聞き分く。常学に非ず。	governance|purification	doc=NOTION:PAGE:1ea6f17926004a19953e3b478ad0a596 pdfPage=2
+a	ア	あ	五十連の惣名	無にして有。五十連の総名として基底に置かれる。	center|manifestation	doc=NOTION:PAGE:af58bef540844ff59f19775177c8f3e8 pdfPage=415
+ame	アメ	あめ	空中水の回転	ア（空中の水灵）＋メ（回転）＝天（アメ）。	cycle|correspondence	doc=NOTION:PAGE:af58bef540844ff59f19775177c8f3e8 pdfPage=415
+wa	ワ	わ	国土・形の宰	水火の灵。国土として形を宰る。	polarity|manifestation	doc=NOTION:PAGE:efc23543a4284d8199d3b8c9ef6e6fbe pdfPage=420
+iki	水火	いき	動水／動火	水=動く側、火=動かす側。形は火が水を動かして顕れる。	polarity|manifestation	doc=NOTION:PAGE:eed52861641d4d32ac88f3755c4c7a89 pdfPage=479
+manaka	正中	まなか	中心核	天地の正中。ゝ（凝）が立ち、水火別を起こす。	center|governance	doc=NOTION:PAGE:6beb2c055ef24cf6b60cecbeb1b7847a pdfPage=97
+kori	ゝ（凝）	こり	中心火の凝	正中に生じ、水火別の起点となる。	center	doc=NOTION:PAGE:6beb2c055ef24cf6b60cecbeb1b7847a pdfPage=97
+ikiwakare	水火別	いきわかれ	水火の上下配属	水は軽して昇り天を宰、火は重して降り地を宰る。	polarity|order	doc=NOTION:PAGE:6beb2c055ef24cf6b60cecbeb1b7847a pdfPage=97
+mitsu	井の灵	みつ	搦む循環の灵	天地人を搦む循環として働く。	carami|cycle	doc=NOTION:PAGE:787022dcfae94d2da708a74fea467dd1 pdfPage=99
+monoif	モノイフ	ものいう	言の発動	人の発語が天地の水火（イキ）を動かす。	breath|manifestation	doc=NOTION:PAGE:f73058b2b18947b5afe5110fa6b312ea pdfPage=101
+g50on	五十連	いそづら	五十音体系	三行（君位）と八行（臣）を持つ秩序体系。	governance|correspondence	doc=NOTION:PAGE:c69b831fb5e24de99b89bf6ccc39874d pdfPage=24
+turbidity	濁/澄	にごり/すみ	方向の規則	澄む=上り、濁る=降る。	purification|polarity	doc=NOTION:PAGE:71974cfd35a54e6fbbe120bd17297bb8 pdfPage=449
+TSV

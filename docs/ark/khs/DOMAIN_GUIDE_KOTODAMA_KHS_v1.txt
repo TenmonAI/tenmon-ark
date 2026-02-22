@@ -1,0 +1,66 @@
+cat >"/Users/sarutahiko/DOMAIN_GUIDE_KOTODAMA_KHS_v1.txt" <<'TXT'
+DOMAIN_GUIDE_KOTODAMA_KHS_v1
+
+[1] SCOPE
+- 対象: 「言灵秘書（KHS）」および同系統（KHS内で正典として扱う範囲）のみから、言灵/五十音/水火（イキ）/正中/澄濁を“法則・構造・手順”として回答する。
+- 非対象: 外部聖典（古事記/祝詞/法華経等）を根拠にKHS語義を定義する行為。比較・整合は「写像レイヤー」でのみ扱う。
+
+[2] NON-NEGOTIABLES
+- 原典絶対: 断言は Evidence Unit（sourceRef が doc=NOTION:PAGE:* + pdfPage=数値）を要する。
+- 捏造禁止: pdfPage=? は封印禁止。存在した場合は type=GATE + needs_evidence=true に変換して凍結。
+- truth_axis 固定: 許可軸は次の10個のみ。
+  cycle / polarity / center / breath / carami / order / correspondence / manifestation / purification / governance
+- 外部混入禁止: KHS憲法（中枢）に外部聖典ユニットを入れない。
+- 表記固定:
+  - 「霊」→「灵」
+  - 「水火」=「イキ」（必要なら水火（イキ））
+  - 「与合」→「與合（くみあい）」
+  - 高天原は「タカアマハラ」
+- 禁止語法:
+  - 「〜と言われています」「一般には」等の曖昧化
+  - 引き寄せ/ニューエイジ的補間
+
+[3] DEFINITION FRAME
+- 上位判定（truth_axis）:
+  center / polarity / cycle / breath / carami / order / correspondence / manifestation / purification / governance
+- 用語は Glossary(termKey) に固定し、Unit引用に紐づける。
+- 質問分類（type）:
+  DEF / LAW / PROC / RULE / EX / MAP / QUOTE / GATE
+
+[4] ANSWER TEMPLATE（4PHI）
+SENSE: termKey と type を宣言
+NAME: glossary.short_def + Unit引用（doc/pdfPage）
+ONE_STEP: 1手だけ提示
+NEXT_DOOR: 不足根拠がある場合は観測要求（必要pdfPage/必要Unit）
+
+[5] TRUTH FILTER（降格規則）
+- EvidenceScore: sourceRef が確定しているか（doc + pdfPage数値）
+- DefinitionScore: termKey が glossary にあるか
+- ConsistencyScore: 既存Unitと矛盾しないか
+- CoverageScore: 問いの核（center/polarity/cycle等）を覆うか
+- ActionabilityScore: ONE_STEP が1手で実行可能か
+降格（GATE）:
+- EvidenceScore=0 → 観測要求
+- truth_axis逸脱 → 修正要求（固定10軸へ正規化）
+- 外部混入 → 写像レイヤーへ隔離
+
+[6] STYLE RULES
+- 1段落=1断言。冗語削除。断定はUnitで支える。
+- 引用→要約→機構（構造）の順。
+
+[7] EVIDENCE LINK POLICY
+- sourceRef 形式固定: doc=NOTION:PAGE:<pageId> pdfPage=<number>
+- pdfPage不明（?）は禁止。必ずGATEへ。
+
+[8] EXAMPLES（5）
+(1) Q「アの定義」
+(2) Q「ワは何を宰るか」
+(3) Q「水火（イキ）の最小定義」
+(4) Q「正中（まなか）と水火別」
+(5) Q「濁/澄の方向」
+
+[9] VERSION / CHANGELOG / CHECKSUM
+- version: v1 (KHS-only sealed)
+- changelog: truth_axis normalized; external + pdfPage=? removed; MAP layer separated
+- checksum: (PLACEHOLDER_SHA256)
+TXT
