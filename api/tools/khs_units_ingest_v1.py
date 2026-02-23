@@ -63,8 +63,8 @@ def main():
     ap.add_argument("--db", default="/opt/tenmon-ark-data/kokuzo.sqlite")
     ap.add_argument("--head", type=int, default=600)
     ap.add_argument("--limit", type=int, default=500)
-ap.add_argument("--allow-doc", action="append", default=[], help="Allow doc name (repeatable). Default: KHS set")
-ap.add_argument("--dry-run", action="store_true", help="List candidate docs/counts only; no DB writes")
+    ap.add_argument("--allow-doc", action="append", default=[], help="Allow doc name (repeatable). Default: KHS set")
+    ap.add_argument("--dry-run", action="store_true", help="List candidate docs/counts only; no DB writes")
     args = ap.parse_args()
 
     t0 = time.time()
@@ -72,7 +72,7 @@ ap.add_argument("--dry-run", action="store_true", help="List candidate docs/coun
     conn.execute("PRAGMA journal_mode=WAL;")
     conn.execute("PRAGMA synchronous=NORMAL;")
 
-        # C0_3_KHS_SELECTOR_V1 dry-run: show candidate doc counts and exit
+    # C0_3_KHS_SELECTOR_V1 dry-run: show candidate doc counts and exit
     allow_docs = args.allow_doc if args.allow_doc else []
     if args.dry_run:
         allow = allow_docs if allow_docs else DEFAULT_ALLOW_DOCS[:]
@@ -85,7 +85,7 @@ ap.add_argument("--dry-run", action="store_true", help="List candidate docs/coun
         print("[DRYRUN] counts:")
         for d, c in rows:
             print(" -", d, c)
-        # Show if any forbidden doc (sutra) sneaks in (should not)
+    # Show if any forbidden doc (sutra) sneaks in (should not)
         bad = conn.execute(
             "SELECT doc, COUNT(*) FROM kokuzo_pages WHERE doc IN ('HANNYA','HOKKE') GROUP BY doc ORDER BY doc ASC;"
         ).fetchall()
