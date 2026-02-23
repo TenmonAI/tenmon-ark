@@ -175,3 +175,86 @@ CREATE TABLE IF NOT EXISTS kokuzo_restore_suggestions (
 CREATE INDEX IF NOT EXISTS idx_kokuzo_restore_doc_page
   ON kokuzo_restore_suggestions(doc, pdfPage);
 
+-- ============================================================
+-- C0_KHS_SCHEMA_V1: KHS normalized law schema (tables only)
+-- NOTE: Observability + canonicalization only. No routing/chat behavior changes.
+-- ============================================================
+
+-- khs_units: minimal grounded quote unit (doc/pdfPage/quote)
+CREATE TABLE IF NOT EXISTS khs_units (
+  unitId    TEXT PRIMARY KEY,
+  doc       TEXT NOT NULL,
+  pdfPage   INTEGER,
+  quote     TEXT NOT NULL,
+  quoteHash TEXT NOT NULL,
+  locHint   TEXT NOT NULL DEFAULT '',
+  createdAt TEXT NOT NULL DEFAULT (datetime('now')),
+  updatedAt TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_khs_units_doc     ON khs_units(doc);
+CREATE INDEX IF NOT EXISTS idx_khs_units_pdfPage ON khs_units(pdfPage);
+
+-- khs_terms: stable termKey to kill term drift
+CREATE TABLE IF NOT EXISTS khs_terms (
+  termKey   TEXT PRIMARY KEY,
+  display   TEXT NOT NULL,
+  reading   TEXT NOT NULL DEFAULT '',
+  norm      TEXT NOT NULL DEFAULT '',
+  aliasJson TEXT NOT NULL DEFAULT '[]',
+  createdAt TEXT NOT NULL DEFAULT (datetime('now')),
+  updatedAt TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- khs_laws: law objects anchored to a grounded unit
+CREATE TABLE IF NOT EXISTS khs_laws (
+  lawKey        TEXT PRIMARY KEY,
+  lawType       TEXT NOT NULL,                   -- DEF|LAW|RULE|PROC|EXAMPLE
+  title         TEXT NOT NULL DEFAULT '',
+  summary       TEXT NOT NULL DEFAULT '',         -- extracted only (no free generation)
+  termKey       TEXT NOT NULL DEFAULT '',
+  operator      TEXT NOT NULL DEFAULT '',         -- OP_DEFINE|OP_CLASSIFY|OP_CONSTRAIN|OP_REWRITE|OP_PLAN|OP_REFLECT
+  truthAxis     TEXT NOT NULL DEFAULT '',         -- CANON|INTERPRET|PRACTICE|HISTORY|WARNING
+  waterFireClass TEXT NOT NULL DEFAULT '',        -- WF_* enum only (no free text)
+  conditionJson TEXT NOT NULL DEFAULT '{}',
+  verdictJson   TEXT NOT NULL DEFAULT '{}',
+  unitId        TEXT NOT NULL,
+  status        TEXT NOT NULL DEFAULT 'proposed', -- proposed|verified|rejected
+  confidence    REAL NOT NULL DEFAULT 0,
+  createdAt     TEXT NOT NULL DEFAULT (datetime('now')),
+  updatedAt     TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_khs_laws_type   ON khs_laws(lawType);
+CREATE INDEX IF NOT EXISTS idx_khs_laws_term   ON khs_laws(termKey);
+CREATE INDEX IF NOT EXISTS idx_khs_laws_status ON khs_laws(status);
+CREATE INDEX IF NOT EXISTS idx_khs_laws_unit   ON khs_laws(unitId);
+
+-- khs_edges: evidence-backed edges only (no guessed relations)
+CREATE TABLE IF NOT EXISTS khs_edges (
+  edgeId     TEXT PRIMARY KEY,
+  fromLawKey TEXT NOT NULL,
+  toLawKey   TEXT NOT NULL,
+  edgeType   TEXT NOT NULL,                      -- SUPPORTS|REFUTES|REQUIRES|DERIVES|EXPLAINS
+  unitId     TEXT NOT NULL,
+  status     TEXT NOT NULL DEFAULT 'proposed',    -- proposed|verified|rejected
+  createdAt  TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_khs_edges_from ON khs_edges(fromLawKey);
+CREATE INDEX IF NOT EXISTS idx_khs_edges_to   ON khs_edges(toLawKey);
+
+-- khs_apply_log: per-turn trace (optional; used in C phase)
+CREATE TABLE IF NOT EXISTS khs_apply_log (
+  applyId    TEXT PRIMARY KEY,
+  threadId   TEXT NOT NULL,
+  turnId     TEXT NOT NULL,
+  mode       TEXT NOT NULL,                      -- NATURAL|HYBRID|GROUNDED
+  deltaSJson TEXT NOT NULL DEFAULT '{}',
+  lawKey     TEXT NOT NULL,
+  unitId     TEXT NOT NULL,
+  applyOp    TEXT NOT NULL,
+  decisionJson TEXT NOT NULL DEFAULT '{}',
+  createdAt  TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_khs_apply_thread ON khs_apply_log(threadId);
+CREATE INDEX IF NOT EXISTS idx_khs_apply_law    ON khs_apply_log(lawKey);
+
+-- /C0_KHS_SCHEMA_V1
