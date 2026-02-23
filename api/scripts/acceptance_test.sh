@@ -109,7 +109,7 @@ http_get_json() {
   local tmp
   tmp="$(mktemp)"
   local code
-  code="$(curl -sS -m 1 -o "$tmp" -w '%{http_code}' "$@" "$url" || echo 000)"
+  code="$(curl -sS -m 2 -o "$tmp" -w '%{http_code}' "$@" "$url" || echo 000)"
   local body
   body="$(cat "$tmp" 2>/dev/null || true)"
   rm -f "$tmp"
