@@ -41,7 +41,10 @@ echo "[deploy] wait 127.0.0.1:3000/api/audit"
 OK=""
 for i in $(seq 1 30); do
 OK=""
+# B2V2_DEPLOY_AUDIT_WAIT_QUIET_V1: print post-smoke audit wait banner only once (no behavior change)
+if [ "${ATTEMPTS:-0}" -le 1 ]; then
 echo "[deploy] wait localhost /api/audit (post-smoke)"
+fi
 OK=""
 ATTEMPTS=0
 for i in $(seq 1 50); do
