@@ -2,36 +2,37 @@
 import argparse, hashlib, sqlite3, sys, time
 from typing import List, Tuple
 
-KEYWORDS = ["言灵秘書", "五十行一言法則", "いろは言灵解", "カタカムナ"]
+KEYWORDS = ["言灵秘書", "五十行一言法則", "いろは言灵解", "カタカムナ"]  # legacy (default OFF)
+DEFAULT_ALLOW_DOCS = ["KHS", "言霊秘書.pdf", "KHS_UTF8"]  # C0_3_KHS_SELECTOR_V1
 
 def sha256_hex(s: str) -> str:
     return hashlib.sha256(s.encode("utf-8")).hexdigest()
 
-def pick_candidates(conn: sqlite3.Connection, limit: int) -> List[Tuple[str, str]]:
-    # C-0-2 v1: deterministic and simple selector (refine in C-0-3)
-    where = []
-    params: List[str] = []
+def pick_candidates(conn: sqlite3.Connection, limit: int, allow_docs: List[str]) -> List[Tuple[str, str]]:
+    """
+    C0_3_KHS_SELECTOR_V1:
+      Default selector is doc-allowlist ONLY (prevents sutra bleed: HANNYA/HOKKE).
+      Text-keyword selector is not used by default (kept only as legacy constant).
+    """
+    allow = [d.strip() for d in (allow_docs or []) if str(d).strip()]
+    if not allow:
+        allow = DEFAULT_ALLOW_DOCS[:]  # deterministic fallback
 
-    where.append("(doc LIKE ? OR doc LIKE ?)")
-    params += ["%khs%", "%KHS%"]
-
-    kw_where = " OR ".join(["text LIKE ?"] * len(KEYWORDS))
-    where.append(f"({kw_where})")
-    params += [f"%{k}%" for k in KEYWORDS]
-
+    qs = ",".join(["?"] * len(allow))
     sql = f"""
       SELECT doc, text
       FROM kokuzo_pages
-      WHERE ({' OR '.join(where)})
+      WHERE doc IN ({qs})
       ORDER BY doc ASC
       LIMIT ?
     """
-    params.append(str(limit))
+    params = list(allow) + [str(limit)]
     cur = conn.execute(sql, params)
-    return [(str(r[0]), str(r[1] or "")) for r in cur.fetchall()]
+    rows = [(str(r[0]), str(r[1] or "")) for r in cur.fetchall()]
+    return rows
 
-def ingest(conn: sqlite3.Connection, head_chars: int, limit: int) -> int:
-    candidates = pick_candidates(conn, limit=limit)
+def ingest(conn: sqlite3.Connection, head_chars: int, limit: int, allow_docs: List[str]) -> int:
+    candidates = pick_candidates(conn, limit=limit, allow_docs=allow_docs)
     ins = 0
     for doc, text in candidates:
         t = (text or "").strip()
@@ -62,6 +63,8 @@ def main():
     ap.add_argument("--db", default="/opt/tenmon-ark-data/kokuzo.sqlite")
     ap.add_argument("--head", type=int, default=600)
     ap.add_argument("--limit", type=int, default=500)
+ap.add_argument("--allow-doc", action="append", default=[], help="Allow doc name (repeatable). Default: KHS set")
+ap.add_argument("--dry-run", action="store_true", help="List candidate docs/counts only; no DB writes")
     args = ap.parse_args()
 
     t0 = time.time()
@@ -69,7 +72,27 @@ def main():
     conn.execute("PRAGMA journal_mode=WAL;")
     conn.execute("PRAGMA synchronous=NORMAL;")
 
-    n = ingest(conn, head_chars=args.head, limit=args.limit)
+        # C0_3_KHS_SELECTOR_V1 dry-run: show candidate doc counts and exit
+    allow_docs = args.allow_doc if args.allow_doc else []
+    if args.dry_run:
+        allow = allow_docs if allow_docs else DEFAULT_ALLOW_DOCS[:]
+        qs = ",".join(["?"] * len(allow))
+        rows = conn.execute(
+            f"SELECT doc, COUNT(*) FROM kokuzo_pages WHERE doc IN ({qs}) GROUP BY doc ORDER BY doc ASC;",
+            allow
+        ).fetchall()
+        print("[DRYRUN] allow_docs=", allow)
+        print("[DRYRUN] counts:")
+        for d, c in rows:
+            print(" -", d, c)
+        # Show if any forbidden doc (sutra) sneaks in (should not)
+        bad = conn.execute(
+            "SELECT doc, COUNT(*) FROM kokuzo_pages WHERE doc IN ('HANNYA','HOKKE') GROUP BY doc ORDER BY doc ASC;"
+        ).fetchall()
+        print("[DRYRUN] known sutra docs present (for reference):", bad)
+        return
+
+    n = ingest(conn, head_chars=args.head, limit=args.limit, allow_docs=allow_docs)
     total = conn.execute("SELECT COUNT(*) FROM khs_units;").fetchone()[0]
     print(f"[OK] inserted={n} total_khs_units={total} elapsed_s={time.time()-t0:.2f}")
 
