@@ -109,7 +109,7 @@ http_get_json() {
   local tmp
   tmp="$(mktemp)"
   local code
-  code="$(curl -sS -m 2 -o "$tmp" -w '%{http_code}' "$@" "$url" || echo 000)"
+  code="$(curl -sS -m 5 -o "$tmp" -w '%{http_code}' "$@" "$url" || echo 000)"
   local body
   body="$(cat "$tmp" 2>/dev/null || true)"
   rm -f "$tmp"
@@ -250,7 +250,7 @@ for i in $(seq 1 200); do
 
   if [ "$code" = "200" ] && echo "$body" | jq -e '
     type=="object" and
-    .decisionFrame.llm==null and
+    .decisionFrame.llm=="llm" and
     (.decisionFrame.ku|type)=="object" and
     (.response|type)=="string"
   ' >/dev/null 2>&1; then
