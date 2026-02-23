@@ -85,3 +85,6 @@ def main():
     print(" -", u1, args.notion_doc, args.page)
     print(" -", u2, args.pdf_doc, args.page)
 
+
+if __name__ == "__main__":
+    main()
