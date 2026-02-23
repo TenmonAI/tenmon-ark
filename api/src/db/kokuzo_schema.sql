@@ -258,3 +258,22 @@ CREATE INDEX IF NOT EXISTS idx_khs_apply_thread ON khs_apply_log(threadId);
 CREATE INDEX IF NOT EXISTS idx_khs_apply_law    ON khs_apply_log(lawKey);
 
 -- /C0_KHS_SCHEMA_V1
+
+-- B2_VERIFIER_LOG_TABLE_V1 (audit-only; no behavior change)
+CREATE TABLE IF NOT EXISTS khs_verifier_log (
+  verifierId TEXT PRIMARY KEY,      -- deterministic id
+  createdAt  TEXT NOT NULL DEFAULT (datetime('now')),
+  pdfUnitId  TEXT NOT NULL,
+  otherUnitId TEXT NOT NULL,
+  rawRatio   REAL NOT NULL,
+  normRatio  REAL NOT NULL,
+  threshold  REAL NOT NULL,
+  verdict    TEXT NOT NULL,         -- PASS|FAIL
+  reason     TEXT NOT NULL DEFAULT '',
+  metaJson   TEXT NOT NULL DEFAULT '{}'  -- holds full verdicts.json or subset
+);
+
+CREATE INDEX IF NOT EXISTS idx_khs_verifier_log_createdAt ON khs_verifier_log(createdAt);
+CREATE INDEX IF NOT EXISTS idx_khs_verifier_log_pdfUnitId ON khs_verifier_log(pdfUnitId);
+CREATE INDEX IF NOT EXISTS idx_khs_verifier_log_otherUnitId ON khs_verifier_log(otherUnitId);
+CREATE INDEX IF NOT EXISTS idx_khs_verifier_log_verdict ON khs_verifier_log(verdict);
