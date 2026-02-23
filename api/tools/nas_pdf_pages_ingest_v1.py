@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# C0_10A2_FIX_INSERT_PDFPAGE_V1: write into kokuzo_pages(doc,pdfPage,text) (schema-aligned)
 import argparse, hashlib, sqlite3, sys, time
 from pathlib import Path
 
@@ -70,12 +71,10 @@ def main():
     # doc = <doc>#p<NNN>  (deterministic)
     # This avoids schema assumptions.
     inserted = 0
-    for (d, pno, txt) in page_rows:
-        page_doc = f"{d}#p{pno:04d}"
-        # Insert into kokuzo_pages as (doc,text). Keep it minimal; other columns default.
+    for (d, pno, txt) in page_rows:        # Insert into kokuzo_pages as (doc,text). Keep it minimal; other columns default.
         cur = conn.execute(
-            "INSERT OR IGNORE INTO kokuzo_pages(doc, text) VALUES(?, ?);",
-            (page_doc, txt)
+            "INSERT OR IGNORE INTO kokuzo_pages(doc, pdfPage, text) VALUES(?, ?, ?);",
+            (d, pno, txt)
         )
         if cur.rowcount and cur.rowcount > 0:
             inserted += 1
