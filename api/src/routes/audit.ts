@@ -3,8 +3,32 @@ import { getGitSha } from "../version.js";
 import { getReadiness } from "../health/readiness.js";
 
 
+/**
+ * B1_CONSTITUTION_HASHES_V2
+ * audit-only observability: expose constitution sha256 (first token).
+ * No routing/chat behavior changes.
+ */
+function __readSha256FirstToken(p: string): string | null {
+  try {
+    const txt = String(fs.readFileSync(p, "utf8") || "").trim();
+    const tok = txt.split(/\s+/)[0];
+    return tok && tok.length >= 32 ? tok : null;
+  } catch {
+    return null;
+  }
+}
+function __constitutionHashes(): Record<string, string | null> {
+  const base = "/opt/tenmon-ark-data/constitution";
+  return {
+    OMEGA_CONTRACT_v1: __readSha256FirstToken(base + "/OMEGA_CONTRACT_v1.sha256"),
+    PDCA_BUILD_CONTRACT_v1: __readSha256FirstToken(base + "/TENMON-ARK_PDCA_BUILD_CONTRACT_v1.sha256"),
+    KHS_RUNTIME_CONTRACT_v1: __readSha256FirstToken(base + "/TENMON-ARK_KHS_RUNTIME_INTEGRATION_CONTRACT_v1.sha256"),
+  };
+}
+
 const BUILD_FEATURES_KOSHIKI = { ...BUILD_FEATURES, koshikiKernel: true } as const;
 import { BUILD_MARK, BUILD_FEATURES } from "../build/buildInfo.js";
+import * as fs from "fs"; // B1_CONSTITUTION_HASHES_V2
 const router = Router();
 router.get("/audit", (_req: Request, res: Response) => {
   const handlerTime = Date.now();
@@ -29,6 +53,7 @@ router.get("/audit", (_req: Request, res: Response) => {
     }
     // Ready: 200 OK
     return res.json({
+  constitution: { ...__constitutionHashes() },
       ok: true,
       timestamp: new Date().toISOString(),
       gitSha,
