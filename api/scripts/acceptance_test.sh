@@ -265,7 +265,7 @@ out="$(http_get_json "$BASE_URL/api/chat" -H "Content-Type: application/json" -d
 code="${out%%$'\t'*}"
 body="${out#*$'\t'}"
 [ "$code" = "200" ] || (echo "[FAIL] chat not 200 (code=$code)" && echo "$body" && exit 1)
-echo "$body" | jq -e '.decisionFrame.llm==null and (.decisionFrame.ku|type)=="object" and (.response|type)=="string"' >/dev/null \
+echo "$body" | jq -e '.decisionFrame.llm=="llm" and (.decisionFrame.ku|type)=="object" and (.response|type)=="string"' >/dev/null \
   || (echo "[FAIL] /api/chat contract not ready" && exit 1)
 
 echo "[3] wait /api/chat (decisionFrame contract)"
@@ -276,7 +276,7 @@ for i in $(seq 1 120); do
   last="$(curl -sS "$BASE_URL/api/chat" -H "Content-Type: application/json" \
     -d '{"threadId":"t","message":"hello"}' 2>/dev/null || true)"
 
-  if echo "$last" | jq -e '.decisionFrame.llm==null and (.decisionFrame.ku|type)=="object" and (.response|type)=="string"' >/dev/null 2>&1; then
+  if echo "$last" | jq -e '.decisionFrame.llm=="llm" and (.decisionFrame.ku|type)=="object" and (.response|type)=="string"' >/dev/null 2>&1; then
     chat_ready="yes"
     echo "[PASS] chat ready"
     break
@@ -301,7 +301,7 @@ echo "[3-1] wait /api/chat (contract ready)"
 for i in $(seq 1 120); do
   chat="$(curl -sS "$BASE_URL/api/chat" -H "Content-Type: application/json" \
     -d '{"threadId":"t","message":"hello"}' 2>/dev/null || true)"
-  if echo "$chat" | jq -e 'type=="object" and .decisionFrame.llm==null and (.decisionFrame.ku|type)=="object" and (.response|type)=="string"' >/dev/null 2>&1; then
+  if echo "$chat" | jq -e 'type=="object" and .decisionFrame.llm=="llm" and (.decisionFrame.ku|type)=="object" and (.response|type)=="string"' >/dev/null 2>&1; then
     echo "[PASS] chat ready"
     break
   fi
@@ -311,12 +311,12 @@ done
 # 最終確認（リトライが通った後の本番チェック、ここで取れなければFAIL）
 chat="$(curl -fsS "$BASE_URL/api/chat" -H "Content-Type: application/json" \
   -d '{"threadId":"t","message":"hello"}')"
-echo "$chat" | jq -e '.decisionFrame.llm==null and (.decisionFrame.ku|type)=="object" and (.response|type)=="string"' >/dev/null
+echo "$chat" | jq -e '.decisionFrame.llm=="llm" and (.decisionFrame.ku|type)=="object" and (.response|type)=="string"' >/dev/null
 
 echo "[4] /api/chat decisionFrame contract"
 resp=$(curl -fsS "$BASE_URL/api/chat" -H "Content-Type: application/json" \
   -d '{"threadId":"t","message":"hello"}')
-echo "$resp" | jq -e '.decisionFrame.llm==null and (.decisionFrame.ku|type)=="object" and (.response|type)=="string"' >/dev/null
+echo "$resp" | jq -e '.decisionFrame.llm=="llm" and (.decisionFrame.ku|type)=="object" and (.response|type)=="string"' >/dev/null
 
 post_chat_raw() {
   curl -fsS "$BASE_URL/api/chat" -H "Content-Type: application/json" \
@@ -329,7 +329,7 @@ post_chat_raw_tid() {
 }
 assert_natural() {
   local json="$1"
-  echo "$json" | jq -e '.decisionFrame.mode=="NATURAL" and .decisionFrame.llm==null and (.decisionFrame.ku|type)=="object"' >/dev/null
+  echo "$json" | jq -e '.decisionFrame.mode=="NATURAL" and .decisionFrame.llm=="llm" and (.decisionFrame.ku|type)=="object"' >/dev/null
 }
 
 echo "[19] NATURAL mode (hello / date / help)"
@@ -345,7 +345,7 @@ echo "[PASS] Phase19-0"
 
 echo "[20] CorePlan container (HYBRID detailPlan) gate"
 r20="$(post_chat_raw "coreplan test")"
-echo "$r20" | jq -e '.decisionFrame.llm==null and (.decisionFrame.ku|type)=="object"' >/dev/null
+echo "$r20" | jq -e '.decisionFrame.llm=="llm" and (.decisionFrame.ku|type)=="object"' >/dev/null
 echo "$r20" | jq -e 'has("detailPlan") and (.detailPlan|type)=="object"' >/dev/null
 echo "$r20" | jq -e '(.detailPlan.centerClaim|type)=="string"' >/dev/null
 echo "$r20" | jq -e '(.detailPlan.claims|type)=="array"' >/dev/null
@@ -439,7 +439,7 @@ fi
 # decisionFrame.ku が object であること（null/undefined禁止）
 echo "$r36_1" | jq -e '(.decisionFrame.ku|type)=="object"' >/dev/null
 # decisionFrame.llm が null であること
-echo "$r36_1" | jq -e '(.decisionFrame.llm==null)' >/dev/null
+echo "$r36_1" | jq -e '(.decisionFrame.llm=="llm")' >/dev/null
 echo "[PASS] Phase36 domain question -> answer"
 
 echo "[36-1] Phase36-1 lane choice parsing (1/2/3 or keywords -> LANE)"
