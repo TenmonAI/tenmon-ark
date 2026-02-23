@@ -277,3 +277,16 @@ CREATE INDEX IF NOT EXISTS idx_khs_verifier_log_createdAt ON khs_verifier_log(cr
 CREATE INDEX IF NOT EXISTS idx_khs_verifier_log_pdfUnitId ON khs_verifier_log(pdfUnitId);
 CREATE INDEX IF NOT EXISTS idx_khs_verifier_log_otherUnitId ON khs_verifier_log(otherUnitId);
 CREATE INDEX IF NOT EXISTS idx_khs_verifier_log_verdict ON khs_verifier_log(verdict);
+
+-- B1_KHS_QUALITY_FLAGS_V1 (audit-only; no behavior change)
+CREATE TABLE IF NOT EXISTS khs_quality_flags (
+  flagId    TEXT PRIMARY KEY,     -- deterministic
+  createdAt TEXT NOT NULL DEFAULT (datetime('now')),
+  unitId    TEXT NOT NULL,
+  flag      TEXT NOT NULL,         -- e.g. 'garbled_like'
+  score     REAL NOT NULL DEFAULT 0,
+  note      TEXT NOT NULL DEFAULT ''
+);
+
+CREATE INDEX IF NOT EXISTS idx_khs_quality_flags_unitId ON khs_quality_flags(unitId);
+CREATE INDEX IF NOT EXISTS idx_khs_quality_flags_flag ON khs_quality_flags(flag);
