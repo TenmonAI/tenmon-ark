@@ -1,0 +1,63 @@
+# TERMKEY_CANON_TABLE_50_v1.tsv
+# 目的: 50音の内部キー（termKey）を完全固定する
+# 重要: 内部キーは「カタカナ1文字」を正典とする（再計算禁止）
+
+termKey	display	reading	kanaSet	romanFixed	note
+ア	ア	a	ア|あ	a	母音
+イ	イ	i	イ|い	i	母音
+ウ	ウ	u	ウ|う	u	母音
+エ	エ	e	エ|え	e	母音
+オ	オ	o	オ|お	o	母音
+
+カ	カ	ka	カ|か	ka	
+キ	キ	ki	キ|き	ki	
+ク	ク	ku	ク|く	ku	
+ケ	ケ	ke	ケ|け	ke	
+コ	コ	ko	コ|こ	ko	
+
+サ	サ	sa	サ|さ	sa	
+シ	シ	shi	シ|し	shi	
+ス	ス	su	ス|す	su	
+セ	セ	se	セ|せ	se	
+ソ	ソ	so	ソ|そ	so	
+
+タ	タ	ta	タ|た	ta	
+チ	チ	chi	チ|ち	chi	
+ツ	ツ	tsu	ツ|つ	tsu	
+テ	テ	te	テ|て	te	
+ト	ト	to	ト|と	to	
+
+ナ	ナ	na	ナ|な	na	
+ニ	ニ	ni	ニ|に	ni	
+ヌ	ヌ	nu	ヌ|ぬ	nu	
+ネ	ネ	ne	ネ|ね	ne	
+ノ	ノ	no	ノ|の	no	
+
+ハ	ハ	ha	ハ|は	ha	
+ヒ	ヒ	hi	ヒ|ひ	hi	
+フ	フ	fu	フ|ふ	fu	
+ヘ	ヘ	he	ヘ|へ	he	
+ホ	ホ	ho	ホ|ほ	ho	
+
+マ	マ	ma	マ|ま	ma	
+ミ	ミ	mi	ミ|み	mi	
+ム	ム	mu	ム|む	mu	
+メ	メ	me	メ|め	me	
+モ	モ	mo	モ|も	mo	
+
+ヤ	ヤ	ya	ヤ|や	ya	
+ユ	ユ	yu	ユ|ゆ	yu	
+ヨ	ヨ	yo	ヨ|よ	yo	
+
+ラ	ラ	ra	ラ|ら	ra	
+リ	リ	ri	リ|り	ri	
+ル	ル	ru	ル|る	ru	
+レ	レ	re	レ|れ	re	
+ロ	ロ	ro	ロ|ろ	ro	
+
+ワ	ワ	wa	ワ|わ	wa	
+ヲ	ヲ	wo	ヲ|を	wo	を
+ン	ン	n	ン|ん	n	撥音
+
+ヰ	ヰ	wi	ヰ|ゐ	wi	歴史仮名
+ヱ	ヱ	we	ヱ|ゑ	we	歴史仮名
