@@ -846,9 +846,11 @@ const pid = process.pid;
         try { db.close?.(); } catch {}
 
         if (hit?.lawKey && hit?.unitId && hit?.doc && hit?.quote && hit?.quoteHash) {
+          const __q = String(hit.quote || "").trim();
+          const __qClip = (__q.length > 600 ? (__q.slice(0, 600) + "…（引用は途中まで）") : __q);
           const __out =
             "【天聞の所見】" +
-            String(hit.quote).trim() +
+            __qClip +
             "（根拠: " +
             String(hit.doc) +
             (hit.pdfPage ? (" pdfPage=" + String(hit.pdfPage)) : "") +
