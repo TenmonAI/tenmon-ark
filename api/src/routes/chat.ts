@@ -131,6 +131,22 @@ function buildGroundedResponse(args: {
 
   // 3分岐（矛盾なし）: 1) 未投入 2) 非テキスト（caps補完 or 未登録） 3) 通常引用
   if (pageText == null) {
+  // A1_CC80_GUARD_V1: block polluted pages (read-only; no DB mutation)
+  try {
+    const _doc = String((args as any)?.doc ?? "");
+    const _p = Number((args as any)?.pdfPage ?? 0);
+    const _isBad = (_doc === "言霊秘書.pdf") && ([5,58,169,182,229,341,344].includes(_p));
+    if (_isBad) {
+      return {
+        response: "（資料準拠）このページは汚染検出（CC80）により表示を抑止しました。別のページを指定してください。",
+        evidence: null,
+        candidates: [],
+        timestamp: (args as any)?.timestamp ?? new Date().toISOString(),
+        threadId: String((args as any)?.threadId ?? ""),
+        decisionFrame: { mode: "GROUNDED", intent: "grounded", llm: null, ku: { routeReason: "A1_CC80_BLOCK" } }
+      } as any;
+    }
+  } catch {}
     const responseText = `（資料準拠）${doc} P${pdfPage} を指定として受け取りました。\n\n※注意: このページは未投入です（ingest_pdf_pages.sh で投入してください）。`;
     const result = buildGroundedResultBody(doc, pdfPage, threadId, timestamp, wantsDetail, responseText, null, evidenceId);
     if (wantsDetail) result.detail = `#詳細\n- doc: ${doc}\n- pdfPage: ${pdfPage}\n- 状態: 未投入（ingest_pdf_pages.sh で投入してください）`;
