@@ -778,28 +778,27 @@ const pid = process.pid;
         const dbPath = getDbPath("kokuzo.sqlite");
         const db: any = new (DatabaseSync as any)(dbPath, { readOnly: true });
 
-        const stmtLaw: any = db.prepare(
-          "SELECT lawKey, title, summary, termKey, unitId, operator FROM khs_laws WHERE lawType=DEF AND status=verified AND termKey=? ORDER BY confidence DESC, updatedAt DESC LIMIT 1"
+        const stmtQ: any = db.prepare(
+          "SELECT l.lawKey AS lawKey, l.unitId AS unitId, u.doc AS doc, u.pdfPage AS pdfPage, u.quote AS quote, u.quoteHash AS quoteHash " +
+          "FROM khs_laws l JOIN khs_units u ON u.unitId = l.unitId " +
+          "WHERE l.lawType=\DEF\ AND l.status=\verified\ AND instr(u.quote, ?) > 0 " +
+          "ORDER BY l.confidence DESC, l.updatedAt DESC LIMIT 1"
         );
-        const law: any = stmtLaw.get(__term);
 
-        let unit: any = null;
-        if (law?.unitId) {
-          const stmtUnit: any = db.prepare(
-            "SELECT unitId, doc, pdfPage, quote, quoteHash FROM khs_units WHERE unitId=? LIMIT 1"
-          );
-          unit = stmtUnit.get(String(law.unitId));
+        let hit: any = stmtQ.get(__term);
+        if (!hit && __rawDef && String(__rawDef).includes("辞")) {
+          hit = stmtQ.get("辞");
         }
 
         try { db.close?.(); } catch {}
 
-        if (law?.lawKey && unit?.doc && unit?.quote && unit?.quoteHash) {
+        if (hit?.lawKey && hit?.unitId && hit?.doc && hit?.quote && hit?.quoteHash) {
           const __out =
             "【天聞の所見】" +
-            String(unit.quote).trim() +
+            String(hit.quote).trim() +
             "（根拠: " +
-            String(unit.doc) +
-            (unit.pdfPage ? (" pdfPage=" + String(unit.pdfPage)) : "") +
+            String(hit.doc) +
+            (hit.pdfPage ? (" pdfPage=" + String(hit.pdfPage)) : "") +
             "）いま、この語はどの場面で使っていますか？";
 
           const __resp = __tenmonClampOneQ(__out);
@@ -818,9 +817,9 @@ const pid = process.pid;
                 routeReason: "KHS_DEF_VERIFIED_HIT",
                 term: __term,
                 khs: {
-                  lawsUsed: [{ lawKey: String(law.lawKey), unitId: String(law.unitId), status: "verified", operator: "OP_DEFINE" }],
-                  evidenceIds: [String(unit.quoteHash)],
-                  lawTrace: [{ lawKey: String(law.lawKey), unitId: String(law.unitId), op: "OP_DEFINE" }],
+                  lawsUsed: [{ lawKey: String(hit.lawKey), unitId: String(hit.unitId), status: "verified", operator: "OP_DEFINE" }],
+                  evidenceIds: [String(hit.quoteHash)],
+                  lawTrace: [{ lawKey: String(hit.lawKey), unitId: String(hit.unitId), op: "OP_DEFINE" }],
                 }
               }
             }
