@@ -2996,7 +2996,7 @@ if (typeof out === "string" && out.trim()) nat.responseText = out.trim();
       return reply({
         response: nat.responseText,
         evidence: null,
-        decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: { rewriteUsed: (nat as any).rewriteUsed ?? false, rewriteDelta: (nat as any).rewriteDelta ?? 0 } },
+        decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: { rewriteUsed: (nat as any).rewriteUsed ?? false, rewriteDelta: (nat as any).rewriteDelta ?? 0, khs: { lawsUsed: [], evidenceIds: [], lawTrace: [] } } },
         timestamp,
         threadId,
       });
