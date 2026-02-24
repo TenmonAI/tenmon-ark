@@ -868,6 +868,10 @@ const pid = process.pid;
               llm: null,
               ku: {
                 routeReason: "KHS_DEF_VERIFIED_HIT",
+                // KHS_R1_TRACE_MIRROR_V2: mirror from hit to top-level ku.* (no generation)
+                lawsUsed: [String(hit.lawKey)],
+                evidenceIds: [String(hit.quoteHash)],
+                lawTrace: [{ lawKey: String(hit.lawKey), unitId: String(hit.unitId), op: "OP_DEFINE" }],
                 term: __term,
                 khs: {
                   lawsUsed: [{ lawKey: String(hit.lawKey), unitId: String(hit.unitId), status: "verified", operator: "OP_DEFINE" }],
