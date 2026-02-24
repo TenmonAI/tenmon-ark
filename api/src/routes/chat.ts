@@ -2925,7 +2925,7 @@ return reply({
         mode: "LLM_CHAT",
         intent: "chat",
         llm: "llm",
-        ku: { twoStage: true, twoStagePlanJson: planText ? true : false },
+        ku: { twoStage: true, twoStagePlanJson: planText ? true : false, khs: { lawsUsed: [], evidenceIds: [], lawTrace: [] } },
       },
       timestamp,
       threadId,
