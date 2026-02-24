@@ -773,6 +773,62 @@ const pid = process.pid;
     }
 
       }
+      // --- KHS-C0 DEF apply (verified) : bypass DEF_LLM_TOP ---
+      try {
+        const dbPath = getDbPath("kokuzo.sqlite");
+        const db: any = new (DatabaseSync as any)(dbPath, { readOnly: true });
+
+        const stmtLaw: any = db.prepare(
+          "SELECT lawKey, title, summary, termKey, unitId, operator FROM khs_laws WHERE lawType=DEF AND status=verified AND termKey=? ORDER BY confidence DESC, updatedAt DESC LIMIT 1"
+        );
+        const law: any = stmtLaw.get(__term);
+
+        let unit: any = null;
+        if (law?.unitId) {
+          const stmtUnit: any = db.prepare(
+            "SELECT unitId, doc, pdfPage, quote, quoteHash FROM khs_units WHERE unitId=? LIMIT 1"
+          );
+          unit = stmtUnit.get(String(law.unitId));
+        }
+
+        try { db.close?.(); } catch {}
+
+        if (law?.lawKey && unit?.doc && unit?.quote && unit?.quoteHash) {
+          const __out =
+            "【天聞の所見】" +
+            String(unit.quote).trim() +
+            "（根拠: " +
+            String(unit.doc) +
+            (unit.pdfPage ? (" pdfPage=" + String(unit.pdfPage)) : "") +
+            "）いま、この語はどの場面で使っていますか？";
+
+          const __resp = __tenmonClampOneQ(__out);
+
+          return res.json(__tenmonGeneralGateResultMaybe({
+            response: __resp,
+            evidence: null,
+            candidates: [],
+            timestamp,
+            threadId,
+            decisionFrame: {
+              mode: "NATURAL",
+              intent: "define",
+              llm: null,
+              ku: {
+                routeReason: "KHS_DEF_VERIFIED_HIT",
+                term: __term,
+                khs: {
+                  lawsUsed: [{ lawKey: String(law.lawKey), unitId: String(law.unitId), status: "verified", operator: "OP_DEFINE" }],
+                  evidenceIds: [String(unit.quoteHash)],
+                  lawTrace: [{ lawKey: String(law.lawKey), unitId: String(law.unitId), op: "OP_DEFINE" }],
+                }
+              }
+            }
+          }));
+        }
+      } catch {}
+      // --- end KHS-C0 DEF apply ---
+
 const DEF_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。雑談は“沈黙→一言→一問”の三拍で返す。
 
 ※絶対条件※
