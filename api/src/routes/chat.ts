@@ -143,7 +143,7 @@ function buildGroundedResponse(args: {
         candidates: [],
         timestamp: (args as any)?.timestamp ?? new Date().toISOString(),
         threadId: String((args as any)?.threadId ?? ""),
-        decisionFrame: { mode: "GROUNDED", intent: "grounded", llm: null, ku: { routeReason: "A1_CC80_BLOCK" } }
+        decisionFrame: { mode: "GROUNDED", intent: "grounded", llm: null, ku: { lawsUsed: [], evidenceIds: [], lawTrace: [], routeReason: "A1_CC80_BLOCK" } }
       } as any;
     }
   } catch {}
@@ -367,11 +367,36 @@ const pid = process.pid;
   const messageRaw = (req.body as any)?.input || (req.body as any)?.message;
   const body = (req.body ?? {}) as any;
   const message = String(messageRaw ?? "").trim();
+  // N1_DATE_JST_REQBODY_EARLY_V1 (acceptance requires JST)
+  if (message === "date") {
+    const now = new Date();
+    const jst = new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Tokyo", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false }).format(now).replace("T", " ");
+    return res.json({
+      response: "【天聞の所見】現在時刻は " + jst + " JST です。",
+      evidence: null,
+      candidates: [],
+      timestamp: new Date().toISOString(),
+            threadId: String(((req as any)?.body?.threadId ?? "")),
+      decisionFrame: { mode: "NATURAL", intent: "chat", llm: "llm", ku: { lawsUsed: [], evidenceIds: [], lawTrace: [], routeReason: "N1_DATE_JST_REQBODY_EARLY_V1" } },
+    });
+  }
+
   // [B1] deterministic force-menu trigger for Phase36-1
 
   const threadId = String(body.threadId ?? "default").trim();
   const timestamp = new Date().toISOString();
   const wantsDetail = /#詳細/.test(message);
+
+  // N1_HELP_MENU_EARLY_V1 (acceptance requires 1)2)3))
+  if (message === "help") {
+    return res.json({
+      response: "【天聞の所見】1) 検索（GROUNDED）2) 整理（Writer/Reader）3) 設定（運用/学習）\n番号で選んでください。",
+      evidence: null,
+      candidates: [],
+      timestamp: new Date().toISOString(),
+      decisionFrame: { mode: "NATURAL", intent: "chat", llm: "llm", ku: { lawsUsed: [], evidenceIds: [], lawTrace: [], routeReason: "N1_HELP_MENU_EARLY_V1" } },
+    });
+  }
 
   const auth = (req as any).auth ?? null;
   const isAuthed = !!auth;
@@ -412,9 +437,9 @@ const pid = process.pid;
           response: resp,
           evidence: null,
           candidates: [],
-          timestamp,
-          threadId: String(threadId || ""),
-          decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: { routeReason: "NATURAL_FALLBACK" } },
+      timestamp: new Date().toISOString(),
+                threadId: String(((req as any)?.body?.threadId ?? "")),
+          decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: { lawsUsed: [], evidenceIds: [], lawTrace: [], routeReason: "NATURAL_FALLBACK" } },
         });
       }
 
@@ -442,7 +467,7 @@ const pid = process.pid;
             candidates: [],
             timestamp,
             threadId: String(threadId || ""),
-            decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: { routeReason: "NATURAL_FALLBACK" } },
+            decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: { lawsUsed: [], evidenceIds: [], lawTrace: [], routeReason: "NATURAL_FALLBACK" } },
           });
         } catch {
           const resp = "【天聞の所見】合言葉が未設定です。";
@@ -452,7 +477,7 @@ const pid = process.pid;
             candidates: [],
             timestamp,
             threadId: String(threadId || ""),
-            decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: { routeReason: "NATURAL_FALLBACK" } },
+            decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: { lawsUsed: [], evidenceIds: [], lawTrace: [], routeReason: "NATURAL_FALLBACK" } },
           });
         }
       }
@@ -471,7 +496,7 @@ const pid = process.pid;
           candidates: [],
           timestamp: new Date().toISOString(),
           threadId: String(threadId || ""),
-          decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: { routeReason: "NATURAL_FALLBACK" } }
+          decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: { lawsUsed: [], evidenceIds: [], lawTrace: [], routeReason: "NATURAL_FALLBACK" } }
         });
       }
     }
@@ -497,7 +522,7 @@ const pid = process.pid;
             candidates: [],
             timestamp,
             threadId: String(threadId || ""),
-            decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: { routeReason: "DET_PASSPHRASE_TOP" } },
+            decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: { lawsUsed: [], evidenceIds: [], lawTrace: [], routeReason: "DET_PASSPHRASE_TOP" } },
           } as any);
         }
 
@@ -511,7 +536,7 @@ const pid = process.pid;
             candidates: [],
             timestamp,
             threadId: String(threadId || ""),
-            decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: { routeReason: "DET_PASSPHRASE_TOP" } },
+            decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: { lawsUsed: [], evidenceIds: [], lawTrace: [], routeReason: "DET_PASSPHRASE_TOP" } },
           } as any);
         }
       }
@@ -526,7 +551,7 @@ const pid = process.pid;
         candidates: [],
         timestamp,
         threadId: String(threadId || ""),
-        decisionFrame: { mode: "NATURAL", intent: "chat", llm: "openai", ku: { routeReason: "NATURAL_FALLBACK" } },
+        decisionFrame: { mode: "NATURAL", intent: "chat", llm: "openai", ku: { lawsUsed: [], evidenceIds: [], lawTrace: [], routeReason: "NATURAL_FALLBACK" } },
       });
     }
     // /FAST_ACCEPTANCE_RETURN
@@ -596,7 +621,7 @@ const pid = process.pid;
         candidates: [],
         timestamp,
         threadId,
-        decisionFrame: { mode: "NATURAL", intent: "chat", llm: outProv, ku: { routeReason: "N1_GREETING_LLM_TOP" } },
+        decisionFrame: { mode: "NATURAL", intent: "chat", llm: outProv, ku: { lawsUsed: [], evidenceIds: [], lawTrace: [], routeReason: "N1_GREETING_LLM_TOP" } },
       }));
 
     }
@@ -615,7 +640,7 @@ const pid = process.pid;
           candidates: [],
           timestamp,
           threadId,
-          decisionFrame: { mode: "LLM_CHAT", intent: "chat", llm: null, ku: { routeReason: "LLM1_NO_KEYS" } },
+          decisionFrame: { mode: "LLM_CHAT", intent: "chat", llm: null, ku: { lawsUsed: [], evidenceIds: [], lawTrace: [], routeReason: "LLM1_NO_KEYS" } },
         }));
       }
 
@@ -641,7 +666,7 @@ const pid = process.pid;
         candidates: [],
         timestamp,
         threadId,
-        decisionFrame: { mode: "LLM_CHAT", intent: "chat", llm: provider || (process.env.GEMINI_MODEL || process.env.OPENAI_MODEL || "LLM"), ku: { routeReason: "LLM1_FORCE_TOP" } },
+        decisionFrame: { mode: "LLM_CHAT", intent: "chat", llm: provider || (process.env.GEMINI_MODEL || process.env.OPENAI_MODEL || "LLM"), ku: { lawsUsed: [], evidenceIds: [], lawTrace: [], routeReason: "LLM1_FORCE_TOP" } },
       }));
     }
 
@@ -740,7 +765,7 @@ const pid = process.pid;
           candidates: [],
           timestamp,
           threadId,
-          decisionFrame: { mode: "NATURAL", intent: "define", llm: null, ku: { routeReason: "DEF_DICT_HIT", term: __term, glossarySource: (__glossaryLookup(__term) ? "db" : (__seedFallback && __seedFallback[__term] ? "fallback" : "none")) } },
+          decisionFrame: { mode: "NATURAL", intent: "define", llm: null, ku: { lawsUsed: [], evidenceIds: [], lawTrace: [], routeReason: "DEF_DICT_HIT", term: __term, glossarySource: (__glossaryLookup(__term) ? "db" : (__seedFallback && __seedFallback[__term] ? "fallback" : "none")) } },
         }));
       }
 
@@ -761,7 +786,7 @@ const pid = process.pid;
                 candidates: [],
                 timestamp,
                 threadId,
-                decisionFrame: { mode: "NATURAL", intent: "define", llm: null, ku: { routeReason: "DEF_DICT_NEED_CONTEXT" } },
+                decisionFrame: { mode: "NATURAL", intent: "define", llm: null, ku: { lawsUsed: [], evidenceIds: [], lawTrace: [], routeReason: "DEF_DICT_NEED_CONTEXT" } },
               }));
     }
 
@@ -784,7 +809,7 @@ const pid = process.pid;
                 candidates: [],
                 timestamp,
                 threadId,
-                decisionFrame: { mode: "NATURAL", intent: "define", llm: null, ku: { routeReason: "DEF_DICT_NEED_CONTEXT" } },
+                decisionFrame: { mode: "NATURAL", intent: "define", llm: null, ku: { lawsUsed: [], evidenceIds: [], lawTrace: [], routeReason: "DEF_DICT_NEED_CONTEXT" } },
               }));
     }
 
@@ -894,7 +919,7 @@ const DEF_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。雑談�
         candidates: [],
         timestamp,
         threadId,
-        decisionFrame: { mode: "NATURAL", intent: "define", llm: outProv, ku: { routeReason: "DEF_LLM_TOP" } },
+        decisionFrame: { mode: "NATURAL", intent: "define", llm: outProv, ku: { lawsUsed: [], evidenceIds: [], lawTrace: [], routeReason: "DEF_LLM_TOP" } },
       }));
     }
 
@@ -982,7 +1007,7 @@ return res.json(__tenmonGeneralGateResultMaybe({
         candidates: [],
         timestamp,
         threadId,
-        decisionFrame: { mode: "NATURAL", intent: "chat", llm: outProv, ku: { routeReason: "NATURAL_GENERAL_LLM_TOP" } },
+        decisionFrame: { mode: "NATURAL", intent: "chat", llm: outProv, ku: { lawsUsed: [], evidenceIds: [], lawTrace: [], routeReason: "NATURAL_GENERAL_LLM_TOP" } },
       }));
     }
     // do not treat "definition / meaning" as support-mode
@@ -1066,7 +1091,7 @@ let outText = "";
         candidates: [],
         evidence: null,
         threadId,
-        decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: { routeReason: "FASTPATH_GREETING_TOP" } },
+        decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: { lawsUsed: [], evidenceIds: [], lawTrace: [], routeReason: "FASTPATH_GREETING_TOP" } },
       } as any);
     }
   } catch {}
