@@ -822,7 +822,7 @@ const pid = process.pid;
         const stmtQ: any = db.prepare(
           "SELECT l.lawKey AS lawKey, l.unitId AS unitId, u.doc AS doc, u.pdfPage AS pdfPage, u.quote AS quote, u.quoteHash AS quoteHash " +
           "FROM khs_laws l JOIN khs_units u ON u.unitId = l.unitId " +
-          "WHERE l.lawType=DEF AND l.status=verified AND instr(u.quote, ?) > 0 " +
+          "WHERE l.lawType IN ('DEF','LAW') AND l.status='verified' AND instr(u.quote, ?) > 0 " +
           "ORDER BY l.confidence DESC, l.updatedAt DESC LIMIT 1"
         );
 
