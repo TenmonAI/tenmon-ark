@@ -829,7 +829,7 @@ const pid = process.pid;
         // KHS_C0_MIN_TRACE_1LAW_V1: deterministic verified hit for 言霊秘書 (DB-observed)
         let hit: any = null;
         if (String(__rawDef || "").includes("言霊秘書") || String(__term || "").includes("言霊秘書")) {
-          hit = { lawKey: "KHSL:LAW:KHSU:41c0bff9cfb8:p0:q0296f174fe31", unitId: "KHSU:41c0bff9cfb8:p0:q0296f174fe31", doc: "KHS", pdfPage: 0, quoteHash: "0296f174fe31cdc1161ee42d7104ab5e1845e802d5f6d725ebfc4800980b0e95", quote: null };
+          hit = { lawKey: "KHSL:LAW:KHSU:41c0bff9cfb8:p0:q043f16b3a0e8", unitId: "KHSU:41c0bff9cfb8:p0:q043f16b3a0e8", doc: "KHS", pdfPage: 0, quoteHash: "043f16b3a0e867077b23d2d0f73f880b40c20abe72d80b62de7c6da8a32b0f84", quote: null };
           try {
             const stmtU: any = db.prepare("SELECT quote FROM khs_units WHERE unitId = ?");
             const rowU: any = stmtU.get(hit.unitId);
@@ -843,6 +843,13 @@ const pid = process.pid;
           hit = stmtQ.get("辞");
         }
 
+        // R1_C1d3_IROHA_EIDS_ATTACH_V1 (read-only; DB evidence only; no doc/pdfPage)
+        try {
+          const stmtIA: any = db.prepare(
+            "SELECT irohaUnitId FROM iroha_khs_alignment WHERE khsLawKey = ? AND relation = 'SUPPORTS_VERIFIED' ORDER BY createdAt DESC LIMIT 5"
+          );
+          (hit as any).__irohaEids = (stmtIA.all(String(hit.lawKey)) || []).map((r: any) => `IROHAUNIT:${String(r.irohaUnitId)}`);
+        } catch {}
         try { db.close?.(); } catch {}
 
         if (hit?.lawKey && hit?.unitId && hit?.doc && hit?.quote && hit?.quoteHash) {
@@ -873,12 +880,12 @@ const pid = process.pid;
                 routeReason: "KHS_DEF_VERIFIED_HIT",
                 // KHS_R1_TRACE_MIRROR_V2: mirror from hit to top-level ku.* (no generation)
                 lawsUsed: [String(hit.lawKey)],
-                evidenceIds: [String(hit.quoteHash)],
+                evidenceIds: [String(hit.quoteHash), ...(((hit as any).__irohaEids) || [])],
                 lawTrace: [{ lawKey: String(hit.lawKey), unitId: String(hit.unitId), op: "OP_DEFINE" }],
                 term: __term,
                 khs: {
                   lawsUsed: [{ lawKey: String(hit.lawKey), unitId: String(hit.unitId), status: "verified", operator: "OP_DEFINE" }],
-                  evidenceIds: [String(hit.quoteHash)],
+                  evidenceIds: [String(hit.quoteHash), ...(((hit as any).__irohaEids) || [])],
                   lawTrace: [{ lawKey: String(hit.lawKey), unitId: String(hit.unitId), op: "OP_DEFINE" }],
                 }
               }
