@@ -2348,7 +2348,7 @@ let outText = "";
       const __dp:any = (__df && typeof (__df as any).detailPlan === "object" && !Array.isArray((__df as any).detailPlan)) ? (__df as any).detailPlan : null;
       if (__dp) {
         __dp.debug = (__dp.debug && typeof __dp.debug === "object") ? __dp.debug : {};
-        const __tid = String((payload as any)?.threadId ?? "");
+        const __tid = (typeof threadId !== "undefined") ? String((threadId as any) ?? "") : String((payload as any)?.threadId ?? "");
         if (__tid) {
           const __dbPath = getDbPath("kokuzo.sqlite");
           const __db = new DatabaseSync(__dbPath, { readOnly: true });
@@ -2367,7 +2367,7 @@ let outText = "";
         const __ku:any = __df.ku;
         const __dp:any = (__df.detailPlan && typeof __df.detailPlan === "object" && !Array.isArray(__df.detailPlan)) ? __df.detailPlan : null;
         if (__dp) __dp.debug = (__dp.debug && typeof __dp.debug === "object") ? __dp.debug : {};
-        const __tid = String((payload as any)?.threadId ?? "");
+        const __tid = (typeof threadId !== "undefined") ? String((threadId as any) ?? "") : String((payload as any)?.threadId ?? "");
         if (__tid) {
           const __dbPath = getDbPath("kokuzo.sqlite");
           const __db = new DatabaseSync(__dbPath, { readOnly: true });
