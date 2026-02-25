@@ -881,7 +881,7 @@ const pid = process.pid;
                 // KHS_R1_TRACE_MIRROR_V2: mirror from hit to top-level ku.* (no generation)
                 lawsUsed: [String(hit.lawKey)],
                 evidenceIds: [String(hit.quoteHash), ...(((hit as any).__irohaEids) || [])],
-                lawTrace: [{ lawKey: String(hit.lawKey), unitId: String(hit.unitId), op: "OP_DEFINE" }],
+                lawTrace: [{ lawKey: String(hit.lawKey), unitId: String(hit.unitId), op: "OP_DEFINE" }, ...(((hit as any).__irohaEids) || []).map((eid:any)=>{ const s=String(eid||""); const iu=s.startsWith("IROHAUNIT:")?s.slice(10):s; return { lawKey: String(hit.lawKey), unitId: String(hit.unitId), op: "IROHA_SUPPORTS_VERIFIED", irohaUnitId: iu }; })],
                 term: __term,
                 khs: {
                   lawsUsed: [{ lawKey: String(hit.lawKey), unitId: String(hit.unitId), status: "verified", operator: "OP_DEFINE" }],
