@@ -2342,6 +2342,23 @@ let outText = "";
       const __stmt = __db.prepare("INSERT OR IGNORE INTO synapse_log(synapseId, createdAt, threadId, turnId, routeReason, lawTraceJson, heartJson, inputSig, outputSig, metaJson) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
       __stmt.run(__synId, __ts, __threadId, __synId, __route, JSON.stringify(__lawTrace), JSON.stringify(__heart), __sigIn, __sigOut, JSON.stringify({v:"S0_2", git:(__ku.gitSha||"") }));
     } catch {}
+    // S2_0_DEBUG_RETURN_SYNAPSE_TOP_V2_SAFE: attach last synapse for this thread into detailPlan.debug (audit-only)
+    try {
+      const __df:any = (payload as any)?.decisionFrame ?? null;
+      const __dp:any = (__df && typeof (__df as any).detailPlan === "object" && !Array.isArray((__df as any).detailPlan)) ? (__df as any).detailPlan : null;
+      if (__dp) {
+        __dp.debug = (__dp.debug && typeof __dp.debug === "object") ? __dp.debug : {};
+        const __tid = String((payload as any)?.threadId ?? "");
+        if (__tid) {
+          const __dbPath = getDbPath("kokuzo.sqlite");
+          const __db = new DatabaseSync(__dbPath, { readOnly: true });
+          const __stmt = __db.prepare("SELECT createdAt, threadId, routeReason, substr(heartJson,1,120) AS heartHead, substr(metaJson,1,160) AS metaHead FROM synapse_log WHERE threadId=? ORDER BY createdAt DESC LIMIT 1");
+          const row:any = __stmt.get(__tid);
+          if (row) (__dp.debug as any).synapseTop = row;
+        }
+      }
+    } catch {}
+    // S2_0_DEBUG_RETURN_SYNAPSE_TOP_V2_SAFE
     const rawCandidates = Array.isArray((payload as any)?.candidates) ? (payload as any).candidates : [];
 
     const isGarbageSnippet = (snip: string): boolean => {
