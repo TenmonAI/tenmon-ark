@@ -2318,22 +2318,6 @@ let outText = "";
   } catch {}
 
     const response =
-    // S2_0_DEBUG_RETURN_SYNAPSE_TOP_V1: attach last synapse for this thread into detailPlan.debug (audit-only)
-    try {
-      const __df:any = (payload as any)?.decisionFrame ?? null;
-      const __dp:any = (__df && typeof (__df as any).detailPlan === "object" && !Array.isArray((__df as any).detailPlan)) ? (__df as any).detailPlan : null;
-      if (__dp) {
-        __dp.debug = (__dp.debug && typeof __dp.debug === "object") ? __dp.debug : {};
-        const __tid = String((payload as any)?.threadId ?? "");
-        if (__tid) {
-          const __dbPath = getDbPath("kokuzo.sqlite");
-          const __db = new DatabaseSync(__dbPath, { readOnly: true });
-          const __stmt = __db.prepare("SELECT createdAt, threadId, routeReason, substr(heartJson,1,120) AS heartHead, substr(metaJson,1,160) AS metaHead FROM synapse_log WHERE threadId=? ORDER BY createdAt DESC LIMIT 1");
-          const row:any = __stmt.get(__tid);
-          if (row) (__dp.debug as any).synapseTop = row;
-        }
-      }
-    } catch {}
       typeof payload.response === "string"
         ? localSurfaceize(payload.response, trimmed)
         : payload.response;
@@ -2357,15 +2341,7 @@ let outText = "";
       const __db = new DatabaseSync(__dbPath);
       const __stmt = __db.prepare("INSERT OR IGNORE INTO synapse_log(synapseId, createdAt, threadId, turnId, routeReason, lawTraceJson, heartJson, inputSig, outputSig, metaJson) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
       __stmt.run(__synId, __ts, __threadId, __synId, __route, JSON.stringify(__lawTrace), JSON.stringify(__heart), __sigIn, __sigOut, JSON.stringify({v:"S0_2", git:(__ku.gitSha||"") }));
-    } catch (e:any) {
-  try {
-    const __df2:any = (payload as any)?.decisionFrame ?? null;
-    const __ku2:any = (__df2 && typeof __df2.ku === "object" && !Array.isArray(__df2.ku)) ? __df2.ku : {};
-    if (!Array.isArray(__ku2.warnings)) __ku2.warnings = [];
-    __ku2.warnings.push("SYNAPSE_INSERT_ERR=" + String(e && (e as any).message ? (e as any).message : e).slice(0,120));
-  } catch {}
-}
-// S0_2b_OBS_SYNAPSE_INSERT_ERR_V4_SCRIPT
+    } catch {}
     const rawCandidates = Array.isArray((payload as any)?.candidates) ? (payload as any).candidates : [];
 
     const isGarbageSnippet = (snip: string): boolean => {
