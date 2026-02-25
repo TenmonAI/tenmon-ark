@@ -836,8 +836,18 @@ const pid = process.pid;
             if (rowU?.quote) hit.quote = String(rowU.quote);
           } catch {}
         }
+        // R1_C1e7_TERM_NORM_V1: normalize definition term for KHS lookup (KHS DEF apply only)
+        const __termNorm = String(__term || "")
+          .replace(/\s+/g, "")
+          .replace(/[?？]+$/g, "")
+          .replace(/とは$/g, "")
+          .replace(/って何$/g, "")
+          .replace(/ってなに$/g, "")
+          .replace(/とは何$/g, "")
+          .replace(/とはなに$/g, "")
+          .trim();
         if (!hit) {
-          hit = stmtQ.get(__term);
+          hit = stmtQ.get(__termNorm || __term);
         }
         if (!hit && __rawDef && String(__rawDef).includes("辞")) {
           hit = stmtQ.get("辞");
