@@ -27,7 +27,7 @@ export function ChatPage() {
   return (
       <div style={{ display: "flex", justifyContent: "flex-end", margin: "8px 0" }}>
         <button type="button" onClick={() => __setDebugOpen(v => !v)} style={{ opacity: 0.85 }}>
-          {__debugOpen ? "Debug: ON" : "Debug: OFF"}
+          {__debugOpen ? "根拠: ON" : "根拠: OFF"}
         </button>
       </div>
       {__debugOpen ? (
