@@ -847,14 +847,15 @@ const pid = process.pid;
 
         if (hit?.lawKey && hit?.unitId && hit?.doc && hit?.quote && hit?.quoteHash) {
           const __q = String(hit.quote || "").trim();
-          const __qClip = (__q.length > 600 ? (__q.slice(0, 600) + "…（引用は途中まで）") : __q);
+          const __qClip = ((__q.length > 420 ? (__q.slice(0, 420) + "...(quote clipped)") : __q).replace(/[?？]/g, ""));
+          const __take = (__term ? ("要点：『" + __term + "』は、根拠の言葉を生活の一手へ落とす入口です。") : "要点：根拠の言葉を生活の一手へ落とす入口です。");
+          const __act = "行動：いまの状況を一行で書き、そこから出来る一手を一つ決めてください。";
           const __out =
-            "【天聞の所見】" +
-            __qClip +
-            "（根拠: " +
-            String(hit.doc) +
-            (hit.pdfPage ? (" pdfPage=" + String(hit.pdfPage)) : "") +
-            "）いま、この語はどの場面で使っていますか？";
+            "【天聞の所見】" + __qClip +
+            "（根拠: " + String(hit.doc) + (hit.pdfPage ? (" pdfPage=" + String(hit.pdfPage)) : "") + "）\n" +
+            __take + "\n" +
+            __act + "\n" +
+            "いま、この語はあなたの生活のどの場面で必要ですか？";
 
           const __resp = __tenmonClampOneQ(__out);
 
