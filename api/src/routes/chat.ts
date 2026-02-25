@@ -4054,6 +4054,14 @@ function __tenmonGeneralGateResultMaybe(x: any): any {
     if (!x || typeof x !== "object") return x;
     const df = (x as any).decisionFrame || {};
     const ku = df.ku || {};
+    // R4_1_HEART_STATIC_KU_V2: static heart in decisionFrame.ku (audit-only)
+    try {
+      if (df && typeof df === "object") {
+        if (!(df as any).ku || typeof (df as any).ku !== "object" || Array.isArray((df as any).ku)) (df as any).ku = {};
+        const __ku:any = (df as any).ku;
+        if (!__ku.heart || typeof __ku.heart !== "object") __ku.heart = { state: "neutral", phase: "CENTER", reason: "STATIC_V1" };
+      }
+    } catch {}
     // H2: compassion wrap for SUPPORT only (routeReason from ku)
     try {
       const rr2 = (ku as any).routeReason || "";
