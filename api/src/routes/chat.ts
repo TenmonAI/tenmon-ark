@@ -2322,6 +2322,26 @@ let outText = "";
         ? localSurfaceize(payload.response, trimmed)
         : payload.response;
     // M1-01_GARBAGE_CANDIDATES_FILTER_V1: candidates を返却直前で統一フィルタ（cleanedが空なら元に戻す）
+    // S0_2_INSERT_SYNAPSE_LOG_V1: write synapse_log (audit-only; no behavior change)
+    try {
+      const __df:any = (payload as any)?.decisionFrame ?? null;
+      const __ku:any = (__df && typeof __df.ku === "object" && !Array.isArray(__df.ku)) ? __df.ku : {};
+      const __route = String(__ku.routeReason ?? "");
+      const __lawTrace = Array.isArray(__ku.lawTrace) ? __ku.lawTrace : [];
+      const __heart = (typeof __ku.heart === "object" && __ku.heart) ? __ku.heart : {};
+      const __threadId = String((payload as any)?.threadId ?? "");
+      const __ts = String((payload as any)?.timestamp ?? new Date().toISOString());
+      const __in = String((payload as any)?.rawMessage ?? (payload as any)?.message ?? "");
+      const __out = String((payload as any)?.response ?? "");
+      const __crypto = require("node:crypto");
+      const __sigIn = __crypto.createHash("sha256").update(__in).digest("hex").slice(0,16);
+      const __sigOut = __crypto.createHash("sha256").update(__out).digest("hex").slice(0,16);
+      const __synId = "SYN:" + __ts.replace(/[^0-9]/g,"").slice(0,14) + ":" + __sigIn;
+      const __dbPath = getDbPath("kokuzo.sqlite");
+      const __db = new DatabaseSync(__dbPath);
+      const __stmt = __db.prepare("INSERT OR IGNORE INTO synapse_log(synapseId, createdAt, threadId, turnId, routeReason, lawTraceJson, heartJson, inputSig, outputSig, metaJson) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+      __stmt.run(__synId, __ts, __threadId, __synId, __route, JSON.stringify(__lawTrace), JSON.stringify(__heart), __sigIn, __sigOut, JSON.stringify({v:"S0_2", git:(__ku.gitSha||"") }));
+    } catch {}
     const rawCandidates = Array.isArray((payload as any)?.candidates) ? (payload as any).candidates : [];
 
     const isGarbageSnippet = (snip: string): boolean => {
