@@ -2265,6 +2265,15 @@ let outText = "";
         if (__dp && Array.isArray((__dp as any).khsCandidates) && (__dp as any).khsCandidates.length === 0) {
           const __src = String((payload as any)?.rawMessage ?? (payload as any)?.message ?? "") + "\n" + String((__dp as any).centerClaim ?? "");
           const __grams = (__src.match(/[一-龯]{2}/g) || []).slice(0, 50);
+          // KG2V2_DETAIL_GRAMS_FROM_QUERY_V1: if message starts with #詳細, derive grams from the query part only
+          try {
+            const __rawQ = String((payload as any)?.rawMessage ?? (payload as any)?.message ?? "");
+            if (__rawQ.trim().startsWith("#詳細")) {
+              const __q = __rawQ.replace(/^\s*#詳細\s*/u, "").trim();
+              const __g2 = (__q.match(/[一-龯]{2}/g) || []).slice(0, 50);
+              if (__g2.length > 0) { __grams.length = 0; for (const x of __g2) __grams.push(x); }
+            }
+          } catch {}
           // KG2V2_SHOW_G0_V1: observability (no behavior change)
           try { const g0 = (__grams && __grams[0]) ? String(__grams[0]) : ""; ((__dp as any).warnings as any[]).push("KG2V2_G0=" + g0.slice(0,24)); } catch {}
           // KG2V2_GRAMS_EMPTY: observability
