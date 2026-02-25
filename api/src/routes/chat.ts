@@ -4056,6 +4056,19 @@ function __tenmonGeneralGateResultMaybe(x: any): any {
     const ku = df.ku || {};
     // R4_1_HEART_STATIC_KU_V2: static heart in decisionFrame.ku (audit-only)
     // R4_1b_HEART_FILL_PHASE_REASON_V2: fill missing heart.phase/reason (preserve existing state/entropy)
+    // R4_2_HEART_DYNAMIC_PHASE_V3_FROM_TRACE_V1: deterministic phase from trace/candidates (audit-only)
+    try {
+      const __ku:any = (df as any).ku;
+      const __h:any = (__ku && typeof __ku.heart === "object") ? __ku.heart : null;
+      if (__h) {
+        const __lt = (__ku && Array.isArray(__ku.lawTrace)) ? __ku.lawTrace : [];
+        const __dp:any = (df as any).detailPlan || null;
+        const __kc = (__dp && Array.isArray(__dp.khsCandidates)) ? __dp.khsCandidates.length : 0;
+        if (__lt.length > 0) { __h.phase = "L-OUT"; __h.reason = "DYN_TRACE_NONEMPTY_V1"; }
+        else if (__kc > 0) { __h.phase = "R-IN"; __h.reason = "DYN_KHSCAND_NONEMPTY_V1"; }
+        else { __h.phase = "CENTER"; __h.reason = "DYN_NONE_V1"; }
+      }
+    } catch {}
     try {
       const __k:any = (df as any).ku;
       const __h:any = (__k && typeof __k.heart === "object") ? __k.heart : null;
