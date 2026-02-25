@@ -4055,6 +4055,15 @@ function __tenmonGeneralGateResultMaybe(x: any): any {
     const df = (x as any).decisionFrame || {};
     const ku = df.ku || {};
     // R4_1_HEART_STATIC_KU_V2: static heart in decisionFrame.ku (audit-only)
+    // R4_1b_HEART_FILL_PHASE_REASON_V2: fill missing heart.phase/reason (preserve existing state/entropy)
+    try {
+      const __k:any = (df as any).ku;
+      const __h:any = (__k && typeof __k.heart === "object") ? __k.heart : null;
+      if (__h) {
+        if (!(__h.phase)) __h.phase = "CENTER";
+        if (!(__h.reason)) __h.reason = "STATIC_V1";
+      }
+    } catch {}
     try {
       if (df && typeof df === "object") {
         if (!(df as any).ku || typeof (df as any).ku !== "object" || Array.isArray((df as any).ku)) (df as any).ku = {};
