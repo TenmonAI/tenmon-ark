@@ -290,3 +290,21 @@ CREATE TABLE IF NOT EXISTS khs_quality_flags (
 
 CREATE INDEX IF NOT EXISTS idx_khs_quality_flags_unitId ON khs_quality_flags(unitId);
 CREATE INDEX IF NOT EXISTS idx_khs_quality_flags_flag ON khs_quality_flags(flag);
+
+-- S0_1_ADD_SYNAPSE_LOG_TABLE_V1: KOKUZO Synapse (audit-first, deterministic)
+CREATE TABLE IF NOT EXISTS synapse_log (
+  synapseId TEXT PRIMARY KEY,
+  createdAt TEXT NOT NULL,
+  threadId TEXT NOT NULL,
+  turnId TEXT NOT NULL,
+  routeReason TEXT NOT NULL,
+  lawTraceJson TEXT NOT NULL,
+  heartJson TEXT NOT NULL,
+  inputSig TEXT NOT NULL,
+  outputSig TEXT NOT NULL,
+  metaJson TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_synapse_log_createdAt ON synapse_log(createdAt);
+CREATE INDEX IF NOT EXISTS idx_synapse_log_threadId ON synapse_log(threadId);
+CREATE INDEX IF NOT EXISTS idx_synapse_log_inputSig ON synapse_log(inputSig);
+
