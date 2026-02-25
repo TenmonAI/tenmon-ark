@@ -4056,6 +4056,23 @@ function __tenmonGeneralGateResultMaybe(x: any): any {
     const ku = df.ku || {};
     // R4_1_HEART_STATIC_KU_V2: static heart in decisionFrame.ku (audit-only)
     // R4_1b_HEART_FILL_PHASE_REASON_V2: fill missing heart.phase/reason (preserve existing state/entropy)
+    // R4_2_HEART_DYNAMIC_PHASE_V2_TRIMMED_V1: deterministic phase routing using trimmed only
+    try {
+      const __m = String((typeof trimmed !== "undefined") ? trimmed : "");
+      const __len = __m.length;
+      const __k:any = (df as any).ku;
+      const __h:any = (__k && typeof __k.heart === "object") ? __k.heart : null;
+      if (__h) {
+        let __phase = String(__h.phase ?? "CENTER");
+        let __reason = "DYN_DEFAULT_V1";
+        if (/つらい|苦しい|しんどい/u.test(__m)) { __phase = "R-IN"; __reason = "DYN_KW_HARD_V1"; }
+        else if (/楽しい|嬉しい|最高/u.test(__m)) { __phase = "L-OUT"; __reason = "DYN_KW_GOOD_V1"; }
+        else if (__len <= 12) { __phase = "L-IN"; __reason = "DYN_LEN_SHORT_V1"; }
+        else if (__len >= 80) { __phase = "R-OUT"; __reason = "DYN_LEN_LONG_V1"; }
+        else { __phase = "CENTER"; __reason = "DYN_LEN_MID_V1"; }
+        __h.phase = __phase; __h.reason = __reason;
+      }
+    } catch {}
     try {
       const __k:any = (df as any).ku;
       const __h:any = (__k && typeof __k.heart === "object") ? __k.heart : null;
