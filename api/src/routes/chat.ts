@@ -203,6 +203,35 @@ function buildGroundedResultNonText(doc: string, pdfPage: number, threadId: stri
   p.warnings.push("NON_TEXT");
   applyTruthCore(p, { responseText: `GROUNDED ${doc} P${pdfPage}`, trace: undefined });
   applyVerifier(p);
+
+      // KG2v1: attach KHS candidates from deterministic seeds (LLM-free)
+      try {
+        const __khsCandidates: any[] = [];
+        const __src = String(responseText || "");
+        const __grams = (__src.match(/[一-龯]{2}/g) || []).slice(0, 50);
+        if (__grams.length > 0) {
+          const __dbPath = getDbPath("kokuzo.sqlite");
+          const __db = new DatabaseSync(__dbPath, { readOnly: true });
+          const __seen = new Set<string>();
+          const stmt = __db.prepare(
+            "SELECT seedKey, lawKey, unitId, quoteHash, quoteLen, kanji2Top FROM khs_seeds_det_v1 WHERE kanji2Top LIKE %||?||% LIMIT 8"
+          );
+          for (const g of __grams) {
+            if (__khsCandidates.length >= 8) break;
+            const rows = stmt.all(g) as any[];
+            for (const r of rows) {
+              if (__khsCandidates.length >= 8) break;
+              const k = String(r.seedKey || r.unitId || "");
+              if (!k || __seen.has(k)) continue;
+              __seen.add(k);
+              __khsCandidates.push(r);
+            }
+          }
+        }
+        (p as any).khsCandidates = __khsCandidates;
+      } catch (e) {
+        try { (p as any).khsCandidates = []; } catch {}
+      }
   const prev = kokuzoRecall(threadId);
   if (prev) {
     if (!p.chainOrder.includes("KOKUZO_RECALL")) p.chainOrder.push("KOKUZO_RECALL");
@@ -248,6 +277,35 @@ function buildGroundedResultBody(
       }
       applyTruthCore(p, { responseText: `GROUNDED ${doc} P${pdfPage}`, trace: undefined });
       applyVerifier(p);
+
+      // KG2v1: attach KHS candidates from deterministic seeds (LLM-free)
+      try {
+        const __khsCandidates: any[] = [];
+        const __src = String(pageText || responseText || "");
+        const __grams = (__src.match(/[一-龯]{2}/g) || []).slice(0, 50);
+        if (__grams.length > 0) {
+          const __dbPath = getDbPath("kokuzo.sqlite");
+          const __db = new DatabaseSync(__dbPath, { readOnly: true });
+          const __seen = new Set<string>();
+          const stmt = __db.prepare(
+            "SELECT seedKey, lawKey, unitId, quoteHash, quoteLen, kanji2Top FROM khs_seeds_det_v1 WHERE kanji2Top LIKE %||?||% LIMIT 8"
+          );
+          for (const g of __grams) {
+            if (__khsCandidates.length >= 8) break;
+            const rows = stmt.all(g) as any[];
+            for (const r of rows) {
+              if (__khsCandidates.length >= 8) break;
+              const k = String(r.seedKey || r.unitId || "");
+              if (!k || __seen.has(k)) continue;
+              __seen.add(k);
+              __khsCandidates.push(r);
+            }
+          }
+        }
+        (p as any).khsCandidates = __khsCandidates;
+      } catch (e) {
+        try { (p as any).khsCandidates = []; } catch {}
+      }
       // Phase23: Kokuzo recall（構文記憶）
       const prev = kokuzoRecall(threadId);
       if (prev) {
@@ -2119,6 +2177,48 @@ let outText = "";
 
 } catch {}
       // DF_DETAILPLAN_MIRROR_V1: always mirror top-level detailPlan into decisionFrame.detailPlan
+      // KG2v1.1_NULL_GUARD_V8: ensure detailPlan.khsCandidates is array (never null)
+      try { const __dp:any = (payload as any)?.decisionFrame?.detailPlan; if (__dp && (__dp as any).khsCandidates == null) (__dp as any).khsCandidates = []; } catch {}
+
+      // KG2v1.1: attach khsCandidates at DF_DETAILPLAN_MIRROR_V1 (LLM-free, safe default)
+      // KG2v1.1_NULL_GUARD_V8: ensure detailPlan.khsCandidates is array (never null)
+      try { const __dp:any = (payload as any)?.decisionFrame?.detailPlan; if (__dp && (__dp as any).khsCandidates == null) (__dp as any).khsCandidates = []; } catch {}
+      try {
+        const __df: any = (payload as any)?.decisionFrame ?? null;
+        const __dp: any = (__df && (__df as any).detailPlan) ? (__df as any).detailPlan : null;
+        if (__dp && typeof __dp === "object" && !Array.isArray(__dp) && !("khsCandidates" in __dp)) {
+          const __khsCandidates: any[] = [];
+          const __src = String((payload as any)?.rawMessage ?? (payload as any)?.message ?? "");
+          const __grams = (__src.match(/[一-龯]{2}/g) || []).slice(0, 50);
+          if (__grams.length > 0) {
+            const __dbPath = getDbPath("kokuzo.sqlite");
+            const __db = new DatabaseSync(__dbPath, { readOnly: true });
+            const __seen = new Set<string>();
+            const stmt = __db.prepare(
+              "SELECT seedKey, lawKey, unitId, quoteHash, quoteLen, kanji2Top FROM khs_seeds_det_v1 WHERE kanji2Top LIKE %||?||% LIMIT 8"
+            );
+            for (const g of __grams) {
+              if (__khsCandidates.length >= 8) break;
+              const rows = stmt.all(g) as any[];
+              for (const r of rows) {
+                if (__khsCandidates.length >= 8) break;
+                const k = String(r.seedKey || r.unitId || "");
+                if (!k || __seen.has(k)) continue;
+                __seen.add(k);
+                __khsCandidates.push(r);
+              }
+            }
+          }
+          (__dp as any).khsCandidates = __khsCandidates;
+        }
+      } catch (e) {
+        try {
+          const __df: any = (payload as any)?.decisionFrame ?? null;
+          if (__df && (__df as any).detailPlan && typeof (__df as any).detailPlan === "object") {
+            ((__df as any).detailPlan as any).khsCandidates = [];
+          }
+        } catch {}
+      }
 
     // AK6_GENESISPLAN_DEBUG_V1: attach genesisPlan template (debug-only, deterministic)
     try {
@@ -2150,6 +2250,58 @@ let outText = "";
         if (payload && payload.decisionFrame && typeof payload.decisionFrame === "object") {
           if (!payload.decisionFrame.detailPlan && (payload as any).detailPlan) {
             payload.decisionFrame.detailPlan = (payload as any).detailPlan;
+      // KG2v1.1C_FORCE_KHSCANDIDATES_V2: ensure decisionFrame.detailPlan.khsCandidates exists (array)
+      // KG2v1.2_FILL_KHSCANDIDATES_V1: fill khsCandidates from khs_seeds_det_v1 (LLM-free)
+      try {
+        const __df:any = (payload as any)?.decisionFrame ?? null;
+        const __dp:any = (__df && (__df as any).detailPlan) ? (__df as any).detailPlan : null;
+        // KG2V2_INIT_KHSCANDIDATES_EARLY_V1: ensure khsCandidates is array before gate
+        try { if (__dp && !Array.isArray((__dp as any).khsCandidates)) ( __dp as any).khsCandidates = []; } catch {}
+        // KG2v1.2_OBS_FLAGS_V2: observability flags (no behavior change)
+        try { if (!Array.isArray((__dp as any).warnings)) (__dp as any).warnings = []; } catch {}
+        try { ((__dp as any).warnings as any[]).push("KG2V2_ENTER"); } catch {}
+        // KG2V2_IF_GATES_V1: observability for if-gate
+        try { const a:any = (__dp as any).khsCandidates; const can = Array.isArray(a); const ln = can ? a.length : -1; ((__dp as any).warnings as any[]).push("KG2V2_IF_CAN=" + String(can)); ((__dp as any).warnings as any[]).push("KG2V2_IF_LEN=" + String(ln)); } catch {}
+        if (__dp && Array.isArray((__dp as any).khsCandidates) && (__dp as any).khsCandidates.length === 0) {
+          const __src = String((payload as any)?.rawMessage ?? (payload as any)?.message ?? "") + "\n" + String((__dp as any).centerClaim ?? "");
+          const __grams = (__src.match(/[一-龯]{2}/g) || []).slice(0, 50);
+          // KG2V2_SHOW_G0_V1: observability (no behavior change)
+          try { const g0 = (__grams && __grams[0]) ? String(__grams[0]) : ""; ((__dp as any).warnings as any[]).push("KG2V2_G0=" + g0.slice(0,24)); } catch {}
+          // KG2V2_GRAMS_EMPTY: observability
+          try { if (__grams.length === 0) { ((__dp as any).warnings as any[]).push("KG2V2_GRAMS_EMPTY"); } } catch {}
+          // KG2v1.2_FIX_IFNULL_AND_FALLBACK_V3: if no kanji-2grams, search by raw query (trimmed)
+          if (__grams.length === 0) { const q = String(__src||"").replace(/\s+/g," ").trim().slice(0, 18); if (q) __grams.push(q); }
+          if (__grams.length > 0) {
+            const __dbPath = getDbPath("kokuzo.sqlite");
+            const __db = new DatabaseSync(__dbPath, { readOnly: true });
+            const __seen = new Set<string>();
+            const __out: any[] = [];
+            // KG2v1.2_USE_KHS_UNITS_INSTR_V1: search khs_units.quote directly (LLM-free)
+            // KG2v1.2_FIX_IFNULL_AND_FALLBACK_V3: fix IFNULL literal + fallback query
+            const stmt = __db.prepare("SELECT u.unitId as unitId, l.lawKey as lawKey, length(u.quote) as quoteLen FROM khs_units u LEFT JOIN khs_laws l ON l.unitId=u.unitId WHERE instr(IFNULL(u.quote, ''), ?) > 0 LIMIT 8");
+            for (const g of __grams) {
+              if (__out.length >= 8) break;
+              const rows = stmt.all(g) as any[];
+            // KG2V2_ROWS0: observability
+            try { if (!Array.isArray(rows) || rows.length === 0) { ((__dp as any).warnings as any[]).push("KG2V2_ROWS0"); } } catch {}
+              for (const r of rows) {
+                if (__out.length >= 8) break;
+                const k = String(r.seedKey || r.unitId || "");
+                if (!k || __seen.has(k)) continue;
+                __seen.add(k);
+                __out.push(r);
+              }
+            }
+            if (__out.length > 0) (__dp as any).khsCandidates = __out;
+          }
+        }
+      } catch {}
+      try {
+        const __dp: any = (payload as any)?.decisionFrame?.detailPlan ?? null;
+        if (__dp && typeof __dp === "object" && !Array.isArray(__dp)) {
+          if (!Array.isArray((__dp as any).khsCandidates)) (__dp as any).khsCandidates = [];
+        }
+      } catch {}
           }
         }
       } catch {}
@@ -3218,7 +3370,7 @@ if (typeof out === "string" && out.trim()) nat.responseText = out.trim();
     const detailPlan = emptyCorePlan(
       typeof response === "string" ? response.slice(0, 80) : ""
     );
-  // K3 debug: breathCycle (no response text change)
+    // KG2v1.1A_INIT_KHSCANDIDATES_SAFE_V1: ensure detailPlan.khsCandidates is always an array\n    try { if (!Array.isArray((detailPlan as any).khsCandidates)) (detailPlan as any).khsCandidates = []; } catch {}\n  // K3 debug: breathCycle (no response text change)
   if (!(detailPlan as any).debug) (detailPlan as any).debug = {};
   (detailPlan as any).debug.breathCycle = computeBreathCycle(String(message || ""));
   // K5 debug: koshiki summary (no response text change)
@@ -3774,7 +3926,7 @@ if (__hasMenu && !__askedMenu) {
     console.error("[CHAT-KANAGI] Error:", { pid, uptime, error });
     // エラー時も観測を返す（停止しない）
     const detailPlan = emptyCorePlan("ERROR_FALLBACK");
-    detailPlan.chainOrder = ["ERROR_FALLBACK"];
+    // KG2v1.1A_INIT_KHSCANDIDATES_SAFE_V1: ensure detailPlan.khsCandidates is always an array\n    try { if (!Array.isArray((detailPlan as any).khsCandidates)) (detailPlan as any).khsCandidates = []; } catch {}\n    detailPlan.chainOrder = ["ERROR_FALLBACK"];
     return reply({
       response: "思考が循環状態にフォールバックしました。矛盾は保持され、旋回を続けています。",
       provisional: true,
