@@ -2359,6 +2359,28 @@ let outText = "";
       }
     } catch {}
     // S2_0_DEBUG_RETURN_SYNAPSE_TOP_V2_SAFE
+    // S2_0b_FALLBACK_KU_SYNAPSE_TOP_V1: if detailPlan missing, attach synapseTop to decisionFrame.ku (audit-only)
+    try {
+      const __df:any = (payload as any)?.decisionFrame ?? null;
+      if (__df && (typeof __df === "object")) {
+        if (!__df.ku || typeof __df.ku !== "object" || Array.isArray(__df.ku)) __df.ku = {};
+        const __ku:any = __df.ku;
+        const __dp:any = (__df.detailPlan && typeof __df.detailPlan === "object" && !Array.isArray(__df.detailPlan)) ? __df.detailPlan : null;
+        if (__dp) __dp.debug = (__dp.debug && typeof __dp.debug === "object") ? __dp.debug : {};
+        const __tid = String((payload as any)?.threadId ?? "");
+        if (__tid) {
+          const __dbPath = getDbPath("kokuzo.sqlite");
+          const __db = new DatabaseSync(__dbPath, { readOnly: true });
+          const __stmt = __db.prepare("SELECT createdAt, threadId, routeReason, substr(heartJson,1,120) AS heartHead, substr(metaJson,1,160) AS metaHead FROM synapse_log WHERE threadId=? ORDER BY createdAt DESC LIMIT 1");
+          const row:any = __stmt.get(__tid);
+          if (row) {
+            if (__dp) (__dp.debug as any).synapseTop = row;
+            else __ku.synapseTop = row;
+          }
+        }
+      }
+    } catch {}
+    // S2_0b_FALLBACK_KU_SYNAPSE_TOP_V1
     const rawCandidates = Array.isArray((payload as any)?.candidates) ? (payload as any).candidates : [];
 
     const isGarbageSnippet = (snip: string): boolean => {
