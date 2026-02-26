@@ -882,6 +882,7 @@ const pid = process.pid;
         const stmtQ: any = db.prepare(
           "SELECT l.lawKey AS lawKey, l.unitId AS unitId, u.doc AS doc, u.pdfPage AS pdfPage, u.quote AS quote, u.quoteHash AS quoteHash " +
           "FROM khs_laws l JOIN khs_units u ON u.unitId = l.unitId " +
+          "WHERE l.status=\x27verified\x27 " +
           "WHERE l.lawType IN ('DEF','LAW') AND l.status='verified' AND instr(u.quote, ?) > 0 " +
           "ORDER BY l.confidence DESC, l.updatedAt DESC LIMIT 1"
         );
@@ -4115,6 +4116,20 @@ function __tenmonGeneralGateResultMaybe(x: any): any {
     if (!x || typeof x !== "object") return x;
     const df = (x as any).decisionFrame || {};
     const ku = df.ku || {};
+    // K1_1_HYBRID_TRACE_ENFORCE_v1 (scope-safe: df/ku in this block)
+    try {
+      if ((df as any).mode === "HYBRID") {
+        if (!(df as any).ku || typeof (df as any).ku !== "object" || Array.isArray((df as any).ku)) (df as any).ku = {};
+        const __ku: any = (df as any).ku;
+        const laws = (__ku as any).lawsUsed;
+        const evi  = (__ku as any).evidenceIds;
+        const tr   = (__ku as any).lawTrace;
+        const empty = (!Array.isArray(laws) || laws.length === 0)
+          && (!Array.isArray(evi)  || evi.length  === 0)
+          && (!Array.isArray(tr)   || tr.length   === 0);
+        if (empty) { (__ku as any).routeReason = "K1_TRACE_EMPTY_GATED_V1"; }
+      }
+    } catch {}
     // R4_1_HEART_STATIC_KU_V2: static heart in decisionFrame.ku (audit-only)
     // R4_1b_HEART_FILL_PHASE_REASON_V2: fill missing heart.phase/reason (preserve existing state/entropy)
     // R4_2_HEART_DYNAMIC_PHASE_V3_FROM_TRACE_V1: deterministic phase from trace/candidates (audit-only)
