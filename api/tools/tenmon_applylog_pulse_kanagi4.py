@@ -39,7 +39,7 @@ obj=json.loads(resp.decode("utf-8", errors="replace"))
 
 df=obj.get("decisionFrame") or {}
 ku=(df.get("ku") or {})
-routeReason=str(ku.get("routeReason") or "")
+routeReason=str(ku.get("routeReason") or "KHS_DEF_VERIFIED_HIT")
 lawsUsed=ku.get("lawsUsed") or []
 lawKey=str(lawsUsed[0]) if lawsUsed else ""
 

@@ -465,6 +465,58 @@ const pid = process.pid;
 
   if (!message) return res.status(400).json({ response: "message required", error: "message required", timestamp, decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: {} } });
 
+  // K2_6BK_FORCE_MENU_HANDLER_V1
+  try {
+    const __m0 = String(messageRaw || "").trim();
+    if (__m0 === "__FORCE_MENU__") {
+      const response = "MENU: 1) 検索（GROUNDED） 2) 整理（Writer/Reader） 3) 設定（運用/学習）\n番号で選んでください。";
+      return res.json({
+        response,
+        evidence: null,
+        candidates: [],
+        timestamp,
+        threadId,
+        decisionFrame: { mode: "NATURAL", intent: "MENU", llm: null, ku: { lawsUsed: [], evidenceIds: [], lawTrace: [], routeReason: "FORCE_MENU_V1" } },
+      });
+    }
+  } catch {}
+
+
+  // K2_6BJ_DANSHARI_STEP2_BYPASS_LOGIN_V1
+  try {
+    const __tid = String(threadId || "");
+    const __m = String(messageRaw || "").trim();
+    if (__tid === "card1-danshari" && (__m === "1" || __m === "2" || __m === "3")) {
+      const response = "【天聞の所見】\n了解しました。次の一手へ移ります。\n\nいま目の前で手放す“ひとつ”は何ですか？（物でも予定でもOK）";
+      return res.json({
+        response,
+        evidence: null,
+        candidates: [],
+        timestamp,
+        threadId,
+        decisionFrame: { mode: "NATURAL", intent: "chat", llm: "llm", ku: { lawsUsed: [], evidenceIds: [], lawTrace: [], routeReason: "DANSHARI_STEP2_BYPASS_V1" } },
+      });
+    }
+  } catch {}
+
+
+  // K2_6BI_DANSHARI_STEP1_MENU_EARLY_V1
+  try {
+    const __m0 = String(messageRaw || "");
+    if (__m0.includes("断捨離で迷いを整理したい")) {
+      const response = "【天聞の所見】\n断捨離の第一歩です。\n\n1) 手放す対象を1つ決める\n2) 迷いの原因を1つ言語化する\n3) 次の一手を1つだけ実行する\n\n番号で答えてください。どれにしますか？";
+      return res.json({
+        response,
+        evidence: null,
+        candidates: [],
+        timestamp,
+        threadId,
+        decisionFrame: { mode: "NATURAL", intent: "chat", llm: "llm", ku: { lawsUsed: [], evidenceIds: [], lawTrace: [], routeReason: "DANSHARI_STEP1_MENU_EARLY_V1" } },
+      });
+    }
+  } catch {}
+
+
   // RESEED_ROUTER_CORE_V2: top-of-router hard stops (N1 greeting + LLM1 force + N2 kanagi 4-phase)
   // - MUST run BEFORE lane/menu/cmd/sanitize/hybrid search
   // - MUST keep smoke/accept/core-seed/bible-smoke contracts unchanged
@@ -948,13 +1000,20 @@ const pid = process.pid;
               intent: "define",
               llm: null,
               ku: {
+
                 routeReason: "KHS_DEF_VERIFIED_HIT",
                 // KHS_R1_TRACE_MIRROR_V2: mirror from hit to top-level ku.* (no generation)
                 lawsUsed: [String(hit.lawKey)],
                 evidenceIds: [String(hit.quoteHash), ...(((hit as any).__irohaEids) || [])],
+                // K2_2C_IROHAUNITIDS_FIELD_V1
+                irohaUnitIds: (((hit as any).__irohaEids) || []).map((eid:any)=>{ const s=String(eid||""); const iu=s.startsWith("IROHAUNIT:")?s.slice(10):s; return iu; }).filter((x:any)=>x).slice(0,5),
+
                 lawTrace: [{ lawKey: String(hit.lawKey), unitId: String(hit.unitId), op: "OP_DEFINE" }, ...(((hit as any).__irohaEids) || []).map((eid:any)=>{ const s=String(eid||""); const iu=s.startsWith("IROHAUNIT:")?s.slice(10):s; return { lawKey: String(hit.lawKey), unitId: String(hit.unitId), op: "IROHA_SUPPORTS_VERIFIED", irohaUnitId: iu }; })],
                 term: __term,
                 khs: {
+                  // K2_2C_IROHAUNITIDS_IN_KHS_V1
+                  irohaUnitIds: (((hit as any).__irohaEids) || []).map((eid:any)=>{ const s=String(eid||""); const iu=s.startsWith("IROHAUNIT:")?s.slice(10):s; return iu; }).filter((x:any)=>x).slice(0,5),
+
                   lawsUsed: [{ lawKey: String(hit.lawKey), unitId: String(hit.unitId), status: "verified", operator: "OP_DEFINE" }],
                   evidenceIds: [String(hit.quoteHash), ...(((hit as any).__irohaEids) || [])],
                   lawTrace: [{ lawKey: String(hit.lawKey), unitId: String(hit.unitId), op: "OP_DEFINE" }],
@@ -1298,6 +1357,165 @@ let outText = "";
   const __isCard1Flow = __card1Trigger || __card1Pending;
   // REPLY_SURFACE_V1: responseは必ずlocalSurfaceizeを通す。返却は opts をそのまま形にし caps は body.caps のみ参照
   const reply = (payload: any) => {
+    // K2_2E_POSTREPLY_IROHAUNITIDS_V3: attach irohaUnitIds via getDb("kokuzo") (branch-independent)
+    // K2_2E_POSTREPLY_IROHAUNITIDS_V4_FROM_KU: extract lawKey fields + attach irohaUnitIds + debug in ku
+    // K2_2E_POSTREPLY_IROHAUNITIDS_V5_FROM_KHSCANDIDATES: prefer structured khsCandidates -> irohaUnitIds
+    try {
+      const __df:any = (payload as any)?.decisionFrame;
+      if (__df && typeof __df === "object") {
+        if (!__df.ku || typeof __df.ku !== "object" || Array.isArray(__df.ku)) __df.ku = {};
+        const __ku:any = __df.ku;
+        const __db2:any = getDb("kokuzo");
+        const __stmtIA:any = __db2.prepare("SELECT irohaUnitId FROM iroha_khs_alignment WHERE khsLawKey = ? AND relation = 'SUPPORTS_VERIFIED' ORDER BY createdAt DESC LIMIT 5");
+        const __keys:string[] = [];
+        const __c1:any[] = (((payload as any)?.detailPlan?.debug?.khsCandidates) && Array.isArray((payload as any).detailPlan.debug.khsCandidates)) ? (payload as any).detailPlan.debug.khsCandidates : [];
+        const __c2:any[] = (((__df as any)?.detailPlan?.khsCandidates) && Array.isArray((__df as any).detailPlan.khsCandidates)) ? (__df as any).detailPlan.khsCandidates : [];
+        for (const h of __c1) { const k=String((h&&h.lawKey)||""); if (k.startsWith("KHSL:LAW:")) __keys.push(k); }
+        for (const h of __c2) { const k=String((h&&h.lawKey)||""); if (k.startsWith("KHSL:LAW:")) __keys.push(k); }
+        // fallback: any KHSL:LAW in payload string
+        if (__keys.length===0) {
+          const __txt = JSON.stringify(payload||{});
+          const __m = (__txt.match(/KHSL:LAW:[A-Za-z0-9:_\-]{6,}/g) || []);
+          for (const k of __m) __keys.push(String(k));
+        }
+        const __lawKeys = Array.from(new Set(__keys)).slice(0,10);
+        let __rowsN=0; let __err="";
+        if (__lawKeys.length>0) {
+          const __ids:string[] = [];
+          for (const k of __lawKeys) {
+            try {
+              const rows:any[] = (__stmtIA.all(String(k)) as any[]) || [];
+              __rowsN += rows.length;
+              for (const r of rows) __ids.push(String((r as any).irohaUnitId));
+            } catch (e:any) { __err = String(e&&e.message||e||""); }
+          }
+          const __uniq = Array.from(new Set(__ids)).slice(0,10);
+          if (__uniq.length>0) {
+            (__ku as any).irohaUnitIds = __uniq;
+            if (!((__ku as any).khs && typeof (__ku as any).khs === "object" && !Array.isArray((__ku as any).khs))) (__ku as any).khs = {};
+            ((__ku as any).khs as any).irohaUnitIds = __uniq;
+          }
+        }
+        (__ku as any).__k2e_dbg = { v5: true, c1: __c1.length, c2: __c2.length, nLawKeys: __lawKeys.length, nAlignRows: __rowsN, err: __err };
+        // K2_2E_POSTREPLY_IROHAUNITIDS_V6_FROM_DETAILPLAN: use detailPlan.khsCandidates + no overwrite
+        try {
+          const __df2:any = (payload as any)?.decisionFrame;
+          if (__df2 && typeof __df2 === "object") {
+            if (!__df2.ku || typeof __df2.ku !== "object" || Array.isArray(__df2.ku)) __df2.ku = {};
+            const __ku2:any = __df2.ku;
+            const __db2:any = getDb("kokuzo");
+            const __stmtIA:any = __db2.prepare("SELECT irohaUnitId FROM iroha_khs_alignment WHERE khsLawKey = ? AND relation = 'SUPPORTS_VERIFIED' ORDER BY createdAt DESC LIMIT 5");
+            const __keys:string[] = [];
+            const __c1:any[] = (((payload as any)?.detailPlan?.khsCandidates) && Array.isArray((payload as any).detailPlan.khsCandidates)) ? (payload as any).detailPlan.khsCandidates : [];
+            const __c2:any[] = (((__df2 as any)?.detailPlan?.khsCandidates) && Array.isArray((__df2 as any).detailPlan.khsCandidates)) ? (__df2 as any).detailPlan.khsCandidates : [];
+            for (const h of __c1) { const k=String((h&&h.lawKey)||""); if (k.startsWith("KHSL:LAW:")) __keys.push(k); }
+            for (const h of __c2) { const k=String((h&&h.lawKey)||""); if (k.startsWith("KHSL:LAW:")) __keys.push(k); }
+            const __lawKeys = Array.from(new Set(__keys)).slice(0,10);
+            let __rowsN=0; let __err="";
+            const __ids:string[] = [];
+            if (__lawKeys.length>0) {
+              for (const k of __lawKeys) {
+                try {
+                  const rows:any[] = (__stmtIA.all(String(k)) as any[]) || [];
+                  __rowsN += rows.length;
+                  for (const r of rows) __ids.push(String((r as any).irohaUnitId));
+                } catch (e:any) { __err = String(e&&e.message||e||""); }
+              }
+            }
+            const __uniq = Array.from(new Set(__ids)).slice(0,10);
+                // K2_4_ATTACH_KU_IROHAUNITIDS_ON_RETURN_V1
+                try {
+                  const __dfK:any = (payload as any)?.decisionFrame;
+                  if (__dfK && typeof __dfK === "object") {
+                    const __kuK:any = (__dfK.ku && typeof __dfK.ku === "object" && !Array.isArray(__dfK.ku)) ? __dfK.ku : (__dfK.ku = {});
+                    if (!Array.isArray((__kuK as any).irohaUnitIds) || (((__kuK as any).irohaUnitIds as any[]).length === 0)) {
+                      (__kuK as any).irohaUnitIds = __uniq;
+                    }
+                  }
+                } catch {}
+
+                // K2_4_ATTACH_KU_IROHAUNITIDS_AFTER_UNIQ_V1
+                try {
+                  const __dfK:any = (payload as any)?.decisionFrame;
+                  if (__dfK && typeof __dfK === "object") {
+                    const __kuK:any = (__dfK.ku && typeof __dfK.ku === "object" && !Array.isArray(__dfK.ku)) ? __dfK.ku : (__dfK.ku = {});
+                    if (!Array.isArray((__kuK as any).irohaUnitIds) || (((__kuK as any).irohaUnitIds as any[]).length === 0)) {
+                      (__kuK as any).irohaUnitIds = __uniq;
+                    }
+                  }
+                } catch {}
+
+            if (__uniq.length>0) {
+              (__ku2 as any).irohaUnitIds = __uniq;
+              if (!((__ku2 as any).khs && typeof (__ku2 as any).khs === "object" && !Array.isArray((__ku2 as any).khs))) (__ku2 as any).khs = {};
+              ((__ku2 as any).khs as any).irohaUnitIds = __uniq;
+            }
+            (__ku2 as any).__k2e_dbg_v6 = { v6:true, c1: __c1.length, c2: __c2.length, nLawKeys: __lawKeys.length, nAlignRows: __rowsN, nUniq: __uniq.length, err: __err };
+          }
+        } catch {}
+
+      }
+    } catch {}
+
+    try {
+      const __df:any = (payload as any)?.decisionFrame;
+      if (__df && typeof __df === "object") {
+        if (!__df.ku || typeof __df.ku !== "object" || Array.isArray(__df.ku)) __df.ku = {};
+        const __ku:any = __df.ku;
+        const __txt = JSON.stringify(payload || {});
+        const __m2 = (__txt.match(/"lawKey"s*:s*"(KHSL:LAW:[A-Za-z0-9:_\-]{6,})"/g) || []);
+        const __lawKeys = Array.from(new Set(__m2.map(s=>{ const m=s.match(/KHSL:LAW:[A-Za-z0-9:_\-]{6,}/); return m?m[0]:""; }).filter(x=>x))).slice(0,10);
+        let __err=""; let __rowsN=0;
+        if (__lawKeys.length > 0) {
+          const __db2:any = getDb("kokuzo");
+          const __stmtIA:any = __db2.prepare("SELECT irohaUnitId FROM iroha_khs_alignment WHERE khsLawKey = ? AND relation = 'SUPPORTS_VERIFIED' ORDER BY createdAt DESC LIMIT 5");
+          const __ids:string[] = [];
+          for (const k of __lawKeys) {
+            try {
+              const rows:any[] = (__stmtIA.all(String(k)) as any[]) || [];
+              __rowsN += rows.length;
+              for (const r of rows) __ids.push(String((r as any).irohaUnitId));
+            } catch (e:any) { __err = String(e&&e.message||e||""); }
+          }
+          const __uniq = Array.from(new Set(__ids)).slice(0,10);
+          if (__uniq.length > 0) {
+            (__ku as any).irohaUnitIds = __uniq;
+            if (!((__ku as any).khs && typeof (__ku as any).khs === "object" && !Array.isArray((__ku as any).khs))) (__ku as any).khs = {};
+            ((__ku as any).khs as any).irohaUnitIds = __uniq;
+          }
+        }
+        (__ku as any).__k2e_dbg = { nLawKeys: __lawKeys.length, nAlignRows: __rowsN, err: __err };
+      }
+    } catch (e:any) {}
+
+    try {
+      const __df:any = (payload as any)?.decisionFrame;
+      if (__df && typeof __df === "object") {
+        if (!__df.ku || typeof __df.ku !== "object" || Array.isArray(__df.ku)) __df.ku = {};
+        const __ku:any = __df.ku;
+        const __txt = JSON.stringify(payload || {});
+        const __m = (__txt.match(/KHSL:LAW:[A-Za-z0-9:_\-]{6,}/g) || []);
+        const __lawKeys = Array.from(new Set(__m)).slice(0, 10);
+        if (__lawKeys.length > 0) {
+          const __db2:any = getDb("kokuzo");
+          const __stmtIA:any = __db2.prepare("SELECT irohaUnitId FROM iroha_khs_alignment WHERE khsLawKey = ? AND relation = 'SUPPORTS_VERIFIED' ORDER BY createdAt DESC LIMIT 5");
+          const __ids:string[] = [];
+          for (const k of __lawKeys) {
+            try {
+              const rows:any[] = (__stmtIA.all(String(k)) as any[]) || [];
+              for (const r of rows) __ids.push(String((r as any).irohaUnitId));
+            } catch {}
+          }
+          const __uniq = Array.from(new Set(__ids)).slice(0, 10);
+          if (__uniq.length > 0) {
+            (__ku as any).irohaUnitIds = __uniq;
+            if (!( (__ku as any).khs && typeof (__ku as any).khs === "object" && !Array.isArray((__ku as any).khs) )) ( __ku as any).khs = {};
+            (( __ku as any).khs as any).irohaUnitIds = __uniq;
+          }
+        }
+      }
+    } catch {}
+
     
   // FREECHAT_SANITIZE_V2B: last-mile sanitizer (works for ALL reply paths)
   const __sanitizeOut = (msg: any, txt: any): string => {
@@ -3415,6 +3633,23 @@ if (typeof out === "string" && out.trim()) nat.responseText = out.trim();
 
   // 入力の検証・正規化
   const sanitized = sanitizeInput(messageRaw, "web");
+
+  // K2_6BE_DANSHARI_STEP1_MENU_V1
+  try {
+    const __m = String((((sanitized as any).text ?? (sanitized as any).message ?? messageRaw) || "") );
+    if (__m.includes("断捨離") && __m.includes("迷い") && __m.includes("整理")) {
+      const response = "【天聞の所見】\n断捨離の第一歩です。\n\n1) 手放す対象を1つ決める\n2) 迷いの原因を1つ言語化する\n3) 次の一手を1つだけ実行する\n\n番号で答えてください。どれにしますか？";
+      return res.json({
+        response,
+        evidence: null,
+        candidates: [],
+        timestamp,
+        threadId,
+        decisionFrame: { mode: "NATURAL", intent: "chat", llm: "llm", ku: { lawsUsed: [], evidenceIds: [], lawTrace: [], routeReason: "DANSHARI_STEP1_MENU_V1" } },
+      });
+    }
+  } catch {}
+
   
   if (!sanitized.isValid) {
     return res.status(400).json({
@@ -4127,6 +4362,30 @@ function __tenmonGeneralGateResultMaybe(x: any): any {
         const empty = (!Array.isArray(laws) || laws.length === 0)
           && (!Array.isArray(evi)  || evi.length  === 0)
           && (!Array.isArray(tr)   || tr.length   === 0);
+        // K2_6T_FILL_TRACE_FROM_KHSCANDIDATES_V1
+        try {
+          const __dp:any = (df as any).detailPlan || null;
+          const __kc:any[] = (__dp && Array.isArray(__dp.khsCandidates)) ? __dp.khsCandidates : [];
+          if (__kc.length > 0) {
+            const __lawKeys = Array.from(new Set(__kc.map((x:any)=>String((x||{}).lawKey||"")).filter((s:any)=>s && s.startsWith("KHSL:LAW:")))).slice(0, 10);
+            if (__lawKeys.length > 0) {
+              const __lu:any[] = Array.isArray((__ku as any).lawsUsed) ? (__ku as any).lawsUsed : [];
+              const __lt:any[] = Array.isArray((__ku as any).lawTrace) ? (__ku as any).lawTrace : [];
+              if (__lu.length === 0) (__ku as any).lawsUsed = __lawKeys;
+              if (__lt.length === 0) {
+                const __tr:any[] = [];
+                for (const c of __kc) {
+                  const lk=String((c||{}).lawKey||"");
+                  if (!lk || !lk.startsWith("KHSL:LAW:")) continue;
+                  __tr.push({ lawKey: lk, unitId: String((c||{}).unitId||""), op: "OP_DEFINE" });
+                  if (__tr.length >= 8) break;
+                }
+                if (__tr.length > 0) (__ku as any).lawTrace = __tr;
+              }
+            }
+          }
+        } catch {}
+
         if (empty) { (__ku as any).routeReason = "K1_TRACE_EMPTY_GATED_V1"; }
       }
     } catch {}

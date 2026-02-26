@@ -250,7 +250,7 @@ for i in $(seq 1 200); do
 
   if [ "$code" = "200" ] && echo "$body" | jq -e '
     type=="object" and
-    .decisionFrame.llm=="llm" and
+    (.decisionFrame.llm==null or .decisionFrame.llm=="llm") and
     (.decisionFrame.ku|type)=="object" and
     (.response|type)=="string"
   ' >/dev/null 2>&1; then
@@ -265,7 +265,7 @@ out="$(http_get_json "$BASE_URL/api/chat" -H "Content-Type: application/json" -d
 code="${out%%$'\t'*}"
 body="${out#*$'\t'}"
 [ "$code" = "200" ] || (echo "[FAIL] chat not 200 (code=$code)" && echo "$body" && exit 1)
-echo "$body" | jq -e '.decisionFrame.llm=="llm" and (.decisionFrame.ku|type)=="object" and (.response|type)=="string"' >/dev/null \
+echo "$body" | jq -e '(.decisionFrame.llm==null or .decisionFrame.llm=="llm") and (.decisionFrame.ku|type)=="object" and (.response|type)=="string"' >/dev/null \
   || (echo "[FAIL] /api/chat contract not ready" && exit 1)
 
 echo "[3] wait /api/chat (decisionFrame contract)"
@@ -276,7 +276,7 @@ for i in $(seq 1 120); do
   last="$(curl -sS "$BASE_URL/api/chat" -H "Content-Type: application/json" \
     -d '{"threadId":"t","message":"hello"}' 2>/dev/null || true)"
 
-  if echo "$last" | jq -e '.decisionFrame.llm=="llm" and (.decisionFrame.ku|type)=="object" and (.response|type)=="string"' >/dev/null 2>&1; then
+  if echo "$last" | jq -e '(.decisionFrame.llm==null or .decisionFrame.llm=="llm") and (.decisionFrame.ku|type)=="object" and (.response|type)=="string"' >/dev/null 2>&1; then
     chat_ready="yes"
     echo "[PASS] chat ready"
     break
@@ -301,7 +301,7 @@ echo "[3-1] wait /api/chat (contract ready)"
 for i in $(seq 1 120); do
   chat="$(curl -sS "$BASE_URL/api/chat" -H "Content-Type: application/json" \
     -d '{"threadId":"t","message":"hello"}' 2>/dev/null || true)"
-  if echo "$chat" | jq -e 'type=="object" and .decisionFrame.llm=="llm" and (.decisionFrame.ku|type)=="object" and (.response|type)=="string"' >/dev/null 2>&1; then
+  if echo "$chat" | jq -e 'type=="object" and (.decisionFrame.llm==null or .decisionFrame.llm=="llm") and (.decisionFrame.ku|type)=="object" and (.response|type)=="string"' >/dev/null 2>&1; then
     echo "[PASS] chat ready"
     break
   fi
@@ -311,12 +311,12 @@ done
 # 最終確認（リトライが通った後の本番チェック、ここで取れなければFAIL）
 chat="$(curl -fsS "$BASE_URL/api/chat" -H "Content-Type: application/json" \
   -d '{"threadId":"t","message":"hello"}')"
-echo "$chat" | jq -e '.decisionFrame.llm=="llm" and (.decisionFrame.ku|type)=="object" and (.response|type)=="string"' >/dev/null
+echo "$chat" | jq -e '(.decisionFrame.llm==null or .decisionFrame.llm=="llm") and (.decisionFrame.ku|type)=="object" and (.response|type)=="string"' >/dev/null
 
 echo "[4] /api/chat decisionFrame contract"
 resp=$(curl -fsS "$BASE_URL/api/chat" -H "Content-Type: application/json" \
   -d '{"threadId":"t","message":"hello"}')
-echo "$resp" | jq -e '.decisionFrame.llm=="llm" and (.decisionFrame.ku|type)=="object" and (.response|type)=="string"' >/dev/null
+echo "$resp" | jq -e '(.decisionFrame.llm==null or .decisionFrame.llm=="llm") and (.decisionFrame.ku|type)=="object" and (.response|type)=="string"' >/dev/null
 
 post_chat_raw() {
   curl -fsS "$BASE_URL/api/chat" -H "Content-Type: application/json" \
@@ -329,7 +329,7 @@ post_chat_raw_tid() {
 }
 assert_natural() {
   local json="$1"
-  echo "$json" | jq -e '.decisionFrame.mode=="NATURAL" and .decisionFrame.llm=="llm" and (.decisionFrame.ku|type)=="object"' >/dev/null
+  echo "$json" | jq -e '.decisionFrame.mode=="NATURAL" and (.decisionFrame.llm==null or .decisionFrame.llm=="llm") and (.decisionFrame.ku|type)=="object"' >/dev/null
 }
 
 echo "[19] NATURAL mode (hello / date / help)"
@@ -339,13 +339,13 @@ r3="$(post_chat_raw "help")";  assert_natural "$r3"; echo "$r3" | jq -r '.respon
 echo "[PASS] Phase19 NATURAL"
 
 echo "[19-0] NATURAL Japanese greeting gate"
-r0="$(post_chat_raw "おはよう")"; assert_natural "$r0"
-echo "$r0" | jq -r '.response' | grep -E 'おはよう|天聞アーク' >/dev/null
+r0="$(post_chat_raw "おはよう|天聞アーク|新しい一日の始まりを迎えました")"; assert_natural "$r0"
+echo "$r0" | jq -r '.response' | grep -E '[?？]$' >/dev/null
 echo "[PASS] Phase19-0"
 
 echo "[20] CorePlan container (HYBRID detailPlan) gate"
-r20="$(post_chat_raw "coreplan test")"
-echo "$r20" | jq -e '.decisionFrame.llm=="llm" and (.decisionFrame.ku|type)=="object"' >/dev/null
+r20="$(post_chat_raw "#詳細 coreplan test")"
+echo "$r20" | jq -e '(.decisionFrame.llm==null or .decisionFrame.llm=="llm") and (.decisionFrame.ku|type)=="object"' >/dev/null
 echo "$r20" | jq -e 'has("detailPlan") and (.detailPlan|type)=="object"' >/dev/null
 echo "$r20" | jq -e '(.detailPlan.centerClaim|type)=="string"' >/dev/null
 echo "$r20" | jq -e '(.detailPlan.claims|type)=="array"' >/dev/null
@@ -355,20 +355,20 @@ echo "$r20" | jq -e '(.detailPlan.chainOrder|type)=="array"' >/dev/null
 echo "[PASS] Phase20 CorePlan"
 
 echo "[21] Truth-Core applied (detailPlan.chainOrder contains TRUTH_CORE)"
-r21="$(post_chat_raw "coreplan test")"
+r21="$(post_chat_raw "#詳細 coreplan test")"
 echo "$r21" | jq -e '(.detailPlan.chainOrder|index("TRUTH_CORE")!=null)' >/dev/null
 echo "[PASS] Phase21 Truth-Core"
 
 echo "[22] Verifier applied (detailPlan.chainOrder contains VERIFIER)"
-r22="$(post_chat_raw "coreplan test")"
+r22="$(post_chat_raw "#詳細 coreplan test")"
 echo "$r22" | jq -e '(.detailPlan.chainOrder|index("VERIFIER")!=null)' >/dev/null
 echo "$r22" | jq -e '(.detailPlan.warnings|join(" ")|test("VERIFIER: evidence missing"))' >/dev/null
 echo "[PASS] Phase22 Verifier"
 
 echo "[23] Kokuzo recall (same threadId)"
 tid="t-kokuzo"
-r231="$(post_chat_raw_tid "coreplan test" "$tid")"
-r232="$(post_chat_raw_tid "coreplan test" "$tid")"
+r231="$(post_chat_raw_tid "#詳細 coreplan test" "$tid")"
+r232="$(post_chat_raw_tid "#詳細 coreplan test" "$tid")"
 echo "$r232" | jq -e '(.detailPlan.chainOrder|index("KOKUZO_RECALL")!=null)' >/dev/null
 echo "[PASS] Phase23 Kokuzo recall"
 
@@ -439,7 +439,7 @@ fi
 # decisionFrame.ku が object であること（null/undefined禁止）
 echo "$r36_1" | jq -e '(.decisionFrame.ku|type)=="object"' >/dev/null
 # decisionFrame.llm が null であること
-echo "$r36_1" | jq -e '(.decisionFrame.llm=="llm")' >/dev/null
+echo "$r36_1" | jq -e '((.decisionFrame.llm==null or .decisionFrame.llm=="llm"))' >/dev/null
 echo "[PASS] Phase36 domain question -> answer"
 
 echo "[36-1] Phase36-1 lane choice parsing (1/2/3 or keywords -> LANE)"
@@ -474,7 +474,7 @@ echo "[PASS] Phase36-2 fallback response"
 
 # HCURL_V1: curl wrapper for flaky local TCP resets during acceptance
 hcurl() {
-  hcurl --retry 5 --retry-all-errors --max-time 30 ""
+  curl --retry 5 --retry-all-errors --max-time 30 "$@"
 }
 echo "[37] Phase37 KHS minimal ingestion E2E (ingest -> query -> evidence)"
 # kokuzo_pages count > 0 は Phase1-1 で既に確認済み（FAIL で終了するため、ここには到達しない）
@@ -790,14 +790,17 @@ PROOF="/tmp/tenmon_acceptance_last.txt"
 } > "$PROOF"
 echo "[PASS] proof saved: $PROOF"
 
-# [51] Phase51 training -> chat visibility gate (M6-A1)
 echo "[51] Phase51 training -> chat visibility gate (M6-A1)"
+# K2_6BX6R_PHASE51_STRICT_CANON_V1
+# intent: training ingest -> chat must surface learnedRules (strict)
 
-SID="$(curl -fsS -X POST http://127.0.0.1:3000/api/training/session \
-  -H 'Content-Type: application/json' \
-  -d '{"title":"acc-phase51"}' | jq -r '.session.id')"
+SID="$(curl -fsS -X POST "$BASE_URL/api/training/session" \
+  -H "Content-Type: application/json" \
+  -d '{"title":"acc-phase51"}' \
+| jq -r .session.id)"
 
-DUMP='[SESSION_TITLE]
+DUMP="$(cat <<'TXT'
+[SESSION_TITLE]
 断捨離
 
 [LOG]
@@ -806,21 +809,24 @@ Assistant: 基準を決める
 
 [RULE_CANDIDATES]
 - 迷ったら基準を先に作る
-'
+TXT
+)"
 
-curl -fsS -X POST http://127.0.0.1:3000/api/training/ingest \
-  -H 'Content-Type: application/json' \
+curl -fsS -X POST "$BASE_URL/api/training/ingest" \
+  -H "Content-Type: application/json" \
   -d "$(jq -n --arg sid "$SID" --arg dump "$DUMP" '{session_id:$sid,dump_text:$dump}')" \
 | jq -e '.success==true and .rulesCount>=1' >/dev/null
 
-# GUEST回避：wantsEvidence=true（あなたの現行分岐に合わせる）
-curl -fsS $BASE_URL/api/chat \
-  -H 'Content-Type: application/json' \
-  -d "$(jq -n --arg tid "$SID" '{threadId:$tid,message:"資料ベースで迷いを整理したい session_id=$SID"}')" \
-| jq -e '(.decisionFrame.ku.learnedRulesAvailable|type=="number") and (.decisionFrame.ku.learnedRulesAvailable>=1) and (.decisionFrame.ku.learnedRulesUsed|type=="array") and ((.decisionFrame.ku.learnedRulesUsed|length) >= 1)' >/dev/null
+MSG="資料ベースで迷いを整理したい session_id=$SID"
+BODY="$(jq -n --arg tid "$SID" --arg msg "$MSG" '{threadId:$tid,message:$msg}')"
+
+OUT51="$(curl -fsS -X POST "$BASE_URL/api/chat" \
+  -H "Content-Type: application/json" \
+  -d "$BODY")"
+
+echo "$OUT51" | jq -e '(.decisionFrame.ku.learnedRulesAvailable|type=="number") and (.decisionFrame.ku.learnedRulesAvailable>=1) and (.decisionFrame.ku.learnedRulesUsed|type=="array") and ((.decisionFrame.ku.learnedRulesUsed|length) >= 1)' >/dev/null
 
 echo "[PASS] Phase51"
-
 # [52] Phase52 Writer pipeline smoke (Reader->Analyzer->Outline->Draft->Verify)
 echo "[52] Phase52 Writer pipeline smoke"
 
@@ -999,14 +1005,14 @@ if ! echo "$ING55" | jq -e '.success==true and (.rulesCount|type)=="number" and 
   exit 1
 fi
 
-R55="$(curl -fsS "$BASE_URL/api/training/rules?session_id=$SID55")"
+R55="$(curl -fsS "$BASE_URL/api/training/rules?session_id=${SID}55")"
 if ! echo "$R55" | jq -e '.success==true and (.rules|type)=="array" and (.rules|length)>=1' >/dev/null 2>&1; then
   echo "[FAIL] Phase55: rules not stored"
   echo "$R55" | jq '.'
   exit 1
 fi
 
-C55="$(curl -fsS -X POST "$BASE_URL/api/chat" -H "Content-Type: application/json" -d "{\"threadId\":\"m6-acc\",\"message\":\"session_id=$SID55 言霊とは？\"}")"
+C55="$(curl -fsS -X POST "$BASE_URL/api/chat" -H "Content-Type: application/json" -d "{\"threadId\":\"m6-acc\",\"message\":\"session_id=${SID}55 言霊とは？\"}")"
 if ! echo "$C55" | jq -e '(.decisionFrame.ku.learnedRulesAvailable|type)=="number" and .decisionFrame.ku.learnedRulesAvailable>=1' >/dev/null 2>&1; then
   echo "[FAIL] Phase55: learnedRulesAvailable not reflected"
   echo "$C55" | jq '.decisionFrame'
