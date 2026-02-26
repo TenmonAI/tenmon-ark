@@ -2328,10 +2328,10 @@ let outText = "";
     try {
       const __df:any = (payload as any)?.decisionFrame ?? null;
       const __ku:any = (__df && typeof __df.ku === "object" && !Array.isArray(__df.ku)) ? __df.ku : {};
-      const __route = String(__ku.routeReason ?? "");
+      const __route = String(__ku.routeReason ?? "") || String((payload as any)?.decisionFrame?.mode ?? "");
       const __lawTrace = Array.isArray(__ku.lawTrace) ? __ku.lawTrace : [];
       const __heart = (typeof __ku.heart === "object" && __ku.heart) ? __ku.heart : {};
-      const __threadId = String((payload as any)?.threadId ?? "");
+      const __threadId = String(((typeof threadId !== "undefined") ? (threadId as any) : (payload as any)?.threadId) ?? "");
       const __ts = String((payload as any)?.timestamp ?? new Date().toISOString());
       const __in = String((payload as any)?.rawMessage ?? (payload as any)?.message ?? "");
       const __out = String((payload as any)?.response ?? "");
