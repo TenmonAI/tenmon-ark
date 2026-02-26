@@ -1,5 +1,7 @@
 /* CARD1_SEAL_V1 */
 import { synthHybridResponseV1 } from "../hybrid/synth.js";
+import { createRequire as __tenmonCreateRequire } from "node:module";
+const __tenmonRequire = __tenmonCreateRequire(import.meta.url);
 import { heartModelV1 } from "../core/heartModel.js";
 import { Router, type IRouter, type Request, type Response } from "express";
 import { sanitizeInput } from "../tenmon/inputSanitizer.js";
@@ -2333,15 +2335,15 @@ let outText = "";
       const __ts = String((payload as any)?.timestamp ?? new Date().toISOString());
       const __in = String((payload as any)?.rawMessage ?? (payload as any)?.message ?? "");
       const __out = String((payload as any)?.response ?? "");
-      const __crypto = require("node:crypto");
+      const __crypto = __tenmonRequire("node:crypto");
       const __sigIn = __crypto.createHash("sha256").update(__in).digest("hex").slice(0,16);
       const __sigOut = __crypto.createHash("sha256").update(__out).digest("hex").slice(0,16);
-      const __synId = "SYN:" + __ts.replace(/[^0-9]/g,"").slice(0,14) + ":" + __sigIn;
+      const __synId = "SYN:" + (new Date()).toISOString().replace(/[^0-9]/g,"").slice(0,17) + ":" + __sigIn + ":" + __crypto.randomBytes(6).toString("hex");
       const __dbPath = getDbPath("kokuzo.sqlite");
       const __db = new DatabaseSync(__dbPath);
       const __stmt = __db.prepare("INSERT OR IGNORE INTO synapse_log(synapseId, createdAt, threadId, turnId, routeReason, lawTraceJson, heartJson, inputSig, outputSig, metaJson) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
       __stmt.run(__synId, __ts, __threadId, __synId, __route, JSON.stringify(__lawTrace), JSON.stringify(__heart), __sigIn, __sigOut, JSON.stringify({v:"S0_2", git:(__ku.gitSha||"") }));
-    } catch {}
+    } catch (e:any) { try { console.error("[SYNAPSE_LOG_INSERT_FAIL]", String((e as any)?.message||e)); } catch {} }
     // S2_0_DEBUG_RETURN_SYNAPSE_TOP_V2_SAFE: attach last synapse for this thread into detailPlan.debug (audit-only)
     try {
       const __df:any = (payload as any)?.decisionFrame ?? null;

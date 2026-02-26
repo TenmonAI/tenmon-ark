@@ -77,3 +77,18 @@ if [ "$RC" -ne 0 ]; then echo "[deploy] FAIL smoke rc=$RC (see $POST_SMOKE_LOG)"
   echo "[deploy] POST_SMOKE: last journal:"; sudo journalctl -u tenmon-ark-api.service --no-pager -n 80 || true;
 } >"$POST_SMOKE_LOG" 2>&1 || true
 echo "[deploy] POST_SMOKE: saved $POST_SMOKE_LOG"
+
+
+# POST_CHECK (optional): synapse delta gate
+if [ "${POST_CHECK:-0}" = "1" ]; then
+  echo "[deploy] POST_CHECK=1 -> check_synapse_delta"
+  if ! bash "$(dirname "$0")/check_synapse_delta.sh" --thread "${POST_THREAD:-t}" --n "${POST_N:-3}" --expect "${POST_EXPECT:-3}"; then
+    echo "[deploy] POST_CHECK FAIL" >&2
+    __evdir="/var/log/tenmon/card_deploy_fail_evidence/$(date -u +%Y%m%dT%H%M%SZ)"
+    mkdir -p "$__evdir"
+    bash "$(dirname "$0")/obs_evidence_bundle.sh" "$__evdir" || true
+    echo "[deploy] evidence => $__evdir" >&2
+    exit 1
+  fi
+  echo "[deploy] POST_CHECK PASS"
+fi
