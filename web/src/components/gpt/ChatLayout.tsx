@@ -3,8 +3,12 @@ import { useChat } from "../../hooks/useChat";
 import { MessageList } from "./MessageList";
 import { Composer } from "./Composer";
 
-export function ChatLayout() {
-  const { messages, sendMessage, loading } = useChat();
+interface ChatLayoutProps {
+  threadId?: string;
+}
+
+export function ChatLayout({ threadId: threadIdProp = "" }: ChatLayoutProps) {
+  const { messages, sendMessage, loading } = useChat(threadIdProp || undefined);
 
   return (
     <div className="gpt-chat-layout">

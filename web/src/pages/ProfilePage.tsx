@@ -6,7 +6,7 @@ export function ProfilePage() {
       <h1 className="gpt-page-title">Profile</h1>
       <div className="gpt-page-card">
         <div className="gpt-page-card-title">Account</div>
-        <p>TENMON-ARK (same-origin)</p>
+        <p>{typeof window !== "undefined" && window.localStorage.getItem("tenmon_user_display_v1") || "TENMON-ARK (same-origin)"}</p>
       </div>
       <div className="gpt-page-card">
         <div className="gpt-page-card-title">Plan</div>

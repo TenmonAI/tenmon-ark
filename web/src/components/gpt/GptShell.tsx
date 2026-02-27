@@ -6,24 +6,52 @@ import { DashboardPage } from "../../pages/DashboardPage";
 import { ProfilePage } from "../../pages/ProfilePage";
 import { SettingsModal } from "./SettingsModal";
 import { APP_TITLE } from "../../config/app";
+import { upsertThread, replaceThreadMessages } from "../../lib/db";
 
-export function GptShell() {
+interface GptShellProps {
+  userDisplay?: string | null;
+  onOpenLoginModal?: () => void;
+  onLogout?: () => Promise<void>;
+  threadId?: string;
+  setThreadId?: (id: string) => void;
+}
+
+export function GptShell({ userDisplay = null, onOpenLoginModal, onLogout, threadId = "", setThreadId }: GptShellProps) {
   const [view, setView] = useState<GptView>("chat");
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isOverlayNav, setIsOverlayNav] = useState(false); // <=1024 drawer mode
 
-
-  const handleNewChat = () => {
+  const handleNewChat = async () => {
     setView("chat");
     setSidebarOpen(false);
-    window.location.reload();
+    if (setThreadId) {
+      const newId = "t_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 7);
+      if (typeof window !== "undefined") window.localStorage.setItem("tenmon_thread_id_v1", newId);
+      try {
+        await upsertThread({ id: newId, title: "New Chat", updatedAt: Date.now() });
+        await replaceThreadMessages(newId, []);
+      } catch (_) {}
+      setThreadId(newId);
+    } else {
+      window.location.reload();
+    }
   };
 
   const handleChangeView = (next: GptView) => {
+    if (next === "chat" && !userDisplay) {
+      window.location.href = "/";
+      return;
+    }
     setView(next);
     setSidebarOpen(false);
   };
+
+  useEffect(() => {
+    if (view === "chat" && !userDisplay) {
+      window.location.href = "/";
+    }
+  }, [view, userDisplay]);
 
   const handleOpenSettings = () => {
     setSidebarOpen(false);
@@ -76,9 +104,16 @@ const title =
         onOpenSettings={handleOpenSettings}
       />
       <main className="gpt-main">
-        <Topbar title={title} onOpenSidebar={isOverlayNav ? () => setSidebarOpen(true) : undefined} isSidebarOpen={sidebarOpen} />
+        <Topbar
+          title={title}
+          onOpenSidebar={isOverlayNav ? () => setSidebarOpen(true) : undefined}
+          isSidebarOpen={sidebarOpen}
+          onAccountClick={onOpenLoginModal}
+          userDisplay={userDisplay}
+          onLogout={onLogout}
+        />
         <div className="gpt-content">
-          {view === "chat" && <ChatRoute />}
+          {view === "chat" && <ChatRoute threadId={threadId} />}
           {view === "dashboard" && <DashboardPage />}
           {view === "profile" && <ProfilePage />}
         </div>

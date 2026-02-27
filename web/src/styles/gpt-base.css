@@ -720,3 +720,33 @@ body::before {
 .gpt-account-caret{
   opacity:0.7;
 }
+
+/* PWA_B1: Login modal */
+.gpt-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+.gpt-modal {
+  background: var(--gpt-bg-primary, #fff);
+  border-radius: var(--gpt-button-radius, 8px);
+  padding: 1rem 1.25rem;
+  min-width: 280px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+}
+.gpt-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+.gpt-modal-header h2 { margin: 0; font-size: 1.125rem; }
+.gpt-modal-body label { display: block; margin-bottom: 0.5rem; }
+.gpt-modal-body input { width: 100%; padding: 0.5rem; margin-top: 0.25rem; box-sizing: border-box; }
+.gpt-modal-body button { margin-top: 0.75rem; }
+.gpt-modal-error { color: #c00; font-size: 0.875rem; margin-top: 0.5rem; }
+.gpt-chat-layout-header { margin-bottom: 0.5rem; }
