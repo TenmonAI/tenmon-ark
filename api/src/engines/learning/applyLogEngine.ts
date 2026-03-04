@@ -3,6 +3,7 @@ import { getDb } from "../../db/index.js";
 export function recordLawUsage(threadId: string, lawKeys: string[]) {
 
   const db = getDb("kokuzo");
+
   const now = new Date().toISOString();
 
   const insert = db.prepare(`
