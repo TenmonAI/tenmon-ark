@@ -798,6 +798,36 @@ ${String((gptDraft as any)?.text ?? "").trim()}
       console.error("[KG2_LEARNING_ENGINE]", e);
     }
 
+    // KG4_CLUSTER_ENGINE_IMPLEMENT_V1: Seed recombination により cluster を生成。TRUTH_GATE 時のみ。decisionFrame/synapse/seed は不変。
+    try {
+      const __dbC = getDb("kokuzo");
+      const seeds = __dbC.prepare(`
+        SELECT seedKey
+        FROM khs_seeds_det_v1
+        WHERE usageScore > 0
+        ORDER BY usageScore DESC
+        LIMIT 10
+      `).all() as { seedKey: string }[];
+      const __c = __tenmonRequire("node:crypto");
+      const __upsert = __dbC.prepare(`
+        INSERT INTO khs_seed_clusters
+        (clusterKey, representativeSeed, clusterSize, updatedAt)
+        VALUES (?, ?, 1, datetime('now'))
+        ON CONFLICT(clusterKey)
+        DO UPDATE SET clusterSize = clusterSize + 1, updatedAt = datetime('now')
+      `);
+      for (let i = 0; i < seeds.length; i++) {
+        for (let j = i + 1; j < seeds.length; j++) {
+          const pair = [String(seeds[i].seedKey ?? ""), String(seeds[j].seedKey ?? "")].sort().join("::");
+          const clusterKey = __c.createHash("sha256").update(pair).digest("hex");
+          const representativeSeed = seeds[i].seedKey ?? "";
+          __upsert.run(clusterKey, representativeSeed);
+        }
+      }
+    } catch (e) {
+      console.error("[KG4_CLUSTER_ENGINE_IMPLEMENT]", e);
+    }
+
     return res.json(payload);
   }
 
