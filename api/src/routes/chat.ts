@@ -691,6 +691,24 @@ ${String((gptDraft as any)?.text ?? "").trim()}
       console.error("[SYNAPSE_INSERT_FAIL_TRUTH]", e);
     }
 
+    // KG1_KHS_APPLY_LOG_V1: KHS裁定時に apply_log を記録（TRUTH_GATEロジック・decisionFrame は不変）
+    try {
+      const db = getDb("kokuzo");
+      const __crypto = __tenmonRequire("node:crypto");
+      const lawsUsed = (payload.decisionFrame.ku.lawsUsed ?? []) as string[];
+      const evidenceIds = (payload.decisionFrame.ku.evidenceIds ?? []) as string[];
+      for (let i = 0; i < Math.min(lawsUsed.length, evidenceIds.length); i++) {
+        const __applyId = __crypto.randomUUID();
+        db.prepare(`
+          INSERT INTO khs_apply_log
+          (applyId, createdAt, threadId, turnId, mode, deltaSJson, lawKey, unitId, applyOp, decisionJson)
+          VALUES (?, datetime('now'), ?, ?, 'HYBRID', '{}', ?, ?, 'KHS_APPLY', '{}')
+        `).run(__applyId, threadId, timestamp, lawsUsed[i], evidenceIds[i]);
+      }
+    } catch (e) {
+      console.error("[KG1_KHS_APPLY_LOG]", e);
+    }
+
     return res.json(payload);
   }
 
