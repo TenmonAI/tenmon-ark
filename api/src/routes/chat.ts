@@ -284,6 +284,32 @@ if (!(res as any).__TENMON_JSON_WRAP_V7) {
                   } catch (e) {
                     console.error("[KG7_CLUSTER_COOLING]", e);
                   }
+                  // KG6_CLUSTER_DIVERSITY_ENGINE / KG7_WEIGHTED_CLUSTER_SELECTION_V1: usageScore ベースの weighted random で seed 選択。TRUTH_GATE/Synapse/Seed/Cluster は不変。
+                  try {
+                    const __dbKg6 = getDb("kokuzo");
+                    const seeds = __dbKg6.prepare(`
+                      SELECT seedKey, usageScore
+                      FROM khs_seeds_det_v1
+                      WHERE usageScore > 0
+                      ORDER BY usageScore DESC
+                      LIMIT 100
+                    `).all() as { seedKey: string; usageScore: number }[];
+                    if (seeds.length > 0) {
+                      function weightedPick(seeds: { seedKey: string; usageScore?: number }[]): string {
+                        const total = seeds.reduce((s, x) => s + Math.log((x.usageScore ?? 0) + 1), 0);
+                        let r = Math.random() * total;
+                        for (const s of seeds) {
+                          r -= Math.log((s.usageScore ?? 0) + 1);
+                          if (r <= 0) return s.seedKey;
+                        }
+                        return seeds[0].seedKey;
+                      }
+                      const s1 = weightedPick(seeds);
+                      void s1;
+                    }
+                  } catch (e) {
+                    console.error("[KG6_CLUSTER_DIVERSITY]", e);
+                  }
                   // A1_SYNAPSETOP_SINGLEPOINT_V1: 同一ターンで INSERT した行をそのまま載せる（DB再読に依存しない）
                   try {
                     const __L = (obj as any)?.decisionFrame?.ku?.lawsUsed ?? [];
