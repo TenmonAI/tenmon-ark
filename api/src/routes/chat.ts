@@ -240,6 +240,26 @@ if (!(res as any).__TENMON_JSON_WRAP_V7) {
                       }
                     }
                   } catch (_) {}
+                  // KG7_CLUSTER_COOLING_ENGINE_V1: clusterSize の偏りを減衰。Synapse 後のみ。TRUTH_GATE/decisionFrame/synapse_log は不変。
+                  try {
+                    const db = getDb("kokuzo");
+                    const rows = db.prepare(`
+                      SELECT clusterKey, clusterSize
+                      FROM khs_seed_clusters
+                      WHERE clusterSize > 10
+                      LIMIT 20
+                    `).all() as { clusterKey: string; clusterSize: number }[];
+                    for (const r of rows) {
+                      const newSize = Math.floor(r.clusterSize * 0.995);
+                      db.prepare(`
+                        UPDATE khs_seed_clusters
+                        SET clusterSize = ?
+                        WHERE clusterKey = ?
+                      `).run(newSize, r.clusterKey);
+                    }
+                  } catch (e) {
+                    console.error("[KG7_CLUSTER_COOLING]", e);
+                  }
                   // A1_SYNAPSETOP_SINGLEPOINT_V1: 同一ターンで INSERT した行をそのまま載せる（DB再読に依存しない）
                   try {
                     const __L = (obj as any)?.decisionFrame?.ku?.lawsUsed ?? [];
