@@ -34,6 +34,16 @@ export function useChat() {
     }
   }, []);
 
+  function resetThread() {
+    const newId =
+      typeof crypto !== "undefined" && "randomUUID" in crypto
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+
+    window.localStorage.setItem(THREAD_ID_KEY, newId);
+    setSessionId(newId);
+  }
+
   useEffect(() => {
     if (!sessionId) return;
     let cancelled = false;
@@ -93,5 +103,5 @@ export function useChat() {
     }
   }
 
-  return { sessionId, messages, loading, sendMessage };
+  return { sessionId, messages, loading, sendMessage, resetThread };
 }

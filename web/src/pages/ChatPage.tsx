@@ -11,7 +11,7 @@ import { DebugPanel } from "../components/chat/DebugPanel";
 export function ChatPage() {
   const [__debugOpen, __setDebugOpen] = useState(false);
 
-  const { messages, sendMessage, loading, sessionId } = useChat();
+  const { messages, sendMessage, loading, sessionId, resetThread } = useChat();
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   useEffect(() => {
@@ -54,7 +54,23 @@ export function ChatPage() {
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div style={{ fontSize: 18, fontWeight: 700 }}>TENMON-ARK Chat</div>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <div style={{ fontSize: 12, opacity: 0.75 }}>sessionId: {sessionId || "(loading...)"}</div>
+            <div style={{ fontSize: 12, opacity: 0.75 }}>
+              Thread: {sessionId || "(loading...)"}
+            </div>
+            <button
+              onClick={resetThread}
+              style={{
+                fontSize: 12,
+                padding: "4px 8px",
+                borderRadius: 4,
+                border: "1px solid rgba(148, 163, 184, 0.7)",
+                background: "rgba(15, 23, 42, 0.8)",
+                color: "#e5e7eb",
+                cursor: "pointer",
+              }}
+            >
+              新しい会話を開始
+            </button>
             <button
               onClick={() => setSettingsOpen(true)}
               style={{
