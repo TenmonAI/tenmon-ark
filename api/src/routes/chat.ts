@@ -1830,18 +1830,25 @@ return reply(payload);
           const __khsCandidates: any[] = [];
           const __src = String((payload as any)?.rawMessage ?? (payload as any)?.message ?? "");
           const __grams = (__src.match(/[一-龯]{2}/g) || []).slice(0, 50);
+          const __isHybrid = (payload as any)?.decisionFrame?.mode === "HYBRID";
           if (__grams.length > 0) {
             const __dbPath = getDbPath("kokuzo.sqlite");
             const __db = new DatabaseSync(__dbPath, { readOnly: true });
             const __seen = new Set<string>();
-            const stmt = __db.prepare(
-              "SELECT seedKey, lawKey, unitId, quoteHash, quoteLen, kanji2Top FROM khs_seeds_det_v1 WHERE kanji2Top LIKE %||?||% LIMIT 8"
-            );
+            // KG3_SEED_RANK_SEARCH_V1: HYBRID のみ usageScore 順・LIMIT 20
+            const stmt = __isHybrid
+              ? __db.prepare(
+                  "SELECT seedKey, lawKey, unitId, quoteHash, quoteLen, kanji2Top FROM khs_seeds_det_v1 WHERE kanji2Top LIKE '%' || ? || '%' ORDER BY COALESCE(usageScore, 0) DESC LIMIT 20"
+                )
+              : __db.prepare(
+                  "SELECT seedKey, lawKey, unitId, quoteHash, quoteLen, kanji2Top FROM khs_seeds_det_v1 WHERE kanji2Top LIKE '%' || ? || '%' LIMIT 8"
+                );
+            const __cap = __isHybrid ? 20 : 8;
             for (const g of __grams) {
-              if (__khsCandidates.length >= 8) break;
+              if (__khsCandidates.length >= __cap) break;
               const rows = stmt.all(g) as any[];
               for (const r of rows) {
-                if (__khsCandidates.length >= 8) break;
+                if (__khsCandidates.length >= __cap) break;
                 const k = String(r.seedKey || r.unitId || "");
                 if (!k || __seen.has(k)) continue;
                 __seen.add(k);
