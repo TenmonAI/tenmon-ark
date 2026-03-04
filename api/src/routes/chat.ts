@@ -284,7 +284,7 @@ if (!(res as any).__TENMON_JSON_WRAP_V7) {
                   } catch (e) {
                     console.error("[KG7_CLUSTER_COOLING]", e);
                   }
-                  // KG6_CLUSTER_DIVERSITY_ENGINE / KG7_WEIGHTED_CLUSTER_SELECTION_V1: usageScore ベースの weighted random で seed 選択。TRUTH_GATE/Synapse/Seed/Cluster は不変。
+                  // KG6_CLUSTER_DIVERSITY_ENGINE / KG7_WEIGHTED_CLUSTER_ENGINE_V1: cluster 生成の seed 選択を TOP 固定から usageScore weighted random に変更。TRUTH_GATE/Synapse/Seed/Concept は不変。
                   try {
                     const __dbKg6 = getDb("kokuzo");
                     const seeds = __dbKg6.prepare(`
@@ -296,11 +296,12 @@ if (!(res as any).__TENMON_JSON_WRAP_V7) {
                     `).all() as { seedKey: string; usageScore: number }[];
                     if (seeds.length > 0) {
                       function weightedPick(seeds: { seedKey: string; usageScore?: number }[]): string {
-                        const total = seeds.reduce((s, x) => s + Math.log((x.usageScore ?? 0) + 1), 0);
+                        const weights = seeds.map((s) => Math.log((s.usageScore ?? 0) + 1));
+                        const total = weights.reduce((a, b) => a + b, 0);
                         let r = Math.random() * total;
-                        for (const s of seeds) {
-                          r -= Math.log((s.usageScore ?? 0) + 1);
-                          if (r <= 0) return s.seedKey;
+                        for (let i = 0; i < seeds.length; i++) {
+                          r -= weights[i];
+                          if (r <= 0) return seeds[i].seedKey;
                         }
                         return seeds[0].seedKey;
                       }
