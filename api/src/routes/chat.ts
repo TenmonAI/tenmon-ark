@@ -706,6 +706,36 @@ ${String((gptDraft as any)?.text ?? "").trim()}
       console.error("[KG2_SEED_USAGE_TRACKER]", e);
     }
 
+    // KG5_CLUSTER_ENGINE_V2: seed を cluster 化。TRUTH_GATE のみ。decisionFrame/synapse は不変。
+    try {
+      const __dbKg5 = getDb("kokuzo");
+      const __rows = __dbKg5.prepare(`
+        SELECT seedKey, lawKey, kanji2Top
+        FROM khs_seeds_det_v1
+        WHERE usageScore > 0
+        ORDER BY usageScore DESC
+        LIMIT 100
+      `).all() as { seedKey: string; lawKey: string; kanji2Top: string }[];
+      const __c = __tenmonRequire("node:crypto");
+      const __insCluster = __dbKg5.prepare(`
+        INSERT OR IGNORE INTO khs_seed_clusters
+        (clusterKey, representativeSeed, clusterSize, updatedAt)
+        VALUES (?, ?, 1, datetime('now'))
+      `);
+      const __updSize = __dbKg5.prepare(`
+        UPDATE khs_seed_clusters
+        SET clusterSize = clusterSize + 1, updatedAt = datetime('now')
+        WHERE clusterKey = ?
+      `);
+      for (const r of __rows) {
+        const clusterKey = __c.createHash("sha1").update(String(r.lawKey ?? "") + String(r.kanji2Top ?? "")).digest("hex");
+        const upd = __updSize.run(clusterKey);
+        if (upd.changes === 0) __insCluster.run(clusterKey, r.seedKey ?? "");
+      }
+    } catch (e) {
+      console.error("[KG5_SEED_CLUSTER]", e);
+    }
+
     // KG1_KHS_APPLY_LOG_V1: KHS裁定時に apply_log を記録（TRUTH_GATEロジック・decisionFrame は不変）
     try {
       const db = getDb("kokuzo");
@@ -768,36 +798,6 @@ ${String((gptDraft as any)?.text ?? "").trim()}
       }
     } catch (e) {
       console.error("[KG4_SEED_RECOMBINATION]", e);
-    }
-
-    // KG5_CLUSTER_ENGINE_V1: seed をクラスタへまとめる。TRUTH_GATE/decisionFrame/synapse は不変。
-    try {
-      const __dbKg5 = getDb("kokuzo");
-      const __rows = __dbKg5.prepare(`
-        SELECT seedKey, lawKey, kanji2Top
-        FROM khs_seeds_det_v1
-        WHERE usageScore > 0
-        ORDER BY usageScore DESC
-        LIMIT 200
-      `).all() as { seedKey: string; lawKey: string; kanji2Top: string }[];
-      const __c = __tenmonRequire("node:crypto");
-      const __insCluster = __dbKg5.prepare(`
-        INSERT OR IGNORE INTO khs_seed_clusters
-        (clusterKey, representativeSeed, clusterSize, updatedAt)
-        VALUES (?, ?, 1, datetime('now'))
-      `);
-      const __updSize = __dbKg5.prepare(`
-        UPDATE khs_seed_clusters
-        SET clusterSize = clusterSize + 1, updatedAt = datetime('now')
-        WHERE clusterKey = ?
-      `);
-      for (const r of __rows) {
-        const clusterKey = __c.createHash("sha1").update(String(r.lawKey ?? "") + String(r.kanji2Top ?? "")).digest("hex");
-        const upd = __updSize.run(clusterKey);
-        if (upd.changes === 0) __insCluster.run(clusterKey, r.seedKey ?? "");
-      }
-    } catch (e) {
-      console.error("[KG5_SEED_CLUSTER]", e);
     }
 
     return res.json(payload);
