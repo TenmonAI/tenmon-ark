@@ -3,6 +3,7 @@ import { synthHybridResponseV1 } from "../hybrid/synth.js";
 import { createRequire as __tenmonCreateRequire } from "node:module";
 const __tenmonRequire = __tenmonCreateRequire(import.meta.url);
 import { heartModelV1 } from "../core/heartModel.js";
+import { computeHeartPhase } from "../core/heartPhase.js";
 import { Router, type IRouter, type Request, type Response } from "express";
 import { sanitizeInput } from "../tenmon/inputSanitizer.js";
 import { qcTextV1 } from "../kokuzo/qc.js";
@@ -51,6 +52,7 @@ import { buildGroundedResponse } from "./chat_parts/grounded_impl.js";
 import { __tenmonGeneralGateResultMaybe, setTenmonLastHeart } from "./chat_parts/gates_impl.js";
 import { saveArkThreadSeedV1 } from "./chat_parts/seed_impl.js";
 import { writeSynapseLogV1 } from "./chat_parts/synapse_impl.js";
+import { generateSeed } from "./chat_parts/seed_engine.js";
 const router: IRouter = Router();
 // __KANAGI_PHASE_MEM_V2: module-scope phase tracker (per threadId) for NATURAL 4-phase state machine.
 const __kanagiPhaseMemV2 = new Map<string, number>();
@@ -199,13 +201,15 @@ if (!(res as any).__TENMON_JSON_WRAP_V7) {
                   const inp = String((obj as any)?.rawMessage ?? (obj as any)?.message ?? "");
                   const out = String((obj as any)?.response ?? "");
                   const ts  = String((obj as any)?.timestamp ?? new Date().toISOString());
+                  const seed = generateSeed(lt);
+                  let __seedId: string | null = null;
+                  if (seed) __seedId = seed.seedId;
                   writeSynapseLogV1({ threadId: tid, routeReason: rr, lawTrace: lt, heart: h, inputText: inp, outputText: out, timestamp: ts, lawsUsed: (obj as any)?.decisionFrame?.ku?.lawsUsed ?? [], evidenceIds: (obj as any)?.decisionFrame?.ku?.evidenceIds ?? [] });
                   // A1_SYNAPSETOP_SINGLEPOINT_V1: 同一ターンで INSERT した行をそのまま載せる（DB再読に依存しない）
                   try {
                     const __L = (obj as any)?.decisionFrame?.ku?.lawsUsed ?? [];
                     const __E = (obj as any)?.decisionFrame?.ku?.evidenceIds ?? [];
-                    let __seedId: string | null = null;
-                    if (Array.isArray(__L) && Array.isArray(__E) && __L.length && __E.length) {
+                    if (__seedId == null && Array.isArray(__L) && Array.isArray(__E) && __L.length && __E.length) {
                       const __c = __tenmonRequire("node:crypto");
                       __seedId = __c.createHash("sha256").update(JSON.stringify(__L) + JSON.stringify(__E)).digest("hex").slice(0, 24);
                     }
@@ -420,6 +424,9 @@ const pid = process.pid;
     );
   }
   console.log("[TRUTH_WEIGHT_BIND]", __truthWeight);
+
+  const phase = computeHeartPhase(__heart.entropy, __truthWeight ?? 0, !!__khsScan?.matched);
+  (__heart as any).phase = phase;
 
   // N1_DATE_JST_REQBODY_EARLY_V1 (acceptance requires JST)
   if (message === "date") {
