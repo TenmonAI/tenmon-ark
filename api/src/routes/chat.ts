@@ -691,12 +691,12 @@ ${String((gptDraft as any)?.text ?? "").trim()}
       console.error("[SYNAPSE_INSERT_FAIL_TRUTH]", e);
     }
 
-    // KG2_SEED_USAGE_TRACKER_FIX_V1: synapse で使用された seed の usageScore を増加（TRUTH_GATE のみ、NATURAL では更新しない）
+    // KG2_SEED_USAGE_TRACKER_FIX_V1: synapse で使用された seed の usageScore を更新（TRUTH_GATE のみ。NATURAL/decisionFrame/synapse は不変）
     try {
       const synapseRow = generateSeed(payload.decisionFrame.ku.lawTrace ?? []);
       if (synapseRow?.seedId) {
-        const db = getDb("kokuzo");
-        db.prepare(`
+        const __dbSeed = getDb("kokuzo");
+        __dbSeed.prepare(`
           UPDATE khs_seeds_det_v1
           SET usageScore = COALESCE(usageScore,0) + 1
           WHERE seedKey = ?
