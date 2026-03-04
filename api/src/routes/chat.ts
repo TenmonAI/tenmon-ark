@@ -741,6 +741,34 @@ ${String((gptDraft as any)?.text ?? "").trim()}
       console.error("[KG2_LEARNING_ENGINE]", e);
     }
 
+    // KG4_SEED_RECOMBINATION_ENGINE_V1: usageScore > 0 の seed をペアで組み合わせて新 seed を生成（既存と重複しない）
+    try {
+      const __dbKg4 = getDb("kokuzo");
+      const __topSeeds = __dbKg4.prepare(`
+        SELECT seedKey, lawKey, unitId, quoteHash, quoteLen
+        FROM khs_seeds_det_v1
+        WHERE usageScore > 0
+        ORDER BY usageScore DESC
+        LIMIT 20
+      `).all() as { seedKey: string; lawKey: string; unitId: string; quoteHash: string; quoteLen: number }[];
+      const __c = __tenmonRequire("node:crypto");
+      const __ins = __dbKg4.prepare(`
+        INSERT OR IGNORE INTO khs_seeds_det_v1
+        (seedKey, unitId, lawKey, quoteHash, quoteLen, createdAt)
+        VALUES (?, ?, ?, ?, ?, datetime('now'))
+      `);
+      for (let i = 0; i < __topSeeds.length; i++) {
+        for (let j = i + 1; j < __topSeeds.length; j++) {
+          const seedA = __topSeeds[i];
+          const seedB = __topSeeds[j];
+          const newSeedKey = __c.createHash("sha256").update(String(seedA.seedKey) + String(seedB.seedKey)).digest("hex").slice(0, 24);
+          __ins.run(newSeedKey, seedA.unitId ?? "", seedA.lawKey ?? "", seedA.quoteHash ?? "", seedA.quoteLen ?? 0);
+        }
+      }
+    } catch (e) {
+      console.error("[KG4_SEED_RECOMBINATION]", e);
+    }
+
     return res.json(payload);
   }
 
