@@ -215,6 +215,31 @@ if (!(res as any).__TENMON_JSON_WRAP_V7) {
                     } catch (_) {}
                   }
                   writeSynapseLogV1({ threadId: tid, routeReason: rr, lawTrace: lt, heart: h, inputText: inp, outputText: out, timestamp: ts, lawsUsed: (obj as any)?.decisionFrame?.ku?.lawsUsed ?? [], evidenceIds: (obj as any)?.decisionFrame?.ku?.evidenceIds ?? [] });
+                  // KG4_RECOMB_MOVE_AFTER_SYNAPSE_V1: Seed recombination を synapse insert の直後で実行。usageScore > 0, LIMIT 20。
+                  try {
+                    const __dbR = getDb("kokuzo");
+                    const __topSeeds = __dbR.prepare(`
+                      SELECT seedKey, lawKey, unitId, quoteHash, quoteLen
+                      FROM khs_seeds_det_v1
+                      WHERE usageScore > 0
+                      ORDER BY usageScore DESC
+                      LIMIT 20
+                    `).all() as { seedKey: string; lawKey: string; unitId: string; quoteHash: string; quoteLen: number }[];
+                    const __c = __tenmonRequire("node:crypto");
+                    const __ins = __dbR.prepare(`
+                      INSERT OR IGNORE INTO khs_seeds_det_v1
+                      (seedKey, unitId, lawKey, quoteHash, quoteLen, createdAt)
+                      VALUES (?, ?, ?, ?, ?, datetime('now'))
+                    `);
+                    for (let i = 0; i < __topSeeds.length; i++) {
+                      for (let j = i + 1; j < __topSeeds.length; j++) {
+                        const seedA = __topSeeds[i];
+                        const seedB = __topSeeds[j];
+                        const newSeedKey = __c.createHash("sha256").update(String(seedA.seedKey) + String(seedB.seedKey)).digest("hex").slice(0, 24);
+                        __ins.run(newSeedKey, seedA.unitId ?? "", seedA.lawKey ?? "", seedA.quoteHash ?? "", seedA.quoteLen ?? 0);
+                      }
+                    }
+                  } catch (_) {}
                   // A1_SYNAPSETOP_SINGLEPOINT_V1: 同一ターンで INSERT した行をそのまま載せる（DB再読に依存しない）
                   try {
                     const __L = (obj as any)?.decisionFrame?.ku?.lawsUsed ?? [];
@@ -771,35 +796,6 @@ ${String((gptDraft as any)?.text ?? "").trim()}
       }
     } catch (e) {
       console.error("[KG2_LEARNING_ENGINE]", e);
-    }
-
-    // KG4_SEED_RECOMBINATION_ENGINE_V1: seed 同士を組み合わせて新 seed を生成。条件: 既存 seed と重複禁止。
-    // KG4_RECOMB_LIMIT_V1: 暴走防止。LIMIT 5 → 5C2 = 最大10 seed 生成。
-    try {
-      const __dbKg4 = getDb("kokuzo");
-      const __topSeeds = __dbKg4.prepare(`
-        SELECT seedKey, lawKey, unitId, quoteHash, quoteLen
-        FROM khs_seeds_det_v1
-        WHERE usageScore > 0
-        ORDER BY usageScore DESC
-        LIMIT 5
-      `).all() as { seedKey: string; lawKey: string; unitId: string; quoteHash: string; quoteLen: number }[];
-      const __c = __tenmonRequire("node:crypto");
-      const __ins = __dbKg4.prepare(`
-        INSERT OR IGNORE INTO khs_seeds_det_v1
-        (seedKey, unitId, lawKey, quoteHash, quoteLen, createdAt)
-        VALUES (?, ?, ?, ?, ?, datetime('now'))
-      `);
-      for (let i = 0; i < __topSeeds.length; i++) {
-        for (let j = i + 1; j < __topSeeds.length; j++) {
-          const seedA = __topSeeds[i];
-          const seedB = __topSeeds[j];
-          const newSeedKey = __c.createHash("sha256").update(String(seedA.seedKey) + String(seedB.seedKey)).digest("hex").slice(0, 24);
-          __ins.run(newSeedKey, seedA.unitId ?? "", seedA.lawKey ?? "", seedA.quoteHash ?? "", seedA.quoteLen ?? 0);
-        }
-      }
-    } catch (e) {
-      console.error("[KG4_SEED_RECOMBINATION]", e);
     }
 
     return res.json(payload);
