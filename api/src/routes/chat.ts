@@ -741,8 +741,8 @@ ${String((gptDraft as any)?.text ?? "").trim()}
       console.error("[KG2_LEARNING_ENGINE]", e);
     }
 
-    // KG4_SEED_RECOMBINATION_ENGINE_V1: seed 同士を組み合わせて新 seed を生成（既存と重複しない）
-    // 1) seed取得 2) seedA×seedB ペア生成 3) newSeedKey=SHA256(seedA+seedB) 4) INSERT OR IGNORE
+    // KG4_SEED_RECOMBINATION_ENGINE_V1: seed 同士を組み合わせて新 seed を生成。条件: 既存 seed と重複禁止。
+    // 1) seed取得 2) seedペア生成(seedA×seedB) 3) 新seedKey生成 SHA256(seedA+seedB) 4) 保存 INSERT OR IGNORE
     try {
       const __dbKg4 = getDb("kokuzo");
       const __topSeeds = __dbKg4.prepare(`
