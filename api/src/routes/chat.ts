@@ -200,6 +200,20 @@ if (!(res as any).__TENMON_JSON_WRAP_V7) {
                   const out = String((obj as any)?.response ?? "");
                   const ts  = String((obj as any)?.timestamp ?? new Date().toISOString());
                   writeSynapseLogV1({ threadId: tid, routeReason: rr, lawTrace: lt, heart: h, inputText: inp, outputText: out, timestamp: ts, lawsUsed: (obj as any)?.decisionFrame?.ku?.lawsUsed ?? [], evidenceIds: (obj as any)?.decisionFrame?.ku?.evidenceIds ?? [] });
+                  // A1_SYNAPSETOP_SINGLEPOINT_V1: 同一ターンで INSERT した行をそのまま載せる（DB再読に依存しない）
+                  try {
+                    const __L = (obj as any)?.decisionFrame?.ku?.lawsUsed ?? [];
+                    const __E = (obj as any)?.decisionFrame?.ku?.evidenceIds ?? [];
+                    let __seedId: string | null = null;
+                    if (Array.isArray(__L) && Array.isArray(__E) && __L.length && __E.length) {
+                      const __c = __tenmonRequire("node:crypto");
+                      __seedId = __c.createHash("sha256").update(JSON.stringify(__L) + JSON.stringify(__E)).digest("hex").slice(0, 24);
+                    }
+                    const synapseRow = { v: "X9", seedId: __seedId, nLaws: Array.isArray(__L) ? __L.length : 0, nEvi: Array.isArray(__E) ? __E.length : 0 };
+                    (obj as any).decisionFrame = (obj as any).decisionFrame || {};
+                    (obj as any).decisionFrame.ku = (obj as any).decisionFrame.ku || {};
+                    (obj as any).decisionFrame.ku.synapseTop = { metaHead: synapseRow };
+                  } catch {}
                   // X9J_SYNAPSETOP_INMEMORY_V1: attach synapseTop without DB read (deterministic)
                   try {
                     const dfm: any = (obj as any)?.decisionFrame;
@@ -223,20 +237,24 @@ if (!(res as any).__TENMON_JSON_WRAP_V7) {
                     }
                   } catch {}
 
-                  // X8C_SYNAPSE_TOP_AFTER_WRITE_V1: re-read synapseTop after write (same response)
+                  // X8C_SYNAPSE_TOP_AFTER_WRITE_V1: re-read synapseTop after write (same response). A1 で既に載せている場合は上書きしない。
                   try {
-                    const tid3 = String(tid || "");
-                    if (tid3 && (obj as any)?.decisionFrame) {
-                      const __db3 = new DatabaseSync(getDbPath("kokuzo.sqlite"), { readOnly: true });
-                      const patt = "\"v\":\"X9\"";
-                      const row3x = __db3.prepare("SELECT createdAt, threadId, routeReason, substr(metaJson,1,160) AS metaHead FROM synapse_log WHERE threadId=? AND instr(IFNULL(metaJson, ), ?) > 0 ORDER BY createdAt DESC LIMIT 1").get(tid3, patt);
-                      const row3 = row3x || __db3.prepare("SELECT createdAt, threadId, routeReason, substr(metaJson,1,160) AS metaHead FROM synapse_log WHERE threadId=? ORDER BY createdAt DESC LIMIT 1").get(tid3);
-                      const df3 = (obj as any).decisionFrame;
-                      df3.ku = (df3.ku && typeof df3.ku === "object") ? df3.ku : {};
-                      if (row3) (df3.ku as any).synapseTop = row3;
+                    const df3 = (obj as any)?.decisionFrame;
+                    const __a1Set = df3 && (df3.ku as any)?.synapseTop?.metaHead && typeof (df3.ku as any).synapseTop.metaHead === "object";
+                    if (!__a1Set) {
+                      const tid3 = String(tid || "");
+                      if (tid3 && (obj as any)?.decisionFrame) {
+                        const __db3 = new DatabaseSync(getDbPath("kokuzo.sqlite"), { readOnly: true });
+                        const patt = "\"v\":\"X9\"";
+                        const row3x = __db3.prepare("SELECT createdAt, threadId, routeReason, substr(metaJson,1,160) AS metaHead FROM synapse_log WHERE threadId=? AND instr(IFNULL(metaJson, ), ?) > 0 ORDER BY createdAt DESC LIMIT 1").get(tid3, patt);
+                        const row3 = row3x || __db3.prepare("SELECT createdAt, threadId, routeReason, substr(metaJson,1,160) AS metaHead FROM synapse_log WHERE threadId=? ORDER BY createdAt DESC LIMIT 1").get(tid3);
+                        const df3b = (obj as any).decisionFrame;
+                        df3b.ku = (df3b.ku && typeof df3b.ku === "object") ? df3b.ku : {};
+                        if (row3) (df3b.ku as any).synapseTop = row3;
+                      }
                     }
                   } catch {}
-                  // X9D_FORCE_SYNAPSETOP_FALLBACK_V1: ensure synapseTop is never null (latest fallback)
+                  // X9D_FORCE_SYNAPSETOP_FALLBACK_V1: ensure synapseTop is never null (latest fallback). A1 で metaHead.seedId があればスキップ。
                   try {
                     const dfF = (obj as any)?.decisionFrame;
                     if (dfF) {
