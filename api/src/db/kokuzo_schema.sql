@@ -308,6 +308,12 @@ CREATE INDEX IF NOT EXISTS idx_synapse_log_createdAt ON synapse_log(createdAt);
 CREATE INDEX IF NOT EXISTS idx_synapse_log_threadId ON synapse_log(threadId);
 CREATE INDEX IF NOT EXISTS idx_synapse_log_inputSig ON synapse_log(inputSig);
 
--- KG2_LEARNING_ENGINE_V1: usageScore for seed reinforcement from apply_log
-ALTER TABLE khs_seeds_det_v1 ADD COLUMN usageScore INTEGER DEFAULT 0;
+-- KG5_SEED_CLUSTER_ENGINE_V1: 意味クラスタ形成（seed 爆発防止）
+CREATE TABLE IF NOT EXISTS khs_seed_clusters (
+  clusterKey TEXT PRIMARY KEY,
+  representativeSeed TEXT,
+  clusterSize INTEGER,
+  updatedAt TEXT
+);
+
 
