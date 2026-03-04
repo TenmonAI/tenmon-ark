@@ -709,6 +709,19 @@ ${String((gptDraft as any)?.text ?? "").trim()}
       console.error("[KG1_KHS_APPLY_LOG]", e);
     }
 
+    // KG2_LEARNING_ENGINE_V1: apply_log から Seed を強化（usageScore を反映）。TRUTH_GATE・decisionFrame・synapse は不変。
+    try {
+      const __dbKg2 = getDb("kokuzo");
+      const __lawsUsed = (payload.decisionFrame.ku.lawsUsed ?? []) as string[];
+      const __byLaw = new Set(__lawsUsed);
+      for (const lawKey of __byLaw) {
+        if (!lawKey) continue;
+        __dbKg2.prepare(`UPDATE khs_seeds_det_v1 SET usageScore = COALESCE(usageScore, 0) + 1 WHERE lawKey = ?`).run(lawKey);
+      }
+    } catch (e) {
+      console.error("[KG2_LEARNING_ENGINE]", e);
+    }
+
     return res.json(payload);
   }
 
