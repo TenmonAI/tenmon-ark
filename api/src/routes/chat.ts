@@ -798,7 +798,7 @@ ${String((gptDraft as any)?.text ?? "").trim()}
       console.error("[KG2_LEARNING_ENGINE]", e);
     }
 
-    // KG4_CLUSTER_ENGINE_IMPLEMENT_V1: Seed recombination により cluster を生成。TRUTH_GATE 時のみ。decisionFrame/synapse/seed は不変。
+    // KG4_CLUSTER_ENGINE_IMPLEMENT_V1: Seed 同士の関係から cluster（概念）を生成。TRUTH_GATE 時のみ。decisionFrame/synapse/seed は不変。
     try {
       const __dbC = getDb("kokuzo");
       const seeds = __dbC.prepare(`
@@ -814,7 +814,9 @@ ${String((gptDraft as any)?.text ?? "").trim()}
         (clusterKey, representativeSeed, clusterSize, updatedAt)
         VALUES (?, ?, 1, datetime('now'))
         ON CONFLICT(clusterKey)
-        DO UPDATE SET clusterSize = clusterSize + 1, updatedAt = datetime('now')
+        DO UPDATE SET
+          clusterSize = clusterSize + 1,
+          updatedAt = excluded.updatedAt
       `);
       for (let i = 0; i < seeds.length; i++) {
         for (let j = i + 1; j < seeds.length; j++) {
