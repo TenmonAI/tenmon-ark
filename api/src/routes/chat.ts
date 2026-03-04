@@ -215,6 +215,30 @@ if (!(res as any).__TENMON_JSON_WRAP_V7) {
                     } catch (_) {}
                   }
                   writeSynapseLogV1({ threadId: tid, routeReason: rr, lawTrace: lt, heart: h, inputText: inp, outputText: out, timestamp: ts, lawsUsed: (obj as any)?.decisionFrame?.ku?.lawsUsed ?? [], evidenceIds: (obj as any)?.decisionFrame?.ku?.evidenceIds ?? [] });
+                  // KG8_CONCEPT_ENGINE_V1: cluster から concept を生成。decisionFrame/TRUTH_GATE/synapse/seed/cluster は不変。LLM 不使用。
+                  try {
+                    const __dbConcept = getDb("kokuzo");
+                    const clusters = __dbConcept.prepare(`
+                      SELECT clusterKey, clusterSize
+                      FROM khs_seed_clusters
+                      ORDER BY clusterSize DESC
+                      LIMIT 20
+                    `).all() as { clusterKey: string; clusterSize: number }[];
+                    for (const c of clusters) {
+                      const label = String(c.clusterKey).slice(0, 8);
+                      __dbConcept.prepare(`
+                        INSERT INTO khs_concepts
+                        (conceptKey, clusterKey, conceptLabel, createdAt, updatedAt)
+                        VALUES (?, ?, ?, datetime('now'), datetime('now'))
+                        ON CONFLICT(conceptKey)
+                        DO UPDATE SET
+                          conceptWeight = conceptWeight + 1,
+                          updatedAt = datetime('now')
+                      `).run("CONC:" + label, c.clusterKey, label);
+                    }
+                  } catch (e) {
+                    console.error("[KG8_CONCEPT_ENGINE]", e);
+                  }
                   // KG4_RECOMB_MOVE_AFTER_SYNAPSE_V1: Seed recombination を synapse insert の直後で実行。usageScore > 0, LIMIT 20。
                   try {
                     const __dbR = getDb("kokuzo");

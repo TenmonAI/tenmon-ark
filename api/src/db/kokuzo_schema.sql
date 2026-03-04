@@ -316,4 +316,16 @@ CREATE TABLE IF NOT EXISTS khs_seed_clusters (
   updatedAt TEXT
 );
 
+-- KG8_CONCEPT_ENGINE_V1: cluster から concept を生成
+CREATE TABLE IF NOT EXISTS khs_concepts (
+  conceptKey TEXT PRIMARY KEY,
+  clusterKey TEXT NOT NULL,
+  conceptLabel TEXT,
+  conceptWeight INTEGER DEFAULT 1,
+  createdAt TEXT NOT NULL,
+  updatedAt TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_khs_concepts_cluster
+  ON khs_concepts(clusterKey);
+
 
