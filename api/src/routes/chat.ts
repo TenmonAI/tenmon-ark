@@ -770,21 +770,21 @@ ${String((gptDraft as any)?.text ?? "").trim()}
       console.error("[KG4_SEED_RECOMBINATION]", e);
     }
 
-    // KG5_SEED_CLUSTER_ENGINE_V1: Seed 爆発防止・意味クラスタ形成。decisionFrame/TRUTH_GATE/synapse は不変。
+    // KG5_CLUSTER_ENGINE_V1: seed をクラスタへまとめる。TRUTH_GATE/decisionFrame/synapse は不変。
     try {
       const __dbKg5 = getDb("kokuzo");
       const __rows = __dbKg5.prepare(`
-        SELECT seedKey, lawKey, quoteHash, kanji2Top
+        SELECT seedKey, lawKey, kanji2Top
         FROM khs_seeds_det_v1
         WHERE usageScore > 0
         ORDER BY usageScore DESC
         LIMIT 200
-      `).all() as { seedKey: string; lawKey: string; quoteHash: string; kanji2Top: string }[];
+      `).all() as { seedKey: string; lawKey: string; kanji2Top: string }[];
       const __c = __tenmonRequire("node:crypto");
       const __insCluster = __dbKg5.prepare(`
         INSERT OR IGNORE INTO khs_seed_clusters
         (clusterKey, representativeSeed, clusterSize, updatedAt)
-        VALUES (?, ?, 0, datetime('now'))
+        VALUES (?, ?, 1, datetime('now'))
       `);
       const __updSize = __dbKg5.prepare(`
         UPDATE khs_seed_clusters
@@ -793,8 +793,8 @@ ${String((gptDraft as any)?.text ?? "").trim()}
       `);
       for (const r of __rows) {
         const clusterKey = __c.createHash("sha1").update(String(r.lawKey ?? "") + String(r.kanji2Top ?? "")).digest("hex");
-        __insCluster.run(clusterKey, r.seedKey ?? "");
-        __updSize.run(clusterKey);
+        const upd = __updSize.run(clusterKey);
+        if (upd.changes === 0) __insCluster.run(clusterKey, r.seedKey ?? "");
       }
     } catch (e) {
       console.error("[KG5_SEED_CLUSTER]", e);
