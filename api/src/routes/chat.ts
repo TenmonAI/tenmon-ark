@@ -742,7 +742,7 @@ ${String((gptDraft as any)?.text ?? "").trim()}
     }
 
     // KG4_SEED_RECOMBINATION_ENGINE_V1: seed 同士を組み合わせて新 seed を生成。条件: 既存 seed と重複禁止。
-    // 1) seed取得 2) seedペア生成(seedA×seedB) 3) 新seedKey生成 SHA256(seedA+seedB) 4) 保存 INSERT OR IGNORE
+    // KG4_RECOMB_LIMIT_V1: 暴走防止。LIMIT 5 → 5C2 = 最大10 seed 生成。
     try {
       const __dbKg4 = getDb("kokuzo");
       const __topSeeds = __dbKg4.prepare(`
@@ -750,7 +750,7 @@ ${String((gptDraft as any)?.text ?? "").trim()}
         FROM khs_seeds_det_v1
         WHERE usageScore > 0
         ORDER BY usageScore DESC
-        LIMIT 20
+        LIMIT 5
       `).all() as { seedKey: string; lawKey: string; unitId: string; quoteHash: string; quoteLen: number }[];
       const __c = __tenmonRequire("node:crypto");
       const __ins = __dbKg4.prepare(`
