@@ -1,4 +1,5 @@
 /* CARD1_SEAL_V1 */
+import { generateSeedsFromKHS } from "../engines/seed/seedGenerator.js";
 import { synthHybridResponseV1 } from "../hybrid/synth.js";
 import { createRequire as __tenmonCreateRequire } from "node:module";
 const __tenmonRequire = __tenmonCreateRequire(import.meta.url);
