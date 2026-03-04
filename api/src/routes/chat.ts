@@ -156,6 +156,10 @@ if (!(res as any).__TENMON_JSON_WRAP_V7) {
             const df = obj.decisionFrame;
             if (df && typeof df === "object") {
               if (!df.ku || typeof df.ku !== "object") df.ku = {};
+              // N2A_NAMING_ATTACH_KU_V1: 観測用。user_naming 確定時のみ ku.naming を付与（文面不変・TRUTH_GATE不触）
+              try {
+                if (typeof __namingObs === "object" && __namingObs != null && (df.ku.naming == null || df.ku.naming === undefined)) df.ku.naming = __namingObs;
+              } catch {}
               // X6_SYNAPSE_IN_JSON_WRAPPER_V1: write synapse_log once per response (observability only)
                     try {
                 let tid = String((obj as any)?.threadId ?? (res as any).__TENMON_THREADID ?? "");
@@ -404,6 +408,7 @@ const pid = process.pid;
   const timestamp = new Date().toISOString();
   let __userName: string | undefined;
   let __assistantName: string | undefined;
+  let __namingObs: { userId: string; userName?: string; assistantName?: string } | null = null;
 
   // N1_NAMING_FLOW_V1: 命名を greeting/NATURAL/TRUTH_GATE より前に発火。smoke/accept/core-seed/bible-smoke はスキップ。
   const auth = (req as any).auth ?? null;
@@ -420,6 +425,7 @@ const pid = process.pid;
       if (namingRow && (namingRow.userName != null || namingRow.assistantName != null)) {
         __userName = namingRow.userName != null ? String(namingRow.userName) : undefined;
         __assistantName = namingRow.assistantName != null ? String(namingRow.assistantName) : undefined;
+        __namingObs = { userId, userName: __userName, assistantName: __assistantName };
       } else {
         const personaDb = getDb("persona");
         const flowRow = dbPrepare("persona", "SELECT step, userName FROM naming_flow WHERE userId = ? LIMIT 1").get(userId) as any;
