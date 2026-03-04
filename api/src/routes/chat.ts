@@ -204,6 +204,16 @@ if (!(res as any).__TENMON_JSON_WRAP_V7) {
                   const seed = generateSeed(lt);
                   let __seedId: string | null = null;
                   if (seed) __seedId = seed.seedId;
+                  if (__seedId) {
+                    try {
+                      const db = getDb("kokuzo");
+                      db.prepare(`
+                        INSERT OR IGNORE INTO khs_seeds_det_v1
+                        (seedId, createdAt)
+                        VALUES (?, datetime('now'))
+                      `).run(__seedId);
+                    } catch (_) {}
+                  }
                   writeSynapseLogV1({ threadId: tid, routeReason: rr, lawTrace: lt, heart: h, inputText: inp, outputText: out, timestamp: ts, lawsUsed: (obj as any)?.decisionFrame?.ku?.lawsUsed ?? [], evidenceIds: (obj as any)?.decisionFrame?.ku?.evidenceIds ?? [] });
                   // A1_SYNAPSETOP_SINGLEPOINT_V1: 同一ターンで INSERT した行をそのまま載せる（DB再読に依存しない）
                   try {
