@@ -308,6 +308,19 @@ CREATE INDEX IF NOT EXISTS idx_synapse_log_createdAt ON synapse_log(createdAt);
 CREATE INDEX IF NOT EXISTS idx_synapse_log_threadId ON synapse_log(threadId);
 CREATE INDEX IF NOT EXISTS idx_synapse_log_inputSig ON synapse_log(inputSig);
 
+-- S0_STORAGE_MANIFEST_TABLE_V1: TENMON-ARK artifact 管理
+CREATE TABLE IF NOT EXISTS artifact_manifest (
+  artifactId TEXT PRIMARY KEY,
+  sha256 TEXT NOT NULL,
+  size INTEGER,
+  storageTier TEXT DEFAULT 'local',
+  storagePath TEXT,
+  createdAt TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_artifact_sha
+  ON artifact_manifest(sha256);
+
 -- KG5_SEED_CLUSTER_ENGINE_V1: 意味クラスタ形成（seed 爆発防止）
 CREATE TABLE IF NOT EXISTS khs_seed_clusters (
   clusterKey TEXT PRIMARY KEY,
@@ -328,4 +341,17 @@ CREATE TABLE IF NOT EXISTS khs_concepts (
 CREATE INDEX IF NOT EXISTS idx_khs_concepts_cluster
   ON khs_concepts(clusterKey);
 
+
+
+CREATE TABLE IF NOT EXISTS khs_concepts (
+  conceptKey TEXT PRIMARY KEY,
+  clusterKey TEXT NOT NULL,
+  conceptLabel TEXT,
+  conceptWeight INTEGER DEFAULT 1,
+  createdAt TEXT NOT NULL,
+  updatedAt TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_khs_concepts_cluster
+ON khs_concepts(clusterKey);
 
