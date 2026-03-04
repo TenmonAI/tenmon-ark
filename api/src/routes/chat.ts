@@ -433,24 +433,27 @@ const pid = process.pid;
         const __kuBase = { lawsUsed: [] as string[], evidenceIds: [] as string[], lawTrace: [] as any[] };
         if (!flowRow) {
           personaDb.prepare("INSERT OR REPLACE INTO naming_flow (userId, step, userName, assistantName, updatedAt) VALUES (?, ?, ?, ?, ?)").run(userId, "STEP1", null, null, now);
+          const __namingObs = { userId, userName: null as string | null, assistantName: null as string | null };
           return res.json({
             response: "あなたを何とお呼びすればよいでしょうか？",
             evidence: null,
             candidates: [],
             timestamp,
             threadId,
-            decisionFrame: { mode: "NAMING_STEP1", intent: "naming", llm: null, ku: { ...__kuBase, routeReason: "NAMING_STEP1" } },
+            decisionFrame: { mode: "NAMING_STEP1", intent: "naming", llm: null, ku: { ...__kuBase, routeReason: "NAMING_STEP1", naming: { ...__namingObs, step: "STEP1" } } },
           });
         }
         if (flowRow.step === "STEP1") {
+          const __userNameStep2 = String(message).trim() || null;
           personaDb.prepare("UPDATE naming_flow SET userName = ?, step = ?, updatedAt = ? WHERE userId = ?").run(String(message).trim(), "STEP2", now, userId);
+          const __namingObs = { userId, userName: __userNameStep2, assistantName: null as string | null };
           return res.json({
             response: "では、私は何と名乗りましょう？",
             evidence: null,
             candidates: [],
             timestamp,
             threadId,
-            decisionFrame: { mode: "NAMING_STEP2", intent: "naming", llm: null, ku: { ...__kuBase, routeReason: "NAMING_STEP2" } },
+            decisionFrame: { mode: "NAMING_STEP2", intent: "naming", llm: null, ku: { ...__kuBase, routeReason: "NAMING_STEP2", naming: { ...__namingObs, step: "STEP2" } } },
           });
         }
         if (flowRow.step === "STEP2") {
@@ -461,13 +464,14 @@ const pid = process.pid;
           const displayUserName = /さん\s*$/.test(u) ? u : (u ? (u + "さん") : u);
           personaDb.prepare("INSERT OR REPLACE INTO user_naming (userId, userName, assistantName, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?)").run(userId, uName, aName, now, now);
           personaDb.prepare("DELETE FROM naming_flow WHERE userId = ?").run(userId);
+          const __namingObs = { userId, userName: uName || null, assistantName: aName || null };
           return res.json({
             response: "承りました。これから「" + aName + "」として、" + displayUserName + "とお話しします。今日は何から整えましょう？",
             evidence: null,
             candidates: [],
             timestamp,
             threadId,
-            decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: { ...__kuBase, routeReason: "NAMING_SAVED" } },
+            decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: { ...__kuBase, routeReason: "NAMING_SAVED", naming: { ...__namingObs, step: "SAVED" } } },
           });
         }
       }
