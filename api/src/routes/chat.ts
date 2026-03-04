@@ -691,6 +691,21 @@ ${String((gptDraft as any)?.text ?? "").trim()}
       console.error("[SYNAPSE_INSERT_FAIL_TRUTH]", e);
     }
 
+    // KG2_SEED_USAGE_TRACKER_V1: synapse で使用された seed の usageScore を増加（TRUTH_GATE のみ、NATURAL では更新しない）
+    try {
+      const synapseRow = generateSeed(payload.decisionFrame.ku.lawTrace ?? []);
+      if (synapseRow?.seedId) {
+        const __dbTracker = getDb("kokuzo");
+        __dbTracker.prepare(`
+          UPDATE khs_seeds_det_v1
+          SET usageScore = COALESCE(usageScore, 0) + 1
+          WHERE seedKey = ?
+        `).run(synapseRow.seedId);
+      }
+    } catch (e) {
+      console.error("[KG2_SEED_USAGE_TRACKER]", e);
+    }
+
     // KG1_KHS_APPLY_LOG_V1: KHS裁定時に apply_log を記録（TRUTH_GATEロジック・decisionFrame は不変）
     try {
       const db = getDb("kokuzo");
