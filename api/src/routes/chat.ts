@@ -1,6 +1,7 @@
 /* CARD1_SEAL_V1 */
 import { runKanagiPhaseTopV1 } from "../engines/kanagi/kanagiEngine.js";
 import { detectKanagiPhase } from "../engines/kanagi/kanagiPhase.js";
+import { reshapeKanagiLoop } from "../engines/kanagi/kanagiPhaseEngine.js";
 import { generateSeedsFromKHS } from "../engines/seed/seedGenerator.js";
 import { generateSeedClusters } from "../engines/seed/clusterEngine.js";
 import { recordLawUsage } from "../engines/learning/applyLogEngine.js";
@@ -4193,28 +4194,11 @@ if (usable.length === 0) {
         const phaseName = detectKanagiPhase(mem);
 
         // only reshape when NATURAL reply looks like looping template / questionnaire
-        const t0 = String((nat as any)?.responseText ?? "");
-        const looksLoop =
-          /いま一番しんどいのは/.test(t0) ||
-          /いま一番近いのは/.test(t0) ||
-          /焦点が一点に定まっていない/.test(t0);
-
-        if (looksLoop) {
-          const userShort = String(__msg).replace(/\s+/g," ").trim().slice(0, 80);
-          let out = "";
-
-          if (phaseName === "SENSE") {
-            out = `いま一番重いのは「不安」そのものですか？それとも「今日の一手が決まらない」感じですか？\n\nどちらに近い？（一言でOK）`;
-          } else if (phaseName === "NAME") {
-            out = `その重さは、\n「決めないといけないのに決められない」焦りから来ている可能性が高いです。\n\nいま一番こわい結末は何ですか？（一言）`;
-          } else if (phaseName === "ONE_STEP") {
-            out = `まず“一手”だけ小さくします。\n今日の予定から「やらない」ものを1つ決めましょう。\n\nいま捨てたい候補は何ですか？（タスク名を1つ）`;
-          } else {
-            out = `ここで一度、息を整えます。\n目を閉じて、ゆっくり1呼吸できますか？\n\nできたら「できた」とだけ返して。`;
-          }
-
-          (nat as any).responseText = out;
-        }
+        (nat as any).responseText = reshapeKanagiLoop(
+          String((nat as any)?.responseText ?? ""),
+          __msg,
+          phaseName
+        );
 
         // annotate
         try {
