@@ -2,6 +2,8 @@
 import { runKanagiPhaseTopV1 } from "../engines/kanagi/kanagiEngine.js";
 import { detectKanagiPhase } from "../engines/kanagi/kanagiPhase.js";
 import { reshapeKanagiLoop } from "../engines/kanagi/kanagiPhaseEngine.js";
+import { kanagiThink } from "../engines/kanagi/kanagiThink.js";
+import { danshariStyle } from "../engines/conversation/danshariStyle.js";
 import { generateSeedsFromKHS } from "../engines/seed/seedGenerator.js";
 import { generateSeedClusters } from "../engines/seed/clusterEngine.js";
 import { recordLawUsage } from "../engines/learning/applyLogEngine.js";
@@ -4192,6 +4194,16 @@ if (usable.length === 0) {
       if (!__isTestTid && !__askedMenu && !__hasDoc) {
         const mem = memoryReadSession(threadId, 40) || [];
         const phaseName = detectKanagiPhase(mem);
+
+        const think = kanagiThink(
+          (nat as any)?.heart?.state ?? "neutral",
+          phaseName
+        );
+        (nat as any).responseText = danshariStyle(
+          think.reception,
+          think.focus,
+          think.step
+        );
 
         // only reshape when NATURAL reply looks like looping template / questionnaire
         (nat as any).responseText = reshapeKanagiLoop(
