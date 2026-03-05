@@ -1,35 +1,43 @@
-import { runSelfDialogue } from "./selfDialogue.js"
+import { llmChat } from "../../core/llmWrapper.js"
 import { evaluateTenmon } from "./tenmonEvaluator.js"
 
 export async function runSelfTraining() {
 
   const questions = [
-    "魂はどこにある？（一般論禁止）",
+    "魂はどこにある？",
     "言霊は何でできている？",
     "水火（イキ）とは何？",
     "文字音の省とは何？",
-    "迷いを断捨離すると何が残る？"
+    "迷いを断捨離すると何が残る？",
+    "いろは言霊解とは何？"
   ]
 
-  const results = []
+  const results: { question: string; answer: string; pass: boolean }[] = []
 
   for (const q of questions) {
 
-    const answer = await runSelfDialogue(q)
+    const res = await llmChat({
+      system: "TENMON人格で答える",
+      history: [],
+      user: q
+    })
 
-    const pass = evaluateTenmon(answer)
+    const text = res?.text ?? ""
+
+    const ok = evaluateTenmon(text)
 
     results.push({
       question: q,
-      answer,
-      pass,
-      errors: pass ? [] : ["evaluateTenmon score < 3"]
+      answer: text,
+      pass: ok
     })
 
-    if (!pass) {
+    if (!ok) {
       throw new Error("TENMON_EVALUATION_FAIL")
     }
   }
 
-  return results
+  return {
+    trained: results.length
+  }
 }
