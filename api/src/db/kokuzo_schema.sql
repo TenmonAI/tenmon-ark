@@ -355,3 +355,16 @@ CREATE TABLE IF NOT EXISTS khs_concepts (
 CREATE INDEX IF NOT EXISTS idx_khs_concepts_cluster
 ON khs_concepts(clusterKey);
 
+
+CREATE TABLE IF NOT EXISTS artifact_manifest (
+  artifactId TEXT PRIMARY KEY,
+  sha256 TEXT NOT NULL,
+  size INTEGER,
+  storageTier TEXT DEFAULT local,
+  storagePath TEXT,
+  createdAt TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_artifact_sha
+ON artifact_manifest(sha256);
+
