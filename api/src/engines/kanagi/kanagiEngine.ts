@@ -1,5 +1,6 @@
 import { kanagiThink } from "./kanagiThink.js";
 import { danshariStyle } from "../conversation/danshariStyle.js";
+import { polishText } from "../conversation/polishEngine.js";
 
 export type KanagiPhaseName = "SENSE" | "NAME" | "ONE_STEP" | "NEXT_DOOR";
 
@@ -121,6 +122,9 @@ export async function runKanagiPhaseTopV1(params: {
     st.err = res.err;
     st.latencyMs = res.latencyMs;
 
+    if (text) {
+      text = await polishText(llmChat, text);
+    }
   } catch (e: any) {
     st.err = String(e?.message || e);
   }

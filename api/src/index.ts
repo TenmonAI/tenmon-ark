@@ -28,6 +28,7 @@ import { registerFounderAuth } from "./routes/auth_founder.js";
 import { markListenReady } from "./health/readiness.js";
 import { getDb } from "./db/index.js";
 import koshikiConsoleRouter from "./routes/koshikiConsole.js";
+import { debugKanagiRouter } from "./routes/debugKanagi.js";
 
 // Debug: 未処理例外のハンドリング
 const pid = process.pid;
@@ -125,6 +126,8 @@ app.use("/api/kanagi", kanagiRoutes);
 
 // 既存 tenmon
 app.use("/api/tenmon", tenmonRoutes);
+
+app.use("/api/debug/kanagi", debugKanagiRouter);
 
 // health check
 app.get("/health", (_, res) => {
