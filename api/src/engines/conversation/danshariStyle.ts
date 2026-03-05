@@ -1,13 +1,10 @@
 export function danshariStyle(
-  reception: string,
-  focus: string,
-  step: string
+  r: string,
+  f: string,
+  s: string
 ): string {
-
-  let out = reception
-
-  if (focus) out += "\n\n" + focus
-  if (step)  out += "\n\n" + step
-
-  return out.trim()
+  let out = r;
+  if (f) out += "\n\n" + f;
+  if (s) out += "\n\n" + s;
+  return out.trim();
 }
