@@ -1,4 +1,6 @@
 /* CARD1_SEAL_V1 */
+import { runKanagiPhaseTopV1 } from "../engines/kanagi/kanagiEngine.js";
+import { detectKanagiPhase } from "../engines/kanagi/kanagiPhase.js";
 import { generateSeedsFromKHS } from "../engines/seed/seedGenerator.js";
 import { generateSeedClusters } from "../engines/seed/clusterEngine.js";
 import { recordLawUsage } from "../engines/learning/applyLogEngine.js";
@@ -3368,9 +3370,11 @@ let outText = "";
         let outProv: any = null;
 
       try {
-        const llmRes: any = await llmChat({ system: KANAGI_SYSTEM_PROMPT + __namingSuffix, user: t0, history: memoryReadSession(String(threadId || ""), 8) });
-        outText = String(llmRes?.text ?? "").trim();
-        outProv = (llmRes?.provider ?? "llm");
+        const __hist = memoryReadSession(String(threadId || ""), 8) || [];
+        const __k = await runKanagiPhaseTopV1({ t0, phaseName, namingSuffix: __namingSuffix, history: __hist as any, llmChat: llmChat as any });
+        outText = String(__k.text || "").trim();
+        outProv = (__k.providerUsed || "llm") as any;
+        try { __llmStatus = __k.llmStatus as any; } catch {}
       } catch (e: any) {
         console.error("[N2_LLM] llmChat failed", e?.message || e);
       }
@@ -4185,15 +4189,8 @@ if (usable.length === 0) {
       const __askedMenu = /^\s*(?:\/menu|menu)\b/i.test(__msg) || /^\s*メニュー\b/.test(__msg);
       const __hasDoc = /\bdoc\b/i.test(__msg) || /pdfPage\s*=\s*\d+/i.test(__msg) || /#詳細/.test(__msg);
       if (!__isTestTid && !__askedMenu && !__hasDoc) {
-        let ucount = 0;
-        try {
-          const mem = memoryReadSession(threadId, 40) || [];
-          for (const row of mem) {
-            if (row && (row as any).role === "user") ucount++;
-          }
-        } catch {}
-        const phase = (ucount % 4);
-        const phaseName = phase === 0 ? "SENSE" : phase === 1 ? "NAME" : phase === 2 ? "ONE_STEP" : "NEXT_DOOR";
+        const mem = memoryReadSession(threadId, 40) || [];
+        const phaseName = detectKanagiPhase(mem);
 
         // only reshape when NATURAL reply looks like looping template / questionnaire
         const t0 = String((nat as any)?.responseText ?? "");
