@@ -81,7 +81,7 @@ export async function runKanagiPhaseTopV1(params: {
 
   // KANAGI_THINK → DANSHARI_STYLE
   try {
-    const think = kanagiThink("neutral", phaseName);
+    const think = kanagiThink("neutral", phaseName, t0);
     const styled = danshariStyle(
       think.reception,
       think.focus,

@@ -4198,7 +4198,8 @@ if (usable.length === 0) {
 
         const think = kanagiThink(
           (nat as any)?.heart?.state ?? "neutral",
-          phaseName
+          phaseName,
+          __msg
         );
         (nat as any).responseText = danshariStyle(
           think.reception,
