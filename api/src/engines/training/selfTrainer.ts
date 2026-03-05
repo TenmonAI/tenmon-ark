@@ -4,11 +4,11 @@ import { evaluateTenmon } from "./tenmonEvaluator.js"
 export async function runSelfTraining() {
 
   const questions = [
-    "魂とは何？",
-    "言霊とは何？",
-    "水火とは何？",
-    "迷いとは何？",
-    "断捨離とは何？"
+    "魂はどこにある？（一般論禁止）",
+    "言霊は何でできている？",
+    "水火（イキ）とは何？",
+    "文字音の省とは何？",
+    "迷いを断捨離すると何が残る？"
   ]
 
   const results = []
@@ -17,16 +17,16 @@ export async function runSelfTraining() {
 
     const answer = await runSelfDialogue(q)
 
-    const evalResult = evaluateTenmon(answer)
+    const pass = evaluateTenmon(answer)
 
     results.push({
       question: q,
       answer,
-      pass: evalResult.pass,
-      errors: evalResult.errors
+      pass,
+      errors: pass ? [] : ["evaluateTenmon score < 3"]
     })
 
-    if (!evalResult.pass) {
+    if (!pass) {
       throw new Error("TENMON_EVALUATION_FAIL")
     }
   }

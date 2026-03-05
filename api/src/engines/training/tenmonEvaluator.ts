@@ -1,21 +1,11 @@
 export function evaluateTenmon(text: string) {
 
-  const errors: string[] = []
+  let score = 0
 
-  if (!text.includes("【天聞の所見】")) {
-    errors.push("missing header")
-  }
+  if (text.includes("【天聞の所見】")) score++
+  if (text.length < 250) score++
+  if (!/一般論|科学では|多くの文化/.test(text)) score++
+  if (/[？?]/.test(text)) score++
 
-  if (text.length > 320) {
-    errors.push("too long")
-  }
-
-  if (/一般的|人それぞれ|統計|研究/.test(text)) {
-    errors.push("general theory escape")
-  }
-
-  return {
-    pass: errors.length === 0,
-    errors
-  }
+  return score >= 3
 }
