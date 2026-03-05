@@ -10,6 +10,7 @@ const __tenmonRequire = __tenmonCreateRequire(import.meta.url);
 import { heartModelV1 } from "../core/heartModel.js";
 import { computeHeartPhase } from "../core/heartPhase.js";
 import { tenmonCore } from "../core/tenmonCore.js";
+import { enforceTenmon } from "../engines/persona/tenmonCore.js";
 import { Router, type IRouter, type Request, type Response } from "express";
 import { sanitizeInput } from "../tenmon/inputSanitizer.js";
 import { qcTextV1 } from "../kokuzo/qc.js";
@@ -913,6 +914,7 @@ ${String((gptDraft as any)?.text ?? "").trim()}
   // REPLY_SURFACE_V1: responseは必ずlocalSurfaceizeを通す。返却は opts をそのまま形にし caps は body.caps のみ参照
 
   const reply = (payload: any) => {
+    if (payload && payload.response != null) payload.response = enforceTenmon(String(payload.response));
     // KHS_SCAN_LAYER_V1: 観測だけ decisionFrame.ku に付与（既存 ku はスプレッドで保持）
     try {
       if (payload && payload.decisionFrame) {
