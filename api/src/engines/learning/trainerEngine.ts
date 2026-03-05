@@ -15,7 +15,15 @@ export function runTrainer(limit = 100) {
   const update = db.prepare(`
     UPDATE khs_concepts
     SET conceptWeight = conceptWeight + ?
-    WHERE clusterKey LIKE ?
+    WHERE clusterKey IN (
+      SELECT clusterKey
+      FROM khs_seed_clusters
+      WHERE representativeSeed IN (
+        SELECT seedKey
+        FROM khs_seeds_det_v1
+        WHERE lawKey = ?
+      )
+    )
   `);
 
   let updated = 0;
@@ -24,7 +32,7 @@ export function runTrainer(limit = 100) {
 
     update.run(
       r.usage,
-      r.lawKey + "%"
+      r.lawKey
     );
 
     updated++;
