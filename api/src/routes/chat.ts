@@ -459,6 +459,7 @@ const pid = process.pid;
         FROM khs_laws l
         JOIN khs_units u ON u.unitId = l.unitId
         WHERE l.status = 'verified'
+        AND IFNULL(l.termKey,'') != ''
         AND instr(?, l.termKey) > 0
         LIMIT 5
       `).all(message);
@@ -2988,8 +2989,7 @@ return res.json(__tenmonGeneralGateResultMaybe({
         const stmtQ: any = db.prepare(
           "SELECT l.lawKey AS lawKey, l.unitId AS unitId, u.doc AS doc, u.pdfPage AS pdfPage, u.quote AS quote, u.quoteHash AS quoteHash " +
           "FROM khs_laws l JOIN khs_units u ON u.unitId = l.unitId " +
-          "WHERE l.status=\x27verified\x27 " +
-          "WHERE l.lawType IN ('DEF','LAW') AND l.status='verified' AND instr(u.quote, ?) > 0 " +
+          "WHERE l.status='verified' AND IFNULL(l.termKey,'') != '' AND l.termKey = ? " +
           "ORDER BY l.confidence DESC, l.updatedAt DESC LIMIT 1"
         );
 
@@ -3031,20 +3031,31 @@ return res.json(__tenmonGeneralGateResultMaybe({
 
         if (hit?.lawKey && hit?.unitId && hit?.doc && hit?.quote && hit?.quoteHash) {
           const __q = String(hit.quote || "").trim();
-          const __qClip = ((__q.length > 420 ? (__q.slice(0, 420) + "...(quote clipped)") : __q).replace(/[?？]/g, ""));
-          const __take = (__term ? ("要点：『" + __term + "』は、根拠の言葉を生活の一手へ落とす入口です。") : "要点：根拠の言葉を生活の一手へ落とす入口です。");
-          const __act = "行動：いまの状況を一行で書き、そこから出来る一手を一つ決めてください。";
-          const __out =
-            "【天聞の所見】" + __qClip +
-            "（根拠: " + String(hit.doc) + (hit.pdfPage ? (" pdfPage=" + String(hit.pdfPage)) : "") + "）\n" +
-            __take + "\n" +
-            __act + "\n" +
-            "いま、この語はあなたの生活のどの場面で必要ですか？";
+          const __qClean = __q
+            .replace(/\r/g, "\n")
+            .replace(/[^\S\n]+/g, " ")
+            .replace(/\n{3,}/g, "\n\n")
+            .replace(/(^|\n)\s*0\s*(?=\n|$)/g, "\n")
+            .replace(/[\uFFFD]+/g, "")
+            .split("\n").map((x:string)=>x.trim()).filter((x:string)=>x.length>=2).join("\n").trim()
+            .slice(0, 400);
+          // A8P: LLM rewrite of OCR quote into modern Japanese (no hallucination gate)
+          let __out = "【天聞の所見】" + __qClean + "\n\nいま、この語はあなたの生活のどの場面で必要ですか？";
+          try {
+            const __llmRewrite = await llmChat({
+              system: "あなたは日本の古典・霊学の原文を現代語に言い換えるアシスタントです。原文の意味を変えず、推測・補足・一般論を一切足さず、2〜3行の常体で言い換えてください。文字化けや記号は読み飛ばしてください。",
+              user: "次の原文を現代語で言い換えてください。\n\n" + __qClean,
+              history: []
+            });
+            const __rewritten = String((__llmRewrite as any)?.text || "").trim();
+            if (__rewritten && __rewritten.length >= 10 && __rewritten.length <= 400) {
+              __out = "【天聞の所見】" + __rewritten + "\n\nいま、この語はあなたの生活のどの場面で必要ですか？";
+            }
+          } catch {}
 
-          const __resp = __tenmonClampOneQ(__out);
 
           return res.json(__tenmonGeneralGateResultMaybe({
-            response: __resp,
+            response: __out,
             evidence: null,
             candidates: [],
             timestamp,
