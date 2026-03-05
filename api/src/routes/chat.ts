@@ -19,6 +19,7 @@ import type { ChatResponseBody } from "../types/chat.js";
 import { runKanagiReasoner } from "../kanagi/engine/fusionReasoner.js";
 import { getCurrentPersonaState } from "../persona/personaState.js";
 import { composeResponse, composeConversationalResponse } from "../kanagi/engine/responseComposer.js";
+import { enforceTenmonPersona } from "../engines/persona/tenmonCoreEngine.js";
 import { getSessionId } from "../memory/sessionId.js";
 import { naturalRouter } from "../persona/naturalRouter.js";
 import { emptyCorePlan } from "../kanagi/core/corePlan.js";
@@ -4593,6 +4594,7 @@ if (typeof out === "string" && out.trim()) nat.responseText = out.trim();
 
     // 観測円から応答文を生成
     const response = composeConversationalResponse(trace, personaState, sanitized.text);
+    const tenmonResponse = enforceTenmonPersona(response);
 
     // 工程3: CorePlan（器）を必ず経由（最小の決定論コンテナ）
     const detailPlan = emptyCorePlan(
@@ -4883,7 +4885,7 @@ if (typeof out === "string" && out.trim()) nat.responseText = out.trim();
       return reply(payload);
     }
 
-let finalResponse = response;
+let finalResponse = tenmonResponse;
   // FREECHAT_SANITIZE_V1: UX hardening
   // - menu prompt must not appear unless user explicitly requests it
   // - internal synth/TODO placeholder must not appear unless #詳細
