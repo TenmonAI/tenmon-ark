@@ -446,7 +446,8 @@ const pid = process.pid;
   };
 
   // SACRED_DOMAIN_GATE_V1: only run KHS_SCAN for sacred-domain queries
-  const __sacredDomain = /カタカムナ|言灵|言霊|天津金木|布斗麻邇|天之御中主|造化三神/;
+  const __sacredDomain =
+  /カタカムナ|言灵|言霊|天津金木|布斗麻邇|天之御中主|造化三神|水火|イキ|魂|ことだま|水穂|言の葉/;
   const __msgForSacred = String(messageRaw ?? message ?? "");
 
   if (__sacredDomain.test(__msgForSacred)) {
@@ -4296,7 +4297,8 @@ return reply({
   const isCorePlanProbe = /\bcoreplan\b/i.test(trimmed);
 
   // domain gate: 主要ドメイン語は LLM_CHAT を禁止（HYBRIDへ）
-  const isDomainLike = /言霊|言灵|カタカムナ|天津金木|古事記|法華経|真言|布斗麻邇|フトマニ|水穂伝|虚空蔵/i.test(message);
+  const isDomainLike =
+  /言霊|言灵|ことだま|カタカムナ|天津金木|古事記|法華経|真言|布斗麻邇|フトマニ|水穂伝|虚空蔵|水火|イキ|魂/i.test(message);
   const shouldLLMChat =
     !__isCard1Flow &&
     !isSmokeHybrid &&
@@ -4755,7 +4757,8 @@ if (typeof out === "string" && out.trim()) nat.responseText = out.trim();
     setThreadCandidates(threadId, candidates);
 
     // ドメイン質問の検出（naturalRouter の判定と一致させる）
-    const isDomainQuestion = /言灵|言霊|ことだま|kotodama|法則|カタカムナ|天津金木|水火|與合/i.test(sanitized.text);
+    const isDomainQuestion =
+  /言灵|言霊|ことだま|kotodama|法則|カタカムナ|天津金木|水火|與合|イキ|魂/i.test(sanitized.text);
     
     // ドメイン質問の場合、回答本文を改善（候補があれば本文を生成、なければ最低限の説明）
     
