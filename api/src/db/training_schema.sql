@@ -59,3 +59,9 @@ CREATE TABLE IF NOT EXISTS training_freezes (
 CREATE INDEX IF NOT EXISTS idx_training_freezes_created_at
   ON training_freezes(created_at);
 
+CREATE TABLE IF NOT EXISTS tenmon_training_log (
+  id TEXT PRIMARY KEY,
+  createdAt TEXT,
+  question TEXT
+);
+
