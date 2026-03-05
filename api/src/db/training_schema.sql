@@ -65,3 +65,9 @@ CREATE TABLE IF NOT EXISTS tenmon_training_log (
   question TEXT
 );
 
+CREATE TABLE IF NOT EXISTS tenmon_audit_log (
+  id TEXT PRIMARY KEY,
+  createdAt TEXT,
+  question TEXT
+);
+
