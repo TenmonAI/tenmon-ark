@@ -10,6 +10,7 @@ const __tenmonRequire = __tenmonCreateRequire(import.meta.url);
 import { heartModelV1 } from "../core/heartModel.js";
 import { computeHeartPhase } from "../core/heartPhase.js";
 import { tenmonCore } from "../core/tenmonCore.js";
+import { TENMON_PERSONA } from "../core/tenmonPersona.js";
 import { enforceTenmon } from "../engines/persona/tenmonCore.js";
 import { Router, type IRouter, type Request, type Response } from "express";
 import { sanitizeInput } from "../tenmon/inputSanitizer.js";
@@ -2731,7 +2732,7 @@ return res.json(__tenmonGeneralGateResultMaybe({
       }
 
       // llmChat signature (current): llmChat({ system, history, user }) -> { text, provider }
-      const system = String(TENMON_CONSTITUTION_TEXT ?? "").trim() || "You are TENMON-ARK. Be natural and helpful.";
+      const system = (String(TENMON_CONSTITUTION_TEXT ?? "").trim() || "You are TENMON-ARK. Be natural and helpful.") + "\n\n" + TENMON_PERSONA;
       const history = [] as any[];
       let outText = "";
       let provider = "";
@@ -4341,7 +4342,7 @@ return reply({
   if (shouldLLMChat) {
     // C1_1_TWO_STAGE_LLMCHAT_V1: two-stage generation (plan JSON -> final) inside LLM_CHAT only
     // evidence is always null (no fabrication). If anything fails, fallback to single-stage output.
-    const system = TENMON_CONSTITUTION_TEXT;
+    const system = TENMON_CONSTITUTION_TEXT + "\n\n" + TENMON_PERSONA;
 
     const userMsg = trimmed;
 
