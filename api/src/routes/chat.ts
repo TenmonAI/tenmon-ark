@@ -20,6 +20,7 @@ import { runKanagiReasoner } from "../kanagi/engine/fusionReasoner.js";
 import { getCurrentPersonaState } from "../persona/personaState.js";
 import { composeResponse, composeConversationalResponse } from "../kanagi/engine/responseComposer.js";
 import { enforceTenmonPersona } from "../engines/persona/tenmonCoreEngine.js";
+import { conversationEngine } from "../engines/conversation/conversationEngine.js";
 import { getSessionId } from "../memory/sessionId.js";
 import { naturalRouter } from "../persona/naturalRouter.js";
 import { emptyCorePlan } from "../kanagi/core/corePlan.js";
@@ -3103,7 +3104,7 @@ const DEF_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。雑談�
       let outProv = "llm";
       try {
         const llmRes = await llmChat({ system: DEF_SYSTEM + __namingSuffix, user: t0, history: memoryReadSession(String(threadId || ""), 8) });
-        outText = __tenmonClampOneQ(String(llmRes?.text ?? "").trim());
+        outText = String(llmRes?.text ?? "").trim();
         outProv = String(llmRes?.provider ?? "llm");
         __llmStatus = {
           enabled: true,
@@ -3276,7 +3277,7 @@ let outText = "";
       let outProv = "llm";
       try {
         const llmRes = await llmChat({ system: GEN_SYSTEM + __namingSuffix, user: t0, history: memoryReadSession(String(threadId || ""), 8) });
-        outText = __tenmonClampOneQ(String(llmRes?.text ?? "").trim());
+        outText = String(llmRes?.text ?? "").trim();
         outProv = String(llmRes?.provider ?? "llm");
         __llmStatus = {
           enabled: true,
@@ -3368,7 +3369,7 @@ let outText = "";
 
       try {
         const llmRes: any = await llmChat({ system: KANAGI_SYSTEM_PROMPT + __namingSuffix, user: t0, history: memoryReadSession(String(threadId || ""), 8) });
-        outText = __tenmonClampOneQ(String(llmRes?.text ?? "").trim());
+        outText = String(llmRes?.text ?? "").trim();
         outProv = (llmRes?.provider ?? "llm");
       } catch (e: any) {
         console.error("[N2_LLM] llmChat failed", e?.message || e);
@@ -4446,6 +4447,25 @@ return reply({
   const hasDocPage = /pdfPage\s*=\s*\d+/i.test(message) || /\bdoc\b/i.test(message);
 
   if (isJapanese && !wantsDetail && !hasDocPage) {
+    const conv = await conversationEngine({
+      message: trimmed,
+      threadId
+    });
+    if (conv && conv.text) {
+      return res.json({
+        response: conv.text,
+        evidence: null,
+        candidates: [],
+        timestamp,
+        threadId,
+        decisionFrame: {
+          mode: "NATURAL",
+          intent: "chat",
+          llm: null,
+          ku: { routeReason: "CONVERSATION_ENGINE_V1" }
+        }
+      });
+    }
     const nat = naturalRouter({ message, mode: "NATURAL" });
     
     // handled=false の場合は通常処理（HYBRID検索）にフォールスルー
