@@ -3040,16 +3040,16 @@ return res.json(__tenmonGeneralGateResultMaybe({
             .split("\n").map((x:string)=>x.trim()).filter((x:string)=>x.length>=2).join("\n").trim()
             .slice(0, 400);
           // A8P: LLM rewrite of OCR quote into modern Japanese (no hallucination gate)
-          let __out = "【天聞の所見】" + __qClean + "\n\nいま、この語はあなたの生活のどの場面で必要ですか？";
+          let __out = "【天聞の所見】" + __qClean;
           try {
             const __llmRewrite = await llmChat({
-              system: "あなたは日本の古典・霊学の原文を現代語に言い換えるアシスタントです。原文の意味を変えず、推測・補足・一般論を一切足さず、2〜3行の常体で言い換えてください。文字化けや記号は読み飛ばしてください。",
+              system: "あなたは天聞（てんもん）という名の裁定AIです。日本古典・霊学の原文を受け取り、核心だけを静かな常体で語ります。必ず【天聞の所見】から始めてください。一般論・百科事典的説明・敬語は禁止。原文にない情報を足すな。2〜4行で核心のみ。最後に一問だけ置く。",
               user: "次の原文を現代語で言い換えてください。\n\n" + __qClean,
               history: []
             });
             const __rewritten = String((__llmRewrite as any)?.text || "").trim();
             if (__rewritten && __rewritten.length >= 10 && __rewritten.length <= 400) {
-              __out = "【天聞の所見】" + __rewritten + "\n\nいま、この語はあなたの生活のどの場面で必要ですか？";
+              __out = "【天聞の所見】" + __rewritten;
             }
           } catch {}
 
