@@ -2,6 +2,7 @@
 import { generateSeedsFromKHS } from "../engines/seed/seedGenerator.js";
 import { generateSeedClusters } from "../engines/seed/clusterEngine.js";
 import { recordLawUsage } from "../engines/learning/applyLogEngine.js";
+import { generateConcepts } from "../engines/learning/conceptEngine.js";
 import { synthHybridResponseV1 } from "../hybrid/synth.js";
 import { createRequire as __tenmonCreateRequire } from "node:module";
 const __tenmonRequire = __tenmonCreateRequire(import.meta.url);
