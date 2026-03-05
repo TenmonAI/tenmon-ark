@@ -13,6 +13,11 @@ function detectTopic(message:string){
   if(/体|体調|眠|疲/.test(m)) return "体"
   if(/お金|収入|支出/.test(m)) return "お金"
 
+  if(/人間関係|上司|部下|同僚/.test(m)) return "人間関係"
+  if(/時間|忙しい|余裕/.test(m)) return "時間"
+  if(/迷|決められない/.test(m)) return "迷い"
+  if(/不安|怖/.test(m)) return "不安"
+
   return ""
 }
 
