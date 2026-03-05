@@ -26,7 +26,6 @@ import { getCurrentPersonaState } from "../persona/personaState.js";
 import { composeResponse, composeConversationalResponse } from "../kanagi/engine/responseComposer.js";
 import { enforceTenmonPersona } from "../engines/persona/tenmonCoreEngine.js";
 import { conversationEngine } from "../engines/conversation/conversationEngine.js";
-import { runSelfGrowth } from "../engines/selfGrowth/selfGrowthEngine.js";
 import { getSessionId } from "../memory/sessionId.js";
 import { naturalRouter } from "../persona/naturalRouter.js";
 import { emptyCorePlan } from "../kanagi/core/corePlan.js";
@@ -3237,24 +3236,7 @@ const DEF_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。雑談�
 
     if (__generalOk && !__isSmokeHybridTop && __truthWeight <= 0.6) {
 
-      const tenmon = tenmonCore(message);
-      if (tenmon) {
-        return res.json({
-          response: tenmon.text,
-          evidence: null,
-          candidates: [],
-          timestamp,
-          threadId,
-          decisionFrame: {
-            mode: "TENMON_CORE",
-            intent: "chat",
-            llm: null,
-            ku: {
-              routeReason: "TENMON_CORE"
-            }
-          }
-        });
-      }
+      // TENMON_CORE disabled: routed to KANAGI
 
   // P3.1 KAMIYO Synapse: load 3 core laws (deterministic, no naming in output)
   const __kamiyo = (() => {
@@ -4224,7 +4206,6 @@ if (usable.length === 0) {
     } catch {}
 
     try {
-      runSelfGrowth(threadId, (nat as any)?.heart);
     } catch {}
 
     return reply({
