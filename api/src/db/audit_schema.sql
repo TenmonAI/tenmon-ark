@@ -18,3 +18,16 @@ CREATE INDEX IF NOT EXISTS idx_tool_audit_plan
 
 CREATE INDEX IF NOT EXISTS idx_tool_audit_created
   ON tool_audit(created_at);
+
+CREATE TABLE IF NOT EXISTS concept_weights (
+  concept TEXT PRIMARY KEY,
+  weight REAL DEFAULT 0,
+  updatedAt INTEGER
+);
+
+CREATE TABLE IF NOT EXISTS trainer_runs (
+  runId TEXT PRIMARY KEY,
+  threadId TEXT,
+  reward REAL,
+  createdAt INTEGER
+);

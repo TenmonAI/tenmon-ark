@@ -26,6 +26,7 @@ import { getCurrentPersonaState } from "../persona/personaState.js";
 import { composeResponse, composeConversationalResponse } from "../kanagi/engine/responseComposer.js";
 import { enforceTenmonPersona } from "../engines/persona/tenmonCoreEngine.js";
 import { conversationEngine } from "../engines/conversation/conversationEngine.js";
+import { runSelfGrowth } from "../engines/selfGrowth/selfGrowthEngine.js";
 import { getSessionId } from "../memory/sessionId.js";
 import { naturalRouter } from "../persona/naturalRouter.js";
 import { emptyCorePlan } from "../kanagi/core/corePlan.js";
@@ -4221,7 +4222,12 @@ if (usable.length === 0) {
         } catch {}
       }
     } catch {}
-return reply({
+
+    try {
+      runSelfGrowth(threadId, (nat as any)?.heart);
+    } catch {}
+
+    return reply({
       response: nat.responseText,
       evidence: null,
       decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: {} },
