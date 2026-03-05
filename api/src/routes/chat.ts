@@ -3382,7 +3382,8 @@ let outText = "";
         console.error("[N2_LLM] llmChat failed", e?.message || e);
       }
 
-      if (!outText) {
+      
+if (!outText) {
         // deterministic fallback (never empty)
         if (phaseName === "SENSE") outText = "【天聞の所見】いま一番重いのは「期限」「量」「判断」のどれに近いですか？（一語でOK）";
         else if (phaseName === "NAME") outText = "【天聞の所見】その重さは、休めない状態から来ています。いま一番怖いのは何ですか？（一語でOK）";

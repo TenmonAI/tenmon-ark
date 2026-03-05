@@ -1,3 +1,6 @@
+import { kanagiThink } from "./kanagiThink.js";
+import { danshariStyle } from "../conversation/danshariStyle.js";
+
 export type KanagiPhaseName = "SENSE" | "NAME" | "ONE_STEP" | "NEXT_DOOR";
 
 export type LlmChatFn = (params: {
@@ -75,6 +78,32 @@ export async function runKanagiPhaseTopV1(params: {
     err: "",
     latencyMs: 0,
   };
+
+  // KANAGI_THINK → DANSHARI_STYLE
+  try {
+    const think = kanagiThink("neutral", phaseName);
+    const styled = danshariStyle(
+      think.reception,
+      think.focus,
+      think.step
+    );
+
+    if (styled && styled.trim()) {
+      return {
+        text: styled,
+        providerUsed: "kanagi",
+        llmStatus: {
+          enabled: false,
+          providerPlanned: "kanagi",
+          providerUsed: "kanagi",
+          modelPlanned: "",
+          modelUsed: "",
+          ok: true,
+          err: ""
+        }
+      };
+    }
+  } catch {}
 
   try {
     const res = await llmChat({

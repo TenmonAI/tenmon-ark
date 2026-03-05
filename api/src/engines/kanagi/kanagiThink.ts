@@ -1,12 +1,12 @@
 export type KanagiThinkResult = {
-  reception: string;
-  focus: string;
-  step: string;
-};
+  reception: string
+  focus: string
+  step: string
+}
 
 export function kanagiThink(
   state: string,
-  phase: string
+  phase: "SENSE" | "NAME" | "ONE_STEP" | "NEXT_DOOR"
 ): KanagiThinkResult {
 
   if (phase === "SENSE") {
@@ -14,7 +14,7 @@ export function kanagiThink(
       reception: "少し疲れが溜まっているようですね。",
       focus: "いま重いのは体でしょうか。それとも気持ちでしょうか。",
       step: ""
-    };
+    }
   }
 
   if (phase === "NAME") {
@@ -22,7 +22,7 @@ export function kanagiThink(
       reception: "その疲れには理由がありそうです。",
       focus: "いま一番影響しているのは何でしょう。",
       step: ""
-    };
+    }
   }
 
   if (phase === "ONE_STEP") {
@@ -30,12 +30,12 @@ export function kanagiThink(
       reception: "まず一つ軽くしましょう。",
       focus: "",
       step: "今日やらないことを一つ決められますか。"
-    };
+    }
   }
 
   return {
     reception: "ここで一度整えます。",
     focus: "",
     step: "ゆっくり一呼吸してみてください。"
-  };
+  }
 }

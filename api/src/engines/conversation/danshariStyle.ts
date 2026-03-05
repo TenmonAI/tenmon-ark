@@ -4,15 +4,10 @@ export function danshariStyle(
   step: string
 ): string {
 
-  let out = reception;
+  let out = reception
 
-  if (focus) {
-    out += "\n\n" + focus;
-  }
+  if (focus) out += "\n\n" + focus
+  if (step)  out += "\n\n" + step
 
-  if (step) {
-    out += "\n\n" + step;
-  }
-
-  return out;
+  return out.trim()
 }
