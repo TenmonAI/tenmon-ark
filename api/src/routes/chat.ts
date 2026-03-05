@@ -9,6 +9,7 @@ import { createRequire as __tenmonCreateRequire } from "node:module";
 const __tenmonRequire = __tenmonCreateRequire(import.meta.url);
 import { heartModelV1 } from "../core/heartModel.js";
 import { computeHeartPhase } from "../core/heartPhase.js";
+import { tenmonCore } from "../core/tenmonCore.js";
 import { Router, type IRouter, type Request, type Response } from "express";
 import { sanitizeInput } from "../tenmon/inputSanitizer.js";
 import { qcTextV1 } from "../kokuzo/qc.js";
@@ -3212,7 +3213,26 @@ const DEF_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。雑談�
     }
 
     if (__generalOk && !__isSmokeHybridTop && __truthWeight <= 0.6) {
-      
+
+      const tenmon = tenmonCore(message);
+      if (tenmon) {
+        return res.json({
+          response: tenmon.text,
+          evidence: null,
+          candidates: [],
+          timestamp,
+          threadId,
+          decisionFrame: {
+            mode: "TENMON_CORE",
+            intent: "chat",
+            llm: null,
+            ku: {
+              routeReason: "TENMON_CORE"
+            }
+          }
+        });
+      }
+
   // P3.1 KAMIYO Synapse: load 3 core laws (deterministic, no naming in output)
   const __kamiyo = (() => {
     try {
