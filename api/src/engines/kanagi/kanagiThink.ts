@@ -5,19 +5,15 @@ export type KanagiThinkResult = {
 }
 
 function detectTopic(message:string){
-
   const m = message || ""
-
+  if(/人間関係|上司|部下|同僚/.test(m)) return "人間関係"
   if(/仕事|職場|会社|残業/.test(m)) return "仕事"
   if(/家族|子供|夫|妻|家庭/.test(m)) return "家族"
-  if(/体|体調|眠|疲/.test(m)) return "体"
   if(/お金|収入|支出/.test(m)) return "お金"
-
-  if(/人間関係|上司|部下|同僚/.test(m)) return "人間関係"
   if(/時間|忙しい|余裕/.test(m)) return "時間"
   if(/迷|決められない/.test(m)) return "迷い"
   if(/不安|怖/.test(m)) return "不安"
-
+  if(/体|体調|眠|疲/.test(m)) return "体"
   return ""
 }
 
