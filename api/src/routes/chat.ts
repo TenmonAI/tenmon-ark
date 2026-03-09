@@ -255,11 +255,11 @@ if (!(res as any).__TENMON_JSON_WRAP_V7) {
                 const __isGeneralRoute = String((obj as any)?.decisionFrame?.ku?.routeReason ?? "").includes("NATURAL_GENERAL");
                 if (!__isGeneralRoute && __phase.includes("IN")) {
                   __r = __r
-                    .replace(/^受容[:：]?\s*/u, "受容：")
+                    .replace(/^受容[:：]?\s*/u, "")
                     .replace(/\n{3,}/g, "\n\n")
                     .trim();
                   if (!__r.includes("一点：")) {
-                    __r = "受容：" + __r.replace(/\s+/g, " ").trim();
+                    __r = __r.replace(/\s+/g, " ").trim();
                   }
                 } else if (!__isGeneralRoute && __phase.includes("OUT")) {
                   if (!__r.includes("一手")) {

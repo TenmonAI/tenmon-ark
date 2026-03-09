@@ -128,7 +128,10 @@ function generalToneNormalize(s: string): string {
   // LABEL_STRIP_V3: 受容：/一点：/一手：ラベルのみ除去（後続テキストは保持）
   out = out.replace(/^(\s*)(受容|一点|一手)：\s*(いまは少し内側を整える段階です。\s*)?/gm, "$1");
   out = out.replace(/^(\s*)(受容|一点|一手)：\s*(いまは小さく外へ動かす段階です。\s*)?/gm, "$1");
+  // LLMFRAME_STRIP_V1: LLMが出力する固定フレーズを除去
+  out = out.replace(/^いまの言葉を[^\n]*\n?/gm, "");
   out = out.replace(/いいまここ/g, "いまここ");
+  out = out.replace(/まここ/g, "いまここ");
   out = out.split("\n").map((l) => l.replace(/^\s+/, "")).join("\n");
   return out.trim();
 }
