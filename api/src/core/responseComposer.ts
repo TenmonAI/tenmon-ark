@@ -129,7 +129,6 @@ function generalToneNormalize(s: string): string {
   out = out.replace(/^(\s*)(受容|一点|一手)：\s*(いまは少し内側を整える段階です。\s*)?/gm, "$1");
   out = out.replace(/^(\s*)(受容|一点|一手)：\s*(いまは小さく外へ動かす段階です。\s*)?/gm, "$1");
   out = out.replace(/いいまここ/g, "いまここ");
-  out = out.replace(/まここ/g, "いまここ");
   out = out.split("\n").map((l) => l.replace(/^\s+/, "")).join("\n");
   return out.trim();
 }
