@@ -251,7 +251,9 @@ if (!(res as any).__TENMON_JSON_WRAP_V7) {
 
                 let __r = String(obj.response ?? "").trim();
 
-                if (__phase.includes("IN")) {
+                // BRIDGE_GENERAL_SKIP_V1: NATURAL_GENERAL_LLM_TOP は responseComposer で処理済みのためスキップ
+                const __isGeneralRoute = String((obj as any)?.decisionFrame?.ku?.routeReason ?? "").includes("NATURAL_GENERAL");
+                if (!__isGeneralRoute && __phase.includes("IN")) {
                   __r = __r
                     .replace(/^受容[:：]?\s*/u, "受容：")
                     .replace(/\n{3,}/g, "\n\n")
@@ -259,7 +261,7 @@ if (!(res as any).__TENMON_JSON_WRAP_V7) {
                   if (!__r.includes("一点：")) {
                     __r = "受容：" + __r.replace(/\s+/g, " ").trim();
                   }
-                } else if (__phase.includes("OUT")) {
+                } else if (!__isGeneralRoute && __phase.includes("OUT")) {
                   if (!__r.includes("一手")) {
                     __r = __r.replace(/[。]\s*$/u, "。") + "\n\n一手：いま動かせることを一つだけ定めましょう。";
                   }
@@ -2638,6 +2640,7 @@ try {
       evidenceIds: (payload as any)?.decisionFrame?.ku?.evidenceIds ?? [],
       lawsUsed: (payload as any)?.decisionFrame?.ku?.lawsUsed ?? [],
       sourceHint: (payload as any)?.decisionFrame?.ku?.katakamunaSourceHint ?? null,
+      heart: (payload as any)?.decisionFrame?.ku?.heart ?? null,
     });
     payload.response = __composed.response;
     if (payload?.decisionFrame?.ku != null && __composed.meaningFrame != null) {
