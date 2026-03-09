@@ -124,10 +124,10 @@ function generalToneNormalize(s: string): string {
   out = out.replace(/体のことで少し疲れが溜まっているようですね。/g, "少し負荷が溜まっているようですね。");
   // organize 系の問いを少し整理
   out = out.replace(/今日、手を付けたいことは一つある？/g, "いま一番気になっている部分を一つだけ選べますか？");
-  // HEART_PHASE_TONE_POLISH_V1: general 冒頭ラベル除去（先頭空白を吸ってから）・崩れ修正・行頭空白除去・trim
-  out = out.replace(/^\s*受容：\s*/gm, "");
-  out = out.replace(/^\s*一点：\s*/gm, "");
-  out = out.replace(/^\s*一手：\s*/gm, "");
+  // HEART_PHASE_TONE_POLISH_V1: general 冒頭ラベル除去・崩れ修正・行頭空白除去・trim
+  // LABEL_STRIP_V3: 受容：/一点：/一手：ラベルのみ除去（後続テキストは保持）
+  out = out.replace(/^(\s*)(受容|一点|一手)：\s*(いまは少し内側を整える段階です。\s*)?/gm, "$1");
+  out = out.replace(/^(\s*)(受容|一点|一手)：\s*(いまは小さく外へ動かす段階です。\s*)?/gm, "$1");
   out = out.replace(/いいまここ/g, "いまここ");
   out = out.replace(/まここ/g, "いまここ");
   out = out.split("\n").map((l) => l.replace(/^\s+/, "")).join("\n");
