@@ -1,5 +1,6 @@
 import type { Router } from "express";
 import { json } from "express";
+import { getDb } from "../db/index.js";
 
 function founderKey(): string {
   return process.env.FOUNDER_KEY || "CHANGE_ME_FOUNDER_KEY";
@@ -42,7 +43,6 @@ export function registerFounderAuth(app: Router) {
   });
 
   app.get("/api/me", (req, res) => {
-    // ME_NOSTORE_CARD4_FIX_V1: avoid cached auth state for /api/me
     try { res.removeHeader("ETag"); } catch {}
     try {
       res.setHeader("Cache-Control", "no-store, max-age=0");
@@ -51,6 +51,60 @@ export function registerFounderAuth(app: Router) {
     } catch {}
 
     const founder = (req as any).cookies?.tenmon_founder === "1";
-    return res.json({ ok: true, user: founder ? { id: "founder", role: "FOUNDER" } : null, founder });
+    if (founder) {
+      return res.json({ ok: true, user: { id: "founder", role: "FOUNDER" }, founder: true });
+    }
+
+    try {
+      const sessionId = String((req as any).cookies?.auth_session ?? "").trim();
+      if (!sessionId) {
+        return res.json({ ok: true, user: null, founder: false });
+      }
+
+      const db = getDb("kokuzo");
+
+      const sess = db.prepare(`
+        SELECT sessionId, userId, expiresAt
+        FROM auth_sessions
+        WHERE sessionId = ?
+        LIMIT 1
+      `).get(sessionId) as any;
+
+      if (!sess || !sess.userId) {
+        return res.json({ ok: true, user: null, founder: false });
+      }
+
+      if (sess.expiresAt && String(sess.expiresAt) < new Date().toISOString()) {
+        return res.json({ ok: true, user: null, founder: false });
+      }
+
+      const user = db.prepare(`
+        SELECT userId, email
+        FROM auth_users
+        WHERE userId = ?
+        LIMIT 1
+      `).get(String(sess.userId)) as any;
+
+      if (!user) {
+        return res.json({ ok: true, user: null, founder: false });
+      }
+
+      return res.json({
+        ok: true,
+        user: {
+          id: String(user.userId),
+          email: String(user.email ?? ""),
+          role: "USER"
+        },
+        founder: false
+      });
+    } catch (e: any) {
+      return res.json({
+        ok: true,
+        user: null,
+        founder: false,
+        error: String(e?.message ?? e ?? "")
+      });
+    }
   });
 }

@@ -97,34 +97,46 @@ function __tenmonGeneralGateResultMaybe(x: any): any {
         if (empty) { (__ku as any).routeReason = "K1_TRACE_EMPTY_GATED_V1"; }
       }
     } catch {}
-    // R4_1_HEART_STATIC_KU_V2: static heart in decisionFrame.ku (audit-only)
-    // R4_1b_HEART_FILL_PHASE_REASON_V2: fill missing heart.phase/reason (preserve existing state/entropy)
-    // R4_2_HEART_DYNAMIC_PHASE_V3_FROM_TRACE_V1: deterministic phase from trace/candidates (audit-only)
+    // R4_1_HEART_STATIC_KU_V2 / R2_HEART_PHASE_REASON_ALIGN_V1:
+    // phase/reason を HeartState に整合させる。arkTargetPhase / userPhase を優先し、無い場合のみ旧補助ロジックを使う。
+    // R4_2_HEART_DYNAMIC_PHASE_V3_FROM_TRACE_V1: deterministic phase from trace/candidates (fallbackのみ)
     try {
-      const __ku:any = (df as any).ku;
-      const __h:any = (__ku && typeof __ku.heart === "object") ? __ku.heart : null;
+      const __ku: any = (df as any).ku;
+      const __h: any = (__ku && typeof __ku.heart === "object") ? __ku.heart : null;
       if (__h) {
-        const __lt = (__ku && Array.isArray(__ku.lawTrace)) ? __ku.lawTrace : [];
-        const __dp:any = (df as any).detailPlan || null;
-        const __kc = (__dp && Array.isArray(__dp.khsCandidates)) ? __dp.khsCandidates.length : 0;
-        if (__lt.length > 0) { __h.phase = "L-OUT"; __h.reason = "DYN_TRACE_NONEMPTY_V1"; }
-        else if (__kc > 0) { __h.phase = "R-IN"; __h.reason = "DYN_KHSCAND_NONEMPTY_V1"; }
-        else { __h.phase = "CENTER"; __h.reason = "DYN_NONE_V1"; }
+        const hasArk = typeof __h.arkTargetPhase === "string" && __h.arkTargetPhase;
+        const hasUser = typeof __h.userPhase === "string" && __h.userPhase;
+        if (hasArk || hasUser) {
+          // 新 HeartState がある場合はそれを優先
+          __h.phase = String(__h.arkTargetPhase || __h.userPhase);
+          if (!__h.reason) __h.reason = "ARK_TARGET_PHASE_V1";
+        } else {
+          // 旧 dynamic fallback（lawTrace / khsCandidates ベース）
+          const __lt = (__ku && Array.isArray(__ku.lawTrace)) ? __ku.lawTrace : [];
+          const __dp: any = (df as any).detailPlan || null;
+          const __kc = (__dp && Array.isArray(__dp.khsCandidates)) ? __dp.khsCandidates.length : 0;
+          if (__lt.length > 0) { __h.phase = "L-OUT"; __h.reason = "DYN_TRACE_NONEMPTY_V1"; }
+          else if (__kc > 0) { __h.phase = "R-IN"; __h.reason = "DYN_KHSCAND_NONEMPTY_V1"; }
+          else { __h.phase = "CENTER"; __h.reason = "DYN_NONE_V1"; }
+        }
       }
     } catch {}
     try {
-      const __k:any = (df as any).ku;
-      const __h:any = (__k && typeof __k.heart === "object") ? __k.heart : null;
+      const __k: any = (df as any).ku;
+      const __h: any = (__k && typeof __k.heart === "object") ? __k.heart : null;
       if (__h) {
         if (!(__h.phase)) __h.phase = "CENTER";
         if (!(__h.reason)) __h.reason = "STATIC_V1";
-      }
-    } catch {}
-    try {
-      if (df && typeof df === "object") {
-        if (!(df as any).ku || typeof (df as any).ku !== "object" || Array.isArray((df as any).ku)) (df as any).ku = {};
-        const __ku:any = (df as any).ku;
-        if (!__ku.heart || typeof __ku.heart !== "object") __ku.heart = { state: "neutral", phase: "CENTER", reason: "STATIC_V1" };
+      } else if (__k && typeof __k === "object") {
+        // heart が存在しない場合だけ静的デフォルトを補う
+        (__k as any).heart = {
+          userPhase: "CENTER",
+          userVector: { waterScore: 0.5, fireScore: 0.5, balance: 0 },
+          arkTargetPhase: "CENTER",
+          entropy: 0.25,
+          phase: "CENTER",
+          reason: "STATIC_V1",
+        };
       }
     } catch {}
     // H2: compassion wrap for SUPPORT only (routeReason from ku)
@@ -140,7 +152,17 @@ function __tenmonGeneralGateResultMaybe(x: any): any {
     try {
       const h = __tenmonLastHeart;
       if (h && typeof h === "object") {
-        (ku as any).heart = { state: String(h.state || "neutral"), entropy: Number(h.entropy ?? 0.25) };
+        // HEART_SHAPE_UNIFY_V1: preserve new shape, merge lastHeart fields only if missing
+        const existing = (ku as any).heart;
+        if (!existing || typeof existing !== "object") {
+          (ku as any).heart = h;
+        } else {
+          if (!existing.userPhase && h.userPhase) existing.userPhase = h.userPhase;
+          if (!existing.userVector && h.userVector) existing.userVector = h.userVector;
+          if (!existing.arkTargetPhase && h.arkTargetPhase) existing.arkTargetPhase = h.arkTargetPhase;
+          if (existing.entropy === undefined && h.entropy !== undefined) existing.entropy = h.entropy;
+        }
+        delete (ku as any).heart.state;
       }
     } catch {}
     if (ku.routeReason === "NATURAL_GENERAL_LLM_TOP") {

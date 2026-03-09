@@ -13,7 +13,8 @@ import { synthHybridResponseV1 } from "../hybrid/synth.js";
 import { createRequire as __tenmonCreateRequire } from "node:module";
 const __tenmonRequire = __tenmonCreateRequire(import.meta.url);
 import { heartModelV1 } from "../core/heartModel.js";
-import { computeHeartPhase } from "../core/heartPhase.js";
+import { computeHeartPhase, computeHeartState } from "../core/heartPhase.js";
+
 import { tenmonCore } from "../core/tenmonCore.js";
 import { TENMON_PERSONA } from "../core/tenmonPersona.js";
 import { enforceTenmon } from "../engines/persona/tenmonCore.js";
@@ -61,6 +62,9 @@ import { memoryPersistMessage, memoryReadSession } from "../memory/index.js";
 import { listRules } from "../training/storage.js";
 
 import { getDbPath } from "../db/index.js";
+import { responseComposer } from "../core/responseComposer.js";
+import { resolveKatakamunaBranches } from "../runtime/katakamunaCanon.js";
+import { resolveKatakamunaBranchesV2 } from "../runtime/katakamunaSchemaV2.js";
 
 import { DatabaseSync } from "node:sqlite";
 import { buildGroundedResponse } from "./chat_parts/grounded_impl.js";
@@ -69,6 +73,36 @@ import { saveArkThreadSeedV1 } from "./chat_parts/seed_impl.js";
 import { writeSynapseLogV1 } from "./chat_parts/synapse_impl.js";
 import { generateSeed } from "./chat_parts/seed_engine.js";
 const router: IRouter = Router();
+
+function normalizeHeartShape(h: any) {
+  const userPhase =
+    typeof h?.userPhase === "string" ? h.userPhase : "CENTER";
+
+  const userVector =
+    h?.userVector && typeof h.userVector === "object"
+      ? {
+          waterScore: Number(h.userVector.waterScore ?? 0.5),
+          fireScore: Number(h.userVector.fireScore ?? 0.5),
+          balance: Number(h.userVector.balance ?? 0),
+        }
+      : { waterScore: 0.5, fireScore: 0.5, balance: 0 };
+
+  const arkTargetPhase =
+    typeof h?.arkTargetPhase === "string" ? h.arkTargetPhase : "CENTER";
+
+  const entropy = Number(h?.entropy ?? 0.25);
+
+  const out: any = {
+    userPhase,
+    userVector,
+    arkTargetPhase,
+    entropy,
+  };
+
+  if (typeof h?.phase === "string" && h.phase) out.phase = h.phase;
+
+  return out;
+}
 // __KANAGI_PHASE_MEM_V2: module-scope phase tracker (per threadId) for NATURAL 4-phase state machine.
 const __kanagiPhaseMemV2 = new Map<string, number>();
 // CARD_C7B2_FIX_N2_TRIGGER_AND_LLM_V1
@@ -144,9 +178,29 @@ router.post("/chat", async (req: Request, res: Response<ChatResponseBody>) => {
   const __heart = (() => { try {
     const b: any = (req as any)?.body || {};
     const raw = String(b.message ?? b.text ?? b.input ?? "");
-    return heartModelV1(raw);
-  } catch { return { state: "neutral", entropy: 0.25 }; } })();
-  console.log(`[HEART] state=${__heart.state} entropy=${Number(__heart.entropy).toFixed(2)}`);
+    const legacy = heartModelV1(raw) as any;
+    return {
+      userPhase: (legacy && typeof legacy.userPhase === "string") ? legacy.userPhase : "CENTER",
+      userVector: (legacy && legacy.userVector && typeof legacy.userVector === "object")
+        ? legacy.userVector
+        : { waterScore: 0.5, fireScore: 0.5, balance: 0 },
+      arkTargetPhase: (legacy && typeof legacy.arkTargetPhase === "string") ? legacy.arkTargetPhase : "CENTER",
+      entropy: typeof legacy?.entropy === "number" ? legacy.entropy : 0.25,
+      phase: legacy?.phase,
+    };
+  } catch {
+    return {
+      userPhase: "CENTER",
+      userVector: { waterScore: 0.5, fireScore: 0.5, balance: 0 },
+      arkTargetPhase: "CENTER",
+      entropy: 0.25,
+    };
+  } })();
+  console.log(
+    `[HEART] userPhase=${String((__heart as any).userPhase || "")}` +
+    ` arkTargetPhase=${String((__heart as any).arkTargetPhase || "")}` +
+    ` entropy=${Number((__heart as any).entropy ?? 0).toFixed(2)}`
+  );
   setTenmonLastHeart(__heart);
 
   // CARD6C_HANDLER_RESJSON_WRAP_V7: wrap res.json ONCE per request so ALL paths get top-level rewriteUsed/rewriteDelta defaults
@@ -179,6 +233,41 @@ if (!(res as any).__TENMON_JSON_WRAP_V7) {
                   r = r.replace(/^\n+/, "\n");
                   obj.response = r;
                 }
+              }
+            } catch {}
+
+            // HEART_RESPONSE_BRIDGE_V1
+            try {
+              if (typeof obj.response === "string") {
+                const __df: any = (obj as any)?.decisionFrame ?? null;
+                const __ku: any = (__df && typeof __df.ku === "object" && !Array.isArray(__df.ku)) ? __df.ku : null;
+                const __heart: any = __ku?.heart ?? null;
+                const __kanagi: any = __ku?.kanagi ?? null;
+
+                const __phase =
+                  String(__kanagi?.phase ?? "") ||
+                  String(__heart?.phase ?? "") ||
+                  "";
+
+                let __r = String(obj.response ?? "").trim();
+
+                if (__phase.includes("IN")) {
+                  __r = __r
+                    .replace(/^受容[:：]?\s*/u, "受容：")
+                    .replace(/\n{3,}/g, "\n\n")
+                    .trim();
+                  if (!__r.includes("一点：")) {
+                    __r = "受容：" + __r.replace(/\s+/g, " ").trim();
+                  }
+                } else if (__phase.includes("OUT")) {
+                  if (!__r.includes("一手")) {
+                    __r = __r.replace(/[。]\s*$/u, "。") + "\n\n一手：いま動かせることを一つだけ定めましょう。";
+                  }
+                } else if (__phase.includes("CENTER")) {
+                  __r = __r.replace(/^受容[:：]?\s*/u, "").trim();
+                }
+
+                obj.response = __r;
               }
             } catch {}
 
@@ -418,6 +507,34 @@ if (!(res as any).__TENMON_JSON_WRAP_V7) {
             }
           }
         } catch {}
+
+        // KANAGI_RUNTIME_TOPWRAP_V1
+        try {
+          const __df: any = (obj as any)?.decisionFrame ?? null;
+          if (__df && typeof __df === "object") {
+            __df.ku = (__df.ku && typeof __df.ku === "object" && !Array.isArray(__df.ku))
+              ? __df.ku
+              : {};
+            const __ku: any = __df.ku;
+
+            const __rawMsg =
+              String((obj as any)?.rawMessage ?? "") ||
+              String((obj as any)?.message ?? "") ||
+              "";
+
+            const __phaseArg = (typeof __ku.kanagiPhase === "string" && __ku.kanagiPhase) ? __ku.kanagiPhase : "SENSE";
+            const __k: any = kanagiThink("", __phaseArg, __rawMsg);
+
+            __ku.kanagi = {
+              topic: String(__k?.topic ?? ""),
+              reception: String(__k?.reception ?? ""),
+              focus: String(__k?.focus ?? ""),
+              step: String(__k?.step ?? ""),
+              routeReason: String(__ku.routeReason ?? "")
+            };
+          }
+        } catch {}
+
         return __origJsonTop(obj);
       };
     }
@@ -437,6 +554,17 @@ const pid = process.pid;
   const messageRaw = (req.body as any)?.input || (req.body as any)?.message;
   const body = (req.body ?? {}) as any;
   const message = String(messageRaw ?? "").trim();
+
+  // HEART_WATERFIRE_PHASE_V1: water/fire vector & phase (observability only)
+  try {
+    const __heartPhase = computeHeartState(String(message ?? ""));
+    try { (__heart as any).userPhase = __heartPhase.userPhase; } catch {}
+    try { (__heart as any).userVector = __heartPhase.userVector; } catch {}
+    try { (__heart as any).arkTargetPhase = __heartPhase.arkTargetPhase; } catch {}
+    try { (__heart as any).entropy = __heartPhase.entropy; } catch {}
+    // drop legacy state field so decisionFrame.ku.heart follows new HeartState shape
+    try { delete (__heart as any).state; } catch {}
+  } catch {}
 
   // ==============================
   // KHS_SCAN_LAYER_V1 (read-only)
@@ -555,14 +683,14 @@ const pid = process.pid;
   if (message === "date") {
     const now = new Date();
     const jst = new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Tokyo", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false }).format(now).replace("T", " ");
-    return res.json({
+    return res.json(__tenmonGeneralGateResultMaybe({
       response: "【天聞の所見】現在時刻は " + jst + " JST です。",
       evidence: null,
       candidates: [],
       timestamp: new Date().toISOString(),
             threadId: String(((req as any)?.body?.threadId ?? "")),
       decisionFrame: { mode: "NATURAL", intent: "chat", llm: "llm", ku: { lawsUsed: [], evidenceIds: [], lawTrace: [], routeReason: "N1_DATE_JST_REQBODY_EARLY_V1" } },
-    });
+    }));
   }
 
   // [B1] deterministic force-menu trigger for Phase36-1
@@ -597,27 +725,27 @@ const pid = process.pid;
         if (!flowRow) {
           personaDb.prepare("INSERT OR REPLACE INTO naming_flow (userId, step, userName, assistantName, updatedAt) VALUES (?, ?, ?, ?, ?)").run(userId, "STEP1", null, null, now);
           const __namingObs = { userId, userName: null as string | null, assistantName: null as string | null };
-          return res.json({
+          return res.json(__tenmonGeneralGateResultMaybe({
             response: "あなたを何とお呼びすればよいでしょうか？",
             evidence: null,
             candidates: [],
             timestamp,
             threadId,
             decisionFrame: { mode: "NAMING_STEP1", intent: "naming", llm: null, ku: { ...__kuBase, routeReason: "NAMING_STEP1", naming: { ...__namingObs, step: "STEP1" } } },
-          });
+          }));
         }
         if (flowRow.step === "STEP1") {
           const __userNameStep2 = String(message).trim() || null;
           personaDb.prepare("UPDATE naming_flow SET userName = ?, step = ?, updatedAt = ? WHERE userId = ?").run(String(message).trim(), "STEP2", now, userId);
           const __namingObs = { userId, userName: __userNameStep2, assistantName: null as string | null };
-          return res.json({
+          return res.json(__tenmonGeneralGateResultMaybe({
             response: "では、私は何と名乗りましょう？",
             evidence: null,
             candidates: [],
             timestamp,
             threadId,
             decisionFrame: { mode: "NAMING_STEP2", intent: "naming", llm: null, ku: { ...__kuBase, routeReason: "NAMING_STEP2", naming: { ...__namingObs, step: "STEP2" } } },
-          });
+          }));
         }
         if (flowRow.step === "STEP2") {
           const uName = flowRow.userName != null ? String(flowRow.userName) : "";
@@ -628,14 +756,14 @@ const pid = process.pid;
           personaDb.prepare("INSERT OR REPLACE INTO user_naming (userId, userName, assistantName, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?)").run(userId, uName, aName, now, now);
           personaDb.prepare("DELETE FROM naming_flow WHERE userId = ?").run(userId);
           const __namingObs = { userId, userName: uName || null, assistantName: aName || null };
-          return res.json({
+          return res.json(__tenmonGeneralGateResultMaybe({
             response: "承りました。これから「" + aName + "」として、" + displayUserName + "とお話しします。今日は何から整えましょう？",
             evidence: null,
             candidates: [],
             timestamp,
             threadId,
             decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: { ...__kuBase, routeReason: "NAMING_SAVED", naming: { ...__namingObs, step: "SAVED" } } },
-          });
+          }));
         }
       }
     } catch (e) {
@@ -753,7 +881,7 @@ ${String((gptDraft as any)?.text ?? "").trim()}
             unitId: "",
             op: "KHS_SCAN"
           })),
-          heart: __heart,
+          heart: normalizeHeartShape(__heart),
           truthGate: { responseRawHead: finalTextRaw.slice(0, 120), sourceDoc: __sourceDoc, sourcePage: __sourcePage },
         }
       }
@@ -918,6 +1046,27 @@ ${String((gptDraft as any)?.text ?? "").trim()}
       console.error("[KG4_CLUSTER_ENGINE_IMPLEMENT]", e);
     }
 
+    // KANAGI_RUNTIME_PAYLOAD_ATTACH_V1
+    try {
+      const __df:any = (payload as any)?.decisionFrame ?? null;
+      if (__df && typeof __df === "object") {
+        __df.ku = (__df.ku && typeof __df.ku === "object" && !Array.isArray(__df.ku)) ? __df.ku : {};
+        const __ku:any = __df.ku;
+
+        const __rawMsg = String(message ?? "");
+        const __phaseArg = (typeof __ku.kanagiPhase === "string" && __ku.kanagiPhase) ? __ku.kanagiPhase : "SENSE";
+        const __k:any = kanagiThink("", __phaseArg, __rawMsg);
+
+        __ku.kanagi = {
+          topic: String(__k?.topic ?? ""),
+          reception: String(__k?.reception ?? ""),
+          focus: String(__k?.focus ?? ""),
+          step: String(__k?.step ?? ""),
+          routeReason: String(__ku.routeReason ?? "")
+        };
+      }
+    } catch {}
+
     return res.json(payload);
   }
 
@@ -940,6 +1089,29 @@ ${String((gptDraft as any)?.text ?? "").trim()}
           ...payload.decisionFrame,
           ku: kuPatch,
         };
+        try {
+          const df: any = payload.decisionFrame;
+          if (df && df.ku && typeof df.ku === "object" && !Array.isArray(df.ku)) {
+            (df.ku as any).heart = normalizeHeartShape((df.ku as any).heart ?? __heart);
+          }
+        } catch {}
+      }
+    } catch {}
+
+    // KATAKAMUNA_RUNTIME_RESOLUTION_V1
+    try {
+      const __raw = String((payload as any)?.rawMessage ?? message ?? "").trim();
+      if (/カタカムナ/i.test(__raw)) {
+        const __r = resolveKatakamunaBranches(__raw);
+        const __df: any = (payload as any)?.decisionFrame ?? null;
+        if (__df && typeof __df === "object") {
+          __df.ku = (__df.ku && typeof __df.ku === "object" && !Array.isArray(__df.ku)) ? __df.ku : {};
+          (__df.ku as any).katakamunaBranchCandidates = __r.candidates;
+          (__df.ku as any).katakamunaCanonVersion = {
+            schema: __r.schema,
+            updatedAt: __r.updatedAt
+          };
+        }
       }
     } catch {}
 
@@ -1300,6 +1472,35 @@ ${String((gptDraft as any)?.text ?? "").trim()}
           } catch {}
           if ((df.ku as any).rewriteUsed === undefined) (df.ku as any).rewriteUsed = false;
           if ((df.ku as any).rewriteDelta === undefined) (df.ku as any).rewriteDelta = 0;
+
+          // KANAGI_RUNTIME_FINALIZE_V1
+          try {
+            const __df: any = (obj as any)?.decisionFrame ?? null;
+            if (__df && typeof __df === "object") {
+              __df.ku = (__df.ku && typeof __df.ku === "object" && !Array.isArray(__df.ku))
+                ? __df.ku
+                : {};
+              const __ku: any = __df.ku;
+
+              const __rawMsg =
+                String((obj as any)?.rawMessage ?? "") ||
+                String((obj as any)?.message ?? "") ||
+                "";
+
+              const __phaseArg = (typeof __ku.kanagiPhase === "string" && __ku.kanagiPhase) ? __ku.kanagiPhase : "SENSE";
+              const __k: any = kanagiThink("", __phaseArg, __rawMsg);
+              const __phase = String(__ku.kanagiPhase ?? (__k?.phase ?? ""));
+
+              __ku.kanagi = {
+                phase: __phase,
+                topic: String(__k?.topic ?? ""),
+                reception: String(__k?.reception ?? ""),
+                focus: String(__k?.focus ?? ""),
+                step: String(__k?.step ?? ""),
+                routeReason: String(__ku.routeReason ?? "")
+              };
+            }
+          } catch {}
         }
       }
     } catch {}
@@ -1673,7 +1874,51 @@ ${String((gptDraft as any)?.text ?? "").trim()}
           }
         } catch {}
 
+        // KANAGI_RUNTIME_WIRE_V1
+        try {
+          const __rawMsg =
+            String((req as any)?.body?.message ?? "") ||
+            String((obj as any)?.rawMessage ?? "") ||
+            String((obj as any)?.message ?? "");
+          const __df = (obj as any).decisionFrame;
+          const __phase = (__df && (__df as any).phase) ? (__df as any).phase : "SENSE";
+          const __kanagi = kanagiThink("", __phase, __rawMsg);
+          if (__df && typeof __df === "object") {
+            __df.ku = (__df.ku && typeof __df.ku === "object") ? __df.ku : {};
+            (__df.ku as any).kanagi = {
+              reception: String((__kanagi as any)?.reception ?? ""),
+              focus: String((__kanagi as any)?.focus ?? ""),
+              step: String((__kanagi as any)?.step ?? "")
+            };
+          }
+        } catch {}
 
+    // KANAGI_RUNTIME_LASTMILE_V1
+    try {
+      const __df: any = (obj as any)?.decisionFrame ?? null;
+      if (__df && typeof __df === "object") {
+        __df.ku = (__df.ku && typeof __df.ku === "object" && !Array.isArray(__df.ku))
+          ? __df.ku
+          : {};
+        const __ku: any = __df.ku;
+
+        const __rawMsg =
+          String((obj as any)?.rawMessage ?? "") ||
+          String((obj as any)?.message ?? "") ||
+          "";
+
+        const __phaseArg = (typeof __ku.kanagiPhase === "string" && __ku.kanagiPhase) ? __ku.kanagiPhase : "SENSE";
+        const __k: any = kanagiThink("", __phaseArg, __rawMsg);
+
+        __ku.kanagi = {
+          topic: String(__k?.topic ?? ""),
+          reception: String(__k?.reception ?? ""),
+          focus: String(__k?.focus ?? ""),
+          step: String(__k?.step ?? ""),
+          routeReason: String(__ku.routeReason ?? "")
+        };
+      }
+    } catch {}
 
     return __origJson(obj);
   };
@@ -2372,15 +2617,35 @@ try {
     try {
       payload.decisionFrame = payload.decisionFrame || { mode: "NATURAL", intent: "chat", llm: null, ku: {} };
       payload.decisionFrame.ku = (payload.decisionFrame.ku && typeof payload.decisionFrame.ku === "object") ? payload.decisionFrame.ku : {};
+      payload.decisionFrame.ku.heart = normalizeHeartShape(payload.decisionFrame.ku.heart ?? __heart);
       const ku: any = payload.decisionFrame.ku;
+      // HEART_SHAPE_NORM_V1: normalize heart shape before return
+      try { if (ku.heart && typeof ku.heart === "object") { ku.heart = normalizeHeartShape(ku.heart); } } catch {}
 
       if (ku.rewriteUsed === undefined) ku.rewriteUsed = false;
       if (ku.rewriteDelta === undefined) ku.rewriteDelta = 0;
     } catch {}
 
+    const __composed = responseComposer({
+      response: String(payload?.response ?? ""),
+      rawMessage: String((payload as any)?.rawMessage ?? message ?? ""),
+      mode: String(payload?.decisionFrame?.mode ?? ""),
+      routeReason: String(payload?.decisionFrame?.ku?.routeReason ?? ""),
+      truthWeight: Number((payload as any)?.decisionFrame?.ku?.truthWeight ?? 0),
+      katakamunaSourceHint: (payload as any)?.decisionFrame?.ku?.katakamunaSourceHint ?? null,
+      naming: (payload as any)?.decisionFrame?.ku?.naming ?? null,
+      lawTrace: (payload as any)?.decisionFrame?.ku?.lawTrace ?? [],
+      evidenceIds: (payload as any)?.decisionFrame?.ku?.evidenceIds ?? [],
+      lawsUsed: (payload as any)?.decisionFrame?.ku?.lawsUsed ?? [],
+      sourceHint: (payload as any)?.decisionFrame?.ku?.katakamunaSourceHint ?? null,
+    });
+    payload.response = __composed.response;
+    if (payload?.decisionFrame?.ku != null && __composed.meaningFrame != null) {
+      (payload.decisionFrame.ku as any).meaningFrame = __composed.meaningFrame;
+    }
 
 return res.json(__tenmonGeneralGateResultMaybe({
-      response,
+      response: __composed.response,
       timestamp: payload.timestamp,
       trace: payload.trace,
       provisional: payload.provisional,
@@ -2397,7 +2662,7 @@ return res.json(__tenmonGeneralGateResultMaybe({
 
   // N1_HELP_MENU_EARLY_V1 (acceptance requires 1)2)3))
   if (message === "help") {
-    return res.json({
+    return reply({
       response: "【天聞の所見】1) 検索（GROUNDED）2) 整理（Writer/Reader）3) 設定（運用/学習）\n番号で選んでください。",
       evidence: null,
       candidates: [],
@@ -2422,13 +2687,13 @@ return res.json(__tenmonGeneralGateResultMaybe({
       LIMIT 1
     `).get(threadId);
 
-    return res.json({
+    return res.json(__tenmonGeneralGateResultMaybe({
       response: row ? "Seed Recall" : "No seed",
       seed: row ?? null,
       timestamp,
       threadId,
       decisionFrame: { mode: "NATURAL", intent: "seed", llm: null, ku: {} }
-    } as any);
+    } as any));
   }
 
   // K2_6BK_FORCE_MENU_HANDLER_V1
@@ -2436,14 +2701,14 @@ return res.json(__tenmonGeneralGateResultMaybe({
     const __m0 = String(messageRaw || "").trim();
     if (__m0 === "__FORCE_MENU__") {
       const response = "MENU: 1) 検索（GROUNDED） 2) 整理（Writer/Reader） 3) 設定（運用/学習）\n番号で選んでください。";
-      return res.json({
+      return res.json(__tenmonGeneralGateResultMaybe({
         response,
         evidence: null,
         candidates: [],
         timestamp,
         threadId,
         decisionFrame: { mode: "NATURAL", intent: "MENU", llm: null, ku: { lawsUsed: [], evidenceIds: [], lawTrace: [], routeReason: "FORCE_MENU_V1" } },
-      });
+      }));
     }
   } catch {}
 
@@ -2454,14 +2719,14 @@ return res.json(__tenmonGeneralGateResultMaybe({
     const __m = String(messageRaw || "").trim();
     if (__tid === "card1-danshari" && (__m === "1" || __m === "2" || __m === "3")) {
       const response = "【天聞の所見】\n了解しました。次の一手へ移ります。\n\nいま目の前で手放す“ひとつ”は何ですか？（物でも予定でもOK）";
-      return res.json({
+      return res.json(__tenmonGeneralGateResultMaybe({
         response,
         evidence: null,
         candidates: [],
         timestamp,
         threadId,
         decisionFrame: { mode: "NATURAL", intent: "chat", llm: "llm", ku: { lawsUsed: [], evidenceIds: [], lawTrace: [], routeReason: "DANSHARI_STEP2_BYPASS_V1" } },
-      });
+      }));
     }
   } catch {}
 
@@ -2471,14 +2736,14 @@ return res.json(__tenmonGeneralGateResultMaybe({
     const __m0 = String(messageRaw || "");
     if (__m0.includes("断捨離で迷いを整理したい")) {
       const response = "【天聞の所見】\n断捨離の第一歩です。\n\n1) 手放す対象を1つ決める\n2) 迷いの原因を1つ言語化する\n3) 次の一手を1つだけ実行する\n\n番号で答えてください。どれにしますか？";
-      return res.json({
+      return res.json(__tenmonGeneralGateResultMaybe({
         response,
         evidence: null,
         candidates: [],
         timestamp,
         threadId,
         decisionFrame: { mode: "NATURAL", intent: "chat", llm: "llm", ku: { lawsUsed: [], evidenceIds: [], lawTrace: [], routeReason: "DANSHARI_STEP1_MENU_EARLY_V1" } },
-      });
+      }));
     }
   } catch {}
 
@@ -2511,14 +2776,14 @@ return res.json(__tenmonGeneralGateResultMaybe({
             (globalThis as any).memoryPersistMessage(String(threadId||""), "assistant", resp);
           }
         } catch {}
-        return res.json({
+        return res.json(__tenmonGeneralGateResultMaybe({
           response: resp,
           evidence: null,
           candidates: [],
       timestamp: new Date().toISOString(),
                 threadId: String(((req as any)?.body?.threadId ?? "")),
           decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: { lawsUsed: [], evidenceIds: [], lawTrace: [], routeReason: "NATURAL_FALLBACK" } },
-        });
+        }));
       }
 
       // RECALL: question about passphrase -> scan conversation_log for last user message containing a passphrase
@@ -2539,24 +2804,24 @@ return res.json(__tenmonGeneralGateResultMaybe({
             }
           }
           const resp = found ? ("【天聞の所見】合言葉は「" + found + "」です。") : "【天聞の所見】合言葉が未設定です。";
-          return res.json({
+          return res.json(__tenmonGeneralGateResultMaybe({
             response: resp,
             evidence: null,
             candidates: [],
             timestamp,
             threadId: String(threadId || ""),
             decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: { lawsUsed: [], evidenceIds: [], lawTrace: [], routeReason: "NATURAL_FALLBACK" } },
-          });
+          }));
         } catch {
           const resp = "【天聞の所見】合言葉が未設定です。";
-          return res.json({
+          return res.json(__tenmonGeneralGateResultMaybe({
             response: resp,
             evidence: null,
             candidates: [],
             timestamp,
             threadId: String(threadId || ""),
             decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: { lawsUsed: [], evidenceIds: [], lawTrace: [], routeReason: "NATURAL_FALLBACK" } },
-          });
+          }));
         }
       }
     }
@@ -2568,14 +2833,14 @@ return res.json(__tenmonGeneralGateResultMaybe({
       const __m = String((req as any)?.body?.message ?? "").trim();
       if (__m.toLowerCase() === "ping") {
         const quick = "【天聞の所見】何をお手伝いしますか？";
-        return res.json({
+        return res.json(__tenmonGeneralGateResultMaybe({
           response: quick,
           evidence: null,
           candidates: [],
           timestamp: new Date().toISOString(),
           threadId: String(threadId || ""),
           decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: { lawsUsed: [], evidenceIds: [], lawTrace: [], routeReason: "NATURAL_FALLBACK" } }
-        });
+        }));
       }
     }
     // /CARD_E0A9
@@ -2594,28 +2859,28 @@ return res.json(__tenmonGeneralGateResultMaybe({
             ? ("【天聞の所見】合言葉は「" + String(p) + "」です。")
             : "【天聞の所見】合言葉が未設定です。先に『合言葉は◯◯です』と教えてください。";
           try { persistTurn(threadId, t0, answer); } catch {}
-          return res.json({
+          return res.json(__tenmonGeneralGateResultMaybe({
             response: answer,
             evidence: null,
             candidates: [],
             timestamp,
             threadId: String(threadId || ""),
             decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: { lawsUsed: [], evidenceIds: [], lawTrace: [], routeReason: "DET_PASSPHRASE_TOP" } },
-          } as any);
+          } as any));
         }
 
         const p2 = extractPassphrase(t0);
         if (p2) {
           const answer = "【天聞の所見】登録しました。合言葉は「" + String(p2) + "」です。";
           try { persistTurn(threadId, t0, answer); } catch {}
-          return res.json({
+          return res.json(__tenmonGeneralGateResultMaybe({
             response: answer,
             evidence: null,
             candidates: [],
             timestamp,
             threadId: String(threadId || ""),
             decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: { lawsUsed: [], evidenceIds: [], lawTrace: [], routeReason: "DET_PASSPHRASE_TOP" } },
-          } as any);
+          } as any));
         }
       }
     } catch {}
@@ -2623,14 +2888,14 @@ return res.json(__tenmonGeneralGateResultMaybe({
     // FAST_ACCEPTANCE_RETURN: must respond <1s for acceptance/smoke probes (no LLM/DB)
     if (isTestTid0 && tid0 !== "smoke") {
       const quick = "【天聞の所見】ログイン前のため、会話は参照ベース（資料検索/整理）で動作します。/login からログインすると通常会話も有効になります？";
-      return res.json({
+      return res.json(__tenmonGeneralGateResultMaybe({
         response: quick,
         evidence: null,
         candidates: [],
         timestamp,
         threadId: String(threadId || ""),
         decisionFrame: { mode: "NATURAL", intent: "chat", llm: "openai", ku: { lawsUsed: [], evidenceIds: [], lawTrace: [], routeReason: "NATURAL_FALLBACK" } },
-      });
+      }));
     }
     // /FAST_ACCEPTANCE_RETURN
 
@@ -2813,16 +3078,189 @@ return res.json(__tenmonGeneralGateResultMaybe({
     // NOTE: This is inside N2 scope, so askedMenu0/hasDoc0/isCmd0/isTestTid0 are in-scope (TS-safe).
 
     // ---------- DEF: definition questions (〜とは何？/って何？) ----------
-    const __isDefinitionQ =
-      /とは\s*[?？]?$/.test(t0) ||
+    // KATAKAMUNA_FASTPATH_GUARD_V1: must be before __isDefinitionQ
+  try {
+    const __msgKG = String(message ?? "").trim();
+    const __isKatakamunaQ =
+      (
+        /カタカムナ/.test(__msgKG) &&
+        /(とは|って|何|なに|関係|系譜|本流|宇野|相似象|楢崎|空海|山口志道|天聞)/.test(__msgKG)
+      ) ||
+      /カタカムナとは\s*(何|なに)\s*(ですか)?\s*[？?]?$/u.test(__msgKG) ||
+      /カタカムナって\s*(何|なに)\s*(ですか)?\s*[？?]?$/u.test(__msgKG) ||
+      /^カタカムナ\s*[？?]?$/u.test(__msgKG);
+
+    if (__isKatakamunaQ && !hasDoc0 && !askedMenu0 && !isCmd0) {
+      const __r = resolveKatakamunaBranchesV2(__msgKG);
+      const __tenmon = (__r.tenmon || {}) as any;
+      const __tpl = (__r.templates || {}) as any;
+      const __topBranch = String((__r.candidates?.[0]?.branch ?? ""));
+
+      let __body = "";
+
+      if (__topBranch === "narasaki_mainline") {
+        __body = String(__tpl.narasaki_branch_fastpath || "");
+      } else if (__topBranch === "uno_society_mainline") {
+        __body = String(__tpl.uno_society_fastpath || "");
+      } else if (__topBranch === "kukai_parallel_axis") {
+        __body = String(__tpl.kukai_axis_fastpath || "");
+      } else if (__topBranch === "tenmon_reintegrative_axis") {
+        __body = String(__tpl.tenmon_axis_fastpath || "");
+      } else {
+        __body = String(
+          __tpl.generic_katakamuna_fastpath ||
+          __tenmon.standard_definition ||
+          "カタカムナは一枚岩ではありません。"
+        );
+      }
+
+      const __negative = String(__tenmon.negative_definition || "");
+
+      const __resp = (
+        "【天聞の所見】\n" +
+        __body +
+        (__negative ? "\n\n" + __negative : "") +
+        "\n\n楢崎本流・宇野会誌本流・空海軸・天聞再統合軸のどこから見たいですか？"
+      ).trim();
+      const __composed = responseComposer({
+        response: String(__resp.trim()),
+        rawMessage: String(__msgKG),
+        mode: "NATURAL",
+        routeReason: "KATAKAMUNA_CANON_ROUTE_V1",
+        truthWeight: 0,
+        katakamunaSourceHint: __r.sourceHint || null,
+        naming: null,
+        katakamunaTopBranch: String((__r.candidates?.[0]?.branch ?? "")),
+        lawTrace: [],
+        evidenceIds: [],
+        lawsUsed: [],
+        sourceHint: __r.sourceHint || null,
+      });
+      const __respFinal = __composed.response;
+      const __ku = {
+        routeReason: "KATAKAMUNA_CANON_ROUTE_V1",
+        katakamunaBranchCandidates: __r.candidates,
+        katakamunaCanonVersion: { schema: __r.schema, updatedAt: __r.updatedAt },
+        katakamunaSourceHint: __r.sourceHint || null,
+        lawsUsed: [],
+        evidenceIds: [],
+        lawTrace: [],
+        heart: normalizeHeartShape(__heart)
+      };
+      if (__composed.meaningFrame != null) (__ku as any).meaningFrame = __composed.meaningFrame;
+
+      return res.json(__tenmonGeneralGateResultMaybe({
+        response: __respFinal,
+        evidence: null,
+        candidates: [],
+        timestamp,
+        threadId,
+        decisionFrame: {
+          mode: "NATURAL",
+          intent: "define",
+          llm: null,
+          ku: __ku
+        }
+      }));
+    }
+  } catch (e) { try { console.error("[KATAKAMUNA_FASTPATH_GUARD_V1]", e); } catch {} }
+
+  // KATAKAMUNA_DETAIL_FASTPATH_V1
+  try {
+    const __msgKD = String(message ?? "").trim();
+    const __isKatakamunaDetail =
+      /カタカムナ/.test(__msgKD) &&
+      /#詳細/.test(__msgKD) &&
+      /(とは|って|何|なに|関係|系譜|本流|宇野|相似象|楢崎|空海|山口志道|天聞)/.test(__msgKD);
+
+    if (__isKatakamunaDetail && !isCmd0) {
+      const __r = resolveKatakamunaBranchesV2(__msgKD);
+      const __tpl = (__r.templates || {}) as any;
+      const __topBranch = String(__r.candidates?.[0]?.branch ?? "");
+
+      let __body = "";
+      if (__topBranch === "narasaki_mainline") {
+        __body =
+          "楢崎本流でのカタカムナは、潜象物理・図象解読・古事記再読を通じて、上古代科学として復元される対象です。中心は効用ではなく、図象・音・神名を物理的構造として読む点にあります。";
+      } else if (__topBranch === "uno_society_mainline") {
+        __body =
+          "宇野・相似象会誌本流では、楢崎解読を感受性・共振・鍛錬・実習へ体系化して継承します。本流の解読を、現代人が受け取れるように編集・訓練化した系統です。";
+      } else if (__topBranch === "kukai_parallel_axis") {
+        __body =
+          "空海軸では、カタカムナは歴史系譜の枝ではなく、声字実相・即身成仏・十住心によって照らされる並行正典軸です。解読対象というより、音・字・宇宙・身体を一体系で理解する上位理論です。";
+      } else {
+        __body =
+          "天聞軸では、カタカムナは楢崎以後の分岐を、水火の法則・言霊・山口志道・言霊秘書・稲荷古伝・空海・天津金木まで遡って再統合する対象です。効用論ではなく、成立原理へ戻す軸として扱います。";
+      }
+
+      const __resp = (
+        "【天聞の所見】\n" +
+        __body +
+        "\n\n楢崎本流・宇野会誌本流・空海軸・天聞再統合軸のうち、次はどこを掘りますか？"
+      ).trim();
+      const __respFinal = responseComposer({
+        response: String(__resp.trim()),
+        rawMessage: String(__msgKD),
+        mode: "NATURAL",
+        routeReason: "KATAKAMUNA_DETAIL_FASTPATH_V1",
+        truthWeight: 0,
+        katakamunaSourceHint: __r.sourceHint || null,
+        katakamunaTopBranch: String((__r.candidates?.[0]?.branch ?? "")),
+        naming: null,
+        lawTrace: [],
+        evidenceIds: [],
+        lawsUsed: [],
+        sourceHint: __r.sourceHint || null,
+      }).response;
+
+      return res.json(__tenmonGeneralGateResultMaybe({
+        response: __respFinal,
+        evidence: null,
+        candidates: [],
+        timestamp,
+        threadId,
+        decisionFrame: {
+          mode: "NATURAL",
+          intent: "define",
+          llm: null,
+          ku: {
+            routeReason: "KATAKAMUNA_DETAIL_FASTPATH_V1",
+            katakamunaBranchCandidates: __r.candidates,
+            katakamunaCanonVersion: {
+              schema: __r.schema,
+              updatedAt: __r.updatedAt
+            },
+            katakamunaSourceHint: __r.sourceHint || null,
+            lawsUsed: [],
+            evidenceIds: [],
+            lawTrace: [],
+            heart: normalizeHeartShape(__heart)
+          }
+        }
+      }));
+    }
+  } catch (e) {
+    try { console.error("[KATAKAMUNA_DETAIL_FASTPATH_V1]", e); } catch {}
+  }
+
+  const __isDefinitionQ =
+      /とは\s*(何|なに)\s*(ですか)?\s*[？?]?$/u.test(t0) ||
+      /って\s*(何|なに)\s*(ですか)?\s*[？?]?$/u.test(t0) ||
+      /とは\s*[？?]?$/.test(t0) ||
       /とは何/.test(t0) ||
       /って何/.test(t0);
 
 
     if (!isTestTid0 && __isDefinitionQ && !hasDoc0 && !askedMenu0 && !isCmd0) {
       // FORCE_KHS_DEFINE_V2（最優先: KHS でヒットすればここで return）
-      const cleaned = message
-        .replace(/とは|って何|とは？|\?|？/g, "")
+      const cleaned = String(message ?? "")
+        .replace(/[?？]/g, "")
+        .replace(/って\s*(何|なに)\s*ですか$/u, "")
+        .replace(/って\s*(何|なに)$/u, "")
+        .replace(/とは\s*(何|なに)\s*ですか$/u, "")
+        .replace(/とは\s*(何|なに)\s*か$/u, "")
+        .replace(/とは\s*(何|なに)$/u, "")
+        .replace(/とは$/u, "")
         .trim();
       {
         const db = new DatabaseSync(getDbPath("kokuzo.sqlite"), { readOnly: true });
@@ -2878,12 +3316,114 @@ return res.json(__tenmonGeneralGateResultMaybe({
                   }
                 ],
                 routeReason: "KHS_DEF_VERIFIED_HIT",
-                heart: __heart
+                heart: normalizeHeartShape(__heart)
               }
             }
           };
           return reply(payload);
         }
+
+        // DEF_PROPOSED_FALLBACK_V1
+        try {
+          const __rowP = db.prepare(`
+            SELECT
+              l.lawKey,
+              l.unitId,
+              l.summary,
+              l.termKey,
+              l.operator,
+              l.status,
+              l.confidence,
+              u.doc,
+              u.pdfPage,
+              u.quote,
+              u.quoteHash
+            FROM khs_laws l
+            JOIN khs_units u ON u.unitId = l.unitId
+            WHERE l.status = 'proposed'
+              AND l.lawType = 'DEF'
+              AND l.termKey = ?
+            ORDER BY l.confidence DESC, l.updatedAt DESC
+            LIMIT 1
+          `).get(cleaned) as any;
+
+          if (__rowP?.lawKey && __rowP?.unitId) {
+            const __summary = String(__rowP.summary ?? "").trim();
+            const __quote = String(__rowP.quote ?? "").trim();
+            const __doc = String(__rowP.doc ?? "");
+            const __page = Number(__rowP.pdfPage ?? 0);
+
+            const __resp =
+              "【天聞の所見】\n" +
+              (__summary || __quote.slice(0, 220)) +
+              (__doc ? `\n\n出典: ${__doc} P${__page}` : "") +
+              "\n\nこの定義候補を、さらに verified 根拠に寄せて深めますか？";
+
+            const __respProposedFinal = responseComposer({
+              response: String(__resp),
+              rawMessage: String(message ?? ""),
+              mode: "NATURAL",
+              routeReason: "DEF_PROPOSED_FALLBACK_V1",
+              truthWeight: 0,
+              katakamunaSourceHint: null,
+              katakamunaTopBranch: "",
+              naming: null,
+              lawTrace: [{ lawKey: String(__rowP.lawKey), unitId: String(__rowP.unitId), op: "OP_DEFINE" }],
+              evidenceIds: [String(__rowP.quoteHash ?? "")].filter(Boolean),
+              lawsUsed: [String(__rowP.lawKey)],
+              sourceHint: null,
+            }).response;
+
+            return res.json(__tenmonGeneralGateResultMaybe({
+              response: __respProposedFinal,
+              evidence: __doc ? {
+                doc: __doc,
+                pdfPage: __page,
+                quote: __quote.slice(0, 120)
+              } : null,
+              candidates: [],
+              timestamp,
+              threadId,
+              decisionFrame: {
+                mode: "NATURAL",
+                intent: "define",
+                llm: null,
+                ku: {
+                  lawsUsed: [String(__rowP.lawKey)],
+                  evidenceIds: [String(__rowP.quoteHash ?? "")].filter(Boolean),
+                  lawTrace: [
+                    {
+                      lawKey: String(__rowP.lawKey),
+                      unitId: String(__rowP.unitId),
+                      op: "OP_DEFINE"
+                    }
+                  ],
+                  routeReason: "DEF_PROPOSED_FALLBACK_V1",
+                  heart: normalizeHeartShape(__heart),
+                  term: cleaned,
+                  khs: {
+                    lawsUsed: [
+                      {
+                        lawKey: String(__rowP.lawKey),
+                        unitId: String(__rowP.unitId),
+                        status: "proposed",
+                        operator: String(__rowP.operator ?? "OP_DEFINE")
+                      }
+                    ],
+                    evidenceIds: [String(__rowP.quoteHash ?? "")].filter(Boolean),
+                    lawTrace: [
+                      {
+                        lawKey: String(__rowP.lawKey),
+                        unitId: String(__rowP.unitId),
+                        op: "OP_DEFINE"
+                      }
+                    ]
+                  }
+                }
+              }
+            }));
+          }
+        } catch {}
       }
 
       // [C15] DEF deterministic dictionary gate (no external etymology / bracket-first)
@@ -3046,10 +3586,10 @@ return res.json(__tenmonGeneralGateResultMaybe({
             .split("\n").map((x:string)=>x.trim()).filter((x:string)=>x.length>=2).join("\n").trim()
             .slice(0, 400);
           // A8P: LLM rewrite of OCR quote into modern Japanese (no hallucination gate)
-          let __out = "【天聞の所見】" + __qClean;
+          let __out = __qClean;
           try {
             const __llmRewrite = await llmChat({
-              system: "あなたは天聞（てんもん）という名の裁定AIです。日本古典・霊学の原文を受け取り、核心だけを静かな常体で語ります。必ず【天聞の所見】から始めてください。一般論・百科事典的説明・敬語は禁止。原文にない情報を足すな。2〜4行で核心のみ。最後に一問だけ置く。",
+              system: "あなたは天聞アーク（TENMON-ARK）の整文者です。与えられた原文だけを用い、意味を変えずに現代語へ整えてください。語調は丁寧な敬語で統一します。形式は「受容（1行）→一点（1行）→一手または質問（1行）」の3段。合計2〜4行、180文字以内。一般論・外部知識・補足は禁止。",
               user: "次の原文を現代語で言い換えてください。\n\n" + __qClean,
               history: []
             });
@@ -3059,6 +3599,42 @@ return res.json(__tenmonGeneralGateResultMaybe({
             }
           } catch {}
 
+          if (String(__term || "") === "魂") {
+            const __resp =
+              "【天聞の所見】\n" +
+              "魂とは、人間の胎内に宿る火水（イキ）であり、息として働く生命の本でもあります。" +
+              "\n\n【根拠】" +
+              String(hit.quote || "").replace(/\s+/g, " ").trim().slice(0, 180) +
+              `\n\n出典: ${String(hit.doc ?? "")} P${Number(hit.pdfPage ?? 0)}` +
+              "\n\n魂・息・火水のどこを深掘りしますか？";
+
+            return res.json(__tenmonGeneralGateResultMaybe({
+              response: __resp,
+              evidence: null,
+              candidates: [],
+              timestamp,
+              threadId,
+              decisionFrame: {
+                mode: "NATURAL",
+                intent: "define",
+                llm: null,
+                ku: {
+                  routeReason: "SOUL_DEF_SURFACE_V1",
+                  lawsUsed: [String(hit.lawKey)],
+                  evidenceIds: [String(hit.quoteHash ?? "")].filter(Boolean),
+                  lawTrace: [
+                    {
+                      lawKey: String(hit.lawKey),
+                      unitId: String(hit.unitId),
+                      op: "OP_DEFINE"
+                    }
+                  ],
+                  term: "魂",
+                  heart: normalizeHeartShape(__heart)
+                }
+              }
+            }));
+          }
 
           return res.json(__tenmonGeneralGateResultMaybe({
             response: __out,
@@ -3215,7 +3791,7 @@ const DEF_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。雑談�
     // ==============================
 
     if (__truthWeight > 0.6) {
-      return res.json({
+      return res.json(__tenmonGeneralGateResultMaybe({
         response: "【天聞の所見】この問いは法則に強く接続しています。定義から展開します。\n\nどの層を深掘りしますか？（構造／作用／実践）",
         timestamp,
         threadId,
@@ -3231,7 +3807,7 @@ const DEF_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。雑談�
             khsScan: __khsScan
           }
         }
-      });
+      }));
     }
 
     if (__generalOk && !__isSmokeHybridTop && __truthWeight <= 0.6) {
@@ -3317,13 +3893,49 @@ let outText = "";
           outText = "【天聞の所見】一般論や相対化は要りません。いま「正しさ」で迷っている場面を一つだけ教えてください（仕事／家族／自分の決断など）？";
         }
       }
-return res.json(__tenmonGeneralGateResultMaybe({
-        response: outText,
+
+      const __heartNorm = normalizeHeartShape(__heart);
+
+      const __composed = responseComposer({
+        response: String(outText ?? ""),
+        rawMessage: String(message ?? ""),
+        mode: "NATURAL",
+        routeReason: "NATURAL_GENERAL_LLM_TOP",
+        truthWeight: Number(__truthWeight ?? 0),
+        katakamunaSourceHint: null,
+        katakamunaTopBranch: "",
+        naming: null,
+        lawTrace: [],
+        evidenceIds: [],
+        lawsUsed: [],
+        sourceHint: null,
+        heart: __heartNorm,
+      } as any);
+
+      const __ku: any = {
+        lawsUsed: [],
+        evidenceIds: [],
+        lawTrace: [],
+        routeReason: "NATURAL_GENERAL_LLM_TOP",
+        heart: __heartNorm,
+      };
+
+      if (__composed.meaningFrame != null) {
+        __ku.meaningFrame = __composed.meaningFrame;
+      }
+
+      return res.json(__tenmonGeneralGateResultMaybe({
+        response: __composed.response,
         evidence: null,
         candidates: [],
         timestamp,
         threadId,
-        decisionFrame: { mode: "NATURAL", intent: "chat", llm: outProv, ku: { lawsUsed: [], evidenceIds: [], lawTrace: [], routeReason: "NATURAL_GENERAL_LLM_TOP" } },
+        decisionFrame: {
+          mode: "NATURAL",
+          intent: "chat",
+          llm: outProv,
+          ku: __ku,
+        },
       }));
     }
     // do not treat "definition / meaning" as support-mode
@@ -3374,9 +3986,36 @@ if (!outText) {
         else outText = "【天聞の所見】いま息を一つだけ深く入れて出せますか？できたら「できた」とだけ返して。";
       }
 
-      
+      const __composed = responseComposer({
+        response: String(outText ?? ""),
+        rawMessage: String(message ?? ""),
+        mode: "NATURAL",
+        routeReason: "N2_KANAGI_PHASE_TOP",
+        truthWeight: Number(__truthWeight ?? 0),
+        katakamunaSourceHint: null,
+        katakamunaTopBranch: "",
+        naming: null,
+        lawTrace: [],
+        evidenceIds: [],
+        lawsUsed: [],
+        sourceHint: null,
+      });
+      const __kuN2 = {
+        lawsUsed: [],
+        evidenceIds: [],
+        lawTrace: [],
+        routeReason: "N2_KANAGI_PHASE_TOP",
+        kanagiPhase: phaseName,
+        kanagiKey: k,
+        kanagiCounter: cur,
+        kanagiPhaseIndex: phase,
+        CARD_C7B2_FIX_N2_TRIGGER_AND_LLM_V1: true,
+        heart: normalizeHeartShape(__heart),
+      };
+      if (__composed.meaningFrame != null) (__kuN2 as any).meaningFrame = __composed.meaningFrame;
+
       return res.json(__tenmonGeneralGateResultMaybe({
-        response: outText,
+        response: __composed.response,
         evidence: null,
         candidates: [],
         timestamp,
@@ -3385,14 +4024,7 @@ if (!outText) {
           mode: "NATURAL",
           intent: "chat",
           llm: outProv,
-          ku: {
-            routeReason: "N2_KANAGI_PHASE_TOP",
-            kanagiPhase: phaseName,
-            kanagiKey: k,
-            kanagiCounter: cur,
-            kanagiPhaseIndex: phase,
-            CARD_C7B2_FIX_N2_TRIGGER_AND_LLM_V1: true,
-          },
+          ku: __kuN2,
         },
       }));
     }
@@ -3467,6 +4099,476 @@ if (!outText) {
 
   const trimmed = message.trim();
 
+  // KATAKAMUNA_FASTPATH_CANON_V1 (disabled: use KATAKAMUNA_CANON_ROUTE_V1 in guard)
+  try {
+    const __msgK = String(message ?? "").trim();
+    const __isKatakamuna =
+      /カタカムナとは\s*(何|なに)\s*(ですか)?\s*[？?]?$/u.test(__msgK) ||
+      /カタカムナって\s*(何|なに)\s*(ですか)?\s*[？?]?$/u.test(__msgK) ||
+      /^カタカムナ\s*[？?]?$/u.test(__msgK);
+
+    const __hasDocK =
+      /\bdoc\b/i.test(__msgK) ||
+      /pdfPage\s*=\s*\d+/i.test(__msgK) ||
+      /#詳細/.test(__msgK);
+
+    const __isCmdK =
+      __msgK.startsWith("#") || __msgK.startsWith("/");
+
+    if (false && __isKatakamuna && !__hasDocK && !__isCmdK) {
+      const __r = resolveKatakamunaBranchesV2(__msgK);
+      const __tenmon = (__r.tenmon || {}) as any;
+      const __tpl = (__r.templates || {}) as any;
+
+      const __resp =
+        "【天聞の所見】\n" +
+        String(
+          __tenmon.standard_definition ||
+          __tpl.generic_katakamuna_fastpath ||
+          "カタカムナは一枚岩ではありません。"
+        ) +
+        "\n\n" +
+        String(__tenmon.negative_definition || "") +
+        "\n\n" +
+        "楢崎本流・宇野会誌本流・空海軸・天聞再統合軸のどこから見たいですか？";
+
+      return res.json(__tenmonGeneralGateResultMaybe({
+        response: __resp.trim(),
+        evidence: null,
+        candidates: [],
+        timestamp,
+        threadId,
+        decisionFrame: {
+          mode: "NATURAL",
+          intent: "define",
+          llm: null,
+          ku: {
+            routeReason: "KATAKAMUNA_FASTPATH_CANON_V1",
+            katakamunaBranchCandidates: __r.candidates,
+            katakamunaCanonVersion: {
+              schema: __r.schema,
+              updatedAt: __r.updatedAt
+            },
+            katakamunaSourceHint: __r.sourceHint || null,
+            lawsUsed: [],
+            evidenceIds: [],
+            lawTrace: [],
+            heart: normalizeHeartShape(__heart)
+          }
+        }
+      }));
+    }
+  } catch (e) {
+    try { console.error("[KATAKAMUNA_FASTPATH_CANON_V1]", e); } catch {}
+  }
+
+  // SOUL_FASTPATH_VERIFIED_V1
+  try {
+    const __msgSoul = String(message ?? "").trim();
+    const __isSoulDef =
+      /魂とは\s*(何|なに)\s*(ですか)?\s*[？?]?$/u.test(__msgSoul) ||
+      /魂って\s*(何|なに)\s*(ですか)?\s*[？?]?$/u.test(__msgSoul);
+
+    const __hasDocSoul =
+      /\bdoc\b/i.test(__msgSoul) ||
+      /pdfPage\s*=\s*\d+/i.test(__msgSoul) ||
+      /#詳細/.test(__msgSoul);
+
+    const __isCmdSoul =
+      __msgSoul.startsWith("#") || __msgSoul.startsWith("/");
+
+    if (__isSoulDef && !__hasDocSoul && !__isCmdSoul) {
+      const __dbSoul = new DatabaseSync(getDbPath("kokuzo.sqlite"), { readOnly: true });
+
+      const __hitSoul: any = __dbSoul.prepare(`
+        SELECT
+          l.lawKey,
+          l.unitId,
+          l.summary,
+          l.operator,
+          u.doc,
+          u.pdfPage,
+          u.quote,
+          u.quoteHash
+        FROM khs_laws l
+        JOIN khs_units u ON u.unitId = l.unitId
+        WHERE l.status = 'verified'
+          AND l.termKey = '魂'
+        ORDER BY l.confidence DESC, l.updatedAt DESC
+        LIMIT 1
+      `).get();
+
+      if (__hitSoul?.lawKey && __hitSoul?.unitId) {
+        const __quoteSoul = String(__hitSoul.quote ?? "").trim();
+        const __respSoul =
+          "【天聞の所見】\n" +
+          "魂とは、人間の胎内に宿る火水（イキ）であり、息として働く生命の本でもあります。" +
+          "\n\n【根拠】" +
+          __quoteSoul.replace(/\s+/g, " ").trim().slice(0, 180) +
+          `\n\n出典: ${String(__hitSoul.doc ?? "")} P${Number(__hitSoul.pdfPage ?? 0)}` +
+          "\n\n魂・息・火水のどこを深掘りしますか？";
+
+        const __composed = responseComposer({
+          response: String(__respSoul),
+          rawMessage: String(message ?? ""),
+          mode: "NATURAL",
+          routeReason: "SOUL_FASTPATH_VERIFIED_V1",
+          truthWeight: 0,
+          katakamunaSourceHint: null,
+          katakamunaTopBranch: "",
+          naming: null,
+          lawTrace: [{ lawKey: String(__hitSoul.lawKey), unitId: String(__hitSoul.unitId), op: "OP_DEFINE" }],
+          evidenceIds: [String(__hitSoul.quoteHash ?? "")].filter(Boolean),
+          lawsUsed: [String(__hitSoul.lawKey)],
+          sourceHint: null,
+        });
+        const __respSoulFinal = __composed.response;
+        const __ku = {
+          routeReason: "SOUL_FASTPATH_VERIFIED_V1",
+          lawsUsed: [String(__hitSoul.lawKey)],
+          evidenceIds: [String(__hitSoul.quoteHash ?? "")].filter(Boolean),
+          lawTrace: [
+            {
+              lawKey: String(__hitSoul.lawKey),
+              unitId: String(__hitSoul.unitId),
+              op: "OP_DEFINE"
+            }
+          ],
+          term: "魂",
+          heart: normalizeHeartShape(__heart)
+        };
+        if (__composed.meaningFrame != null) (__ku as any).meaningFrame = __composed.meaningFrame;
+
+        return res.json(__tenmonGeneralGateResultMaybe({
+          response: __respSoulFinal,
+          evidence: {
+            doc: String(__hitSoul.doc ?? ""),
+            pdfPage: Number(__hitSoul.pdfPage ?? 0),
+            quote: __quoteSoul.slice(0, 120)
+          },
+          candidates: [],
+          timestamp,
+          threadId,
+          decisionFrame: {
+            mode: "NATURAL",
+            intent: "define",
+            llm: null,
+            ku: __ku
+          }
+        }));
+      }
+    }
+  } catch (e) {
+    try { console.error("[SOUL_FASTPATH_VERIFIED_V1]", e); } catch {}
+  }
+
+  // KATAKAMUNA_FASTPATH_CANON_V1 (disabled: use KATAKAMUNA_CANON_ROUTE_V1 in guard)
+  try {
+    const __msgK = String(message ?? "").trim();
+    const __isKatakamuna =
+      /カタカムナとは\s*(何|なに)\s*(ですか)?\s*[？?]?$/u.test(__msgK) ||
+      /カタカムナって\s*(何|なに)\s*(ですか)?\s*[？?]?$/u.test(__msgK) ||
+      /^カタカムナ\s*[？?]?$/u.test(__msgK);
+
+    const __hasDocK =
+      /\bdoc\b/i.test(__msgK) ||
+      /pdfPage\s*=\s*\d+/i.test(__msgK) ||
+      /#詳細/.test(__msgK);
+
+    const __isCmdK =
+      __msgK.startsWith("#") || __msgK.startsWith("/");
+
+    if (false && __isKatakamuna && !__hasDocK && !__isCmdK) {
+      const __r = resolveKatakamunaBranchesV2(__msgK);
+      const __tenmon = (__r.tenmon || {}) as any;
+      const __tpl = (__r.templates || {}) as any;
+
+      const __resp =
+        "【天聞の所見】\n" +
+        String(
+          __tenmon.standard_definition ||
+          __tpl.generic_katakamuna_fastpath ||
+          "カタカムナは一枚岩ではありません。"
+        ) +
+        "\n\n" +
+        String(__tenmon.negative_definition || "") +
+        "\n\n" +
+        "楢崎本流・宇野会誌本流・空海軸・天聞再統合軸のどこから見たいですか？";
+
+      return res.json(__tenmonGeneralGateResultMaybe({
+        response: __resp.trim(),
+        evidence: null,
+        candidates: [],
+        timestamp,
+        threadId,
+        decisionFrame: {
+          mode: "NATURAL",
+          intent: "define",
+          llm: null,
+          ku: {
+            routeReason: "KATAKAMUNA_FASTPATH_CANON_V1",
+            katakamunaBranchCandidates: __r.candidates,
+            katakamunaCanonVersion: {
+              schema: __r.schema,
+              updatedAt: __r.updatedAt
+            },
+            katakamunaSourceHint: __r.sourceHint || null,
+            lawsUsed: [],
+            evidenceIds: [],
+            lawTrace: [],
+            heart: normalizeHeartShape(__heart)
+          }
+        }
+      }));
+    }
+  } catch (e) {
+    try { console.error("[KATAKAMUNA_FASTPATH_CANON_V1]", e); } catch {}
+  }
+
+  // DEF_FASTPATH_VERIFIED_V1
+  try {
+    const __msg0 = String(message ?? "").trim();
+    const __defFast =
+      /とは\s*(何|なに)\s*(ですか)?\s*[？?]?$/u.test(__msg0) ||
+      /って\s*(何|なに)\s*(ですか)?\s*[？?]?$/u.test(__msg0);
+
+    const __hasDocFast =
+      /\bdoc\b/i.test(__msg0) ||
+      /pdfPage\s*=\s*\d+/i.test(__msg0) ||
+      /#詳細/.test(__msg0);
+
+    const __isCmdFast =
+      __msg0.startsWith("#") || __msg0.startsWith("/");
+
+    if (__defFast && !__hasDocFast && !__isCmdFast) {
+      const __term = __msg0
+        .replace(/[?？]/g, "")
+        .replace(/って\s*(何|なに)\s*(ですか)?$/u, "")
+        .replace(/とは\s*(何|なに)\s*(ですか)?$/u, "")
+        .replace(/とは$/u, "")
+        .trim();
+
+      const __dbFast = new DatabaseSync(getDbPath("kokuzo.sqlite"), { readOnly: true });
+
+      const __hitV: any = __dbFast.prepare(`
+        SELECT
+          l.lawKey,
+          l.unitId,
+          l.summary,
+          l.operator,
+          u.doc,
+          u.pdfPage,
+          u.quote,
+          u.quoteHash
+        FROM khs_laws l
+        JOIN khs_units u ON u.unitId = l.unitId
+        WHERE l.status = 'verified'
+          AND l.lawType = 'DEF'
+          AND l.termKey = ?
+        ORDER BY l.confidence DESC, l.updatedAt DESC
+        LIMIT 1
+      `).get(__term);
+
+      const __hitExplain: any = __dbFast.prepare(`
+        SELECT
+          l.lawKey,
+          l.unitId,
+          l.summary,
+          l.operator,
+          u.doc,
+          u.pdfPage,
+          u.quote,
+          u.quoteHash
+        FROM khs_laws l
+        JOIN khs_units u ON u.unitId = l.unitId
+        WHERE l.status = 'verified'
+          AND l.lawType = 'EXPLAINS'
+          AND l.termKey = ?
+        ORDER BY l.confidence DESC, l.updatedAt DESC
+        LIMIT 1
+      `).get(__term);
+
+      if (__hitV?.lawKey && __hitV?.unitId) {
+        const __quote = String(__hitV.quote ?? "").trim();
+        const __summary =
+          String(__hitV.summary ?? "").trim() ||
+          "言霊とは、天地に鳴り響く五十連の音と、水火を與み解いて詞の本を知る法則です。";
+
+        const __quoteHead =
+          (__quote || "").replace(/\s+/g, " ").trim().slice(0, 180);
+
+        const __resp =
+          "【天聞の所見】\n" +
+          __summary +
+          "\n\n" +
+          "【根拠】" + __quoteHead +
+          `\n\n出典: ${String(__hitV.doc ?? "")} P${Number(__hitV.pdfPage ?? 0)}` +
+          "\n\n定義・法則・伝承のどこを深掘りしますか？";
+
+        const __composed = responseComposer({
+          response: String(__resp),
+          rawMessage: String(message ?? ""),
+          mode: "NATURAL",
+          routeReason: "DEF_FASTPATH_VERIFIED_V1",
+          truthWeight: 0,
+          katakamunaSourceHint: null,
+          katakamunaTopBranch: "",
+          naming: null,
+          lawTrace: [
+            { lawKey: String(__hitV.lawKey), unitId: String(__hitV.unitId), op: "OP_DEFINE" },
+            ...(__hitExplain?.lawKey ? [{ lawKey: String(__hitExplain.lawKey), unitId: String(__hitExplain.unitId), op: "OP_EXPLAINS" }] : []),
+          ],
+          evidenceIds: [
+            String(__hitV.quoteHash ?? ""),
+            ...(__hitExplain?.quoteHash ? [String(__hitExplain.quoteHash)] : []),
+          ].filter(Boolean),
+          lawsUsed: [
+            String(__hitV.lawKey),
+            ...(__hitExplain?.lawKey ? [String(__hitExplain.lawKey)] : []),
+          ],
+          sourceHint: null,
+        });
+        const __respFinal = __composed.response;
+        const __ku = {
+          routeReason: "DEF_FASTPATH_VERIFIED_V1",
+          lawsUsed: [
+            String(__hitV.lawKey),
+            ...(__hitExplain?.lawKey ? [String(__hitExplain.lawKey)] : [])
+          ],
+          evidenceIds: [
+            String(__hitV.quoteHash ?? ""),
+            ...(__hitExplain?.quoteHash ? [String(__hitExplain.quoteHash)] : [])
+          ].filter(Boolean),
+          lawTrace: [
+            {
+              lawKey: String(__hitV.lawKey),
+              unitId: String(__hitV.unitId),
+              op: "OP_DEFINE"
+            },
+            ...(__hitExplain?.lawKey ? [{
+              lawKey: String(__hitExplain.lawKey),
+              unitId: String(__hitExplain.unitId),
+              op: "OP_EXPLAINS"
+            }] : [])
+          ],
+          term: __term,
+          heart: normalizeHeartShape(__heart),
+          khs: {
+            lawsUsed: [
+              {
+                lawKey: String(__hitV.lawKey),
+                unitId: String(__hitV.unitId),
+                status: "verified",
+                operator: String(__hitV.operator ?? "OP_DEFINE")
+              },
+              ...(__hitExplain?.lawKey ? [{
+                lawKey: String(__hitExplain.lawKey),
+                unitId: String(__hitExplain.unitId),
+                status: "verified",
+                operator: String(__hitExplain.operator ?? "OP_EXPLAINS")
+              }] : [])
+            ],
+            evidenceIds: [
+              String(__hitV.quoteHash ?? ""),
+              ...(__hitExplain?.quoteHash ? [String(__hitExplain.quoteHash)] : [])
+            ].filter(Boolean),
+            lawTrace: [
+              {
+                lawKey: String(__hitV.lawKey),
+                unitId: String(__hitV.unitId),
+                op: "OP_DEFINE"
+              },
+              ...(__hitExplain?.lawKey ? [{
+                lawKey: String(__hitExplain.lawKey),
+                unitId: String(__hitExplain.unitId),
+                op: "OP_EXPLAINS"
+              }] : [])
+            ]
+          }
+        };
+        if (__composed.meaningFrame != null) (__ku as any).meaningFrame = __composed.meaningFrame;
+
+        return res.json(__tenmonGeneralGateResultMaybe({
+          response: __respFinal,
+          evidence: {
+            doc: String(__hitV.doc ?? ""),
+            pdfPage: Number(__hitV.pdfPage ?? 0),
+            quote: __quote.slice(0, 120)
+          },
+          candidates: [],
+          timestamp,
+          threadId,
+          decisionFrame: {
+            mode: "NATURAL",
+            intent: "define",
+            llm: null,
+            ku: __ku
+          }
+        }));
+      }
+
+      const __hitP: any = __dbFast.prepare(`
+        SELECT
+          l.lawKey,
+          l.unitId,
+          l.summary,
+          l.operator,
+          u.doc,
+          u.pdfPage,
+          u.quote,
+          u.quoteHash
+        FROM khs_laws l
+        JOIN khs_units u ON u.unitId = l.unitId
+        WHERE l.status = 'proposed'
+          AND l.lawType = 'DEF'
+          AND l.termKey = ?
+        ORDER BY l.confidence DESC, l.updatedAt DESC
+        LIMIT 1
+      `).get(__term);
+
+      if (__hitP?.lawKey && __hitP?.unitId) {
+        const __quote = String(__hitP.quote ?? "").trim();
+        const __resp =
+          "【天聞の所見】\n" +
+          (String(__hitP.summary ?? "").trim() || __quote.slice(0, 220)) +
+          `\n\n出典: ${String(__hitP.doc ?? "")} P${Number(__hitP.pdfPage ?? 0)}` +
+          "\n\nこの定義候補を、さらに verified 根拠に寄せて深めますか？";
+
+        return res.json(__tenmonGeneralGateResultMaybe({
+          response: __resp,
+          evidence: {
+            doc: String(__hitP.doc ?? ""),
+            pdfPage: Number(__hitP.pdfPage ?? 0),
+            quote: __quote.slice(0, 120)
+          },
+          candidates: [],
+          timestamp,
+          threadId,
+          decisionFrame: {
+            mode: "NATURAL",
+            intent: "define",
+            llm: null,
+            ku: {
+              routeReason: "DEF_FASTPATH_PROPOSED_V1",
+              lawsUsed: [String(__hitP.lawKey)],
+              evidenceIds: [String(__hitP.quoteHash ?? "")].filter(Boolean),
+              lawTrace: [
+                {
+                  lawKey: String(__hitP.lawKey),
+                  unitId: String(__hitP.unitId),
+                  op: "OP_DEFINE"
+                }
+              ],
+              term: __term,
+              heart: normalizeHeartShape(__heart)
+            }
+          }
+        }));
+      }
+    }
+  } catch (e) {
+    try { console.error("[DEF_FASTPATH_VERIFIED_V1]", e); } catch {}
+  }
 
 
 
@@ -4428,13 +5530,18 @@ if (usable.length === 0) {
   const isJapanese = /[ぁ-んァ-ン一-龯]/.test(message);
   const hasDocPage = /pdfPage\s*=\s*\d+/i.test(message) || /\bdoc\b/i.test(message);
 
-  if (isJapanese && !wantsDetail && !hasDocPage) {
+  const isDefinitionLike =
+    /とは\s*(何|なに)\s*(ですか)?[？?]?$/u.test(trimmed) ||
+    /って\s*(何|なに)\s*(ですか)?[？?]?$/u.test(trimmed) ||
+    /とは[？?]?$/.test(trimmed);
+
+  if (isJapanese && !wantsDetail && !hasDocPage && !isDefinitionLike) {
     const conv = await conversationEngine({
       message: trimmed,
       threadId
     });
     if (conv && conv.text) {
-      return res.json({
+      return res.json(__tenmonGeneralGateResultMaybe({
         response: conv.text,
         evidence: null,
         candidates: [],
@@ -4446,7 +5553,7 @@ if (usable.length === 0) {
           llm: null,
           ku: { routeReason: "CONVERSATION_ENGINE_V1" }
         }
-      });
+      }));
     }
     const nat = naturalRouter({ message, mode: "NATURAL" });
     
@@ -4575,16 +5682,16 @@ if (typeof out === "string" && out.trim()) nat.responseText = out.trim();
   // K2_6BE_DANSHARI_STEP1_MENU_V1
   try {
     const __m = String((((sanitized as any).text ?? (sanitized as any).message ?? messageRaw) || "") );
-    if (__m.includes("断捨離") && __m.includes("迷い") && __m.includes("整理")) {
+    if (false && __m.includes("断捨離") && __m.includes("迷い") && __m.includes("整理")) {
       const response = "【天聞の所見】\n断捨離の第一歩です。\n\n1) 手放す対象を1つ決める\n2) 迷いの原因を1つ言語化する\n3) 次の一手を1つだけ実行する\n\n番号で答えてください。どれにしますか？";
-      return res.json({
+      return res.json(__tenmonGeneralGateResultMaybe({
         response,
         evidence: null,
         candidates: [],
         timestamp,
         threadId,
         decisionFrame: { mode: "NATURAL", intent: "chat", llm: "llm", ku: { lawsUsed: [], evidenceIds: [], lawTrace: [], routeReason: "DANSHARI_STEP1_MENU_V1" } },
-      });
+      }));
     }
   } catch {}
 

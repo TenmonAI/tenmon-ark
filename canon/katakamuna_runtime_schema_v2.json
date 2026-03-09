@@ -1,0 +1,204 @@
+{
+  "schema": "KATAKAMUNA_RUNTIME_SCHEMA_V2",
+  "updated_at": "2026-03-09",
+  "branch_resolution_rules": [
+    {
+      "branch_id": "narasaki_mainline",
+      "display_name": "楢崎本流",
+      "priority": 90,
+      "positive_keywords": [
+        "楢崎",
+        "楢崎皐月",
+        "潜象物理",
+        "図象",
+        "静電三法",
+        "古事記再読",
+        "上古代科学"
+      ],
+      "negative_keywords": [
+        "引き寄せ",
+        "奇跡",
+        "松果体",
+        "開運",
+        "グッズ"
+      ],
+      "one_line_definition": "楢崎皐月の発見・潜象物理・図象解読・古事記再読を中心とする起点系統",
+      "not_equal_to": [
+        "modern_applied_general"
+      ],
+      "related_axes": [
+        "historical_origin"
+      ]
+    },
+    {
+      "branch_id": "uno_society_mainline",
+      "display_name": "宇野・相似象会誌本流",
+      "priority": 80,
+      "positive_keywords": [
+        "宇野多美恵",
+        "相似象",
+        "会誌",
+        "感受性",
+        "共振",
+        "鍛錬"
+      ],
+      "negative_keywords": [
+        "引き寄せ",
+        "奇跡",
+        "開運"
+      ],
+      "one_line_definition": "相似象会誌を通じて感受性・共振・鍛錬・実習へ体系化した継承系統",
+      "not_equal_to": [
+        "modern_applied_general"
+      ],
+      "related_axes": [
+        "systematization"
+      ]
+    },
+    {
+      "branch_id": "kukai_parallel_axis",
+      "display_name": "空海並行正典軸",
+      "priority": 95,
+      "positive_keywords": [
+        "空海",
+        "弘法大師",
+        "声字実相",
+        "即身成仏",
+        "十住心",
+        "三密",
+        "六大"
+      ],
+      "negative_keywords": [
+        "楢崎の弟子",
+        "歴史的カタカムナ研究者"
+      ],
+      "one_line_definition": "歴史枝ではなく、声字実相・即身成仏・十住心からカタカムナを照らす並行正典軸",
+      "not_equal_to": [
+        "narasaki_mainline",
+        "modern_applied_general"
+      ],
+      "related_axes": [
+        "parallel_canonical_axis"
+      ]
+    },
+    {
+      "branch_id": "tenmon_reintegrative_axis",
+      "display_name": "天聞再統合軸",
+      "priority": 100,
+      "positive_keywords": [
+        "天聞",
+        "言霊秘書",
+        "水穂伝",
+        "稲荷古伝",
+        "山口志道",
+        "水火",
+        "天津金木",
+        "三種神器",
+        "いろは"
+      ],
+      "negative_keywords": [
+        "現代応用枝",
+        "自己啓発",
+        "奇跡",
+        "開運"
+      ],
+      "one_line_definition": "楢崎以後の分岐を、山口志道・言霊秘書・水穂伝・空海・天津金木へ遡って再統合する軸",
+      "not_equal_to": [
+        "modern_applied_general"
+      ],
+      "related_axes": [
+        "reintegrative_axis",
+        "water_fire_law",
+        "kotodama"
+      ]
+    },
+    {
+      "branch_id": "modern_applied_general",
+      "display_name": "現代応用枝",
+      "priority": 40,
+      "positive_keywords": [
+        "引き寄せ",
+        "開運",
+        "奇跡",
+        "松果体",
+        "ヒーリング",
+        "グッズ",
+        "音読",
+        "神聖幾何"
+      ],
+      "negative_keywords": [
+        "楢崎皐月",
+        "相似象会誌",
+        "声字実相",
+        "山口志道",
+        "言霊秘書"
+      ],
+      "one_line_definition": "本流から派生した、効用・実践・商品化・自己啓発寄りの現代応用群",
+      "not_equal_to": [
+        "narasaki_mainline",
+        "uno_society_mainline",
+        "kukai_parallel_axis",
+        "tenmon_reintegrative_axis"
+      ],
+      "related_axes": [
+        "applied_branch"
+      ]
+    }
+  ],
+  "tenmon_canonical_definition": {
+    "short_definition": "天聞カタカムナは、水火の法則・言霊・天地創造・天津金木を中核に、楢崎以後に分岐したカタカムナを再統合する軸である。",
+    "standard_definition": "天聞カタカムナは、楢崎皐月の潜象物理・図象解読を継承しつつ、それだけでは未充足だった言霊・水火・天地創造・文明再構築の次元を、山口志道『水穂伝』・『言霊秘書』・稲荷古伝・空海・いろは・三種神器・天津金木まで遡って再構造化する再統合軸である。",
+    "negative_definition": "天聞カタカムナは、一般スピリチュアル的な『言葉で運が良くなる』『引き寄せが起きる』『奇跡が起きる』『松果体が開く』といった効用中心の説明ではない。また、単なる現代応用枝でもなければ、楢崎本流の物理解読をそのまま言い換えたものでもない。",
+    "relation_to_narasaki": "楢崎の潜象物理・図象解読・古事記再読を継承するが、水火・言霊・天地創造・文明再構築まで再統合する点で拡張される。",
+    "relation_to_kukai": "空海は歴史枝ではなく並行正典軸であり、声字実相・即身成仏・十住心によってカタカムナを照らす上位理論軸として接続する。",
+    "relation_to_modern_applied": "現代応用枝の効用論とは異なり、天聞軸は成立原理と再統合構造を重視する。"
+  },
+  "canonical_sources": {
+    "narasaki_mainline": {
+      "source_name": "楢崎本流資料",
+      "preferred_doc": "KATAKAMUNA",
+      "preferred_pages": [
+        1
+      ],
+      "short_quote": "楢崎皐月の発見・潜象物理・図象解読を起点とする本流。",
+      "evidence_priority": "high"
+    },
+    "uno_society_mainline": {
+      "source_name": "宇野・相似象会誌",
+      "preferred_doc": "相似象会誌",
+      "preferred_pages": [
+        1
+      ],
+      "short_quote": "楢崎解読を感受性・共振・鍛錬・実習へ体系化して継承する系統。",
+      "evidence_priority": "high"
+    },
+    "kukai_parallel_axis": {
+      "source_name": "空海並行正典軸",
+      "preferred_doc": "空海関係",
+      "preferred_pages": [
+        1
+      ],
+      "short_quote": "声字実相・即身成仏・十住心からカタカムナを照らす並行正典軸。",
+      "evidence_priority": "high"
+    },
+    "tenmon_reintegrative_axis": {
+      "source_name": "天聞再統合軸",
+      "preferred_doc": "言霊秘書.pdf",
+      "preferred_pages": [
+        612,
+        613,
+        660,
+        670
+      ],
+      "short_quote": "山口志道・言霊秘書・稲荷古伝・空海・天津金木まで遡って再統合する軸。",
+      "evidence_priority": "highest"
+    }
+  },
+  "response_templates": {
+    "generic_katakamuna_fastpath": "カタカムナは一枚岩ではありません。楢崎皐月を起点とする解読系、宇野・相似象会誌の継承系、現代応用枝、そして空海の並行正典軸があります。天聞軸では、カタカムナを単なる効用論ではなく、水火・言霊・山口志道・言霊秘書・天津金木まで遡って再統合する対象として扱います。",
+    "narasaki_branch_fastpath": "楢崎本流では、カタカムナは潜象物理・図象解読・古事記再読を通じて上古代科学を復元する対象です。",
+    "uno_society_fastpath": "宇野・相似象会誌本流では、カタカムナは楢崎解読を感受性・共振・鍛錬・実習へ体系化して継承する系統です。",
+    "kukai_axis_fastpath": "空海軸では、カタカムナは歴史枝ではなく、声字実相・即身成仏・十住心から照らされる並行正典軸です。",
+    "tenmon_axis_fastpath": "天聞軸では、カタカムナは水火の法則・言霊・山口志道・言霊秘書・稲荷古伝・天津金木まで遡って再統合される対象です。"
+  }
+}
