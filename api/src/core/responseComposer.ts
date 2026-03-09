@@ -114,6 +114,8 @@ function generalToneNormalize(s: string): string {
   out = out.replace(/ {2,}/g, " ");
   // "。\n\n " のような余計な空白を削る
   out = out.replace(/。\n\n\s+/g, "。\n\n");
+  // "。  " のような文末直後の余計な空白を1つに
+  out = out.replace(/。 +/g, "。 ");
   // 2) 言い回しの微調整
   out = out.replace(/見え隠れしているように感じる/g, "見えてきます");
   out = out.replace(/まず目の前の不要なものを一つ捨てるなら、何がある？/g, "まず一つ手放すなら、何が近いですか？");
@@ -122,6 +124,13 @@ function generalToneNormalize(s: string): string {
   out = out.replace(/体のことで少し疲れが溜まっているようですね。/g, "少し負荷が溜まっているようですね。");
   // organize 系の問いを少し整理
   out = out.replace(/今日、手を付けたいことは一つある？/g, "いま一番気になっている部分を一つだけ選べますか？");
+  // HEART_PHASE_TONE_POLISH_V1: general 冒頭ラベル除去・崩れ修正・行頭空白除去
+  out = out.replace(/^受容：\s*/gm, "");
+  out = out.replace(/^一点：\s*/gm, "");
+  out = out.replace(/^一手：\s*/gm, "");
+  out = out.replace(/いいまここ/g, "いまここ");
+  out = out.replace(/まここ/g, "いまここ");
+  out = out.split("\n").map((l) => l.replace(/^\s+/, "")).join("\n");
   return out;
 }
 
