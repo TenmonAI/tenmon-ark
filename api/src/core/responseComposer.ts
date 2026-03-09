@@ -153,16 +153,17 @@ function applyPersonaReduction(
   const idx = content.indexOf("。");
   const firstEnd = idx >= 0 ? idx + 1 : content.length;
   const firstSentence = content.slice(0, firstEnd).trim();
+  const firstSentenceNorm = firstSentence.replace(/^\s*(?:受容：|一点：|一手：)\s*/, "").trim();
   const rest = content.slice(firstEnd);
 
   switch (meaningFrame.topicClass) {
     case "katakamuna":
       return response;
     case "kotodama":
-      if (firstSentence.startsWith("言霊とは、")) return response;
+      if (firstSentenceNorm.startsWith("言霊とは、")) return response;
       return prefix + KOTODAMA_FIRST_SENTENCE + rest;
     case "soul":
-      if (firstSentence.startsWith("魂とは、")) return response;
+      if (firstSentenceNorm.startsWith("魂とは、")) return response;
       return prefix + SOUL_FIRST_SENTENCE + rest;
     default: {
       // general: optional truth frame prefix (one sentence), dedup + tone normalize
@@ -172,12 +173,12 @@ function applyPersonaReduction(
 
       // 既に phase/old truth frame が先頭にある場合はそのまま（重ねない）
       if (
-        firstSentence.startsWith(phaseInLine) ||
-        firstSentence.startsWith(phaseOutLine) ||
-        firstSentence.startsWith(TRUTHFRAME_WEIGHT) ||
-        firstSentence.startsWith(TRUTHFRAME_EVIDENCE) ||
-        firstSentence.startsWith(TRUTHFRAME_LOAD) ||
-        firstSentence.startsWith(TRUTHFRAME_DEFAULT)
+        firstSentenceNorm.startsWith(phaseInLine) ||
+        firstSentenceNorm.startsWith(phaseOutLine) ||
+        firstSentenceNorm.startsWith(TRUTHFRAME_WEIGHT) ||
+        firstSentenceNorm.startsWith(TRUTHFRAME_EVIDENCE) ||
+        firstSentenceNorm.startsWith(TRUTHFRAME_LOAD) ||
+        firstSentenceNorm.startsWith(TRUTHFRAME_DEFAULT)
       ) {
         return generalToneNormalize(response);
       }
