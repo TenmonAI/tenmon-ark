@@ -271,7 +271,7 @@ if (!(res as any).__TENMON_JSON_WRAP_V7) {
                   }
                 } else if (!__isGeneralRoute && __phase.includes("OUT")) {
                   if (!__r.includes("一手")) {
-                    __r = __r.replace(/[。]\s*$/u, "。") + "\n\n一手：いま動かせることを一つだけ定めましょう。";
+                    __r = __r.replace(/[。]\s*$/u, "。");
                   }
                 } else if (__phase.includes("CENTER")) {
                   __r = __r.replace(/^受容[:：]?\s*/u, "").trim();
