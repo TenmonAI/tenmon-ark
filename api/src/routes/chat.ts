@@ -3973,10 +3973,11 @@ let outText = "";
 
           let __seedLookup: { seedId: string; ownerId: string; routeReason: string; phase: string; integrityAnchor: string } | null = null;
           try {
-            const __row = getDb("kokuzo").prepare(
-              "SELECT seedId, ownerId, routeReason, phase, integrityAnchor FROM kz_seeds WHERE ownerId=? AND routeReason=? AND phase=? AND seedId!=? ORDER BY createdAt DESC LIMIT 1"
-            ).get(String(threadId || "seed:anon"), "NATURAL_GENERAL_LLM_TOP", String(__heartNorm?.phase || ""), __seedLocked.id) as { seedId: string; ownerId: string; routeReason: string; phase: string; integrityAnchor: string } | undefined;
-            if (__row) __seedLookup = { seedId: __row.seedId, ownerId: __row.ownerId, routeReason: __row.routeReason, phase: __row.phase, integrityAnchor: __row.integrityAnchor };
+            const __rows = getDb("kokuzo").prepare(
+              "SELECT seedId, ownerId, routeReason, phase, integrityAnchor FROM kz_seeds WHERE ownerId=? AND routeReason=? ORDER BY createdAt DESC LIMIT 2"
+            ).all(String(threadId || "seed:anon"), "NATURAL_GENERAL_LLM_TOP") as { seedId: string; ownerId: string; routeReason: string; phase: string; integrityAnchor: string }[];
+            const __prev = Array.isArray(__rows) && __rows.length >= 2 ? __rows.find((r) => r.seedId !== __seedLocked.id) : null;
+            if (__prev) __seedLookup = { seedId: __prev.seedId, ownerId: __prev.ownerId, routeReason: __prev.routeReason, phase: __prev.phase, integrityAnchor: __prev.integrityAnchor };
           } catch (_) {}
 
           const __kuLocked: any = {
