@@ -1,0 +1,184 @@
+{
+  "schema": "TENMON_SCRIPTURE_CANON_V1",
+  "updated_at": "2026-03-10T00:00:00Z",
+  "scriptures": [
+    {
+      "scriptureKey": "kotodama_hisho",
+      "displayName": "言霊秘書",
+      "aliases": [
+        "言霊秘書",
+        "言灵秘書",
+        "ことだまひしょ"
+      ],
+      "short_definition": "言霊秘書は、言霊・五十音法則・水火・天地成立を読むための中心正典である。",
+      "standard_definition": "言霊秘書は、単なる資料集ではなく、五十連十行・言霊一言法則・水火法則・原典断片を通して、言霊と成立原理を読むための中核正典である。",
+      "deep_definition": "天聞軸における言霊秘書は、五十音・水火・生成・原典引用・校訂断片を含む読解層であり、言霊・カタカムナ・水火の法則を固定するための主要正典入力である。",
+      "negative_definition": [
+        "自己啓発のヒント集ではない",
+        "心の整理ノートではない",
+        "抽象精神論の本ではない",
+        "generic spiritual guide ではない"
+      ],
+      "core_axes": [
+        "五十音一言法則",
+        "五十連十行",
+        "水火法則",
+        "原典断片",
+        "山口志道"
+      ],
+      "reading_algorithm": [
+        "語を単独で解釈せず五十音法則へ戻す",
+        "水火の與合と分離で読む",
+        "天地成立・言霊成立・身体成立を対応させる",
+        "原典断片を法則へ戻して読む"
+      ],
+      "subconcepts": [
+        "五十音一言法則",
+        "五十連十行",
+        "水火",
+        "與合",
+        "山口志道"
+      ],
+      "evidence_priority": [
+        "KHS",
+        "言霊秘書.pdf",
+        "KHS_UTF8"
+      ],
+      "related_scriptures": [
+        "iroha_kotodama_kai",
+        "katakamuna_kotodama_kai"
+      ],
+      "next_axes": [
+        "五十音一言法則",
+        "水火法則",
+        "山口志道"
+      ],
+      "evidence": [
+        {
+          "doc": "KHS",
+          "pdfPage": 24,
+          "lawKey": "KHSL:LAW:KHSU:41c0bff9cfb8:p0:q043f16b3a0e8",
+          "quoteHint": "言霊秘書・五十音一言法則"
+        }
+      ]
+    },
+    {
+      "scriptureKey": "iroha_kotodama_kai",
+      "displayName": "イロハ言灵解",
+      "aliases": [
+        "いろは言灵解",
+        "イロハ言灵解",
+        "いろは言霊解"
+      ],
+      "short_definition": "イロハ言灵解は、いろは配列を通して時間・成立・循環を読む正典である。",
+      "standard_definition": "イロハ言灵解は、単なる詩文解釈ではなく、いろはの並びと構文を通じて、時間・生成・文明秩序を読むための正典である。",
+      "deep_definition": "天聞軸におけるイロハ言灵解は、いろは文を時間構文・循環構文として読み、言霊秘書の五十音法則と接続しつつ、文明・秩序・生成の推移を解くための独立正典である。",
+      "negative_definition": [
+        "単なる古典詩の鑑賞ではない",
+        "暗号遊びではない",
+        "字面の語呂合わせではない",
+        "一般教養的な国文学解説ではない"
+      ],
+      "core_axes": [
+        "いろは配列",
+        "時間構文",
+        "循環",
+        "文明秩序",
+        "言霊法則"
+      ],
+      "reading_algorithm": [
+        "いろはを単語列でなく構文列として読む",
+        "時間の進行と循環の両方で読む",
+        "言霊秘書の五十音法則と照合する",
+        "秩序形成の観点で読む"
+      ],
+      "subconcepts": [
+        "いろは配列",
+        "時間構文",
+        "循環構文",
+        "文明秩序"
+      ],
+      "evidence_priority": [
+        "いろは言灵解",
+        "言霊秘書.pdf",
+        "KHS"
+      ],
+      "related_scriptures": [
+        "kotodama_hisho",
+        "katakamuna_kotodama_kai"
+      ],
+      "next_axes": [
+        "時間構文",
+        "いろは配列",
+        "文明秩序"
+      ],
+      "evidence": [
+        {
+          "doc": "TENMON_REPO",
+          "pdfPage": 0,
+          "lawKey": "TENMON:SCRIPTURE:IROHA:TEXT:V1",
+          "quoteHint": "repo内のいろは言灵解原稿・Twin-Core系"
+        }
+      ]
+    },
+    {
+      "scriptureKey": "katakamuna_kotodama_kai",
+      "displayName": "カタカムナ言灵解",
+      "aliases": [
+        "カタカムナ言灵解",
+        "カタカムナ言霊解",
+        "カタカムナ言灵"
+      ],
+      "short_definition": "カタカムナ言灵解は、カタカムナを水火・言霊・成立原理から読み直すための正典である。",
+      "standard_definition": "カタカムナ言灵解は、効用中心の説明ではなく、カタカムナウタヒ・言霊・水火の法則・原典群の接続から、成立原理を読み直すための正典である。",
+      "deep_definition": "天聞軸におけるカタカムナ言灵解は、楢崎以後の解釈枝をそのままなぞるのではなく、カタカムナウタヒを言霊・水火・山口志道・言霊秘書・稲荷古伝・天津金木へ接続して読み直すための独立正典である。",
+      "negative_definition": [
+        "言葉で運が良くなる理論ではない",
+        "引き寄せ説明ではない",
+        "松果体活性の話ではない",
+        "楢崎解釈の言い換えだけではない"
+      ],
+      "core_axes": [
+        "カタカムナウタヒ",
+        "言霊",
+        "水火の法則",
+        "山口志道",
+        "天津金木"
+      ],
+      "reading_algorithm": [
+        "ウタヒを効用でなく成立原理で読む",
+        "言霊秘書の法則へ戻して読む",
+        "水火の與合と分離で読む",
+        "楢崎本流と天聞再統合軸を区別して読む"
+      ],
+      "subconcepts": [
+        "カタカムナウタヒ",
+        "相似象",
+        "楢崎本流",
+        "再統合軸"
+      ],
+      "evidence_priority": [
+        "KATAKAMUNA",
+        "TENMON_ARK_KATAKAMUNA_CANON_V1",
+        "言霊秘書.pdf"
+      ],
+      "related_scriptures": [
+        "kotodama_hisho",
+        "iroha_kotodama_kai"
+      ],
+      "next_axes": [
+        "カタカムナウタヒ",
+        "水火の法則",
+        "言霊"
+      ],
+      "evidence": [
+        {
+          "doc": "TENMON_REPO",
+          "pdfPage": 0,
+          "lawKey": "TENMON:SCRIPTURE:KATAKAMUNA_KAI:TEXT:V1",
+          "quoteHint": "repo内のカタカムナ言灵解原稿・todo_reikaku_os系"
+        }
+      ]
+    }
+  ]
+}
