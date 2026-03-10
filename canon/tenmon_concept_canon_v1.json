@@ -167,7 +167,9 @@
         "身体・言語・生成の接続を外さない",
         "天聞の水火=イキの中核を崩さない"
       ],
-      "evidence": [],
+      "evidence": [
+        { "doc": "KHS", "pdfPage": 0, "lawKey": "KHSL:LAW:water_fire_law:canon:v1", "quoteHint": "與合・生成循環" }
+      ],
       "next_axes": [
         "與合",
         "分離と回帰",

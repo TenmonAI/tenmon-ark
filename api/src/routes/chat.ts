@@ -3291,6 +3291,7 @@ return res.json(__tenmonGeneralGateResultMaybe({
             lawsUsed: [],
             sourceHint: null,
             heart: normalizeHeartShape(__heart),
+            conceptKey: __conceptKey,
           } as any);
           const __ku: any = {
             routeReason: __routeReason,

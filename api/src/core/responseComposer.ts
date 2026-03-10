@@ -14,6 +14,8 @@ export type ResponseComposerInput = {
   lawsUsed?: string[];
   sourceHint?: any;
   heart?: any;
+  /** R3_CONCEPT_MEANINGFRAME_TOPICCLASS_FIX_V1: concept canon 時の topicClass 補正用 */
+  conceptKey?: string;
 };
 
 export type MeaningFrame = {
@@ -23,7 +25,7 @@ export type MeaningFrame = {
   hasEvidence: boolean;
   hasLawTrace: boolean;
   hasSourceHint: boolean;
-  topicClass: "katakamuna" | "kotodama" | "soul" | "general";
+  topicClass: "katakamuna" | "kotodama" | "soul" | "general" | "water_fire_law" | "kotodama_hisho";
 };
 
 export type ResponseComposerOutput = {
@@ -39,9 +41,26 @@ function buildMeaningFrame(input: ResponseComposerInput): MeaningFrame {
   const evidenceIds = Array.isArray(input?.evidenceIds) ? input.evidenceIds : [];
   const lawTrace = Array.isArray(input?.lawTrace) ? input.lawTrace : [];
   const sourceHint = input?.sourceHint ?? input?.katakamunaSourceHint ?? null;
+  const conceptKey = String(input?.conceptKey ?? "").trim();
 
   let topicClass: MeaningFrame["topicClass"] = "general";
-  if (/KATAKAMUNA/.test(routeReason) || /カタカムナ/.test(rawMessage)) {
+  // R3_CONCEPT_MEANINGFRAME_TOPICCLASS_FIX_V1: concept canon 時は conceptKey で topicClass を固定
+  if (
+    (routeReason === "TENMON_CONCEPT_CANON_V1" || routeReason === "KATAKAMUNA_CANON_ROUTE_V1") &&
+    conceptKey
+  ) {
+    const allowed: MeaningFrame["topicClass"] =
+      conceptKey === "water_fire_law"
+        ? "water_fire_law"
+        : conceptKey === "kotodama_hisho"
+          ? "kotodama_hisho"
+          : conceptKey === "katakamuna"
+            ? "katakamuna"
+            : conceptKey === "kotodama"
+              ? "kotodama"
+              : "general";
+    topicClass = allowed;
+  } else if (/KATAKAMUNA/.test(routeReason) || /カタカムナ/.test(rawMessage)) {
     topicClass = "katakamuna";
   } else if (
     routeReason === "DEF_FASTPATH_VERIFIED_V1" ||
@@ -87,6 +106,17 @@ const SOUL_TAIL =
   "魂・息・火水のどこを深掘りしますか？";
 const SOUL_TAIL_REPLACEMENT =
   "次は、魂・息・火水のどこから掘りますか？";
+
+/** R3_SOUL_SURFACE_CLEANUP_V1: SOUL 応答の二重空白・分断空白・OCRノイズのみ整流。first sentence は触らない。 */
+function soulSurfaceCleanup(s: string): string {
+  if (!s || typeof s !== "string") return s;
+  let out = s
+    .replace(/[\s\u3000]{2,}/g, " ")
+    .replace(/どこ\s+から/g, "どこから")
+    .replace(/深\s*掘\s*り/g, "深掘り")
+    .replace(/魂\s*・\s*息\s*・\s*火水/g, "魂・息・火水");
+  return out.trim();
+}
 
 const PROPOSED_DEF_TAIL =
   "この定義候補を、さらに verified 根拠に寄せて深めますか？";
@@ -299,5 +329,8 @@ export function responseComposer(input: ResponseComposerInput): ResponseComposer
 
   const meaningFrame = buildMeaningFrame(input);
   out = applyPersonaReduction(out, meaningFrame, input?.rawMessage, (input as any)?.heart);
+  if (input?.routeReason === "SOUL_FASTPATH_VERIFIED_V1") {
+    out = soulSurfaceCleanup(out);
+  }
   return { response: out, meaningFrame };
 }
