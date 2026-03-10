@@ -303,6 +303,11 @@ function applyPersonaReduction(
       return prefix + SOUL_FIRST_SENTENCE + rest;
     default: {
       // general: optional truth frame prefix (one sentence), dedup + tone normalize
+      // R7_DANSHARI_STYLE_BIND_V1: support/organize 用の断捨離スタイル補正は
+      // NATURAL_GENERAL_LLM_TOP / N2_KANAGI_PHASE_TOP に限定し、canonical routes には影響させない。
+      const isDanshariTarget =
+        meaningFrame.routeReason === "NATURAL_GENERAL_LLM_TOP" ||
+        meaningFrame.routeReason === "N2_KANAGI_PHASE_TOP";
       const arkPhase = String(heart?.arkTargetPhase ?? "").toUpperCase();
       const phaseInLine = "いまは少し内側を整える段階です。";
       const phaseOutLine = "いまは小さく外へ動かす段階です。";
@@ -340,7 +345,24 @@ function applyPersonaReduction(
         }
       }
 
-      const withFrame = prefix + truthPrefix + "\n\n" + content;
+      let withFrame = prefix + truthPrefix + "\n\n" + content;
+
+      if (isDanshariTarget) {
+        // 断捨離スタイル補助:
+        // - 一片へ絞る
+        // - 抵抗理由を解く
+        // - 相手を責めずに視野を広げる
+        const LINES = withFrame.split("\n").map((l) => l.trimEnd());
+        const extra: string[] = [];
+        const hasFocusLine = LINES.some((l) => l.includes("一つ") || l.includes("一点") || l.includes("一片") || l.includes("一歩"));
+        if (!hasFocusLine) {
+          extra.push("いまは全部を変えなくて大丈夫です。まず一片だけに絞ると、少し呼吸がしやすくなります。");
+        }
+        extra.push("もし動けない理由があるなら、それも一緒に見ていきましょう。責めるためではなく、動ける条件を探すためです。");
+        extra.push("いま気になっているところを、一歩だけ外側から眺めるとしたら、どこから見てみたいですか？");
+        withFrame = (LINES.join("\n") + "\n\n" + extra.join("\n")).trim();
+      }
+
       return generalToneNormalize(withFrame);
     }
   }

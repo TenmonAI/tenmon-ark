@@ -74,7 +74,7 @@ import { writeSynapseLogV1 } from "./chat_parts/synapse_impl.js";
 import { generateSeed } from "./chat_parts/seed_engine.js";
 import { createSeed, summarizeSeed } from "../core/kokuzoSeed.js";
 import { resolveTenmonConcept, buildConceptCanonResponse, isConceptCanonTarget } from "../core/conceptCanon.js";
-import { resolveScriptureQuery, buildScriptureCanonResponse } from "../core/scriptureCanon.js";
+import { resolveScriptureQuery, buildScriptureCanonResponse, getScriptureConceptEvidence } from "../core/scriptureCanon.js";
 const router: IRouter = Router();
 
 function normalizeHeartShape(h: any) {
@@ -3131,6 +3131,12 @@ return res.json(__tenmonGeneralGateResultMaybe({
         );
       }
 
+      // R7_SCRIPTURE_MEANING_BIND_V1: 「カタカムナとは」の場合のみ、scripture 由来の補助意味を一段だけ追加
+      if (/カタカムナとは\s*(何|なに)\s*(ですか)?\s*[？?]?$/u.test(__msgKG)) {
+        __body +=
+          " 天聞軸では、楢崎本流だけでなく、言霊・水火・稲荷古伝・フトマニ・天津金木へ読み直す軸としても扱われます。";
+      }
+
       const __negative = String(__tenmon.negative_definition || "");
 
       const __resp = (
@@ -3309,6 +3315,7 @@ return res.json(__tenmonGeneralGateResultMaybe({
                 scriptureKey: __hitScripture.scriptureKey,
                 displayName: __hitScripture.displayName ?? __hitScripture.scriptureKey,
               },
+              conceptEvidence: getScriptureConceptEvidence(__hitScripture.scriptureKey),
               lawsUsed: [],
               evidenceIds: [],
               lawTrace: [],
@@ -4710,9 +4717,15 @@ if (!outText) {
 
       if (__hitV?.lawKey && __hitV?.unitId) {
         const __quote = String(__hitV.quote ?? "").trim();
-        const __summary =
+        let __summary =
           String(__hitV.summary ?? "").trim() ||
           "言霊とは、天地に鳴り響く五十連の音と、水火を與み解いて詞の本を知る法則です。";
+
+        // R7_SCRIPTURE_MEANING_BIND_V1: 言霊定義に「いろは」由来の補助意味を一段だけ追加
+        if (__term === "言霊") {
+          __summary +=
+            " いろは歌は、単なる詩文の解釈ではなく、時間・成立・文明の秩序を読むための配列として扱われます。";
+        }
 
         const __quoteHead =
           (__quote || "").replace(/\s+/g, " ").trim().slice(0, 180);
