@@ -73,6 +73,7 @@ import { saveArkThreadSeedV1 } from "./chat_parts/seed_impl.js";
 import { writeSynapseLogV1 } from "./chat_parts/synapse_impl.js";
 import { generateSeed } from "./chat_parts/seed_engine.js";
 import { createSeed, summarizeSeed } from "../core/kokuzoSeed.js";
+import { resolveTenmonConcept, buildConceptCanonResponse } from "../core/conceptCanon.js";
 const router: IRouter = Router();
 
 function normalizeHeartShape(h: any) {
@@ -3256,6 +3257,52 @@ return res.json(__tenmonGeneralGateResultMaybe({
 
 
     if (!isTestTid0 && __isDefinitionQ && !hasDoc0 && !askedMenu0 && !isCmd0) {
+      // R3_CONCEPT_CANON_ROUTE_V1: 4概念を verified/proposed より前に canonical に通す
+      const __conceptKey = resolveTenmonConcept(String(message ?? ""));
+      if (__conceptKey) {
+        const __canon = buildConceptCanonResponse(__conceptKey, "standard");
+        if (__canon) {
+          const __routeReason = __conceptKey === "katakamuna" ? "KATAKAMUNA_CANON_ROUTE_V1" : "TENMON_CONCEPT_CANON_V1";
+          let __body = String(__canon.text ?? "").trim();
+          const __negArr = Array.isArray(__canon.negative_definition) ? __canon.negative_definition : (__canon.negative_definition != null ? [__canon.negative_definition] : []);
+          if (__negArr[0]) __body += "\n\n【非定義】" + String(__negArr[0]);
+          const __axes = Array.isArray(__canon.next_axes) ? __canon.next_axes.slice(0, 2) : [];
+          if (__axes.length) __body += "\n\n次は、" + __axes.join("・") + "のどこから掘りますか？";
+          const __composed = responseComposer({
+            response: __body,
+            rawMessage: String(message ?? ""),
+            mode: "NATURAL",
+            routeReason: __routeReason,
+            truthWeight: 0,
+            katakamunaSourceHint: null,
+            katakamunaTopBranch: "",
+            naming: null,
+            lawTrace: [],
+            evidenceIds: [],
+            lawsUsed: [],
+            sourceHint: null,
+            heart: normalizeHeartShape(__heart),
+          } as any);
+          const __ku: any = {
+            routeReason: __routeReason,
+            heart: normalizeHeartShape(__heart),
+            conceptCanon: { conceptKey: __canon.conceptKey, displayName: __canon.displayName ?? __canon.conceptKey },
+            lawsUsed: [],
+            evidenceIds: [],
+            lawTrace: [],
+          };
+          if (__composed.meaningFrame != null) __ku.meaningFrame = __composed.meaningFrame;
+          return res.json(__tenmonGeneralGateResultMaybe({
+            response: __composed.response,
+            evidence: null,
+            candidates: [],
+            timestamp,
+            threadId,
+            decisionFrame: { mode: "NATURAL", intent: "define", llm: null, ku: __ku },
+          }));
+        }
+      }
+
       // FORCE_KHS_DEFINE_V2（最優先: KHS でヒットすればここで return）
       const cleaned = String(message ?? "")
         .replace(/[?？]/g, "")
