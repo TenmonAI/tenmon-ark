@@ -78,6 +78,7 @@ import { resolveScriptureQuery, buildScriptureCanonResponse, getScriptureConcept
 import { resolveSubconceptQuery, buildSubconceptResponse } from "../core/subconceptCanon.js";
 import { getKatakamunaComparisonGuide, getThoughtGuideSummary } from "../core/thoughtGuide.js";
 import { getNotionCanonForRoute } from "../core/notionCanon.js";
+import { getPersonaConstitutionSummary } from "../core/personaConstitution.js";
 const router: IRouter = Router();
 
 function normalizeHeartShape(h: any) {
@@ -3170,6 +3171,7 @@ return res.json(__tenmonGeneralGateResultMaybe({
         katakamunaCanonVersion: { schema: __r.schema, updatedAt: __r.updatedAt },
         katakamunaSourceHint: __r.sourceHint || null,
         thoughtGuideSummary: getThoughtGuideSummary("katakamuna"),
+        personaConstitutionSummary: getPersonaConstitutionSummary(),
         notionCanon: getNotionCanonForRoute("KATAKAMUNA_CANON_ROUTE_V1", String(__msgKG)),
         lawsUsed: [],
         evidenceIds: [],
@@ -3333,6 +3335,7 @@ return res.json(__tenmonGeneralGateResultMaybe({
               conceptEvidence: getScriptureConceptEvidence(__hitScripture.scriptureKey),
               thoughtGuideSummary: getThoughtGuideSummary("scripture"),
               notionCanon: getNotionCanonForRoute("TENMON_SCRIPTURE_CANON_V1", String(message ?? "")),
+              personaConstitutionSummary: getPersonaConstitutionSummary(),
               lawsUsed: [],
               evidenceIds: [],
               lawTrace: [],
@@ -3403,6 +3406,7 @@ return res.json(__tenmonGeneralGateResultMaybe({
                 conceptKey: __canon.conceptKey,
                 displayName: __canon.displayName ?? __canon.conceptKey,
               },
+              personaConstitutionSummary: getPersonaConstitutionSummary(),
               lawsUsed: [],
               evidenceIds: [],
               lawTrace: [],
@@ -4911,7 +4915,8 @@ if (!outText) {
           notionCanon:
             __term === "言霊"
               ? getNotionCanonForRoute("DEF_FASTPATH_VERIFIED_V1", String(message ?? ""))
-              : []
+              : [],
+          personaConstitutionSummary: getPersonaConstitutionSummary()
         };
         if (__composed.meaningFrame != null) (__ku as any).meaningFrame = __composed.meaningFrame;
 
