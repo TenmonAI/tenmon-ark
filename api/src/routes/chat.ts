@@ -4001,6 +4001,17 @@ let outText = "";
               }
             : null;
 
+          const __seedPolicy = __seedSurface
+            ? {
+                display: "hidden",
+                reuse: __seedSurface.seenBefore === true,
+                stability:
+                  __seedSurface.samePhase === true
+                    ? "phase_locked"
+                    : "phase_shifted",
+              }
+            : null;
+
           const __kuLocked: any = {
             lawsUsed: [],
             evidenceIds: [],
@@ -4011,6 +4022,7 @@ let outText = "";
             seedLookup: __seedLookup,
             seedHint: __seedHint,
             seedSurface: __seedSurface,
+            seedPolicy: __seedPolicy,
           };
           if (__composedLocked.meaningFrame != null) {
             __kuLocked.meaningFrame = __composedLocked.meaningFrame;
