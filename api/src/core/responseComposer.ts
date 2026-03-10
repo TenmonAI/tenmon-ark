@@ -25,7 +25,7 @@ export type MeaningFrame = {
   hasEvidence: boolean;
   hasLawTrace: boolean;
   hasSourceHint: boolean;
-  topicClass: "katakamuna" | "kotodama" | "soul" | "general" | "water_fire_law" | "kotodama_hisho";
+  topicClass: "katakamuna" | "kotodama" | "soul" | "general" | "water_fire_law" | "kotodama_hisho" | "subconcept";
 };
 
 export type ResponseComposerOutput = {
@@ -69,6 +69,8 @@ function buildMeaningFrame(input: ResponseComposerInput): MeaningFrame {
     topicClass = "kotodama";
   } else if (routeReason === "SOUL_FASTPATH_VERIFIED_V1") {
     topicClass = "soul";
+  } else if (routeReason === "TENMON_SUBCONCEPT_CANON_V1") {
+    topicClass = "subconcept";
   }
 
   return {
