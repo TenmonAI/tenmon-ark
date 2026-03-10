@@ -777,8 +777,17 @@ const pid = process.pid;
   // N2_NAME_INJECT_SYSTEM_V1: user_naming があるときだけ LLM system に呼称を注入（TRUTH_GATE の X12 は触れない）
   const __namingSuffix = (__userName != null && __assistantName != null) ? `\nUserName: ${__userName}\nAssistantName: ${__assistantName}` : "";
 
-  // TRUTH_GATE_RETURN_V2 (hard preempt)
-  if (__truthWeight >= 0.6 && __khsScan?.matched) {
+  // R3_CONCEPT_ROUTE_PREEMPT_FIX_V1: definition 系は concept canon / verified / proposed を優先。TRUTH_GATE で食わない。
+  const __msgDef = String(message ?? "").trim();
+  const __isDefinitionQPreempt =
+    /とは\s*(何|なに)\s*(ですか)?\s*[？?]?$/u.test(__msgDef) ||
+    /って\s*(何|なに)\s*(ですか)?\s*[？?]?$/u.test(__msgDef) ||
+    /とは\s*[？?]?$/.test(__msgDef) ||
+    /とは何/.test(__msgDef) ||
+    /って何/.test(__msgDef);
+
+  // TRUTH_GATE_RETURN_V2 (hard preempt) — definition Q のときはスキップし、後段の DEF ブロックで処理
+  if (!__isDefinitionQPreempt && __truthWeight >= 0.6 && __khsScan?.matched) {
     // C2_LLM_POLISH_ONLY_GATE_V1: snapshot hard fields BEFORE any LLM
     const __hardBefore = JSON.stringify({
       lawsUsed: __khsScan.lawKeys ?? [],
