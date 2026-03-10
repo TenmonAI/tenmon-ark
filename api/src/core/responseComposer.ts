@@ -128,10 +128,21 @@ function generalToneNormalize(s: string): string {
   // LABEL_STRIP_V3: 受容：/一点：/一手：ラベルのみ除去（後続テキストは保持）
   out = out.replace(/^(\s*)(受容|一点|一手)：\s*(いまは少し内側を整える段階です。\s*)?/gm, "$1");
   out = out.replace(/^(\s*)(受容|一点|一手)：\s*(いまは小さく外へ動かす段階です。\s*)?/gm, "$1");
-  // LLMFRAME_STRIP_V1: LLMが出力する固定フレーズを除去
-  out = out.replace(/^いまの言葉を[^\n]*\n?/gm, "");
+  // LLMFRAME_STRIP_V4: LLM生成の導入句を先頭行ごと除去
+  const LLMFRAME_PATTERNS = [
+    /^いまの言葉を[^\n]*\n?/gm,
+    /^いまは整理の入口にいます[^\n]*\n?/gm,
+    /^[^\n]*[\u201c\u201d"]次の一歩[\u201c\u201d"][^\n]*\n?/gm,
+    /^[^\n]*「次の一歩」[^\n]*\n?/gm,
+    /^[^\n]*を[""]次の[^"\n]*[""]に落とし[^\n]*\n?/gm,
+  ];
+  for (const pat of LLMFRAME_PATTERNS) out = out.replace(pat, "");
   out = out.replace(/いいまここ/g, "いまここ");
   out = out.replace(/まここ/g, "いまここ");
+  out = out.replace(/よく分かる/g, "伝わっている");
+  out = out.replace(/捨ててみる/g, "手放してみる");
+  out = out.replace(/だろうか？/g, "でしょうか。");
+  out = out.replace(/かな？/g, "でしょうか。");
   out = out.split("\n").map((l) => l.replace(/^\s+/, "")).join("\n");
   return out.trim();
 }

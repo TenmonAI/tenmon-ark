@@ -116,11 +116,33 @@ kata_rr="$(jq -r '.decisionFrame.ku.routeReason' "${LOG_DIR}/katakamuna.json")"
 assert_equals "${kata_rr}" "KATAKAMUNA_CANON_ROUTE_V1" "katakamuna rr"
 echo
 
+PROPOSED_TERM="$(sqlite3 /opt/tenmon-ark-data/kokuzo.sqlite \
+  "SELECT p.termKey
+   FROM khs_laws p
+   WHERE p.status='proposed'
+     AND p.lawType='DEF'
+     AND IFNULL(p.termKey,'')<>''
+     AND NOT EXISTS (
+       SELECT 1
+       FROM khs_laws v
+       WHERE v.status='verified'
+         AND v.lawType='DEF'
+         AND v.termKey = p.termKey
+     )
+   ORDER BY p.confidence DESC, p.updatedAt DESC
+   LIMIT 1;")"
+if [[ -z "${PROPOSED_TERM}" ]]; then
+  echo "[ASSERT_FAIL] proposed seed term missing"
+  exit 1
+fi
+
 run_probe "proposed_fallback.json" \
-  '{"message":"未検証の言霊候補を整理して","threadId":"probe_matrix_proposed"}'
+  "{\"message\":\"${PROPOSED_TERM}とは何ですか？\",\"threadId\":\"probe_matrix_proposed\"}"
 echo "== proposed fallback ==" && \
 jq '{rr:.decisionFrame.ku.routeReason, mf:.decisionFrame.ku.meaningFrame, resp:.response}' "${LOG_DIR}/proposed_fallback.json"
+proposed_rr="$(jq -r '.decisionFrame.ku.routeReason' "${LOG_DIR}/proposed_fallback.json")"
 proposed_resp="$(jq -r '.response' "${LOG_DIR}/proposed_fallback.json")"
+assert_equals "${proposed_rr}" "DEF_PROPOSED_FALLBACK_V1" "proposed fallback rr"
 assert_contains_not "${proposed_resp}" "いまの言葉を“次の一歩”に落とします。" "proposed fallback no-bridge-prefix"
 echo
 
