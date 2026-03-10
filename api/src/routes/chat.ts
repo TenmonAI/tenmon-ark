@@ -73,7 +73,7 @@ import { saveArkThreadSeedV1 } from "./chat_parts/seed_impl.js";
 import { writeSynapseLogV1 } from "./chat_parts/synapse_impl.js";
 import { generateSeed } from "./chat_parts/seed_engine.js";
 import { createSeed, summarizeSeed } from "../core/kokuzoSeed.js";
-import { resolveTenmonConcept, buildConceptCanonResponse } from "../core/conceptCanon.js";
+import { resolveTenmonConcept, buildConceptCanonResponse, isConceptCanonTarget } from "../core/conceptCanon.js";
 const router: IRouter = Router();
 
 function normalizeHeartShape(h: any) {
@@ -3257,9 +3257,9 @@ return res.json(__tenmonGeneralGateResultMaybe({
 
 
     if (!isTestTid0 && __isDefinitionQ && !hasDoc0 && !askedMenu0 && !isCmd0) {
-      // R3_CONCEPT_CANON_ROUTE_V1: 4概念を verified/proposed より前に canonical に通す
+      // R3_CONCEPT_CANON_ROUTE_V1: water_fire_law / kotodama_hisho のみ TENMON_CONCEPT_CANON_V1。kotodama は verified fastpath 優先。
       const __conceptKey = resolveTenmonConcept(String(message ?? ""));
-      if (__conceptKey) {
+      if (__conceptKey && __conceptKey !== "kotodama") {
         const __canon = buildConceptCanonResponse(__conceptKey, "standard");
         if (__canon) {
           const __routeReason = __conceptKey === "katakamuna" ? "KATAKAMUNA_CANON_ROUTE_V1" : "TENMON_CONCEPT_CANON_V1";
@@ -3287,6 +3287,7 @@ return res.json(__tenmonGeneralGateResultMaybe({
             routeReason: __routeReason,
             heart: normalizeHeartShape(__heart),
             conceptCanon: { conceptKey: __canon.conceptKey, displayName: __canon.displayName ?? __canon.conceptKey },
+            conceptEvidence: __canon.evidence?.[0] ?? null,
             lawsUsed: [],
             evidenceIds: [],
             lawTrace: [],
@@ -3530,6 +3531,26 @@ return res.json(__tenmonGeneralGateResultMaybe({
           timestamp,
           threadId,
           decisionFrame: { mode: "NATURAL", intent: "define", llm: null, ku: { lawsUsed: [], evidenceIds: [], lawTrace: [], routeReason: "DEF_DICT_HIT", term: __term, glossarySource: (__glossaryLookup(__term) ? "db" : (__seedFallback && __seedFallback[__term] ? "fallback" : "none")) } },
+        }));
+      }
+
+      // R3_CONCEPT_ANTI_GENERIC_GUARD_V1: 4概念で canon/verified/proposed/glossary までで止め、generic fallback を使わない
+      if (isConceptCanonTarget(String(message ?? ""))) {
+        const __out = "【天聞の所見】この概念はまだ天聞正準へ固定中です。次は原典・法則・周辺概念のどこから詰めますか？";
+        return res.json(__tenmonGeneralGateResultMaybe({
+          response: ((): string => {
+            let t = String(__out || "").replace(/\r/g, "").trim();
+            if (!t.startsWith("【天聞の所見】")) t = "【天聞の所見】" + t;
+            const q = Math.max(t.indexOf("？"), t.indexOf("?"));
+            if (q !== -1) t = t.slice(0, q + 1).trim();
+            if (t.length > 260) t = t.slice(0, 260).replace(/[。、\s　]+$/g, "") + "？";
+            return t;
+          })(),
+          evidence: null,
+          candidates: [],
+          timestamp,
+          threadId,
+          decisionFrame: { mode: "NATURAL", intent: "define", llm: null, ku: { lawsUsed: [], evidenceIds: [], lawTrace: [], routeReason: "DEF_CONCEPT_UNFIXED_V1", term: __term } },
         }));
       }
 

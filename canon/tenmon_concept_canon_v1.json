@@ -110,7 +110,9 @@
         "振動一般論へ薄めない",
         "五十連と水火の法則を外さない"
       ],
-      "evidence": [],
+      "evidence": [
+        { "doc": "KHS", "pdfPage": 0, "lawKey": "KHSL:LAW:kotodama:canon:v1", "quoteHint": "五十連音と水火の與合" }
+      ],
       "next_axes": [
         "五十連",
         "水火",
@@ -220,7 +222,9 @@
         "アルゴリズム性を外さない",
         "天津金木・五十音法則との接続を切らない"
       ],
-      "evidence": [],
+      "evidence": [
+        { "doc": "KHS", "pdfPage": 0, "lawKey": "KHSL:LAW:KHSU:41c0bff9cfb8:p0:q043f16b3a0e8", "quoteHint": "言霊秘書・五十音一言法則" }
+      ],
       "next_axes": [
         "五十音一言法則",
         "水火法則",

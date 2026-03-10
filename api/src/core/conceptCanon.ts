@@ -1,137 +1,134 @@
 import fs from "node:fs";
 import path from "node:path";
 
-const CANON_SCHEMA = "TENMON_CONCEPT_CANON_V1";
+type CanonMode = "short" | "standard" | "deep";
 
-type ConceptEntry = {
-  displayName?: string;
-  canonicalRouteReason?: string;
+type CanonConcept = {
+  displayName: string;
+  canonicalRouteReason: string;
   preferredMode?: string;
   requiredPriority?: number;
-  aliases?: string[];
-  short_definition?: string;
-  standard_definition?: string;
-  deep_definition?: string;
-  negative_definition?: string | string[];
-  core_axes?: string[];
-  related_concepts?: string[];
-  source_priority?: string[];
+  aliases: string[];
+  short_definition: string;
+  standard_definition: string;
+  deep_definition: string;
+  negative_definition: string[];
+  core_axes: string[];
+  related_concepts: string[];
+  source_priority: string[];
   antiGenericDrift?: string[];
-  evidence?: unknown[];
-  next_axes?: string[];
+  evidence: any[];
+  next_axes: string[];
 };
 
-type CanonDoc = {
-  schema?: string;
-  updated_at?: string;
-  concepts?: Record<string, ConceptEntry>;
+type CanonSchema = {
+  schema: string;
+  updated_at: string;
+  concepts: Record<string, CanonConcept>;
 };
 
-let __canonCache: CanonDoc | null = null;
+const CANON_PATH = path.resolve("/opt/tenmon-ark-repo/canon/tenmon_concept_canon_v1.json");
+const CANON_SCHEMA = "TENMON_CONCEPT_CANON_V1";
 
-function canonPath(): string {
-  return path.resolve(process.cwd(), "../canon/tenmon_concept_canon_v1.json");
-}
+let __canonCache: CanonSchema | null = null;
 
-/**
- * Load and parse tenmon_concept_canon_v1.json. Verifies schema. Cached after first load.
- */
-export function loadTenmonConceptCanon(): CanonDoc | null {
-  try {
-    if (__canonCache) return __canonCache;
-    const p = canonPath();
-    const raw = fs.readFileSync(p, "utf-8");
-    const doc = JSON.parse(raw) as CanonDoc;
-    if (doc.schema !== CANON_SCHEMA) return null;
-    __canonCache = doc;
-    return doc;
-  } catch {
-    return null;
+export function loadTenmonConceptCanon(): CanonSchema {
+  if (__canonCache) return __canonCache;
+  const raw = fs.readFileSync(CANON_PATH, "utf-8");
+  const obj = JSON.parse(raw) as CanonSchema;
+  if (!obj || obj.schema !== CANON_SCHEMA || typeof obj.concepts !== "object") {
+    throw new Error("INVALID_TENMON_CONCEPT_CANON");
   }
+  __canonCache = obj;
+  return obj;
 }
 
-/**
- * Normalize user query for concept lookup: trim, strip trailing とは/って何/ってどういうこと etc.
- */
 export function normalizeConceptQuery(text: string): string {
-  let t = String(text ?? "").trim();
-  const suffixes = [
-    /とは\s*$/,
-    /って何\s*$/,
-    /ってなに\s*$/,
-    /ってどういうこと\s*$/,
-    /って何ですか\s*$/,
-    /とは何ですか\s*$/,
-    /とは何\s*$/,
-    /の真相\s*$/,
-    /の説明\s*$/,
-  ];
-  for (const re of suffixes) {
-    t = t.replace(re, "").trim();
-  }
-  return t;
+  return String(text || "")
+    .trim()
+    .replace(/[？?]+$/g, "")
+    .replace(/ってどういうこと$/u, "")
+    .replace(/って何$/u, "")
+    .replace(/とは何$/u, "")
+    .replace(/とは$/u, "")
+    .replace(/って$/u, "")
+    .trim();
 }
 
-/**
- * Resolve normalized query to a conceptKey via aliases (prefix or partial match). Returns null if no hit.
- */
 export function resolveTenmonConcept(text: string): string | null {
   const canon = loadTenmonConceptCanon();
-  if (!canon?.concepts) return null;
-  const normalized = normalizeConceptQuery(text);
-  if (!normalized) return null;
+  const q = normalizeConceptQuery(text);
+  if (!q) return null;
 
-  for (const [key, concept] of Object.entries(canon.concepts)) {
-    const aliases = concept.aliases ?? [];
-    for (const alias of aliases) {
-      const a = String(alias).trim();
-      if (!a) continue;
-      if (normalized === a) return key;
-      if (normalized.startsWith(a) || a.startsWith(normalized)) return key;
-      if (normalized.includes(a) || a.includes(normalized)) return key;
+  const pairs: { conceptKey: string; alias: string }[] = [];
+  for (const [conceptKey, concept] of Object.entries(canon.concepts)) {
+    const aliases = Array.isArray(concept.aliases) ? concept.aliases : [];
+    for (const a of aliases) {
+      const alias = normalizeConceptQuery(a);
+      if (!alias) continue;
+      pairs.push({ conceptKey, alias });
     }
-    if (normalized === (concept.displayName ?? "").trim()) return key;
+    const displayName = (concept.displayName ?? "").trim();
+    if (displayName) pairs.push({ conceptKey, alias: normalizeConceptQuery(displayName) || displayName });
+  }
+  pairs.sort((a, b) => b.alias.length - a.alias.length);
+
+  for (const { conceptKey, alias } of pairs) {
+    if (!alias) continue;
+    if (q === alias) return conceptKey;
+  }
+  for (const { conceptKey, alias } of pairs) {
+    if (!alias) continue;
+    if (q.startsWith(alias) || alias.startsWith(q)) return conceptKey;
+  }
+  for (const { conceptKey, alias } of pairs) {
+    if (!alias) continue;
+    if (q.includes(alias) || alias.includes(q)) return conceptKey;
   }
   return null;
 }
 
-export type ConceptCanonResponse = {
-  conceptKey: string;
-  displayName: string;
-  canonicalRouteReason: string;
-  text: string;
-  negative_definition: string | string[];
-  next_axes: string[];
-};
-
-/**
- * Build canonical response for a concept. mode selects short/standard/deep definition text.
- */
-export function buildConceptCanonResponse(
-  conceptKey: string,
-  mode: "short" | "standard" | "deep" = "standard"
-): ConceptCanonResponse | null {
+export function buildConceptCanonResponse(conceptKey: string, mode: CanonMode = "standard") {
   const canon = loadTenmonConceptCanon();
-  if (!canon?.concepts) return null;
-  const concept = canon.concepts[conceptKey];
+  const concept = canon.concepts[String(conceptKey)];
   if (!concept) return null;
 
   const text =
     mode === "short"
-      ? concept.short_definition ?? ""
+      ? concept.short_definition
       : mode === "deep"
-        ? concept.deep_definition ?? ""
-        : concept.standard_definition ?? concept.short_definition ?? "";
-
-  const negative = concept.negative_definition ?? [];
-  const nextAxes = Array.isArray(concept.next_axes) ? concept.next_axes : [];
+        ? concept.deep_definition
+        : concept.standard_definition;
 
   return {
     conceptKey,
-    displayName: concept.displayName ?? conceptKey,
-    canonicalRouteReason: concept.canonicalRouteReason ?? "",
+    displayName: concept.displayName,
+    canonicalRouteReason: concept.canonicalRouteReason,
     text,
-    negative_definition: Array.isArray(negative) ? negative : [negative],
-    next_axes: nextAxes,
+    negative_definition: concept.negative_definition,
+    next_axes: concept.next_axes,
+    evidence: Array.isArray(concept.evidence) ? concept.evidence : [],
   };
+}
+
+const GENERIC_DRIFT_PHRASES = [
+  "言葉に宿る力",
+  "現実に影響",
+  "柔軟さと情熱",
+  "心に響く言葉",
+  "過去の経験を見直す",
+  "ヒントが詰まっている",
+  "日常に変化をもたらす",
+  "望む変化を考える",
+];
+
+/** True if the text resolves to one of the 4 canonical concepts (katakamuna / kotodama / water_fire_law / kotodama_hisho). */
+export function isConceptCanonTarget(text: string): boolean {
+  return resolveTenmonConcept(String(text ?? "")) != null;
+}
+
+/** Returns phrases from GENERIC_DRIFT_PHRASES that appear in the given text. */
+export function detectGenericDrift(text: string): string[] {
+  const t = String(text ?? "");
+  return GENERIC_DRIFT_PHRASES.filter((phrase) => t.includes(phrase));
 }
