@@ -157,6 +157,16 @@ function generalToneNormalize(s: string): string {
   return out.trim();
 }
 
+/** R3_CONCEPT_CANON_PWA_POLISH_V1: 概念正準の3段落・空白崩れのみ整流。他は触らない。 */
+function conceptCanonPwaPolish(response: string): string {
+  if (!response || typeof response !== "string") return response;
+  let out = response
+    .replace(/次[\s\u3000]+は/g, "次は")
+    .replace(/\n{3,}/g, "\n\n");
+  out = out.split("\n").map((l) => l.trim()).join("\n").trim();
+  return out;
+}
+
 function applyPersonaReduction(
   response: string,
   meaningFrame: MeaningFrame,
@@ -164,6 +174,13 @@ function applyPersonaReduction(
   heart?: any
 ): string {
   if (!response || typeof response !== "string") return response;
+
+  if (
+    meaningFrame.routeReason === "TENMON_CONCEPT_CANON_V1" ||
+    meaningFrame.routeReason === "KATAKAMUNA_CANON_ROUTE_V1"
+  ) {
+    return conceptCanonPwaPolish(response);
+  }
 
   let prefix = "";
   let content = response;
