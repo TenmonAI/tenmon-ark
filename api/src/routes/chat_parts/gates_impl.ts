@@ -1,6 +1,8 @@
 // gates_impl.ts extracted from chat.ts
 // X3_GATES_EXTRACT_V1
 
+import { getIntentionHintForKu } from "../../core/intentionConstitution.js";
+
 function __tenmonGeneralGateSoft(out: string): string {
   let t = String(out || "").replace(/\r/g, "").trim();
 
@@ -168,6 +170,14 @@ function __tenmonGeneralGateResultMaybe(x: any): any {
     if (ku.routeReason === "NATURAL_GENERAL_LLM_TOP") {
       (x as any).response = __tenmonGeneralGateSoft((x as any).response);
     }
+    // R8_INTENTION_BIND_THOUGHT_GUIDE_V1: wire intention hint to ku (observation only, no route/response change)
+    try {
+      const __df = (x as any).decisionFrame;
+      if (__df && __df.ku && typeof __df.ku === "object") {
+        const hint = getIntentionHintForKu();
+        if (hint) __df.ku.intention = hint;
+      }
+    } catch {}
     return x;
   } catch { return x; }
 }

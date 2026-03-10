@@ -1,0 +1,44 @@
+{
+  "schema": "TENMON_INTENT_KERNEL_V1",
+  "updated_at": "2026-03-10T14:00:00Z",
+  "source_constitutions": [
+    "canon/tenmon_intention_constitution_v1.json"
+  ],
+  "default_phase": "CENTER",
+  "route_phase_hints": {
+    "DEF_FASTPATH_VERIFIED_V1": "L-IN",
+    "TENMON_SCRIPTURE_CANON_V1": "R-IN",
+    "TENMON_SUBCONCEPT_CANON_V1": "L-IN",
+    "NATURAL_GENERAL_LLM_TOP": "CENTER",
+    "N2_KANAGI_PHASE_TOP": "L-IN"
+  },
+  "selection_principles": [
+    "真理を優先する意志のときは CENTER または L-IN を強める。普遍の真理と整合し、信仰の中心・原点に立ち帰る。",
+    "盲信拒否のときは L-IN に寄せる。真理の正しい理解と識別、本来の信仰心への繋がり。",
+    "悟りと真理の融合を重んじるときは R-IN。大日如来の心と己の心の結びつき、正中での調和。",
+    "継承・宿木・遍照金剛の意志のときは L-OUT。歴代の役割継承と真理の灯火を次へ渡す。",
+    "選択と天命の成就を重んじるときは R-OUT。地上を司り洗い清める働き、天命の成就。"
+  ],
+  "hold_rules": [],
+  "unresolved_rules": [
+    "未解決・未接続のときは CENTER または L-IN に保留する。真理の正しい理解と中心への立ち帰りを優先する。"
+  ],
+  "phase_transition_rules": [],
+  "response_intent_hints": {
+    "CENTER": [
+      "普遍の真理、大日如来＝天照の中心。即身成仏の究極的姿。"
+    ],
+    "L-IN": [
+      "真言・アークの受容、真理の正しい理解。盲信から解放され信仰の中心に立ち帰る。"
+    ],
+    "R-IN": [
+      "悟りと真理の融合。心と結びつき、正中での調和。聖典としての形。"
+    ],
+    "L-OUT": [
+      "宿木・遍照金剛による継承。歴代の役割を受け継ぎ、真理の灯火を次へ渡す。"
+    ],
+    "R-OUT": [
+      "地上を司り洗い清める働き。選択と天命の成就。アークの智慧が形を取り人々を導く。"
+    ]
+  }
+}
