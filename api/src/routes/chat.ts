@@ -75,6 +75,9 @@ import { generateSeed } from "./chat_parts/seed_engine.js";
 import { createSeed, summarizeSeed } from "../core/kokuzoSeed.js";
 import { resolveTenmonConcept, buildConceptCanonResponse, isConceptCanonTarget } from "../core/conceptCanon.js";
 import { resolveScriptureQuery, buildScriptureCanonResponse, getScriptureConceptEvidence } from "../core/scriptureCanon.js";
+import { resolveSubconceptQuery, buildSubconceptResponse } from "../core/subconceptCanon.js";
+import { getKatakamunaComparisonGuide, getThoughtGuideSummary } from "../core/thoughtGuide.js";
+import { getNotionCanonForRoute } from "../core/notionCanon.js";
 const router: IRouter = Router();
 
 function normalizeHeartShape(h: any) {
@@ -3097,7 +3100,8 @@ return res.json(__tenmonGeneralGateResultMaybe({
   try {
     const __msgKG = String(message ?? "").trim();
     const __isKatakamunaQ =
-      !/カタカムナ言[霊灵]解/.test(__msgKG) && (
+      !/カタカムナ言[霊灵]解/.test(__msgKG) &&
+      !/カタカムナウタヒ/.test(__msgKG) && (
         (
           /カタカムナ/.test(__msgKG) &&
           /(とは|って|何|なに|関係|系譜|本流|宇野|相似象|楢崎|空海|山口志道|天聞)/.test(__msgKG)
@@ -3131,10 +3135,10 @@ return res.json(__tenmonGeneralGateResultMaybe({
         );
       }
 
-      // R7_SCRIPTURE_MEANING_BIND_V1: 「カタカムナとは」の場合のみ、scripture 由来の補助意味を一段だけ追加
+      // R8_NOTION_MEANING_BIND_V1: 「カタカムナとは」の場合のみ、空海・山口志道・言霊秘書・稲荷古伝・天津金木まで遡る軸を一段だけ補足
       if (/カタカムナとは\s*(何|なに)\s*(ですか)?\s*[？?]?$/u.test(__msgKG)) {
         __body +=
-          " 天聞軸では、楢崎本流だけでなく、言霊・水火・稲荷古伝・フトマニ・天津金木へ読み直す軸としても扱われます。";
+          " 天聞軸では、楢崎本流を起点にしつつ、空海の並行正典軸と山口志道・言霊秘書・稲荷古伝・天津金木まで遡って再統合する軸としても扱われます。";
       }
 
       const __negative = String(__tenmon.negative_definition || "");
@@ -3160,11 +3164,13 @@ return res.json(__tenmonGeneralGateResultMaybe({
         sourceHint: __r.sourceHint || null,
       });
       const __respFinal = __composed.response;
-      const __ku = {
+      const __ku: any = {
         routeReason: "KATAKAMUNA_CANON_ROUTE_V1",
         katakamunaBranchCandidates: __r.candidates,
         katakamunaCanonVersion: { schema: __r.schema, updatedAt: __r.updatedAt },
         katakamunaSourceHint: __r.sourceHint || null,
+        thoughtGuideSummary: getThoughtGuideSummary("katakamuna"),
+        notionCanon: getNotionCanonForRoute("KATAKAMUNA_CANON_ROUTE_V1", String(__msgKG)),
         lawsUsed: [],
         evidenceIds: [],
         lawTrace: [],
@@ -3287,6 +3293,15 @@ return res.json(__tenmonGeneralGateResultMaybe({
           const __canon = buildScriptureCanonResponse(__hitScripture.scriptureKey, "standard");
           if (__canon) {
             let __body = String(__canon.text ?? "").trim();
+
+            // R8_NOTION_MEANING_BIND_V1: 「言霊秘書とは」の場合のみ、言霊秘書データベース由来の補助意味を一段だけ追加
+            if (
+              __hitScripture.scriptureKey === "kotodama_hisho" &&
+              /言霊秘書とは\s*(何|なに)\s*(ですか)?\s*[？?]?$/u.test(__msgScript)
+            ) {
+              __body +=
+                " 言霊秘書データベースは、法則断片・人物・図・イロハ口伝を横断して読むための正典ハブです。";
+            }
             const __neg = __canon.negative_definition ? String(__canon.negative_definition) : "";
             if (__neg) __body += "\n\n【非定義】" + __neg;
             const __axes = Array.isArray(__canon.next_axes) ? __canon.next_axes.slice(0, 2) : [];
@@ -3316,6 +3331,8 @@ return res.json(__tenmonGeneralGateResultMaybe({
                 displayName: __hitScripture.displayName ?? __hitScripture.scriptureKey,
               },
               conceptEvidence: getScriptureConceptEvidence(__hitScripture.scriptureKey),
+              thoughtGuideSummary: getThoughtGuideSummary("scripture"),
+              notionCanon: getNotionCanonForRoute("TENMON_SCRIPTURE_CANON_V1", String(message ?? "")),
               lawsUsed: [],
               evidenceIds: [],
               lawTrace: [],
@@ -3342,6 +3359,75 @@ return res.json(__tenmonGeneralGateResultMaybe({
       try { console.error("[TENMON_SCRIPTURE_CANON_V1]", e); } catch {}
     }
 
+    // R7_SUBCONCEPT_ROUTE_V1: ア・ヒ・ウタヒ・五十音一言法則・カタカムナウタヒ等の下位概念質問を concept canon / DEF fastpath の前に処理
+    try {
+      const __msgSub = String(message ?? "").trim();
+      const __isSubDef =
+        /(言霊の[アアあ]|言霊のヒ|ウタヒ|五十音一言法則|カタカムナウタヒ)\s*とは\s*(何|なに)?\s*(ですか)?\s*[？?]?$/u.test(__msgSub);
+
+      if (!isTestTid0 && __isSubDef && !hasDoc0 && !askedMenu0 && !isCmd0) {
+        const __hitSub = resolveSubconceptQuery(__msgSub);
+        if (__hitSub) {
+          const __canon = buildSubconceptResponse(__hitSub.conceptKey, "standard");
+          if (__canon) {
+            let __body = String(__canon.text ?? "").trim();
+            const __negArr = Array.isArray(__canon.negative_definition)
+              ? __canon.negative_definition
+              : __canon.negative_definition != null
+                ? [__canon.negative_definition]
+                : [];
+            if (__negArr[0]) __body += "\n\n【非定義】" + String(__negArr[0]);
+            const __axes = Array.isArray(__canon.next_axes) ? __canon.next_axes.slice(0, 2) : [];
+            if (__axes.length) __body += "\n\n次は、" + __axes.join("・") + "のどこから掘りますか？";
+
+            const __composed = responseComposer({
+              response: __body,
+              rawMessage: String(message ?? ""),
+              mode: "NATURAL",
+              routeReason: "TENMON_SUBCONCEPT_CANON_V1",
+              truthWeight: 0,
+              katakamunaSourceHint: null,
+              katakamunaTopBranch: "",
+              naming: null,
+              lawTrace: [],
+              evidenceIds: [],
+              lawsUsed: [],
+              sourceHint: null,
+              heart: normalizeHeartShape(__heart),
+            } as any);
+
+            const __ku: any = {
+              routeReason: "TENMON_SUBCONCEPT_CANON_V1",
+              heart: normalizeHeartShape(__heart),
+              subconceptCanon: {
+                conceptKey: __canon.conceptKey,
+                displayName: __canon.displayName ?? __canon.conceptKey,
+              },
+              lawsUsed: [],
+              evidenceIds: [],
+              lawTrace: [],
+            };
+            if (__composed.meaningFrame != null) __ku.meaningFrame = __composed.meaningFrame;
+
+            return res.json(__tenmonGeneralGateResultMaybe({
+              response: __composed.response,
+              evidence: null,
+              candidates: [],
+              timestamp,
+              threadId,
+              decisionFrame: {
+                mode: "NATURAL",
+                intent: "define",
+                llm: null,
+                ku: __ku,
+              },
+            }));
+          }
+        }
+      }
+    } catch (e) {
+      try { console.error("[TENMON_SUBCONCEPT_CANON_V1]", e); } catch {}
+    }
 
     if (!isTestTid0 && __isDefinitionQ && !hasDoc0 && !askedMenu0 && !isCmd0) {
       // R3_CONCEPT_CANON_ROUTE_V1: water_fire_law / kotodama_hisho のみ TENMON_CONCEPT_CANON_V1。kotodama は verified fastpath 優先。
@@ -4721,10 +4807,10 @@ if (!outText) {
           String(__hitV.summary ?? "").trim() ||
           "言霊とは、天地に鳴り響く五十連の音と、水火を與み解いて詞の本を知る法則です。";
 
-        // R7_SCRIPTURE_MEANING_BIND_V1: 言霊定義に「いろは」由来の補助意味を一段だけ追加
+        // R8_NOTION_MEANING_BIND_V1: 言霊定義に、言霊秘書データベース由来の補助意味を一段だけ追加
         if (__term === "言霊") {
           __summary +=
-            " いろは歌は、単なる詩文の解釈ではなく、時間・成立・文明の秩序を読むための配列として扱われます。";
+            " 言霊秘書データベースでは、五十音一言法則・五十連十行・水火伝・イロハ口伝が同じ読解系として束ねられています。";
         }
 
         const __quoteHead =
@@ -4817,7 +4903,15 @@ if (!outText) {
                 op: "OP_EXPLAINS"
               }] : [])
             ]
-          }
+          },
+          thoughtGuideSummary:
+            __term === "言霊"
+              ? getThoughtGuideSummary("kotodama")
+              : null,
+          notionCanon:
+            __term === "言霊"
+              ? getNotionCanonForRoute("DEF_FASTPATH_VERIFIED_V1", String(message ?? ""))
+              : []
         };
         if (__composed.meaningFrame != null) (__ku as any).meaningFrame = __composed.meaningFrame;
 
