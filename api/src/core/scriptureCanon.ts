@@ -80,3 +80,33 @@ export function buildScriptureCanonResponse(
     next_axes: Array.isArray(hit.next_axes) ? hit.next_axes : [],
   };
 }
+
+export function getScriptureConceptEvidence(scriptureKey: string):
+  | { doc: string; pdfPage: number; lawKey: string; quoteHint: string }
+  | null {
+  switch (scriptureKey) {
+    case "kotodama_hisho":
+      return {
+        doc: "KHS",
+        pdfPage: 24,
+        lawKey: "KHSL:LAW:KHSU:41c0bff9cfb8:p0:q043f16b3a0e8",
+        quoteHint: "言霊秘書・五十音一言法則",
+      };
+    case "iroha_kotodama_kai":
+      return {
+        doc: "いろは最終原稿.docx",
+        pdfPage: 1,
+        lawKey: "TENMON:SCRIPTURE:IROHA:TEXT:V1",
+        quoteHint: "いろは口伝・時間構文",
+      };
+    case "katakamuna_kotodama_kai":
+      return {
+        doc: "カタカムナ言灵解.pdf",
+        pdfPage: 1,
+        lawKey: "TENMON:SCRIPTURE:KATAKAMUNA_KAI:TEXT:V1",
+        quoteHint: "カタカムナを稲荷の言霊で読み解く",
+      };
+    default:
+      return null;
+  }
+}

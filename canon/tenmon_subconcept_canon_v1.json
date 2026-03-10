@@ -1,0 +1,116 @@
+{
+  "schema": "TENMON_SUBCONCEPT_CANON_V1",
+  "updated_at": "2026-03-10T00:00:00Z",
+  "subconcepts": [
+    {
+      "conceptKey": "a",
+      "displayName": "ア",
+      "aliases": ["ア", "あ", "言霊のア"],
+      "short_definition": "アは始原の発端であり、水の灵の発しを示す。",
+      "standard_definition": "アは、単なる始まり一般ではなく、天地の発端としての水の灵の発しを示す音である。",
+      "negative_definition": ["ポジティブ開始の掛け声ではない"],
+      "core_axes": ["始原", "水", "発端"],
+      "related_scriptures": ["kotodama_hisho", "iroha_kotodama_kai"],
+      "next_axes": ["水火", "五十音一言法則"]
+    },
+    {
+      "conceptKey": "hi",
+      "displayName": "ヒ",
+      "aliases": ["ヒ", "ひ", "言霊のヒ"],
+      "short_definition": "ヒは火の灵として、発光・発現・ひらきに関わる。",
+      "standard_definition": "ヒは、単なる日や火の比喩ではなく、火の灵として発現とひらきを担う音である。",
+      "negative_definition": ["単なる熱や日光の説明ではない"],
+      "core_axes": ["火", "発現", "ひらき"],
+      "related_scriptures": ["kotodama_hisho", "katakamuna_kotodama_kai"],
+      "next_axes": ["水火", "一音読解"]
+    },
+    {
+      "conceptKey": "utahi",
+      "displayName": "ウタヒ",
+      "aliases": ["ウタヒ", "うたひ", "歌ひ"],
+      "short_definition": "ウタヒは、響きを通して成立原理を伝える構文である。",
+      "standard_definition": "ウタヒは、単なる歌唱ではなく、音の響きによって成立原理と構文を伝える形式である。",
+      "negative_definition": ["娯楽としての歌ではない"],
+      "core_axes": ["響き", "構文", "成立原理"],
+      "related_scriptures": ["katakamuna_kotodama_kai", "kotodama_hisho"],
+      "next_axes": ["カタカムナウタヒ", "言霊"]
+    },
+    {
+      "conceptKey": "gojuon_ichigen_hosoku",
+      "displayName": "五十音一言法則",
+      "aliases": ["五十音一言法則"],
+      "short_definition": "五十音一言法則は、一音ごとの深義を読むための基礎法則である。",
+      "standard_definition": "五十音一言法則は、五十音を単なる音列ではなく、一音ごとの深義と生成法則として読むための基礎法則である。",
+      "negative_definition": ["発音表ではない"],
+      "core_axes": ["一音", "深義", "法則"],
+      "related_scriptures": ["kotodama_hisho"],
+      "next_axes": ["ア", "ヒ", "水火"]
+    },
+    {
+      "conceptKey": "gojuren_jugyo",
+      "displayName": "五十連十行",
+      "aliases": ["五十連十行"],
+      "short_definition": "五十連十行は、天地の音と形の配列法則である。",
+      "standard_definition": "五十連十行は、五十音の並びを天地の音と形の配列法則として読むための基盤である。",
+      "negative_definition": ["単なる一覧表ではない"],
+      "core_axes": ["配列", "音", "形"],
+      "related_scriptures": ["kotodama_hisho"],
+      "next_axes": ["五十音一言法則", "水火"]
+    },
+    {
+      "conceptKey": "iroha_sequence",
+      "displayName": "いろは配列",
+      "aliases": ["いろは配列"],
+      "short_definition": "いろは配列は、時間と循環を示す構文配列である。",
+      "standard_definition": "いろは配列は、文字順の並びではなく、時間・循環・秩序を示す構文配列である。",
+      "negative_definition": ["仮名順の暗記用ではない"],
+      "core_axes": ["時間", "循環", "秩序"],
+      "related_scriptures": ["iroha_kotodama_kai"],
+      "next_axes": ["時間構文", "文明秩序"]
+    },
+    {
+      "conceptKey": "time_syntax",
+      "displayName": "時間構文",
+      "aliases": ["時間構文"],
+      "short_definition": "時間構文は、生成と推移を読むための構文である。",
+      "standard_definition": "時間構文は、単なる時系列ではなく、生成・推移・回帰を読むための構文である。",
+      "negative_definition": ["年表ではない"],
+      "core_axes": ["生成", "推移", "回帰"],
+      "related_scriptures": ["iroha_kotodama_kai"],
+      "next_axes": ["いろは配列", "文明秩序"]
+    },
+    {
+      "conceptKey": "katakamuna_utahi",
+      "displayName": "カタカムナウタヒ",
+      "aliases": ["カタカムナウタヒ"],
+      "short_definition": "カタカムナウタヒは、カタカムナの響きによる成立原理伝達である。",
+      "standard_definition": "カタカムナウタヒは、効果を求める唱和ではなく、響きと配列によって成立原理を伝える形式である。",
+      "negative_definition": ["願望実現マントラではない"],
+      "core_axes": ["響き", "成立原理", "配列"],
+      "related_scriptures": ["katakamuna_kotodama_kai"],
+      "next_axes": ["ウタヒ", "水火"]
+    },
+    {
+      "conceptKey": "narasaki_line",
+      "displayName": "楢崎本流",
+      "aliases": ["楢崎本流", "楢崎皐月"],
+      "short_definition": "楢崎本流は、潜象物理・図象解読を起点とするカタカムナ読解である。",
+      "standard_definition": "楢崎本流は、潜象物理と図象解読を起点とするカタカムナ読解系統であり、天聞再統合軸とは区別して扱う。",
+      "negative_definition": ["天聞再統合軸そのものではない"],
+      "core_axes": ["潜象物理", "図象解読", "本流"],
+      "related_scriptures": ["katakamuna_kotodama_kai"],
+      "next_axes": ["再統合軸", "相似象"]
+    },
+    {
+      "conceptKey": "yamaguchi_shido",
+      "displayName": "山口志道",
+      "aliases": ["山口志道"],
+      "short_definition": "山口志道は、水穂伝・言霊秘書の核心伝承者として読むべき軸である。",
+      "standard_definition": "山口志道は、単なる国学者ではなく、水穂伝・言霊秘書・水火法則を読む上で中心となる伝承軸である。",
+      "negative_definition": ["単なる近世思想家の一人ではない"],
+      "core_axes": ["水穂伝", "言霊秘書", "水火法則"],
+      "related_scriptures": ["kotodama_hisho", "katakamuna_kotodama_kai"],
+      "next_axes": ["水穂伝", "言霊秘書"]
+    }
+  ]
+}
