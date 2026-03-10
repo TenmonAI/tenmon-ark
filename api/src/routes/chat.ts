@@ -79,6 +79,7 @@ import { resolveSubconceptQuery, buildSubconceptResponse } from "../core/subconc
 import { getKatakamunaComparisonGuide, getThoughtGuideSummary } from "../core/thoughtGuide.js";
 import { getNotionCanonForRoute } from "../core/notionCanon.js";
 import { getPersonaConstitutionSummary } from "../core/personaConstitution.js";
+import { writeScriptureLearningLedger } from "../core/scriptureLearningLedger.js";
 const router: IRouter = Router();
 
 function normalizeHeartShape(h: any) {
@@ -3165,6 +3166,24 @@ return res.json(__tenmonGeneralGateResultMaybe({
         sourceHint: __r.sourceHint || null,
       });
       const __respFinal = __composed.response;
+      try {
+        const __persona = getPersonaConstitutionSummary();
+        writeScriptureLearningLedger({
+          threadId: String(threadId || ""),
+          message: String(message ?? ""),
+          routeReason: "KATAKAMUNA_CANON_ROUTE_V1",
+          scriptureKey: null,
+          subconceptKey: null,
+          conceptKey: "katakamuna",
+          thoughtGuideKey: "KUKAI_NARASAKI_TENMON_KATAKAMUNA_AXIS",
+          personaConstitutionKey: __persona?.constitutionKey ?? null,
+          hasEvidence: false,
+          hasLawTrace: false,
+          resolvedLevel: "concept",
+          unresolvedNote: null,
+        });
+      } catch {}
+
       const __ku: any = {
         routeReason: "KATAKAMUNA_CANON_ROUTE_V1",
         katakamunaBranchCandidates: __r.candidates,
@@ -3325,6 +3344,25 @@ return res.json(__tenmonGeneralGateResultMaybe({
               heart: normalizeHeartShape(__heart),
             } as any);
 
+            try {
+              const __persona = getPersonaConstitutionSummary();
+              const __kuTmp: any = __composed.meaningFrame ?? {};
+              writeScriptureLearningLedger({
+                threadId: String(threadId || ""),
+                message: String(message ?? ""),
+                routeReason: "TENMON_SCRIPTURE_CANON_V1",
+                scriptureKey: __hitScripture.scriptureKey,
+                subconceptKey: null,
+                conceptKey: null,
+                thoughtGuideKey: null,
+                personaConstitutionKey: __persona?.constitutionKey ?? null,
+                hasEvidence: Boolean(__kuTmp.hasEvidence),
+                hasLawTrace: Boolean(__kuTmp.hasLawTrace),
+                resolvedLevel: "scripture",
+                unresolvedNote: null,
+              });
+            } catch {}
+
             const __ku: any = {
               routeReason: "TENMON_SCRIPTURE_CANON_V1",
               heart: normalizeHeartShape(__heart),
@@ -3398,6 +3436,25 @@ return res.json(__tenmonGeneralGateResultMaybe({
               sourceHint: null,
               heart: normalizeHeartShape(__heart),
             } as any);
+
+            try {
+              const __personaSub = getPersonaConstitutionSummary();
+              const __mfSub: any = __composed.meaningFrame ?? {};
+              writeScriptureLearningLedger({
+                threadId: String(threadId || ""),
+                message: String(message ?? ""),
+                routeReason: "TENMON_SUBCONCEPT_CANON_V1",
+                scriptureKey: null,
+                subconceptKey: __hitSub.conceptKey,
+                conceptKey: null,
+                thoughtGuideKey: null,
+                personaConstitutionKey: __personaSub?.constitutionKey ?? null,
+                hasEvidence: Boolean(__mfSub.hasEvidence),
+                hasLawTrace: Boolean(__mfSub.hasLawTrace),
+                resolvedLevel: "subconcept",
+                unresolvedNote: null,
+              });
+            } catch {}
 
             const __ku: any = {
               routeReason: "TENMON_SUBCONCEPT_CANON_V1",
@@ -4274,6 +4331,25 @@ let outText = "";
             __kuLocked.meaningFrame = __composedLocked.meaningFrame;
           }
 
+          try {
+            const __mf: any = __composedLocked.meaningFrame ?? {};
+            const __persona = getPersonaConstitutionSummary();
+            writeScriptureLearningLedger({
+              threadId: String(threadId || ""),
+              message: String(message ?? ""),
+              routeReason: "NATURAL_GENERAL_LLM_TOP",
+              scriptureKey: null,
+              subconceptKey: null,
+              conceptKey: null,
+              thoughtGuideKey: null,
+              personaConstitutionKey: __persona?.constitutionKey ?? null,
+              hasEvidence: Boolean(__mf.hasEvidence),
+              hasLawTrace: Boolean(__mf.hasLawTrace),
+              resolvedLevel: "general",
+              unresolvedNote: null,
+            });
+          } catch {}
+
           return res.json(__tenmonGeneralGateResultMaybe({
             response: __composedLocked.response,
             evidence: null,
@@ -4319,6 +4395,25 @@ const __heartNorm = normalizeHeartShape(__heart);
       if (__composed.meaningFrame != null) {
         __ku.meaningFrame = __composed.meaningFrame;
       }
+
+      try {
+        const __mf: any = __composed.meaningFrame ?? {};
+        const __persona = getPersonaConstitutionSummary();
+        writeScriptureLearningLedger({
+          threadId: String(threadId || ""),
+          message: String(message ?? ""),
+          routeReason: "NATURAL_GENERAL_LLM_TOP",
+          scriptureKey: null,
+          subconceptKey: null,
+          conceptKey: null,
+          thoughtGuideKey: null,
+          personaConstitutionKey: __persona?.constitutionKey ?? null,
+          hasEvidence: Boolean(__mf.hasEvidence),
+          hasLawTrace: Boolean(__mf.hasLawTrace),
+          resolvedLevel: "general",
+          unresolvedNote: null,
+        });
+      } catch {}
 
       return res.json(__tenmonGeneralGateResultMaybe({
         response: __composed.response,
@@ -4409,6 +4504,25 @@ if (!outText) {
         heart: normalizeHeartShape(__heart),
       };
       if (__composed.meaningFrame != null) (__kuN2 as any).meaningFrame = __composed.meaningFrame;
+
+      try {
+        const __mfN2: any = __composed.meaningFrame ?? {};
+        const __personaN2 = getPersonaConstitutionSummary();
+        writeScriptureLearningLedger({
+          threadId: String(threadId || ""),
+          message: String(message ?? ""),
+          routeReason: "N2_KANAGI_PHASE_TOP",
+          scriptureKey: null,
+          subconceptKey: null,
+          conceptKey: null,
+          thoughtGuideKey: null,
+          personaConstitutionKey: __personaN2?.constitutionKey ?? null,
+          hasEvidence: Boolean(__mfN2.hasEvidence),
+          hasLawTrace: Boolean(__mfN2.hasLawTrace),
+          resolvedLevel: "general",
+          unresolvedNote: null,
+        });
+      } catch {}
 
       return res.json(__tenmonGeneralGateResultMaybe({
         response: __composed.response,
@@ -4852,6 +4966,26 @@ if (!outText) {
           sourceHint: null,
         });
         const __respFinal = __composed.response;
+
+        try {
+          const __persona = getPersonaConstitutionSummary();
+          const __mf: any = __composed.meaningFrame ?? {};
+          writeScriptureLearningLedger({
+            threadId: String(threadId || ""),
+            message: String(message ?? ""),
+            routeReason: "DEF_FASTPATH_VERIFIED_V1",
+            scriptureKey: null,
+            subconceptKey: null,
+            conceptKey: __term === "言霊" ? "kotodama" : null,
+            thoughtGuideKey: __term === "言霊" ? "KOTODAMA_DEF_FASTPATH" : null,
+            personaConstitutionKey: __persona?.constitutionKey ?? null,
+            hasEvidence: Boolean(__mf.hasEvidence),
+            hasLawTrace: Boolean(__mf.hasLawTrace),
+            resolvedLevel: "verified",
+            unresolvedNote: null,
+          });
+        } catch {}
+
         const __ku = {
           routeReason: "DEF_FASTPATH_VERIFIED_V1",
           lawsUsed: [

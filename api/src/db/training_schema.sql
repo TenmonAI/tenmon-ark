@@ -71,3 +71,23 @@ CREATE TABLE IF NOT EXISTS tenmon_audit_log (
   question TEXT
 );
 
+CREATE TABLE IF NOT EXISTS scripture_learning_ledger (
+  id TEXT PRIMARY KEY,
+  createdAt TEXT NOT NULL,
+  threadId TEXT NOT NULL,
+  message TEXT NOT NULL,
+  routeReason TEXT NOT NULL,
+  scriptureKey TEXT,
+  subconceptKey TEXT,
+  conceptKey TEXT,
+  thoughtGuideKey TEXT,
+  personaConstitutionKey TEXT,
+  hasEvidence INTEGER NOT NULL DEFAULT 0,
+  hasLawTrace INTEGER NOT NULL DEFAULT 0,
+  resolvedLevel TEXT NOT NULL,
+  unresolvedNote TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_scripture_learning_ledger_thread
+  ON scripture_learning_ledger(threadId, createdAt);
+
