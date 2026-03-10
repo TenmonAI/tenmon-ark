@@ -3971,6 +3971,14 @@ let outText = "";
             );
           } catch (_) {}
 
+          let __seedLookup: { seedId: string; ownerId: string; routeReason: string; phase: string; integrityAnchor: string } | null = null;
+          try {
+            const __row = getDb("kokuzo").prepare(
+              "SELECT seedId, ownerId, routeReason, phase, integrityAnchor FROM kz_seeds WHERE ownerId=? AND routeReason=? AND phase=? AND seedId!=? ORDER BY createdAt DESC LIMIT 1"
+            ).get(String(threadId || "seed:anon"), "NATURAL_GENERAL_LLM_TOP", String(__heartNorm?.phase || ""), __seedLocked.id) as { seedId: string; ownerId: string; routeReason: string; phase: string; integrityAnchor: string } | undefined;
+            if (__row) __seedLookup = { seedId: __row.seedId, ownerId: __row.ownerId, routeReason: __row.routeReason, phase: __row.phase, integrityAnchor: __row.integrityAnchor };
+          } catch (_) {}
+
           const __kuLocked: any = {
             lawsUsed: [],
             evidenceIds: [],
@@ -3978,6 +3986,7 @@ let outText = "";
             routeReason: "NATURAL_GENERAL_LLM_TOP",
             heart: __heartNorm,
             seedSummary: __seedLocked,
+            seedLookup: __seedLookup,
           };
           if (__composedLocked.meaningFrame != null) {
             __kuLocked.meaningFrame = __composedLocked.meaningFrame;
