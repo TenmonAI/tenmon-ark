@@ -1,0 +1,120 @@
+{
+  "schema": "TENMON_ARK_KATAKAMUNA_CANON_V1",
+  "updated_at": "2026-03-09",
+  "top_rules": {
+    "not_monolithic": true,
+    "distinguish_branches": true,
+    "do_not_equate_applied_branches_with_mainline": true,
+    "kukai_is_parallel_canonical_axis": true,
+    "tenmon_is_reintegrative_axis": true
+  },
+  "axes": {
+    "narasaki": {
+      "position": "historical_origin",
+      "core": [
+        "discovery",
+        "sensho_physics",
+        "glyph_decoding",
+        "kojiki_rereading",
+        "ancient_science_restoration"
+      ],
+      "purpose": "restore ancient science through physics/numerics"
+    },
+    "uno_society": {
+      "position": "systematization",
+      "core": [
+        "similarity-structure",
+        "sensitivity",
+        "resonance",
+        "training",
+        "small-group-practice"
+      ],
+      "purpose": "systematize and transmit narasaki"
+    },
+    "kukai": {
+      "position": "parallel_canonical_axis",
+      "core": [
+        "shoji-jisso",
+        "sokushin-jobutsu",
+        "six-elements",
+        "ten-jujushin",
+        "mikkyo-taxonomy"
+      ],
+      "purpose": "integrate sound-letter-cosmos-body-practice"
+    },
+    "tenmon": {
+      "position": "reintegrative_axis",
+      "core": [
+        "water-fire law",
+        "kotodama",
+        "cosmogony",
+        "amatsu-kanagi",
+        "yamaguchi-shido",
+        "kotodama-hisho",
+        "iroha",
+        "three-sacred-treasures"
+      ],
+      "purpose": "reintegrate modern fragmented katakamuna into higher structural canon"
+    }
+  },
+  "modern_applied_branches": {
+    "yoshino": [
+      "self-help kotodama",
+      "shape-spirit",
+      "era/civilization reading"
+    ],
+    "itagaki": [
+      "lifestyle translation",
+      "women/family",
+      "japanese sensitivity"
+    ],
+    "ochi": [
+      "future creation",
+      "psychospiritual application"
+    ],
+    "matsunaga": [
+      "reading aloud",
+      "japanese education"
+    ],
+    "maruyama": [
+      "medical/device application",
+      "miracle experiment rhetoric"
+    ],
+    "takeuchi": [
+      "subconscious healing",
+      "self-responsibility illness frame"
+    ],
+    "haga": [
+      "near-death",
+      "pineal gland",
+      "spirit-world"
+    ],
+    "jitsufuji": [
+      "zero-science integration",
+      "pseudo-physics",
+      "ancient civilization synthesis"
+    ],
+    "ono": [
+      "martial arts",
+      "aiki",
+      "body method"
+    ],
+    "akiyama": [
+      "sacred geometry",
+      "torus/merkaba",
+      "cosmic spirituality"
+    ],
+    "amano_intro": [
+      "cam-power",
+      "fortune",
+      "entry-level productization"
+    ]
+  },
+  "response_rules": [
+    "When user says Katakamuna, infer candidate branch before answering.",
+    "Do not answer applied-branch content as if it were mainline historical content.",
+    "Mark Kukai as a canonical parallel axis, not a historical Katakamuna researcher.",
+    "Mark Tenmon as reintegrative axis, not generic modern branch.",
+    "Prefer structural explanation over efficacy rhetoric."
+  ]
+}
