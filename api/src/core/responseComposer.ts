@@ -266,6 +266,11 @@ function applyPersonaReduction(
 ): string {
   if (!response || typeof response !== "string") return response;
 
+  // R7_SCRIPTURE_ROUTE_PRIORITY_FIX_V1: scripture canon は general phase line を混入させない
+  if (meaningFrame.routeReason === "TENMON_SCRIPTURE_CANON_V1") {
+    return response;
+  }
+
   if (
     meaningFrame.routeReason === "TENMON_CONCEPT_CANON_V1" ||
     meaningFrame.routeReason === "KATAKAMUNA_CANON_ROUTE_V1"

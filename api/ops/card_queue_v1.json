@@ -1,0 +1,122 @@
+[
+  {
+    "cardName": "AUTO_CARD_RUNNER_V1",
+    "phase": "AUTO",
+    "title": "queue runner を作る",
+    "targetFiles": ["api/ops/card_runner_v1.py"],
+    "intent": "card_queue_v1.json を読み、1カードずつ実行・記録する runner を実装する",
+    "passCondition": "runner が queue を読んで pending の先頭カード名を出せる",
+    "failClass": "RUNNER_BOOT_FAIL",
+    "nextOnPass": "AUTO_FAIL_CLASSIFIER_V1",
+    "nextOnFail": "AUTO_CARD_RUNNER_V1",
+    "status": "pending"
+  },
+  {
+    "cardName": "AUTO_FAIL_CLASSIFIER_V1",
+    "phase": "AUTO",
+    "title": "fail 分類器を作る",
+    "targetFiles": ["api/ops/fail_classifier_v1.py"],
+    "intent": "probe/stability/release ログから fail を route/surface/evidence/heart/seed/scripture に分類する",
+    "passCondition": "単一ログを入力して failure_class を返せる",
+    "failClass": "FAIL_CLASSIFIER_BOOT_FAIL",
+    "nextOnPass": "R7_SCRIPTURE_CANON_SCHEMA_V1",
+    "nextOnFail": "AUTO_FAIL_CLASSIFIER_V1",
+    "status": "pending"
+  },
+  {
+    "cardName": "R7_SCRIPTURE_CANON_SCHEMA_V1",
+    "phase": "R7",
+    "title": "正典 schema を作る",
+    "targetFiles": ["canon/tenmon_scripture_canon_v1.json"],
+    "intent": "言霊秘書・イロハ言灵解・カタカムナ言灵解を思考入力正典として schema 化する",
+    "passCondition": "3 scripture が scriptureKey / reading_algorithm / subconcepts を持つ",
+    "failClass": "SCRIPTURE_SCHEMA_FAIL",
+    "nextOnPass": "R7_SCRIPTURE_CANON_CONTENT_V1",
+    "nextOnFail": "R7_SCRIPTURE_CANON_SCHEMA_V1",
+    "status": "pending"
+  },
+  {
+    "cardName": "R7_SCRIPTURE_CANON_CONTENT_V1",
+    "phase": "R7",
+    "title": "正典内容を埋める",
+    "targetFiles": ["canon/tenmon_scripture_canon_v1.json"],
+    "intent": "short/standard/deep/negative/next_axes を天聞AI基準で埋める",
+    "passCondition": "3 scripture の定義と否定定義が埋まる",
+    "failClass": "SCRIPTURE_CONTENT_FAIL",
+    "nextOnPass": "R7_SCRIPTURE_CANON_LOADER_V1",
+    "nextOnFail": "R7_SCRIPTURE_CANON_CONTENT_V1",
+    "status": "pending"
+  },
+  {
+    "cardName": "R7_SCRIPTURE_CANON_LOADER_V1",
+    "phase": "R7",
+    "title": "正典 loader を作る",
+    "targetFiles": ["api/src/core/scriptureCanon.ts"],
+    "intent": "load / resolve / build の3関数を実装する",
+    "passCondition": "scripture query を解決できる",
+    "failClass": "SCRIPTURE_LOADER_FAIL",
+    "nextOnPass": "R7_SUBCONCEPT_CANON_SCHEMA_V1",
+    "nextOnFail": "R7_SCRIPTURE_CANON_LOADER_V1",
+    "status": "pending"
+  },
+  {
+    "cardName": "R7_SUBCONCEPT_CANON_SCHEMA_V1",
+    "phase": "R7",
+    "title": "下位概念 schema を作る",
+    "targetFiles": ["canon/tenmon_subconcept_canon_v1.json"],
+    "intent": "ア・ヒ・ウタヒ・五十音一言法則などを下位概念として schema 化する",
+    "passCondition": "下位概念が 10 件以上登録される",
+    "failClass": "SUBCONCEPT_SCHEMA_FAIL",
+    "nextOnPass": "R7_SUBCONCEPT_ROUTE_V1",
+    "nextOnFail": "R7_SUBCONCEPT_CANON_SCHEMA_V1",
+    "status": "pending"
+  },
+  {
+    "cardName": "R7_SUBCONCEPT_ROUTE_V1",
+    "phase": "R7",
+    "title": "下位概念 route をつなぐ",
+    "targetFiles": ["api/src/routes/chat.ts", "api/src/core/scriptureCanon.ts"],
+    "intent": "ア・ヒ・ウタヒのような問いを generic fallback へ落とさず canonical に接続する",
+    "passCondition": "ア/ヒ/ウタヒ query が generic fallback に落ちない",
+    "failClass": "SUBCONCEPT_ROUTE_FAIL",
+    "nextOnPass": "R7_THOUGHT_GUIDE_SCHEMA_V1",
+    "nextOnFail": "R7_SUBCONCEPT_ROUTE_V1",
+    "status": "pending"
+  },
+  {
+    "cardName": "R7_THOUGHT_GUIDE_SCHEMA_V1",
+    "phase": "R7",
+    "title": "thought guide schema を作る",
+    "targetFiles": ["canon/tenmon_thought_guide_v1.json"],
+    "intent": "天聞AIの判断順序・概念優先順位・禁止事項を schema 化する",
+    "passCondition": "judgementOrder / conceptPriority / antiGenericDrift が定義される",
+    "failClass": "THOUGHT_GUIDE_SCHEMA_FAIL",
+    "nextOnPass": "R7_THOUGHT_GUIDE_ROUTER_V1",
+    "nextOnFail": "R7_THOUGHT_GUIDE_SCHEMA_V1",
+    "status": "pending"
+  },
+  {
+    "cardName": "R7_THOUGHT_GUIDE_ROUTER_V1",
+    "phase": "R7",
+    "title": "thought guide を router に差し込む",
+    "targetFiles": ["api/src/routes/chat.ts"],
+    "intent": "input normalization 後・concept canon 前に thought guide を差し込む",
+    "passCondition": "thought guide を通った query 処理が可能になる",
+    "failClass": "THOUGHT_GUIDE_ROUTER_FAIL",
+    "nextOnPass": "R7_THOUGHT_GUIDE_BIND_V1",
+    "nextOnFail": "R7_THOUGHT_GUIDE_ROUTER_V1",
+    "status": "pending"
+  },
+  {
+    "cardName": "R7_THOUGHT_GUIDE_BIND_V1",
+    "phase": "R7",
+    "title": "thought guide を応答へ拘束する",
+    "targetFiles": ["api/src/routes/chat.ts", "api/src/core/responseComposer.ts"],
+    "intent": "thought guide を通らない generic drift を抑制し、応答意図順序を固定する",
+    "passCondition": "query の応答が thought guide 優先順で返る",
+    "failClass": "THOUGHT_GUIDE_BIND_FAIL",
+    "nextOnPass": "R8_PERSONA_CONSTITUTION_SCHEMA_V1",
+    "nextOnFail": "R7_THOUGHT_GUIDE_BIND_V1",
+    "status": "pending"
+  }
+]

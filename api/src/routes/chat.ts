@@ -74,6 +74,7 @@ import { writeSynapseLogV1 } from "./chat_parts/synapse_impl.js";
 import { generateSeed } from "./chat_parts/seed_engine.js";
 import { createSeed, summarizeSeed } from "../core/kokuzoSeed.js";
 import { resolveTenmonConcept, buildConceptCanonResponse, isConceptCanonTarget } from "../core/conceptCanon.js";
+import { resolveScriptureQuery, buildScriptureCanonResponse } from "../core/scriptureCanon.js";
 const router: IRouter = Router();
 
 function normalizeHeartShape(h: any) {
@@ -3096,13 +3097,15 @@ return res.json(__tenmonGeneralGateResultMaybe({
   try {
     const __msgKG = String(message ?? "").trim();
     const __isKatakamunaQ =
-      (
-        /カタカムナ/.test(__msgKG) &&
-        /(とは|って|何|なに|関係|系譜|本流|宇野|相似象|楢崎|空海|山口志道|天聞)/.test(__msgKG)
-      ) ||
-      /カタカムナとは\s*(何|なに)\s*(ですか)?\s*[？?]?$/u.test(__msgKG) ||
-      /カタカムナって\s*(何|なに)\s*(ですか)?\s*[？?]?$/u.test(__msgKG) ||
-      /^カタカムナ\s*[？?]?$/u.test(__msgKG);
+      !/カタカムナ言[霊灵]解/.test(__msgKG) && (
+        (
+          /カタカムナ/.test(__msgKG) &&
+          /(とは|って|何|なに|関係|系譜|本流|宇野|相似象|楢崎|空海|山口志道|天聞)/.test(__msgKG)
+        ) ||
+        /カタカムナとは\s*(何|なに)\s*(ですか)?\s*[？?]?$/u.test(__msgKG) ||
+        /カタカムナって\s*(何|なに)\s*(ですか)?\s*[？?]?$/u.test(__msgKG) ||
+        /^カタカムナ\s*[？?]?$/u.test(__msgKG)
+      );
 
     if (__isKatakamunaQ && !hasDoc0 && !askedMenu0 && !isCmd0) {
       const __r = resolveKatakamunaBranchesV2(__msgKG);
@@ -3263,6 +3266,74 @@ return res.json(__tenmonGeneralGateResultMaybe({
       /とは\s*[？?]?$/.test(t0) ||
       /とは何/.test(t0) ||
       /って何/.test(t0);
+
+    // R7_SCRIPTURE_CANON_ROUTE_V1: scripture canon (言霊秘書・イロハ言灵解・カタカムナ言灵解) は concept canon / KHS / DEF fastpath より前に処理する
+    try {
+      const __msgScript = String(message ?? "").trim();
+      const __isScriptureDef =
+        /言霊秘書とは\s*(何|なに)\s*(ですか)?\s*[？?]?$/u.test(__msgScript) ||
+        /イロハ言[霊灵]解とは\s*(何|なに)\s*(ですか)?\s*[？?]?$/u.test(__msgScript) ||
+        /カタカムナ言[霊灵]解とは\s*(何|なに)\s*(ですか)?\s*[？?]?$/u.test(__msgScript);
+
+      if (!isTestTid0 && __isScriptureDef && !hasDoc0 && !askedMenu0 && !isCmd0) {
+        const __hitScripture = resolveScriptureQuery(__msgScript);
+        if (__hitScripture) {
+          const __canon = buildScriptureCanonResponse(__hitScripture.scriptureKey, "standard");
+          if (__canon) {
+            let __body = String(__canon.text ?? "").trim();
+            const __neg = __canon.negative_definition ? String(__canon.negative_definition) : "";
+            if (__neg) __body += "\n\n【非定義】" + __neg;
+            const __axes = Array.isArray(__canon.next_axes) ? __canon.next_axes.slice(0, 2) : [];
+            if (__axes.length) __body += "\n\n次は、" + __axes.join("・") + "のどこから掘りますか？";
+
+            const __composed = responseComposer({
+              response: __body,
+              rawMessage: String(message ?? ""),
+              mode: "NATURAL",
+              routeReason: "TENMON_SCRIPTURE_CANON_V1",
+              truthWeight: 0,
+              katakamunaSourceHint: null,
+              katakamunaTopBranch: "",
+              naming: null,
+              lawTrace: [],
+              evidenceIds: [],
+              lawsUsed: [],
+              sourceHint: null,
+              heart: normalizeHeartShape(__heart),
+            } as any);
+
+            const __ku: any = {
+              routeReason: "TENMON_SCRIPTURE_CANON_V1",
+              heart: normalizeHeartShape(__heart),
+              scriptureCanon: {
+                scriptureKey: __hitScripture.scriptureKey,
+                displayName: __hitScripture.displayName ?? __hitScripture.scriptureKey,
+              },
+              lawsUsed: [],
+              evidenceIds: [],
+              lawTrace: [],
+            };
+            if (__composed.meaningFrame != null) __ku.meaningFrame = __composed.meaningFrame;
+
+            return res.json(__tenmonGeneralGateResultMaybe({
+              response: __composed.response,
+              evidence: null,
+              candidates: [],
+              timestamp,
+              threadId,
+              decisionFrame: {
+                mode: "NATURAL",
+                intent: "define",
+                llm: null,
+                ku: __ku,
+              },
+            }));
+          }
+        }
+      }
+    } catch (e) {
+      try { console.error("[TENMON_SCRIPTURE_CANON_V1]", e); } catch {}
+    }
 
 
     if (!isTestTid0 && __isDefinitionQ && !hasDoc0 && !askedMenu0 && !isCmd0) {
