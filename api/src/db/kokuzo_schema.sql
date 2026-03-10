@@ -378,3 +378,16 @@ CREATE TABLE IF NOT EXISTS kz_seeds (
   createdAt INTEGER NOT NULL
 );
 
+-- KZ3_SEED_INSTANCE_KEY_V1: instance-scoped events (no overwrite)
+CREATE TABLE IF NOT EXISTS kz_seed_events (
+  instanceId TEXT PRIMARY KEY,
+  seedId TEXT NOT NULL,
+  ownerId TEXT NOT NULL,
+  routeReason TEXT NOT NULL,
+  phase TEXT NOT NULL,
+  integrityAnchor TEXT,
+  createdAt INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_kz_seed_events_owner_created
+  ON kz_seed_events(ownerId, createdAt);
+

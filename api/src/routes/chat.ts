@@ -3958,26 +3958,28 @@ let outText = "";
           }));
 
           try {
-            const __db = getDb("kokuzo");
-            __db.prepare(
-              "INSERT OR REPLACE INTO kz_seeds (seedId, ownerId, routeReason, phase, integrityAnchor, createdAt) VALUES (?, ?, ?, ?, ?, ?)"
+            const __createdAt = Date.now();
+            const __instanceId = __seedLocked.id + ":" + String(__createdAt);
+            getDb("kokuzo").prepare(
+              "INSERT OR IGNORE INTO kz_seed_events (instanceId, seedId, ownerId, routeReason, phase, integrityAnchor, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?)"
             ).run(
+              __instanceId,
               __seedLocked.id,
               __seedLocked.ownerId,
               "NATURAL_GENERAL_LLM_TOP",
               String(__heartNorm?.phase || ""),
               "NATURAL_GENERAL_LLM_TOP",
-              Date.now()
+              __createdAt
             );
           } catch (_) {}
 
           let __seedLookup: { seedId: string; ownerId: string; routeReason: string; phase: string; integrityAnchor: string } | null = null;
           try {
             const __rows = getDb("kokuzo").prepare(
-              "SELECT seedId, ownerId, routeReason, phase, integrityAnchor FROM kz_seeds WHERE ownerId=? AND routeReason=? ORDER BY createdAt DESC LIMIT 2"
-            ).all(String(threadId || "seed:anon"), "NATURAL_GENERAL_LLM_TOP") as { seedId: string; ownerId: string; routeReason: string; phase: string; integrityAnchor: string }[];
-            const __prev = Array.isArray(__rows) && __rows.length >= 2 ? __rows.find((r) => r.seedId !== __seedLocked.id) : null;
-            if (__prev) __seedLookup = { seedId: __prev.seedId, ownerId: __prev.ownerId, routeReason: __prev.routeReason, phase: __prev.phase, integrityAnchor: __prev.integrityAnchor };
+              "SELECT seedId, ownerId, routeReason, phase, integrityAnchor FROM kz_seed_events WHERE ownerId=? ORDER BY createdAt DESC LIMIT 5"
+            ).all(String(threadId || "seed:anon")) as { seedId: string; ownerId: string; routeReason: string; phase: string; integrityAnchor: string }[];
+            const __prev = Array.isArray(__rows) && __rows.length >= 2 ? __rows[1] : null;
+            if (__prev) __seedLookup = { seedId: __prev.seedId, ownerId: __prev.ownerId, routeReason: __prev.routeReason, phase: __prev.phase, integrityAnchor: __prev.integrityAnchor ?? "" };
           } catch (_) {}
 
           const __kuLocked: any = {
