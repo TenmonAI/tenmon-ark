@@ -118,6 +118,31 @@ function soulSurfaceCleanup(s: string): string {
   return out.trim();
 }
 
+/** R3_SOUL_PARAGRAPH_LOCK_V1: SOUL 応答を 1=魂とは〜 2=【根拠】〜 3=次は、〜 の3段落に再構築。 */
+function soulParagraphLock(response: string): string {
+  if (!response || typeof response !== "string") return response;
+  let content = response;
+  let prefix = "";
+  if (content.startsWith("【天聞の所見】")) {
+    const nl = content.indexOf("\n");
+    prefix = nl >= 0 ? content.slice(0, nl + 1) : "【天聞の所見】\n";
+    content = content.slice(prefix.length);
+  }
+  const firstEnd = content.indexOf("。");
+  const para1 = (firstEnd >= 0 ? content.slice(0, firstEnd + 1) : content).trim();
+  const idxRoot = content.indexOf("【根拠】");
+  const idxNext = content.indexOf("次は、");
+  const para2 =
+    idxRoot >= 0
+      ? content.slice(idxRoot, idxNext >= 0 ? idxNext : content.length).trim()
+      : "";
+  const para3 = idxNext >= 0 ? content.slice(idxNext).trim() : "";
+  const parts = [para1];
+  if (para2) parts.push(para2);
+  if (para3) parts.push(para3);
+  return soulSurfaceCleanup(prefix + parts.join("\n\n"));
+}
+
 const PROPOSED_DEF_TAIL =
   "この定義候補を、さらに verified 根拠に寄せて深めますか？";
 const PROPOSED_DEF_TAIL_REPLACEMENT =
@@ -330,7 +355,7 @@ export function responseComposer(input: ResponseComposerInput): ResponseComposer
   const meaningFrame = buildMeaningFrame(input);
   out = applyPersonaReduction(out, meaningFrame, input?.rawMessage, (input as any)?.heart);
   if (input?.routeReason === "SOUL_FASTPATH_VERIFIED_V1") {
-    out = soulSurfaceCleanup(out);
+    out = soulParagraphLock(out);
   }
   return { response: out, meaningFrame };
 }
