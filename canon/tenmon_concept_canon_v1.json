@@ -1,0 +1,232 @@
+{
+  "schema": "TENMON_CONCEPT_CANON_V1",
+  "updated_at": "2026-03-10T03:00:00Z",
+  "concepts": {
+    "katakamuna": {
+      "displayName": "カタカムナ",
+      "canonicalRouteReason": "KATAKAMUNA_CANON_ROUTE_V1",
+      "preferredMode": "NATURAL",
+      "requiredPriority": 1,
+      "aliases": [
+        "カタカムナ",
+        "カタカムナとは",
+        "カタカムナって何",
+        "カタカムナってどういうこと",
+        "カタカムナの真相"
+      ],
+      "short_definition": "カタカムナは、天聞軸では水火の法則・言霊・山口志道・言霊秘書・稲荷古伝・天津金木まで遡って再統合される対象である。",
+      "standard_definition": "カタカムナは、単なる現代スピリチュアルの効用論でも、楢崎本流の物理解読の別名でもなく、天地生成の水火運動・言霊法則・原典群をつなぎ直す再統合対象である。",
+      "deep_definition": "天聞軸においてカタカムナは、楢崎・宇野・空海・山口志道・言霊秘書・稲荷古伝・天津金木の複数枝を、水火の成立原理へ戻して貫くための中心結節であり、効果や神秘現象の説明対象ではなく、生成構文の再読対象である。",
+      "negative_definition": [
+        "言葉で運が良くなる理論ではない",
+        "引き寄せ成功法ではない",
+        "松果体活性の説明語ではない",
+        "楢崎物理の言い換えだけではない",
+        "現代応用枝だけではない"
+      ],
+      "core_axes": [
+        "水火の法則",
+        "言霊",
+        "山口志道",
+        "言霊秘書",
+        "稲荷古伝",
+        "天津金木",
+        "楢崎本流",
+        "宇野会誌本流",
+        "空海並行正典軸"
+      ],
+      "related_concepts": [
+        "water_fire_law",
+        "kotodama",
+        "kotodama_hisho"
+      ],
+      "source_priority": [
+        "TENMON_CONCEPT_CANON_V1",
+        "KATAKAMUNA_CANON_ROUTE_V1",
+        "verified_khs",
+        "proposed_khs",
+        "glossary",
+        "llm_fallback"
+      ],
+      "antiGenericDrift": [
+        "効用中心へ流さない",
+        "一般スピリチュアル説明へ落とさない",
+        "楢崎系のみへ単純化しない",
+        "天聞軸の再統合対象として扱う"
+      ],
+      "evidence": [],
+      "next_axes": [
+        "水火の法則",
+        "言霊",
+        "山口志道",
+        "言霊秘書"
+      ]
+    },
+    "kotodama": {
+      "displayName": "言霊",
+      "canonicalRouteReason": "DEF_FASTPATH_VERIFIED_V1",
+      "preferredMode": "NATURAL",
+      "requiredPriority": 1,
+      "aliases": [
+        "言霊",
+        "言霊とは",
+        "言霊って何",
+        "言霊って",
+        "ことだま"
+      ],
+      "short_definition": "言霊とは、天地に鳴り響く五十連の音と、その水火を與み解いて詞の本を知る五十音一言一言の深義を示す法則である。",
+      "standard_definition": "言霊は、単なる「言葉の力」ではなく、天地開闢以来の五十連音と、水火の與合によって成立する詞の根本法則である。",
+      "deep_definition": "天聞軸で言霊とは、発話された言葉の心理効果ではなく、五十連音の生成循環・水火運動・詞の本を知るための法則体系であり、音・形・成立過程を一体で読むものである。",
+      "negative_definition": [
+        "ポジティブワードの自己暗示ではない",
+        "願望実現テクニックではない",
+        "言葉に宿るエネルギー一般ではない",
+        "ただの波動論ではない"
+      ],
+      "core_axes": [
+        "五十連",
+        "五十音一言法則",
+        "水火",
+        "詞の本",
+        "言霊秘書",
+        "天地開闢"
+      ],
+      "related_concepts": [
+        "water_fire_law",
+        "kotodama_hisho",
+        "katakamuna"
+      ],
+      "source_priority": [
+        "TENMON_CONCEPT_CANON_V1",
+        "DEF_FASTPATH_VERIFIED_V1",
+        "verified_khs",
+        "proposed_khs",
+        "glossary",
+        "llm_fallback"
+      ],
+      "antiGenericDrift": [
+        "願望成就の効用論へ流さない",
+        "単なる音波説明へ落とさない",
+        "振動一般論へ薄めない",
+        "五十連と水火の法則を外さない"
+      ],
+      "evidence": [],
+      "next_axes": [
+        "五十連",
+        "水火",
+        "詞の本",
+        "言霊秘書"
+      ]
+    },
+    "water_fire_law": {
+      "displayName": "水火の法則",
+      "canonicalRouteReason": "TENMON_WATERFIRE_CANON_V1",
+      "preferredMode": "NATURAL",
+      "requiredPriority": 1,
+      "aliases": [
+        "水火の法則",
+        "水火とは",
+        "水火の仕組み",
+        "イキの法則"
+      ],
+      "short_definition": "水火の法則とは、天地・言霊・生命・形の成立を、水と火の與合・循環・転相として捉える生成原理である。",
+      "standard_definition": "水火の法則は、柔軟さと情熱の象徴論ではなく、生成・分化・循環・統合の成立構造を示す法則であり、天聞軸ではカタカムナ・言霊・天津金木を貫く中心原理である。",
+      "deep_definition": "水火の法則とは、母の水と父の火、上下の反転、與合、分離、回帰という運動のなかで天地・音・詞・身体・文明がどう成立するかを読む原理であり、象徴的比喩ではなく構造法である。",
+      "negative_definition": [
+        "柔軟さと情熱の心理比喩ではない",
+        "陰陽の一般論ではない",
+        "火と水の単なる対立図式ではない",
+        "感情論の説明モデルではない"
+      ],
+      "core_axes": [
+        "與合",
+        "生成循環",
+        "分離と回帰",
+        "天津金木",
+        "言霊",
+        "天地成立"
+      ],
+      "related_concepts": [
+        "katakamuna",
+        "kotodama",
+        "kotodama_hisho"
+      ],
+      "source_priority": [
+        "TENMON_CONCEPT_CANON_V1",
+        "TENMON_WATERFIRE_CANON_V1",
+        "verified_khs",
+        "proposed_khs",
+        "glossary",
+        "llm_fallback"
+      ],
+      "antiGenericDrift": [
+        "陰陽の一般論だけにしない",
+        "比喩だけで済ませない",
+        "身体・言語・生成の接続を外さない",
+        "天聞の水火=イキの中核を崩さない"
+      ],
+      "evidence": [],
+      "next_axes": [
+        "與合",
+        "分離と回帰",
+        "天津金木",
+        "言霊"
+      ]
+    },
+    "kotodama_hisho": {
+      "displayName": "言霊秘書",
+      "canonicalRouteReason": "TENMON_KHS_CANON_V1",
+      "preferredMode": "NATURAL",
+      "requiredPriority": 1,
+      "aliases": [
+        "言霊秘書",
+        "言霊秘書とは",
+        "言霊秘書って何",
+        "KHS"
+      ],
+      "short_definition": "言霊秘書とは、言霊・五十音法則・水火・天地成立を解くための原典群であり、天聞軸の概念理解の主要根拠層である。",
+      "standard_definition": "言霊秘書は、過去の経験を整理する自己啓発書ではなく、五十連十行・言霊一言法則・水火法則・原典断片を通して、言霊と成立原理を読むための中核資料群である。",
+      "deep_definition": "天聞軸における言霊秘書は、単独の一冊というより、言霊法則・五十音・水火・原典引用・校訂断片を含む資料層であり、カタカムナ・言霊・水火の法則を固定するための canonical evidence base として扱われる。",
+      "negative_definition": [
+        "自己啓発のヒント集ではない",
+        "心の整理ノートではない",
+        "抽象精神論の本ではない",
+        "generic spiritual guide ではない"
+      ],
+      "core_axes": [
+        "五十音一言法則",
+        "五十連十行",
+        "水火法則",
+        "原典断片",
+        "山口志道",
+        "KHS"
+      ],
+      "related_concepts": [
+        "kotodama",
+        "water_fire_law",
+        "katakamuna"
+      ],
+      "source_priority": [
+        "TENMON_CONCEPT_CANON_V1",
+        "TENMON_KHS_CANON_V1",
+        "verified_khs",
+        "proposed_khs",
+        "glossary",
+        "llm_fallback"
+      ],
+      "antiGenericDrift": [
+        "単なる資料集に落とさない",
+        "引用断片だけで理解したことにしない",
+        "アルゴリズム性を外さない",
+        "天津金木・五十音法則との接続を切らない"
+      ],
+      "evidence": [],
+      "next_axes": [
+        "五十音一言法則",
+        "水火法則",
+        "山口志道",
+        "KHS"
+      ]
+    }
+  }
+}
