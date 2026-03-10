@@ -277,6 +277,12 @@ function applyPersonaReduction(
     return response;
   }
 
+  if (meaningFrame.routeReason === "TENMON_SUBCONCEPT_CANON_V1") {
+    return String(response)
+      .replace(/\n\n一手：[^\n]*\s*$/u, "")
+      .trim();
+  }
+
   if (
     meaningFrame.routeReason === "TENMON_CONCEPT_CANON_V1" ||
     meaningFrame.routeReason === "KATAKAMUNA_CANON_ROUTE_V1"
