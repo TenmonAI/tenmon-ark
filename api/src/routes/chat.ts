@@ -130,6 +130,20 @@ function scrubEvidenceLike(text: string): string {
   return t;
 }
 
+// OPS_CORE_OLDGLYPH_ALIAS_GUARD_V1: core term glyph normalization for routing only
+function normalizeCoreTermForRouting(text: string): string {
+  let t = String(text ?? "");
+  // 言灵 / 言靈 → 言霊
+  t = t.replace(/言[灵靈]/g, "言霊");
+  // 言霊秘書の異体字
+  t = t.replace(/言[霊灵靈]秘書/g, "言霊秘書");
+  // カタカムナ言霊解の異体字
+  t = t.replace(/カタカムナ言[霊灵靈]解/g, "カタカムナ言霊解");
+  // イロハ言霊解の異体字
+  t = t.replace(/イロハ言[霊灵靈]解/g, "イロハ言霊解");
+  return t;
+}
+
 
 // --- DET_PASSPHRASE_HELPERS_V1 (required by DET_PASSPHRASE_V2) ---
 function extractPassphrase(text: string): string | null {
@@ -2865,7 +2879,8 @@ return res.json(__tenmonGeneralGateResultMaybe({
     }
     // /CARD_E0A9
     const raw0 = String(message ?? "");
-    const t0 = raw0.trim();
+    // OPS_CORE_KOTODAMA_ALIAS_FASTPATH_FIX_V1: definition 判定で言灵/言靈→言霊に揃え、verified fastpath に乗せる
+    const t0 = normalizeCoreTermForRouting(raw0.trim());
 
     // DET_PASSPHRASE_TOP_V2: deterministic passphrase handling BEFORE any LLM routes (smoke contract)
     try {
@@ -3306,9 +3321,10 @@ return res.json(__tenmonGeneralGateResultMaybe({
       /とは何/.test(t0) ||
       /って何/.test(t0);
 
-    // R7_SCRIPTURE_CANON_ROUTE_V1: scripture canon (言霊秘書・イロハ言灵解・カタカムナ言灵解) は concept canon / KHS / DEF fastpath より前に処理する
+    // R7_SCRIPTURE_CANON_ROUTE_V1: scripture canon (言霊秘書・イロハ言霊解・カタカムナ言霊解) は concept canon / KHS / DEF fastpath より前に処理する
     try {
-      const __msgScript = String(message ?? "").trim();
+      const __msgScriptRaw = String(message ?? "").trim();
+      const __msgScript = normalizeCoreTermForRouting(__msgScriptRaw);
       const __isScriptureDef =
         /言霊秘書とは\s*(何|なに)\s*(ですか)?\s*[？?]?$/u.test(__msgScript) ||
         /イロハ言[霊灵]解とは\s*(何|なに)\s*(ですか)?\s*[？?]?$/u.test(__msgScript) ||
@@ -3408,7 +3424,8 @@ return res.json(__tenmonGeneralGateResultMaybe({
 
     // R7_SUBCONCEPT_ROUTE_V1: ア・ヒ・ウタヒ・五十音一言法則・カタカムナウタヒ等の下位概念質問を concept canon / DEF fastpath の前に処理
     try {
-      const __msgSub = String(message ?? "").trim();
+      const __msgSubRaw = String(message ?? "").trim();
+      const __msgSub = normalizeCoreTermForRouting(__msgSubRaw);
       const __isSubDef =
         /(言霊の[アアあ]|言霊のヒ|ウタヒ|五十音一言法則|カタカムナウタヒ)\s*とは\s*(何|なに)?\s*(ですか)?\s*[？?]?$/u.test(__msgSub);
 
@@ -3863,7 +3880,7 @@ return res.json(__tenmonGeneralGateResultMaybe({
           } catch {}
         }
         // R1_C1e7_TERM_NORM_V1: normalize definition term for KHS lookup (KHS DEF apply only)
-        const __termNorm = String(__term || "")
+        let __termNorm = String(__term || "")
           .replace(/\s+/g, "")
           .replace(/[?？]+$/g, "")
           .replace(/とは$/g, "")
@@ -3872,6 +3889,8 @@ return res.json(__tenmonGeneralGateResultMaybe({
           .replace(/とは何$/g, "")
           .replace(/とはなに$/g, "")
           .trim();
+        // OPS_CORE_KOTODAMA_ALIAS_FASTPATH_FIX_V1: ことだま → 言霊 で verified に揃える
+        if (__termNorm === "ことだま") __termNorm = "言霊";
         if (!hit) {
           hit = stmtQ.get(__termNorm || __term);
         }
@@ -3889,6 +3908,72 @@ return res.json(__tenmonGeneralGateResultMaybe({
         try { db.close?.(); } catch {}
 
         if (hit?.lawKey && hit?.unitId && hit?.doc && hit?.quote && hit?.quoteHash) {
+          // OPS_CORE_KOTODAMA_ALIAS_FASTPATH_FIX_V1: 言霊は DEF_FASTPATH_VERIFIED_V1 と同じ文面・routeReason で返す（t0 正規化でここに乗る）
+          const __termForKotodama = String(__termNorm || __term || "").trim();
+          if (__termForKotodama === "言霊") {
+            let __summary =
+              String((hit as any).summary ?? "").trim() ||
+              "言霊とは、天地に鳴り響く五十連の音と、水火を與み解いて詞の本を知る法則です。";
+            __summary +=
+              " 五十連の音の法則としての言霊を軸に、いろは配列では時間・秩序・成立の側から、水火伝では生成と與合の側から読み、これらを同じ読解系として束ねていきます。";
+            const __quoteHead =
+              String(hit.quote ?? "").replace(/\s+/g, " ").trim().slice(0, 180);
+            const __resp =
+              "【天聞の所見】\n" +
+              __summary +
+              "\n\n【根拠】" + __quoteHead +
+              `\n\n出典: ${String(hit.doc ?? "")} P${Number(hit.pdfPage ?? 0)}` +
+              "\n\n定義・法則・伝承のどこを深掘りしますか？";
+            const __composedK = responseComposer({
+              response: String(__resp),
+              rawMessage: String(message ?? ""),
+              mode: "NATURAL",
+              routeReason: "DEF_FASTPATH_VERIFIED_V1",
+              truthWeight: 0,
+              katakamunaSourceHint: null,
+              katakamunaTopBranch: "",
+              naming: null,
+              lawTrace: [{ lawKey: String(hit.lawKey), unitId: String(hit.unitId), op: "OP_DEFINE" }],
+              evidenceIds: [String(hit.quoteHash ?? "")].filter(Boolean),
+              lawsUsed: [String(hit.lawKey)],
+              sourceHint: null,
+            });
+            try {
+              const __personaK = getPersonaConstitutionSummary();
+              const __mfK: any = __composedK.meaningFrame ?? {};
+              writeScriptureLearningLedger({
+                threadId: String(threadId || ""),
+                message: String(message ?? ""),
+                routeReason: "DEF_FASTPATH_VERIFIED_V1",
+                scriptureKey: null,
+                subconceptKey: null,
+                conceptKey: "kotodama",
+                thoughtGuideKey: "KOTODAMA_DEF_FASTPATH",
+                personaConstitutionKey: __personaK?.constitutionKey ?? null,
+                hasEvidence: Boolean(__mfK.hasEvidence),
+                hasLawTrace: Boolean(__mfK.hasLawTrace),
+                resolvedLevel: "verified",
+                unresolvedNote: null,
+              });
+            } catch {}
+            const __kuK = {
+              routeReason: "DEF_FASTPATH_VERIFIED_V1",
+              lawsUsed: [String(hit.lawKey)],
+              evidenceIds: [String(hit.quoteHash ?? "")].filter(Boolean),
+              lawTrace: [{ lawKey: String(hit.lawKey), unitId: String(hit.unitId), op: "OP_DEFINE" }],
+              term: "言霊",
+              heart: normalizeHeartShape(__heart),
+            };
+            return res.json(__tenmonGeneralGateResultMaybe({
+              response: __composedK.response,
+              evidence: null,
+              candidates: [],
+              timestamp,
+              threadId,
+              decisionFrame: { mode: "NATURAL", intent: "define", llm: null, ku: __kuK },
+            }));
+          }
+
           const __q = String(hit.quote || "").trim();
           const __qClean = __q
             .replace(/\r/g, "\n")
@@ -4565,7 +4650,8 @@ if (!outText) {
 
   // CARD_C3_FASTPATH_IDENTITY_V1: meta questions must get a direct answer (avoid questionnaire loop)
   try {
-    const t0 = String(message || "").trim();
+    const t0Raw = String(message || "").trim();
+    const t0 = normalizeCoreTermForRouting(t0Raw);
     const tid0 = String(threadId || "");
     const isTestTid0 = /^(accept|core-seed|bible-smoke)/i.test(tid0);
 
@@ -4864,7 +4950,8 @@ if (!outText) {
 
   // DEF_FASTPATH_VERIFIED_V1
   try {
-    const __msg0 = String(message ?? "").trim();
+    const __msg0Raw = String(message ?? "").trim();
+    const __msg0 = normalizeCoreTermForRouting(__msg0Raw);
     const __defFast =
       /とは\s*(何|なに)\s*(ですか)?\s*[？?]?$/u.test(__msg0) ||
       /って\s*(何|なに)\s*(ですか)?\s*[？?]?$/u.test(__msg0);
