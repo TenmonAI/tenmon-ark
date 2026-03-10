@@ -72,6 +72,7 @@ import { __tenmonGeneralGateResultMaybe, setTenmonLastHeart } from "./chat_parts
 import { saveArkThreadSeedV1 } from "./chat_parts/seed_impl.js";
 import { writeSynapseLogV1 } from "./chat_parts/synapse_impl.js";
 import { generateSeed } from "./chat_parts/seed_engine.js";
+import { createSeed, summarizeSeed } from "../core/kokuzoSeed.js";
 const router: IRouter = Router();
 
 function normalizeHeartShape(h: any) {
@@ -3949,12 +3950,34 @@ let outText = "";
             heart: __heartNorm,
           } as any);
 
+          const __seedLocked = summarizeSeed(createSeed({
+            ownerId: String(threadId || "seed:anon"),
+            tags: ["NATURAL_GENERAL_LLM_TOP"],
+            phaseProfile: [String(__heartNorm?.phase || "")].filter(Boolean),
+            integrityAnchor: "NATURAL_GENERAL_LLM_TOP",
+          }));
+
+          try {
+            const __db = getDb("kokuzo");
+            __db.prepare(
+              "INSERT OR REPLACE INTO kz_seeds (seedId, ownerId, routeReason, phase, integrityAnchor, createdAt) VALUES (?, ?, ?, ?, ?, ?)"
+            ).run(
+              __seedLocked.id,
+              __seedLocked.ownerId,
+              "NATURAL_GENERAL_LLM_TOP",
+              String(__heartNorm?.phase || ""),
+              "NATURAL_GENERAL_LLM_TOP",
+              Date.now()
+            );
+          } catch (_) {}
+
           const __kuLocked: any = {
             lawsUsed: [],
             evidenceIds: [],
             lawTrace: [],
             routeReason: "NATURAL_GENERAL_LLM_TOP",
             heart: __heartNorm,
+            seedSummary: __seedLocked,
           };
           if (__composedLocked.meaningFrame != null) {
             __kuLocked.meaningFrame = __composedLocked.meaningFrame;

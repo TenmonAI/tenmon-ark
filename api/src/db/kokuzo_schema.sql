@@ -368,3 +368,13 @@ CREATE TABLE IF NOT EXISTS artifact_manifest (
 CREATE INDEX IF NOT EXISTS idx_artifact_sha
 ON artifact_manifest(sha256);
 
+-- KZ1: general deterministic seed log (R3_GENERAL_TEMPLATE_LOCK_V1)
+CREATE TABLE IF NOT EXISTS kz_seeds (
+  seedId TEXT PRIMARY KEY,
+  ownerId TEXT NOT NULL,
+  routeReason TEXT NOT NULL,
+  phase TEXT NOT NULL DEFAULT '',
+  integrityAnchor TEXT NOT NULL DEFAULT '',
+  createdAt INTEGER NOT NULL
+);
+
