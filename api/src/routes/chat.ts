@@ -3982,6 +3982,17 @@ let outText = "";
             if (__prev) __seedLookup = { seedId: __prev.seedId, ownerId: __prev.ownerId, routeReason: __prev.routeReason, phase: __prev.phase, integrityAnchor: __prev.integrityAnchor ?? "" };
           } catch (_) {}
 
+          const __seedHint = __seedLookup
+            ? {
+                seenBefore: true,
+                samePhase:
+                  String(__seedLookup.phase || "") ===
+                  String(__heartNorm?.phase || ""),
+                lastRouteReason: String(__seedLookup.routeReason || ""),
+                hint: "RECURSIVE_PHASE_MEMORY",
+              }
+            : null;
+
           const __kuLocked: any = {
             lawsUsed: [],
             evidenceIds: [],
@@ -3990,6 +4001,7 @@ let outText = "";
             heart: __heartNorm,
             seedSummary: __seedLocked,
             seedLookup: __seedLookup,
+            seedHint: __seedHint,
           };
           if (__composedLocked.meaningFrame != null) {
             __kuLocked.meaningFrame = __composedLocked.meaningFrame;
