@@ -3137,10 +3137,10 @@ return res.json(__tenmonGeneralGateResultMaybe({
         );
       }
 
-      // R8_NOTION_MEANING_BIND_V1: 「カタカムナとは」の場合のみ、空海・山口志道・言霊秘書・稲荷古伝・天津金木まで遡る軸を一段だけ補足
+      // R10_KATAKAMUNA_GROUNDED_RESPONSE_V1: 「カタカムナとは」の場合のみ、楢崎皐月を起点に山口志道『言霊秘書』・稲荷古伝・フトマニ・水火の法則へ読み直す軸を一段だけ補足
       if (/カタカムナとは\s*(何|なに)\s*(ですか)?\s*[？?]?$/u.test(__msgKG)) {
         __body +=
-          " 天聞軸では、楢崎本流を起点にしつつ、空海の並行正典軸と山口志道・言霊秘書・稲荷古伝・天津金木まで遡って再統合する軸としても扱われます。";
+          " 天聞軸では、楢崎皐月の読解を起点にしつつ、山口志道『言霊秘書』・稲荷古伝・フトマニ・水火の法則へ読み直して再統合する軸としても扱われます。";
       }
 
       const __negative = String(__tenmon.negative_definition || "");
@@ -3189,6 +3189,12 @@ return res.json(__tenmonGeneralGateResultMaybe({
         katakamunaBranchCandidates: __r.candidates,
         katakamunaCanonVersion: { schema: __r.schema, updatedAt: __r.updatedAt },
         katakamunaSourceHint: __r.sourceHint || null,
+        conceptEvidence: {
+          doc: "カタカムナ言灵解.pdf",
+          pdfPage: 4,
+          lawKey: "TENMON:KATAKAMUNA:GROUNDED:V1",
+          quoteHint: "楢崎本流を水火・言霊・原典群へ接続して読む本文"
+        },
         thoughtGuideSummary: getThoughtGuideSummary("katakamuna"),
         personaConstitutionSummary: getPersonaConstitutionSummary(),
         notionCanon: getNotionCanonForRoute("KATAKAMUNA_CANON_ROUTE_V1", String(__msgKG)),

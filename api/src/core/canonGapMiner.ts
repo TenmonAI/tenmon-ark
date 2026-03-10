@@ -25,20 +25,73 @@ function runSql(sql: string): string {
   });
 }
 
-function classifyMessage(message: string): GapKind {
-  if (/(とは|って何|何ですか|意味|定義|概念)/.test(message)) {
-    if (/(ア|ヒ|フ|ム|ウタヒ|五十音一言法則|五十連十行)/.test(message)) {
-      return "subconcept_candidate";
-    }
-    if (/(言霊秘書|イロハ言灵解|カタカムナ言灵解|水穂伝|稲荷古伝)/.test(message)) {
-      return "scripture_candidate";
-    }
-    return "thought_guide_candidate";
+function classifyGap(
+  message: string,
+  routeReason: string | null,
+  resolvedLevel: string | null
+): { kind: GapKind | null; reason: string } {
+  const msg = message.trim();
+
+  // すでに十分に解決しているものは gap から外す
+  if (routeReason === "TENMON_SUBCONCEPT_CANON_V1" && resolvedLevel === "subconcept") {
+    return { kind: null, reason: "subconcept で解決済み" };
   }
-  if (/(なぜ|どうして|本質|違い|比較|系譜|位置づけ)/.test(message)) {
-    return "thought_guide_candidate";
+  if (routeReason === "TENMON_SCRIPTURE_CANON_V1" && resolvedLevel === "scripture") {
+    return { kind: null, reason: "scripture で解決済み" };
   }
-  return "persona_candidate";
+
+  // 一般整理・支援系
+  if (resolvedLevel === "general") {
+    return {
+      kind: "persona_candidate",
+      reason: "general 止まり。支援・整理の人格運用候補",
+    };
+  }
+
+  // カタカムナ概念は scripture 深化候補
+  if (routeReason === "KATAKAMUNA_CANON_ROUTE_V1" && resolvedLevel === "concept") {
+    return {
+      kind: "scripture_candidate",
+      reason: "concept 止まり。カタカムナ言灵解・原典群で深化候補",
+    };
+  }
+
+  // 言霊 verified は scripture 横断深化候補
+  if (routeReason === "DEF_FASTPATH_VERIFIED_V1" && resolvedLevel === "verified") {
+    if (/言霊とは何ですか？/.test(msg)) {
+      return {
+        kind: "scripture_candidate",
+        reason: "verified 済みだが、言霊秘書・いろは・水火伝との横断深化候補",
+      };
+    }
+    return { kind: null, reason: "verified で解決済み" };
+  }
+
+  // 未整備の下位粒度
+  if (/(ア|ヒ|フ|ム|ウタヒ|五十音一言法則|五十連十行)/.test(msg)) {
+    return {
+      kind: "subconcept_candidate",
+      reason: "下位粒度 canon 候補",
+    };
+  }
+
+  // 比較・本質・系譜など
+  if (/(なぜ|どうして|本質|違い|比較|系譜|位置づけ)/.test(msg)) {
+    return {
+      kind: "thought_guide_candidate",
+      reason: "thought guide 深化候補",
+    };
+  }
+
+  // 定義系は scripture 寄り
+  if (/(とは|って何|何ですか|意味|定義|概念)/.test(msg)) {
+    return {
+      kind: "scripture_candidate",
+      reason: "定義系の scripture 深化候補",
+    };
+  }
+
+  return { kind: null, reason: "gap 対象外" };
 }
 
 export function mineCanonGaps(limit = 200): CanonGapItem[] {
@@ -58,41 +111,25 @@ export function mineCanonGaps(limit = 200): CanonGapItem[] {
   const raw = runSql(sql).trim();
   if (!raw) return [];
 
-  const rows = raw.split("\n").map((line) => {
-    const [message, routeReason, resolvedLevel, n] = line.split("\t");
-    return {
-      message: String(message || "").trim(),
-      routeReason: routeReason ? String(routeReason) : null,
-      resolvedLevel: resolvedLevel ? String(resolvedLevel) : null,
-      n: Number(n || 0),
-    };
-  });
-
   const out: CanonGapItem[] = [];
 
-  for (const r of rows) {
-    const msg = r.message;
-    const rr = r.routeReason;
-    const rl = r.resolvedLevel;
+  for (const line of raw.split("\n")) {
+    const [message, routeReason, resolvedLevel, n] = line.split("\t");
+    const msg = String(message || "").trim();
+    const rr = routeReason ? String(routeReason) : null;
+    const rl = resolvedLevel ? String(resolvedLevel) : null;
+    const count = Number(n || 0);
 
-    const looksCanonical =
-      /(とは|って何|何ですか|意味|定義|概念|関係|違い|比較|本質|系譜)/.test(msg);
-
-    const shallow =
-      rl === "general" ||
-      (rl === "concept" && /(関係|違い|比較|本質|系譜)/.test(msg));
-
-    if (!looksCanonical && !shallow) continue;
+    const judged = classifyGap(msg, rr, rl);
+    if (!judged.kind) continue;
 
     out.push({
-      kind: classifyMessage(msg),
+      kind: judged.kind,
       message: msg,
-      count: r.n,
+      count,
       lastRouteReason: rr,
       lastResolvedLevel: rl,
-      reason: shallow
-        ? "resolvedLevel が浅いか general/concept 止まり"
-        : "canonical 昇格候補",
+      reason: judged.reason,
     });
   }
 
