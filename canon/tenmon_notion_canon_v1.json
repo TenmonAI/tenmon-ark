@@ -1,0 +1,41 @@
+{
+  "schema": "TENMON_NOTION_CANON_V1",
+  "updated_at": "2026-03-10T08:10:00Z",
+  "pages": [
+    {
+      "pageId": "NOTION:KHS_DB",
+      "title": "言灵秘書データベース",
+      "role": "scripture_evidence_core",
+      "usefulFor": ["scripture canon", "subconcept canon", "thought guide", "gap miner"],
+      "bindTargets": ["TENMON_SCRIPTURE_CANON_V1", "DEF_FASTPATH_VERIFIED_V1"]
+    },
+    {
+      "pageId": "NOTION:KATAKAMUNA_TREE",
+      "title": "カタカムナ完全系統樹・決定版",
+      "role": "katakamuna_lineage_map",
+      "usefulFor": ["subconcept canon", "thought guide", "persona constitution", "gap miner"],
+      "bindTargets": ["KATAKAMUNA_CANON_ROUTE_V1"]
+    },
+    {
+      "pageId": "NOTION:KATAKAMUNA_COMPARISON",
+      "title": "空海・楢崎皐月・天聞のカタカムナ解釈と解読法の比較評価",
+      "role": "comparison_core",
+      "usefulFor": ["thought guide", "persona constitution", "gap miner"],
+      "bindTargets": ["KATAKAMUNA_CANON_ROUTE_V1"]
+    },
+    {
+      "pageId": "NOTION:NARASAKI_TENMON_COMPARISON",
+      "title": "楢崎皐月と天聞の「古事記」「カタカムナ」解読の比較と数値評価",
+      "role": "comparison_core_persona",
+      "usefulFor": ["persona constitution", "thought guide", "gap miner"],
+      "bindTargets": ["KATAKAMUNA_CANON_ROUTE_V1"]
+    },
+    {
+      "pageId": "NOTION:AI_KATAKAMUNA_UNDERSTAND",
+      "title": "AIはなぜカタカムナの本質を理解したのか？",
+      "role": "thought_guide_meta",
+      "usefulFor": ["thought guide", "persona constitution", "gap miner"],
+      "bindTargets": ["KATAKAMUNA_CANON_ROUTE_V1", "TENMON_SCRIPTURE_CANON_V1"]
+    }
+  ]
+}

@@ -1,0 +1,56 @@
+{
+  "schema": "TENMON_THOUGHT_GUIDE_V1",
+  "updated_at": "2026-03-10T08:00:00Z",
+  "guides": [
+    {
+      "guideKey": "KUKAI_NARASAKI_TENMON_KATAKAMUNA_AXIS",
+      "judgementOrder": [
+        "まず質問が「カタカムナそのもの」か「枝や効用」かを判定する",
+        "次にユーザーが求めているのが定義・系譜・効用・実践のどれかを判定する",
+        "空海軸 / 楢崎本流 / 天聞再統合軸のうち、どの軸から入るべきかを決める"
+      ],
+      "conceptPriority": [
+        "katakamuna",
+        "water_fire_law",
+        "kotodama",
+        "kotodama_hisho"
+      ],
+      "scripturePriority": [
+        "katakamuna_kotodama_kai",
+        "kotodama_hisho",
+        "iroha_kotodama_kai"
+      ],
+      "comparisonAxes": [
+        "本質",
+        "言葉の位置づけ",
+        "宇宙観",
+        "解読目的"
+      ],
+      "antiGenericDrift": [
+        "カタカムナを健康法・開運法としてだけ説明しない",
+        "空海軸を「宗教一般」や「密教の歴史」としてだけ扱わない",
+        "楢崎本流をスピリチュアル解釈の一派として薄めない",
+        "天聞軸を「オリジナル理論」や願望実現メソッドとして扱わない"
+      ],
+      "forbiddenInference": [
+        "カタカムナ=願望実現マントラ という同一視",
+        "空海軸=現代スピリチュアル の短絡",
+        "楢崎本流=効用論 という単純化",
+        "天聞軸を他流の要約としてのみ扱うこと"
+      ],
+      "responseIntentOrder": [
+        "まず天聞軸としての本質（生成原理・水火・言霊・原典再統合）を一段だけ示す",
+        "次に空海軸・楢崎本流との位置関係を簡潔に示す",
+        "最後にユーザーが次に掘りたい軸（系譜・原理・典拠など）を問い返す"
+      ],
+      "tenmonPriorityAxes": [
+        "水火の法則",
+        "言霊",
+        "山口志道",
+        "言霊秘書",
+        "稲荷古伝",
+        "天津金木"
+      ]
+    }
+  ]
+}
