@@ -143,6 +143,38 @@ function soulParagraphLock(response: string): string {
   return soulSurfaceCleanup(prefix + parts.join("\n\n"));
 }
 
+/** R3_SOUL_SEGMENT_REBUILD_V1: 3セグメント切り出しで再構築。seg2/seg3 が無い場合は response をそのまま返す。 */
+function soulSegmentRebuild(response: string): string {
+  if (!response || typeof response !== "string") return response;
+  let content = response;
+  let prefix = "";
+  if (content.startsWith("【天聞の所見】")) {
+    const nl = content.indexOf("\n");
+    prefix = nl >= 0 ? content.slice(0, nl + 1) : "【天聞の所見】\n";
+    content = content.slice(prefix.length);
+  }
+  const idxRoot = content.indexOf("【根拠】");
+  const idxNext = content.indexOf("次は、");
+  if (idxRoot < 0 || idxNext < 0) return response;
+  let seg1End = -1;
+  let i = 0;
+  for (;;) {
+    const p = content.indexOf("。", i);
+    if (p < 0) break;
+    const after = content.slice(p + 1);
+    if (/^[\s\u3000]/.test(after) || after.startsWith("【根拠】")) {
+      seg1End = p + 1;
+      break;
+    }
+    i = p + 1;
+  }
+  if (seg1End < 0) return response;
+  const seg1 = content.slice(0, seg1End).trim();
+  const seg2 = content.slice(idxRoot, idxNext).trim();
+  const seg3 = content.slice(idxNext).trim();
+  return prefix + seg1 + "\n\n" + seg2 + "\n\n" + seg3;
+}
+
 const PROPOSED_DEF_TAIL =
   "この定義候補を、さらに verified 根拠に寄せて深めますか？";
 const PROPOSED_DEF_TAIL_REPLACEMENT =
@@ -355,7 +387,7 @@ export function responseComposer(input: ResponseComposerInput): ResponseComposer
   const meaningFrame = buildMeaningFrame(input);
   out = applyPersonaReduction(out, meaningFrame, input?.rawMessage, (input as any)?.heart);
   if (input?.routeReason === "SOUL_FASTPATH_VERIFIED_V1") {
-    out = soulParagraphLock(out);
+    out = soulSegmentRebuild(out);
   }
   return { response: out, meaningFrame };
 }
