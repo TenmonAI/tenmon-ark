@@ -4451,6 +4451,27 @@ if (!outText) {
           sourceHint: null,
         });
         const __respSoulFinal = __composed.response;
+        const __respSoulLocked = ((): string => {
+          const raw = String(__respSoulFinal ?? "");
+          if (!raw) return raw;
+          let prefix = "";
+          let content = raw;
+          if (content.startsWith("【天聞の所見】")) {
+            const nl = content.indexOf("\n");
+            prefix = nl >= 0 ? content.slice(0, nl + 1) : "【天聞の所見】\n";
+            content = content.slice(prefix.length);
+          }
+          const idxRoot = content.indexOf("【根拠】");
+          const idxNext = content.indexOf("次は、");
+          if (idxRoot < 0 || idxNext < 0) return raw;
+          const seg1End = content.indexOf("。");
+          if (seg1End < 0 || seg1End > idxRoot) return raw;
+          const seg1 = content.slice(0, seg1End + 1).trim();
+          const seg2 = content.slice(idxRoot, idxNext).trim();
+          const seg3 = content.slice(idxNext).trim();
+          if (!seg1 || !seg2 || !seg3) return raw;
+          return prefix + seg1 + "\n\n" + seg2 + "\n\n" + seg3;
+        })();
         const __ku = {
           routeReason: "SOUL_FASTPATH_VERIFIED_V1",
           lawsUsed: [String(__hitSoul.lawKey)],
@@ -4468,7 +4489,7 @@ if (!outText) {
         if (__composed.meaningFrame != null) (__ku as any).meaningFrame = __composed.meaningFrame;
 
         return res.json(__tenmonGeneralGateResultMaybe({
-          response: __respSoulFinal,
+          response: __respSoulLocked,
           evidence: {
             doc: String(__hitSoul.doc ?? ""),
             pdfPage: Number(__hitSoul.pdfPage ?? 0),

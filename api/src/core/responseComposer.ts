@@ -107,11 +107,13 @@ const SOUL_TAIL =
 const SOUL_TAIL_REPLACEMENT =
   "次は、魂・息・火水のどこから掘りますか？";
 
-/** R3_SOUL_SURFACE_CLEANUP_V1: SOUL 応答の二重空白・分断空白・OCRノイズのみ整流。first sentence は触らない。 */
+/** R3_SOUL_SURFACE_CLEANUP_V1 + R4_FOUNDER_DEMO_SURFACE_POLISH_V1: 二重空白・分断空白・OCRノイズ・単語内空白を整流。 */
 function soulSurfaceCleanup(s: string): string {
   if (!s || typeof s !== "string") return s;
   let out = s
     .replace(/[\s\u3000]{2,}/g, " ")
+    .replace(/ョ\s+ウィ/g, "ョウィ")
+    .replace(/どこか\s+ら/g, "どこから")
     .replace(/どこ\s+から/g, "どこから")
     .replace(/深\s*掘\s*り/g, "深掘り")
     .replace(/魂\s*・\s*息\s*・\s*火水/g, "魂・息・火水");
@@ -387,7 +389,7 @@ export function responseComposer(input: ResponseComposerInput): ResponseComposer
   const meaningFrame = buildMeaningFrame(input);
   out = applyPersonaReduction(out, meaningFrame, input?.rawMessage, (input as any)?.heart);
   if (input?.routeReason === "SOUL_FASTPATH_VERIFIED_V1") {
-    out = soulSegmentRebuild(out);
+    out = soulSurfaceCleanup(soulSegmentRebuild(out));
   }
   return { response: out, meaningFrame };
 }
