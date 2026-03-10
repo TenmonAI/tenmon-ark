@@ -3993,6 +3993,14 @@ let outText = "";
               }
             : null;
 
+          const __seedSurface = __seedHint
+            ? {
+                mode: "memory",
+                seenBefore: Boolean(__seedHint.seenBefore),
+                samePhase: Boolean(__seedHint.samePhase),
+              }
+            : null;
+
           const __kuLocked: any = {
             lawsUsed: [],
             evidenceIds: [],
@@ -4002,6 +4010,7 @@ let outText = "";
             seedSummary: __seedLocked,
             seedLookup: __seedLookup,
             seedHint: __seedHint,
+            seedSurface: __seedSurface,
           };
           if (__composedLocked.meaningFrame != null) {
             __kuLocked.meaningFrame = __composedLocked.meaningFrame;
