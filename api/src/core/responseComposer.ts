@@ -141,6 +141,16 @@ function generalToneNormalize(s: string): string {
   out = out.replace(/まここ/g, "いまここ");
   out = out.replace(/よく分かる/g, "伝わっている");
   out = out.replace(/捨ててみる/g, "手放してみる");
+  out = out.replace(/^の前/gm, "");
+  out = out.replace(/^ち込/gm, "");
+  out = out.replace(/^まくい/gm, "");
+  out = out.replace(/^体的/gm, "");
+  out = out.replace(/^えが/gm, "");
+  out = out.replace(/^報/gm, "");
+  out = out.replace(/^況/gm, "");
+  out = out.replace(/^理/gm, "");
+  out = out.replace(/どうだろう。/g, "どうでしょうか。");
+  out = out.replace(/あるかい\?/g, "ありますか？");
   out = out.replace(/だろうか？/g, "でしょうか。");
   out = out.replace(/かな？/g, "でしょうか。");
   out = out.split("\n").map((l) => l.replace(/^\s+/, "")).join("\n");
