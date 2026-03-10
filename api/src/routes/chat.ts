@@ -3475,9 +3475,9 @@ return res.json(__tenmonGeneralGateResultMaybe({
               lawTrace: [],
             };
             if (__composed.meaningFrame != null) __ku.meaningFrame = __composed.meaningFrame;
-
+            const __respSub = String(__composed.response ?? "").replace(/\n\n一手：[^\n]*\s*$/u, "").trim();
             return res.json(__tenmonGeneralGateResultMaybe({
-              response: __composed.response,
+              response: __respSub,
               evidence: null,
               candidates: [],
               timestamp,
