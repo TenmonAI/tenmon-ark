@@ -86,11 +86,15 @@ import { buildKanagiGrowthLedgerEntryFromKu, insertKanagiGrowthLedgerEntry } fro
 import { upsertThreadCenter, getLatestThreadCenter } from "../core/threadCenterMemory.js";
 import { resolveIrohaActionPattern } from "../core/irohaActionPatterns.js";
 
+// FIX_PRE_GATE_GENERAL_SURFACE_V1: 先頭・末尾欠損・不要前置き混入を止血。引用あり/なしの「いまの言葉を…と受け取りました。」を安全に除去。
 function __cleanLlmFrame(r: string): string {
   const __in = String(r ?? "");
-  // 先頭欠損防止: 「いまの言葉を「…」と受け取りました。」のみ除去。同行の「万葉集とは」等は残す。
   const __out = __in
+    // 引用あり: 「いまの言葉を「…」と受け取りました。」のみ除去（同行の「万葉集とは」等は残す）
     .replace(/いまの言葉を[\u201c\u201d\u0022][^\u201c\u201d\u0022\n]*[\u201c\u201d\u0022]\s*と受け取りました。?/gu, "")
+    // 引用なし: 【天聞の所見】直後の「いまの言葉を…と受け取りました。」（悩みを聞いてくれ等）
+    .replace(/(【天聞の所見】\s*)いまの言葉を[^\n]*と受け取りました。?\s*/u, "$1")
+    // 行頭が「いまの言葉を」の行を除去
     .replace(/^いまの言葉を[^\n]*\n?/gm, "")
     .trimStart();
   if (__in !== __out) console.log("[CLEAN_LLM_FRAME] stripped");
@@ -4865,8 +4869,9 @@ const __heartNorm = normalizeHeartShape(__heart);
 
       const __composedRespCleaned = __cleanLlmFrame(String(__composed.response ?? ""));
       console.log("[GEN_GENERAL_PRE_GATE]", { out: __composedRespCleaned.slice(0, 240) });
-      // PRE_GATE まで正常な response を固定。以降は trimStart / replace / 先頭行除去を一切かけない。
-      const finalResp = __composedRespCleaned;
+      // FIX_PRE_GATE_GENERAL_SURFACE_V1: composer が先頭を欠損させた場合は __safeForComposer を採用。scripture prefix は「さっき見ていた」で始まるので保持。
+      const __hasValidHead = /^(【天聞の所見】|さっき見ていた)/.test(__composedRespCleaned);
+      const finalResp = __hasValidHead ? __composedRespCleaned : __safeForComposer;
       return res.json(__tenmonGeneralGateResultMaybe({
         response: finalResp,
         evidence: null,
