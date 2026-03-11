@@ -3,6 +3,7 @@
 
 import { getIntentionHintForKu } from "../../core/intentionConstitution.js";
 import { computeKanagiSelfKernel, getSafeKanagiSelfOutput } from "../../core/kanagiSelfKernel.js";
+import { resolveScriptureQuery } from "../../core/scriptureCanon.js";
 
 function __tenmonGeneralGateSoft(out: string): string {
   let t = String(out || "").replace(/\r/g, "").trim();
@@ -189,8 +190,38 @@ function __tenmonGeneralGateResultMaybe(x: any): any {
           const routeReason = String(__ku.routeReason ?? (__df as any).mode ?? "");
           const heart = __ku.heart ?? null;
           const intention = __ku.intention ?? null;
+          const mf = __ku.meaningFrame;
+          const topicClass =
+            mf && typeof mf === "object" && typeof (mf as any).topicClass === "string"
+              ? (mf as any).topicClass
+              : undefined;
+          let scriptureKey: string | undefined;
+          let scriptureMode: string | undefined;
+          let scriptureAlignment: string | undefined;
+          if (routeReason === "TENMON_SCRIPTURE_CANON_V1") {
+            const hit = resolveScriptureQuery(rawMessage);
+            if (hit) {
+              scriptureKey = hit.scriptureKey;
+              scriptureMode = "canon";
+              scriptureAlignment = "scripture_aligned";
+            } else if (mf && (mf as any).scriptureKey != null) {
+              scriptureKey = String((mf as any).scriptureKey);
+              scriptureMode = "canon";
+              scriptureAlignment = "scripture_aligned";
+            }
+          }
           try {
-            __ku.kanagiSelf = computeKanagiSelfKernel({ rawMessage, routeReason, heart, intention });
+            __ku.kanagiSelf = computeKanagiSelfKernel({
+              rawMessage,
+              routeReason,
+              heart,
+              intention,
+              topicClass,
+              conceptKey: mf && (mf as any).conceptKey != null ? String((mf as any).conceptKey) : undefined,
+              scriptureKey: scriptureKey ?? (mf && (mf as any).scriptureKey != null ? String((mf as any).scriptureKey) : undefined),
+              scriptureMode,
+              scriptureAlignment,
+            });
           } catch {
             __ku.kanagiSelf = getSafeKanagiSelfOutput();
           }

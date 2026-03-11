@@ -21,6 +21,16 @@ function toKanagiPhase(s: unknown): KanagiPhase {
   return VALID_PHASES.includes(v) ? v : "CENTER";
 }
 
+/** R8_CONCEPT_CANON_BIND_SELF_V1: concept canon 軸（任意・後方互換） */
+export type ConceptClass =
+  | "katakamuna"
+  | "kotodama"
+  | "soul"
+  | "general"
+  | "water_fire_law"
+  | "kotodama_hisho"
+  | "subconcept";
+
 export type SelfKernelInput = {
   rawMessage: string;
   routeReason?: string;
@@ -31,6 +41,14 @@ export type SelfKernelInput = {
     entropy?: unknown;
   };
   intention?: { coreIntentionTop?: string; kanagiCenterHint?: string };
+  /** R8_CONCEPT_CANON_BIND_SELF_V1: 任意。meaningFrame 等から渡す */
+  topicClass?: string;
+  conceptKey?: string;
+  scriptureKey?: string;
+  /** R8_SCRIPTURE_CANON_BIND_SELF_V1: 任意。TENMON_SCRIPTURE_CANON_V1 時に gates から渡す */
+  scriptureMode?: string;
+  scriptureAlignment?: string;
+  scriptureQuery?: string;
 };
 
 export type SelfKernelOutput = {
@@ -47,6 +65,14 @@ export type SelfKernelOutput = {
   heartTargetPhase?: KanagiPhase;
   heartEntropy?: number;
   alignment?: string;
+  /** R8_CONCEPT_CANON_BIND_SELF_V1: 観測用 */
+  topicClass?: string;
+  conceptMode?: string;
+  conceptAlignment?: string;
+  /** R8_SCRIPTURE_CANON_BIND_SELF_V1: 観測用。非 scripture route では設定しない */
+  scriptureKey?: string;
+  scriptureMode?: string;
+  scriptureAlignment?: string;
 };
 
 function numEntropy(v: unknown): number {
@@ -59,14 +85,66 @@ function numEntropy(v: unknown): number {
 /**
  * 決定論的に self kernel を計算する。heart を一次入力とし、intent kernel と整合させる。
  */
+function resolveTopicClass(input: {
+  topicClass?: string;
+  routeReason?: string;
+  rawMessage?: string;
+}): string {
+  const tc = String(input.topicClass ?? "").trim();
+  if (tc && /^(katakamuna|kotodama|soul|general|water_fire_law|kotodama_hisho|subconcept)$/.test(tc))
+    return tc;
+  const rr = String(input.routeReason ?? "");
+  const raw = String(input.rawMessage ?? "");
+  if (/KATAKAMUNA|カタカムナ/.test(rr) || /カタカムナ/.test(raw)) return "katakamuna";
+  if (
+    rr.includes("DEF_FASTPATH") ||
+    rr.includes("KOTODAMA") ||
+    /言霊/.test(raw)
+  )
+    return "kotodama";
+  if (rr.includes("SOUL_")) return "soul";
+  if (rr === "TENMON_SUBCONCEPT_CANON_V1" || /ウタヒ|五十音|ア・ヒ/.test(raw)) return "subconcept";
+  if (rr === "TENMON_SCRIPTURE_CANON_V1") return "kotodama_hisho";
+  return "general";
+}
+
 export function computeKanagiSelfKernel(input: SelfKernelInput): SelfKernelOutput {
-  const { routeReason = "", heart, intention } = input;
+  const {
+    routeReason = "",
+    heart,
+    intention,
+    topicClass: inputTopicClass,
+    conceptKey,
+    scriptureKey: inputScriptureKey,
+    scriptureMode: inputScriptureMode,
+    scriptureAlignment: inputScriptureAlignment,
+    scriptureQuery: _scriptureQuery,
+  } = input;
   const routeHints = resolveRoutePhaseHints();
   const defaultPhase = resolveDefaultIntentPhase() || "CENTER";
   const principles = resolveSelectionPrinciples();
   const responseHints = resolveResponseIntentHints();
 
   const rr = String(routeReason);
+  const isScriptureRoute = rr === "TENMON_SCRIPTURE_CANON_V1";
+  const scriptureKey =
+    isScriptureRoute && inputScriptureKey && String(inputScriptureKey).trim()
+      ? String(inputScriptureKey).trim()
+      : undefined;
+
+  const topicClass = resolveTopicClass({
+    topicClass: inputTopicClass,
+    routeReason: rr,
+    rawMessage: input.rawMessage,
+  });
+  const isConceptCanon =
+    topicClass === "katakamuna" ||
+    topicClass === "kotodama" ||
+    topicClass === "soul" ||
+    topicClass === "subconcept" ||
+    topicClass === "kotodama_hisho" ||
+    topicClass === "water_fire_law";
+
   const isCanonical =
     rr.includes("VERIFIED") ||
     rr.includes("SCRIPTURE") ||
@@ -103,12 +181,39 @@ export function computeKanagiSelfKernel(input: SelfKernelInput): SelfKernelOutpu
   }
   if (!VALID_PHASES.includes(selfPhase)) selfPhase = "CENTER";
 
+  // judgementAxis: selection_principles + concept 軸 + scripture 軸（非 scripture では concept のみ維持）
   const judgementAxis = Array.isArray(principles) ? [...principles] : [];
+  if (isConceptCanon) {
+    const conceptLine =
+      topicClass === "katakamuna"
+        ? "カタカムナ概念軸: 楢崎・宇野・空海・天聞再統合の観測核に沿う。"
+        : topicClass === "kotodama" || topicClass === "kotodama_hisho"
+          ? "言霊概念軸: 正典・核概念の整合に沿う。"
+          : topicClass === "soul"
+            ? "魂概念軸: 魂の定義と正典の接続に沿う。"
+            : topicClass === "subconcept"
+              ? "下位概念軸: ア・ヒ・ウタヒ・五十音一言法則に沿う。"
+              : "";
+    if (conceptLine && !judgementAxis.includes(conceptLine)) judgementAxis.push(conceptLine);
+  }
+  // R8_SCRIPTURE_CANON_BIND_SELF_V1: scripture 軸の一文（3種を区別）。非 scripture では追加しない。
+  if (isScriptureRoute && scriptureKey) {
+    const scriptureLine =
+      scriptureKey === "kotodama_hisho"
+        ? "正典軸: 言霊秘書・五十音一言法則に沿う。"
+        : scriptureKey === "iroha_kotodama_kai"
+          ? "正典軸: イロハ言霊解・いろは口伝に沿う。"
+          : scriptureKey === "katakamuna_kotodama_kai"
+            ? "正典軸: カタカムナ言霊解・稲荷の言霊で読み解くに沿う。"
+            : "正典軸: 聖典の意図に沿う。";
+    if (!judgementAxis.includes(scriptureLine)) judgementAxis.push(scriptureLine);
+  }
 
-  // stabilityScore / driftRisk: heart.entropy と route class で再計算
+  // stabilityScore / driftRisk: heart.entropy と route class と concept 軸で再計算
   let driftRisk: number;
   if (isLlmTop) driftRisk = 0.5 + heartEntropyNum * 0.3;
   else if (isCanonical) driftRisk = 0.05 + heartEntropyNum * 0.1;
+  else if (isConceptCanon) driftRisk = 0.08 + heartEntropyNum * 0.12;
   else driftRisk = 0.2 + heartEntropyNum * 0.3;
   driftRisk = Math.max(0, Math.min(1, driftRisk));
   const stabilityScore = 1 - driftRisk;
@@ -135,6 +240,24 @@ export function computeKanagiSelfKernel(input: SelfKernelInput): SelfKernelOutpu
   const alignment =
     selfPhase === intentPhase ? "aligned" : driftRisk >= 0.5 ? "drift" : "neutral";
 
+  // R8_CONCEPT_CANON_BIND_SELF_V1: 観測キー topicClass, conceptMode, conceptAlignment
+  const conceptMode = isConceptCanon ? "canon" : "general";
+  const conceptAlignment =
+    isConceptCanon && (isCanonical || isSupportGeneral)
+      ? "canon_aligned"
+      : isConceptCanon
+        ? "canon"
+        : "general";
+
+  // R8_SCRIPTURE_CANON_BIND_SELF_V1: 非 scripture route では設定しない
+  const outScriptureKey = scriptureKey;
+  const outScriptureMode =
+    scriptureKey != null ? (inputScriptureMode && String(inputScriptureMode).trim()) || "canon" : undefined;
+  const outScriptureAlignment =
+    scriptureKey != null
+      ? (inputScriptureAlignment && String(inputScriptureAlignment).trim()) || "scripture_aligned"
+      : undefined;
+
   return {
     selfPhase,
     intentPhase,
@@ -148,6 +271,14 @@ export function computeKanagiSelfKernel(input: SelfKernelInput): SelfKernelOutpu
     heartTargetPhase,
     heartEntropy,
     alignment,
+    topicClass,
+    conceptMode,
+    conceptAlignment,
+    ...(outScriptureKey != null && {
+      scriptureKey: outScriptureKey,
+      scriptureMode: outScriptureMode,
+      scriptureAlignment: outScriptureAlignment,
+    }),
   };
 }
 
@@ -165,5 +296,8 @@ export function getSafeKanagiSelfOutput(): SelfKernelOutput {
     heartTargetPhase: "CENTER",
     heartEntropy: 0.25,
     alignment: "neutral",
+    topicClass: "general",
+    conceptMode: "general",
+    conceptAlignment: "general",
   };
 }
