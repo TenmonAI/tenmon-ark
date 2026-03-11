@@ -1,5 +1,6 @@
 {
   "schema": "TENMON_AUTO_QUEUE_V1",
+  "ops_note": "health-only official; apply unwired (OPS_APPLY_ENGINE_SELECT_V1)",
   "repo": "/opt/tenmon-ark-repo",
   "api": "/opt/tenmon-ark-repo/api",
   "base_url": "http://127.0.0.1:3000",
