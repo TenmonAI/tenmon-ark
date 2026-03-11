@@ -82,6 +82,7 @@ import { getKatakamunaComparisonGuide, getThoughtGuideSummary } from "../core/th
 import { getNotionCanonForRoute } from "../core/notionCanon.js";
 import { getPersonaConstitutionSummary } from "../core/personaConstitution.js";
 import { writeScriptureLearningLedger } from "../core/scriptureLearningLedger.js";
+import { buildKanagiGrowthLedgerEntryFromKu, insertKanagiGrowthLedgerEntry } from "../core/kanagiGrowthLedger.js";
 const router: IRouter = Router();
 
 function normalizeHeartShape(h: any) {
@@ -1359,6 +1360,21 @@ ${String((gptDraft as any)?.text ?? "").trim()}
             if (!(obj as any).message || String((obj as any).message).trim() === "") (obj as any).message = raw;
             const cur = (df.ku as any).inputText;
             if (cur == null || String(cur).trim() === "") (df.ku as any).inputText = raw;
+          } catch {}
+
+          // R9_GROWTH_LEDGER_INSERT_RELOCATE_V1: 共通整流層で ledger insert 1回（rawMessage/ku.inputText 埋まった後）
+          try {
+            const __ku = df.ku as any;
+            if (
+              __ku &&
+              typeof __ku === "object" &&
+              (__ku.kanagiSelf?.shouldPersist === true || __ku.kanagiSelf?.shouldRecombine === true) &&
+              !(obj as any).__KANAGI_LEDGER_DONE
+            ) {
+              const entry = buildKanagiGrowthLedgerEntryFromKu(__ku, (obj as any).rawMessage);
+              insertKanagiGrowthLedgerEntry(entry);
+              (obj as any).__KANAGI_LEDGER_DONE = true;
+            }
           } catch {}
 
           // C2_LLM_STATUS_ALWAYS_ATTACH_V1: always attach llmStatus (observability only)
