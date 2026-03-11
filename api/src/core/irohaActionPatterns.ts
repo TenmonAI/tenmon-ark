@@ -127,7 +127,8 @@ export function classifyIrohaCounselInput(input: string): IrohaCounselClassifica
       actionKey: "defer",
       displayName: "保留する",
       confidence: 0.78,
-      matchedSignals: ["/整理/u", "/保留/u"]
+      matchedSignals: ["/整理/u", "/保留/u"],
+      nextStepStyle: null
     };
   }
   const text = String(input || "").trim();
