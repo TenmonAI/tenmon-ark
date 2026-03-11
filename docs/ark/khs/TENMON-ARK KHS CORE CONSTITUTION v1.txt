@@ -1,0 +1,201 @@
+🌌 TENMON-ARK KHS CORE CONSTITUTION v1
+
+（言灵秘書 中枢封印版）
+
+【0. 宣言】
+
+本体系は「言灵秘書（KHS）」を唯一の言灵中枢とする。
+KHSに含まれない言灵概念は一切採用しない。
+
+外部体系（カタカムナ、古事記、祝詞、法華経、聖書、コーラン等）は
+写像レイヤーにのみ存在し、中枢語義を定義してはならない。
+
+【1. 憲法（非交渉事項）】
+
+言灵の定義は必ずKHS原典Unitに基づく
+
+doc=NOTION:PAGE:* + pdfPage=数値 が無い断言は禁止
+
+pdfPage=? は封印不可（GATE凍結のみ許可）
+
+truth_axisは以下の10軸に固定する
+
+cycle
+polarity
+center
+breath
+carami
+order
+correspondence
+manifestation
+purification
+governance
+
+表記固定
+
+霊 → 灵
+
+水火 = イキ（必要時 水火（イキ））
+
+与合 → 與合（くみあい）
+
+高天原 → タカアマハラ
+
+禁止事項
+
+外部語源補間
+
+ニューエイジ的補間
+
+「一般には」「と言われる」等の曖昧化
+
+KHS語義の心理学化
+
+【2. 中枢構造】
+中心原理
+
+正中（まなか）＝ゝ（凝）
+そこより水火別（イキワカレ）が起こる。
+
+水＝軽清＝昇＝天
+火＝重濁＝降＝地
+
+この上下配属がすべての判定軸。
+
+【3. 最小定義核】
+水火（イキ）
+
+水＝動く側
+火＝動かす側
+形＝火が水を動かして顕れる
+
+sourceRef:
+doc=NOTION:PAGE:eed52861641d4d32ac88f3755c4c7a89
+pdfPage=479
+
+truth_axis: polarity / manifestation
+
+正中（まなか）
+
+天地の中心にゝ（凝）が立つ
+ここから水火別が起こる
+
+sourceRef:
+doc=NOTION:PAGE:6beb2c055ef24cf6b60cecbeb1b7847a
+pdfPage=97
+
+truth_axis: center / order
+
+ア
+
+五十連の惣名
+無にして有
+基底母体
+
+sourceRef:
+doc=NOTION:PAGE:af58bef540844ff59f19775177c8f3e8
+pdfPage=415
+
+truth_axis: center / manifestation
+
+ワ
+
+国土
+形の宰
+水火の灵
+
+sourceRef:
+doc=NOTION:PAGE:efc23543a4284d8199d3b8c9ef6e6fbe
+pdfPage=420
+
+truth_axis: polarity / manifestation
+
+五十連秩序
+
+ア行＝天
+ワ行＝地
+ヤ行＝人
+三行＝君位
+八行＝臣
+
+sourceRef:
+doc=NOTION:PAGE:c69b831fb5e24de99b89bf6ccc39874d
+pdfPage=24
+
+truth_axis: governance / correspondence
+
+澄濁方向
+
+澄＝上
+濁＝降
+
+sourceRef:
+doc=NOTION:PAGE:71974cfd35a54e6fbbe120bd17297bb8
+pdfPage=449
+
+truth_axis: purification / polarity
+
+【4. 思考規則（4PHI）】
+
+SENSE
+問いを termKey と type（DEF / LAW / PROC / RULE）に分類する
+
+NAME
+glossary.short_def + Unit引用
+
+ONE_STEP
+1手のみ提示
+
+NEXT_DOOR
+不足Unitがあれば観測要求
+
+【5. 真理フィルター】
+
+EvidenceScore = 0 → GATE
+Consistency違反 → 停止
+truth_axis逸脱 → 修正
+外部混入 → 写像レイヤーへ隔離
+
+【6. 中枢と写像の分離】
+
+KHS_CORE = 語義定義領域
+SCRIPTURE_MAP = 外部整合領域
+
+外部は必ず
+
+docs/ark/map/
+
+に保存すること。
+
+【7. バージョン】
+
+version: KHS_CORE_v1
+status: SEALABLE
+checksum: (生成後追記)
+
+封印手順（VPS）
+
+上記全文を
+KHS_CORE_CONSTITUTION_v1.txt
+として保存
+
+アップロード
+
+scp KHS_CORE_CONSTITUTION_v1.txt tenmon-vps:/var/tmp/
+
+VPSで配置
+
+sudo mkdir -p /opt/tenmon-ark-repo/docs/ark/khs
+sudo cp /var/tmp/KHS_CORE_CONSTITUTION_v1.txt \
+  /opt/tenmon-ark-repo/docs/ark/khs/
+
+チェックサム封印
+
+sha256sum /opt/tenmon-ark-repo/docs/ark/khs/KHS_CORE_CONSTITUTION_v1.txt \
+  | sudo tee /opt/tenmon-ark-repo/docs/ark/khs/KHS_CORE_CONSTITUTION_v1.sha256
+
+git封印
+
+git add docs/ark/khs/KHS_CORE_CONSTITUTION_v1.*
+git commit -m "seal(khs-core): add KHS_CORE_CONSTITUTION_v1"
+git push

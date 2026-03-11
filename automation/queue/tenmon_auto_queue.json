@@ -1,0 +1,92 @@
+{
+  "schema": "TENMON_AUTO_QUEUE_V1",
+  "repo": "/opt/tenmon-ark-repo",
+  "api": "/opt/tenmon-ark-repo/api",
+  "base_url": "http://127.0.0.1:3000",
+  "service": "tenmon-ark-api.service",
+  "global_allowed_dirty_paths": [
+    "docs/ark/forge/",
+    "docs/ark/governance/",
+    "\"docs/ark/khs/TENMON-ARK KHS CORE CONSTITUTION v1.sha256\"",
+    "\"docs/ark/khs/TENMON-ARK KHS CORE CONSTITUTION v1.txt\"",
+    "docs/ark/map/iroha_amaterasu_axis_raw_hits_v1.txt",
+    "automation/"
+  ],
+  "cards": [
+    {
+      "name": "OPS_HEALTHCHECK_V1",
+      "enabled": true,
+      "build": false,
+      "restart_service": "",
+      "audit_stage": "READY",
+      "probes": [
+        {
+          "message": "言霊とは何ですか？",
+          "threadId": "auto_health_def_1",
+          "expect_route": "DEF_FASTPATH_VERIFIED_V1",
+          "expect_intention_schema": "TENMON_INTENTION_CONSTITUTION_V1"
+        },
+        {
+          "message": "言霊秘書とは何ですか？",
+          "threadId": "auto_health_scripture_1",
+          "expect_route": "TENMON_SCRIPTURE_CANON_V1",
+          "expect_intention_schema": "TENMON_INTENTION_CONSTITUTION_V1"
+        },
+        {
+          "message": "今日は少し疲れています",
+          "threadId": "auto_health_support_1",
+          "expect_route": "N2_KANAGI_PHASE_TOP",
+          "expect_intention_schema": "TENMON_INTENTION_CONSTITUTION_V1"
+        }
+      ],
+      "next_on_pass": "R8_KANAGI_SELF_KERNEL_V1",
+      "next_on_fail": "OPS_HEALTHCHECK_V1"
+    },
+    {
+      "name": "R8_KANAGI_SELF_KERNEL_V1",
+      "enabled": true,
+      "precheck": [
+        "test -f /opt/tenmon-ark-repo/canon/tenmon_intention_constitution_v1.json",
+        "test -f /opt/tenmon-ark-repo/canon/tenmon_intent_kernel_v1.json",
+        "test -f /opt/tenmon-ark-repo/api/src/core/intentionConstitution.ts",
+        "test -f /opt/tenmon-ark-repo/api/src/core/intentKernel.ts"
+      ],
+      "apply_cmd": "bash /opt/tenmon-ark-repo/automation/ai_apply_adapter.sh",
+      "prompt_file": "/opt/tenmon-ark-repo/automation/prompts/R8_KANAGI_SELF_KERNEL_V1.prompt.md",
+      "build": true,
+      "restart_service": "tenmon-ark-api.service",
+      "audit_stage": "READY",
+      "allowed_dirty_paths": [
+        "api/src/core/kanagiSelfKernel.ts",
+        "api/src/routes/chat_parts/gates_impl.ts",
+        "api/src/core/intentionConstitution.ts",
+        "api/src/core/intentKernel.ts",
+        "canon/tenmon_intention_constitution_v1.json",
+        "canon/tenmon_intent_kernel_v1.json",
+        "docs/ark/map/iroha_amaterasu_axis_v1.md"
+      ],
+      "probes": [
+        {
+          "message": "言霊とは何ですか？",
+          "threadId": "auto_selfkernel_def_1",
+          "expect_route": "DEF_FASTPATH_VERIFIED_V1",
+          "expect_intention_schema": "TENMON_INTENTION_CONSTITUTION_V1"
+        },
+        {
+          "message": "この件をどう整理すればいい？",
+          "threadId": "auto_selfkernel_general_1",
+          "expect_route": "NATURAL_GENERAL_LLM_TOP",
+          "expect_intention_schema": "TENMON_INTENTION_CONSTITUTION_V1"
+        },
+        {
+          "message": "今日は少し疲れています",
+          "threadId": "auto_selfkernel_support_1",
+          "expect_route": "N2_KANAGI_PHASE_TOP",
+          "expect_intention_schema": "TENMON_INTENTION_CONSTITUTION_V1"
+        }
+      ],
+      "next_on_pass": "R9_SCRIPTURE_LEARNING_LEDGER_V1",
+      "next_on_fail": "R8_KANAGI_SELF_KERNEL_V1"
+    }
+  ]
+}
