@@ -120,6 +120,16 @@ const KEYWORD_RULES: Record<string, RegExp[]> = {
  * マッチが無い場合は null を返す。
  */
 export function classifyIrohaCounselInput(input: string): IrohaCounselClassificationResult | null {
+
+  // R10_DEFER_SIGNAL_COVERAGE_V1: 「整理 or 保留」問いは defer を優先で返す
+  if (/保留/.test(input) && /整理/.test(input)) {
+    return {
+      actionKey: "defer",
+      displayName: "保留する",
+      confidence: 0.78,
+      matchedSignals: ["/整理/u", "/保留/u"]
+    };
+  }
   const text = String(input || "").trim();
   if (!text) return null;
 
