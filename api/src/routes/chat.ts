@@ -659,6 +659,10 @@ const pid = process.pid;
     }
   }
 
+  // wrap res.json so ANY {response: "..."} is sanitized before leaving the server
+  const __origJson = (res as any).json.bind(res);
+  (res as any).json = (obj: any) => __origJson(obj);
+
   function buildLlmStatusFromResult(r: any) {
     return {
       enabled: true,
