@@ -4,20 +4,23 @@
   "api": "/opt/tenmon-ark-repo/api",
   "base_url": "http://127.0.0.1:3000",
   "service": "tenmon-ark-api.service",
+  "freeze_log_dir": "/var/log/tenmon",
   "global_allowed_dirty_paths": [
     "docs/ark/forge/",
     "docs/ark/governance/",
-    "\"docs/ark/khs/TENMON-ARK KHS CORE CONSTITUTION v1.sha256\"",
-    "\"docs/ark/khs/TENMON-ARK KHS CORE CONSTITUTION v1.txt\"",
-    "docs/ark/map/iroha_amaterasu_axis_raw_hits_v1.txt",
+    "docs/ark/khs/",
+    "docs/ark/map/",
+    "docs/automation/",
     "automation/"
   ],
   "cards": [
     {
       "name": "OPS_HEALTHCHECK_V1",
+      "lane": "health",
       "enabled": true,
-      "build": false,
-      "restart_service": "",
+      "build": true,
+      "restart_service": "tenmon-ark-api.service",
+      "settle_seconds": 2,
       "audit_stage": "READY",
       "probes": [
         {
@@ -39,12 +42,13 @@
           "expect_intention_schema": "TENMON_INTENTION_CONSTITUTION_V1"
         }
       ],
-      "next_on_pass": "R8_KANAGI_SELF_KERNEL_V1",
+      "next_on_pass": "OPS_HEALTHCHECK_V1",
       "next_on_fail": "OPS_HEALTHCHECK_V1"
     },
     {
       "name": "R8_KANAGI_SELF_KERNEL_V1",
-      "enabled": true,
+      "lane": "apply",
+      "enabled": false,
       "precheck": [
         "test -f /opt/tenmon-ark-repo/canon/tenmon_intention_constitution_v1.json",
         "test -f /opt/tenmon-ark-repo/canon/tenmon_intent_kernel_v1.json",

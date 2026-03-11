@@ -156,6 +156,7 @@ def write_freeze(
     audit_json: dict[str, Any] | None,
     next_card: str | None,
     status: str,
+    freeze_log_dir: str = "/var/log/tenmon",
 ) -> None:
     git_sha = subprocess.check_output(
         ["bash", "-lc", "git rev-parse --short HEAD"], cwd=repo, text=True
@@ -163,7 +164,9 @@ def write_freeze(
     git_status = subprocess.check_output(
         ["bash", "-lc", "git status --short"], cwd=repo, text=True
     ).strip()
-    freeze_path = pathlib.Path(f"/var/log/tenmon/{card_name}_AUTO_FREEZE_V1.txt")
+    freeze_dir = pathlib.Path(freeze_log_dir)
+    freeze_dir.mkdir(parents=True, exist_ok=True)
+    freeze_path = freeze_dir / f"{card_name}_AUTO_FREEZE_V1.txt"
     body = [
         f"# {card_name} AUTO FREEZE",
         f"- status: {status}",
@@ -205,6 +208,7 @@ def run_card(queue: dict[str, Any], state: dict[str, Any], card: dict[str, Any])
     api = queue["api"]
     base_url = queue["base_url"]
     service = card.get("restart_service") or queue.get("service")
+    freeze_log_dir = queue.get("freeze_log_dir", "/var/log/tenmon")
     global_allow = queue.get("global_allowed_dirty_paths", [])
     card_allow = card.get("allowed_dirty_paths", [])
     allow_rules = global_allow + card_allow
@@ -245,20 +249,25 @@ def run_card(queue: dict[str, Any], state: dict[str, Any], card: dict[str, Any])
         if apply_cmd:
             logger.write("")
             logger.write("== APPLY ==")
-            env = os.environ.copy()
-            env.update(
-                {
-                    "CARD_NAME": card_name,
-                    "REPO": repo,
-                    "API": api,
-                    "BASE_URL": base_url,
-                    "LOGDIR": str(logdir),
-                    "CARD_PROMPT_FILE": str(card.get("prompt_file", "")),
-                }
-            )
-            p = run_cmd(apply_cmd, cwd=repo, logger=logger, env=env)
-            if p.returncode != 0:
-                raise RunnerError("apply", f"apply failed: {apply_cmd}", p.returncode)
+            if not os.environ.get("TENMON_APPLY_ENGINE"):
+                logger.write("[SKIP] apply: TENMON_APPLY_ENGINE not set (apply lane safe stop)")
+            else:
+                env = os.environ.copy()
+                env.update(
+                    {
+                        "CARD_NAME": card_name,
+                        "REPO": repo,
+                        "API": api,
+                        "BASE_URL": base_url,
+                        "LOGDIR": str(logdir),
+                        "CARD_PROMPT_FILE": str(card.get("prompt_file", "")),
+                    }
+                )
+                p = run_cmd(apply_cmd, cwd=repo, logger=logger, env=env)
+                if p.returncode == 90:
+                    logger.write("[SKIP] apply not wired (exit 90)")
+                elif p.returncode != 0:
+                    raise RunnerError("apply", f"apply failed: {apply_cmd}", p.returncode)
 
         if card.get("build", True):
             logger.write("")
@@ -324,6 +333,7 @@ def run_card(queue: dict[str, Any], state: dict[str, Any], card: dict[str, Any])
             audit_json=audit_json,
             next_card=next_card,
             status="pass",
+            freeze_log_dir=freeze_log_dir,
         )
         logger.write("")
         logger.write(f"[PASS] {card_name}")
@@ -346,6 +356,7 @@ def run_card(queue: dict[str, Any], state: dict[str, Any], card: dict[str, Any])
             audit_json=audit_json,
             next_card=next_card,
             status=f"fail:{cls}",
+            freeze_log_dir=freeze_log_dir,
         )
         logger.write("")
         logger.write(f"[FAIL] stage={e.stage} class={cls} message={e}")
@@ -369,6 +380,7 @@ def run_card(queue: dict[str, Any], state: dict[str, Any], card: dict[str, Any])
             audit_json=audit_json,
             next_card=card_name,
             status="fail:runner_exception",
+            freeze_log_dir=freeze_log_dir,
         )
         return 1
 

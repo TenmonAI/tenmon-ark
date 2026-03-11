@@ -1,0 +1,17 @@
+# AUTO_RUNNER_HEALTH_LANE_FREEZE_V1: health lane のみ（build/restart/audit/probe/freeze）
+[Unit]
+Description=TENMON auto runner (health lane)
+After=network-online.target tenmon-ark-api.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+EnvironmentFile=-/opt/tenmon-ark-repo/automation/systemd/tenmon-auto-runner.env
+WorkingDirectory=/opt/tenmon-ark-repo
+ExecStart=/usr/bin/python3 /opt/tenmon-ark-repo/automation/tenmon_auto_runner.py --queue /opt/tenmon-ark-repo/automation/queue/tenmon_auto_queue.json --once
+LockDirectory=/var/lock
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
