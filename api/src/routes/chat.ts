@@ -97,6 +97,9 @@ function __cleanLlmFrame(r: string): string {
 }
 const router: IRouter = Router();
 
+// R10_THREAD_CONTINUITY_SCRIPTURE_CENTER_FIX_V2: same-thread follow-up 検出用（scripture continuity 補助）
+const RE_THREAD_FOLLOWUP = /(そのうち|その前提で|今の話|今の件|どちらが中心|次の一歩だけ|整理ですか、それとも保留ですか)/;
+
 function normalizeHeartShape(h: any) {
   const userPhase =
     typeof h?.userPhase === "string" ? h.userPhase : "CENTER";
@@ -984,6 +987,32 @@ ${String((gptDraft as any)?.text ?? "").trim()}
       );
     } catch (e) {
       console.error("[SYNAPSE_INSERT_FAIL_TRUTH]", e);
+    }
+
+    // R10_THREAD_CENTER_UPSERT_TRUTH_GATE_V2: TRUTH_GATE_RETURN_V2 の返却直前で thread center を保存（continuity 用の下地作り）。
+    try {
+      const centerDoc = typeof __sourceDoc === "string" && __sourceDoc.trim() ? __sourceDoc.trim() : null;
+      if (centerDoc) {
+        upsertThreadCenter({
+          threadId: String(threadId || ""),
+          centerType: "scripture",
+          centerKey: centerDoc,
+          centerReason: "TRUTH_GATE_RETURN_V2",
+          sourceRouteReason: "TRUTH_GATE_RETURN_V2",
+          sourceScriptureKey: centerDoc,
+          sourceTopicClass: "scripture",
+          // selfPhase / intentPhase は現状空でよい
+          confidence: 0.8,
+        });
+      }
+    } catch (e) {
+      try {
+        console.error(
+          "[THREAD_CENTER_ERROR]",
+          "op=upsert_from_truth_gate",
+          "err=" + ((e as any)?.message ?? String(e))
+        );
+      } catch {}
     }
 
     // KG2_SEED_USAGE_TRACKER_FIX_V1: synapse で使用された seed の usageScore を更新（TRUTH_GATE のみ。NATURAL/decisionFrame/synapse は不変）
@@ -3507,8 +3536,37 @@ return res.json(__tenmonGeneralGateResultMaybe({
         /イロハ言[霊灵]解とは\s*(何|なに)\s*(ですか)?\s*[？?]?$/u.test(__msgScript) ||
         /カタカムナ言[霊灵]解とは\s*(何|なに)\s*(ですか)?\s*[？?]?$/u.test(__msgScript);
 
-      if (!isTestTid0 && (__isScriptureDef || __isDefinitionQ) && !hasDoc0 && !askedMenu0 && !isCmd0) {
-        const __hitScripture = resolveScriptureQuery(__msgScript);
+      // R10_THREAD_CONTINUITY_SCRIPTURE_CENTER_FIX_V2: same-thread follow-up 時に直前 scripture center を補助ヒントとして使う
+      let __scriptureCenterKey: string | null = null;
+      try {
+        const tidForCenter = String(threadId || "").trim();
+        const isFollowup = RE_THREAD_FOLLOWUP.test(__msgScriptRaw);
+        if (tidForCenter && isFollowup) {
+          const center = getLatestThreadCenter(tidForCenter);
+          if (center && center.center_type === "scripture" && center.center_key) {
+            __scriptureCenterKey = center.center_key;
+            console.log(
+              "[THREAD_CENTER_FOLLOWUP]",
+              "threadId=" + tidForCenter,
+              "centerType=" + center.center_type,
+              "centerKey=" + center.center_key
+            );
+          }
+        }
+      } catch {}
+
+      if (!isTestTid0 && (__isScriptureDef || __isDefinitionQ || __scriptureCenterKey) && !hasDoc0 && !askedMenu0 && !isCmd0) {
+        let __hitScripture = resolveScriptureQuery(__msgScript);
+        if (!__hitScripture && __scriptureCenterKey && !__isScriptureDef && !__isDefinitionQ) {
+          __hitScripture = resolveScriptureQuery(__scriptureCenterKey);
+          if (__hitScripture) {
+            console.log(
+              "[THREAD_CENTER_SCRIPTURE_CONTINUITY]",
+              "threadId=" + String(threadId || ""),
+              "scriptureKey=" + __scriptureCenterKey
+            );
+          }
+        }
         if (__hitScripture) {
           const __canon = buildScriptureCanonResponse(__hitScripture.scriptureKey, "standard");
           if (__canon) {
@@ -4680,6 +4738,16 @@ const __heartNorm = normalizeHeartShape(__heart);
       if (__composed.meaningFrame != null) {
         __ku.meaningFrame = __composed.meaningFrame;
       }
+      // R10_THREAD_CENTER_READ_BIND_V1
+      try {
+        if (String(threadId || "").trim()) {
+          const __tc = getLatestThreadCenter(String(threadId));
+          if (__tc) {
+            __ku.threadCenter = { centerType: __tc.center_type, centerKey: __tc.center_key, sourceRouteReason: __tc.source_route_reason };
+            console.log("[THREAD_CENTER_FOLLOWUP]", "threadId=" + threadId, "centerType=" + __tc.center_type, "centerKey=" + __tc.center_key);
+          }
+        }
+      } catch {}
 
       try {
         const __mf: any = __composed.meaningFrame ?? {};
