@@ -49,6 +49,11 @@ function __tenmonGeneralGateSoft(out: string): string {
     // cap length
     if (u.length > 220) u = u.slice(0, 220).replace(/[。、\s　]+$/g, "") + "？";
 
+    // R10_GENERAL_POST_TAIL_SANITIZE_V1: remove generic support tails for NATURAL_GENERAL_LLM_TOP
+    u = u.replace(/.*もし動けない理由があるなら[^\n]*\n?/g, "");
+    u = u.replace(/.*いま気になっているところを、一歩だけ外側から眺めるとしたら[^\n]*\n?/g, "");
+    u = u.replace(/\n{3,}/g, "\n\n").trim();
+
     // if preach-y, soften but keep the user's question ending
     if (hasBad) {
       const qpos3 = Math.max(u.lastIndexOf("？"), u.lastIndexOf("?"));
@@ -57,6 +62,11 @@ function __tenmonGeneralGateSoft(out: string): string {
 
     return u.startsWith("【天聞の所見】") ? u : ("【天聞の所見】" + u);
   }
+
+  // normal path (no preach / no clamp): strip generic support tails if present
+  t = t.replace(/.*もし動けない理由があるなら[^\n]*\n?/g, "");
+  t = t.replace(/.*いま気になっているところを、一歩だけ外側から眺めるとしたら[^\n]*\n?/g, "");
+  t = t.replace(/\n{3,}/g, "\n\n").trim();
 
   return t;
 }
