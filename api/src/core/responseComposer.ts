@@ -397,7 +397,7 @@ function applyPersonaReduction(
 }
 
 export function responseComposer(input: ResponseComposerInput): ResponseComposerOutput {
-  let out = String(input?.response ?? "");
+  let out = String(input?.response ?? "").replace(/\u3044\u307e\u306e\u8a00\u8449\u3092[\u201c\u201d""][^\n]*/gu, "").replace(/^\u3044\u307e\u306e\u8a00\u8449\u3092[^\n]*\n?/gm, "").trimStart();
   const style = getTenmonStyle();
   void style.voice;
 
