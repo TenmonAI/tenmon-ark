@@ -51,7 +51,6 @@ function __tenmonGeneralGateSoft(out: string): string {
 
     // if preach-y, soften but keep the user's question ending
     if (hasBad) {
-      u = "【天聞の所見】いまの言葉を“次の一歩”に落とします。\n" + u.replace(/^【天聞の所見】/, "").trim();
       const qpos3 = Math.max(u.lastIndexOf("？"), u.lastIndexOf("?"));
       if (qpos3 !== -1) u = u.slice(0, qpos3 + 1).trim();
     }
