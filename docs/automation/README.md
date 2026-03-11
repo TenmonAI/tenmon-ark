@@ -1,10 +1,10 @@
 # Automation (AUTO_RUNNER_HEALTH_LANE_FREEZE_V1)
 
-## Health lane 固定
+## Health lane 固定（正式運用）
 
 - **対象カード**: `OPS_HEALTHCHECK_V1`（build / restart / audit / representative probes / freeze log）
 - **反復**: `next_on_pass` / `next_on_fail` とも `OPS_HEALTHCHECK_V1` で health のみループ
-- **Apply lane**: `R8_KANAGI_SELF_KERNEL_V1` は `enabled: false`。`TENMON_AI_APPLY_CMD` / `TENMON_APPLY_ENGINE` 未設定時は apply は skip（fail にしない）。apply カードは find_next_card で選ばれない（health-only モード）
+- **Apply lane**: **unwired / skip-disabled official**（[OPS_APPLY_ENGINE_SELECT_V1](./OPS_APPLY_ENGINE_SELECT_V1.md)）。`R8_KANAGI_SELF_KERNEL_V1` は `enabled: false`。`TENMON_AI_APPLY_CMD` / `TENMON_APPLY_ENGINE` 未設定＝正常運用。apply は skip（fail にしない）
 
 ## Freeze 出力先
 
