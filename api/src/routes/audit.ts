@@ -53,15 +53,15 @@ router.get("/audit", (_req: Request, res: Response) => {
     }
     // Ready: 200 OK
     return res.json({
-  constitution: { ...__constitutionHashes() },
+      constitution: { ...__constitutionHashes() },
       ok: true,
       timestamp: new Date().toISOString(),
       gitSha,
       pid,
       uptime: Math.floor(uptime),
       readiness: r,
-    build: { mark: BUILD_MARK, features: BUILD_FEATURES_KOSHIKI },
-        });
+      build: { mark: BUILD_MARK, features: BUILD_FEATURES_KOSHIKI },
+    });
   } catch (error) {
     // gitSha と readiness は取得を試みる（失敗時は空文字/null）
     let gitSha = "";

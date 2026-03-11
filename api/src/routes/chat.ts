@@ -14,6 +14,8 @@ import { createRequire as __tenmonCreateRequire } from "node:module";
 const __tenmonRequire = __tenmonCreateRequire(import.meta.url);
 import { heartModelV1 } from "../core/heartModel.js";
 import { computeHeartPhase, computeHeartState } from "../core/heartPhase.js";
+import { computeKanagiSelfKernel, getSafeKanagiSelfOutput } from "../core/kanagiSelfKernel.js";
+import { getIntentionHintForKu } from "../core/intentionConstitution.js";
 
 import { tenmonCore } from "../core/tenmonCore.js";
 import { TENMON_PERSONA } from "../core/tenmonPersona.js";
@@ -2657,6 +2659,19 @@ try {
 
       if (ku.rewriteUsed === undefined) ku.rewriteUsed = false;
       if (ku.rewriteDelta === undefined) ku.rewriteDelta = 0;
+      // R8_KANAGI_SELF_BIND_KU_V1: decisionFrame.ku.kanagiSelf を決定論で生成（routeReason/heart/intention は不変）
+      try {
+        const __intention = getIntentionHintForKu();
+        const __ks = computeKanagiSelfKernel({
+          rawMessage: String((payload as any)?.rawMessage ?? message ?? ""),
+          routeReason: String(ku.routeReason ?? ""),
+          heart: ku.heart ?? undefined,
+          intention: __intention ?? undefined,
+        });
+        (ku as any).kanagiSelf = __ks;
+      } catch {
+        (ku as any).kanagiSelf = getSafeKanagiSelfOutput();
+      }
     } catch {}
 
     const __composed = responseComposer({
