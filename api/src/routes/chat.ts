@@ -1612,10 +1612,9 @@ ${String((gptDraft as any)?.text ?? "").trim()}
                   }
                 }
               } catch {}
-              if (
-                (__ku.kanagiSelf?.shouldPersist === true || __ku.kanagiSelf?.shouldPersist === 1 ||
-                 __ku.kanagiSelf?.shouldRecombine === true || __ku.kanagiSelf?.shouldRecombine === 1)
-              ) {
+              // R9_LEDGER_APPEND_GUARD_UNIFY_V1: 全 route 共通 — has_self で append 可否を判定（shouldPersist/shouldRecombine は builder 用に維持）
+              const __has_self = __ku.kanagiSelf != null && typeof __ku.kanagiSelf === "object";
+              if (__has_self) {
                 const entry = buildKanagiGrowthLedgerEntryFromKu(__ku, rawForLedger);
                 insertKanagiGrowthLedgerEntry(entry);
               // OBS_R9_LEDGER_WRAPPER_HITMAP_V1: ledger mark 直前の観測（ロジック変更なし）

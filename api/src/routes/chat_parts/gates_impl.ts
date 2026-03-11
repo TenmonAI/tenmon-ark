@@ -2,6 +2,7 @@
 // X3_GATES_EXTRACT_V1
 
 import { getIntentionHintForKu } from "../../core/intentionConstitution.js";
+import { tryAppendKanagiGrowthLedgerFromPayload } from "../../core/kanagiGrowthLedger.js";
 import { computeKanagiSelfKernel, getSafeKanagiSelfOutput } from "../../core/kanagiSelfKernel.js";
 import { resolveScriptureQuery } from "../../core/scriptureCanon.js";
 
@@ -60,25 +61,6 @@ function __tenmonGeneralGateSoft(out: string): string {
 }
 function __tenmonGeneralGateResultMaybe(x: any): any {
   try {
-    // OBS_R9_LEDGER_WRAPPER_HITMAP_V1: gate 入口での route / df / ku / self ヒット状況を軽量観測
-    try {
-      const hasResp = x && typeof x === "object" && "response" in x;
-      const df0 = (x as any)?.decisionFrame;
-      const has_df = df0 != null && typeof df0 === "object";
-      const ku0 = has_df ? (df0 as any).ku : null;
-      const has_ku = ku0 != null && typeof ku0 === "object";
-      const self0 = has_ku ? (ku0 as any).kanagiSelf : null;
-      const has_self = self0 != null && typeof self0 === "object";
-      console.error(
-        "[R9_LEDGER_HITMAP_GATE]",
-        "rr=" + String(has_ku ? (ku0 as any).routeReason ?? "" : ""),
-        "has_response=" + hasResp,
-        "has_df=" + has_df,
-        "has_ku=" + has_ku,
-        "has_self=" + has_self
-      );
-    } catch {}
-
     if (!x || typeof x !== "object") return x;
     const df = (x as any).decisionFrame || {};
     const ku = df.ku || {};
@@ -242,6 +224,28 @@ function __tenmonGeneralGateResultMaybe(x: any): any {
           }
         }
       }
+    } catch {}
+    // R9_LEDGER_GATE_WRAPPER_APPEND_UNIFY_V1: gate 経由でも共通 append（__KANAGI_LEDGER_DONE で二重防止）
+    try {
+      tryAppendKanagiGrowthLedgerFromPayload(x);
+    } catch {}
+    // R9_LEDGER_HITMAP_SELF_FLAG_ALIGN_V1: has_self は kanagiSelf 補完後の ku を参照
+    try {
+      const hasResp = x && typeof x === "object" && "response" in x;
+      const df0 = (x as any)?.decisionFrame;
+      const has_df = df0 != null && typeof df0 === "object";
+      const ku0 = has_df ? (df0 as any).ku : null;
+      const has_ku = ku0 != null && typeof ku0 === "object";
+      const self0 = has_ku ? (ku0 as any).kanagiSelf : null;
+      const has_self = self0 != null && typeof self0 === "object";
+      console.error(
+        "[R9_LEDGER_HITMAP_GATE]",
+        "rr=" + String(has_ku ? (ku0 as any).routeReason ?? "" : ""),
+        "has_response=" + hasResp,
+        "has_df=" + has_df,
+        "has_ku=" + has_ku,
+        "has_self=" + has_self
+      );
     } catch {}
     return x;
   } catch { return x; }

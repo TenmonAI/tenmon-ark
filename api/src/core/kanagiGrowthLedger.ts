@@ -212,6 +212,31 @@ export function insertKanagiGrowthLedgerEntry(
   }
 }
 
+/**
+ * R9_LEDGER_GATE_WRAPPER_APPEND_UNIFY_V1: payload から 1 回だけ append を試行。__KANAGI_LEDGER_DONE で二重防止。
+ * 入力優先: rawMessageOverride / payload.rawMessage / payload.message / decisionFrame.ku.inputText
+ */
+export function tryAppendKanagiGrowthLedgerFromPayload(
+  payload: any,
+  rawMessageOverride?: string
+): void {
+  try {
+    if (!payload || typeof payload !== "object") return;
+    if ((payload as any).__KANAGI_LEDGER_DONE === true) return;
+    const df = payload.decisionFrame;
+    if (!df || typeof df !== "object") return;
+    const ku = df.ku;
+    if (!ku || typeof ku !== "object") return;
+    if (!ku.kanagiSelf || typeof ku.kanagiSelf !== "object") return;
+    const rawForLedger = String(
+      rawMessageOverride ?? (payload as any)?.rawMessage ?? (payload as any)?.message ?? (ku as any)?.inputText ?? ""
+    );
+    const entry = buildKanagiGrowthLedgerEntryFromKu(ku as Record<string, unknown>, rawForLedger);
+    insertKanagiGrowthLedgerEntry(entry);
+    (payload as any).__KANAGI_LEDGER_DONE = true;
+  } catch {}
+}
+
 /** DB 行（snake_case）の値型 */
 export type KanagiGrowthLedgerRow = Record<string, string | number | null>;
 
