@@ -84,6 +84,17 @@ import { getPersonaConstitutionSummary } from "../core/personaConstitution.js";
 import { writeScriptureLearningLedger } from "../core/scriptureLearningLedger.js";
 import { buildKanagiGrowthLedgerEntryFromKu, insertKanagiGrowthLedgerEntry } from "../core/kanagiGrowthLedger.js";
 import { upsertThreadCenter, getLatestThreadCenter } from "../core/threadCenterMemory.js";
+
+function __cleanLlmFrame(r: string): string {
+  const __in = String(r ?? "");
+  const __out = __in
+    .replace(/いまの言葉を[\u201c\u201d\u0022][^\n]*/gu, "")
+    .replace(/^いまの言葉を[^\n]*\n?/gm, "")
+    .trimStart();
+  if (__in !== __out) console.log("[CLEAN_LLM_FRAME] stripped");
+  else if (__in.includes("いまの言葉を")) console.log("[CLEAN_LLM_FRAME] MISS pattern=", JSON.stringify(__in.slice(0,40)));
+  return __out;
+}
 const router: IRouter = Router();
 
 function normalizeHeartShape(h: any) {
@@ -2842,7 +2853,7 @@ try {
     }
 
 return res.json(__tenmonGeneralGateResultMaybe({
-      response: __composed.response,
+      response: __cleanLlmFrame(__composed.response),
       timestamp: payload.timestamp,
       trace: payload.trace,
       provisional: payload.provisional,
@@ -3584,7 +3595,7 @@ return res.json(__tenmonGeneralGateResultMaybe({
               });
             } catch {}
             return res.json(__tenmonGeneralGateResultMaybe({
-              response: __composed.response,
+              response: __cleanLlmFrame(__composed.response),
               evidence: null,
               candidates: [],
               timestamp,
@@ -3733,7 +3744,7 @@ return res.json(__tenmonGeneralGateResultMaybe({
           };
           if (__composed.meaningFrame != null) __ku.meaningFrame = __composed.meaningFrame;
           return res.json(__tenmonGeneralGateResultMaybe({
-            response: __composed.response,
+            response: __cleanLlmFrame(__composed.response),
             evidence: null,
             candidates: [],
             timestamp,
@@ -4293,6 +4304,8 @@ const DEF_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。雑談�
         .replace(/^\s*\d+[.)].*$/gm, "")
         .replace(/^\s*[-*•]\s+.*$/gm, "")
         .replace(/^いまの言葉を[^\n]*\n?/gm, "")
+        .replace(/いまの言葉を[\u201c\u201d\u0022][^\n]*/gu, "")
+        .replace(/いまの言葉を[\u201c\u201d\u0022][^\n]*/gu, "")
         .replace(/^\s*(受容|一点|一手)：\s*/gm, "")
         .replace(/\n{3,}/g, "\n\n")
         .trim();
@@ -4623,7 +4636,7 @@ let outText = "";
           } catch {}
 
           return res.json(__tenmonGeneralGateResultMaybe({
-            response: __composedLocked.response,
+            response: __cleanLlmFrame(__composedLocked.response),
             evidence: null,
             candidates: [],
             timestamp,
@@ -4687,8 +4700,12 @@ const __heartNorm = normalizeHeartShape(__heart);
         });
       } catch {}
 
+      const __composedRespCleaned = String(__composed.response ?? "")
+        .replace(/いまの言葉を[\u201c\u201d\u0022][^\n]*/gu, "")
+        .replace(/^いまの言葉を[^\n]*\n?/gm, "")
+        .trimStart();
       return res.json(__tenmonGeneralGateResultMaybe({
-        response: __composed.response,
+        response: __composedRespCleaned,
         evidence: null,
         candidates: [],
         timestamp,
@@ -4797,7 +4814,7 @@ if (!outText) {
       } catch {}
 
       return res.json(__tenmonGeneralGateResultMaybe({
-        response: __composed.response,
+        response: __cleanLlmFrame(__composed.response),
         evidence: null,
         candidates: [],
         timestamp,
