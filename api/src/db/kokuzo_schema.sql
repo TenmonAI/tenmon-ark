@@ -308,6 +308,26 @@ CREATE INDEX IF NOT EXISTS idx_synapse_log_createdAt ON synapse_log(createdAt);
 CREATE INDEX IF NOT EXISTS idx_synapse_log_threadId ON synapse_log(threadId);
 CREATE INDEX IF NOT EXISTS idx_synapse_log_inputSig ON synapse_log(inputSig);
 
+-- R10_SYNAPSE_TO_THREAD_SEED_V1: thread 単位の学習核（synapse 昇格用）
+CREATE TABLE IF NOT EXISTS ark_thread_seeds (
+  seedId TEXT PRIMARY KEY,
+  threadId TEXT NOT NULL,
+  createdAt TEXT NOT NULL DEFAULT (datetime('now')),
+  routeReason TEXT NOT NULL DEFAULT '',
+  topicClass TEXT,
+  scriptureKey TEXT,
+  selfPhase TEXT,
+  intentPhase TEXT,
+  driftRisk REAL,
+  lawsUsedJson TEXT NOT NULL DEFAULT '[]',
+  evidenceIdsJson TEXT NOT NULL DEFAULT '[]',
+  heartJson TEXT NOT NULL DEFAULT '{}',
+  lawTraceJson TEXT NOT NULL DEFAULT '[]',
+  sourceKind TEXT NOT NULL DEFAULT 'synapse_to_thread_seed_v1'
+);
+CREATE INDEX IF NOT EXISTS idx_ark_thread_seeds_threadId ON ark_thread_seeds(threadId);
+CREATE INDEX IF NOT EXISTS idx_ark_thread_seeds_createdAt ON ark_thread_seeds(createdAt);
+
 -- S0_STORAGE_MANIFEST_TABLE_V1: TENMON-ARK artifact 管理
 CREATE TABLE IF NOT EXISTS artifact_manifest (
   artifactId TEXT PRIMARY KEY,

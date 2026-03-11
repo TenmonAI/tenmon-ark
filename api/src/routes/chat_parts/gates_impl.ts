@@ -6,6 +6,7 @@ import { tryAppendKanagiGrowthLedgerFromPayload } from "../../core/kanagiGrowthL
 import { computeKanagiSelfKernel, getSafeKanagiSelfOutput } from "../../core/kanagiSelfKernel.js";
 import { resolveScriptureQuery } from "../../core/scriptureCanon.js";
 import { memoryPersistMessage } from "../../memory/index.js";
+import { tryAppendThreadSeedFromPayload } from "../../core/threadSeed.js";
 
 function __tenmonGeneralGateSoft(out: string): string {
   let t = String(out || "").replace(/\r/g, "").trim();
@@ -269,6 +270,10 @@ function __tenmonGeneralGateResultMaybe(x: any, rawMessageOverride?: string): an
         memoryPersistMessage(tid, "user", raw);
         memoryPersistMessage(tid, "assistant", String((x as any).response ?? ""));
       }
+    } catch {}
+    // R10_SYNAPSE_TO_THREAD_SEED_V1: synapse 昇格。1 response 1 seed、__THREAD_SEED_DONE で二重防止。失敗しても会話を落とさない。
+    try {
+      tryAppendThreadSeedFromPayload(x);
     } catch {}
     return x;
   } catch { return x; }
