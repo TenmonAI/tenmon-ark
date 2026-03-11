@@ -1352,6 +1352,14 @@ ${String((gptDraft as any)?.text ?? "").trim()}
         if (df && typeof df === "object") {
           df.ku = (df.ku && typeof df.ku === "object") ? df.ku : {};
 
+          // R9_GROWTH_LEDGER_RAWINPUT_BIND_V1: decisionFrame.ku.inputText を共通整流層で必ず埋める（既にあれば上書きしない）
+          try {
+            const cur = (df.ku as any).inputText;
+            if (cur == null || String(cur).trim() === "") {
+              (df.ku as any).inputText = String((obj as any)?.rawMessage ?? (obj as any)?.message ?? message ?? "");
+            }
+          } catch {}
+
           // C2_LLM_STATUS_ALWAYS_ATTACH_V1: always attach llmStatus (observability only)
           try {
             if ((df.ku as any).llmStatus == null) {
@@ -3337,6 +3345,7 @@ return res.json(__tenmonGeneralGateResultMaybe({
       /って何/.test(t0);
 
     // R7_SCRIPTURE_CANON_ROUTE_V1: scripture canon (言霊秘書・イロハ言霊解・カタカムナ言霊解) は concept canon / KHS / DEF fastpath より前に処理する
+    // OPS_IROHA_SCRIPTURE_PREEMPT_FIX_V1: 定義系の問い（とは/って/何/なに）でも resolveScriptureQuery を試し、scripture hit なら優先
     try {
       const __msgScriptRaw = String(message ?? "").trim();
       const __msgScript = normalizeCoreTermForRouting(__msgScriptRaw);
@@ -3345,7 +3354,7 @@ return res.json(__tenmonGeneralGateResultMaybe({
         /イロハ言[霊灵]解とは\s*(何|なに)\s*(ですか)?\s*[？?]?$/u.test(__msgScript) ||
         /カタカムナ言[霊灵]解とは\s*(何|なに)\s*(ですか)?\s*[？?]?$/u.test(__msgScript);
 
-      if (!isTestTid0 && __isScriptureDef && !hasDoc0 && !askedMenu0 && !isCmd0) {
+      if (!isTestTid0 && (__isScriptureDef || __isDefinitionQ) && !hasDoc0 && !askedMenu0 && !isCmd0) {
         const __hitScripture = resolveScriptureQuery(__msgScript);
         if (__hitScripture) {
           const __canon = buildScriptureCanonResponse(__hitScripture.scriptureKey, "standard");
@@ -3403,6 +3412,9 @@ return res.json(__tenmonGeneralGateResultMaybe({
             const __ku: any = {
               routeReason: "TENMON_SCRIPTURE_CANON_V1",
               heart: normalizeHeartShape(__heart),
+              scriptureKey: __hitScripture.scriptureKey,
+              scriptureMode: "canon",
+              scriptureAlignment: "scripture_aligned",
               scriptureCanon: {
                 scriptureKey: __hitScripture.scriptureKey,
                 displayName: __hitScripture.displayName ?? __hitScripture.scriptureKey,
@@ -3415,7 +3427,9 @@ return res.json(__tenmonGeneralGateResultMaybe({
               evidenceIds: [],
               lawTrace: [],
             };
-            if (__composed.meaningFrame != null) __ku.meaningFrame = __composed.meaningFrame;
+            if (__composed.meaningFrame != null) {
+              __ku.meaningFrame = { ...__composed.meaningFrame, scriptureKey: __hitScripture.scriptureKey };
+            }
 
             return res.json(__tenmonGeneralGateResultMaybe({
               response: __composed.response,

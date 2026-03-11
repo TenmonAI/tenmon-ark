@@ -3,6 +3,10 @@
 
 import { getIntentionHintForKu } from "../../core/intentionConstitution.js";
 import { computeKanagiSelfKernel, getSafeKanagiSelfOutput } from "../../core/kanagiSelfKernel.js";
+import {
+  buildKanagiGrowthLedgerEntryFromKu,
+  insertKanagiGrowthLedgerEntry,
+} from "../../core/kanagiGrowthLedger.js";
 import { resolveScriptureQuery } from "../../core/scriptureCanon.js";
 
 function __tenmonGeneralGateSoft(out: string): string {
@@ -195,21 +199,17 @@ function __tenmonGeneralGateResultMaybe(x: any): any {
             mf && typeof mf === "object" && typeof (mf as any).topicClass === "string"
               ? (mf as any).topicClass
               : undefined;
-          let scriptureKey: string | undefined;
-          let scriptureMode: string | undefined;
-          let scriptureAlignment: string | undefined;
-          if (routeReason === "TENMON_SCRIPTURE_CANON_V1") {
-            const hit = resolveScriptureQuery(rawMessage);
-            if (hit) {
-              scriptureKey = hit.scriptureKey;
-              scriptureMode = "canon";
-              scriptureAlignment = "scripture_aligned";
-            } else if (mf && (mf as any).scriptureKey != null) {
-              scriptureKey = String((mf as any).scriptureKey);
-              scriptureMode = "canon";
-              scriptureAlignment = "scripture_aligned";
-            }
-          }
+          // R8_SCRIPTURE_CANON_BIND_SELF_COMPLETE_V1: 優先順 __ku.scriptureKey → mf.scriptureKey → resolveScriptureQuery(rawMessage)
+          let scriptureKey: string | undefined =
+            __ku.scriptureKey != null && String(__ku.scriptureKey).trim()
+              ? String(__ku.scriptureKey).trim()
+              : mf && (mf as any).scriptureKey != null
+                ? String((mf as any).scriptureKey)
+                : routeReason === "TENMON_SCRIPTURE_CANON_V1"
+                  ? resolveScriptureQuery(rawMessage)?.scriptureKey ?? undefined
+                  : undefined;
+          const scriptureMode = scriptureKey ? "canon" : undefined;
+          const scriptureAlignment = scriptureKey ? "scripture_aligned" : undefined;
           try {
             __ku.kanagiSelf = computeKanagiSelfKernel({
               rawMessage,
@@ -218,7 +218,7 @@ function __tenmonGeneralGateResultMaybe(x: any): any {
               intention,
               topicClass,
               conceptKey: mf && (mf as any).conceptKey != null ? String((mf as any).conceptKey) : undefined,
-              scriptureKey: scriptureKey ?? (mf && (mf as any).scriptureKey != null ? String((mf as any).scriptureKey) : undefined),
+              scriptureKey,
               scriptureMode,
               scriptureAlignment,
             });
@@ -226,6 +226,29 @@ function __tenmonGeneralGateResultMaybe(x: any): any {
             __ku.kanagiSelf = getSafeKanagiSelfOutput();
           }
         }
+      }
+    } catch {}
+    // R9_GROWTH_LEDGER_KANAGI_V1: append to kanagi_growth_ledger when shouldPersist or shouldRecombine (1回のみ、失敗時は握る)
+    try {
+      const __df = (x as any).decisionFrame;
+      const __ku = __df?.ku;
+      if (
+        __ku &&
+        typeof __ku === "object" &&
+        (__ku.kanagiSelf?.shouldPersist === true || __ku.kanagiSelf?.shouldRecombine === true) &&
+        !(x as any).__growthLedgerWritten
+      ) {
+        // R9_GROWTH_LEDGER_INPUT_FIX_V1: 確実に input を渡す（rawMessage 優先、複数ソース）
+        const rawMessage = String(
+          (x as any)?.rawMessage ??
+          (x as any)?.message ??
+          (x as any)?.body?.message ??
+          (x as any)?.input ??
+          ""
+        );
+        const entry = buildKanagiGrowthLedgerEntryFromKu(__ku, rawMessage);
+        insertKanagiGrowthLedgerEntry(entry);
+        (x as any).__growthLedgerWritten = true;
       }
     } catch {}
     return x;

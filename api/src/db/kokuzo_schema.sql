@@ -391,3 +391,33 @@ CREATE TABLE IF NOT EXISTS kz_seed_events (
 CREATE INDEX IF NOT EXISTS idx_kz_seed_events_owner_created
   ON kz_seed_events(ownerId, createdAt);
 
+-- R9_GROWTH_LEDGER_SCHEMA_V1: kanagi growth ledger (虚空蔵接続の器。runtime bind は別カード)
+CREATE TABLE IF NOT EXISTS kanagi_growth_ledger (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  input_text TEXT NOT NULL,
+  route_reason TEXT,
+  self_phase TEXT,
+  intent_phase TEXT,
+  heart_source_phase TEXT,
+  heart_target_phase TEXT,
+  heart_entropy REAL,
+  topic_class TEXT,
+  concept_mode TEXT,
+  concept_alignment TEXT,
+  scripture_key TEXT,
+  scripture_mode TEXT,
+  scripture_alignment TEXT,
+  stability_score REAL,
+  drift_risk REAL,
+  should_persist INTEGER NOT NULL DEFAULT 0,
+  should_recombine INTEGER NOT NULL DEFAULT 0,
+  unresolved_class TEXT,
+  next_growth_axis TEXT,
+  note TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_kanagi_growth_ledger_created_at
+  ON kanagi_growth_ledger(created_at);
+CREATE INDEX IF NOT EXISTS idx_kanagi_growth_ledger_route_reason
+  ON kanagi_growth_ledger(route_reason);
+
