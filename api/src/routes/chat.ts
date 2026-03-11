@@ -1576,23 +1576,48 @@ ${String((gptDraft as any)?.text ?? "").trim()}
             }
           } catch {}
 
-          // R9_GROWTH_LEDGER_INSERT_RELOCATE_V1 / R9_GROWTH_LEDGER_RESJSON_WRAPPER_BIND_V1: res.json 共通 wrapper で ledger insert 1回（inputText 優先: obj.rawMessage → obj.message → req.body.input → req.body.message → ku.inputText）
+          // R9_GROWTH_LEDGER_INSERT_RELOCATE_V1 / R9_LEDGER_APPEND_PAYLOAD_SOURCE_FIX_V1:
+          // payload source = obj.rawMessage / obj.message / body / message(handler) / ku.inputText。has_self は ku.kanagiSelf 実在で判定するため、先に self-complete してから条件判定。
           try {
             const __ku = df.ku as any;
-            if (
-              __ku &&
-              typeof __ku === "object" &&
-              (__ku.kanagiSelf?.shouldPersist === true || __ku.kanagiSelf?.shouldRecombine === true) &&
-              !(obj as any).__KANAGI_LEDGER_DONE
-            ) {
+            if (!__ku || typeof __ku !== "object") {
+              /* skip: no ku */
+            } else if ((obj as any).__KANAGI_LEDGER_DONE) {
+              /* skip: already done */
+            } else {
               const __body = (req as any)?.body;
               const rawForLedger = String(
                 (obj as any)?.rawMessage ??
                 (obj as any)?.message ??
-                (__body?.input ?? __body?.message ?? (__ku?.inputText ?? ""))
+                (__body?.input ?? __body?.message ?? message ?? (__ku?.inputText ?? ""))
               );
-              const entry = buildKanagiGrowthLedgerEntryFromKu(__ku, rawForLedger);
-              insertKanagiGrowthLedgerEntry(entry);
+              // R9_GROWTH_LEDGER_REAL_INPUT_SELF_COMPLETE_V1: append 条件判定前に ku.kanagiSelf を補完（全 route で同じ payload builder を通す）
+              try {
+                if (!__ku.kanagiSelf || typeof __ku.kanagiSelf !== "object") {
+                  const __intention = getIntentionHintForKu();
+                  try {
+                    __ku.kanagiSelf = computeKanagiSelfKernel({
+                      rawMessage: rawForLedger,
+                      routeReason: String(__ku.routeReason ?? df.mode ?? ""),
+                      heart: __ku.heart ?? undefined,
+                      intention: __intention ?? undefined,
+                      topicClass: (__ku.meaningFrame as any)?.topicClass ?? undefined,
+                      conceptKey: (__ku.meaningFrame as any)?.conceptKey ?? undefined,
+                      scriptureKey: __ku.scriptureKey ?? (__ku.meaningFrame as any)?.scriptureKey ?? undefined,
+                      scriptureMode: __ku.scriptureMode ?? undefined,
+                      scriptureAlignment: __ku.scriptureAlignment ?? undefined,
+                    });
+                  } catch {
+                    __ku.kanagiSelf = getSafeKanagiSelfOutput();
+                  }
+                }
+              } catch {}
+              if (
+                (__ku.kanagiSelf?.shouldPersist === true || __ku.kanagiSelf?.shouldPersist === 1 ||
+                 __ku.kanagiSelf?.shouldRecombine === true || __ku.kanagiSelf?.shouldRecombine === 1)
+              ) {
+                const entry = buildKanagiGrowthLedgerEntryFromKu(__ku, rawForLedger);
+                insertKanagiGrowthLedgerEntry(entry);
               // OBS_R9_LEDGER_WRAPPER_HITMAP_V1: ledger mark 直前の観測（ロジック変更なし）
               try {
                 const rawLen = rawForLedger.length;
@@ -1608,7 +1633,8 @@ ${String((gptDraft as any)?.text ?? "").trim()}
                   "shouldRecombine=" + shouldRecombine
                 );
               } catch {}
-              (obj as any).__KANAGI_LEDGER_DONE = true;
+                (obj as any).__KANAGI_LEDGER_DONE = true;
+              }
             }
           } catch {}
         }

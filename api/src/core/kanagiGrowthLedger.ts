@@ -92,17 +92,17 @@ export function normalizeKanagiGrowthLedgerEntry(
   };
 }
 
-/** R9_GROWTH_LEDGER_RAWINPUT_BIND_V1: input_text 優先順 ku.inputText → rawMessage → message → "(no input)" */
+/** R9_LEDGER_APPEND_PAYLOAD_SOURCE_FIX_V1: input_text は message/rawMessage 優先、最後の fallback だけ "(no input)" */
 function resolveInputText(
   rawMessage: string | undefined,
   ku: Record<string, unknown>
 ): string {
   const str = (v: unknown) => (v != null && typeof v === "string" ? String(v).trim() : "");
-  const a = str(ku.inputText);
+  const a = rawMessage != null && rawMessage !== "" ? rawMessage.trim() : "";
   if (a) return a;
-  const b = rawMessage != null && rawMessage !== "" ? rawMessage.trim() : "";
+  const b = str(ku.inputText);
   if (b) return b;
-  const c = str((ku as any).message ?? ku.rawMessage);
+  const c = str((ku as any).rawMessage ?? (ku as any).message);
   if (c) return c;
   return "(no input)";
 }
