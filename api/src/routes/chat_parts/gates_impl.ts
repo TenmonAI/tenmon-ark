@@ -59,11 +59,20 @@ function __tenmonGeneralGateSoft(out: string): string {
 
   return t;
 }
-function __tenmonGeneralGateResultMaybe(x: any): any {
+const __GATE_RAW_MESSAGE_KEY = "__tenmon_gate_raw_message_v1";
+function __tenmonGeneralGateResultMaybe(x: any, rawMessageOverride?: string): any {
   try {
     if (!x || typeof x !== "object") return x;
+    // R9_LEDGER_REAL_INPUT_FREEZE_V1: 実入力を payload と ku に固定（rawMessageOverride / global / payload 優先）
+    const fromGlobal = typeof (globalThis as any)[__GATE_RAW_MESSAGE_KEY] === "string" ? (globalThis as any)[__GATE_RAW_MESSAGE_KEY] : "";
+    const raw = String(
+      rawMessageOverride ?? fromGlobal ?? (x as any).rawMessage ?? (x as any).message ?? (x as any).decisionFrame?.ku?.inputText ?? ""
+    );
+    if ((x as any).rawMessage == null || String((x as any).rawMessage).trim() === "") (x as any).rawMessage = raw;
+    if ((x as any).message == null || String((x as any).message).trim() === "") (x as any).message = raw;
     const df = (x as any).decisionFrame || {};
     const ku = df.ku || {};
+    if (ku && typeof ku === "object" && ((ku as any).inputText == null || String((ku as any).inputText ?? "").trim() === "")) (ku as any).inputText = raw;
     // K1_1_HYBRID_TRACE_ENFORCE_v1 (scope-safe: df/ku in this block)
     try {
       if ((df as any).mode === "HYBRID") {

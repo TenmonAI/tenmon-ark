@@ -581,6 +581,8 @@ const pid = process.pid;
   const messageRaw = (req.body as any)?.input || (req.body as any)?.message;
   const body = (req.body ?? {}) as any;
   const message = String(messageRaw ?? "").trim();
+  // R9_LEDGER_REAL_INPUT_FREEZE_V1: gate 経由 append で実入力を使うため
+  try { (globalThis as any).__tenmon_gate_raw_message_v1 = message; } catch {}
 
   // HEART_WATERFIRE_PHASE_V1: water/fire vector & phase (observability only)
   try {
