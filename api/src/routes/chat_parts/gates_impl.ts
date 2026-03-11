@@ -2,6 +2,7 @@
 // X3_GATES_EXTRACT_V1
 
 import { getIntentionHintForKu } from "../../core/intentionConstitution.js";
+import { computeKanagiSelfKernel, getSafeKanagiSelfOutput } from "../../core/kanagiSelfKernel.js";
 
 function __tenmonGeneralGateSoft(out: string): string {
   let t = String(out || "").replace(/\r/g, "").trim();
@@ -176,6 +177,24 @@ function __tenmonGeneralGateResultMaybe(x: any): any {
       if (__df && __df.ku && typeof __df.ku === "object") {
         const hint = getIntentionHintForKu();
         if (hint) __df.ku.intention = hint;
+      }
+    } catch {}
+    // R8_KANAGI_SELF_BIND_GATE_WRAPPER_V1: 最終返却前に kanagiSelf を保証（既に object なら上書きしない）
+    try {
+      const __df = (x as any).decisionFrame;
+      if (__df && __df.ku && typeof __df.ku === "object") {
+        const __ku: any = __df.ku;
+        if (!__ku.kanagiSelf || typeof __ku.kanagiSelf !== "object") {
+          const rawMessage = String((x as any)?.rawMessage ?? (x as any)?.message ?? "");
+          const routeReason = String(__ku.routeReason ?? (__df as any).mode ?? "");
+          const heart = __ku.heart ?? null;
+          const intention = __ku.intention ?? null;
+          try {
+            __ku.kanagiSelf = computeKanagiSelfKernel({ rawMessage, routeReason, heart, intention });
+          } catch {
+            __ku.kanagiSelf = getSafeKanagiSelfOutput();
+          }
+        }
       }
     } catch {}
     return x;

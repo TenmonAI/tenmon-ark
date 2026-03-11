@@ -24,7 +24,12 @@ function toKanagiPhase(s: unknown): KanagiPhase {
 export type SelfKernelInput = {
   rawMessage: string;
   routeReason?: string;
-  heart?: { phase?: unknown; userPhase?: unknown; arkTargetPhase?: unknown };
+  heart?: {
+    phase?: unknown;
+    userPhase?: unknown;
+    arkTargetPhase?: unknown;
+    entropy?: unknown;
+  };
   intention?: { coreIntentionTop?: string; kanagiCenterHint?: string };
 };
 
@@ -37,10 +42,22 @@ export type SelfKernelOutput = {
   shouldPersist: boolean;
   shouldRecombine: boolean;
   centerHint?: string;
+  /** R8_HEART_KANAGI_UNIFY_V1: 観測用 */
+  heartSourcePhase?: KanagiPhase;
+  heartTargetPhase?: KanagiPhase;
+  heartEntropy?: number;
+  alignment?: string;
 };
 
+function numEntropy(v: unknown): number {
+  if (typeof v === "number" && v >= 0 && v <= 1) return v;
+  const n = Number(v);
+  if (Number.isFinite(n) && n >= 0 && n <= 1) return n;
+  return 0.25;
+}
+
 /**
- * 決定論的に self kernel を計算する。heart / intention / routeReason と intent kernel の route_phase_hints を使用。
+ * 決定論的に self kernel を計算する。heart を一次入力とし、intent kernel と整合させる。
  */
 export function computeKanagiSelfKernel(input: SelfKernelInput): SelfKernelOutput {
   const { routeReason = "", heart, intention } = input;
@@ -49,21 +66,7 @@ export function computeKanagiSelfKernel(input: SelfKernelInput): SelfKernelOutpu
   const principles = resolveSelectionPrinciples();
   const responseHints = resolveResponseIntentHints();
 
-  // intentPhase: heart.phase or heart.arkTargetPhase or CENTER
-  const intentPhase: KanagiPhase = toKanagiPhase(
-    heart?.phase ?? heart?.arkTargetPhase ?? defaultPhase
-  );
-
-  // selfPhase: route_phase_hints があればそれ、なければ default。NATURAL_GENERAL は CENTER 寄り
-  let selfPhase: KanagiPhase = toKanagiPhase(routeHints[routeReason] ?? defaultPhase);
-
-  // judgementAxis: selection_principles をそのまま利用（先頭2本などに絞ってもよいが最小 diff で全部）
-  const judgementAxis = Array.isArray(principles) ? [...principles] : [];
-
-  // driftRisk: LLM_TOP 系は高め、verified / scripture / subconcept は低め
   const rr = String(routeReason);
-  const isLlmTop =
-    rr.includes("LLM_TOP") || rr === "NATURAL_GENERAL_LLM_TOP" || rr === "DEF_LLM_TOP";
   const isCanonical =
     rr.includes("VERIFIED") ||
     rr.includes("SCRIPTURE") ||
@@ -72,27 +75,65 @@ export function computeKanagiSelfKernel(input: SelfKernelInput): SelfKernelOutpu
     rr === "KHS_DEF_VERIFIED_HIT" ||
     rr === "TENMON_SCRIPTURE_CANON_V1" ||
     rr === "TENMON_SUBCONCEPT_CANON_V1";
-  const driftRisk = isLlmTop ? 0.6 : isCanonical ? 0.1 : 0.3;
+  const isLlmTop =
+    rr.includes("LLM_TOP") || rr === "NATURAL_GENERAL_LLM_TOP" || rr === "DEF_LLM_TOP";
+  const isSupportGeneral =
+    rr.includes("N2_KANAGI") || rr.includes("NATURAL_GENERAL") || rr === "NATURAL_FALLBACK";
+
+  // R8_HEART_KANAGI_UNIFY_V1: heart を一次入力として明示
+  const heartPhase = toKanagiPhase(heart?.phase);
+  const heartArk = toKanagiPhase(heart?.arkTargetPhase);
+  const heartUser = toKanagiPhase(heart?.userPhase);
+  const heartEntropyNum = numEntropy(heart?.entropy);
+
+  // intentPhase: heart.phase → heart.arkTargetPhase → CENTER
+  const intentPhase: KanagiPhase =
+    heartPhase !== "CENTER" ? heartPhase : heartArk !== "CENTER" ? heartArk : "CENTER";
+
+  // selfPhase: verified/scripture/subconcept → L-IN or R-IN; support/general → heart.userPhase + routeReason; fallback CENTER
+  let selfPhase: KanagiPhase;
+  if (isCanonical) {
+    const hint = toKanagiPhase(routeHints[rr]);
+    selfPhase = hint !== "CENTER" ? hint : rr.includes("SCRIPTURE") ? "R-IN" : "L-IN";
+  } else if (isSupportGeneral) {
+    const fromHeart = heartUser !== "CENTER" ? heartUser : toKanagiPhase(routeHints[rr]);
+    selfPhase = fromHeart !== "CENTER" ? fromHeart : toKanagiPhase(routeHints[rr] ?? defaultPhase);
+  } else {
+    selfPhase = toKanagiPhase(routeHints[rr] ?? defaultPhase);
+  }
+  if (!VALID_PHASES.includes(selfPhase)) selfPhase = "CENTER";
+
+  const judgementAxis = Array.isArray(principles) ? [...principles] : [];
+
+  // stabilityScore / driftRisk: heart.entropy と route class で再計算
+  let driftRisk: number;
+  if (isLlmTop) driftRisk = 0.5 + heartEntropyNum * 0.3;
+  else if (isCanonical) driftRisk = 0.05 + heartEntropyNum * 0.1;
+  else driftRisk = 0.2 + heartEntropyNum * 0.3;
+  driftRisk = Math.max(0, Math.min(1, driftRisk));
   const stabilityScore = 1 - driftRisk;
 
-  // shouldPersist: verified / scripture / subconcept / strong general は true
   const shouldPersist =
     isCanonical ||
     rr.includes("N2_KANAGI") ||
     rr === "NATURAL_GENERAL_LLM_TOP" ||
     rr.includes("FASTPATH");
 
-  // shouldRecombine: general のみ true 寄り、def/scripture は false 寄り
-  const isGeneral = rr.includes("NATURAL_GENERAL") || rr === "NATURAL_FALLBACK";
   const isDefOrScripture =
     rr.includes("DEF_") || rr.includes("SCRIPTURE") || rr.includes("SUBCONCEPT");
-  const shouldRecombine = isGeneral && !isDefOrScripture;
+  const shouldRecombine = isSupportGeneral && !isDefOrScripture;
 
-  // centerHint: intention.kanagiCenterHint or response_intent_hints.CENTER[0]
   const centerHint =
     intention?.kanagiCenterHint ??
     (responseHints.CENTER && responseHints.CENTER[0]) ??
     undefined;
+
+  // 観測キー: heartSourcePhase, heartTargetPhase, heartEntropy, alignment
+  const heartSourcePhase: KanagiPhase = heartPhase;
+  const heartTargetPhase: KanagiPhase = heartArk;
+  const heartEntropy: number = heartEntropyNum;
+  const alignment =
+    selfPhase === intentPhase ? "aligned" : driftRisk >= 0.5 ? "drift" : "neutral";
 
   return {
     selfPhase,
@@ -103,10 +144,14 @@ export function computeKanagiSelfKernel(input: SelfKernelInput): SelfKernelOutpu
     shouldPersist,
     shouldRecombine,
     centerHint,
+    heartSourcePhase,
+    heartTargetPhase,
+    heartEntropy,
+    alignment,
   };
 }
 
-/** R8_KANAGI_SELF_BIND_KU_V1: 失敗時用の安全な戻り値。CENTER 系。route を壊さない。 */
+/** R8_KANAGI_SELF_BIND_KU_V1 / R8_HEART_KANAGI_UNIFY_V1: 失敗時用の安全な戻り値。CENTER 系。shape は SelfKernelOutput に揃える。 */
 export function getSafeKanagiSelfOutput(): SelfKernelOutput {
   return {
     selfPhase: "CENTER",
@@ -116,5 +161,9 @@ export function getSafeKanagiSelfOutput(): SelfKernelOutput {
     driftRisk: 0.5,
     shouldPersist: false,
     shouldRecombine: false,
+    heartSourcePhase: "CENTER",
+    heartTargetPhase: "CENTER",
+    heartEntropy: 0.25,
+    alignment: "neutral",
   };
 }
