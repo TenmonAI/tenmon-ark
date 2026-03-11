@@ -1353,9 +1353,14 @@ ${String((gptDraft as any)?.text ?? "").trim()}
         if (df && typeof df === "object") {
           df.ku = (df.ku && typeof df.ku === "object") ? df.ku : {};
 
-          // R9_GROWTH_LEDGER_RAWINPUT_PROPAGATE_V1: top-level と ku に raw input を伝播（既に非空なら上書きしない）
+          // R9_GROWTH_LEDGER_RAWINPUT_PROPAGATE_V1 / R9_GROWTH_LEDGER_RESJSON_WRAPPER_BIND_V1: top-level と ku に raw input を伝播（obj.rawMessage → obj.message → req.body.input → req.body.message → message）
           try {
-            const raw = String((obj as any)?.rawMessage ?? (obj as any)?.message ?? message ?? "");
+            const __body = (req as any)?.body;
+            const raw = String(
+              (obj as any)?.rawMessage ??
+              (obj as any)?.message ??
+              (__body?.input ?? __body?.message ?? message ?? "")
+            );
             if (!(obj as any).rawMessage || String((obj as any).rawMessage).trim() === "") (obj as any).rawMessage = raw;
             if (!(obj as any).message || String((obj as any).message).trim() === "") (obj as any).message = raw;
             const cur = (df.ku as any).inputText;
@@ -1547,7 +1552,7 @@ ${String((gptDraft as any)?.text ?? "").trim()}
             }
           } catch {}
 
-          // R9_GROWTH_LEDGER_INSERT_RELOCATE_V1 / R9_GROWTH_LEDGER_ROUTE_COVERAGE_FIX_V1: 共通最終整流点で ledger insert 1回（全 route 通過後）
+          // R9_GROWTH_LEDGER_INSERT_RELOCATE_V1 / R9_GROWTH_LEDGER_RESJSON_WRAPPER_BIND_V1: res.json 共通 wrapper で ledger insert 1回（inputText 優先: obj.rawMessage → obj.message → req.body.input → req.body.message → ku.inputText）
           try {
             const __ku = df.ku as any;
             if (
@@ -1556,13 +1561,55 @@ ${String((gptDraft as any)?.text ?? "").trim()}
               (__ku.kanagiSelf?.shouldPersist === true || __ku.kanagiSelf?.shouldRecombine === true) &&
               !(obj as any).__KANAGI_LEDGER_DONE
             ) {
-              const entry = buildKanagiGrowthLedgerEntryFromKu(__ku, (obj as any).rawMessage);
+              const __body = (req as any)?.body;
+              const rawForLedger = String(
+                (obj as any)?.rawMessage ??
+                (obj as any)?.message ??
+                (__body?.input ?? __body?.message ?? (__ku?.inputText ?? ""))
+              );
+              const entry = buildKanagiGrowthLedgerEntryFromKu(__ku, rawForLedger);
               insertKanagiGrowthLedgerEntry(entry);
               (obj as any).__KANAGI_LEDGER_DONE = true;
             }
           } catch {}
         }
       }
+    } catch {}
+
+    // OBS_R9_LEDGER_SKIP_REASON_TRACE_V1: 毎回1本（insert/skip 理由を分類、修正は次カード）
+    try {
+      const _df = (obj as any)?.decisionFrame;
+      const has_df = _df != null && typeof _df === "object";
+      const _ku = has_df ? _df.ku : null;
+      const has_ku = _ku != null && typeof _ku === "object";
+      const _self = has_ku ? _ku.kanagiSelf : null;
+      const has_self = _self != null && typeof _self === "object";
+      const shouldPersist = has_self && (_self.shouldPersist === true || _self.shouldPersist === 1);
+      const shouldRecombine = has_self && (_self.shouldRecombine === true || _self.shouldRecombine === 1);
+      const alreadyDone = (obj as any).__KANAGI_LEDGER_DONE === true;
+      const __body = (req as any)?.body;
+      const rawStr = String((obj as any)?.rawMessage ?? (obj as any)?.message ?? (__body?.input ?? __body?.message ?? ""));
+      const rawLen = rawStr.length;
+      const inputTextLen = String(has_ku ? (_ku.inputText ?? "") : "").length;
+      let action = "inserted";
+      if (!has_df) action = "skip_no_df";
+      else if (!has_ku) action = "skip_no_ku";
+      else if (!has_self) action = "skip_no_self";
+      else if (!shouldPersist && !shouldRecombine) action = "skip_no_flags";
+      else if (alreadyDone) action = "skip_already_done";
+      console.error(
+        "[R9_LEDGER_SKIPTRACE]",
+        "rr=" + String(has_ku ? (_ku.routeReason ?? "") : ""),
+        "has_df=" + has_df,
+        "has_ku=" + has_ku,
+        "has_self=" + has_self,
+        "shouldPersist=" + shouldPersist,
+        "shouldRecombine=" + shouldRecombine,
+        "alreadyDone=" + alreadyDone,
+        "rawLen=" + rawLen,
+        "inputTextLen=" + inputTextLen,
+        "action=" + action
+      );
     } catch {}
 
     try {
