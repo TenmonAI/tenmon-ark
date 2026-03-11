@@ -38,13 +38,23 @@ export function loadTenmonScriptureCanon(): ScriptureCanonFile {
   return json;
 }
 
+/** OPS_IROHA_SCRIPTURE_ALIAS_FIX_V1: 軽い正規化。言灵/言靈→言霊、イロハ→いろは。マッチング前にのみ使用。 */
+function normalizeScriptureQuery(q: string): string {
+  return q
+    .replace(/言灵/g, "言霊")
+    .replace(/言靈/g, "言霊")
+    .replace(/イロハ/g, "いろは");
+}
+
 export function resolveScriptureQuery(text: string): ScriptureCanonItem | null {
-  const q = String(text || "").trim().toLowerCase();
-  if (!q) return null;
+  const raw = String(text || "").trim();
+  if (!raw) return null;
+  const normalized = normalizeScriptureQuery(raw);
+  const q = normalized.toLowerCase();
   const canon = loadTenmonScriptureCanon();
   for (const s of canon.scriptures) {
     const names = [s.displayName, s.scriptureKey, ...(s.aliases || [])]
-      .map((x) => String(x || "").trim().toLowerCase())
+      .map((x) => normalizeScriptureQuery(String(x || "").trim()).toLowerCase())
       .filter(Boolean);
     if (names.some((name) => q.includes(name))) return s;
   }
