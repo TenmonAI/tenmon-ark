@@ -1338,6 +1338,26 @@ ${String((gptDraft as any)?.text ?? "").trim()}
   // wrap res.json so ANY {response: "..."} is sanitized before leaving the server
   const __origJson = (res as any).json.bind(res);
   (res as any).json = (obj: any) => {
+    // OBS_R9_LEDGER_WRAPPER_HITMAP_V1: res.json 共通 wrapper のヒット状況を軽量観測（ロジック変更なし）
+    try {
+      const df0 = (obj as any)?.decisionFrame;
+      const has_df = df0 != null && typeof df0 === "object";
+      const ku0 = has_df ? (df0 as any).ku : null;
+      const has_ku = ku0 != null && typeof ku0 === "object";
+      const self0 = has_ku ? (ku0 as any).kanagiSelf : null;
+      const has_self = self0 != null && typeof self0 === "object";
+      const alreadyDone0 = (obj as any)?.__KANAGI_LEDGER_DONE === true;
+      console.error(
+        "[R9_LEDGER_HITMAP_RESJSON]",
+        "rr=" + String(has_ku ? (ku0 as any).routeReason ?? "" : ""),
+        "has_response=" + ("response" in (obj || {})),
+        "has_df=" + has_df,
+        "has_ku=" + has_ku,
+        "has_self=" + has_self,
+        "alreadyDone=" + alreadyDone0
+      );
+    } catch {}
+
     // CARD6C_TOPLEVEL_WRAPPER_ONLY_V6: ensure top-level rewriteUsed/rewriteDelta always exist (robust)
     try {
       if (obj && typeof obj === "object") {
@@ -1569,6 +1589,21 @@ ${String((gptDraft as any)?.text ?? "").trim()}
               );
               const entry = buildKanagiGrowthLedgerEntryFromKu(__ku, rawForLedger);
               insertKanagiGrowthLedgerEntry(entry);
+              // OBS_R9_LEDGER_WRAPPER_HITMAP_V1: ledger mark 直前の観測（ロジック変更なし）
+              try {
+                const rawLen = rawForLedger.length;
+                const inputTextLen = String(__ku?.inputText ?? "").length;
+                const shouldPersist = __ku?.kanagiSelf?.shouldPersist === true || __ku?.kanagiSelf?.shouldPersist === 1;
+                const shouldRecombine = __ku?.kanagiSelf?.shouldRecombine === true || __ku?.kanagiSelf?.shouldRecombine === 1;
+                console.error(
+                  "[R9_LEDGER_HITMAP_MARK]",
+                  "rr=" + String(__ku?.routeReason ?? ""),
+                  "rawLen=" + rawLen,
+                  "inputTextLen=" + inputTextLen,
+                  "shouldPersist=" + shouldPersist,
+                  "shouldRecombine=" + shouldRecombine
+                );
+              } catch {}
               (obj as any).__KANAGI_LEDGER_DONE = true;
             }
           } catch {}
