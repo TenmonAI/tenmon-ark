@@ -4586,6 +4586,21 @@ let outText = "";
             "いまは少し内側を整える段階です。\n\nまず一つに絞ると流れが戻ります。いま最も引っかかっている一点は何ですか？";
         }
 
+        // R10_IROHA_COUNSEL_RESPONSE_BIND_V1: ku.irohaAction に基づいて locked general surface を行動裁定ベースに差し替える。
+        if (__lockedGeneral && __irohaForGeneral && typeof __irohaForGeneral.actionKey === "string") {
+          const __ak = String(__irohaForGeneral.actionKey || "");
+          if (__ak === "organize") {
+            __lockedGeneral =
+              "いまは整理の段です。\n\nまず三つだけ書き出し、『今やる』『後で見る』『手放す』に分けてください。最初に出す一つは何ですか？";
+          } else if (__ak === "defer") {
+            __lockedGeneral =
+              "いまは保留の段です。\n\n今日は結論を出さず、見直す時だけ決めます。いつ見直しますか？";
+          } else if (__ak === "discern") {
+            __lockedGeneral =
+              "いまは見極めの段です。\n\n『事実』『気持ち』『解釈』を一つずつ分けてください。今いちばん確かな事実は何ですか？";
+          }
+        }
+
         if (__lockedGeneral) {
           const __heartNorm = normalizeHeartShape(__heart);
           const __composedLocked = responseComposer({
