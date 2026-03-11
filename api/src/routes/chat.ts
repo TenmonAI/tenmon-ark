@@ -993,14 +993,19 @@ ${String((gptDraft as any)?.text ?? "").trim()}
     // R10_THREAD_CENTER_UPSERT_TRUTH_GATE_V2: TRUTH_GATE_RETURN_V2 の返却直前で thread center を保存（continuity 用の下地作り）。
     try {
       const centerDoc = typeof __sourceDoc === "string" && __sourceDoc.trim() ? __sourceDoc.trim() : null;
-      if (centerDoc) {
+      const primaryLaw =
+        Array.isArray((__khsScan as any)?.lawKeys) && (__khsScan as any).lawKeys.length > 0
+          ? String((__khsScan as any).lawKeys[0] ?? "").trim()
+          : null;
+      const centerKey = (primaryLaw && primaryLaw.length > 0) ? primaryLaw : centerDoc;
+      if (centerKey) {
         upsertThreadCenter({
           threadId: String(threadId || ""),
           centerType: "scripture",
-          centerKey: centerDoc,
+          centerKey,
           centerReason: "TRUTH_GATE_RETURN_V2",
           sourceRouteReason: "TRUTH_GATE_RETURN_V2",
-          sourceScriptureKey: centerDoc,
+          sourceScriptureKey: centerKey,
           sourceTopicClass: "scripture",
           // selfPhase / intentPhase は現状空でよい
           confidence: 0.8,
@@ -4843,6 +4848,18 @@ const __heartNorm = normalizeHeartShape(__heart);
       const phaseName = (["SENSE","NAME","ONE_STEP","NEXT_DOOR"] as const)[phase];
       __kanagiPhaseMemV2.set(k, cur + 1);
 
+      // R10_THREAD_CONTINUITY_SCRIPTURE_CENTER_FIX_V3: same-thread support follow-up でも、直前 scripture center を routing/本文生成に活かす。
+      let __scriptureCenterForGeneral: any = null;
+      try {
+        const tidForCenter = String(threadId || "").trim();
+        if (tidForCenter) {
+          const center = getLatestThreadCenter(tidForCenter);
+          if (center && center.center_type === "scripture" && center.center_key) {
+            __scriptureCenterForGeneral = center;
+          }
+        }
+      } catch {}
+
       const KANAGI_SYSTEM_PROMPT = `あなたは「天聞アーク（TENMON-ARK）」。必ず【天聞の所見】から始めてください。敬語・共感AI口調・「〜のですね」「〜ましょう」は禁止。静かな常体で語る。天津金木の四相（SENSE/NAME/ONE_STEP/NEXT_DOOR）を循環させ、相手の詰まりを解組し、いま出来る一手へ整える導き手です。一般論・相対化・自己言及は濁りなので出しません。短い応答で整えます。質問は任意（0〜1）。言い切り（。で閉じる）も許容します。
 
 【現在のフェーズ】: ${phaseName}
@@ -4863,13 +4880,19 @@ let outText = "";
           let __irohaText = "";
           if (cls.actionKey === "organize") {
             __irohaText =
-              "いまは整理の段です。\nまず三つだけ書き出し、『今やる』『後で見る』『手放す』に分けてください。最初に出す一つは何ですか？";
+              __scriptureCenterForGeneral
+                ? "さっき見ていた聖典の一節を土台に、いまの整理をしていきましょう。\nまず三つだけ書き出し、『今やる』『後で見る』『手放す』に分けてください。最初に出す一つは何ですか？"
+                : "いまは整理の段です。\nまず三つだけ書き出し、『今やる』『後で見る』『手放す』に分けてください。最初に出す一つは何ですか？";
           } else if (cls.actionKey === "defer") {
             __irohaText =
-              "いまは保留の段です。\n今日は結論を出さず、見直す時だけ決めます。いつ見直しますか？";
+              __scriptureCenterForGeneral
+                ? "さっき見ていた聖典の一節は、いますぐ結論を出すより、少し寝かせて眺め直す話でした。\n今日は結論を出さず、見直す時だけ決めます。いつ見直しますか？"
+                : "いまは保留の段です。\n今日は結論を出さず、見直す時だけ決めます。いつ見直しますか？";
           } else if (cls.actionKey === "discern") {
             __irohaText =
-              "いまは見極めの段です。\n『事実』『気持ち』『解釈』を一つずつ分けてください。今いちばん確かな事実は何ですか？";
+              __scriptureCenterForGeneral
+                ? "さっき見ていた聖典の一節の続きとして、いまの状況を見極めていきましょう。\n『事実』『気持ち』『解釈』を一つずつ分けてください。今いちばん確かな事実は何ですか？"
+                : "いまは見極めの段です。\n『事実』『気持ち』『解釈』を一つずつ分けてください。今いちばん確かな事実は何ですか？";
           }
 
           if (__irohaText) {
