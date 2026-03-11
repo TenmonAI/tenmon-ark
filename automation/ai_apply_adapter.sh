@@ -19,10 +19,12 @@ if [[ -n "${CARD_PROMPT_FILE:-}" && ! -f "$CARD_PROMPT_FILE" ]]; then
   exit 91
 fi
 
-if [[ -z "${TENMON_APPLY_ENGINE:-}" ]]; then
-  echo "[SKIP] TENMON_APPLY_ENGINE is not set" | tee -a "$APPLY_LOG"
+# AUTO_RUNNER_HEALTH_ONLY_MODE_V1: 未設定時は exit 90 (runner が skip 扱いで継続)
+APPLY_CMD="${TENMON_AI_APPLY_CMD:-${TENMON_APPLY_ENGINE:-}}"
+if [[ -z "$APPLY_CMD" ]]; then
+  echo "[SKIP] TENMON_AI_APPLY_CMD / TENMON_APPLY_ENGINE not set" | tee -a "$APPLY_LOG"
   exit 90
 fi
 
-echo "[ENGINE] $TENMON_APPLY_ENGINE" | tee -a "$APPLY_LOG"
-bash -lc "$TENMON_APPLY_ENGINE" | tee -a "$APPLY_LOG"
+echo "[ENGINE] $APPLY_CMD" | tee -a "$APPLY_LOG"
+bash -lc "$APPLY_CMD" | tee -a "$APPLY_LOG"

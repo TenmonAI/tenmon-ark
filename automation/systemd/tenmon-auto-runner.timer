@@ -1,0 +1,11 @@
+# AUTO_RUNNER_HEALTH_LANE_FREEZE_V1: health lane のみ定期実行
+[Unit]
+Description=TENMON auto runner health lane (periodic)
+
+[Timer]
+OnCalendar=*-*-* *:00/2:00
+Persistent=true
+RandomizedDelaySec=60
+
+[Install]
+WantedBy=timers.target

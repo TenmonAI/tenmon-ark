@@ -185,18 +185,31 @@ def write_freeze(
     freeze_path.write_text("\n".join(body), encoding="utf-8")
 
 
+def _apply_wired() -> bool:
+    """True if apply engine is configured (health-only mode when False)."""
+    return bool(os.environ.get("TENMON_AI_APPLY_CMD") or os.environ.get("TENMON_APPLY_ENGINE"))
+
+
 def find_next_card(queue: dict[str, Any], state: dict[str, Any]) -> dict[str, Any] | None:
     cards: list[dict[str, Any]] = queue.get("cards", [])
     current_name = state.get("current_card")
     statuses = state.setdefault("cards", {})
+    apply_ok = _apply_wired()
+
+    def _is_apply_card(c: dict[str, Any]) -> bool:
+        return bool(c.get("apply_cmd")) or c.get("lane") == "apply"
 
     if current_name:
         for c in cards:
             if c["name"] == current_name and c.get("enabled", True):
+                if _is_apply_card(c) and not apply_ok:
+                    break
                 return c
 
     for c in cards:
         if not c.get("enabled", True):
+            continue
+        if _is_apply_card(c) and not apply_ok:
             continue
         if statuses.get(c["name"], {}).get("status") != "pass":
             return c
@@ -249,8 +262,8 @@ def run_card(queue: dict[str, Any], state: dict[str, Any], card: dict[str, Any])
         if apply_cmd:
             logger.write("")
             logger.write("== APPLY ==")
-            if not os.environ.get("TENMON_APPLY_ENGINE"):
-                logger.write("[SKIP] apply: TENMON_APPLY_ENGINE not set (apply lane safe stop)")
+            if not _apply_wired():
+                logger.write("[SKIP] apply: TENMON_AI_APPLY_CMD/TENMON_APPLY_ENGINE not set (health-only)")
             else:
                 env = os.environ.copy()
                 env.update(
