@@ -7,9 +7,18 @@ import { SettingsPanel } from "../components/SettingsPanel";
 import { DebugPanel } from "../components/chat/DebugPanel";
 
 // UI1_CHATPAGE_DEBUGTOGGLE_V1
+// PWA_CHAT_RELEASE_BRIDGE_V1: hidden debug block ON = ?debug=1 or localStorage TENMON_PWA_DEBUG=1
+function isDebugBridgeOn(): boolean {
+  if (typeof window === "undefined") return false;
+  return (
+    new URLSearchParams(window.location.search).get("debug") === "1" ||
+    localStorage.getItem("TENMON_PWA_DEBUG") === "1"
+  );
+}
 
 export function ChatPage() {
   const [__debugOpen, __setDebugOpen] = useState(false);
+  const debugBridgeOn = isDebugBridgeOn();
 
   const { messages, sendMessage, loading, sessionId, resetThread } = useChat();
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -25,6 +34,7 @@ export function ChatPage() {
   };
 
   return (
+    <>
       <div style={{ display: "flex", justifyContent: "flex-end", margin: "8px 0" }}>
         <button type="button" onClick={() => __setDebugOpen(v => !v)} style={{ opacity: 0.85 }}>
           {__debugOpen ? "根拠: ON" : "根拠: OFF"}
@@ -37,8 +47,6 @@ export function ChatPage() {
           }
         />
       ) : null}
-
-    <>
       <div
         style={{
           height: "100vh",
@@ -89,7 +97,7 @@ export function ChatPage() {
           </div>
         </div>
 
-        <ChatWindow messages={messages} />
+        <ChatWindow messages={messages} debugBridgeOn={debugBridgeOn} />
 
         <ChatInput loading={loading} onSend={sendMessage} />
 

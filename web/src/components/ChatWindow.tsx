@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import type { Message } from "../types/chat";
 import { ChatMessage } from "./ChatMessage";
 
-export function ChatWindow({ messages }: { messages: Message[] }) {
+export function ChatWindow({ messages, debugBridgeOn = false }: { messages: Message[]; debugBridgeOn?: boolean }) {
   useEffect(() => {
     const el = document.getElementById("chat-bottom");
     el?.scrollIntoView({ behavior: "smooth" });
@@ -20,7 +20,7 @@ export function ChatWindow({ messages }: { messages: Message[] }) {
       }}
     >
       {messages.map((m, i) => (
-        <ChatMessage key={i} message={m} />
+        <ChatMessage key={i} message={m} debugBridgeOn={debugBridgeOn} />
       ))}
       <div id="chat-bottom" />
     </div>
