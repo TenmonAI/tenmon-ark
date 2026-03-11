@@ -4557,6 +4557,13 @@ let outText = "";
       }
 
       
+      // R10_IROHA_COUNSEL_ROUTE_TUNE_V1: NATURAL_GENERAL に入る前に、いろは classifier を一度だけ評価しておき、ku に痕跡を残す。
+      let __irohaForGeneral: any = null;
+      try {
+        const __iroha = resolveIrohaActionPattern(String(message ?? ""));
+        __irohaForGeneral = (__iroha as any)?.classification || null;
+      } catch {}
+
       // R3_GENERAL_TEMPLATE_LOCK_V1: deterministic general surface for release stabilization
       {
         const __msgNorm = String(message ?? "").trim();
@@ -4671,6 +4678,14 @@ let outText = "";
             seedSurface: __seedSurface,
             seedPolicy: __seedPolicy,
           };
+          if (__irohaForGeneral) {
+            __kuLocked.irohaAction = {
+              actionKey: __irohaForGeneral.actionKey,
+              displayName: __irohaForGeneral.displayName,
+              confidence: __irohaForGeneral.confidence,
+              matchedSignals: __irohaForGeneral.matchedSignals,
+            };
+          }
           if (__composedLocked.meaningFrame != null) {
             __kuLocked.meaningFrame = __composedLocked.meaningFrame;
           }
@@ -4735,6 +4750,15 @@ const __heartNorm = normalizeHeartShape(__heart);
         routeReason: "NATURAL_GENERAL_LLM_TOP",
         heart: __heartNorm,
       };
+
+      if (__irohaForGeneral) {
+        __ku.irohaAction = {
+          actionKey: __irohaForGeneral.actionKey,
+          displayName: __irohaForGeneral.displayName,
+          confidence: __irohaForGeneral.confidence,
+          matchedSignals: __irohaForGeneral.matchedSignals,
+        };
+      }
 
       if (__composed.meaningFrame != null) {
         __ku.meaningFrame = __composed.meaningFrame;
