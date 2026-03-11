@@ -83,6 +83,7 @@ import { getNotionCanonForRoute } from "../core/notionCanon.js";
 import { getPersonaConstitutionSummary } from "../core/personaConstitution.js";
 import { writeScriptureLearningLedger } from "../core/scriptureLearningLedger.js";
 import { buildKanagiGrowthLedgerEntryFromKu, insertKanagiGrowthLedgerEntry } from "../core/kanagiGrowthLedger.js";
+import { upsertThreadCenter } from "../core/threadCenterMemory.js";
 const router: IRouter = Router();
 
 function normalizeHeartShape(h: any) {
@@ -3572,6 +3573,16 @@ return res.json(__tenmonGeneralGateResultMaybe({
               __ku.meaningFrame = { ...__composed.meaningFrame, scriptureKey: __hitScripture.scriptureKey };
             }
 
+            try {
+              upsertThreadCenter({
+                threadId: String(threadId ?? ""),
+                centerType: "scripture",
+                centerKey: String((__composed as any)?.scriptureKey ?? ""),
+                sourceRouteReason: "TENMON_SCRIPTURE_CANON_V1",
+                sourceScriptureKey: String((__composed as any)?.scriptureKey ?? ""),
+                sourceTopicClass: String(__composed.meaningFrame?.topicClass ?? ""),
+              });
+            } catch {}
             return res.json(__tenmonGeneralGateResultMaybe({
               response: __composed.response,
               evidence: null,
