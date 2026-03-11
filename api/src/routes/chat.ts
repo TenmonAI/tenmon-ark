@@ -83,7 +83,7 @@ import { getNotionCanonForRoute } from "../core/notionCanon.js";
 import { getPersonaConstitutionSummary } from "../core/personaConstitution.js";
 import { writeScriptureLearningLedger } from "../core/scriptureLearningLedger.js";
 import { buildKanagiGrowthLedgerEntryFromKu, insertKanagiGrowthLedgerEntry } from "../core/kanagiGrowthLedger.js";
-import { upsertThreadCenter } from "../core/threadCenterMemory.js";
+import { upsertThreadCenter, getLatestThreadCenter } from "../core/threadCenterMemory.js";
 const router: IRouter = Router();
 
 function normalizeHeartShape(h: any) {

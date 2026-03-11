@@ -232,10 +232,12 @@ function generalToneNormalize(s: string): string {
   // LLMFRAME_STRIP_V4: LLM生成の導入句を先頭行ごと除去
   const LLMFRAME_PATTERNS = [
     /^いまの言葉を[^\n]*\n?/gm,
+    /いまの言葉を[^\n]*"次の一歩"[^\n]*/gu,
     /^いまは整理の入口にいます[^\n]*\n?/gm,
     /^[^\n]*[\u201c\u201d"]次の一歩[\u201c\u201d"][^\n]*\n?/gm,
     /^[^\n]*「次の一歩」[^\n]*\n?/gm,
     /^[^\n]*を[""]次の[^"\n]*[""]に落とし[^\n]*\n?/gm,
+    /いまの言葉を[^\n]*/gu,
   ];
   for (const pat of LLMFRAME_PATTERNS) out = out.replace(pat, "");
   out = out.replace(/いいまここ/g, "いまここ");
