@@ -97,7 +97,7 @@ export function getLatestThreadCenter(threadId: string): ThreadCenterRow | null 
         `SELECT * FROM thread_center_memory WHERE thread_id = ? ORDER BY updated_at DESC LIMIT 1`
       )
       .get(tid);
-    return (row as any) as ThreadCenterRow || null;
+    return (row as ThreadCenterRow) || null;
   } catch {
     return null;
   }
