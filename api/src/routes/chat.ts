@@ -1352,12 +1352,13 @@ ${String((gptDraft as any)?.text ?? "").trim()}
         if (df && typeof df === "object") {
           df.ku = (df.ku && typeof df.ku === "object") ? df.ku : {};
 
-          // R9_GROWTH_LEDGER_RAWINPUT_BIND_V1: decisionFrame.ku.inputText を共通整流層で必ず埋める（既にあれば上書きしない）
+          // R9_GROWTH_LEDGER_RAWINPUT_PROPAGATE_V1: top-level と ku に raw input を伝播（既に非空なら上書きしない）
           try {
+            const raw = String((obj as any)?.rawMessage ?? (obj as any)?.message ?? message ?? "");
+            if (!(obj as any).rawMessage || String((obj as any).rawMessage).trim() === "") (obj as any).rawMessage = raw;
+            if (!(obj as any).message || String((obj as any).message).trim() === "") (obj as any).message = raw;
             const cur = (df.ku as any).inputText;
-            if (cur == null || String(cur).trim() === "") {
-              (df.ku as any).inputText = String((obj as any)?.rawMessage ?? (obj as any)?.message ?? message ?? "");
-            }
+            if (cur == null || String(cur).trim() === "") (df.ku as any).inputText = raw;
           } catch {}
 
           // C2_LLM_STATUS_ALWAYS_ATTACH_V1: always attach llmStatus (observability only)

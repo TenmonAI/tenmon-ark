@@ -246,7 +246,22 @@ function __tenmonGeneralGateResultMaybe(x: any): any {
           (x as any)?.input ??
           ""
         );
+        // R9_GROWTH_LEDGER_RAWINPUT_PROPAGATE_V1: ledger insert 直前で __ku.inputText が空なら rawMessage を補う
+        if (rawMessage.trim() !== "" && (!__ku.inputText || String(__ku.inputText).trim() === "")) {
+          (__ku as any).inputText = rawMessage;
+        }
         const entry = buildKanagiGrowthLedgerEntryFromKu(__ku, rawMessage);
+        // OBS_R9_LEDGER_RAWINPUT_RUNTIME_TRACE_V1: drop point 確定用（一時 trace、修正は次カード）
+        console.error(
+          "[R9_LEDGER_RAWTRACE]",
+          "rr=" + String(__ku.routeReason ?? ""),
+          "top_rawMessage=" + String((x as any)?.rawMessage ?? ""),
+          "top_message=" + String((x as any)?.message ?? ""),
+          "ku_inputText=" + String(__ku.inputText ?? ""),
+          "ku_message=" + String((__ku as any).message ?? ""),
+          "entry_inputText=" + String(entry.inputText ?? ""),
+          "scriptureKey=" + String(__ku.scriptureKey ?? "")
+        );
         insertKanagiGrowthLedgerEntry(entry);
         (x as any).__growthLedgerWritten = true;
       }
