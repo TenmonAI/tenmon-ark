@@ -1109,12 +1109,21 @@ ${String((gptDraft as any)?.text ?? "").trim()}
       }
     } catch {}
 
+    // CARD_SESSION_MEMORY_PERSIST_TRUTH_GATE_V1: TRUTH_GATE は gate を通らないため、返却直前に session_memory へ user/assistant を persist。best-effort・失敗時は会話を落とさない。
+    try {
+      if (String(threadId ?? "").trim() && String(message ?? "").trim() && payload?.response != null) {
+        persistTurn(String(threadId), String(message).trim(), String(payload.response));
+      }
+    } catch {}
+
     return res.json(payload);
   }
 
   // REPLY_SURFACE_V1: responseは必ずlocalSurfaceizeを通す。返却は opts をそのまま形にし caps は body.caps のみ参照
 
   const reply = (payload: any) => {
+    // CARD_SESSION_MEMORY_PERSIST_ALL_ROUTES_V1: gate で persist するため threadId が無い場合は handler の threadId を付与
+    if (payload && (payload.threadId == null || String(payload.threadId).trim() === "")) (payload as any).threadId = threadId;
     if (payload && payload.response != null) payload.response = enforceTenmon(String(payload.response));
     // KHS_SCAN_LAYER_V1: 観測だけ decisionFrame.ku に付与（既存 ku はスプレッドで保持）
     try {
@@ -3054,6 +3063,7 @@ return res.json(__tenmonGeneralGateResultMaybe({
             timestamp,
             threadId: String(threadId || ""),
             decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: { lawsUsed: [], evidenceIds: [], lawTrace: [], routeReason: "DET_PASSPHRASE_TOP" } },
+            __TENMON_PERSIST_DONE: true,
           } as any));
         }
 
@@ -3068,6 +3078,7 @@ return res.json(__tenmonGeneralGateResultMaybe({
             timestamp,
             threadId: String(threadId || ""),
             decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: { lawsUsed: [], evidenceIds: [], lawTrace: [], routeReason: "DET_PASSPHRASE_TOP" } },
+            __TENMON_PERSIST_DONE: true,
           } as any));
         }
       }

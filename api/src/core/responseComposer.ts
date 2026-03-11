@@ -1,4 +1,6 @@
 import { getTenmonStyle } from "./personaStyleConstitution.js";
+import { shouldUseDanshariCommunication } from "./danshariCommunication.js";
+import { computeKanagiSelfKernel } from "./kanagiSelfKernel.js";
 
 export type ResponseComposerInput = {
   response: string;
@@ -16,6 +18,12 @@ export type ResponseComposerInput = {
   heart?: any;
   /** R3_CONCEPT_MEANINGFRAME_TOPICCLASS_FIX_V1: concept canon 時の topicClass 補正用 */
   conceptKey?: string;
+  /** R10_DANSHARI_COMMUNICATION_LOOP_V1: general/support の断捨離整流制御用 */
+  driftRisk?: number | null;
+  selfPhase?: string | null;
+  intentPhase?: string | null;
+  shouldPersist?: boolean | number | null;
+  shouldRecombine?: boolean | number | null;
 };
 
 export type MeaningFrame = {
@@ -264,7 +272,8 @@ function applyPersonaReduction(
   response: string,
   meaningFrame: MeaningFrame,
   rawMessage?: string,
-  heart?: any
+  heart?: any,
+  inputOrKanagi?: { routeReason?: string; topicClass?: string; driftRisk?: number | null; [k: string]: unknown }
 ): string {
   if (!response || typeof response !== "string") return response;
 
@@ -315,11 +324,16 @@ function applyPersonaReduction(
       return prefix + SOUL_FIRST_SENTENCE + rest;
     default: {
       // general: optional truth frame prefix (one sentence), dedup + tone normalize
-      // R7_DANSHARI_STYLE_BIND_V1: support/organize 用の断捨離スタイル補正は
-      // NATURAL_GENERAL_LLM_TOP / N2_KANAGI_PHASE_TOP に限定し、canonical routes には影響させない。
-      const isDanshariTarget =
-        meaningFrame.routeReason === "NATURAL_GENERAL_LLM_TOP" ||
-        meaningFrame.routeReason === "N2_KANAGI_PHASE_TOP";
+      // R10_DANSHARI_COMMUNICATION_LOOP_V1: driftRisk >= 0.5 かつ topicClass=general のときだけ断捨離整流。scripture/verified/subconcept/katakamuna では抑制。
+      const isDanshariTarget = shouldUseDanshariCommunication({
+        routeReason: meaningFrame.routeReason,
+        topicClass: meaningFrame.topicClass,
+        driftRisk: (inputOrKanagi as any)?.driftRisk ?? null,
+        selfPhase: (inputOrKanagi as any)?.selfPhase ?? null,
+        intentPhase: (inputOrKanagi as any)?.intentPhase ?? null,
+        shouldPersist: (inputOrKanagi as any)?.shouldPersist ?? null,
+        shouldRecombine: (inputOrKanagi as any)?.shouldRecombine ?? null,
+      });
       const arkPhase = String(heart?.arkTargetPhase ?? "").toUpperCase();
       const phaseInLine = "いまは少し内側を整える段階です。";
       const phaseOutLine = "いまは小さく外へ動かす段階です。";
@@ -428,7 +442,29 @@ export function responseComposer(input: ResponseComposerInput): ResponseComposer
   }
 
   const meaningFrame = buildMeaningFrame(input);
-  out = applyPersonaReduction(out, meaningFrame, input?.rawMessage, (input as any)?.heart);
+  // R10_DANSHARI_COMMUNICATION_LOOP_V1: general/support 時に driftRisk を先行計算して applyPersonaReduction に渡す（gate より前のためここで計算）
+  const rr = String(input?.routeReason ?? "");
+  if (
+    (rr === "NATURAL_GENERAL_LLM_TOP" || rr === "N2_KANAGI_PHASE_TOP") &&
+    (input as any).driftRisk == null
+  ) {
+    try {
+      const ks = computeKanagiSelfKernel({
+        rawMessage: String(input?.rawMessage ?? ""),
+        routeReason: rr,
+        heart: (input as any)?.heart,
+        topicClass: "general",
+      });
+      (input as any).driftRisk = ks.driftRisk;
+      (input as any).selfPhase = ks.selfPhase;
+      (input as any).intentPhase = ks.intentPhase;
+      (input as any).shouldPersist = ks.shouldPersist;
+      (input as any).shouldRecombine = ks.shouldRecombine;
+    } catch {
+      // 失敗時は driftRisk 未設定のまま → shouldUseDanshariCommunication は false
+    }
+  }
+  out = applyPersonaReduction(out, meaningFrame, input?.rawMessage, (input as any)?.heart, input);
   if (input?.routeReason === "SOUL_FASTPATH_VERIFIED_V1") {
     out = soulSurfaceCleanup(soulSegmentRebuild(out));
   }

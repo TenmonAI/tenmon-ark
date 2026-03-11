@@ -5,6 +5,7 @@ import { getIntentionHintForKu } from "../../core/intentionConstitution.js";
 import { tryAppendKanagiGrowthLedgerFromPayload } from "../../core/kanagiGrowthLedger.js";
 import { computeKanagiSelfKernel, getSafeKanagiSelfOutput } from "../../core/kanagiSelfKernel.js";
 import { resolveScriptureQuery } from "../../core/scriptureCanon.js";
+import { memoryPersistMessage } from "../../memory/index.js";
 
 function __tenmonGeneralGateSoft(out: string): string {
   let t = String(out || "").replace(/\r/g, "").trim();
@@ -255,6 +256,19 @@ function __tenmonGeneralGateResultMaybe(x: any, rawMessageOverride?: string): an
         "has_ku=" + has_ku,
         "has_self=" + has_self
       );
+    } catch {}
+    // CARD_SESSION_MEMORY_PERSIST_ALL_ROUTES_V1: same-thread 前文脈保持のため、gate 経由全返却で session_memory に user/assistant を persist。二重保存は __TENMON_PERSIST_DONE でスキップ。失敗時は会話を落とさない。
+    try {
+      const tid = String((x as any).threadId ?? "").trim();
+      if (
+        tid &&
+        raw &&
+        !(x as any).__TENMON_PERSIST_DONE &&
+        typeof memoryPersistMessage === "function"
+      ) {
+        memoryPersistMessage(tid, "user", raw);
+        memoryPersistMessage(tid, "assistant", String((x as any).response ?? ""));
+      }
     } catch {}
     return x;
   } catch { return x; }

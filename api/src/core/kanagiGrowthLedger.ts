@@ -3,6 +3,7 @@
  * kanagi growth ledger の型・pure helper・append-only insert。
  */
 import { getDb } from "../db/index.js";
+import { shouldUseDanshariCommunication } from "./danshariCommunication.js";
 
 export type KanagiGrowthLedgerEntry = {
   inputText: string;
@@ -63,7 +64,7 @@ export function normalizeKanagiGrowthLedgerEntry(
   const str = (v: unknown) => (v != null && typeof v === "string" ? v : null);
   const num = (v: unknown) =>
     typeof v === "number" && Number.isFinite(v) ? v : null;
-  const boolOrInt = (v: unknown) => {
+  const boolOrInt = (v: unknown): 0 | 1 | null => {
     if (v === true || v === 1) return 1;
     if (v === false || v === 0) return 0;
     return null;
@@ -90,6 +91,11 @@ export function normalizeKanagiGrowthLedgerEntry(
     nextGrowthAxis: str(o.nextGrowthAxis ?? o.next_growth_axis) ?? null,
     note: str(o.note) ?? null,
   };
+}
+
+function toShouldPersistOrRecombineVal(v: unknown): 0 | 1 {
+  if (v === true || v === 1) return 1;
+  return 0;
 }
 
 /** R9_LEDGER_APPEND_PAYLOAD_SOURCE_FIX_V1: input_text は message/rawMessage 優先、最後の fallback だけ "(no input)" */
@@ -137,6 +143,18 @@ export function buildKanagiGrowthLedgerEntryFromKu(
     isScripture ? "canon" : (str(ks?.conceptMode) ?? null);
   const conceptAlignment =
     isScripture ? "scripture_aligned" : (str(ks?.conceptAlignment) ?? null);
+  const driftRiskVal = num(ks?.driftRisk) ?? null;
+  // R10_DANSHARI_COMMUNICATION_LOOP_V1: general/support で driftRisk >= 0.5 のときのみ ledger に danshari_communication を残す
+  const noteVal =
+    shouldUseDanshariCommunication({
+      routeReason,
+      topicClass,
+      driftRisk: driftRiskVal,
+      selfPhase: str(ks?.selfPhase) ?? null,
+      intentPhase: str(ks?.intentPhase) ?? null,
+      shouldPersist: toShouldPersistOrRecombineVal(ks?.shouldPersist) ? 1 : null,
+      shouldRecombine: toShouldPersistOrRecombineVal(ks?.shouldRecombine) ? 1 : null,
+    }) ? "danshari_communication" : null;
   return {
     inputText,
     routeReason,
@@ -153,14 +171,12 @@ export function buildKanagiGrowthLedgerEntryFromKu(
     scriptureAlignment:
       str(ku.scriptureAlignment ?? ks?.scriptureAlignment) ?? null,
     stabilityScore: num(ks?.stabilityScore) ?? null,
-    driftRisk: num(ks?.driftRisk) ?? null,
-    shouldPersist:
-      ks?.shouldPersist === true || ks?.shouldPersist === 1 ? 1 : 0,
-    shouldRecombine:
-      ks?.shouldRecombine === true || ks?.shouldRecombine === 1 ? 1 : 0,
+    driftRisk: driftRiskVal,
+    shouldPersist: toShouldPersistOrRecombineVal(ks?.shouldPersist),
+    shouldRecombine: toShouldPersistOrRecombineVal(ks?.shouldRecombine),
     unresolvedClass: null,
     nextGrowthAxis: null,
-    note: null,
+    note: noteVal,
   };
 }
 
