@@ -1362,21 +1362,6 @@ ${String((gptDraft as any)?.text ?? "").trim()}
             if (cur == null || String(cur).trim() === "") (df.ku as any).inputText = raw;
           } catch {}
 
-          // R9_GROWTH_LEDGER_INSERT_RELOCATE_V1: 共通整流層で ledger insert 1回（rawMessage/ku.inputText 埋まった後）
-          try {
-            const __ku = df.ku as any;
-            if (
-              __ku &&
-              typeof __ku === "object" &&
-              (__ku.kanagiSelf?.shouldPersist === true || __ku.kanagiSelf?.shouldRecombine === true) &&
-              !(obj as any).__KANAGI_LEDGER_DONE
-            ) {
-              const entry = buildKanagiGrowthLedgerEntryFromKu(__ku, (obj as any).rawMessage);
-              insertKanagiGrowthLedgerEntry(entry);
-              (obj as any).__KANAGI_LEDGER_DONE = true;
-            }
-          } catch {}
-
           // C2_LLM_STATUS_ALWAYS_ATTACH_V1: always attach llmStatus (observability only)
           try {
             if ((df.ku as any).llmStatus == null) {
@@ -1559,6 +1544,21 @@ ${String((gptDraft as any)?.text ?? "").trim()}
                 step: String(__k?.step ?? ""),
                 routeReason: String(__ku.routeReason ?? "")
               };
+            }
+          } catch {}
+
+          // R9_GROWTH_LEDGER_INSERT_RELOCATE_V1 / R9_GROWTH_LEDGER_ROUTE_COVERAGE_FIX_V1: 共通最終整流点で ledger insert 1回（全 route 通過後）
+          try {
+            const __ku = df.ku as any;
+            if (
+              __ku &&
+              typeof __ku === "object" &&
+              (__ku.kanagiSelf?.shouldPersist === true || __ku.kanagiSelf?.shouldRecombine === true) &&
+              !(obj as any).__KANAGI_LEDGER_DONE
+            ) {
+              const entry = buildKanagiGrowthLedgerEntryFromKu(__ku, (obj as any).rawMessage);
+              insertKanagiGrowthLedgerEntry(entry);
+              (obj as any).__KANAGI_LEDGER_DONE = true;
             }
           } catch {}
         }
