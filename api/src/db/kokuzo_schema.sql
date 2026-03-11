@@ -441,3 +441,23 @@ CREATE INDEX IF NOT EXISTS idx_kanagi_growth_ledger_created_at
 CREATE INDEX IF NOT EXISTS idx_kanagi_growth_ledger_route_reason
   ON kanagi_growth_ledger(route_reason);
 
+
+-- R10_THREAD_CENTER_MEMORY_SCHEMA_V1: thread 単位の中心メモリ（まだ routing bind しない）
+CREATE TABLE IF NOT EXISTS thread_center_memory (
+  id INTEGER PRIMARY KEY,
+  thread_id TEXT NOT NULL,
+  center_type TEXT NOT NULL,
+  center_key TEXT,
+  center_reason TEXT,
+  next_axes_json TEXT,
+  source_route_reason TEXT,
+  source_scripture_key TEXT,
+  source_topic_class TEXT,
+  source_self_phase TEXT,
+  source_intent_phase TEXT,
+  confidence REAL NOT NULL DEFAULT 0.0,
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_thread_center_memory_thread_id_updated_at
+  ON thread_center_memory(thread_id, updated_at DESC);
+
