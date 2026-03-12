@@ -1,0 +1,163 @@
+{
+  "schema": "R10_KATAKAMUNA_SOURCEPACK_MANIFEST_V1",
+  "updated_at": "2026-03-10",
+  "description": "相似象・楢崎・宇野・カタカムナ関連PDF群を KATAKAMUNA_SOURCEPACK として正式固定。node extract の入口として利用する。",
+  "axis_tags": ["人物", "概念", "図象", "実践", "物理", "批判"],
+  "sources": [
+    {
+      "sourceKey": "SOUJO_01",
+      "displayName": "相似象 1号",
+      "axisTags": ["概念", "図象", "実践"],
+      "notes": "相似象学・会誌"
+    },
+    {
+      "sourceKey": "SOUJO_02",
+      "displayName": "相似象 2号",
+      "axisTags": ["概念", "図象", "実践"]
+    },
+    {
+      "sourceKey": "SOUJO_03",
+      "displayName": "相似象 3号",
+      "axisTags": ["概念", "図象", "実践"]
+    },
+    {
+      "sourceKey": "SOUJO_04",
+      "displayName": "相似象 4号",
+      "axisTags": ["概念", "図象", "実践"]
+    },
+    {
+      "sourceKey": "SOUJO_05",
+      "displayName": "相似象 5号",
+      "axisTags": ["概念", "図象", "実践"]
+    },
+    {
+      "sourceKey": "SOUJO_06",
+      "displayName": "相似象 6号",
+      "axisTags": ["概念", "図象", "実践"]
+    },
+    {
+      "sourceKey": "SOUJO_07",
+      "displayName": "相似象 7号",
+      "axisTags": ["概念", "図象", "実践"]
+    },
+    {
+      "sourceKey": "SOUJO_08",
+      "displayName": "相似象 8号",
+      "axisTags": ["概念", "図象", "実践"]
+    },
+    {
+      "sourceKey": "SOUJO_09",
+      "displayName": "相似象 9号",
+      "axisTags": ["概念", "図象", "実践"]
+    },
+    {
+      "sourceKey": "SOUJO_10",
+      "displayName": "相似象 10号",
+      "axisTags": ["概念", "図象", "実践"]
+    },
+    {
+      "sourceKey": "SOUJO_11",
+      "displayName": "相似象 11号",
+      "axisTags": ["概念", "図象", "実践"]
+    },
+    {
+      "sourceKey": "SOUJO_12",
+      "displayName": "相似象 12号",
+      "axisTags": ["概念", "図象", "実践"]
+    },
+    {
+      "sourceKey": "SOUJO_13",
+      "displayName": "相似象 13号",
+      "axisTags": ["概念", "図象", "実践"]
+    },
+    {
+      "sourceKey": "SOUJO_14",
+      "displayName": "相似象 14号",
+      "axisTags": ["概念", "図象", "実践"]
+    },
+    {
+      "sourceKey": "SOUJO_15",
+      "displayName": "相似象 15号",
+      "axisTags": ["概念", "図象", "実践"]
+    },
+    {
+      "sourceKey": "SOUJO_16",
+      "displayName": "相似象 16号",
+      "axisTags": ["概念", "図象", "実践"]
+    },
+    {
+      "sourceKey": "MIKKAN_17_YOKO",
+      "displayName": "未刊17横",
+      "axisTags": ["概念", "図象"],
+      "notes": "未刊17号（横組）"
+    },
+    {
+      "sourceKey": "MIKKAN_17_TATE",
+      "displayName": "未刊17縦",
+      "axisTags": ["概念", "図象"],
+      "notes": "未刊17号（縦組）"
+    },
+    {
+      "sourceKey": "JOKODAI_BUNMEI_BUTSURI",
+      "displayName": "日本の上古代文明と日本の物理学",
+      "axisTags": ["概念", "物理", "図象"],
+      "notes": "楢崎・直観物理・考古物理学"
+    },
+    {
+      "sourceKey": "NIHON_BUTSURI_BEKKA",
+      "displayName": "日本の物理学抜粋",
+      "axisTags": ["物理", "概念"]
+    },
+    {
+      "sourceKey": "NARASAKI_CHOKKAN_01",
+      "displayName": "楢崎直感1号",
+      "axisTags": ["人物", "概念", "物理", "図象"],
+      "notes": "楢崎皐月・直観物理"
+    },
+    {
+      "sourceKey": "KAMUNAGARA_120",
+      "displayName": "カムナガラノ道120pより",
+      "axisTags": ["概念", "実践", "図象"]
+    },
+    {
+      "sourceKey": "KATAKAMUNA_GENREIKAI",
+      "displayName": "カタカムナ言灵解",
+      "axisTags": ["概念", "図象", "物理"],
+      "notes": "天聞軸への橋の一つ"
+    },
+    {
+      "sourceKey": "HOI_GROUP",
+      "displayName": "補遺群",
+      "axisTags": ["概念", "図象"],
+      "notes": "補遺資料群"
+    },
+    {
+      "sourceKey": "SEIDEN_SANPO_NARASAKI",
+      "displayName": "静電三法 楢崎皐月",
+      "axisTags": ["人物", "物理", "実践"],
+      "notes": "楢崎皐月・静電三法"
+    }
+  ],
+  "core_nodes": [
+    "楢崎皐月",
+    "宇野多美恵",
+    "相似象学",
+    "直観物理",
+    "考古物理学",
+    "アマウツシ",
+    "イヤシロチ",
+    "カタカムナ文献"
+  ],
+  "tenmon_bridge": [
+    "言霊秘書",
+    "カタカムナ言灵解",
+    "いろは言灵解",
+    "空海軸",
+    "水火法則",
+    "天津金木"
+  ],
+  "node_extract": {
+    "entry_point": true,
+    "description": "本 manifest の sources と core_nodes を起点に node extract を行う。lawgraph 全面実装前の入口として利用する。"
+  }
+}
