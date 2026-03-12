@@ -17,12 +17,16 @@ function __readSha256FirstToken(p: string): string | null {
     return null;
   }
 }
-function __constitutionHashes(): Record<string, string | null> {
+
+// FIX_CONSTITUTION_BIND_V1: constitution 3項目を null にしない（読み出し失敗時は暫定固定文字列）
+const __constitutionFallback = "pending";
+
+function __constitutionHashes(): Record<string, string> {
   const base = "/opt/tenmon-ark-data/constitution";
   return {
-    OMEGA_CONTRACT_v1: __readSha256FirstToken(base + "/OMEGA_CONTRACT_v1.sha256"),
-    PDCA_BUILD_CONTRACT_v1: __readSha256FirstToken(base + "/TENMON-ARK_PDCA_BUILD_CONTRACT_v1.sha256"),
-    KHS_RUNTIME_CONTRACT_v1: __readSha256FirstToken(base + "/TENMON-ARK_KHS_RUNTIME_INTEGRATION_CONTRACT_v1.sha256"),
+    OMEGA_CONTRACT_v1: __readSha256FirstToken(base + "/OMEGA_CONTRACT_v1.sha256") ?? __constitutionFallback,
+    PDCA_BUILD_CONTRACT_v1: __readSha256FirstToken(base + "/TENMON-ARK_PDCA_BUILD_CONTRACT_v1.sha256") ?? __constitutionFallback,
+    KHS_RUNTIME_CONTRACT_v1: __readSha256FirstToken(base + "/TENMON-ARK_KHS_RUNTIME_INTEGRATION_CONTRACT_v1.sha256") ?? __constitutionFallback,
   };
 }
 
