@@ -2934,6 +2934,11 @@ try {
         const __centerLabel =
           (__labelMap[__centerKey] || __labelMap[__cm] || __labelMap[__srcKey] || __centerKey || "").trim();
 
+        const __normalizeCenterLabel = (s: string): string =>
+          String(s || "")
+            .trim()
+            .replace(/(とは|って|は|が|を|に|へ|と|も|の)\s*$/u, "");
+
         let __profile = "standard";
         if (/一言で|簡潔に|短く|要点だけ/u.test(__rawMsg)) __profile = "brief";
         else if (/詳しく|徹底的に|本質|設計|解析|レポート/u.test(__rawMsg)) __profile = "deep_report";
@@ -2942,7 +2947,7 @@ try {
 
         ku.responseProfile = __profile;
         if (__centerKey) ku.centerKey = __centerKey;
-        if (__centerLabel) ku.centerLabel = __centerLabel;
+        ku.centerLabel = __normalizeCenterLabel(String(ku.centerLabel || __centerLabel || __centerKey || ""));
         // FIX_THREAD_CONTINUITY_FULL_V1
         try {
           const __tidCenter = String(threadId || "").trim();
