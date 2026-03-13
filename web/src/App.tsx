@@ -1,4 +1,8 @@
 import React from "react";
+import { useEffect, useState } from "react";
+import KoshikiConsolePage from "./pages/KoshikiConsole";
+import { GptShell } from "./components/gpt/GptShell";
+import { I18nProvider } from "./i18n/useI18n";
 
 const TENMON_AUTH_OK_V1 = "TENMON_AUTH_OK_V1";
 
@@ -13,41 +17,43 @@ async function tenmonCheckMe(): Promise<boolean> {
   }
 }
 
-import KoshikiConsolePage from "./pages/KoshikiConsole";
-import { GptShell } from "./components/gpt/GptShell";
-import { I18nProvider } from "./i18n/useI18n";
-
-import { useEffect } from "react";
-
 export default function App() {
-
   const [authReady, setAuthReady] = useState(false);
   const [authOk, setAuthOk] = useState(false);
 
+  // 1) 認証確認
   useEffect(() => {
     let dead = false;
+
     (async () => {
       const ok = await tenmonCheckMe();
       if (dead) return;
       setAuthOk(ok);
       setAuthReady(true);
-      try { localStorage.setItem(TENMON_AUTH_OK_V1, ok ? "1" : "0"); } catch {}
-      if (!ok && typeof window !== "undefined" && window.location.pathname.startsWith("/pwa")) {
+      try {
+        localStorage.setItem(TENMON_AUTH_OK_V1, ok ? "1" : "0");
+      } catch {}
+
+      if (
+        !ok &&
+        typeof window !== "undefined" &&
+        window.location.pathname.startsWith("/pwa")
+      ) {
         window.location.href = "/pwa/login-local.html?next=/pwa/";
       }
     })();
-    return () => { dead = true; };
+
+    return () => {
+      dead = true;
+    };
   }, []);
 
-  if (!authReady) {
-    return <div style={{ padding: 24, fontFamily: "sans-serif" }}>認証確認中...</div>;
-  }
-
-
-  // APP_AUTOLOGIN_V1: auto-login once using ?k= or localStorage TENMON_FOUNDER_KEY
+  // 2) founder autologin
   useEffect(() => {
+    if (!authReady) return;
+
     try {
-      if (localStorage.getItem('TENMON_AUTOLOGIN_DONE') === '1') return;
+      if (localStorage.getItem("TENMON_AUTOLOGIN_DONE") === "1") return;
     } catch {}
 
     (async () => {
@@ -59,7 +65,9 @@ export default function App() {
         if (!key) return;
 
         if (kParam && kParam !== kStore) {
-          try { localStorage.setItem("TENMON_FOUNDER_KEY", kParam); } catch {}
+          try {
+            localStorage.setItem("TENMON_FOUNDER_KEY", kParam);
+          } catch {}
         }
 
         await fetch("/api/login", {
@@ -68,9 +76,11 @@ export default function App() {
           credentials: "include",
           body: JSON.stringify({ founderKey: key }),
         });
-        try { localStorage.setItem('TENMON_AUTOLOGIN_DONE','1'); } catch {}
 
-        // drop k= to avoid replay
+        try {
+          localStorage.setItem("TENMON_AUTOLOGIN_DONE", "1");
+        } catch {}
+
         try {
           if (kParam) {
             u.searchParams.delete("k");
@@ -79,18 +89,20 @@ export default function App() {
         } catch {}
       } catch {}
     })();
-  }, []);
+  }, [authReady]);
+
+  if (!authReady) {
+    return <div style={{ padding: 24, fontFamily: "sans-serif" }}>認証確認中...</div>;
+  }
 
   return (
     <I18nProvider>
-      
-{/* KOSHIKI_ROUTE_WIRING_V1: /pwa/koshiki renders KoshikiConsolePage */}
-      {
-        (typeof window !== "undefined" && window.location.pathname.startsWith("/pwa/koshiki"))
-          ? <KoshikiConsolePage />
-          : <GptShell />
-      }
-    
+      {typeof window !== "undefined" &&
+      window.location.pathname.startsWith("/pwa/koshiki") ? (
+        <KoshikiConsolePage />
+      ) : (
+        <GptShell />
+      )}
     </I18nProvider>
   );
 }

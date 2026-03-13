@@ -142,8 +142,8 @@ authLocalRouter.post("/auth/local/login", (req, res) => {
     db.exec("BEGIN");
     try {
       db.prepare(`DELETE FROM auth_sessions WHERE userId = ?`).run(String(row.userId));
-      db.prepare(`INSERT INTO auth_sessions (sessionId, userId, expiresAt) VALUES (?, ?, ?)`)
-        .run(sessionId, String(row.userId), expiresAt);
+      db.prepare(`INSERT INTO auth_sessions (sessionId, userId, expiresAt, createdAt) VALUES (?, ?, ?, ?)`)
+        .run(sessionId, String(row.userId), expiresAt, nowIso());
       db.exec("COMMIT");
     } catch (e) {
       try { db.exec("ROLLBACK"); } catch {}
