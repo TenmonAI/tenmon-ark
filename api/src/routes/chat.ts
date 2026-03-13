@@ -90,6 +90,7 @@ import { writeScriptureLearningLedger } from "../core/scriptureLearningLedger.js
 import { buildKanagiGrowthLedgerEntryFromKu, insertKanagiGrowthLedgerEntry } from "../core/kanagiGrowthLedger.js";
 import { upsertThreadCenter, getLatestThreadCenter } from "../core/threadCenterMemory.js";
 import { resolveIrohaActionPattern } from "../core/irohaActionPatterns.js";
+import { buildResponsePlan } from "../planning/responsePlanCore.js";
 
 // FIX_PRE_GATE_GENERAL_SURFACE_V1: 先頭・末尾欠損・不要前置き混入を止血。引用あり/なしの「いまの言葉を…と受け取りました。」を安全に除去。
 function __cleanLlmFrame(r: string): string {
@@ -3362,13 +3363,25 @@ return res.json(__tenmonGeneralGateResultMaybe({
       };
       outText = __n1ClampOneQ(outText);
 
+      const __kuGreeting: any = { lawsUsed: [], evidenceIds: [], lawTrace: [], routeReason: "N1_GREETING_LLM_TOP" };
+      __kuGreeting.responsePlan = buildResponsePlan({
+        routeReason: "N1_GREETING_LLM_TOP",
+        rawMessage: String(message ?? ""),
+        centerKey: null,
+        centerLabel: null,
+        scriptureKey: null,
+        semanticBody: outText,
+        mode: "greeting",
+        responseKind: "statement_plus_question",
+      });
+
       return res.json(__tenmonGeneralGateResultMaybe({
         response: outText,
         evidence: null,
         candidates: [],
         timestamp,
         threadId,
-        decisionFrame: { mode: "NATURAL", intent: "chat", llm: outProv, ku: { lawsUsed: [], evidenceIds: [], lawTrace: [], routeReason: "N1_GREETING_LLM_TOP" } },
+        decisionFrame: { mode: "NATURAL", intent: "chat", llm: outProv, ku: __kuGreeting },
       }));
 
     }
@@ -4569,9 +4582,20 @@ return res.json(__tenmonGeneralGateResultMaybe({
             };
             __ku.synapseTop = { ...((__ku as any).synapseTop || {}), ...__synapseTopScr };
             try { console.log("[SYNAPSETOP_AFTER_ASSIGN_SCRIPTURE]", { path: "canon", keys: Object.keys((__ku as any).synapseTop || {}) }); } catch {}
+            const __respCanon = __cleanLlmFrame(__composed.response);
+            __ku.responsePlan = buildResponsePlan({
+              routeReason: "TENMON_SCRIPTURE_CANON_V1",
+              rawMessage: String(message ?? ""),
+              centerKey: String(__hitScripture.scriptureKey || "").trim() || null,
+              centerLabel: String(__hitScripture.displayName || __hitScripture.scriptureKey || "").trim() || null,
+              scriptureKey: String(__hitScripture.scriptureKey || "").trim() || null,
+              semanticBody: __respCanon,
+              mode: "canon",
+              responseKind: "statement_plus_question",
+            });
             try { console.log("[SYNAPSETOP_BEFORE_RETURN]", { path: "scripture_canon", synapseTop: (__ku as any).synapseTop }); } catch {}
             return res.json(__tenmonGeneralGateResultMaybe({
-              response: __cleanLlmFrame(__composed.response),
+              response: __respCanon,
               evidence: null,
               candidates: [],
               timestamp,
@@ -6249,6 +6273,16 @@ const __heartNorm = normalizeHeartShape(__heart);
       console.log("[GEN_GENERAL_PRE_GATE]", { out: __canonicalBody.slice(0, 240) });
       // FIX_GENERAL_COMPOSED_BYPASS_V1: general 本文は __canonicalBody（CLAMP_AFTER 由来）のみ採用。trimStart / 追加 replace / 追加整形は行わない。
       const finalResp = __canonicalBody;
+      (__ku as any).responsePlan = buildResponsePlan({
+        routeReason: "NATURAL_GENERAL_LLM_TOP",
+        rawMessage: String(message ?? ""),
+        centerKey: null,
+        centerLabel: null,
+        scriptureKey: null,
+        semanticBody: finalResp,
+        mode: "general",
+        responseKind: "statement_plus_question",
+      });
       try { console.log("[SYNAPSETOP_BEFORE_RETURN]", { path: "general", synapseTop: (__ku as any).synapseTop }); } catch {}
       return res.json(__tenmonGeneralGateResultMaybe({
         response: finalResp,
