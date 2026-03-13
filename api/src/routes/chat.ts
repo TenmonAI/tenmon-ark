@@ -4480,9 +4480,11 @@ return res.json(__tenmonGeneralGateResultMaybe({
             const __ku: any = {
               routeReason: "TENMON_SCRIPTURE_CANON_V1",
               heart: normalizeHeartShape(__heart),
-              scriptureKey: __hitScripture.scriptureKey,
+              centerKey: String(__hitScripture.scriptureKey || "").trim() || null,
+              centerMeaning: String(__hitScripture.scriptureKey || "").trim() || null,
+              centerLabel: String(__hitScripture.displayName || __hitScripture.scriptureKey || "").trim() || null,
+              scriptureKey: String(__hitScripture.scriptureKey || "").trim() || null,
               scriptureMode: "canon",
-                centerMeaning: String(__hitScripture.scriptureKey || "").trim(),
                 thoughtCoreSummary: {
                   centerKey: "TENMON_SCRIPTURE_CANON_V1",
                   centerMeaning: String(__hitScripture.scriptureKey || "").trim() || null,
@@ -4508,14 +4510,17 @@ return res.json(__tenmonGeneralGateResultMaybe({
             }
 
             try {
-              upsertThreadCenter({
-                threadId: String(threadId ?? ""),
-                centerType: "scripture",
-                centerKey: String((__composed as any)?.scriptureKey ?? ""),
-                sourceRouteReason: "TENMON_SCRIPTURE_CANON_V1",
-                sourceScriptureKey: String((__composed as any)?.scriptureKey ?? ""),
-                sourceTopicClass: String(__composed.meaningFrame?.topicClass ?? ""),
-              });
+              const __persistScriptureKey = String(__hitScripture.scriptureKey || "").trim();
+              if (__persistScriptureKey) {
+                upsertThreadCenter({
+                  threadId: String(threadId ?? ""),
+                  centerType: "scripture",
+                  centerKey: __persistScriptureKey,
+                  sourceRouteReason: "TENMON_SCRIPTURE_CANON_V1",
+                  sourceScriptureKey: __persistScriptureKey,
+                  sourceTopicClass: String(__composed.meaningFrame?.topicClass ?? ""),
+                });
+              }
             } catch {}
             // R10_SYNAPSE_TOP_BIND_V3_REAPPLY: TENMON_SCRIPTURE_CANON_V1 return payload 内 ku に synapseTop を直書き追加（scripture continuity + 既存 metaHead を消さずマージ）
             const __scriptureKey = String(__hitScripture.scriptureKey ?? "");
@@ -6022,10 +6027,67 @@ const __heartNorm = normalizeHeartShape(__heart);
           const __tc = getLatestThreadCenter(String(threadId));
           if (__tc) {
             __ku.threadCenter = { centerType: __tc.center_type, centerKey: __tc.center_key, sourceRouteReason: __tc.source_route_reason };
-            // FIX_THREAD_CONTINUITY_ROUTE_BIND_V1: scripture center の follow-up は routeReason を TENMON_SCRIPTURE_CANON_V1 に寄せ、general 落ちを避ける。
+            // FIX_THREAD_CONTINUITY_ROUTE_BIND_V1:
+            // scripture center の follow-up は routeReason を TENMON_SCRIPTURE_CANON_V1 に寄せ、
+            // metadata を threadCenter から再水和する
             if (__isFollowupGeneral) {
               if (__tc.center_type === "scripture") {
+                const __scriptureKeyTC0 = String(__tc.center_key || "").trim();
+                const __scriptureResolvedTC = resolveScriptureQuery(__scriptureKeyTC0);
+                const __scriptureKeyTC = String(
+                  __scriptureResolvedTC?.scriptureKey || __scriptureKeyTC0 || ""
+                ).trim();
+                const __scriptureLabelTC = String(
+                  __scriptureResolvedTC?.displayName ||
+                    (__scriptureKeyTC === "hokekyo"
+                      ? "法華経"
+                      : __scriptureKeyTC === "kotodama_hisho"
+                        ? "言霊秘書"
+                        : __scriptureKeyTC === "iroha_kotodama_kai"
+                          ? "いろは言霊解"
+                          : __scriptureKeyTC === "katakamuna_kotodama_kai"
+                            ? "カタカムナ言霊解"
+                            : __scriptureKeyTC0)
+                ).trim();
+
                 __ku.routeReason = "TENMON_SCRIPTURE_CANON_V1";
+                __ku.scriptureKey = __scriptureKeyTC || null;
+                __ku.scriptureMode =
+                  /次の一歩|一つだけ|示してください|示して|教えて|その前提で|そこから/u.test(String(message || ""))
+                    ? "action_instruction"
+                    : "canon";
+                __ku.centerKey = __scriptureKeyTC || null;
+                __ku.centerMeaning = __scriptureKeyTC || null;
+                __ku.centerLabel = __scriptureLabelTC || null;
+                __ku.threadCenter = {
+                  centerType: "scripture",
+                  centerKey: __scriptureKeyTC || __scriptureKeyTC0 || null,
+                  sourceRouteReason: "TENMON_SCRIPTURE_CANON_V1",
+                };
+
+                if (!__ku.thoughtCoreSummary || typeof __ku.thoughtCoreSummary !== "object") {
+                  __ku.thoughtCoreSummary = {
+                    centerKey: "TENMON_SCRIPTURE_CANON_V1",
+                    centerMeaning: __scriptureKeyTC || null,
+                    routeReason: "TENMON_SCRIPTURE_CANON_V1",
+                    modeHint: "scripture",
+                    continuityHint: __scriptureKeyTC || null,
+                  };
+                }
+
+                // scripture continuity 用 synapseTop を再水和
+                const __synTopTC: any = {
+                  sourceThreadCenter: {
+                    centerType: "scripture",
+                    centerKey: __scriptureKeyTC || __scriptureKeyTC0 || null,
+                    sourceRouteReason: "TENMON_SCRIPTURE_CANON_V1",
+                  },
+                  sourceRouteReason: "TENMON_SCRIPTURE_CANON_V1",
+                  sourceScriptureKey: __scriptureKeyTC || __scriptureKeyTC0 || null,
+                  sourceLedgerHint: "ledger:scripture_continuity",
+                  notionHint: "notion:tenmon_reconcile/notion_bridge",
+                };
+                __ku.synapseTop = { ...((__ku as any).synapseTop || {}), ...__synTopTC };
               } else if (__tc.center_type === "concept") {
                 const __srcRR = String(__tc.source_route_reason || "DEF_DICT_HIT");
                 const __conceptKey = String(__tc.center_key || "");
@@ -6094,29 +6156,60 @@ const __heartNorm = normalizeHeartShape(__heart);
 
         // 2) synapseTop に実データを束ねる
         const __intention = getIntentionHintForKu() || null;
-        const __threadCenter = (__ku as any).threadCenter || { centerType: "none", centerKey: "", sourceRouteReason: "" };
         const __mfTop: any = (__ku as any).meaningFrame || null;
         const __routeR = String((__ku as any).routeReason || "NATURAL_GENERAL_LLM_TOP");
-        const __scriptureKey = String((__threadCenter as any).centerKey || "");
+
+        const __threadCenterRaw = (__ku as any).threadCenter || null;
+        const __threadCenterPrev =
+          ((__ku as any).synapseTop && (__ku as any).synapseTop.sourceThreadCenter) || null;
+
+        const __threadCenter =
+          (__threadCenterRaw && String((__threadCenterRaw as any).centerKey || "").trim())
+            ? __threadCenterRaw
+            : (__threadCenterPrev && String((__threadCenterPrev as any).centerKey || "").trim())
+              ? __threadCenterPrev
+              : null;
+
+        const __scriptureKey =
+          String(
+            (__ku as any).scriptureKey ||
+            (__threadCenter && (__threadCenter as any).centerKey) ||
+            (((__ku as any).synapseTop || {}).sourceScriptureKey) ||
+            ""
+          ).trim();
+
         const __isScriptureFollow =
-          (__threadCenter as any).centerType === "scripture" && __isFollowupGeneral;
+          (__threadCenter as any)?.centerType === "scripture" && __isFollowupGeneral;
+
         // R10_SYNAPSE_TOP_BIND_V3: notionHint 固定文字列
         const __notionHint = "notion:tenmon_reconcile/notion_bridge";
 
-        const __synapseTop = {
-          sourceThreadCenter: __threadCenter,
+        const __memoryCenterKey =
+          __scriptureKey || String(((__ku as any).centerKey || "")).trim();
+
+        const __synapseTopPatch: any = {
           sourceRouteReason: __routeR,
-          sourceScriptureKey: __scriptureKey,
-          sourceKanagiSelf: (__ku as any).kanagiSelf || {},
-          sourceIntention: __intention || { kind: "none" },
-          sourceHeart: (__ku as any).heart || __heartNorm || {},
-          sourceMemoryHint: String(threadId || "") ? `thread:${String(threadId)} centerKey:${__scriptureKey || "none"}` : "",
           sourceLedgerHint: __routeR === "TENMON_SCRIPTURE_CANON_V1" ? "ledger:scripture_continuity" : "ledger:general",
           reconcileHint: __isScriptureFollow ? "scripture_followup" : "",
           notionHint: __notionHint,
         };
-        // R10_SYNAPSE_TOP_BIND_V3: 既に metaHead がある場合も上記フィールドをマージ
-        (__ku as any).synapseTop = { ...((__ku as any).synapseTop || {}), ...__synapseTop };
+
+        if (__threadCenter) __synapseTopPatch.sourceThreadCenter = __threadCenter;
+        if (__scriptureKey) __synapseTopPatch.sourceScriptureKey = __scriptureKey;
+        if (__memoryCenterKey && String(threadId || "")) {
+          __synapseTopPatch.sourceMemoryHint = `thread:${String(threadId)} centerKey:${__memoryCenterKey}`;
+        }
+        if ((__ku as any).kanagiSelf) __synapseTopPatch.sourceKanagiSelf = (__ku as any).kanagiSelf;
+        if (__intention) __synapseTopPatch.sourceIntention = __intention;
+        if ((__ku as any).heart || __heartNorm) {
+          __synapseTopPatch.sourceHeart = (__ku as any).heart || __heartNorm;
+        }
+
+        // 既存 synapseTop を空で上書きせず、非空パッチのみマージ
+        (__ku as any).synapseTop = {
+          ...((__ku as any).synapseTop || {}),
+          ...__synapseTopPatch,
+        };
         try { console.log("[SYNAPSETOP_AFTER_ASSIGN_GENERAL]", { keys: Object.keys((__ku as any).synapseTop || {}) }); } catch {}
       } catch {}
 

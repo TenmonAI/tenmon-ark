@@ -43,7 +43,9 @@ function normalizeScriptureQuery(q: string): string {
   return q
     .replace(/言灵/g, "言霊")
     .replace(/言靈/g, "言霊")
-    .replace(/イロハ/g, "いろは");
+    .replace(/イロハ/g, "いろは")
+    .replace(/(とは何か|とは何|とはなに|とは\s*(何|なに)\s*ですか|って\s*(何|なに)\s*ですか|って\s*(何|なに)|とは[？?]?|って[？?]?|は[？?]?)$/u, "")
+    .trim();
 }
 
 export function resolveScriptureQuery(text: string): ScriptureCanonItem | null {
@@ -115,6 +117,13 @@ export function getScriptureConceptEvidence(scriptureKey: string):
         pdfPage: 1,
         lawKey: "TENMON:SCRIPTURE:KATAKAMUNA_KAI:TEXT:V1",
         quoteHint: "カタカムナを稲荷の言霊で読み解く",
+      };
+    case "hokekyo":
+      return {
+        doc: "法華経",
+        pdfPage: 1,
+        lawKey: "TENMON:SCRIPTURE:HOKEKYO:TEXT:V1",
+        quoteHint: "法華経・一仏乗と方便真実",
       };
     default:
       return null;

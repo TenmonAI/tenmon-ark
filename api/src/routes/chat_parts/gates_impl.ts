@@ -201,7 +201,21 @@ function __tenmonGeneralGateResultMaybe(x: any, rawMessageOverride?: string): an
         delete (ku as any).heart.state;
       }
     } catch {}
-    if (ku.routeReason === "NATURAL_GENERAL_LLM_TOP") {
+    // SCRIPTURE_FALLBACK_BLOCK_V1: scripture route では general fallback 文面を除去
+  if (String((ku as any)?.routeReason || "") === "TENMON_SCRIPTURE_CANON_V1") {
+    try {
+      if (typeof (x as any).response === "string") {
+        let t = String((x as any).response || "");
+        t = t.replace(/【天聞の所見】?\s*いま、一番引っかかっている一点は何ですか？\s*一語でも大丈夫です。?/g, "");
+        t = t.replace(/いま、一番引っかかっている一点は何ですか？\s*一語でも大丈夫です。?/g, "");
+        t = t.replace(/もし動けない理由があるなら[^\n]*\n?/g, "");
+        t = t.replace(/いま気になっているところを、一歩だけ外側から眺めるとしたら[^\n]*\n?/g, "");
+        (x as any).response = t.trim();
+      }
+    } catch {}
+  }
+
+  if (ku.routeReason === "NATURAL_GENERAL_LLM_TOP") {
       (x as any).response = __tenmonGeneralGateSoft((x as any).response);
     }
 
@@ -471,6 +485,92 @@ function __tenmonGeneralGateResultMaybe(x: any, rawMessageOverride?: string): an
           if ((x as any).shadowResult == null) (x as any).shadowResult = __kuOut.shadowResult ?? null;
         }
       } catch {}
+
+      // FIX_SCRIPTURE_EMPTY_RESPONSE_REHYDRATE_V1
+      try {
+        const __dfE: any = (x as any)?.decisionFrame;
+        const __kuE: any =
+          (__dfE && __dfE.ku && typeof __dfE.ku === "object")
+            ? __dfE.ku
+            : null;
+
+        const __rrE = String(__kuE?.routeReason || "");
+        const __modeE = String(__kuE?.scriptureMode || "");
+
+        const __threadCenterE: any =
+          __kuE?.threadCenter ||
+          __kuE?.synapseTop?.sourceThreadCenter ||
+          null;
+
+        const __tcKeyE0 = String(
+          __threadCenterE?.centerKey ||
+          __threadCenterE?.center_key ||
+          ""
+        ).trim();
+
+        const __tcResolvedE = __tcKeyE0 ? resolveScriptureQuery(__tcKeyE0) : null;
+
+        const __skE = String(
+          __kuE?.scriptureKey ||
+          __kuE?.synapseTop?.sourceScriptureKey ||
+          __tcResolvedE?.scriptureKey ||
+          __tcKeyE0 ||
+          ""
+        ).trim();
+
+        const __labelE = String(
+          __kuE?.centerLabel ||
+          __tcResolvedE?.displayName ||
+          (__skE === "hokekyo"
+            ? "法華経"
+            : __skE === "kotodama_hisho"
+              ? "言霊秘書"
+              : __skE === "iroha_kotodama_kai"
+                ? "いろは言霊解"
+                : __skE === "katakamuna_kotodama_kai"
+                  ? "カタカムナ言霊解"
+                  : "")
+        ).trim();
+
+        const __respE = String((x as any)?.response || "").trim();
+
+        if (__kuE && __rrE === "TENMON_SCRIPTURE_CANON_V1" && !__respE) {
+          const __dispE =
+            __labelE ||
+            (__skE === "hokekyo"
+              ? "法華経"
+              : __skE === "kotodama_hisho"
+                ? "言霊秘書"
+                : __skE === "iroha_kotodama_kai"
+                  ? "いろは言霊解"
+                  : __skE === "katakamuna_kotodama_kai"
+                    ? "カタカムナ言霊解"
+                    : "この聖典");
+
+          let __bodyE = "";
+          if (__modeE === "action_instruction") {
+            const __instrMapE: Record<string, string> = {
+              hokekyo: "まず『法華経は、衆生に仏となる可能性が開かれていることを示す経典である』と一行で置いてください。",
+              kotodama_hisho: "まず『言霊秘書は音の法則を担い、いろははその配列を担う』と一行で書き分けてください。",
+              iroha_kotodama_kai: "まず『いろはは音の配列であり、言霊はその内在法則である』と一行で書き分けてください。",
+              katakamuna_kotodama_kai: "まず『カタカムナ言霊解は音と図象の対応を担う』と一行で置いてください。",
+            };
+            __bodyE =
+              "さっき見ていた聖典（" + __dispE + "）を土台に、いまの話を見ていきましょう。\n【天聞の所見】" +
+              String(__instrMapE[__skE] || "まず、この聖典の中心を一行で置いてください。");
+          } else {
+            __bodyE =
+              "さっき見ていた聖典（" + __dispE + "）を土台に、いまの話を見ていきましょう。\n【天聞の所見】その中心を一行で言い直すと、どこに軸があるかを先に置けます。";
+          }
+
+          (x as any).response = __bodyE;
+          __kuE.centerKey = __skE || null;
+          __kuE.centerMeaning = __skE || null;
+          __kuE.centerLabel = __labelE || null;
+          __kuE.scriptureKey = __skE || null;
+        }
+      } catch {}
+
       tryAppendThreadSeedFromPayload(x);
     } catch {}
       // R13_RESPONSE_PROJECTOR_REINTRO_SAFE_V1
