@@ -490,10 +490,17 @@ function __tenmonGeneralGateResultMaybe(x: any, rawMessageOverride?: string): an
           (x as any).response = projected.response;
         }
       } catch {}
-      // 最終返却直前: 全角ではない連続空白を1個に圧縮（改行は維持）
+      // 最終返却直前: 全角ではない連続空白を1個に圧縮（改行は維持）＋和文内の半角スペースを除去
       try {
         if (typeof (x as any).response === "string") {
-          (x as any).response = String((x as any).response || "").replace(/[^\S\n]+/g, " ");
+          let __respNorm = String((x as any).response || "").replace(/[^\S\n]+/g, " ");
+          let __prevNorm = "";
+          while (__respNorm !== __prevNorm) {
+            __prevNorm = __respNorm;
+            __respNorm = __respNorm.replace(/([一-龠々ぁ-んァ-ヶー]) ([一-龠々ぁ-んァ-ヶー])/g, "$1$2");
+            __respNorm = __respNorm.replace(/([。、】【「」『』（）]) ([一-龠々ぁ-んァ-ヶー])/g, "$1$2");
+          }
+          (x as any).response = __respNorm;
         }
       } catch {}
     return x;
