@@ -93,6 +93,9 @@ try {
 
 app.use(cors());
 app.use(express.json());
+app.use("/api/infra", infraAssetsRouter);
+
+
 app.use(cookieParser());
 
 app.use("/api", kamuRouter);
@@ -146,3 +149,4 @@ app.listen(PORT, "0.0.0.0", () => {
 import { writerRouter } from "./routes/writer.js";
 import { writerVerifyRouter } from "./routes/writerVerify.js";
 import { writerDraftRouter } from "./routes/writerDraft.js";
+import { infraAssetsRouter } from "./routes/infraAssets.js";

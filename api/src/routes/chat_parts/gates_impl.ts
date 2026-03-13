@@ -7,6 +7,11 @@ import { computeKanagiSelfKernel, getSafeKanagiSelfOutput } from "../../core/kan
 import { resolveScriptureQuery } from "../../core/scriptureCanon.js";
 import { memoryPersistMessage } from "../../memory/index.js";
 import { tryAppendThreadSeedFromPayload } from "../../core/threadSeed.js";
+import { normalizeProviderPlan } from "../../provider/providerPlan.js";
+import { projectResponseSurface } from "../../projection/responseProjector.js";
+import { inferExpressionPlan, inferComfortTuning } from "../../expression/expressionPlanner.js";
+import { buildBrainstemDecisionFromKu } from "../../chat/brainstem/brainstem.js";
+import { upsertThreadCenter } from "../../core/threadCenterMemory.js";
 
 function __tenmonGeneralGateSoft(out: string): string {
   let t = String(out || "").replace(/\r/g, "").trim();
@@ -193,6 +198,7 @@ function __tenmonGeneralGateResultMaybe(x: any, rawMessageOverride?: string): an
     if (ku.routeReason === "NATURAL_GENERAL_LLM_TOP") {
       (x as any).response = __tenmonGeneralGateSoft((x as any).response);
     }
+
     // R8_INTENTION_BIND_THOUGHT_GUIDE_V1: wire intention hint to ku (observation only, no route/response change)
     try {
       const __df = (x as any).decisionFrame;
@@ -206,6 +212,112 @@ function __tenmonGeneralGateResultMaybe(x: any, rawMessageOverride?: string): an
       const __df = (x as any).decisionFrame;
       if (__df && __df.ku && typeof __df.ku === "object") {
         const __ku: any = __df.ku;
+          // R12_CENTER_LABEL_AND_SURFACE_STYLE_FIX_V2
+          try {
+            const __rr = String(__ku.routeReason || "");
+            const __syn = (__ku.synapseTop && typeof __ku.synapseTop === "object") ? __ku.synapseTop : {};
+            const __srcKey = String((__syn && __syn.sourceScriptureKey) || "");
+            const __cm = String(__ku.centerMeaning || __srcKey || "").trim();
+            const __labelMap: Record<string, string> = {
+              "KHSL:LAW:KHSU:41c0bff9cfb8:p0:qcb9cdda1f01d": "言霊秘書",
+              "kotodama_hisho": "言霊秘書",
+              "iroha_kotodama_kai": "いろは言霊解",
+              "katakamuna_kotodama_kai": "カタカムナ言霊解",
+              "kotodama": "言霊",
+              "katakamuna": "カタカムナ",
+              "self_reflection": "自己観照",
+              "general_study_path": "学び方",
+              "katakamuna_study_path": "カタカムナの学び方",
+              "iroha_counsel": "いろは相談",
+            };
+
+            if ((!__ku.centerLabel || typeof __ku.centerLabel !== "string") && __cm) {
+              const __sk = String(__ku.scriptureKey || "").trim();
+              __ku.centerLabel = String(__labelMap[__cm] || __labelMap[__sk] || __cm).trim();
+            }
+
+            if (!__ku.surfaceStyle || typeof __ku.surfaceStyle !== "string") {
+              __ku.surfaceStyle =
+                __rr === "TENMON_SCRIPTURE_CANON_V1" ? "scripture_centered" :
+                __rr === "R10_SELF_REFLECTION_ROUTE_V4_SAFE" ? "reflective_clear" :
+                __rr === "R10_STUDY_PATH_CANON_ROUTE_V1" ? "guide_structured" :
+                __rr === "R10_IROHA_COUNSEL_ROUTE_V1" ? "counsel_gentle" :
+                "plain_clean";
+            }
+
+            if (!__ku.closingType || typeof __ku.closingType !== "string") {
+              __ku.closingType =
+                __rr === "TENMON_SCRIPTURE_CANON_V1" ? "restate_or_next_step" :
+                __rr === "R10_SELF_REFLECTION_ROUTE_V4_SAFE" ? "axis_or_next_step" :
+                __rr === "R10_STUDY_PATH_CANON_ROUTE_V1" ? "define_structure_next" :
+                __rr === "R10_IROHA_COUNSEL_ROUTE_V1" ? "prioritize_or_hold" :
+                "default";
+            }
+          } catch {}
+          // R12_BRAINSTEM_BIND_SEED_AND_PROVIDER_V1: 全 route に seedKernel / responseProfile / providerPlan を補完
+          try {
+            const __raw = String((x as any)?.rawMessage ?? (x as any)?.message ?? "");
+            const __rr = String(__ku.routeReason || "");
+            const __syn = (__ku.synapseTop && typeof __ku.synapseTop === "object") ? __ku.synapseTop : {};
+            const __cm = String(__ku.centerMeaning || __syn.sourceScriptureKey || "").trim();
+
+            const __profile =
+              /一言で|簡潔に|短く/u.test(__raw) ? "brief" :
+              /詳しく|徹底的に|解析|設計|構築/u.test(__raw) ? "deep_report" :
+              "standard";
+
+            const __phase =
+              /整理|意味|本質|理解|関係/u.test(__raw) ? "L-IN" :
+              /次の一歩|実行|進める|どうする/u.test(__raw) ? "R-OUT" :
+              /教えて|内容|とは/u.test(__raw) ? "L-OUT" :
+              "CENTER";
+
+            if (!__ku.seedKernel || typeof __ku.seedKernel !== "object") {
+              __ku.seedKernel = {
+                id: "seed_" + String(Date.now()),
+                phase: __phase,
+                responseProfile: __profile,
+                routeReason: __rr || null,
+                centerMeaning: __cm || null,
+              };
+            }
+
+            if (!__ku.responseProfile || typeof __ku.responseProfile !== "string") {
+              __ku.responseProfile = __profile;
+            }
+
+            if (!__ku.providerPlan || typeof __ku.providerPlan !== "object") {
+              const __needsBreadth =
+                /日本の首相|アメリカ|どういう関係|誰|なぜ|いつ|どこ|比較/u.test(__raw) ||
+                (__rr === "NATURAL_GENERAL_LLM_TOP" && !__cm);
+
+              __ku.providerPlan = {
+                primaryRenderer: "gpt-5.4",
+                helperModels: __needsBreadth ? ["gemini"] : [],
+                shadowOnly: true,
+                finalAnswerAuthority: "gpt-5.4",
+              };
+            }
+          } catch {}
+          // R10_GATE_KEEP_SCRIPTURE_FIELDS_REAPPLY_SAFE
+          try {
+            if ((__ku.centerMeaning == null || __ku.centerMeaning === "") && __ku.synapseTop && __ku.synapseTop.sourceScriptureKey) {
+              __ku.centerMeaning = String(__ku.synapseTop.sourceScriptureKey || "").trim();
+            }
+            if ((__ku.thoughtCoreSummary == null || typeof __ku.thoughtCoreSummary !== "object") && String(__ku.routeReason || "") === "TENMON_SCRIPTURE_CANON_V1") {
+              const __cm = String(__ku.centerMeaning || (__ku.synapseTop && __ku.synapseTop.sourceScriptureKey) || "").trim();
+              __ku.thoughtCoreSummary = {
+                centerKey: "TENMON_SCRIPTURE_CANON_V1",
+                centerMeaning: __cm || null,
+                routeReason: "TENMON_SCRIPTURE_CANON_V1",
+                modeHint: "scripture",
+                continuityHint: __cm || null,
+              };
+            }
+            if (typeof __ku.scriptureMode !== "string" && String(__ku.routeReason || "") === "TENMON_SCRIPTURE_CANON_V1" && String(__ku.centerMeaning || "").trim()) {
+              __ku.scriptureMode = "canon";
+            }
+          } catch {}
         if (!__ku.kanagiSelf || typeof __ku.kanagiSelf !== "object") {
           const rawMessage = String((x as any)?.rawMessage ?? (x as any)?.message ?? "");
           const routeReason = String(__ku.routeReason ?? (__df as any).mode ?? "");
@@ -282,8 +394,94 @@ function __tenmonGeneralGateResultMaybe(x: any, rawMessageOverride?: string): an
     } catch {}
     // R10_SYNAPSE_TO_THREAD_SEED_V1: synapse 昇格。1 response 1 seed、__THREAD_SEED_DONE で二重防止。失敗しても会話を落とさない。
     try {
+      // R12_EXPORT_BRAINSTEM_CONTRACT_V2_LINEPATCH
+      try {
+        const __dfOut: any = (x as any)?.decisionFrame;
+        const __kuOut: any = (__dfOut && __dfOut.ku && typeof __dfOut.ku === "object") ? __dfOut.ku : null;
+        if (__kuOut) {
+          if ((__kuOut as any).providerPlan) {
+            (__kuOut as any).providerPlan = normalizeProviderPlan((__kuOut as any).providerPlan);
+          }
+          if ((x as any).routeReason == null) (x as any).routeReason = __kuOut.routeReason ?? null;
+          if ((x as any).centerMeaning == null) (x as any).centerMeaning = __kuOut.centerMeaning ?? null;
+          if ((x as any).responseProfile == null) (x as any).responseProfile = __kuOut.responseProfile ?? null;
+          if ((x as any).providerPlan == null) (x as any).providerPlan = __kuOut.providerPlan ?? null;
+          if ((x as any).thoughtCoreSummary == null) (x as any).thoughtCoreSummary = __kuOut.thoughtCoreSummary ?? null;
+          if ((x as any).seedKernel == null) (x as any).seedKernel = __kuOut.seedKernel ?? null;
+          if ((x as any).scriptureMode == null) (x as any).scriptureMode = __kuOut.scriptureMode ?? null;
+          if ((x as any).centerLabel == null) (x as any).centerLabel = __kuOut.centerLabel ?? null;
+          if ((x as any).surfaceStyle == null) (x as any).surfaceStyle = __kuOut.surfaceStyle ?? null;
+          if ((x as any).closingType == null) (x as any).closingType = __kuOut.closingType ?? null;
+          // FIX_THREAD_CONTINUITY_FULL_V2B_GATES_PERSIST_LINEPATCH
+          try {
+            const __tidCenter = String((x as any)?.threadId || "").trim();
+            const __rrCenter = String((__kuOut as any)?.routeReason || (x as any)?.routeReason || "").trim();
+            const __centerKeyCenter = String((__kuOut as any)?.centerKey || (__kuOut as any)?.centerMeaning || "").trim();
+            const __mfAny: any = (__kuOut as any)?.meaningFrame || null;
+            const __isDefRoute =
+              __rrCenter === "DEF_DICT_HIT" ||
+              __rrCenter === "DEF_FASTPATH_VERIFIED_V1" ||
+              __rrCenter === "DEF_LLM_TOP";
+            if (__tidCenter && __isDefRoute && __centerKeyCenter) {
+              upsertThreadCenter({
+                threadId: __tidCenter,
+                centerType: "concept",
+                centerKey: __centerKeyCenter,
+                sourceRouteReason: __rrCenter,
+                sourceScriptureKey: null,
+                sourceTopicClass: String(__mfAny?.topicClass || "concept"),
+              });
+            }
+          } catch {}
+          // R25_TRINITY_BRAINSTEM_EXTRACT_V1
+          try {
+            (__kuOut as any).brainstemDecision = buildBrainstemDecisionFromKu(__kuOut);
+            if ((x as any).brainstemDecision == null) {
+              (x as any).brainstemDecision = (__kuOut as any).brainstemDecision;
+            }
+          } catch {}
+          if (!(__kuOut as any).expressionPlan || typeof (__kuOut as any).expressionPlan !== "object") {
+            (__kuOut as any).expressionPlan = inferExpressionPlan({
+              routeReason: (__kuOut as any).routeReason,
+              centerMeaning: (__kuOut as any).centerMeaning,
+              response: (x as any).response,
+            });
+          }
+          if (!(__kuOut as any).comfortTuning || typeof (__kuOut as any).comfortTuning !== "object") {
+            (__kuOut as any).comfortTuning = inferComfortTuning({
+              routeReason: (__kuOut as any).routeReason,
+              response: (x as any).response,
+            });
+          }
+          if ((x as any).expressionPlan == null) (x as any).expressionPlan = (__kuOut as any).expressionPlan ?? null;
+          if ((x as any).comfortTuning == null) (x as any).comfortTuning = (__kuOut as any).comfortTuning ?? null;
+          // R25B_BRAINSTEM_REFRESH_AFTER_STYLE_V1
+          try {
+            (__kuOut as any).brainstemDecision = buildBrainstemDecisionFromKu(__kuOut);
+            (x as any).brainstemDecision = (__kuOut as any).brainstemDecision;
+          } catch {}
+          if ((x as any).shadowResult == null) (x as any).shadowResult = __kuOut.shadowResult ?? null;
+        }
+      } catch {}
       tryAppendThreadSeedFromPayload(x);
     } catch {}
+      // R13_RESPONSE_PROJECTOR_REINTRO_SAFE_V1
+      try {
+        const __dfP: any = (x as any)?.decisionFrame;
+        const __kuP: any = (__dfP && __dfP.ku && typeof __dfP.ku === "object") ? __dfP.ku : null;
+        if (__kuP && typeof (x as any).response === "string") {
+          const projected = projectResponseSurface({
+            routeReason: __kuP.routeReason,
+            centerMeaning: __kuP.centerMeaning,
+            centerLabel: __kuP.centerLabel,
+            surfaceStyle: __kuP.surfaceStyle,
+            closingType: __kuP.closingType,
+            thoughtCoreSummary: __kuP.thoughtCoreSummary,
+            response: String((x as any).response || ""),
+          });
+          (x as any).response = projected.response;
+        }
+      } catch {}
     return x;
   } catch { return x; }
 }
