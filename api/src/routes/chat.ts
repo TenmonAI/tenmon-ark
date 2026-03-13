@@ -3864,7 +3864,7 @@ return res.json(__tenmonGeneralGateResultMaybe({
       const __msgCovNorm = __msgCov.replace(/[？?！!。．]/g, " ").trim();
 
       const __isKatakamunaConcept =
-        /カタカムナ/u.test(__msgCovNorm) &&
+        /カタカムナ(?!言[霊灵靈]解)/u.test(__msgCovNorm) &&
         /(とは|という意味|意味|内容|教えて|何|本質)/u.test(__msgCovNorm);
 
       const __isKotodamaConcept =
@@ -4024,7 +4024,7 @@ return res.json(__tenmonGeneralGateResultMaybe({
       const __msgCovNorm = __msgCov.replace(/[？?！!。．]/g, " ").trim();
 
       const __isKatakamunaCoverage =
-        /カタカムナ/u.test(__msgCovNorm) &&
+        /カタカムナ(?!言[霊灵靈]解)/u.test(__msgCovNorm) &&
         /(意味|とは|という意味|内容|教えて|何|本質|学ぶ|勉強)/u.test(__msgCovNorm);
 
       const __isKotodamaCoverage =
@@ -4176,6 +4176,18 @@ return res.json(__tenmonGeneralGateResultMaybe({
       }
     } catch {}
 
+    // S3B_SCRIPTURE_BOUNDARY_LOCK_V1
+    let __scripturePreemptHit: any = null;
+    try {
+      const __msgScriptPre = String(message ?? "").trim();
+      const __isCoreScripture =
+        /(法華経|言霊秘書|いろは言[霊灵靈]解|イロハ言[霊灵靈]解|カタカムナ言[霊灵靈]解|水穂伝)/u.test(__msgScriptPre);
+
+      if (!isTestTid0 && !hasDoc0 && !askedMenu0 && !isCmd0 && __isCoreScripture) {
+        __scripturePreemptHit = resolveScriptureQuery(__msgScriptPre);
+      }
+    } catch {}
+
 // R7_SCRIPTURE_CANON_ROUTE_V1: scripture canon (言霊秘書・イロハ言霊解・カタカムナ言霊解) は concept canon / KHS / DEF fastpath より前に処理する
     // OPS_IROHA_SCRIPTURE_PREEMPT_FIX_V1: 定義系の問い（とは/って/何/なに）でも resolveScriptureQuery を試し、scripture hit なら優先
     try {
@@ -4216,7 +4228,7 @@ return res.json(__tenmonGeneralGateResultMaybe({
           isCmd0,
           __msgScriptRaw
         });
-        let __hitScripture = resolveScriptureQuery(__msgScript);
+        let __hitScripture = __scripturePreemptHit || resolveScriptureQuery(__msgScript);
         let __hitFromScriptureCenter = false;
         if (!__hitScripture && __scriptureCenterKey && !__isScriptureDef && !__isDefinitionQ) {
           __hitScripture = resolveScriptureQuery(__scriptureCenterKey);
