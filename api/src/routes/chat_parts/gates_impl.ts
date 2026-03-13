@@ -13,6 +13,12 @@ import { inferExpressionPlan, inferComfortTuning } from "../../expression/expres
 import { buildBrainstemDecisionFromKu } from "../../chat/brainstem/brainstem.js";
 import { upsertThreadCenter } from "../../core/threadCenterMemory.js";
 
+function __normalizeCenterLabel(s: string): string {
+  return String(s || "")
+    .trim()
+    .replace(/(とは|って|は|が|を|に|へ|と|も|の)\s*$/u, "");
+}
+
 function __tenmonGeneralGateSoft(out: string): string {
   let t = String(out || "").replace(/\r/g, "").trim();
 
@@ -233,7 +239,9 @@ function __tenmonGeneralGateResultMaybe(x: any, rawMessageOverride?: string): an
 
             if ((!__ku.centerLabel || typeof __ku.centerLabel !== "string") && __cm) {
               const __sk = String(__ku.scriptureKey || "").trim();
-              __ku.centerLabel = String(__labelMap[__cm] || __labelMap[__sk] || __cm).trim();
+              __ku.centerLabel = __normalizeCenterLabel(
+                String(__labelMap[__cm] || __labelMap[__sk] || __cm).trim()
+              );
             }
 
             if (!__ku.surfaceStyle || typeof __ku.surfaceStyle !== "string") {
@@ -480,6 +488,12 @@ function __tenmonGeneralGateResultMaybe(x: any, rawMessageOverride?: string): an
             response: String((x as any).response || ""),
           });
           (x as any).response = projected.response;
+        }
+      } catch {}
+      // 最終返却直前: 全角ではない連続空白を1個に圧縮（改行は維持）
+      try {
+        if (typeof (x as any).response === "string") {
+          (x as any).response = String((x as any).response || "").replace(/[^\S\n]+/g, " ");
         }
       } catch {}
     return x;
