@@ -3,6 +3,7 @@ import { Routes, Route } from "react-router-dom";
 import { LandingPage } from "./pages/LandingPage";
 import { PricingPage } from "./pages/PricingPage";
 import { LoginPage } from "./pages/LoginPage";
+import { RegisterPage } from "./pages/RegisterPage";
 import { SuccessPage } from "./pages/SuccessPage";
 import { AppGate } from "./pages/AppGate";
 import { TermsPage } from "./pages/TermsPage";
@@ -14,6 +15,7 @@ export function App() {
       <Route path="/" element={<LandingPage />} />
       <Route path="/pricing" element={<PricingPage />} />
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/register" element={<RegisterPage />} />
       <Route path="/success" element={<SuccessPage />} />
       <Route path="/app" element={<AppGate />} />
       <Route path="/terms" element={<TermsPage />} />

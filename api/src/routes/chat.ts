@@ -92,6 +92,7 @@ import { upsertThreadCenter, getLatestThreadCenter } from "../core/threadCenterM
 import { resolveIrohaActionPattern } from "../core/irohaActionPatterns.js";
 import { buildResponsePlan } from "../planning/responsePlanCore.js";
 import { safeGeneralRoute } from "./chat_parts/safeGeneralRoute.js";
+import { responseProjector, normalizeDisplayLabel } from "../projection/responseProjector.js";
 
 // FIX_PRE_GATE_GENERAL_SURFACE_V1: 先頭・末尾欠損・不要前置き混入を止血。引用あり/なしの「いまの言葉を…と受け取りました。」を安全に除去。
 function __cleanLlmFrame(r: string): string {
@@ -3884,8 +3885,11 @@ return res.json(__tenmonGeneralGateResultMaybe({
         /カタカムナ(?!言[霊灵靈]解)/u.test(__msgCovNorm) &&
         /(とは|という意味|意味|内容|教えて|何|本質)/u.test(__msgCovNorm);
 
+      const __isKanaKotodamaUnit = /(?:^|[ 　])(?:あ|ア|ひ|ヒ)\s*(?:の)?\s*言[霊灵靈]/u.test(__msgCovNorm);
+
       const __isKotodamaConcept =
         !__isScriptureBookTitle &&
+        !__isKanaKotodamaUnit &&
         /(言霊|言灵|いろは)/u.test(__msgCovNorm) &&
         /(とは|という意味|意味|内容|教えて|何)/u.test(__msgCovNorm);
 
@@ -3917,6 +3921,8 @@ return res.json(__tenmonGeneralGateResultMaybe({
               centerLabel: "カタカムナ",
               heart: __heartCov,
               thoughtGuideSummary: getThoughtGuideSummary("katakamuna"),
+              sourcePack: "seiten",
+              groundedRequired: true,
               notionCanon: getNotionCanonForRoute("KATAKAMUNA_CANON_ROUTE_V1", __msgCov),
               personaConstitutionSummary: __persona,
               thoughtCoreSummary: {
@@ -4049,8 +4055,12 @@ return res.json(__tenmonGeneralGateResultMaybe({
         /カタカムナ/u.test(__msgCovNorm) &&
         /(意味|とは|という意味|内容|教えて|何|本質|学ぶ|勉強)/u.test(__msgCovNorm);
 
+
+      const __isKanaKotodamaUnit = /(?:^|[ 　])(?:あ|ア|ひ|ヒ)\s*(?:の)?\s*言[霊灵靈]/u.test(__msgCovNorm);
+
       const __isKotodamaCoverage =
         !__isScriptureBookTitle &&
+        !__isKanaKotodamaUnit &&
         /(言霊|言灵|いろは)/u.test(__msgCovNorm) &&
         /(意味|とは|内容|教えて|何)/u.test(__msgCovNorm);
 
@@ -4436,6 +4446,8 @@ return res.json(__tenmonGeneralGateResultMaybe({
                 scriptureKey: __hitScripture.scriptureKey,
                 displayName: __hitScripture.displayName ?? __hitScripture.scriptureKey,
               },
+              sourcePack: "seiten",
+              groundedRequired: true,
               conceptEvidence: getScriptureConceptEvidence(__hitScripture.scriptureKey),
               thoughtGuideSummary: getThoughtGuideSummary("scripture"),
               notionCanon: getNotionCanonForRoute("TENMON_SCRIPTURE_CANON_V1", __msgRaw),
@@ -4614,6 +4626,67 @@ return res.json(__tenmonGeneralGateResultMaybe({
     } catch (e) {
       try { console.error("[TENMON_SCRIPTURE_CANON_V1]", e); } catch {}
     }
+
+  // MAINLINE_P1K_KANA_PREEMPT_MOVE_EARLY_V1
+  try {
+    const __msgKana = String(message ?? "").trim();
+    const __msgKanaNorm = normalizeCoreTermForRouting(__msgKana);
+    const __isKanaSubconcept =
+      /(?:^|[ 　])(?:あ|ア|ひ|ヒ)\s*(?:の)?\s*言[霊灵靈](?:\s*(?:の)?\s*(?:意味|定義))?(?:\s*は)?\s*[？?]?$/u.test(__msgKanaNorm);
+
+    try {
+      console.error("[KANA_PREEMPT_OBS]", JSON.stringify({
+        raw: __msgKana,
+        norm: __msgKanaNorm,
+        hit: __isKanaSubconcept
+      }));
+    } catch {}
+
+    if (__isKanaSubconcept) {
+      const __hitSub = resolveSubconceptQuery(__msgKanaNorm);
+      try {
+        console.error("[KANA_PREEMPT_RESOLVE]", JSON.stringify({
+          norm: __msgKanaNorm,
+          conceptKey: __hitSub?.conceptKey ?? null,
+          displayName: __hitSub?.displayName ?? null
+        }));
+      } catch {}
+      if (__hitSub) {
+        const __canon = buildSubconceptResponse(__hitSub.conceptKey, "standard");
+        if (__canon) {
+          let __body = String(__canon.text ?? "").trim();
+          const __negArr = Array.isArray(__canon.negative_definition) ? __canon.negative_definition : [];
+          if (__negArr[0]) __body += "\n\n【非定義】" + String(__negArr[0]);
+          const __axes = Array.isArray(__canon.next_axes) ? __canon.next_axes.slice(0, 2) : [];
+          if (__axes.length) __body += "\n\n次は、" + __axes.join("・") + "のどこから掘りますか？";
+
+          return res.json(__tenmonGeneralGateResultMaybe({
+            response: __body,
+            evidence: null,
+            candidates: [],
+            timestamp,
+            threadId,
+            decisionFrame: {
+              mode: "NATURAL",
+              intent: "define",
+              llm: null,
+              ku: {
+                routeReason: "TENMON_SUBCONCEPT_CANON_V1",
+                centerKey: __canon.conceptKey,
+                centerLabel: __canon.displayName,
+                lawsUsed: [],
+                evidenceIds: [],
+                lawTrace: [],
+                heart: normalizeHeartShape(__heart)
+              }
+            }
+          }));
+        }
+      }
+    }
+  } catch (e) {
+    try { console.error("[MAINLINE_P1K_KANA_PREEMPT_MOVE_EARLY_V1]", e); } catch {}
+  }
 
     // R7_SUBCONCEPT_ROUTE_V1: ア・ヒ・ウタヒ・五十音一言法則・カタカムナウタヒ等の下位概念質問を concept canon / DEF fastpath の前に処理
     try {
@@ -6273,7 +6346,96 @@ const __heartNorm = normalizeHeartShape(__heart);
 
       console.log("[GEN_GENERAL_PRE_GATE]", { out: __canonicalBody.slice(0, 240) });
       // FIX_GENERAL_COMPOSED_BYPASS_V1: general 本文は __canonicalBody（CLAMP_AFTER 由来）のみ採用。trimStart / 追加 replace / 追加整形は行わない。
-      const finalResp = __canonicalBody;
+      const __projectorThreadCenter =
+        ((__ku as any).threadCenter && String(((__ku as any).threadCenter as any).centerKey || "").trim())
+          ? (__ku as any).threadCenter
+          : (((__ku as any).synapseTop || {}).sourceThreadCenter && String((((__ku as any).synapseTop || {}).sourceThreadCenter.centerKey || "")).trim())
+            ? (((__ku as any).synapseTop || {}).sourceThreadCenter)
+            : null;
+
+      const __projectorThreadCenterKey = String(((__projectorThreadCenter as any)?.centerKey) || "").trim();
+      const __projectorThreadCenterType = String(((__projectorThreadCenter as any)?.centerType) || "").trim();
+
+      if (__projectorThreadCenterKey) {
+        if (!String((__ku as any).centerKey || "").trim()) {
+          (__ku as any).centerKey = __projectorThreadCenterKey;
+        }
+        if (!String((__ku as any).centerMeaning || "").trim()) {
+          (__ku as any).centerMeaning = __projectorThreadCenterKey;
+        }
+
+        const __normalizedThreadCenterLabel = normalizeDisplayLabel(__projectorThreadCenterKey);
+        if (!String((__ku as any).centerLabel || "").trim() || String((__ku as any).centerLabel || "").trim() === __projectorThreadCenterKey) {
+          (__ku as any).centerLabel = __normalizedThreadCenterLabel;
+        }
+
+        if (__projectorThreadCenterType === "scripture") {
+          (__ku as any).routeReason = "TENMON_SCRIPTURE_CANON_V1";
+          if (!String((__ku as any).scriptureKey || "").trim()) {
+            (__ku as any).scriptureKey = __projectorThreadCenterKey;
+          }
+          if (!String((__ku as any).centerLabel || "").trim()) {
+            (__ku as any).centerLabel = __projectorThreadCenterKey;
+          }
+          if (!(__ku as any).thoughtCoreSummary || typeof (__ku as any).thoughtCoreSummary !== "object") {
+            (__ku as any).thoughtCoreSummary = {};
+          }
+          (__ku as any).thoughtCoreSummary.centerKey = "TENMON_SCRIPTURE_CANON_V1";
+          (__ku as any).thoughtCoreSummary.centerMeaning = __projectorThreadCenterKey;
+          (__ku as any).thoughtCoreSummary.routeReason = "TENMON_SCRIPTURE_CANON_V1";
+          (__ku as any).thoughtCoreSummary.modeHint = "scripture";
+          (__ku as any).thoughtCoreSummary.continuityHint = __projectorThreadCenterKey;
+        } else if (__projectorThreadCenterType === "concept") {
+          if (!String((__ku as any).routeReason || "").trim() || String((__ku as any).routeReason) === "NATURAL_GENERAL_LLM_TOP") {
+            (__ku as any).routeReason = "TENMON_SUBCONCEPT_CANON_V1";
+          }
+          if (!String((__ku as any).centerLabel || "").trim()) {
+            (__ku as any).centerLabel = __projectorThreadCenterKey;
+          }
+          if (!(__ku as any).thoughtCoreSummary || typeof (__ku as any).thoughtCoreSummary !== "object") {
+            (__ku as any).thoughtCoreSummary = {};
+          }
+          (__ku as any).thoughtCoreSummary.centerKey = __projectorThreadCenterKey;
+          (__ku as any).thoughtCoreSummary.centerMeaning = __projectorThreadCenterKey;
+          (__ku as any).thoughtCoreSummary.routeReason = String((__ku as any).routeReason || "TENMON_SUBCONCEPT_CANON_V1");
+          (__ku as any).thoughtCoreSummary.modeHint = "concept";
+          (__ku as any).thoughtCoreSummary.continuityHint = __projectorThreadCenterKey;
+        }
+      }
+
+      const finalResp = responseProjector({
+        routeReason: String((__ku as any).routeReason || "NATURAL_GENERAL_LLM_TOP"),
+        centerMeaning: String((__ku as any).centerMeaning || ""),
+        centerLabel: String((__ku as any).centerLabel || ""),
+        centerKey: String((__ku as any).centerKey || ""),
+        surfaceStyle: String((__ku as any).surfaceStyle || "plain_clean"),
+        closingType: String((__ku as any).closingType || "one_question"),
+        threadCenter: __projectorThreadCenter,
+        rawResponse: String(__beforeClamp || outText || ""),
+        canonicalResponse: String(__canonicalBody || ""),
+      });
+
+      try {
+        console.log("[PROJECTOR_GENERAL_BIND]", {
+          rr: String((__ku as any).routeReason || "NATURAL_GENERAL_LLM_TOP"),
+          centerLabel: String((__ku as any).centerLabel || ""),
+          centerKey: String((__ku as any).centerKey || ""),
+          threadCenter: __projectorThreadCenter,
+          canonical: String(__canonicalBody || "").slice(0, 240),
+          projected: String(finalResp || "").slice(0, 240),
+        });
+        console.log("[PROJECTOR_AUDIT]", {
+          rr: String((__ku as any).routeReason || "NATURAL_GENERAL_LLM_TOP"),
+          centerLabel: String((__ku as any).centerLabel || ""),
+          centerKey: String((__ku as any).centerKey || ""),
+          surfaceStyle: String((__ku as any).surfaceStyle || ""),
+          closingType: String((__ku as any).closingType || ""),
+          rawResponse: String(__beforeClamp || outText || "").slice(0, 240),
+          canonicalResponse: String(__canonicalBody || "").slice(0, 240),
+          projectedResponse: String(finalResp || "").slice(0, 240),
+        });
+      } catch {}
+
       (__ku as any).responsePlan = buildResponsePlan({
         routeReason: "NATURAL_GENERAL_LLM_TOP",
         rawMessage: String(message ?? ""),
@@ -6877,7 +7039,13 @@ if (!outText) {
     try { console.error("[KATAKAMUNA_FASTPATH_CANON_V1]", e); } catch {}
   }
 
-  // DEF_FASTPATH_VERIFIED_V1
+  
+  
+
+
+
+
+// DEF_FASTPATH_VERIFIED_V1
   try {
     const __msg0Raw = String(message ?? "").trim();
     const __msg0 = normalizeCoreTermForRouting(__msg0Raw);
@@ -7064,6 +7232,8 @@ if (!outText) {
               }] : [])
             ]
           },
+          sourcePack: __term === "言霊" ? "seiten" : null,
+          groundedRequired: __term === "言霊" ? true : null,
           thoughtGuideSummary:
             __term === "言霊"
               ? getThoughtGuideSummary("kotodama")
