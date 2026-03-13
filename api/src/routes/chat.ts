@@ -4242,14 +4242,20 @@ return res.json(__tenmonGeneralGateResultMaybe({
               msg: __msgRaw2,
             });
             const __resolvedCenterI = resolveScriptureCenter(__scriptureCenterKey);
+
             const __scriptureKeyI =
               __hitScripture?.scriptureKey ??
               __resolvedCenterI.shortKey ??
               (__scriptureCenterKey && !__scriptureCenterKey.startsWith("KHSL:") ? __scriptureCenterKey : null);
+
             const __dispI =
               __hitScripture?.displayName ??
               __resolvedCenterI.label ??
-              __scriptureCenterKey;
+              (__scriptureKeyI === "hokekyo" ? "法華経" :
+               __scriptureKeyI === "kotodama_hisho" ? "言霊秘書" :
+               __scriptureKeyI === "iroha_kotodama_kai" ? "いろは言霊解" :
+               __scriptureKeyI === "katakamuna_kotodama_kai" ? "カタカムナ言霊解" :
+               __scriptureCenterKey);
             const __instrMapI: Record<string, string> = {
               kotodama_hisho: "まず『言霊秘書は音の法則を担い、いろははその配列を担う』と一行で書き分けてください。",
               iroha_kotodama_kai: "まず『いろはは音の配列であり、言霊はその内在法則である』と一行で書き分けてください。",
@@ -4258,16 +4264,20 @@ return res.json(__tenmonGeneralGateResultMaybe({
             const __instrI = (__scriptureKeyI && __instrMapI[__scriptureKeyI])
               ? __instrMapI[__scriptureKeyI]
               : "まず、この聖典の文脈で中心となる一点を一行で書き分けてください。";
-            const __bodyI = "さっき見ていた聖典（" + __dispI + "）を土台に、いまの話を見ていきましょう。\n【天聞の所見】" + __instrI;
+            const __bodyI =
+              "さっき見ていた聖典（" + __dispI + "）を土台に、いまの話を見ていきましょう。\n【天聞の所見】" + __instrI;
             try {
-              upsertThreadCenter({
-                threadId: String(threadId ?? ""),
-                centerType: "scripture",
-                centerKey: String(__scriptureCenterKey),
-                sourceRouteReason: "TENMON_SCRIPTURE_CANON_V1",
-                sourceScriptureKey: String(__scriptureKeyI || ""),
-                sourceTopicClass: "",
-              });
+              const __persistScriptureKeyI = String(__scriptureKeyI || "").trim();
+              if (__persistScriptureKeyI) {
+                upsertThreadCenter({
+                  threadId: String(threadId ?? ""),
+                  centerType: "scripture",
+                  centerKey: __persistScriptureKeyI,
+                  sourceRouteReason: "TENMON_SCRIPTURE_CANON_V1",
+                  sourceScriptureKey: __persistScriptureKeyI,
+                  sourceTopicClass: "",
+                });
+              }
             } catch {}
             // R10_SYNAPSE_TOP_BIND_COMPLETE_V1: THREAD_CENTER_ACTION_INTERCEPT branch の ku に rich synapseTop を追加（3ターン目 instruction でも契約統一）
             const __scriptureKeyIntercept = String(__scriptureKeyI ?? __scriptureCenterKey ?? "");
@@ -4275,18 +4285,20 @@ return res.json(__tenmonGeneralGateResultMaybe({
             const __kuIntercept: any = {
               routeReason: "TENMON_SCRIPTURE_CANON_V1",
               heart: normalizeHeartShape(__heart),
-              scriptureKey: __scriptureKeyI,
+              scriptureKey: __scriptureKeyI || null,
               scriptureMode: "action_instruction",
               scriptureCenterKey: __scriptureCenterKey,
-                centerMeaning: String(__scriptureKeyIntercept || "").trim(),
-                thoughtCoreSummary: {
-                  centerKey: "TENMON_SCRIPTURE_CANON_V1",
-                  centerMeaning: String(__scriptureKeyIntercept || "").trim() || null,
-                  routeReason: "TENMON_SCRIPTURE_CANON_V1",
-                  modeHint: "scripture",
-                  continuityHint: String(__scriptureKeyIntercept || "").trim() || null,
-                },
-                              };
+              centerKey: __scriptureKeyI || null,
+              centerMeaning: String(__scriptureKeyI || "").trim() || null,
+              centerLabel: __dispI || null,
+              thoughtCoreSummary: {
+                centerKey: "TENMON_SCRIPTURE_CANON_V1",
+                centerMeaning: String(__scriptureKeyI || "").trim() || null,
+                routeReason: "TENMON_SCRIPTURE_CANON_V1",
+                modeHint: "scripture",
+                continuityHint: String(__scriptureKeyI || "").trim() || null,
+              },
+            };
             const __synapseTopIntercept = {
               sourceThreadCenter: __threadCenterIntercept,
               sourceRouteReason: "TENMON_SCRIPTURE_CANON_V1",
