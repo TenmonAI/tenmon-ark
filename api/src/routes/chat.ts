@@ -1137,8 +1137,21 @@ const pid = process.pid;
                   if (__page >= 6 && __page <= 20) v += 900;
                 }
               } catch {}
-
-
+              // KUKAI_SHOJI_PAGE126_V3
+              try {
+                const __rawMsg = String(message ?? "");
+                const __page = Number(x?.pdfPage || x?.page || 0) || 0;
+                if (/声字実相/u.test(__rawMsg)) {
+                  if (/声字実相|釈名体義|六合釈|梵語/u.test(t)) v += 4200;
+                  if (__page >= 120 && __page <= 150) v += 5200;
+                  if (/即身成仏義|二経一論八箇の証文/u.test(t)) v -= 3000;
+                  if (__page > 0 && __page <= 20) v -= 1800;
+                }
+                if (/即身成仏/u.test(__rawMsg)) {
+                  if (/即身成仏|六大|三密/u.test(t)) v += 2600;
+                  if (/声字実相|釈名体義|六合釈/u.test(t)) v -= 1400;
+                }
+              } catch {}
               return v;
             };
             return score(b) - score(a);

@@ -96,11 +96,11 @@ export function resolveScriptureLocalEvidence(input: string): ScriptureLocalReso
       else if (isLocalRead) terms.push("水火");
       else if (isHistory) terms.push("空海", "いろは");
       else terms.push("いろは");
-    } else if (fam.family === "KATAKAMUNA") {
+    } else if (String(fam.family) === "KATAKAMUNA") {
       if (isDefinition) terms.push("カタカムナ");
       else if (isHistory) terms.push("楢崎", "カタカムナ");
       else terms.push("カタカムナ");
-    } else if (fam.family === "KUKAI") {
+    } else if (String(fam.family) === "KUKAI") {
       if (isDefinition) terms.push("空海", "声字実相");
       else if (isLocalRead) terms.push("即身成仏", "声字実相");
       else if (isHistory) terms.push("空海");
@@ -114,16 +114,31 @@ export function resolveScriptureLocalEvidence(input: string): ScriptureLocalReso
 
 
   // KUKAI_LOCAL_DISAMBIG_V1
-  if (fam.family == "KUKAI") {
+  if (String(fam.family) == "KUKAI") {
     const raw = String(input || "");
 
     if (/即身成仏/u.test(raw)) {
     
   // KATAKAMUNA_A_LOCAL_FIX_V1
-  if (fam.family == "KATAKAMUNA") {
+  if (String(fam.family) == "KATAKAMUNA") {
+    const raw = String(input || "");
+    if (/ア/u.test(raw) && /解釈/u.test(raw)) {
+    
+  // KATAKAMUNA_A_LOCAL_FIX_V2
+  if (String(fam.family) === "KATAKAMUNA") {
     const raw = String(input || "");
     if (/ア/u.test(raw) && /解釈/u.test(raw)) {
       return {
+        family: fam.family,
+        primaryDoc: "カタカムナ言霊解",
+        familyDocs: ["カタカムナ言霊解", "カタカムナ言灵解.pdf"],
+        intent: "scripture_local_read",
+        queryTerms: ["ア", "起こり", "初音", "音義", "図象", "水火"]
+      };
+    }
+  }
+
+  return {
         family: fam.family,
         primaryDoc: "カタカムナ言霊解",
         familyDocs: ["カタカムナ言霊解", "カタカムナ言灵解.pdf"],
