@@ -54,10 +54,30 @@ function stripInternal(text: string): string {
   return out.trim();
 }
 
-function scripturePrefix(label: string, body: string): string {
+
+function hasKotodamaCompareParity(input: any): boolean {
+  try {
+    const ku = input?.ku || input?.decisionFrame?.ku || {};
+    const ss = ku?.sourceStackSummary || {};
+    const tcs = ku?.thoughtCoreSummary || {};
+    return Boolean(
+      String(ku?.centerKey || "") === "kotodama_hisho" ||
+      String(ku?.centerMeaning || "") === "kotodama_hisho" ||
+      (Array.isArray(ss?.sourceKinds) && ss.sourceKinds.includes("kotodama_one_sound")) ||
+      (ss?.previousSound && ss?.currentSound) ||
+      String(tcs?.intentKind || "") === "compare"
+    );
+  } catch {
+    return false;
+  }
+}
+
+function scripturePrefix(label: string, body: string, skipPrefix?: boolean): string {
   if (!label) return body;
-  if (body.startsWith("さっき見ていた聖典（")) return body;
-  return `さっき見ていた聖典（${label}）を土台に、いまの話を見ていきましょう。\n${body}`.trim();
+  if (skipPrefix) return body;
+  if (body.startsWith("（")) return body;
+  if (body.startsWith("【天聞の所見】")) return body;
+  return `（${label}）を土台に、いまの話を見ていきましょう。\n${body}`.trim();
 }
 
 function conceptPrefix(label: string, body: string): string {
@@ -80,14 +100,18 @@ export function responseProjector(input: ProjectorInput): string {
   let body = stripInternal(canonical || raw || "");
 
   const isBadGeneric =
-    body === "【天聞の所見】受け取っています。そのまま続けてください。" ||
-    body === "受け取っています。そのまま続けてください。" ||
-    body === "受け取っています。そのまま続けてください？" ||
-    body === "【天聞の所見】受け取っています。そのまま続けてください？";
+    body === "【天聞の所見】【天聞の所見】受け取りました。いま一番引っかかっている一点を置いてください。" ||
+    body === "【天聞の所見】受け取りました。いま一番引っかかっている一点を置いてください。" ||
+    body === "【天聞の所見】受け取りました。核心を一点に絞って置いてください。" ||
+    body === "【天聞の所見】【天聞の所見】受け取りました。核心を一点に絞って置いてください。";
 
   const tcType = s(threadCenter?.centerType);
   const tcKey = normalizeDisplayLabel(s(threadCenter?.centerKey));
   const followLabel = centerLabel || centerMeaning || centerKey || tcKey;
+
+  const isNaturalGeneral = routeReason.includes("NATURAL_GENERAL");
+  const effectiveSurfaceStyle = surfaceStyle || (isNaturalGeneral ? "plain_clean" : "");
+  const effectiveClosingType = closingType || (isNaturalGeneral ? "one_question" : "");
 
   if (isBadGeneric && (tcType === "scripture" || routeReason === "TENMON_SCRIPTURE_CANON_V1" || /秘書|法華経|いろは|カタカムナ|水穂伝/u.test(followLabel))) {
     const label = centerLabel || centerMeaning || centerKey || tcKey || "聖典";
@@ -101,8 +125,8 @@ export function responseProjector(input: ProjectorInput): string {
 
   if (tcType === "scripture") {
     const __label = centerLabel || centerMeaning || normalizeDisplayLabel(centerKey) || tcKey;
-    if (!body.startsWith(`さっき見ていた聖典（${__label}）`) && !body.startsWith(`${__label}を土台に続けます。`)) {
-      body = scripturePrefix(__label, body);
+    if (!body.startsWith(`（${__label}）`) && !body.startsWith(`${__label}を土台に続けます。`)) {
+      body = scripturePrefix(__label, body, hasKotodamaCompareParity(input));
     }
   } else if (tcType === "concept") {
     const __label = centerLabel || centerMeaning || normalizeDisplayLabel(centerKey) || tcKey;
@@ -112,15 +136,15 @@ export function responseProjector(input: ProjectorInput): string {
   }
 
   body = body
-    .replace(/さっき見ていた聖典（([^）]+)）を土台に、いまの話を見ていきましょう。\s*\1を土台に続けます。/g, 'さっき見ていた聖典（$1）を土台に、いまの話を見ていきましょう。')
+    .replace(/（([^）]+)）を土台に、いまの話を見ていきましょう。\s*\1を土台に続けます。/g, '（$1）を土台に、いまの話を見ていきましょう。')
     .replace(/さっき見ていた中心（([^）]+)）を土台に、いまの話を見ていきましょう。\s*\1を土台に続けます。/g, 'さっき見ていた中心（$1）を土台に、いまの話を見ていきましょう。');
 
-  if (surfaceStyle === "plain_clean") {
+  if (effectiveSurfaceStyle === "plain_clean") {
     body = body.replace(/^【天聞の所見】\s*/u, "【天聞の所見】");
     if (!body.startsWith("【天聞の所見】")) body = `【天聞の所見】${body}`;
   }
 
-  if (closingType === "one_question") {
+  if (effectiveClosingType === "one_question") {
     body = body.replace(/\n*$/u, "");
   }
 

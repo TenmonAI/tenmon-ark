@@ -105,7 +105,7 @@ export async function frontConversationRenderer(input: FrontRendererInput): Prom
       provider: {
         primaryRenderer: "gpt-5.4",
         helperModels: [],
-        shadowOnly: true,
+        shadowOnly: false,
         finalAnswerAuthority: "gpt-5.4",
       },
     };
@@ -117,7 +117,7 @@ export async function frontConversationRenderer(input: FrontRendererInput): Prom
       provider: {
         primaryRenderer: "gpt-5.4",
         helperModels: [],
-        shadowOnly: true,
+        shadowOnly: false,
         finalAnswerAuthority: "gpt-5.4",
       },
     };

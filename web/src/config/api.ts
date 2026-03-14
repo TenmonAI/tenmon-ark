@@ -4,16 +4,11 @@ export const API_CHAT_URL = API_BASE_URL + "/api/chat";
 export const API_CHAT_FRONT_URL = API_BASE_URL + "/api/chat_front";
 
 export function getChatApiMode(): "legacy" | "front" {
-  try {
-    const v = typeof window !== "undefined" ? window.localStorage.getItem("CHAT_API_MODE") : null;
-    if (v === "legacy") return "legacy";
-    if (v === "front") return "front";
-    return "front";
-  } catch {
-    return "front";
-  }
+  // UI 側は /api/chat に統一。将来のため enum は残すが常に legacy を返す。
+  return "legacy";
 }
 
 export function getChatApiUrl(): string {
-  return getChatApiMode() === "front" ? API_CHAT_FRONT_URL : API_CHAT_URL;
+  // 常に /api/chat を使う
+  return API_CHAT_URL;
 }

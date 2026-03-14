@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { postChat } from "../api/chat";
 
 export type ChatRole = "user" | "assistant";
@@ -12,6 +12,56 @@ export type ChatMessage = {
 
 const THREAD_KEY = "TENMON_THREAD_ID";
 const MSGS_KEY_PREFIX = "TENMON_PWA_MSGS_V2:";
+
+type ThreadMeta = {
+  id: string;
+  title?: string;
+  updatedAt?: number;
+};
+
+const THREADS_META_KEY = "TENMON_PWA_THREADS_META_V1";
+
+function loadThreadMetaMap(): Record<string, ThreadMeta> {
+  try {
+    const raw = localStorage.getItem(THREADS_META_KEY);
+    return raw ? (JSON.parse(raw) as Record<string, ThreadMeta>) : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveThreadMetaMap(map: Record<string, ThreadMeta>) {
+  try {
+    localStorage.setItem(THREADS_META_KEY, JSON.stringify(map));
+  } catch {
+    // ignore
+  }
+}
+
+function inferTitle(msgs: ChatMessage[]): string | undefined {
+  const firstUser = msgs.find((m) => m.role === "user");
+  const firstAssistant = msgs.find((m) => m.role === "assistant");
+  const base = (firstUser || firstAssistant)?.content?.trim();
+  if (!base) return undefined;
+  const oneLine = base.split(/\r?\n/)[0] || base;
+  return oneLine.length > 40 ? `${oneLine.slice(0, 40)}…` : oneLine;
+}
+
+function touchThreadMeta(threadId: string, msgs: ChatMessage[]) {
+  try {
+    const map = loadThreadMetaMap();
+    const prev = map[threadId] || { id: threadId };
+    const title = prev.title || inferTitle(msgs);
+    map[threadId] = {
+      id: threadId,
+      title,
+      updatedAt: Date.now(),
+    };
+    saveThreadMetaMap(map);
+  } catch {
+    // ignore
+  }
+}
 
 function getThreadId(): string {
   try {
@@ -50,12 +100,28 @@ export function useChat() {
     const tid = getThreadId();
     setThreadId(tid);
     setMessages(loadMessages(tid));
+     // ensure thread meta exists
+    try {
+      const map = loadThreadMetaMap();
+      if (!map[tid]) {
+        map[tid] = { id: tid, updatedAt: Date.now() };
+        saveThreadMetaMap(map);
+      }
+    } catch {
+      // ignore
+    }
     hydratedRef.current = true;
   }, []);
 
   useEffect(() => {
     if (!hydratedRef.current || !threadId) return;
     saveMessages(threadId, messages);
+    touchThreadMeta(threadId, messages);
+    try {
+      window.dispatchEvent(new Event("tenmon:threads-updated"));
+    } catch {
+      // ignore (e.g. SSR)
+    }
   }, [threadId, messages]);
 
   async function sendMessage(input: string) {
@@ -72,7 +138,7 @@ export function useChat() {
 
     try {
       setLoading(true);
-      const out = await postChat({ message: text, threadId });
+      const out = await postChat({ message: text, sessionId: threadId });
       const assistantMsg: ChatMessage = {
         id: `${threadId}:a:${Date.now()}`,
         role: "assistant",
@@ -88,7 +154,12 @@ export function useChat() {
 
   function resetThread() {
     const tid = `pwa-${Date.now().toString(36)}`;
-    try { localStorage.setItem(THREAD_KEY, tid); } catch {}
+    try {
+      localStorage.setItem(THREAD_KEY, tid);
+      window.dispatchEvent(new Event("tenmon:threads-updated"));
+    } catch {
+      // ignore
+    }
     setThreadId(tid);
     setMessages([]);
   }

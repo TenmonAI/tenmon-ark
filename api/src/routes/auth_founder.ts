@@ -38,7 +38,7 @@ export function registerFounderAuth(app: Router) {
   });
 
   app.post("/api/logout", (_req, res) => {
-    res.clearCookie("tenmon_founder", { path: "/" });
+    res.clearCookie("tenmon_founder", cookieOpts());
     return res.json({ ok: true });
   });
 

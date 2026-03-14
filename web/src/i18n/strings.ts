@@ -31,7 +31,7 @@ const ja: Dict = {
   "sidebar.brandLine1": "TENMON-ARK",
   "sidebar.brandLine2": "天聞アーク",
 
-  "topbar.chatMeta": "/api/chat | /api/chat_front （同一オリジン）",
+  "topbar.chatMeta": "/api/chat （同一オリジン）",
 
   "composer.placeholder": "天聞アークにメッセージを送る…",
 
@@ -67,7 +67,7 @@ const en: Dict = {
   "sidebar.brandLine1": "TENMON-ARK",
   "sidebar.brandLine2": "Tenmon Ark",
 
-  "topbar.chatMeta": "/api/chat | /api/chat_front (same-origin)",
+  "topbar.chatMeta": "/api/chat (same-origin)",
 
   "composer.placeholder": "Message TENMON-ARK...",
 
@@ -103,7 +103,7 @@ const es: Dict = {
   "sidebar.brandLine1": "TENMON-ARK",
   "sidebar.brandLine2": "Tenmon Ark",
 
-  "topbar.chatMeta": "/api/chat | /api/chat_front (origen común)",
+  "topbar.chatMeta": "/api/chat (origen común)",
 
   "composer.placeholder": "Escribe a TENMON-ARK…",
 
@@ -139,7 +139,7 @@ const fr: Dict = {
   "sidebar.brandLine1": "TENMON-ARK",
   "sidebar.brandLine2": "Tenmon Ark",
 
-  "topbar.chatMeta": "/api/chat | /api/chat_front (même origine)",
+  "topbar.chatMeta": "/api/chat (même origine)",
 
   "composer.placeholder": "Écrire à TENMON-ARK…",
 
@@ -175,7 +175,7 @@ const zhHans: Dict = {
   "sidebar.brandLine1": "TENMON-ARK",
   "sidebar.brandLine2": "天闻方舟",
 
-  "topbar.chatMeta": "/api/chat | /api/chat_front（同源）",
+  "topbar.chatMeta": "/api/chat（同源）",
 
   "composer.placeholder": "向 TENMON-ARK 发送消息…",
 
@@ -211,7 +211,7 @@ const zhHant: Dict = {
   "sidebar.brandLine1": "TENMON-ARK",
   "sidebar.brandLine2": "天聞方舟",
 
-  "topbar.chatMeta": "/api/chat | /api/chat_front（同源）",
+  "topbar.chatMeta": "/api/chat（同源）",
 
   "composer.placeholder": "向 TENMON-ARK 發送訊息…",
 
@@ -247,7 +247,7 @@ const ko: Dict = {
   "sidebar.brandLine1": "TENMON-ARK",
   "sidebar.brandLine2": "텐몬 아크",
 
-  "topbar.chatMeta": "/api/chat | /api/chat_front (same-origin)",
+  "topbar.chatMeta": "/api/chat (same-origin)",
 
   "composer.placeholder": "TENMON-ARK 에게 메시지를 보내세요…",
 

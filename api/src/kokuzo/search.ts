@@ -723,6 +723,69 @@ function getSafeFallbackCandidates(docOrNull: string | null, limit: number): Kok
 
 }
 
+/**
+ * 言霊 FTS 行の品質スコア（Notion / clean text を優先、OCR ノイズを下げる）
+ */
+function kotodamaFtsQualityScore(doc: string, snippet: string): number {
+  const docStr = String(doc || "");
+  const s = String(snippet || "");
+  if (!s) return -1000;
+  let score = 0;
+  if (docStr.startsWith("NOTION:PAGE:")) score += 20;
+  if (/【title】/.test(s)) score += 15;
+  const len = s.length;
+  const cjk = (s.match(/[\u4e00-\u9fff\u3400-\u4dbf]/g) || []).length;
+  const kana = (s.match(/[ぁ-んァ-ン]/g) || []).length;
+  const space = (s.match(/\s/g) || []).length;
+  const readable = cjk + kana;
+  const readableRatio = len > 0 ? readable / len : 0;
+  if (readableRatio >= 0.5) score += 10;
+  else if (readableRatio >= 0.3) score += 5;
+  const consecutiveSymbol = (s.match(/[。、・]{3,}|[^\p{L}\p{N}\s]{4,}/gu) || []).length;
+  const replacement = (s.match(/\uFFFD/g) || []).length;
+  const spaceHeavy = len > 0 && space / len > 0.4;
+  const singleRepeat = (s.match(/(.)\1{4,}/g) || []).length;
+  score -= consecutiveSymbol * 5;
+  score -= replacement * 8;
+  if (spaceHeavy) score -= 10;
+  score -= singleRepeat * 5;
+  return score;
+}
+
+/**
+ * 言霊会話用: kokuzo_pages_fts で短い grounding を取得。NON_TEXT 除外＋品質スコアで Notion/clean を優先。
+ * @param query 検索語（言霊・言灵・ことだま・五十音・または一音「ヒ」など）
+ * @param limit 最大件数（default 3）
+ * @returns { doc, pdfPage, snippet }[]（score desc で先頭が top hit）
+ */
+export function searchKotodamaFts(query: string, limit = 3): { doc: string; pdfPage: number; snippet: string }[] {
+  const q = String(query || "").trim();
+  if (!q) return [];
+  try {
+    const db = getDb("kokuzo");
+    if (!tableExists(db, "kokuzo_pages_fts")) return [];
+    const ftsTerm = q.includes('"') ? `"${q.replace(/"/g, '""')}"` : q;
+    const rawLimit = Math.min(limit * 6, 30);
+    const rows = db
+      .prepare(
+        `SELECT doc, pdfPage, substr(replace(text, char(12), ' '), 1, 200) AS snippet
+         FROM kokuzo_pages_fts
+         WHERE kokuzo_pages_fts MATCH ?
+         ORDER BY bm25(kokuzo_pages_fts) ASC
+         LIMIT ?`
+      )
+      .all(ftsTerm, rawLimit) as { doc: string; pdfPage: number; snippet: string }[];
+    const NON_TEXT = "[NON_TEXT_PAGE_OR_OCR_FAILED]";
+    const filtered = rows.filter((r) => r.snippet && !String(r.snippet).includes(NON_TEXT));
+    const scored = filtered.map((r) => ({ ...r, _score: kotodamaFtsQualityScore(r.doc, r.snippet) }));
+    scored.sort((a, b) => b._score - a._score);
+    return scored.slice(0, limit).map(({ doc, pdfPage, snippet }) => ({ doc, pdfPage, snippet }));
+  } catch (e) {
+    console.warn("[KOKUZO-SEARCH] searchKotodamaFts failed:", e);
+    return [];
+  }
+}
+
 // --- Backward compatible exports for src/routes/kokuzo.ts ---
 // NOTE: Keep deterministic. No LLM. Minimal SQL.
 

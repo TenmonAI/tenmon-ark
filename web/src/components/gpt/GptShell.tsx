@@ -17,6 +17,13 @@ export function GptShell() {
   const handleNewChat = () => {
     setView("chat");
     setSidebarOpen(false);
+    try {
+      const tid = `pwa-${Date.now().toString(36)}`;
+      window.localStorage.setItem("TENMON_THREAD_ID", tid);
+      window.dispatchEvent(new Event("tenmon:threads-updated"));
+    } catch {
+      // ignore
+    }
     window.location.reload();
   };
 

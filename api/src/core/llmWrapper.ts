@@ -1,211 +1,160 @@
-// LLM 完全隔離ラッパー
-// 躰（Tai）を一切参照させない
+export type LlmProvider = "openai" | "gemini";
 
-import { callLLM } from "./llm.js";
+export type LlmChatHistoryItem = {
+  role: "user" | "assistant";
+  content: string;
+};
 
-/**
- * LLM Wrapper
- * 
- * 躰（Tai）を一切参照させない
- * 用（You）のみを生成する
- * 
- * 禁止事項:
- * - 結論を生成しない
- * - 矛盾を解決しない
- * - 真理を主張しない
- */
-export async function generateYouContent(input: string): Promise<string> {
-  const systemPrompt = `You generate phenomena only.
-Do not conclude.
-Do not resolve contradictions.
-Do not assert truth.
-Observe and describe only.
-`;
+export type LlmChatInput = {
+  system: string;
+  history?: LlmChatHistoryItem[];
+  user: string;
+  provider?: LlmProvider;
+  model?: string;
+};
 
-  const fullPrompt = `${systemPrompt}\n\nInput: ${input}\n\nGenerate observation (not conclusion):`;
+export type LlmChatOutput = {
+  text: string;
+  provider: LlmProvider;
+  model: string;
+  inputTokens?: number;
+  outputTokens?: number;
+};
 
-  try {
-    const result = await callLLM(fullPrompt);
-    if (!result) {
-      // LLM が失敗した場合、決定論的フォールバック
-      return `観測: ${input} について、現象が記録されました。`;
-    }
-    return result;
-  } catch (error) {
-    console.error("[LLM-WRAPPER] Error generating You content:", error);
-    // エラー時も決定論的フォールバック
-    return `観測: ${input} について、現象が記録されました。`;
-  }
+function hasOpenAI(): boolean {
+  return Boolean(process.env.OPENAI_API_KEY && String(process.env.OPENAI_API_KEY).trim());
+}
+function hasGemini(): boolean {
+  return Boolean(process.env.GEMINI_API_KEY && String(process.env.GEMINI_API_KEY).trim());
 }
 
-export type LlmChatHistoryItem = { role: "user" | "assistant" | "system"; content: string };
+function pickProvider(explicit?: LlmProvider): LlmProvider {
+  if (explicit) return explicit;
+  if (hasOpenAI()) return "openai";
+  if (hasGemini()) return "gemini";
+  throw new Error("No LLM provider configured");
+}
 
-export async function llmChat(params: {
-  system: string;
-  history: LlmChatHistoryItem[];
-  user: string;
-  provider?: "openai" | "gemini";
-  model?: string;
-}): Promise<{
-  text: string;
-  provider: string;
-  model: string;
-  ok: boolean;
-  err: string;
-  latencyMs: number;
-}> {
-  const blocks: string[] = [];
-  blocks.push("SYSTEM:\n" + params.system.trim());
-  for (const m of params.history) {
-    blocks.push(`${m.role.toUpperCase()}:\n${m.content}`);
+function pickModel(provider: LlmProvider, explicit?: string): string {
+  if (explicit && String(explicit).trim()) return String(explicit).trim();
+  if (provider === "openai") return String(process.env.OPENAI_MODEL || "gpt-4o").trim();
+  return String(process.env.GEMINI_MODEL || "models/gemini-1.5-pro").trim();
+}
+
+function buildOpenAIMessages(input: LlmChatInput) {
+  const out: Array<{ role: "system" | "user" | "assistant"; content: string }> = [];
+  out.push({ role: "system", content: String(input.system || "") });
+  for (const h of input.history || []) {
+    if (!h?.content) continue;
+    out.push({ role: h.role, content: h.content });
   }
-  blocks.push("USER:\n" + params.user);
-  const prompt = blocks.join("\n\n").trim() + "\n\nASSISTANT:\n";
+  out.push({ role: "user", content: String(input.user || "") });
+  return out;
+}
 
-  const hasOpenAI = !!(process.env.OPENAI_API_KEY && String(process.env.OPENAI_API_KEY).trim());
-  const hasGemini = !!(process.env.GEMINI_API_KEY && String(process.env.GEMINI_API_KEY).trim());
-
-  let plannedProvider: "openai" | "gemini" | "" = "";
-  if (params.provider === "openai" && hasOpenAI) {
-    plannedProvider = "openai";
-  } else if (params.provider === "gemini" && hasGemini) {
-    plannedProvider = "gemini";
-  } else if (hasOpenAI) {
-    plannedProvider = "openai";
-  } else if (hasGemini) {
-    plannedProvider = "gemini";
+function buildGeminiContents(input: LlmChatInput) {
+  const out: Array<{ role: "user" | "model"; parts: Array<{ text: string }> }> = [];
+  const sys = String(input.system || "").trim();
+  if (sys) out.push({ role: "user", parts: [{ text: `SYSTEM:\n${sys}` }] });
+  for (const h of input.history || []) {
+    if (!h?.content) continue;
+    out.push({
+      role: h.role === "assistant" ? "model" : "user",
+      parts: [{ text: h.content }],
+    });
   }
+  out.push({ role: "user", parts: [{ text: String(input.user || "") }] });
+  return out;
+}
 
-  const plannedModel =
-    params.model ||
-    (plannedProvider === "openai"
-      ? String(process.env.OPENAI_MODEL || "")
-      : plannedProvider === "gemini"
-      ? String(process.env.GEMINI_MODEL || "")
-      : "");
+async function callOpenAI(input: LlmChatInput, model: string): Promise<LlmChatOutput> {
+  const apiKey = String(process.env.OPENAI_API_KEY || "").trim();
+  if (!apiKey) throw new Error("OPENAI_API_KEY missing");
 
-  const start = Date.now();
-  const timeoutMs = 10000;
-
-  const makeResult = (
-    text: string,
-    provider: string,
-    model: string,
-    ok: boolean,
-    err: string
-  ) => ({
-    text: String(text ?? "").trim(),
-    provider,
-    model,
-    ok,
-    err,
-    latencyMs: Date.now() - start,
+  const resp = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model,
+      messages: buildOpenAIMessages(input),
+      temperature: 0.4,
+    }),
   });
 
-  // helper: with timeout
-  async function withTimeout<T>(p: Promise<T>): Promise<T> {
-    let timeoutId: NodeJS.Timeout;
-    const timeoutPromise = new Promise<never>((_, reject) => {
-      timeoutId = setTimeout(() => reject(new Error("timeout")), timeoutMs);
-    });
-    try {
-      // eslint-disable-next-line @typescript-eslint/await-thenable
-      const result = await Promise.race([p, timeoutPromise]) as T;
-      clearTimeout(timeoutId!);
-      return result;
-    } catch (e) {
-      clearTimeout(timeoutId!);
-      throw e;
-    }
+  if (!resp.ok) {
+    const txt = await resp.text();
+    throw new Error(`OpenAI ${resp.status}: ${txt.slice(0, 500)}`);
   }
 
-  // No specific provider available: fall back to existing callLLM behavior
-  if (!plannedProvider) {
-    try {
-      const out = await withTimeout(callLLM(prompt));
-      const txt = (out ?? "").trim();
-      const ok = !!txt;
-      return makeResult(txt, "", "", ok, ok ? "" : "empty");
-    } catch (e: any) {
-      return makeResult("", "", "", false, String(e?.message || e || "timeout"));
-    }
+  const json: any = await resp.json();
+  const text = String(json?.choices?.[0]?.message?.content || "").trim();
+  return {
+    text,
+    provider: "openai",
+    model,
+    inputTokens: json?.usage?.prompt_tokens,
+    outputTokens: json?.usage?.completion_tokens,
+  };
+}
+
+async function callGemini(input: LlmChatInput, model: string): Promise<LlmChatOutput> {
+  const apiKey = String(process.env.GEMINI_API_KEY || "").trim();
+  if (!apiKey) throw new Error("GEMINI_API_KEY missing");
+
+  const url = `https://generativelanguage.googleapis.com/v1beta/${model}:generateContent?key=${encodeURIComponent(apiKey)}`;
+  const resp = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      contents: buildGeminiContents(input),
+      generationConfig: {
+        temperature: 0.4,
+        maxOutputTokens: 1024,
+      },
+    }),
+  });
+
+  if (!resp.ok) {
+    const txt = await resp.text();
+    throw new Error(`Gemini ${resp.status}: ${txt.slice(0, 500)}`);
   }
 
-  if (plannedProvider === "openai") {
-    try {
-      const out = await withTimeout(callLLM(prompt));
-      const txt = (out ?? "").trim();
-      const ok = !!txt;
-      return makeResult(
-        txt,
-        "openai",
-        plannedModel || String(process.env.OPENAI_MODEL || ""),
-        ok,
-        ok ? "" : "empty"
-      );
-    } catch (e: any) {
-      return makeResult(
-        "",
-        "openai",
-        plannedModel || String(process.env.OPENAI_MODEL || ""),
-        false,
-        String(e?.message || e || "timeout")
-      );
-    }
-  }
+  const json: any = await resp.json();
+  const text = String(
+    json?.candidates?.[0]?.content?.parts?.map((p: any) => String(p?.text || "")).join("") || ""
+  ).trim();
 
-  // plannedProvider === "gemini"
+  return {
+    text,
+    provider: "gemini",
+    model,
+    inputTokens: json?.usageMetadata?.promptTokenCount,
+    outputTokens: json?.usageMetadata?.candidatesTokenCount,
+  };
+}
+
+export async function llmChat(input: LlmChatInput): Promise<LlmChatOutput> {
+  const provider = pickProvider(input.provider);
+  const model = pickModel(provider, input.model);
+
   try {
-    const apiKey = String(process.env.GEMINI_API_KEY || "").trim();
-    if (!apiKey) {
-      const out = await withTimeout(callLLM(prompt));
-      const txt = (out ?? "").trim();
-      const ok = !!txt;
-      return makeResult(txt, "", "", ok, ok ? "" : "empty");
+    const out = provider === "openai"
+      ? await callOpenAI(input, model)
+      : await callGemini(input, model);
+
+    if (!String(out.text || "").trim()) {
+      throw new Error(`${provider} empty response`);
     }
-    const model =
-      plannedModel || String(process.env.GEMINI_MODEL || "gemini-1.5-flash").trim();
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(
-      model
-    )}:generateContent?key=${encodeURIComponent(apiKey)}`;
-
-    const res: any = await withTimeout(
-      fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [
-            {
-              parts: [{ text: prompt }],
-            },
-          ],
-        }),
-      }) as any
-    );
-
-    if (!res.ok) {
-      const errText = await res.text().catch(() => "unknown error");
-      console.error("[LLM-WRAPPER] Gemini API error:", res.status, errText);
-      return makeResult("", "gemini", model, false, `http ${res.status}`);
-    }
-
-    const data = (await res.json()) as any;
-    const text =
-      (data?.candidates?.[0]?.content?.parts || [])
-        .map((p: any) => String(p?.text || ""))
-        .join("") || "";
-
-    const txt = text.trim();
-    const ok = !!txt;
-    return makeResult(txt, "gemini", model, ok, ok ? "" : "empty");
+    return out;
   } catch (e: any) {
-    console.error("[LLM-WRAPPER] Gemini call failed:", e instanceof Error ? e.message : String(e));
-    return makeResult(
-      "",
-      "gemini",
-      plannedModel || String(process.env.GEMINI_MODEL || ""),
-      false,
-      String(e?.message || e || "timeout")
-    );
+    try { console.error("[llmChat]", provider, model, String(e?.message || e)); } catch {}
+    return {
+      text: "",
+      provider,
+      model,
+    };
   }
 }

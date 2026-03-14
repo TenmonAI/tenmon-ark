@@ -162,13 +162,31 @@ authLocalRouter.post("/auth/local/login", (req, res) => {
   }
 });
 
-authLocalRouter.post("/auth/local/logout", (_req, res) => {
+authLocalRouter.post("/auth/local/logout", (req, res) => {
   const isProd = String(process.env.NODE_ENV || "") === "production";
+
+  try {
+    const sessionId = String((req as any).cookies?.auth_session ?? "").trim();
+    if (sessionId) {
+      const db = ensureTables();
+      db.prepare(`DELETE FROM auth_sessions WHERE sessionId = ?`).run(sessionId);
+    }
+  } catch {
+    // ignore DB cleanup errors; logout should still proceed
+  }
+
   res.clearCookie("auth_session", {
     httpOnly: true,
     sameSite: "lax",
     secure: isProd,
     path: "/",
   });
+  res.clearCookie("tenmon_founder", {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: isProd,
+    path: "/",
+  });
+
   return res.json({ ok: true });
 });

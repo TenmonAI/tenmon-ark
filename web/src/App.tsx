@@ -1,6 +1,7 @@
 import React from "react";
 import { useEffect, useState } from "react";
 import KoshikiConsolePage from "./pages/KoshikiConsole";
+import LoginLocal from "./pages/LoginLocal";
 import { GptShell } from "./components/gpt/GptShell";
 import { I18nProvider } from "./i18n/useI18n";
 
@@ -21,7 +22,12 @@ export default function App() {
   const [authReady, setAuthReady] = useState(false);
   const [authOk, setAuthOk] = useState(false);
 
-  // 1) 認証確認
+  const pathname =
+    typeof window !== "undefined" ? window.location.pathname : "/pwa/";
+
+  const isLoginLocal = pathname === "/pwa/login-local.html";
+  const isKoshiki = pathname.startsWith("/pwa/koshiki");
+
   useEffect(() => {
     let dead = false;
 
@@ -30,15 +36,12 @@ export default function App() {
       if (dead) return;
       setAuthOk(ok);
       setAuthReady(true);
+
       try {
         localStorage.setItem(TENMON_AUTH_OK_V1, ok ? "1" : "0");
       } catch {}
 
-      if (
-        !ok &&
-        typeof window !== "undefined" &&
-        window.location.pathname.startsWith("/pwa")
-      ) {
+      if (!ok && !isLoginLocal && typeof window !== "undefined" && pathname.startsWith("/pwa")) {
         window.location.href = "/pwa/login-local.html?next=/pwa/";
       }
     })();
@@ -46,11 +49,11 @@ export default function App() {
     return () => {
       dead = true;
     };
-  }, []);
+  }, [isLoginLocal, pathname]);
 
-  // 2) founder autologin
   useEffect(() => {
     if (!authReady) return;
+    if (isLoginLocal) return;
 
     try {
       if (localStorage.getItem("TENMON_AUTOLOGIN_DONE") === "1") return;
@@ -89,7 +92,7 @@ export default function App() {
         } catch {}
       } catch {}
     })();
-  }, [authReady]);
+  }, [authReady, isLoginLocal]);
 
   if (!authReady) {
     return <div style={{ padding: 24, fontFamily: "sans-serif" }}>認証確認中...</div>;
@@ -97,8 +100,9 @@ export default function App() {
 
   return (
     <I18nProvider>
-      {typeof window !== "undefined" &&
-      window.location.pathname.startsWith("/pwa/koshiki") ? (
+      {isLoginLocal ? (
+        <LoginLocal />
+      ) : isKoshiki ? (
         <KoshikiConsolePage />
       ) : (
         <GptShell />

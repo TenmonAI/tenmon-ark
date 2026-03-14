@@ -6,7 +6,7 @@ export type HelperModelAlias =
 export type ProviderPlan = {
   primaryRenderer: "gpt-5.4";
   helperModels: HelperModelAlias[];
-  shadowOnly: true;
+  shadowOnly: false;
   finalAnswerAuthority: "gpt-5.4";
 };
 
@@ -25,7 +25,7 @@ export function normalizeProviderPlan(x: any): ProviderPlan {
   return {
     primaryRenderer: "gpt-5.4",
     helperModels: Array.from(new Set(helperModels)),
-    shadowOnly: true,
+    shadowOnly: false,
     finalAnswerAuthority: "gpt-5.4",
   };
 }

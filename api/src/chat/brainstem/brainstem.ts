@@ -19,7 +19,7 @@ function asObj(x: any): any | null {
 
 export function buildBrainstemDecisionFromKu(ku: any): BrainstemDecision {
   const k = asObj(ku) || {};
-  return {
+  const base: BrainstemDecision = {
     routeReason: typeof k.routeReason === "string" ? k.routeReason : null,
     centerMeaning: typeof k.centerMeaning === "string" ? k.centerMeaning : null,
     centerLabel: typeof k.centerLabel === "string" ? k.centerLabel : null,
@@ -33,4 +33,24 @@ export function buildBrainstemDecisionFromKu(ku: any): BrainstemDecision {
     thoughtCoreSummary: asObj(k.thoughtCoreSummary),
     seedKernel: asObj(k.seedKernel),
   };
+
+  const rr = String(base.routeReason || "");
+  const isNaturalGeneral = rr.includes("NATURAL_GENERAL");
+
+  // TENMON_GENERAL_DEFAULTS_V1:
+  // NATURAL_GENERAL 系や routeReason 未設定のときも、天聞AIとしての表層スタイルを固定する。
+  if (!base.surfaceStyle && (isNaturalGeneral || !rr)) {
+    base.surfaceStyle = "plain_clean";
+  }
+  if (!base.closingType && (isNaturalGeneral || !rr)) {
+    base.closingType = "one_question";
+  }
+  if (!base.responseProfile && (isNaturalGeneral || !rr)) {
+    base.responseProfile = "tenmon_general";
+  }
+  if (!base.centerLabel && base.centerMeaning) {
+    base.centerLabel = String(base.centerMeaning);
+  }
+
+  return base;
 }

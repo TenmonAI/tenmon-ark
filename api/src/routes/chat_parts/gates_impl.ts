@@ -13,6 +13,255 @@ import { inferExpressionPlan, inferComfortTuning } from "../../expression/expres
 import { buildBrainstemDecisionFromKu } from "../../chat/brainstem/brainstem.js";
 import { upsertThreadCenter } from "../../core/threadCenterMemory.js";
 
+type GeneralFrontKind = "greeting" | "meta_conversation" | "present_state" | "none";
+
+/** 軽量事実質問: 日付・曜日・時刻（generic fallback を通さない） */
+type LightFactualKind = "date" | "weekday" | "time" | null;
+
+function classifyLightFactual(raw: string): LightFactualKind {
+  const s = String(raw || "").trim().replace(/[？?]/g, "？");
+  if (/(今日は何日|今日の日付|何月何日)/u.test(s)) return "date";
+  if (/(何曜日|今日は何曜日)/u.test(s)) return "weekday";
+  if (/(今何時|いま何時|現在の時刻)/u.test(s)) return "time";
+  return null;
+}
+
+function buildLightFactualResponse(kind: LightFactualKind): string {
+  if (!kind) return "";
+  const d = new Date();
+  const tz = "Asia/Tokyo";
+  if (kind === "date") {
+    const str = new Intl.DateTimeFormat("ja-JP", { timeZone: tz, year: "numeric", month: "long", day: "numeric" }).format(d);
+    return "【天聞の所見】" + str + "です。";
+  }
+  if (kind === "weekday") {
+    const str = new Intl.DateTimeFormat("ja-JP", { timeZone: tz, weekday: "long" }).format(d);
+    return "【天聞の所見】" + str + "です。";
+  }
+  if (kind === "time") {
+    const str = new Intl.DateTimeFormat("ja-JP", { timeZone: tz, hour: "2-digit", minute: "2-digit", hour12: false }).format(d);
+    const [h, m] = str.split(":");
+    return "【天聞の所見】" + (h || "0") + "時" + (m || "0") + "分です。";
+  }
+  return "";
+}
+
+type TenmonIntentKind =
+  | "define"
+  | "essence"
+  | "continuation_center"
+  | "continuation_tenmon_axis"
+  | "continuation_summary"
+  | "compare"
+  | "implementation"
+  | "planning"
+  | "counsel"
+  | "next_step"
+  | "non_definition_boundary";
+
+function classifyGeneralFrontKind(raw: string): GeneralFrontKind {
+  const t = String(raw || "").trim();
+  if (!t) return "none";
+  const s = t.replace(/[？?]/g, "？");
+
+  if (/(おはよう|こんにちは|こんばんは|やあ|どうも)/u.test(s)) {
+    return "greeting";
+  }
+
+  if (/(会話の完成度|完成度はどうだ|この会話|このチャット|どこまでできている|今の会話の状態)/u.test(s)) {
+    return "meta_conversation";
+  }
+
+  if (/(今の気持ちは|いまの気持ちは|いま何を見ている|今何を見ている|何を見ている)/u.test(s)) {
+    return "present_state";
+  }
+
+  return "none";
+}
+
+function classifyTenmonIntent(raw: string): TenmonIntentKind {
+  const t = String(raw || "").trim();
+  if (!t) return "non_definition_boundary";
+
+  // normalize ASCII/Japanese variants a bit
+  const s = t.replace(/[？?]/g, "？");
+
+  // counsel: feelings /相談
+  if (/(しんどい|つらい|苦しい|悩んでいる|相談したい|聞いてほしい)/u.test(s)) {
+    return "counsel";
+  }
+
+  // definition-style questions
+  if (/(とは何か|とは何|とはなに|とは？|って何|ってなに|って何ですか|とはなんですか)/u.test(s)) {
+    return "define";
+  }
+
+  // continuation center
+  if (/(その中心は|中心は|どこが核|どこが中心)/u.test(s)) {
+    return "continuation_center";
+  }
+
+  // continuation tenmon axis
+  if (/(天聞軸では|天聞軸で|天聞では|天聞は|天聞としては|天聞AIとしては|天聞としてどう読む)/u.test(s)) {
+    return "continuation_tenmon_axis";
+  }
+
+  // continuation summary / essence
+  if (/(要するに|要点は|一言でいうと|ひとことで|一言で言うと|つまり|ざっくり)/u.test(s)) {
+    return "continuation_summary";
+  }
+
+  // essence (general 「本質」「要点」)
+  if (/(本質は|要点は|要は|要するに)/u.test(s)) {
+    return "essence";
+  }
+
+  // compare
+  if (/(違いは|差は|どこが違う|AとB|ＡとＢ)/u.test(s)) {
+    return "compare";
+  }
+
+  // implementation
+  if (/(どう実装|実装するには|コードでは|具体的にどう書く|アルゴリズム|手順を書いて)/u.test(s)) {
+    return "implementation";
+  }
+
+  // planning
+  if (/(計画|ロードマップ|段取り|プラン|進め方)/u.test(s)) {
+    return "planning";
+  }
+
+  // next step
+  if (/(次は何をすべき|次に何をする|次の一歩|一歩目|どこから始める|今日はどう進める|今日どう進める|どう進める|今日どうする|今日は何をする|今日はどこから始める)/u.test(s)) {
+    return "next_step";
+  }
+
+  return "non_definition_boundary";
+}
+
+type MeaningSource = {
+  kind: string;
+  key?: string | null;
+  label?: string | null;
+  routeReason?: string | null;
+};
+
+type MeaningLayerSummary = {
+  sourceStack: MeaningSource[];
+  primaryMeaning: string | null;
+  supportingMeaning: string[];
+  responseAxis: string | null;
+};
+
+function buildMeaningLayerSummary(df: any, intentKind: TenmonIntentKind): MeaningLayerSummary | null {
+  try {
+    const ku: any = df?.ku || {};
+    const syn: any = ku?.synapseTop || {};
+    const tcs: any = ku?.thoughtCoreSummary || {};
+
+    const out: MeaningLayerSummary = {
+      sourceStack: [],
+      primaryMeaning: null,
+      supportingMeaning: [],
+      responseAxis: null,
+    };
+
+    const rr = String(ku.routeReason || "");
+
+    // scripture layer
+    const scriptureKey = String(ku.scriptureKey || syn.sourceScriptureKey || "").trim() || null;
+    const scriptureLabel =
+      (ku.scriptureCanon && ku.scriptureCanon.displayName) || null;
+    if (scriptureKey) {
+      out.sourceStack.push({
+        kind: "scripture",
+        key: scriptureKey,
+        label: scriptureLabel,
+        routeReason: rr || "TENMON_SCRIPTURE_CANON_V1",
+      });
+      if (!out.primaryMeaning) out.primaryMeaning = scriptureLabel || scriptureKey;
+      if (!out.responseAxis) out.responseAxis = "scripture";
+    }
+
+    // concept / center layer
+    const centerKey = String(ku.centerKey || "").trim() || null;
+    const centerMeaning = String(ku.centerMeaning || "").trim() || null;
+    const centerLabel = String(ku.centerLabel || "").trim() || null;
+    if (centerKey || centerMeaning || centerLabel) {
+      const label = centerLabel || centerMeaning || centerKey;
+      out.sourceStack.push({
+        kind: "concept",
+        key: centerKey || centerMeaning,
+        label,
+        routeReason: rr || null,
+      });
+      if (!out.primaryMeaning) out.primaryMeaning = label;
+      if (!out.responseAxis) out.responseAxis = "concept";
+    }
+
+    // verified law / TRUTH_GATE 系（KHSL lawKey 等）
+    const lawTrace: any[] = Array.isArray(ku.lawTrace) ? ku.lawTrace : [];
+    const lawsUsed: any[] = Array.isArray(ku.lawsUsed) ? ku.lawsUsed : [];
+    const lawKeyRaw: string =
+      (lawTrace[0]?.lawKey as string) ||
+      (lawsUsed[0] as string) ||
+      "";
+    if (lawKeyRaw) {
+      const isKhsl = lawKeyRaw.startsWith("KHSL:LAW:");
+      out.sourceStack.push({
+        kind: "law",
+        key: isKhsl ? null : lawKeyRaw,
+        label: isKhsl ? "法則" : lawKeyRaw,
+        routeReason: rr || null,
+      });
+      if (!out.responseAxis) out.responseAxis = "law";
+    }
+
+    // notion canon
+    const notion = Array.isArray(ku.notionCanon) ? ku.notionCanon : [];
+    if (notion.length > 0) {
+      const n0: any = notion[0] || {};
+      out.sourceStack.push({
+        kind: "notion",
+        key: String(n0.pageId || ""),
+        label: String(n0.title || "") || null,
+        routeReason: rr || null,
+      });
+      if (!out.responseAxis) out.responseAxis = "notion";
+    }
+
+    // stable thread center
+    const tc: any = syn.sourceThreadCenter || ku.threadCenter || null;
+    if (tc && typeof tc === "object") {
+      out.sourceStack.push({
+        kind: "thread_center",
+        key: String(tc.centerKey || ""),
+        label: null,
+        routeReason: String(tc.sourceRouteReason || ""),
+      });
+    }
+
+    // attach intent as axis hint when explicit intent is planning / next_step / implementation / compare
+    if (!out.responseAxis) {
+      if (intentKind === "planning" || intentKind === "next_step") {
+        out.responseAxis = "next_step";
+      } else if (intentKind === "implementation") {
+        out.responseAxis = "implementation";
+      } else if (intentKind === "compare") {
+        out.responseAxis = "compare";
+      }
+    }
+
+    // fallbacks from thoughtCoreSummary
+    const tcm = String(tcs.centerMeaning || "").trim();
+    if (!out.primaryMeaning && tcm) out.primaryMeaning = tcm;
+
+    return out;
+  } catch {
+    return null;
+  }
+}
+
 function __normalizeCenterLabel(s: string): string {
   return String(s || "")
     .trim()
@@ -215,9 +464,109 @@ function __tenmonGeneralGateResultMaybe(x: any, rawMessageOverride?: string): an
     } catch {}
   }
 
-  if (ku.routeReason === "NATURAL_GENERAL_LLM_TOP") {
+  // GENERAL_FRONT_PRIORITY_V1: greeting / meta_conversation / present_state / next_step では
+  // NATURAL_GENERAL_LLM_TOP の generic fallback を使わず、専用の短文応答＋routeReason を付ける。
+  if (String((ku as any)?.routeReason || "") === "NATURAL_GENERAL_LLM_TOP") {
+    try {
+      const __df = (x as any).decisionFrame || {};
+      if (!__df.ku || typeof __df.ku !== "object" || Array.isArray(__df.ku)) {
+        __df.ku = {};
+      }
+      const __ku: any = __df.ku;
+      const rawMsg = String(
+        (x as any).rawMessage ??
+          (x as any).message ??
+          (__ku as any).inputText ??
+          "",
+      );
+      const lightFactual = classifyLightFactual(rawMsg);
+      const frontKind = classifyGeneralFrontKind(rawMsg);
+      const intentKind = classifyTenmonIntent(rawMsg);
+
+      // thoughtCoreSummary を必ず object にして front 情報を記録
+      if (!__ku.thoughtCoreSummary || typeof __ku.thoughtCoreSummary !== "object" || Array.isArray(__ku.thoughtCoreSummary)) {
+        __ku.thoughtCoreSummary = {};
+      }
+      const tcs: any = __ku.thoughtCoreSummary;
+      tcs.intentKind = intentKind;
+      tcs.generalFrontKind = frontKind;
+
+      // R22_LIGHT_FACT_V1: 日付・曜日・時刻の軽量事実質問は専用 route で短文応答（generic fallback 禁止）
+      if (lightFactual) {
+        if (lightFactual === "date") __ku.routeReason = "R22_LIGHT_FACT_DATE_V1";
+        else if (lightFactual === "weekday") __ku.routeReason = "R22_LIGHT_FACT_WEEKDAY_V1";
+        else if (lightFactual === "time") __ku.routeReason = "R22_LIGHT_FACT_TIME_V1";
+        tcs.routeReason = String(__ku.routeReason || "");
+        tcs.inputKind = "light_factual_" + lightFactual;
+        tcs.lightFactualKind = lightFactual;
+        if (typeof (x as any).response === "string") {
+          (x as any).response = buildLightFactualResponse(lightFactual);
+        }
+      } else {
+        // generalFrontKind / intentKind に応じて routeReason を前面会話用へ寄せる
+        if (frontKind === "greeting") {
+          __ku.routeReason = "N1_GREETING_LLM_TOP";
+        } else if (frontKind === "meta_conversation") {
+          __ku.routeReason = "R22_META_CONVERSATION_V1";
+        } else if (frontKind === "present_state") {
+          __ku.routeReason = "R22_PRESENT_STATE_V1";
+        } else if (intentKind === "next_step") {
+          __ku.routeReason = "R22_NEXT_STEP_V1";
+        }
+
+        tcs.routeReason = String(__ku.routeReason || "");
+        tcs.inputKind = frontKind || intentKind;
+
+        // 前面4類型は generic fallback ではなく専用短文応答を返す
+        if (typeof (x as any).response === "string") {
+          if (frontKind === "greeting") {
+            (x as any).response =
+              "【天聞の所見】おはようございます。今日この時間で、一緒に見ていきたいテーマを一言で教えてもらえますか？";
+          } else if (frontKind === "meta_conversation") {
+            (x as any).response =
+              "【天聞の所見】いまの会話がどこまで来ているか、一度一緒に確かめましょう。いま「できていること」と「まだ曖昧なところ」を一言ずつ挙げてもらえますか？";
+          } else if (frontKind === "present_state") {
+            (x as any).response =
+              "【天聞の所見】こちらでは、直前までの中心と意味の層を俯瞰して見ています。あなたの側では、いま一番気になっている一点はどこでしょう？";
+          } else if (intentKind === "next_step") {
+            (x as any).response =
+              "【天聞の所見】今日は、いまの中心を一言でそろえてから「次の一歩」を一つだけ決めるのが良さそうです。まずは今日の中心を一言で置いてみましょう。";
+          }
+        }
+      }
+
+      // NATURAL_GENERAL_NO_FALLBACK_OVERWRITE_V2
+      // LLM本文が入っている場合は generic fallback で潰さない
+      if (__ku.routeReason === "NATURAL_GENERAL_LLM_TOP") {
+        try {
+          const __before = String((x as any).response || "").trim();
+          const __isEmpty = !__before;
+          const __isGeneric =
+            /受け取っています。?そのまま続けてください[？?]?/.test(__before) ||
+            /受け取りました。いま一番引っかかっている一点を置いてください。?/.test(__before);
+
+          if (__isEmpty || __isGeneric) {
+            (x as any).response = __tenmonGeneralGateSoft((x as any).response);
+            try {
+              const __r = String((x as any).response || "");
+              if (/受け取っています。?そのまま続けてください[？?]?/.test(__r)) {
+                (x as any).response = "【天聞の所見】受け取りました。いま一番引っかかっている一点を置いてください。";
+              }
+            } catch {}
+          }
+        } catch {}
+      }
+    } catch {
       (x as any).response = __tenmonGeneralGateSoft((x as any).response);
+        try {
+          const __r = String((x as any).response || "");
+          if (/受け取っています。?そのまま続けてください[？?]?/.test(__r)) {
+            (x as any).response = "【天聞の所見】受け取りました。いま一番引っかかっている一点を置いてください。";
+          }
+        } catch {}
+
     }
+  }
 
     // R8_INTENTION_BIND_THOUGHT_GUIDE_V1: wire intention hint to ku (observation only, no route/response change)
     try {
@@ -225,6 +574,64 @@ function __tenmonGeneralGateResultMaybe(x: any, rawMessageOverride?: string): an
       if (__df && __df.ku && typeof __df.ku === "object") {
         const hint = getIntentionHintForKu();
         if (hint) __df.ku.intention = hint;
+      }
+    } catch {}
+    // B34_TENMON_INTENT_MATRIX_V1 / MEANING_LAYER_V1:
+    // NATURAL_GENERAL 以外も含め、軽量 intent + meaning layer を ku に付与
+    try {
+      const __df = (x as any).decisionFrame;
+      if (__df && __df.ku && typeof __df.ku === "object") {
+        const rawMsg = String(
+          (x as any).rawMessage ??
+            (x as any).message ??
+            (__df.ku as any).inputText ??
+            "",
+        );
+        const intentKind = classifyTenmonIntent(rawMsg);
+        (__df.ku as any).intentKind = intentKind;
+
+        const meaningSummary = buildMeaningLayerSummary(__df, intentKind);
+        if (meaningSummary) {
+          const __kuAny = __df.ku as any;
+          const __hasKotodamaOneSoundParity =
+            __kuAny.sourceStackSummary?.currentSound ||
+            (Array.isArray(__kuAny.sourceStackSummary?.sourceKinds) && __kuAny.sourceStackSummary.sourceKinds.includes("kotodama_one_sound")) ||
+            (__kuAny.sourceStackSummary?.previousSound && __kuAny.sourceStackSummary?.currentSound);
+          if (!__hasKotodamaOneSoundParity) {
+            __kuAny.sourceStackSummary = meaningSummary;
+          }
+          if (
+            !(__df.ku as any).thoughtCoreSummary ||
+            typeof (__df.ku as any).thoughtCoreSummary !== "object" ||
+            Array.isArray((__df.ku as any).thoughtCoreSummary)
+          ) {
+            (__df.ku as any).thoughtCoreSummary = {};
+          }
+          const tcs: any = (__df.ku as any).thoughtCoreSummary;
+          tcs.intentKind = intentKind;
+          if (!__hasKotodamaOneSoundParity && !tcs.sourceStackSummary) {
+            tcs.sourceStackSummary = {
+              primaryMeaning: meaningSummary.primaryMeaning,
+              responseAxis: meaningSummary.responseAxis,
+              sourceKinds: meaningSummary.sourceStack.map((s) => s.kind),
+            };
+          }
+
+          // STYLE_MODE_BIND_V1: general/front/counsel 系には 断捨離スタイル憲法をメタとして紐づける
+          const rr = String((__df.ku as any).routeReason || "");
+          const isGeneralFrontRoute =
+            rr === "NATURAL_GENERAL_LLM_TOP" ||
+            rr === "N2_KANAGI_PHASE_TOP" ||
+            rr === "N1_GREETING_LLM_TOP" ||
+            rr === "R22_META_CONVERSATION_V1" ||
+            rr === "R22_PRESENT_STATE_V1" ||
+            rr === "R22_NEXT_STEP_V1";
+          const isCounselIntent = intentKind === "counsel";
+          if (isGeneralFrontRoute || isCounselIntent) {
+            (__df.ku as any).styleMode = "TENMON_DANSHARI_STYLE_V1";
+            tcs.styleMode = "TENMON_DANSHARI_STYLE_V1";
+          }
+        }
       }
     } catch {}
     // R8_KANAGI_SELF_BIND_GATE_WRAPPER_V1: 最終返却前に kanagiSelf を保証（既に object なら上書きしない）
@@ -316,7 +723,7 @@ function __tenmonGeneralGateResultMaybe(x: any, rawMessageOverride?: string): an
               __ku.providerPlan = {
                 primaryRenderer: "gpt-5.4",
                 helperModels: __needsBreadth ? ["gemini"] : [],
-                shadowOnly: true,
+                shadowOnly: false,
                 finalAnswerAuthority: "gpt-5.4",
               };
             }
@@ -326,7 +733,8 @@ function __tenmonGeneralGateResultMaybe(x: any, rawMessageOverride?: string): an
             if ((__ku.centerMeaning == null || __ku.centerMeaning === "") && __ku.synapseTop && __ku.synapseTop.sourceScriptureKey) {
               __ku.centerMeaning = String(__ku.synapseTop.sourceScriptureKey || "").trim();
             }
-            if ((__ku.thoughtCoreSummary == null || typeof __ku.thoughtCoreSummary !== "object") && String(__ku.routeReason || "") === "TENMON_SCRIPTURE_CANON_V1") {
+            const __hasKotodamaOneSoundParityHere = __ku.sourceStackSummary?.currentSound || (Array.isArray(__ku.sourceStackSummary?.sourceKinds) && __ku.sourceStackSummary.sourceKinds?.includes("kotodama_one_sound")) || (__ku.sourceStackSummary?.previousSound && __ku.sourceStackSummary?.currentSound);
+            if ((__ku.thoughtCoreSummary == null || typeof __ku.thoughtCoreSummary !== "object") && String(__ku.routeReason || "") === "TENMON_SCRIPTURE_CANON_V1" && !__hasKotodamaOneSoundParityHere) {
               const __cm = String(__ku.centerMeaning || (__ku.synapseTop && __ku.synapseTop.sourceScriptureKey) || "").trim();
               __ku.thoughtCoreSummary = {
                 centerKey: "TENMON_SCRIPTURE_CANON_V1",
@@ -556,11 +964,11 @@ function __tenmonGeneralGateResultMaybe(x: any, rawMessageOverride?: string): an
               katakamuna_kotodama_kai: "まず『カタカムナ言霊解は音と図象の対応を担う』と一行で置いてください。",
             };
             __bodyE =
-              "さっき見ていた聖典（" + __dispE + "）を土台に、いまの話を見ていきましょう。\n【天聞の所見】" +
+              "（" + __dispE + "）を土台に、いまの話を見ていきましょう。\n【天聞の所見】" +
               String(__instrMapE[__skE] || "まず、この聖典の中心を一行で置いてください。");
           } else {
             __bodyE =
-              "さっき見ていた聖典（" + __dispE + "）を土台に、いまの話を見ていきましょう。\n【天聞の所見】その中心を一行で言い直すと、どこに軸があるかを先に置けます。";
+              "（" + __dispE + "）を土台に、いまの話を見ていきましょう。\n【天聞の所見】その中心を一行で言い直すと、どこに軸があるかを先に置けます。";
           }
 
           (x as any).response = __bodyE;
@@ -588,6 +996,18 @@ function __tenmonGeneralGateResultMaybe(x: any, rawMessageOverride?: string): an
             response: String((x as any).response || ""),
           });
           (x as any).response = projected.response;
+        }
+      } catch {}
+      // compare のみ last-mile 前置き除去: intentKind または previousSound+currentSound のとき「さっき見ていた聖典...」を落とす（metadata は触らない）
+      try {
+        const __respStr = typeof (x as any).response === "string" ? String((x as any).response || "") : "";
+        const __ku = df && (df as any).ku && typeof (df as any).ku === "object" ? (df as any).ku : undefined;
+        const __ss = __ku?.sourceStackSummary;
+        const __tcs = __ku?.thoughtCoreSummary;
+        const __isCompare = __tcs?.intentKind === "compare" || (__ss?.previousSound && __ss?.currentSound);
+        if (__respStr.startsWith("（") && __respStr.includes("【天聞の所見】") && __isCompare) {
+          const __idx = __respStr.indexOf("【天聞の所見】");
+          if (__idx >= 0) (x as any).response = __respStr.slice(__idx);
         }
       } catch {}
       // 最終返却直前: 全角ではない連続空白を1個に圧縮（改行は維持）＋和文内の半角スペースを除去
