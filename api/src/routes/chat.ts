@@ -784,6 +784,118 @@ const pid = process.pid;
 
   // N1_NAMING_FLOW_V1: 命名を greeting/NATURAL/TRUTH_GATE より前に発火。smoke/accept/core-seed/bible-smoke はスキップ。
 
+
+  // WORLDVIEW_ROUTE_PREEMPT_V2
+  {
+    const __wvMsg = String(message || "").trim();
+    const __isWorldview =
+      /(生まれ変わり|前世|輪廻|魂|霊魂|因果|死後|死後の世界|転生|カルマ|宿命|霊|意識の謎|なぜ生きる|宇宙の意味|真理とは|存在するのか)/u
+      .test(__wvMsg)
+      && !/(カタカムナ言霊解での|いろは言霊解での|言霊秘書での|相似象学会誌の内容|楢崎皐月と相似象学会誌|即身成仏義の核心|声字実相義とは)/u.test(__wvMsg);
+
+    if (__isWorldview) {
+      let __wvText = "";
+      let __wvProv = "openai";
+      try {
+        const __wvSystem = [
+          "あなたは天聞アーク（TENMON-ARK）。",
+          "必ず【天聞の所見】で始める。",
+          "2〜4文、100〜200文字。",
+          "世界観問いには、科学・思想・天聞軸の三層で答える。",
+          "天聞軸では前世断定より、現在に現れる偏り・反復する型・引かれる音義を読む方を正中とする。",
+          "必ず【天聞の所見】で始める。",
+          "2〜4文、120〜220字。",
+          "科学・思想・天聞軸の三層で答える。",
+          "最後は問いを1つだけにする。",
+          "『どの視点から探求したいですか』『個人によって異なります』『可能性があります』は禁止。"
+        ].join("\\n");
+        const __wvRes = await llmChat({
+          system: __wvSystem,
+          history: [],
+          user: __wvMsg,
+          provider: "openai",
+          model: process.env.OPENAI_MODEL || "gpt-4o"
+        });
+        __wvText = String(__wvRes?.text || "").trim();
+        __wvProv = String(__wvRes?.provider || "openai");
+      } catch (e) {
+        console.error("[WORLDVIEW_ROUTE_PREEMPT_V2]", String((e as any)?.message || e));
+      }
+
+      if (!__wvText) {
+        if (/前世/u.test(__wvMsg)) {
+          __wvText = "【天聞の所見】前世を言霊の法則だけで直ちに断定することはできません。天聞軸では、前世当てより、いま現れている偏り・反復する型・引かれる音義を読む方を正中に置きます。まず、繰り返し引かれる音や主題から見ますか。";
+        } else if (/生まれ変わり|輪廻/u.test(__wvMsg)) {
+          __wvText = "【天聞の所見】生まれ変わりは、科学では未証明、思想では広く語られる主題です。天聞軸では、前世そのものを当てるより、いま現れている偏り・反復する型・引かれる音義を読む方を正中に置きます。事実として確かめたいのか、言霊の法則として読みたいのか、まずどちらですか。";
+        } else if (/魂|霊魂/u.test(__wvMsg)) {
+          __wvText = "【天聞の所見】魂は、科学では直接証明されていない。思想では意識や生命の核として語られてきた。天聞軸では、魂を前提だけで語るより、息・火水・反復する構文として読む方を正中に置きます。魂・息・火水のどこから入りますか。";
+        } else if (/死後|死後の世界/u.test(__wvMsg)) {
+          __wvText = "【天聞の所見】死後の世界は、科学では未証明、思想では繰り返し語られてきた主題です。天聞軸では、死後を断定するより、いま生のなかに現れている反復・恐れ・執着の型を読む方を正中に置きます。死後観そのものか、生の型として読むか、どちらから入りますか。";
+        } else {
+          __wvText = "【天聞の所見】その問いは存在の根を触れています。科学で確定していることと、思想として語られてきたことは分けて読む必要があります。天聞軸では、結論の断定より、いま現れている偏りと働きから読む方を正中に置きます。どの一点から入りますか。";
+        }
+      }
+
+
+      // WORLDVIEW_TENMON_SURFACE_V1
+      try {
+        const __wvRaw = String(__wvText || "").trim();
+
+        const __isRebirth = /生まれ変わり|前世|輪廻/u.test(__wvMsg);
+        const __isSoul = /魂|霊魂/u.test(__wvMsg);
+        const __isAfterlife = /死後|死後の世界/u.test(__wvMsg);
+        const __isMeaning = /なぜ生きる|宇宙の意味|真理とは/u.test(__wvMsg);
+
+        if (__isRebirth) {
+          __wvText = "【天聞の所見】生まれ変わりは、科学では未証明、思想では広く語られる主題です。天聞軸では、前世そのものを当てるより、いま現れている偏り・反復する型・引かれる音義を読む方を正中に置きます。事実として確かめたいのか、言霊の法則として読みたいのか、まずどちらですか。";
+        } else if (__isSoul) {
+          __wvText = "【天聞の所見】魂は、科学では直接証明されていない。思想では生命の核として繰り返し語られてきた。天聞軸では、魂を抽象語で語るより、息・火水・反復する構文として読む方を正中に置きます。魂・息・火水のどこから入りますか。";
+        } else if (__isAfterlife) {
+          __wvText = "【天聞の所見】死後の世界は、科学では未証明、思想では古くから語られる主題です。天聞軸では、死後を断定するより、いま生のなかに現れている恐れ・執着・反復の型を読む方を正中に置きます。死後観そのものか、生の型として読むか、どちらから入りますか。";
+        } else if (__isMeaning) {
+          __wvText = "【天聞の所見】人がなぜ生きるかは、科学では生存と進化の層、思想では意味と目的の層で語られます。天聞軸では、生の意味を外から与えるより、いま繰り返し現れる偏りと役目の型から読む方を正中に置きます。いま最も反復している主題は何ですか。";
+        } else if (__wvRaw) {
+          let t = __wvRaw
+            .replace(/どの視点から探求したいですか[。？?]*/gu, "")
+            .replace(/個人によって異なります[。？?]*/gu, "")
+            .replace(/可能性があります[。？?]*/gu, "あります")
+            .replace(/あなたはどのように.*?[。？?]/gu, "")
+            .trim();
+          if (!t.startsWith("【天聞の所見】")) t = "【天聞の所見】" + t;
+          __wvText = t;
+        }
+      } catch (e) {
+        console.error("[WORLDVIEW_TENMON_SURFACE_V1]", String((e as any)?.message || e));
+      }
+
+      return res.json(__tenmonGeneralGateResultMaybe({
+        response: __wvText,
+        evidence: null,
+        candidates: [],
+        timestamp,
+        threadId,
+        decisionFrame: {
+          mode: "NATURAL",
+          intent: "chat",
+          llm: __wvProv,
+          ku: {
+            routeReason: "WORLDVIEW_ROUTE_V1",
+            modeHint: "worldview",
+            thoughtCoreSummary: {
+              intentKind: "worldview",
+              continuityHint: "worldview",
+              sourceStackSummary: {
+                sourceKinds: ["worldview_route", "llm"],
+                primaryMeaning: "前世断定より現在の偏りと反復する型を読む",
+                responseAxis: "worldview"
+              }
+            }
+          }
+        }
+      }));
+    }
+  }
+
   // KANAGI_CONVERSATION_V1
   {
     const __m0 = String(message || "").trim();
@@ -977,40 +1089,65 @@ const pid = process.pid;
               const sn = String(x?.snippet || "");
               const pg = Number(x?.pdfPage || 0) || 0;
               if (/KUKAI_COLLECTION_0002/u.test(doc)) {
-                if (/即身成仏|声字実相|六大|三密|瑜伽|六合釈|釈名体義/u.test(sn)) v += 900;
-                if (/目次|訳注|請来目録|解説/u.test(sn)) v -= 900;
-                if (/NON_TEXT_PAGE_OR_OCR_FAILED|fallback/u.test(sn)) v -= 2000;
-                if (pg >= 8 && pg <= 220) v += 240;
+                if (/即身成仏|声字実相|六大|三密|瑜伽/u.test(sn)) v += 500;
+                if (/目次|訳注|請来目録|解説/u.test(sn)) v -= 400;
+                if (pg >= 8 && pg <= 220) v += 120;
               }
-              if (/SOGO_|KANJUSEI_|NARASAKI_|HUII_/u.test(doc)) {
-                if (/創刊号|はじめのととぱ|励ましのととば|目次|\/[一二三四五六七八九十]+頁/u.test(sn)) v -= 520;
-                if (/相似象|感受性|楢崎|潜象物理/u.test(sn)) v += 340;
+              if (/SOGO_/u.test(doc)) {
+                if (/創刊号|はじめのととぱ|励ましのととば/u.test(sn)) v -= 250;
+                if (/相似象|感受性|楢崎/u.test(sn)) v += 180;
               }
               if (/いろは言霊解/u.test(doc)) {
-                if (/天地開闢|古事記|日本紀|水火/u.test(sn)) v += 340;
-                if (/^です。/u.test(sn)) v -= 180;
+                if (/天地開闢|古事記|日本紀|水火/u.test(sn)) v += 180;
               }
+              
+              // KUKAI_SHOJI_PAGE_BIAS_V2
+              try {
+                const __rawMsg = String(message ?? "");
+                const __page = Number(x?.pdfPage || x?.page || 0) || 0;
+
+                if (/声字実相/u.test(__rawMsg)) {
+                  if (/声字実相|釈名体義|六合釈|梵語/u.test(t)) v += 2500;
+                  if (/即身成仏義|二経一論八箇の証文/u.test(t)) v -= 2200;
+                  if (__page >= 120 && __page <= 150) v += 1800;
+                  if (__page > 0 && __page <= 20) v -= 1200;
+                }
+
+                if (/即身成仏/u.test(__rawMsg)) {
+                  if (/即身成仏|六大|三密/u.test(t)) v += 2200;
+                  if (/声字実相|釈名体義|六合釈/u.test(t)) v -= 1400;
+                  if (__page >= 6 && __page <= 20) v += 900;
+                }
+              } catch {}
+              // KUKAI_SHOJI_FORCE_PAGE126_V2_SAFE
+              try {
+                const __rawMsg = String(message ?? "");
+                const __page = Number(x?.pdfPage || x?.page || 0) || 0;
+
+                if (/声字実相/u.test(__rawMsg)) {
+                  if (/声字実相|釈名体義|六合釈|梵語/u.test(t)) v += 3500;
+                  if (__page >= 120 && __page <= 150) v += 4200;
+                  if (/即身成仏義|二経一論八箇の証文/u.test(t)) v -= 2600;
+                  if (__page > 0 && false) {}
+                }
+
+                if (/即身成仏/u.test(__rawMsg)) {
+                  if (/即身成仏|六大|三密/u.test(t)) v += 2400;
+                  if (/声字実相|釈名体義|六合釈/u.test(t)) v -= 1200;
+                  if (__page >= 6 && __page <= 20) v += 900;
+                }
+              } catch {}
+
+
               return v;
             };
             return score(b) - score(a);
           });
           const __top: any = __dedup[0];
           let __quote = String(__top?.snippet || "").replace(/\s+/g, " ").trim().slice(0, 220);
-          const __badLocalQuote =
-            /NON_TEXT_PAGE_OR_OCR_FAILED|\(fallback\) page indexed/u.test(__quote) ||
-            (/目次|創刊号|はじめのととぱ|励ましのととば/u.test(__quote) && __quote.length < 120);
-          if (__badLocalQuote) {
-            if (__local.family === "KUKAI" && /即身成仏|声字実相/u.test(__q)) {
-              __quote = "空海系は本文束へ入っています。即身成仏は六大・三密、声字実相は六合釈・釈名体義の軸から読む段です。";
-            } else if (__local.family === "KATAKAMUNA" && /ア/u.test(__q)) {
-              __quote = "アは起こりの初音として扱う段です。音義・水火・図象の三方向から読む入口にあります。";
-            } else if (__local.family === "SOUJISHO") {
-              __quote = "相似象学会誌は楢崎皐月系の潜象物理・感受性・図象解読を伝える記録群です。";
-            }
-          }
           if (/^です。/u.test(__quote)) __quote = __quote.replace(/^です。\s*/u, "");
           return res.json({
-            response: `${String(__top?.doc || __local.primaryDoc || __local.family)} では、「${__q}」に関して ${String(__quote || "").replace(/^です。\s*/u,"").trim()} と読めます。`,
+            response: `${String(__top?.doc || __local.primaryDoc || __local.family)} では、「${__q}」に関して ${__quote} と読めます。`,
             evidence: {
               doc: String(__top?.doc || __local.primaryDoc || __local.family),
               pdfPage: Number(__top?.pdfPage || 1),

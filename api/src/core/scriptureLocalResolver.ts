@@ -112,6 +112,47 @@ export function resolveScriptureLocalEvidence(input: string): ScriptureLocalReso
     }
   }
 
+
+  // KUKAI_LOCAL_DISAMBIG_V1
+  if (fam.family == "KUKAI") {
+    const raw = String(input || "");
+
+    if (/即身成仏/u.test(raw)) {
+    
+  // KATAKAMUNA_A_LOCAL_FIX_V1
+  if (fam.family == "KATAKAMUNA") {
+    const raw = String(input || "");
+    if (/ア/u.test(raw) && /解釈/u.test(raw)) {
+      return {
+        family: fam.family,
+        primaryDoc: "カタカムナ言霊解",
+        familyDocs: ["カタカムナ言霊解", "カタカムナ言灵解.pdf"],
+        intent: "scripture_local_read",
+        queryTerms: ["ア", "起こり", "初音", "図象", "水火"]
+      };
+    }
+  }
+
+  return {
+        family: fam.family,
+        primaryDoc: "KUKAI_COLLECTION_0002",
+        familyDocs: ["KUKAI_COLLECTION_0002", "KUKAI_COLLECTION_0003", "KUKAI_COLLECTION_0004", "KUKAI_COLLECTION_0001"],
+        intent: "scripture_local_read",
+        queryTerms: ["即身成仏", "六大", "三密"]
+      };
+    }
+
+    if (/声字実相/u.test(raw)) {
+      return {
+        family: fam.family,
+        primaryDoc: "KUKAI_COLLECTION_0002",
+        familyDocs: ["KUKAI_COLLECTION_0002", "KUKAI_COLLECTION_0003", "KUKAI_COLLECTION_0004", "KUKAI_COLLECTION_0001"],
+        intent: "scripture_local_read",
+        queryTerms: ["声字実相", "釈名体義", "六合釈", "梵語複合語"]
+      };
+    }
+  }
+
   return {
     family: fam.family,
     primaryDoc: fam.primaryDoc,
