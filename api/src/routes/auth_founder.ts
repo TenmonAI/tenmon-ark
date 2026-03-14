@@ -52,7 +52,7 @@ export function registerFounderAuth(app: Router) {
 
     const founder = (req as any).cookies?.tenmon_founder === "1";
     if (founder) {
-      return res.json({ ok: true, user: { id: "founder", role: "FOUNDER" }, founder: true });
+      return res.json({ ok: true, user: { id: "founder", email: "", role: "FOUNDER" }, founder: true });
     }
 
     try {

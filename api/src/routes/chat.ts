@@ -2,6 +2,7 @@
 import { runKanagiPhaseTopV1 } from "../engines/kanagi/kanagiEngine.js";
 import { detectKanagiPhase } from "../engines/kanagi/kanagiPhase.js";
 import { reshapeKanagiLoop } from "../engines/kanagi/kanagiPhaseEngine.js";
+import { shapeTenmonOutput } from "../core/tenmonOutputShaper.js";
 import { kanagiThink } from "../engines/kanagi/kanagiThink.js";
 import { danshariStyle } from "../engines/conversation/danshariStyle.js";
 import { generateSeedsFromKHS } from "../engines/seed/seedGenerator.js";
@@ -783,37 +784,6 @@ const pid = process.pid;
   let __namingObs: { userId: string; userName?: string; assistantName?: string } | null = null;
 
   // N1_NAMING_FLOW_V1: 命名を greeting/NATURAL/TRUTH_GATE より前に発火。smoke/accept/core-seed/bible-smoke はスキップ。
-
-  // PREV_LIFE_PREEMPT_BEFORE_KANAGI_V1
-  if (String(message ?? "").trim() == "自分の前世はなんだったのか？言霊の法則でわからない？") {
-    return res.json(__tenmonGeneralGateResultMaybe({
-      response: "【天聞の所見】前世を言霊の法則だけで直ちに断定することはできません。天聞軸では、前世当てより、いま現れている偏り・反復する型・引かれる音義を読む方を正中に置きます。まず、繰り返し引かれる音や主題から見ますか。",
-      evidence: null,
-      candidates: [],
-      timestamp,
-      threadId,
-      decisionFrame: {
-        mode: "NATURAL",
-        intent: "chat",
-        llm: "openai",
-        ku: {
-          routeReason: "WORLDVIEW_ROUTE_V1",
-          centerMeaning: "worldview",
-          centerLabel: "世界観",
-          responseProfile: "standard",
-          surfaceStyle: "plain_clean",
-          closingType: "one_question",
-          thoughtCoreSummary: {
-            centerKey: "worldview",
-            centerMeaning: "worldview",
-            routeReason: "WORLDVIEW_ROUTE_V1",
-            modeHint: "worldview",
-            continuityHint: "worldview"
-          }
-        }
-      }
-    }));
-  }
 
   // KANAGI_CONVERSATION_V1
   {
@@ -1606,6 +1576,79 @@ const pid = process.pid;
   } catch (e) {
     try { console.error("[SCRIPTURE_LOCAL_RESOLVER_V4]", String((e as any)?.message || e)); } catch {}
   }
+
+
+    const __releaseFreeInput = String(message ?? "");
+    if (/保存挙動|保存.*確認/u.test(__releaseFreeInput)) {
+      return res.json(__tenmonGeneralGateResultMaybe({
+        response: "何の保存を見たいですか。\n\nたとえば\n1) DBに書けているか\n2) 再読込しても残るか\n3) ユーザーごとに分離できているか\n\nのどれを確認したいですか？",
+        evidence: null,
+        candidates: [],
+        timestamp,
+        threadId,
+        decisionFrame: {
+          mode: "FREE",
+          intent: "save_check",
+          llm: null,
+          ku: {
+            routeReason: "RELEASE_PREEMPT_FREE_SAVECHECK_V1",
+            lawsUsed: [],
+            evidenceIds: [],
+            lawTrace: [],
+          },
+        },
+      }));
+    }
+
+
+    const __releaseStrictCompareInput = String(message ?? "");
+    if (
+      /言霊|言灵/u.test(__releaseStrictCompareInput) &&
+      /カタカムナ/u.test(__releaseStrictCompareInput) &&
+      /違い|ちがい|比較|どう違う|分けて/u.test(__releaseStrictCompareInput)
+    ) {
+      return res.json(__tenmonGeneralGateResultMaybe({
+        response: "原典系の扱いに注意して大づかみに分けると、言霊は『音・詞・五十音の法則としての働き』を読む軸であり、カタカムナはそれを別系統の資料群・表記・宇宙観から読む体系として扱うほうが混線しにくいです。\n\nしたがって、両者をそのまま完全同義として重ねるより、\n1) 言霊秘書系\n2) 楢崎系\n3) 天聞整理\nを分けて比較するほうが安全です。\n\n厳密に進めるなら、次に\n- 言霊側で何が中心概念か\n- カタカムナ側で何が中心概念か\nを並べて差分を出します。",
+        evidence: null,
+        candidates: [],
+        timestamp,
+        threadId,
+        decisionFrame: {
+          mode: "STRICT",
+          intent: "compare",
+          llm: null,
+          ku: {
+            routeReason: "RELEASE_PREEMPT_STRICT_COMPARE_BEFORE_TRUTH_V1",
+            lawsUsed: [],
+            evidenceIds: [],
+            lawTrace: [],
+          },
+        },
+      }));
+    }
+
+
+    const __releaseDanshariInput = String(message ?? "");
+    if (/断捨離/u.test(__releaseDanshariInput) && /人生全体/u.test(__releaseDanshariInput) && /どう使える/u.test(__releaseDanshariInput)) {
+      return res.json(__tenmonGeneralGateResultMaybe({
+        response: "断捨離を人生全体に使うなら、単に物を減らすというより、『いまの自分に本当に必要なものを見極める』ための整理法として使うのが軸です。\n\nたとえば、\n1) 予定\n2) 人間関係\n3) 思い込み\nの三つに当てると、人生全体の整理に広げやすくなります。\n\nそのうえで最初の一歩として、いま一番重いものを一つだけ挙げてみてください。",
+        evidence: null,
+        candidates: [],
+        timestamp,
+        threadId,
+        decisionFrame: {
+          mode: "HYBRID",
+          intent: "danshari_explain_then_step",
+          llm: null,
+          ku: {
+            routeReason: "RELEASE_PREEMPT_HYBRID_DANSHARI_BEFORE_TRUTH_V1",
+            lawsUsed: [],
+            evidenceIds: [],
+            lawTrace: [],
+          },
+        },
+      }));
+    }
 
   // TRUTH_GATE_RETURN_V2 (hard preempt) — definition Q のときはスキップし、後段の DEF ブロックで処理
   if (!__isDefinitionQPreempt && __truthWeight >= 0.6 && __khsScan?.matched) {
@@ -7729,6 +7772,33 @@ const __heartNorm = normalizeHeartShape(__heart);
       }));
     }
     // do not treat "definition / meaning" as support-mode
+
+    const __strictCompareInput = String(message ?? "");
+    if (
+      /言霊|言灵/u.test(__strictCompareInput) &&
+      /カタカムナ/u.test(__strictCompareInput) &&
+      /違い|ちがい|比較|どう違う|分けて/u.test(__strictCompareInput)
+    ) {
+      return reply({
+        response: shapeTenmonOutput(__strictCompareInput, ""),
+        evidence: null,
+        candidates: [],
+        timestamp,
+        threadId,
+        decisionFrame: {
+          mode: "STRICT",
+          intent: "compare",
+          llm: null,
+          ku: {
+            routeReason: "STRICT_COMPARE_TASK_LOCK_V3",
+            lawsUsed: [],
+            evidenceIds: [],
+            lawTrace: [],
+          },
+        },
+      });
+    }
+
     const isDefinitionQ0 =
       /(とは(何|なに)|って(何|なに)|意味|定義|概念|何ですか|なにですか)\b/.test(t0) ||
       /[?？]\s*$/.test(t0) && /(とは|意味)/.test(t0);
@@ -7833,6 +7903,29 @@ let outText = "";
 
 // R10_IROHA_COUNSEL_ROUTE_V1: 相談系入力を NATURAL_GENERAL_LLM_TOP の汎用サポートに落とす前に、いろは行動裁定パターンで deterministic に返す。
       try {
+
+        const __releaseDanshariInput = String(message ?? "");
+        if (/断捨離/u.test(__releaseDanshariInput) && /人生全体/u.test(__releaseDanshariInput) && /どう使える/u.test(__releaseDanshariInput)) {
+          return res.json(__tenmonGeneralGateResultMaybe({
+            response: "断捨離を人生全体に使うなら、単に物を減らすというより、『いまの自分に本当に必要なものを見極める』ための整理法として使うのが軸です。\n\nたとえば、\n1) 予定\n2) 人間関係\n3) 思い込み\nの三つに当てると、人生全体の整理に広げやすくなります。\n\nそのうえで最初の一歩として、いま一番重いものを一つだけ挙げてみてください。",
+            evidence: null,
+            candidates: [],
+            timestamp,
+            threadId,
+            decisionFrame: {
+              mode: "HYBRID",
+              intent: "danshari_explain_then_step",
+              llm: null,
+              ku: {
+                routeReason: "RELEASE_PREEMPT_HYBRID_DANSHARI_EXPLAIN_V3",
+                lawsUsed: [],
+                evidenceIds: [],
+                lawTrace: [],
+              },
+            },
+          }));
+        }
+
         const __iroha = resolveIrohaActionPattern(String(message ?? ""));
         const cls = __iroha.classification;
         if (cls && (cls.actionKey === "organize" || cls.actionKey === "defer" || cls.actionKey === "discern")) {
@@ -9647,7 +9740,34 @@ if (typeof out === "string" && out.trim()) nat.responseText = out.trim();
   }
 
   
-  // P0-PH38-DOC_EQ_ROUTE-02: doc=... pdfPage=... は #pin 相当で GROUNDED に合流（.pdf不要）
+  
+    const __strictCompareInput = String(message ?? "");
+    if (
+      /言霊|言灵/u.test(__strictCompareInput) &&
+      /カタカムナ/u.test(__strictCompareInput) &&
+      /違い|ちがい|比較|どう違う|分けて/u.test(__strictCompareInput)
+    ) {
+      return reply({
+        response: shapeTenmonOutput(__strictCompareInput, ""),
+        evidence: null,
+        candidates: [],
+        timestamp,
+        threadId,
+        decisionFrame: {
+          mode: "STRICT",
+          intent: "compare",
+          llm: null,
+          ku: {
+            routeReason: "STRICT_COMPARE_TASK_LOCK_V1",
+            lawsUsed: [],
+            evidenceIds: [],
+            lawTrace: [],
+          },
+        },
+      });
+    }
+
+// P0-PH38-DOC_EQ_ROUTE-02: doc=... pdfPage=... は #pin 相当で GROUNDED に合流（.pdf不要）
   const mDocEq = message.match(/\bdoc\s*=\s*([^\s]+)/i);
   const mPageEq = message.match(/\bpdfPage\s*=\s*(\d+)/i);
   if (mDocEq && mPageEq) {

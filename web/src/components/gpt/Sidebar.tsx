@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useI18n } from "../../i18n/useI18n";
+import { getStorageKeys } from "../../hooks/useChat";
 
 export type GptView = "chat" | "dashboard" | "profile";
 
@@ -16,13 +17,10 @@ type ThreadMeta = {
   updatedAt?: number;
 };
 
-const THREAD_KEY = "TENMON_THREAD_ID";
-const THREADS_META_KEY = "TENMON_PWA_THREADS_META_V1";
-const MSGS_KEY_PREFIX = "TENMON_PWA_MSGS_V2:";
-
 function loadThreads(): ThreadMeta[] {
   if (typeof window === "undefined") return [];
   try {
+    const { THREADS_META_KEY } = getStorageKeys();
     const raw = window.localStorage.getItem(THREADS_META_KEY);
     const map = raw ? (JSON.parse(raw) as Record<string, ThreadMeta>) : {};
     return Object.values(map)
@@ -36,6 +34,7 @@ function loadThreads(): ThreadMeta[] {
 function getActiveThreadId(): string | null {
   if (typeof window === "undefined") return null;
   try {
+    const { THREAD_KEY } = getStorageKeys();
     const v = window.localStorage.getItem(THREAD_KEY);
     return v && v.trim() ? v : null;
   } catch {
@@ -70,6 +69,7 @@ export function Sidebar({ view, onView, onNewChat, onOpenSettings }: SidebarProp
 
   const handleSelectThread = (id: string) => {
     try {
+      const { THREAD_KEY } = getStorageKeys();
       window.localStorage.setItem(THREAD_KEY, id);
       window.dispatchEvent(new Event("tenmon:threads-updated"));
     } catch {
@@ -81,6 +81,7 @@ export function Sidebar({ view, onView, onNewChat, onOpenSettings }: SidebarProp
   const handleDeleteThread = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     try {
+      const { THREAD_KEY, THREADS_META_KEY, MSGS_KEY_PREFIX } = getStorageKeys();
       const raw = window.localStorage.getItem(THREADS_META_KEY);
       const map: Record<string, ThreadMeta> = raw ? JSON.parse(raw) : {};
       delete map[id];

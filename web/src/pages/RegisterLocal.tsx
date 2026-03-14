@@ -12,34 +12,49 @@ function getNextPath(): string {
   }
 }
 
-export default function LoginLocal() {
+function errorToMessage(error: string): string {
+  if (error === "PASSWORD_MISMATCH") return "パスワードが一致しません。";
+  if (error === "EMAIL_EXISTS") return "このメールアドレスは既に登録されています。";
+  if (error === "REGISTER_FAILED" || error === "BAD_EMAIL" || error === "WEAK_PASSWORD" || error === "PASSWORD_CONFIRM_REQUIRED") {
+    return "入力内容を確認してください。";
+  }
+  return error || "登録に失敗しました。しばらくしてからお試しください。";
+}
+
+export default function RegisterLocal() {
   const nextPath = useMemo(() => getNextPath(), []);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [passwordConfirm, setPasswordConfirm] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [errorText, setErrorText] = useState("");
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (submitting) return;
+    if (password !== passwordConfirm) {
+      setErrorText("PASSWORD_MISMATCH");
+      return;
+    }
     setSubmitting(true);
     setErrorText("");
 
     try {
-      const res = await fetch("/api/auth/local/login", {
+      const res = await fetch("/api/auth/local/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({
           email: email.trim(),
           password,
+          password_confirm: passwordConfirm,
         }),
       });
 
       const body = await res.json().catch(() => ({}));
 
       if (!res.ok || !body?.ok) {
-        setErrorText(String(body?.error || "LOGIN_FAILED"));
+        setErrorText(errorToMessage(String(body?.error || "REGISTER_FAILED")));
         setSubmitting(false);
         return;
       }
@@ -54,8 +69,8 @@ export default function LoginLocal() {
       } catch {}
 
       window.location.href = nextPath;
-    } catch (err: any) {
-      setErrorText(String(err?.message || err || "LOGIN_FAILED"));
+    } catch {
+      setErrorText("登録に失敗しました。しばらくしてからお試しください。");
       setSubmitting(false);
     }
   }
@@ -90,11 +105,11 @@ export default function LoginLocal() {
             alt="TENMON-ARK"
             style={{ width: 28, height: 28 }}
           />
-          <div style={{ fontSize: 22, fontWeight: 700 }}>ログイン</div>
+          <div style={{ fontSize: 22, fontWeight: 700 }}>新規登録</div>
         </div>
 
         <div style={{ marginBottom: 16, color: "var(--gpt-text-secondary)", fontSize: 14 }}>
-          ログインしてチャットを再開します。
+          TENMON-ARK のアカウントを作成します
         </div>
 
         <label style={{ display: "block", marginBottom: 8, fontSize: 14 }}>メールアドレス</label>
@@ -109,11 +124,19 @@ export default function LoginLocal() {
         />
 
         <PasswordWithEye
-          label="パスワード"
+          label="パスワード（8文字以上）"
           value={password}
           onChange={setPassword}
-          placeholder="パスワード"
-          autoComplete="current-password"
+          placeholder="8文字以上"
+          autoComplete="new-password"
+        />
+
+        <PasswordWithEye
+          label="確認用"
+          value={passwordConfirm}
+          onChange={setPasswordConfirm}
+          placeholder="同じパスワードを再入力"
+          autoComplete="new-password"
         />
 
         {errorText ? (
@@ -129,20 +152,28 @@ export default function LoginLocal() {
               fontSize: 14,
             }}
           >
-            {errorText}
+            {errorToMessage(errorText)}
           </div>
         ) : null}
 
         <button
           type="submit"
           className="gpt-btn gpt-btn-primary"
-          disabled={submitting || !email.trim() || !password}
+          disabled={submitting || !email.trim() || !password || !passwordConfirm}
           style={{ width: "100%", height: 48, minHeight: 48 }}
         >
-          {submitting ? "ログイン中..." : "ログイン"}
+          {submitting ? "登録中..." : "登録してはじめる"}
         </button>
+
+        <div style={{ marginTop: 16, fontSize: 14 }}>
+          <a
+            href={`/pwa/login-local.html?next=${encodeURIComponent(nextPath)}`}
+            style={{ color: "var(--gpt-link)" }}
+          >
+            すでにアカウントをお持ちの方はこちら
+          </a>
+        </div>
       </form>
     </div>
   );
 }
-

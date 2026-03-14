@@ -7,7 +7,7 @@ router.get("/me", (req, res) => {
   try {
     const founder = (req as any).cookies?.tenmon_founder === "1";
     if (founder) {
-      return res.json({ ok: true, authenticated: true, founder: true, user: { id: "founder", role: "FOUNDER" } });
+      return res.json({ ok: true, authenticated: true, founder: true, user: { id: "founder", email: "", role: "FOUNDER" } });
     }
 
     const sessionId = String((req as any).cookies?.auth_session ?? "").trim();

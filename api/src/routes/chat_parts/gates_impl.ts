@@ -331,9 +331,146 @@ function __tenmonGeneralGateSoft(out: string): string {
   return t;
 }
 const __GATE_RAW_MESSAGE_KEY = "__tenmon_gate_raw_message_v1";
-function __tenmonGeneralGateResultMaybe(x: any, rawMessageOverride?: string): any {
+
+function __thinReleasePayloadV2(x: any): any {
   try {
     if (!x || typeof x !== "object") return x;
+
+    const out: any = { ...x };
+    const df: any =
+      out.decisionFrame && typeof out.decisionFrame === "object"
+        ? { ...out.decisionFrame }
+        : null;
+
+    const topRouteReason = String(out.routeReason || "");
+    const mode = String(df?.mode || "");
+    const ku0: any =
+      df?.ku && typeof df.ku === "object" && !Array.isArray(df.ku)
+        ? df.ku
+        : {};
+    const kuRouteReason = String(ku0.routeReason || "");
+
+    const isReleaseLike =
+      mode === "FREE" ||
+      mode === "HYBRID" ||
+      mode === "STRICT" ||
+      topRouteReason.startsWith("RELEASE_PREEMPT_") ||
+      kuRouteReason.startsWith("RELEASE_PREEMPT_");
+
+    if (!isReleaseLike) return out;
+
+    delete out.providerPlan;
+    delete out.seedKernel;
+    delete out.brainstemDecision;
+    delete out.expressionPlan;
+    delete out.comfortTuning;
+    delete out.shadowResult;
+
+    if (df) {
+      const ku: any =
+        df.ku && typeof df.ku === "object" && !Array.isArray(df.ku)
+          ? { ...df.ku }
+          : {};
+
+      delete ku.intention;
+      delete ku.kanagiSelf;
+      delete ku.synapseTop;
+      delete ku.llmStatus;
+      delete ku.kanagi;
+      delete ku.providerPlan;
+      delete ku.seedKernel;
+      delete ku.brainstemDecision;
+      delete ku.expressionPlan;
+      delete ku.comfortTuning;
+      delete ku.shadowResult;
+
+      ku.lawsUsed = Array.isArray(ku.lawsUsed) ? ku.lawsUsed : [];
+      ku.evidenceIds = Array.isArray(ku.evidenceIds) ? ku.evidenceIds : [];
+      ku.lawTrace = Array.isArray(ku.lawTrace) ? ku.lawTrace : [];
+      ku.rewriteUsed = Boolean(ku.rewriteUsed);
+      ku.rewriteDelta = Number(ku.rewriteDelta || 0);
+
+      df.ku = ku;
+      out.decisionFrame = df;
+    }
+
+    return out;
+  } catch {
+    return x;
+  }
+}
+
+
+function __applyReleaseThinAtExit(obj: any): any {
+  try {
+    if (!obj || typeof obj !== "object") return obj;
+
+    const df: any = obj.decisionFrame;
+    const ku: any =
+      df && df.ku && typeof df.ku === "object" && !Array.isArray(df.ku)
+        ? df.ku
+        : null;
+
+    const mode = String(df?.mode || "");
+    const rr = String(ku?.routeReason || obj?.routeReason || "");
+
+    const isReleaseThin =
+      mode === "FREE" ||
+      mode === "HYBRID" ||
+      mode === "STRICT" ||
+      rr.startsWith("RELEASE_PREEMPT_") ||
+      rr.startsWith("STRICT_COMPARE_TASK_LOCK_");
+
+    if (!isReleaseThin) return obj;
+
+    const drop = (t: any) => {
+      if (!t || typeof t !== "object") return;
+      delete t.synapseTop;
+      delete t.llmStatus;
+      delete t.kanagi;
+      delete t.providerPlan;
+      delete t.seedKernel;
+      delete t.brainstemDecision;
+      delete t.expressionPlan;
+      delete t.comfortTuning;
+      delete t.shadowResult;
+      delete t.intention;
+      delete t.kanagiSelf;
+    };
+
+    drop(ku);
+
+    delete obj.providerPlan;
+    delete obj.seedKernel;
+    delete obj.brainstemDecision;
+    delete obj.expressionPlan;
+    delete obj.comfortTuning;
+    delete obj.shadowResult;
+  } catch {}
+
+  return obj;
+}
+
+
+function __stripInternalContinuityLeadV1(text: string): string {
+  let t = String(text || "").replace(/\r/g, "").trim();
+
+  const patterns: RegExp[] = [
+    /^さっき見ていた中心（[^）\n]+）を土台に、いまの話を見ていきましょう。\s*/u,
+    /^さっき見ていた中心（[^）\n]+）を土台に、[^\n]*\s*/u,
+    /^いま見ている中心（[^）\n]+）を土台に、[^\n]*\s*/u,
+    /^さっき見ていた聖典の一節を土台に、いまの整理をしていきましょう。\s*/u,
+    /^さっき見ていた聖典の一節を土台に、[^\n]*\s*/u,
+  ];
+
+  for (const re of patterns) t = t.replace(re, "");
+  t = t.replace(/\n{3,}/g, "\n\n").trim();
+  return t;
+}
+
+function __tenmonGeneralGateResultMaybe(x: any, rawMessageOverride?: string): any {
+  try {
+    if (!x || typeof x !== "object") return __applyReleaseThinAtExit(x);
     // R9_LEDGER_REAL_INPUT_FREEZE_V1: 実入力を payload と ku に固定（rawMessageOverride / global / payload 優先）
     const fromGlobal = typeof (globalThis as any)[__GATE_RAW_MESSAGE_KEY] === "string" ? (globalThis as any)[__GATE_RAW_MESSAGE_KEY] : "";
     const raw = String(
@@ -379,7 +516,11 @@ function __tenmonGeneralGateResultMaybe(x: any, rawMessageOverride?: string): an
           }
         } catch {}
 
-        if (empty) { (__ku as any).routeReason = "K1_TRACE_EMPTY_GATED_V1"; }
+        const __rr0 = String((__ku as any).routeReason || "");
+          const __isReleaseLocked =
+            __rr0.startsWith("RELEASE_PREEMPT_") ||
+            __rr0.startsWith("STRICT_COMPARE_TASK_LOCK_");
+          if (empty && !__isReleaseLocked) { (__ku as any).routeReason = "K1_TRACE_EMPTY_GATED_V1"; }
       }
     } catch {}
     // R4_1_HEART_STATIC_KU_V2 / R2_HEART_PHASE_REASON_ALIGN_V1:
@@ -891,6 +1032,31 @@ function __tenmonGeneralGateResultMaybe(x: any, rawMessageOverride?: string): an
             (x as any).brainstemDecision = (__kuOut as any).brainstemDecision;
           } catch {}
           if ((x as any).shadowResult == null) (x as any).shadowResult = __kuOut.shadowResult ?? null;
+
+            const __rrThin = String((__kuOut as any).routeReason || "");
+            const __isReleaseThin =
+              __rrThin.startsWith("RELEASE_PREEMPT_") ||
+              __rrThin.startsWith("STRICT_COMPARE_TASK_LOCK_");
+            if (__isReleaseThin) {
+              delete (__kuOut as any).synapseTop;
+              delete (__kuOut as any).llmStatus;
+              delete (__kuOut as any).kanagi;
+              delete (__kuOut as any).providerPlan;
+              delete (__kuOut as any).seedKernel;
+              delete (__kuOut as any).brainstemDecision;
+              delete (__kuOut as any).expressionPlan;
+              delete (__kuOut as any).comfortTuning;
+              delete (__kuOut as any).shadowResult;
+              delete (__kuOut as any).intention;
+              delete (__kuOut as any).kanagiSelf;
+
+              delete (x as any).providerPlan;
+              delete (x as any).seedKernel;
+              delete (x as any).brainstemDecision;
+              delete (x as any).expressionPlan;
+              delete (x as any).comfortTuning;
+              delete (x as any).shadowResult;
+            }
         }
       } catch {}
 
@@ -1023,8 +1189,15 @@ function __tenmonGeneralGateResultMaybe(x: any, rawMessageOverride?: string): an
           (x as any).response = __respNorm;
         }
       } catch {}
-    return x;
-  } catch { return x; }
+    return __thinReleasePayloadV2(x);
+  } catch { return __thinReleasePayloadV2(x); }
+
+    try {
+      if (typeof (x as any).response === "string") {
+        (x as any).response = __stripInternalContinuityLeadV1(String((x as any).response || ""));
+      }
+    } catch {}
+
 }
 // --- /C21G1C: GENERAL_GATE_SOFT_V1 ---
 

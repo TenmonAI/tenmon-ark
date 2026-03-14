@@ -51,6 +51,8 @@ export function Topbar({
       localStorage.removeItem("TENMON_AUTH_OK_V1");
       localStorage.removeItem("TENMON_AUTOLOGIN_DONE");
       localStorage.removeItem("TENMON_FOUNDER_KEY");
+      localStorage.removeItem("TENMON_USER_KEY");
+      localStorage.removeItem("tenmon_user_display_v1");
     } catch {}
 
     window.location.href = "/pwa/login-local.html?next=/pwa/";
@@ -92,6 +94,7 @@ export function Topbar({
           type="button"
           className="gpt-account-btn"
           aria-label="Account menu"
+          title={accountName}
           onClick={() => setMenuOpen((v) => !v)}
         >
           <span className="gpt-account-avatar" aria-hidden="true">

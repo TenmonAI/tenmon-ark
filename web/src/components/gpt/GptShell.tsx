@@ -6,6 +6,7 @@ import { DashboardPage } from "../../pages/DashboardPage";
 import { ProfilePage } from "../../pages/ProfilePage";
 import { SettingsModal } from "./SettingsModal";
 import { APP_TITLE } from "../../config/app";
+import { getStorageKeys } from "../../hooks/useChat";
 
 export function GptShell() {
   const [view, setView] = useState<GptView>("chat");
@@ -18,8 +19,9 @@ export function GptShell() {
     setView("chat");
     setSidebarOpen(false);
     try {
+      const { THREAD_KEY } = getStorageKeys();
       const tid = `pwa-${Date.now().toString(36)}`;
-      window.localStorage.setItem("TENMON_THREAD_ID", tid);
+      window.localStorage.setItem(THREAD_KEY, tid);
       window.dispatchEvent(new Event("tenmon:threads-updated"));
     } catch {
       // ignore

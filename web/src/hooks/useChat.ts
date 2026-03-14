@@ -10,8 +10,16 @@ export type ChatMessage = {
   _payload?: any;
 };
 
-const THREAD_KEY = "TENMON_THREAD_ID";
-const MSGS_KEY_PREFIX = "TENMON_PWA_MSGS_V2:";
+const USER_KEY_STORAGE = "TENMON_USER_KEY";
+
+export function getStorageKeys(): { THREAD_KEY: string; THREADS_META_KEY: string; MSGS_KEY_PREFIX: string } {
+  const userKey = typeof window !== "undefined" ? (localStorage.getItem(USER_KEY_STORAGE) || "").trim() : "";
+  return {
+    THREAD_KEY: userKey ? `TENMON_THREAD_ID:${userKey}` : "TENMON_THREAD_ID",
+    THREADS_META_KEY: userKey ? `TENMON_PWA_THREADS_META_V1:${userKey}` : "TENMON_PWA_THREADS_META_V1",
+    MSGS_KEY_PREFIX: userKey ? `TENMON_PWA_MSGS_V2:${userKey}:` : "TENMON_PWA_MSGS_V2:",
+  };
+}
 
 type ThreadMeta = {
   id: string;
@@ -19,10 +27,9 @@ type ThreadMeta = {
   updatedAt?: number;
 };
 
-const THREADS_META_KEY = "TENMON_PWA_THREADS_META_V1";
-
 function loadThreadMetaMap(): Record<string, ThreadMeta> {
   try {
+    const { THREADS_META_KEY } = getStorageKeys();
     const raw = localStorage.getItem(THREADS_META_KEY);
     return raw ? (JSON.parse(raw) as Record<string, ThreadMeta>) : {};
   } catch {
@@ -32,6 +39,7 @@ function loadThreadMetaMap(): Record<string, ThreadMeta> {
 
 function saveThreadMetaMap(map: Record<string, ThreadMeta>) {
   try {
+    const { THREADS_META_KEY } = getStorageKeys();
     localStorage.setItem(THREADS_META_KEY, JSON.stringify(map));
   } catch {
     // ignore
@@ -65,6 +73,7 @@ function touchThreadMeta(threadId: string, msgs: ChatMessage[]) {
 
 function getThreadId(): string {
   try {
+    const { THREAD_KEY } = getStorageKeys();
     const v = localStorage.getItem(THREAD_KEY);
     if (v && v.trim()) return v;
     const next = `pwa-${Date.now().toString(36)}`;
@@ -77,6 +86,7 @@ function getThreadId(): string {
 
 function loadMessages(threadId: string): ChatMessage[] {
   try {
+    const { MSGS_KEY_PREFIX } = getStorageKeys();
     const raw = localStorage.getItem(MSGS_KEY_PREFIX + threadId);
     return raw ? JSON.parse(raw) : [];
   } catch {
@@ -86,6 +96,7 @@ function loadMessages(threadId: string): ChatMessage[] {
 
 function saveMessages(threadId: string, messages: ChatMessage[]) {
   try {
+    const { MSGS_KEY_PREFIX } = getStorageKeys();
     localStorage.setItem(MSGS_KEY_PREFIX + threadId, JSON.stringify(messages));
   } catch {}
 }
@@ -155,6 +166,7 @@ export function useChat() {
   function resetThread() {
     const tid = `pwa-${Date.now().toString(36)}`;
     try {
+      const { THREAD_KEY } = getStorageKeys();
       localStorage.setItem(THREAD_KEY, tid);
       window.dispatchEvent(new Event("tenmon:threads-updated"));
     } catch {

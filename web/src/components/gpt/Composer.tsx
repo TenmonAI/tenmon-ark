@@ -21,20 +21,22 @@ export function Composer({ onSend, loading }: ComposerProps) {
   return (
     <div className="gpt-composer-wrap">
       <div className="gpt-composer-inner">
-        <input
+        <textarea
           className="gpt-input gpt-focus-ring gpt-composer-input"
           value={text}
           onChange={(e) => setText(e.target.value)}
           placeholder={t("composer.placeholder")}
           disabled={loading}
+          rows={2}
           onCompositionStart={() => { composingRef.current = true; }}
           onCompositionEnd={() => { composingRef.current = false; }}
           onKeyDown={(e) => {
-            const comp = composingRef.current || (e.nativeEvent as unknown as { isComposing?: boolean }).isComposing;
-            if (e.key === "Enter" && !e.shiftKey && !comp) {
-              e.preventDefault();
-              submit();
-            }
+            if (e.key !== "Enter") return;
+            const composing = composingRef.current || (e.nativeEvent as unknown as { isComposing?: boolean }).isComposing;
+            if (composing) return;
+            if (e.shiftKey) return;
+            e.preventDefault();
+            submit();
           }}
         />
         <button

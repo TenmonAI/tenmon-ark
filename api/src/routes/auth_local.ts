@@ -52,12 +52,19 @@ function ensureTables() {
     CREATE TABLE IF NOT EXISTS auth_sessions (
       sessionId TEXT PRIMARY KEY,
       userId TEXT NOT NULL,
-      expiresAt TEXT NOT NULL
+      expiresAt TEXT NOT NULL,
+      createdAt TEXT
     );
 
     CREATE INDEX IF NOT EXISTS idx_auth_sessions_userId
       ON auth_sessions(userId);
-
+  `);
+  try {
+    db.exec("ALTER TABLE auth_sessions ADD COLUMN createdAt TEXT");
+  } catch {
+    // column may already exist
+  }
+  db.exec(`
     CREATE TABLE IF NOT EXISTS auth_approved_emails (
       email TEXT PRIMARY KEY,
       approvedAt TEXT NOT NULL
@@ -81,8 +88,11 @@ authLocalRouter.post("/auth/local/register", (req, res) => {
   try {
     const email = normalizeEmail((req.body as any)?.email);
     const password = String((req.body as any)?.password ?? "");
+    const passwordConfirm = String((req.body as any)?.password_confirm ?? "");
     if (!email || !email.includes("@")) return res.status(400).json({ ok: false, error: "BAD_EMAIL" });
     if (password.length < 8) return res.status(400).json({ ok: false, error: "WEAK_PASSWORD" });
+    if (!passwordConfirm) return res.status(400).json({ ok: false, error: "PASSWORD_CONFIRM_REQUIRED" });
+    if (password !== passwordConfirm) return res.status(400).json({ ok: false, error: "PASSWORD_MISMATCH" });
 
     const db = ensureTables();
     const exists = db.prepare(`SELECT email FROM auth_local_accounts WHERE email = ? LIMIT 1`).get(email) as any;
@@ -91,6 +101,8 @@ authLocalRouter.post("/auth/local/register", (req, res) => {
     const userId = newId("user");
     const { saltHex, hashHex } = hashPassword(password);
     const now = nowIso();
+    const sessionId = newId("sess");
+    const expiresAt = new Date(Date.now() + 1000 * 60 * 60 * 24 * 30).toISOString();
 
     db.exec("BEGIN");
     try {
@@ -99,13 +111,18 @@ authLocalRouter.post("/auth/local/register", (req, res) => {
         INSERT INTO auth_local_accounts (email, userId, passwordSalt, passwordHash, createdAt, updatedAt)
         VALUES (?, ?, ?, ?, ?, ?)
       `).run(email, userId, saltHex, hashHex, now, now);
+      db.prepare(`INSERT OR IGNORE INTO auth_approved_emails (email, approvedAt) VALUES (?, ?)`).run(email, now);
+      db.prepare(`INSERT INTO auth_sessions (sessionId, userId, expiresAt, createdAt) VALUES (?, ?, ?, ?)`).run(sessionId, userId, expiresAt, now);
       db.exec("COMMIT");
     } catch (e) {
       try { db.exec("ROLLBACK"); } catch {}
       throw e;
     }
 
-    return res.json({ ok: true, user: { id: userId, email }, needApproval: true });
+    setSessionCookie(res, sessionId);
+    let nextPath = String((req.body as any)?.next ?? "/pwa/").trim();
+    if (!nextPath.startsWith("/")) nextPath = "/pwa/";
+    return res.json({ ok: true, user: { id: userId, email }, next: nextPath || "/pwa/" });
   } catch (e: any) {
     return res.status(500).json({ ok: false, error: "REGISTER_FAILED", detail: String(e?.message || e || "") });
   }

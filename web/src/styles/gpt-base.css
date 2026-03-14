@@ -400,6 +400,12 @@ body::before {
   flex: 1;
   min-height: 44px;
 }
+textarea.gpt-composer-input {
+  resize: vertical;
+  max-height: 120px;
+  padding-top: var(--gpt-composer-padding-y);
+  padding-bottom: var(--gpt-composer-padding-y);
+}
 .gpt-composer-btn {
   width: 44px;
   height: 44px;
@@ -750,4 +756,21 @@ body::before {
 
 .gpt-account-menu-item:hover{
   background:var(--hover);
+}
+
+/* PWA prerelease: mobile (iPhone/narrow) — no overflow, tap targets, keyboard */
+@media (max-width: 480px) {
+  .gpt-input {
+    font-size: 16px;
+  }
+  .gpt-composer-wrap {
+    padding: 12px;
+  }
+  .gpt-composer-input {
+    min-height: 48px;
+  }
+  .gpt-composer-btn {
+    min-width: 48px;
+    min-height: 48px;
+  }
 }
