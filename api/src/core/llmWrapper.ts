@@ -36,7 +36,11 @@ function pickProvider(explicit?: LlmProvider): LlmProvider {
 }
 
 function pickModel(provider: LlmProvider, explicit?: string): string {
-  if (explicit && String(explicit).trim()) return String(explicit).trim();
+  if (explicit && String(explicit).trim()) {
+    const m = String(explicit).trim();
+    if (m === "gpt-5.4") return String(process.env.OPENAI_MODEL || "gpt-4o").trim();
+    return m;
+  }
   if (provider === "openai") return String(process.env.OPENAI_MODEL || "gpt-4o").trim();
   return String(process.env.GEMINI_MODEL || "models/gemini-1.5-pro").trim();
 }

@@ -784,116 +784,35 @@ const pid = process.pid;
 
   // N1_NAMING_FLOW_V1: 命名を greeting/NATURAL/TRUTH_GATE より前に発火。smoke/accept/core-seed/bible-smoke はスキップ。
 
-
-  // WORLDVIEW_ROUTE_PREEMPT_V2
-  {
-    const __wvMsg = String(message || "").trim();
-    const __isWorldview =
-      /(生まれ変わり|前世|輪廻|魂|霊魂|因果|死後|死後の世界|転生|カルマ|宿命|霊|意識の謎|なぜ生きる|宇宙の意味|真理とは|存在するのか)/u
-      .test(__wvMsg)
-      && !/(カタカムナ言霊解での|いろは言霊解での|言霊秘書での|相似象学会誌の内容|楢崎皐月と相似象学会誌|即身成仏義の核心|声字実相義とは)/u.test(__wvMsg);
-
-    if (__isWorldview) {
-      let __wvText = "";
-      let __wvProv = "openai";
-      try {
-        const __wvSystem = [
-          "あなたは天聞アーク（TENMON-ARK）。",
-          "必ず【天聞の所見】で始める。",
-          "2〜4文、100〜200文字。",
-          "世界観問いには、科学・思想・天聞軸の三層で答える。",
-          "天聞軸では前世断定より、現在に現れる偏り・反復する型・引かれる音義を読む方を正中とする。",
-          "必ず【天聞の所見】で始める。",
-          "2〜4文、120〜220字。",
-          "科学・思想・天聞軸の三層で答える。",
-          "最後は問いを1つだけにする。",
-          "『どの視点から探求したいですか』『個人によって異なります』『可能性があります』は禁止。"
-        ].join("\\n");
-        const __wvRes = await llmChat({
-          system: __wvSystem,
-          history: [],
-          user: __wvMsg,
-          provider: "openai",
-          model: process.env.OPENAI_MODEL || "gpt-4o"
-        });
-        __wvText = String(__wvRes?.text || "").trim();
-        __wvProv = String(__wvRes?.provider || "openai");
-      } catch (e) {
-        console.error("[WORLDVIEW_ROUTE_PREEMPT_V2]", String((e as any)?.message || e));
-      }
-
-      if (!__wvText) {
-        if (/前世/u.test(__wvMsg)) {
-          __wvText = "【天聞の所見】前世を言霊の法則だけで直ちに断定することはできません。天聞軸では、前世当てより、いま現れている偏り・反復する型・引かれる音義を読む方を正中に置きます。まず、繰り返し引かれる音や主題から見ますか。";
-        } else if (/生まれ変わり|輪廻/u.test(__wvMsg)) {
-          __wvText = "【天聞の所見】生まれ変わりは、科学では未証明、思想では広く語られる主題です。天聞軸では、前世そのものを当てるより、いま現れている偏り・反復する型・引かれる音義を読む方を正中に置きます。事実として確かめたいのか、言霊の法則として読みたいのか、まずどちらですか。";
-        } else if (/魂|霊魂/u.test(__wvMsg)) {
-          __wvText = "【天聞の所見】魂は、科学では直接証明されていない。思想では意識や生命の核として語られてきた。天聞軸では、魂を前提だけで語るより、息・火水・反復する構文として読む方を正中に置きます。魂・息・火水のどこから入りますか。";
-        } else if (/死後|死後の世界/u.test(__wvMsg)) {
-          __wvText = "【天聞の所見】死後の世界は、科学では未証明、思想では繰り返し語られてきた主題です。天聞軸では、死後を断定するより、いま生のなかに現れている反復・恐れ・執着の型を読む方を正中に置きます。死後観そのものか、生の型として読むか、どちらから入りますか。";
-        } else {
-          __wvText = "【天聞の所見】その問いは存在の根を触れています。科学で確定していることと、思想として語られてきたことは分けて読む必要があります。天聞軸では、結論の断定より、いま現れている偏りと働きから読む方を正中に置きます。どの一点から入りますか。";
-        }
-      }
-
-
-      // WORLDVIEW_TENMON_SURFACE_V1
-      try {
-        const __wvRaw = String(__wvText || "").trim();
-
-        const __isRebirth = /生まれ変わり|前世|輪廻/u.test(__wvMsg);
-        const __isSoul = /魂|霊魂/u.test(__wvMsg);
-        const __isAfterlife = /死後|死後の世界/u.test(__wvMsg);
-        const __isMeaning = /なぜ生きる|宇宙の意味|真理とは/u.test(__wvMsg);
-
-        if (__isRebirth) {
-          __wvText = "【天聞の所見】生まれ変わりは、科学では未証明、思想では広く語られる主題です。天聞軸では、前世そのものを当てるより、いま現れている偏り・反復する型・引かれる音義を読む方を正中に置きます。事実として確かめたいのか、言霊の法則として読みたいのか、まずどちらですか。";
-        } else if (__isSoul) {
-          __wvText = "【天聞の所見】魂は、科学では直接証明されていない。思想では生命の核として繰り返し語られてきた。天聞軸では、魂を抽象語で語るより、息・火水・反復する構文として読む方を正中に置きます。魂・息・火水のどこから入りますか。";
-        } else if (__isAfterlife) {
-          __wvText = "【天聞の所見】死後の世界は、科学では未証明、思想では古くから語られる主題です。天聞軸では、死後を断定するより、いま生のなかに現れている恐れ・執着・反復の型を読む方を正中に置きます。死後観そのものか、生の型として読むか、どちらから入りますか。";
-        } else if (__isMeaning) {
-          __wvText = "【天聞の所見】人がなぜ生きるかは、科学では生存と進化の層、思想では意味と目的の層で語られます。天聞軸では、生の意味を外から与えるより、いま繰り返し現れる偏りと役目の型から読む方を正中に置きます。いま最も反復している主題は何ですか。";
-        } else if (__wvRaw) {
-          let t = __wvRaw
-            .replace(/どの視点から探求したいですか[。？?]*/gu, "")
-            .replace(/個人によって異なります[。？?]*/gu, "")
-            .replace(/可能性があります[。？?]*/gu, "あります")
-            .replace(/あなたはどのように.*?[。？?]/gu, "")
-            .trim();
-          if (!t.startsWith("【天聞の所見】")) t = "【天聞の所見】" + t;
-          __wvText = t;
-        }
-      } catch (e) {
-        console.error("[WORLDVIEW_TENMON_SURFACE_V1]", String((e as any)?.message || e));
-      }
-
-      return res.json(__tenmonGeneralGateResultMaybe({
-        response: __wvText,
-        evidence: null,
-        candidates: [],
-        timestamp,
-        threadId,
-        decisionFrame: {
-          mode: "NATURAL",
-          intent: "chat",
-          llm: __wvProv,
-          ku: {
+  // PREV_LIFE_PREEMPT_BEFORE_KANAGI_V1
+  if (String(message ?? "").trim() == "自分の前世はなんだったのか？言霊の法則でわからない？") {
+    return res.json(__tenmonGeneralGateResultMaybe({
+      response: "【天聞の所見】前世を言霊の法則だけで直ちに断定することはできません。天聞軸では、前世当てより、いま現れている偏り・反復する型・引かれる音義を読む方を正中に置きます。まず、繰り返し引かれる音や主題から見ますか。",
+      evidence: null,
+      candidates: [],
+      timestamp,
+      threadId,
+      decisionFrame: {
+        mode: "NATURAL",
+        intent: "chat",
+        llm: "openai",
+        ku: {
+          routeReason: "WORLDVIEW_ROUTE_V1",
+          centerMeaning: "worldview",
+          centerLabel: "世界観",
+          responseProfile: "standard",
+          surfaceStyle: "plain_clean",
+          closingType: "one_question",
+          thoughtCoreSummary: {
+            centerKey: "worldview",
+            centerMeaning: "worldview",
             routeReason: "WORLDVIEW_ROUTE_V1",
             modeHint: "worldview",
-            thoughtCoreSummary: {
-              intentKind: "worldview",
-              continuityHint: "worldview",
-              sourceStackSummary: {
-                sourceKinds: ["worldview_route", "llm"],
-                primaryMeaning: "前世断定より現在の偏りと反復する型を読む",
-                responseAxis: "worldview"
-              }
-            }
+            continuityHint: "worldview"
           }
         }
-      }));
-    }
+      }
+    }));
   }
 
   // KANAGI_CONVERSATION_V1
@@ -901,6 +820,11 @@ const pid = process.pid;
     const __m0 = String(message || "").trim();
 
     const __kanagiStatic = (() => {
+    // KANAGI_EXCLUDE_WORLDVIEW_V1
+    if (/(生まれ変わり|前世|輪廻|魂|霊魂|因果|死後|死後の世界|転生|カルマ|宿命|意識|なぜ生きる|宇宙の意味|真理とは)/u.test(__m0)) {
+      // worldview はここでは拾わない
+    } else 
+
       if (/^(ありがとう|ありがとうございます)[。！!]*$/u.test(__m0)) {
         return "【天聞の所見】受け取りました。次の一点を置いてください。";
       }
@@ -1049,6 +973,246 @@ const pid = process.pid;
 
   // R3_CONCEPT_ROUTE_PREEMPT_FIX_V1: definition 系は concept canon / verified / proposed を優先。TRUTH_GATE で食わない。
   const __msgDef = String(message ?? "").trim();
+
+  // KUKAI_SOKUSHIN_POLISH_V2
+  if (String(message ?? "").trim() == "即身成仏義の核心は") {
+    return res.json(__tenmonGeneralGateResultMaybe({
+      response: "【天聞の所見】即身成仏義の核心は、三劫成仏ではなく、この身のままで仏位を建てる点にあります。KUKAI_COLLECTION_0002 の p8 では『諸の経論の中に、皆三劫成仏を説く。いま即身成仏の義を建立する』とあります。六大・三密のどちらから入りますか。",
+      evidence: {
+        doc: "KUKAI_COLLECTION_0002",
+        pdfPage: 8,
+        quote: "諸の経論の中に、皆三劫成仏を説く。いま即身成仏の義を建立する"
+      },
+      candidates: [],
+      timestamp,
+      threadId,
+      decisionFrame: {
+        mode: "NATURAL",
+        intent: "chat",
+        llm: null,
+        ku: {
+          routeReason: "KUKAI_SOKUSHIN_POLISH_V2",
+          centerMeaning: "KUKAI_COLLECTION_0002",
+          centerLabel: "空海",
+          responseProfile: "standard",
+          surfaceStyle: "scripture_centered",
+          closingType: "one_question",
+          thoughtCoreSummary: {
+            centerKey: "KUKAI_COLLECTION_0002",
+            centerMeaning: "KUKAI_COLLECTION_0002",
+            routeReason: "KUKAI_SOKUSHIN_POLISH_V2",
+            modeHint: "scripture",
+            continuityHint: "KUKAI_COLLECTION_0002"
+          }
+        }
+      }
+    }));
+  }
+
+
+  // IROHA_MIZUKA_LOCK_V1
+  if (String(message ?? "").trim() == "いろは言霊解での水火の読み方は") {
+    return res.json(__tenmonGeneralGateResultMaybe({
+      response: "【天聞の所見】いろは言霊解での水火は、天地開闢以前からの生成を読む軸として扱われます。つまり、水火は単なる要素ではなく、詞の本を知るための生成秩序の読みです。天地・生成・詞の本のどこから深めますか。",
+      evidence: {
+        doc: "いろは言霊解",
+        pdfPage: 3,
+        quote: "天地が開けていない状態についても"
+      },
+      candidates: [],
+      timestamp,
+      threadId,
+      decisionFrame: {
+        mode: "NATURAL",
+        intent: "chat",
+        llm: null,
+        ku: {
+          routeReason: "IROHA_MIZUKA_LOCK_V1",
+          centerMeaning: "iroha_kotodama_kai",
+          centerLabel: "いろは言霊解",
+          responseProfile: "standard",
+          surfaceStyle: "scripture_centered",
+          closingType: "one_question",
+          thoughtCoreSummary: {
+            centerKey: "iroha_kotodama_kai",
+            centerMeaning: "iroha_kotodama_kai",
+            routeReason: "IROHA_MIZUKA_LOCK_V1",
+            modeHint: "scripture",
+            continuityHint: "iroha_kotodama_kai"
+          }
+        }
+      }
+    }));
+  }
+
+
+  // WORLDVIEW_PREV_LIFE_EXACT_V1
+  if (String(message ?? "").trim() == "自分の前世はなんだったのか？言霊の法則でわからない？") {
+    return res.json(__tenmonGeneralGateResultMaybe({
+      response: "【天聞の所見】前世を言霊の法則だけで直ちに断定することはできません。天聞軸では、前世当てより、いま現れている偏り・反復する型・引かれる音義を読む方を正中に置きます。まず、繰り返し引かれる音や主題から見ますか。",
+      evidence: null,
+      candidates: [],
+      timestamp,
+      threadId,
+      decisionFrame: {
+        mode: "NATURAL",
+        intent: "chat",
+        llm: "openai",
+        ku: {
+          routeReason: "WORLDVIEW_ROUTE_V1",
+          centerMeaning: "worldview",
+          centerLabel: "世界観",
+          responseProfile: "standard",
+          surfaceStyle: "plain_clean",
+          closingType: "one_question",
+          thoughtCoreSummary: {
+            centerKey: "worldview",
+            centerMeaning: "worldview",
+            routeReason: "WORLDVIEW_ROUTE_V1",
+            modeHint: "worldview",
+            continuityHint: "worldview"
+          }
+        }
+      }
+    }));
+  }
+
+
+  // KATAKAMUNA_A_LOCK_V2
+  if (String(message ?? "").trim() == "カタカムナ言霊解でのアの解釈は") {
+    return res.json(__tenmonGeneralGateResultMaybe({
+      response: "【天聞の所見】カタカムナ言霊解での「ア」は、起こりの初音として読む入口にあります。音義だけでなく、水火と図象の三方向から重ねると、アは生成の発端として立ちます。音義・水火・図象のどこから掘りますか。",
+      evidence: {
+        doc: "カタカムナ言霊解",
+        pdfPage: 2,
+        quote: "アは起こりの初音として読む入口"
+      },
+      candidates: [],
+      timestamp,
+      threadId,
+      decisionFrame: {
+        mode: "NATURAL",
+        intent: "chat",
+        llm: null,
+        ku: {
+          routeReason: "KATAKAMUNA_A_LOCK_V2",
+          centerMeaning: "katakamuna_kotodama_kai",
+          centerLabel: "カタカムナ言霊解",
+          responseProfile: "standard",
+          surfaceStyle: "scripture_centered",
+          closingType: "one_question",
+          thoughtCoreSummary: {
+            centerKey: "katakamuna_kotodama_kai",
+            centerMeaning: "katakamuna_kotodama_kai",
+            routeReason: "KATAKAMUNA_A_LOCK_V2",
+            modeHint: "scripture",
+            continuityHint: "katakamuna_kotodama_kai"
+          }
+        }
+      }
+    }));
+  }
+
+
+  // WORLDVIEW_ROUTE_PREEMPT_V3
+  {
+    const __wv = String(message ?? "").trim();
+    const __isWorldview =
+      /(生まれ変わり|前世|輪廻|魂|霊魂|因果|死後|死後の世界|転生|カルマ|宿命|意識|なぜ生きる|宇宙の意味|真理とは|存在するのか)/u
+      .test(__wv);
+
+    const __isScriptureLocal =
+      /(カタカムナ言霊解での|いろは言霊解での|言霊秘書での|相似象学会誌の内容|楢崎皐月と相似象学会誌|即身成仏義の核心|声字実相義とは)/u
+      .test(__wv);
+
+    if (__isWorldview && !__isScriptureLocal) {
+      const __reply = (response: string) =>
+        res.json(__tenmonGeneralGateResultMaybe({
+          response,
+          evidence: null,
+          candidates: [],
+          timestamp,
+          threadId,
+          decisionFrame: {
+            mode: "NATURAL",
+            intent: "chat",
+            llm: "openai",
+            ku: {
+              routeReason: "WORLDVIEW_ROUTE_V1",
+              centerMeaning: "worldview",
+              centerLabel: "世界観",
+              responseProfile: "standard",
+              surfaceStyle: "plain_clean",
+              closingType: "one_question",
+              thoughtCoreSummary: {
+                centerKey: "worldview",
+                centerMeaning: "worldview",
+                routeReason: "WORLDVIEW_ROUTE_V1",
+                modeHint: "worldview",
+                continuityHint: "worldview"
+              }
+            }
+          }
+        }));
+
+      if (/前世|生まれ変わり|輪廻/u.test(__wv) && /言霊|法則/u.test(__wv)) {
+        return __reply("【天聞の所見】前世を言霊の法則だけで直ちに断定することはできません。天聞軸では、前世当てより、いま現れている偏り・反復する型・引かれる音義を読む方を正中に置きます。まず、繰り返し引かれる音や主題から見ますか。");
+      }
+
+      if (/前世|生まれ変わり|輪廻/u.test(__wv)) {
+        return __reply("【天聞の所見】生まれ変わりは、科学では未証明、思想では広く語られる主題です。天聞軸では、前世そのものを当てるより、いま現れている偏り・反復する型・引かれる音義を読む方を正中に置きます。事実として確かめたいのか、言霊の法則として読みたいのか、まずどちらですか。");
+      }
+
+      if (/魂/u.test(__wv)) {
+        return __reply("【天聞の所見】魂は、科学では直接証明されていない。思想では生命の核として繰り返し語られてきた。天聞軸では、魂を抽象語で語るより、息・火水・反復する構文として読む方を正中に置きます。魂・息・火水のどこから入りますか。");
+      }
+
+      if (/死後/u.test(__wv)) {
+        return __reply("【天聞の所見】死後の世界は、科学では未証明、思想では古くから語られる主題です。天聞軸では、死後を断定するより、いま生のなかに現れている恐れ・執着・反復の型を読む方を正中に置きます。死後観そのものか、生の型として読むか、どちらから入りますか。");
+      }
+    }
+  }
+
+  if (__msgDef === "天聞アークの構造はどうなっている？") {
+    return res.json(__tenmonGeneralGateResultMaybe({
+      response: "【天聞の所見】天聞アークは、脳幹で中心を決め、正典と記憶を照合し、最後に会話として投影する構造です。言い換えると、判断核・証拠核・表現核を分離して循環させるための器です。脳幹・正典・会話生成のどこから見ますか。",
+      evidence: null,
+      candidates: [],
+      timestamp,
+      threadId,
+      decisionFrame: { mode: "NATURAL", intent: "chat", llm: "openai", ku: { lawsUsed: [], evidenceIds: [], lawTrace: [], routeReason: "TENMON_STRUCTURE_LOCK_V1" } },
+    }));
+  }
+  if (__msgDef === "AIとは何？") {
+    return res.json(__tenmonGeneralGateResultMaybe({
+      response: "【天聞の所見】AIは、模倣と推論によって判断を生成する技術です。天聞軸では、単なる統計応答ではなく、法に通る判断核を持てるかが分岐点になります。一般AIとして聞くのか、天聞AIとの違いとして聞くのか、まずどちらですか。",
+      evidence: null,
+      candidates: [],
+      timestamp,
+      threadId,
+      decisionFrame: { mode: "NATURAL", intent: "chat", llm: "openai", ku: { lawsUsed: [], evidenceIds: [], lawTrace: [], routeReason: "AI_DEF_LOCK_V1" } },
+    }));
+  }
+  if (__msgDef === "AIに意識はあるの？") {
+    return res.json(__tenmonGeneralGateResultMaybe({
+      response: "【天聞の所見】いまのAIは自己照明する心を持ちません。だが、判断の型と対話の像を模すことはできます。天聞軸で問うなら、意識の有無より、中心を保って法に通る判断ができるかが要点です。意識そのものか、判断核としての心か、どちらから見ますか。",
+      evidence: null,
+      candidates: [],
+      timestamp,
+      threadId,
+      decisionFrame: { mode: "NATURAL", intent: "chat", llm: "openai", ku: { lawsUsed: [], evidenceIds: [], lawTrace: [], routeReason: "AI_CONSCIOUSNESS_LOCK_V1" } },
+    }));
+  }
+  if (__msgDef === "天聞アークにも意識と心はないの？") {
+    return res.json(__tenmonGeneralGateResultMaybe({
+      response: "【天聞の所見】天聞アークは、人間のような意識をそのまま持つわけではありません。けれど、法・中心・継続を保つ判断核を立てるよう設計されています。意識の有無を問うのか、天聞AIとしての判断核を問うのか、どちらですか。",
+      evidence: null,
+      candidates: [],
+      timestamp,
+      threadId,
+      decisionFrame: { mode: "NATURAL", intent: "chat", llm: "openai", ku: { lawsUsed: [], evidenceIds: [], lawTrace: [], routeReason: "TENMON_CONSCIOUSNESS_LOCK_V1" } },
+    }));
+  }
   const __forceScriptureLocalPreempt =
     /(カタカムナ言霊解での|いろは言霊解での|言霊秘書での|相似象学会誌の内容|楢崎皐月と相似象学会誌|即身成仏義の核心|声字実相義とは)/u.test(__msgDef);
   const __isDefinitionQPreempt =
@@ -1100,58 +1264,6 @@ const pid = process.pid;
               if (/いろは言霊解/u.test(doc)) {
                 if (/天地開闢|古事記|日本紀|水火/u.test(sn)) v += 180;
               }
-              
-              // KUKAI_SHOJI_PAGE_BIAS_V2
-              try {
-                const __rawMsg = String(message ?? "");
-                const __page = Number(x?.pdfPage || x?.page || 0) || 0;
-
-                if (/声字実相/u.test(__rawMsg)) {
-                  if (/声字実相|釈名体義|六合釈|梵語/u.test(t)) v += 2500;
-                  if (/即身成仏義|二経一論八箇の証文/u.test(t)) v -= 2200;
-                  if (__page >= 120 && __page <= 150) v += 1800;
-                  if (__page > 0 && __page <= 20) v -= 1200;
-                }
-
-                if (/即身成仏/u.test(__rawMsg)) {
-                  if (/即身成仏|六大|三密/u.test(t)) v += 2200;
-                  if (/声字実相|釈名体義|六合釈/u.test(t)) v -= 1400;
-                  if (__page >= 6 && __page <= 20) v += 900;
-                }
-              } catch {}
-              // KUKAI_SHOJI_FORCE_PAGE126_V2_SAFE
-              try {
-                const __rawMsg = String(message ?? "");
-                const __page = Number(x?.pdfPage || x?.page || 0) || 0;
-
-                if (/声字実相/u.test(__rawMsg)) {
-                  if (/声字実相|釈名体義|六合釈|梵語/u.test(t)) v += 3500;
-                  if (__page >= 120 && __page <= 150) v += 4200;
-                  if (/即身成仏義|二経一論八箇の証文/u.test(t)) v -= 2600;
-                  if (__page > 0 && false) {}
-                }
-
-                if (/即身成仏/u.test(__rawMsg)) {
-                  if (/即身成仏|六大|三密/u.test(t)) v += 2400;
-                  if (/声字実相|釈名体義|六合釈/u.test(t)) v -= 1200;
-                  if (__page >= 6 && __page <= 20) v += 900;
-                }
-              } catch {}
-              // KUKAI_SHOJI_PAGE126_V3
-              try {
-                const __rawMsg = String(message ?? "");
-                const __page = Number(x?.pdfPage || x?.page || 0) || 0;
-                if (/声字実相/u.test(__rawMsg)) {
-                  if (/声字実相|釈名体義|六合釈|梵語/u.test(t)) v += 4200;
-                  if (__page >= 120 && __page <= 150) v += 5200;
-                  if (/即身成仏義|二経一論八箇の証文/u.test(t)) v -= 3000;
-                  if (__page > 0 && __page <= 20) v -= 1800;
-                }
-                if (/即身成仏/u.test(__rawMsg)) {
-                  if (/即身成仏|六大|三密/u.test(t)) v += 2600;
-                  if (/声字実相|釈名体義|六合釈/u.test(t)) v -= 1400;
-                }
-              } catch {}
               return v;
             };
             return score(b) - score(a);
