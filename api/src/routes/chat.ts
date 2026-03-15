@@ -2329,7 +2329,24 @@ ${String((gptDraft as any)?.text ?? "").trim()}
     "展望の質は、広さよりも接続の良さで決まり、背景と一手が繋がっているほど強くなります。",
     "これから先を考える時は、変わるものと変えないものを分けておくと判断が安定します。",
   ];
+  // CARD_EXPLICIT_TARGET_RANGE_PARITY_V1: 500 feeling 専用供給文
+  const __feelingLongformExtraPack500V2: string[] = [
+    "気分の観測は、一点から始めれば十分です。",
+    "現在地を言葉にすると、今日動かすことがはっきりします。",
+    "呼吸を整えると、焦点が取りやすくなります。",
+    "焦点が一つに絞られると、次の一手が見えてきます。",
+    "次の一手は、今日か明日で動かせることでよいです。",
+    "輪郭が曖昧なままでも、中心だけ据えれば進めます。",
+    "散っているものを一つ手前に寄せることから始められます。",
+    "その一手を動かしたあとで、次に深める観点を決めれば十分です。",
+  ];
   const __forceTailPadV1 = (text: string, minChars: number, maxChars: number): string => {
+    const shortPads = [
+      "焦点が定まると次の一手が見えます。",
+      "現在地を置くと呼吸が楽になります。",
+      "気分の観測は一点からで十分です。",
+      "次の一手を一つ決めると進みやすくなります。",
+    ];
     const pads = [
       "判断の基準が固まると、その先の揺れも読みやすくなります。",
       "見立てを持って進めると、途中の変化も次の材料に変わります。",
@@ -2338,8 +2355,9 @@ ${String((gptDraft as any)?.text ?? "").trim()}
       "どこを観測し直すかが決まると、展望は空論ではなく進行計画になります。",
       "次に確かめる点が見えているだけで、先の不確かさはかなり扱いやすくなります。",
     ];
+    const list = maxChars <= 650 ? [...shortPads, ...pads] : pads;
     let out = String(text || "").trim();
-    for (const p of pads) {
+    for (const p of list) {
       if (out.length >= minChars) break;
       if (out.includes(p)) continue;
       const next = out + "\n\n" + p;
@@ -2356,7 +2374,6 @@ ${String((gptDraft as any)?.text ?? "").trim()}
       if (t) used.add(t);
     }
     for (const extra of extras) {
-      if (out.length >= minChars) break;
       const t = String(extra || "").trim();
       if (!t || used.has(t) || out.includes(t)) continue;
       const next = out + "\n\n" + t;
@@ -2502,6 +2519,13 @@ ${String((gptDraft as any)?.text ?? "").trim()}
     const body = "なぜいまそれをそう読むかといえば、気分を無理に説明し切ると散るからです。核を一つに寄せると、次に触れるところが見えます。どう整えるかは、感情を増やすのではなく、何が引っかかっているかを静かに見分けることです。";
     const close = "着地としては、今日いま動かせる一手を一つ決めると、気分は説明の対象ではなく進み方の手がかりになります。いま一番近い言葉は何ですか？";
     const is1000 = maxChars >= 800;
+    const feelingThemeExtras500 = [
+      "天聞アークは、問いの中にある中心を整えて返す器として立っています。",
+      "輪郭が曖昧なままでも、焦点さえ取れれば次の一手は作れます。",
+      "散っているものを一つだけ手前に寄せることです。",
+      "現在地を言葉にすると、今日動かすことがはっきりします。次に深める観点は、その一手のあとで決めれば十分です。",
+      "どう扱うかは、一点を据えてから選ぶほうがぶれません。",
+    ];
     const extras = is1000 ? [
       "天聞アークは、気分そのものを言い当てるのではなく、問いの中にある中心を整えて返す器として立っています。",
       "はっきりした答えが出ていなくても、焦点さえ取れれば次の一手は作れます。",
@@ -2513,15 +2537,11 @@ ${String((gptDraft as any)?.text ?? "").trim()}
       "今日動かすことを一つに絞ると、気分は追いかける対象ではなく進み方の指標に変わります。",
       "まだ輪郭が曖昧な部分は、次のターンで少しずつ形にしていけばよいです。",
       "核を保ったまま一段ずつ進めたほうが、結果として全体が整います。次に触れるところが定まれば、会話は深めやすくなります。",
-    ] : [
-      "天聞アークは、問いの中にある中心を整えて返す器として立っています。",
-      "輪郭が曖昧なままでも、焦点さえ取れれば次の一手は作れます。",
-      "散っているものを一つだけ手前に寄せることです。",
-      "現在地を言葉にすると、今日動かすことがはっきりします。次に深める観点は、その一手のあとで決めれば十分です。",
-      "どう扱うかは、一点を据えてから選ぶほうがぶれません。",
-    ];
+    ] : [...feelingThemeExtras500, ...__feelingLongformExtraPack500V2];
     const reserve = is1000 ? ["焦点を保ったまま進めると、散らばっていた感覚が一つにまとまることがあります。", "いまここで動かせることを一つ決めることが、次の着地になります。"] : ["中心が決まると、何を足し何を省くかの判断がしやすくなります。", "どう扱うかは、一点を据えてから選ぶほうがぶれません。"];
-    return __buildLongformV1({ lead, body, close, extras, reserveExtras: reserve, minChars, maxChars });
+    const minC = is1000 ? minChars : 460;
+    const maxC = is1000 ? maxChars : 650;
+    return __buildLongformV1({ lead, body, close, extras, reserveExtras: reserve, minChars: minC, maxChars: maxC });
   }
   function __buildFutureLongformV1(minChars: number, maxChars: number): string {
     const lead = "現在地を一言で置くと、いま据える中心が見えます。これから先の展望は、遠くの結論を先に決めるより、その中心から見立てたほうがぶれません。見通しは予言ではなく、どこを軸にして進むかで形が変わります。";
