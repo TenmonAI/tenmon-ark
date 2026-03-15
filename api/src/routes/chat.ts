@@ -6890,6 +6890,43 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
         }
       } catch {}
 
+      // CARD_EXPLICIT_CHAR_PRIORITY_FIX_V1: 明示文字数がある場合は feeling/impression より先に explicit char preempt
+      const __explicitCharMatchEarly = t0.match(/(\d+)\s*文字\s*(で(答えて|返して|書いて)?)?/);
+      const __explicitChars = (() => {
+        if (!__explicitCharMatchEarly || !__explicitCharMatchEarly[1]) return null;
+        const n = parseInt(__explicitCharMatchEarly[1], 10);
+        return (n >= 80 && n <= 5000) ? n : null;
+      })();
+      if (__explicitChars != null && !isCmd0 && !hasDoc0 && !askedMenu0) {
+        const __tier = __explicitChars <= 220 ? "short" : __explicitChars <= 450 ? "medium" : "long";
+        const __bodyShort = "指定の文字数で返す前提で受け取りました。いま、何についてその長さで答えますか。テーマを一言で置いてください。";
+        const __bodyMedium = "指定の文字数で返す前提で受け取りました。その長さに合わせて、見立てと一手を返します。いま、どのテーマから始めますか。一点だけ置いてください。そこから、指定字数内で整理して返します。";
+        const __bodyLong = "指定の文字数で返す前提で受け取りました。その長さに合わせて、見立てと根拠・一手までを一続きで返します。いま、どのテーマから掘りますか。中心を一言で置いてください。そこから、指定字数内でまとめて返します。途中で切れても、次のやり取りで継ぎ足せます。";
+        const __body = __explicitChars <= 220 ? __bodyShort : __explicitChars <= 450 ? __bodyMedium : __bodyLong;
+        return res.json(__tenmonGeneralGateResultMaybe({
+          response: __body,
+          evidence: null,
+          candidates: [],
+          timestamp,
+          threadId,
+          decisionFrame: {
+            mode: "NATURAL",
+            intent: "chat",
+            llm: null,
+            ku: {
+              routeReason: "EXPLICIT_CHAR_PREEMPT_V1",
+              answerLength: __tier,
+              answerMode: "analysis",
+              answerFrame: "one_step",
+              explicitLengthRequested: __explicitChars,
+              lawsUsed: [],
+              evidenceIds: [],
+              lawTrace: [],
+            },
+          },
+        }));
+      }
+
       // CARD_FEELING_AND_IMPRESSION_ROUTE_V1: 気分・感想を NATURAL_GENERAL_LLM_TOP に流さず専用 preempt（deterministic）
       try {
         const __t0Feeling = String(t0).trim();
@@ -6952,14 +6989,10 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
       const __isFollowupGeneral =
         RE_THREAD_FOLLOWUP.test(t0) || __isShortContinuation || __isCompareFollowup;
 
-      // CARD_EXPLICIT_LENGTH_AND_FEELING_ROUTE_V1: 明示文字数・気分・continuity 文
-      const __explicitCharMatch = t0.match(/(\d+)\s*文字\s*(で(答えて|返して|書いて)?)?/);
-      const __explicitChars = (() => {
-        if (!__explicitCharMatch || !__explicitCharMatch[1]) return null;
-        const n = parseInt(__explicitCharMatch[1], 10);
-        return (n >= 80 && n <= 5000) ? n : null;
-      })();
+      // CARD_EXPLICIT_LENGTH_AND_FEELING_ROUTE_V1: 気分・continuity 文（__explicitChars は CARD_EXPLICIT_CHAR_PRIORITY_FIX_V1 で先行定義済み）
       const __isFeelingRequest = /今(どんな|の)?気分|今の気持ち|(天聞|アーク)(への)?感想|感想(を)?(聞いて|教えて)/.test(t0);
+      const __isImpressionArk = /(天聞アーク|アーク)(への)?感想|天聞アークをどう思う|アークをどう思う/.test(t0);
+      const __isImpressionTenmon = /(天聞)(への)?感想|天聞をどう思う/.test(t0);
       const __isContinuityAnchor = __threadCenterForGeneral != null && /さっき見ていた中心|(言霊|中心)(を)?土台に/.test(t0);
 
       const __GEN_SYSTEM_CLEAN =
