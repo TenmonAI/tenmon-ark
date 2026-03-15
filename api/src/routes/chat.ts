@@ -2314,76 +2314,68 @@ ${String((gptDraft as any)?.text ?? "").trim()}
   }
   // CARD_LONGFORM_1000_ENFORCE_V2: 1000字 future 専用供給文
   const __futureLongformExtraPack1000V2: string[] = [
-    "展望がはっきりする条件は、現在地と動かせる範囲を分けて読むことです。",
-    "変化の軸を外さないことが、先の流れを具体にする判断の基準になります。",
-    "次に更新すべき観点は、その一手を動かしたあとで決めれば十分です。",
-    "長期の見通しより、今日の中心と一手を決めるほうが展望が現実になります。",
-    "どこを中心に置くかが決まれば、条件と保留にしてよい部分が分かれます。",
-    "見通しは据え直すたびに更新されるので、一気に固めなくてよいです。",
-    "明日か今週、動くことを一つ決めると展望が具体化していきます。",
-    "現在地を一言で置くと、展望が決まる条件が見えやすくなります。",
-    "変化の軸を保ったまま進めると、見通しは更新のたびに具体化します。",
-    "今日か明日で決める一手を一つに絞ると、次に決めることが明確になります。",
-    "判断の基準は、どこから現実に接続するかを見誤らないことです。",
-    "次に更新すべき観点は、その一手を動かしたあとで選べば十分です。",
-    "展望はその後の対話でいくらでも更新できます。",
-    "いま手元にある中心から見通すと、可能性は据えるたびに広がります。",
+    "展望は気分だけで決まらず、どの条件が揃うと流れが変わるかで輪郭が出ます。",
+    "先を読むときは、勢いそのものよりも、何が継続し何が途切れるかを見るほうが外れにくくなります。",
+    "変化の軸を一つに絞ると、広がりすぎた話でも道筋として読み直しやすくなります。",
+    "次に起こることを当てるより、どの兆しが出たら前進と見るかを決めるほうが実務では効きます。",
+    "展望を具体化するには、理想像だけでなく、今の位置と次の更新点を同時に置く必要があります。",
+    "先の見通しは、情報量を増やすことより、判断の基準を固定することで急に明瞭になります。",
+    "動きが大きく見える時期ほど、何を足すかより、何を残すかの判断が質を分けます。",
+    "未来の像は一気に完成するものではなく、節目ごとに見直されながら精度を上げていくものです。",
+    "条件が揃う前に急いで結論を出すとぶれやすいので、途中の観測点を持つことが重要です。",
+    "次の一手が決まると、展望は抽象論ではなく、現実の進行として読めるようになります。",
+    "先を整えるとは、願望を並べることではなく、更新すべき焦点を見失わないことです。",
+    "焦点が一つに定まると、遠い話に見えた展望も、今日から触れられる段階へ下りてきます。",
+    "展望の質は、広さよりも接続の良さで決まり、背景と一手が繋がっているほど強くなります。",
+    "これから先を考える時は、変わるものと変えないものを分けておくと判断が安定します。",
   ];
-  function __forceTailPadV1(text: string, used: Set<string>, minChars: number, maxChars: number): string {
-    const padSentences = [
-      "中心を据え直すたびに道筋は更新されます。",
-      "一手を動かしたあとで視点を決めれば十分です。",
-      "焦点を絞れば道筋は具体になります。",
-      "保留にしてよい部分と足す情報が分かれます。",
-      "次のターンで見通しを更新すればよいです。",
-      "据えたうえで次の一手が決めやすくなります。",
+  const __forceTailPadV1 = (text: string, minChars: number, maxChars: number): string => {
+    const pads = [
+      "判断の基準が固まると、その先の揺れも読みやすくなります。",
+      "見立てを持って進めると、途中の変化も次の材料に変わります。",
+      "更新点を一つずつ確かめるほうが、結果として遠くまで崩れずに進めます。",
+      "話を広げる前に焦点を定めることで、長文でも芯が残りやすくなります。",
+      "どこを観測し直すかが決まると、展望は空論ではなく進行計画になります。",
+      "次に確かめる点が見えているだけで、先の不確かさはかなり扱いやすくなります。",
     ];
-    const normalize = (s: string) => String(s).trim().replace(/\s+/g, " ");
-    let out = String(text).trim();
-    for (const p of padSentences) {
-      if (out.length >= minChars || out.length >= maxChars) break;
-      const n = normalize(p);
-      if (used.has(n)) continue;
-      const candidate = out + "\n\n" + p;
-      if (candidate.length > maxChars) break;
-      out = candidate;
-      used.add(n);
+    let out = String(text || "").trim();
+    for (const p of pads) {
+      if (out.length >= minChars) break;
+      if (out.includes(p)) continue;
+      const next = out + "\n\n" + p;
+      if (next.length > maxChars) break;
+      out = next;
     }
-    return out.trim();
-  }
-  function __expandToTargetRangeV1(base: string, extras: string[], minChars: number, maxChars: number, reserveExtras?: string[]): string {
-    let out = String(base ?? "").trim();
+    return out;
+  };
+  function __expandToTargetRangeV1(base: string, extras: string[], minChars: number, maxChars: number): string {
+    let out = String(base || "").trim();
     const used = new Set<string>();
-    const normalize = (s: string) => String(s).trim().replace(/\s+/g, " ");
-    for (const line of out.split(/\n+/).map((x) => x.trim()).filter(Boolean)) used.add(normalize(line));
+    for (const s of out.split(/\n+/)) {
+      const t = s.trim();
+      if (t) used.add(t);
+    }
     for (const extra of extras) {
-      const e = String(extra ?? "").trim();
-      if (!e) continue;
-      const n = normalize(e);
-      if (used.has(n)) continue;
-      out += "\n\n" + e;
-      used.add(n);
+      if (out.length >= minChars) break;
+      const t = String(extra || "").trim();
+      if (!t || used.has(t) || out.includes(t)) continue;
+      const next = out + "\n\n" + t;
+      if (next.length > maxChars) break;
+      out = next;
+      used.add(t);
     }
-    const reserve = Array.isArray(reserveExtras) ? reserveExtras : [];
-    for (const extra of reserve) {
-      const e = String(extra ?? "").trim();
-      if (!e) continue;
-      const n = normalize(e);
-      if (used.has(n)) continue;
-      out += "\n\n" + e;
-      used.add(n);
+    if (out.length < minChars) {
+      out = __forceTailPadV1(out, minChars, maxChars);
     }
-    if (out.length < minChars) out = __forceTailPadV1(out, used, minChars, maxChars);
-    out = __trimExtraQuestionsV1(out);
-    out = __safeTrimToMaxCharsV1(out, maxChars);
-    return out.trim();
+    out = __trimExtraQuestionsV1(out).trim();
+    if (out.length > maxChars) out = out.slice(0, maxChars).trim();
+    return out;
   }
   function __buildLongformV1(input: { lead: string; body: string; close: string; extras?: string[]; reserveExtras?: string[]; minChars: number; maxChars: number }): string {
     const parts = [input.lead, input.body, input.close].map((x) => String(x ?? "").trim()).filter(Boolean);
     let out = parts.join("\n\n");
-    out = __expandToTargetRangeV1(out, Array.isArray(input.extras) ? input.extras : [], input.minChars, input.maxChars, input.reserveExtras);
-    out = __trimExtraQuestionsV1(out);
-    out = __safeTrimToMaxCharsV1(out, input.maxChars);
+    const allExtras = [...(Array.isArray(input.extras) ? input.extras : []), ...(Array.isArray(input.reserveExtras) ? input.reserveExtras : [])];
+    out = __expandToTargetRangeV1(out, allExtras, input.minChars, input.maxChars);
     return out.trim();
   }
   const __buildFeelingLongform = (minChars: number, maxChars: number): string => {
