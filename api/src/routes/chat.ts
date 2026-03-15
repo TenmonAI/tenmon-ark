@@ -7169,6 +7169,45 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
       const __isImpressionTenmon = /(天聞)(への)?感想|天聞をどう思う/.test(t0);
       const __isContinuityAnchor = __threadCenterForGeneral != null && /さっき見ていた中心|(言霊|中心)(を)?土台に|今の話を(続ける|続けて|見ていきましょう)/.test(t0);
 
+      // CARD_THREADCORE_MIN_V1B_NEXTSTEP_CONTRACT_FIX: 「次は？」系を ThreadCore 優先で短文 preempt（旧前置きを出さない）
+      const __t0TrimNext = String(t0).trim();
+      const __isNextStepShort = /^(次は|次の一手は|次の一歩は|では次は)[？?]?$/u.test(__t0TrimNext) || (__t0TrimNext.length <= 16 && /次(は|の一手|の一歩)/u.test(__t0TrimNext));
+      if ((__threadCore.centerLabel || __threadCore.centerKey) && __isNextStepShort) {
+        const __centerLabelNext = __threadCore.centerLabel || centerLabelFromKey(__threadCore.centerKey) || "この中心";
+        const __bodyNext = __threadCore.centerLabel || __threadCore.centerKey
+          ? "【天聞の所見】" + __centerLabelNext + "で進めるなら、次は法則を見るか背景を見るかを先に決めると進みやすいです。"
+          : "【天聞の所見】次は、いまの中心を一つ保ったまま、見る角度を一つ決めると進みやすいです。";
+        const __coreNext: ThreadCore = { ...__threadCore, lastResponseContract: { answerLength: "short", answerMode: "analysis", answerFrame: "one_step", routeReason: "R22_NEXTSTEP_FOLLOWUP_V1" }, updatedAt: new Date().toISOString() };
+        saveThreadCore(__coreNext).catch(() => {});
+        try { (res as any).__TENMON_THREAD_CORE = __threadCore; } catch {}
+        return res.json(__tenmonGeneralGateResultMaybe({
+          response: __bodyNext,
+          evidence: null,
+          candidates: [],
+          timestamp,
+          threadId,
+          decisionFrame: {
+            mode: "NATURAL",
+            intent: "chat",
+            llm: null,
+            ku: {
+              routeReason: "R22_NEXTSTEP_FOLLOWUP_V1",
+              answerLength: "short",
+              answerMode: "analysis",
+              answerFrame: "one_step",
+              threadCenterKey: __threadCore.centerKey ?? null,
+              threadCenterLabel: __threadCore.centerLabel ?? centerLabelFromKey(__threadCore.centerKey) ?? null,
+              lastAnswerLength: __threadCore.lastResponseContract?.answerLength ?? undefined,
+              lastAnswerMode: __threadCore.lastResponseContract?.answerMode ?? undefined,
+              lastAnswerFrame: __threadCore.lastResponseContract?.answerFrame ?? undefined,
+              lawsUsed: [],
+              evidenceIds: [],
+              lawTrace: [],
+            },
+          },
+        }));
+      }
+
       // CARD_ESSENCE_FOLLOWUP_PREEMPT_V1: threadCenter ありで「要するに/要点/本質」→ 短文返す（continuity 儀式文を出さない）
       if (__threadCenterForGeneral != null && /(要するに|要点は|一言でいうと|本質は|要は)/u.test(t0)) {
         const __ckE = String(__threadCenterForGeneral.center_key || "").trim();
