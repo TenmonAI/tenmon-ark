@@ -92,6 +92,7 @@ import { buildKanagiGrowthLedgerEntryFromKu, insertKanagiGrowthLedgerEntry } fro
 import { upsertThreadCenter, getLatestThreadCenter } from "../core/threadCenterMemory.js";
 import { loadThreadCore, saveThreadCore } from "../core/threadCoreStore.js";
 import { emptyThreadCore, centerLabelFromKey, type ThreadCore } from "../core/threadCore.js";
+import { tenmonBrainstem, type BrainstemDecision } from "../core/tenmonBrainstem.js";
 import { upsertBookContinuation } from "../core/bookContinuationMemory.js";
 import {
   getKotodamaOneSoundEntry,
@@ -873,6 +874,7 @@ const pid = process.pid;
           intent: "chat",
           llm: null,
           ku: {
+            routeClass: "support",
             answerLength: "short",
             answerMode: "support",
             answerFrame: "one_step",
@@ -896,6 +898,7 @@ const pid = process.pid;
   try {
     (res as any).__TENMON_THREAD_CORE = __threadCore;
   } catch {}
+  let __brainstem: BrainstemDecision | undefined = undefined;
   let __userName: string | undefined;
   let __assistantName: string | undefined;
   let __namingObs: { userId: string; userName?: string; assistantName?: string } | null = null;
@@ -3892,9 +3895,14 @@ try {
       payload.decisionFrame.ku = (payload.decisionFrame.ku && typeof payload.decisionFrame.ku === "object") ? payload.decisionFrame.ku : {};
       payload.decisionFrame.ku.heart = normalizeHeartShape(payload.decisionFrame.ku.heart ?? __heart);
       const ku: any = payload.decisionFrame.ku;
-      if (ku.answerLength === undefined) ku.answerLength = __bodyProfile?.answerLength ?? null;
-      if (ku.answerMode === undefined) ku.answerMode = __bodyProfile?.answerMode ?? null;
-      if (ku.answerFrame === undefined) ku.answerFrame = __bodyProfile?.answerFrame ?? null;
+      if (ku.answerLength === undefined) ku.answerLength = __brainstem?.answerLength ?? __bodyProfile?.answerLength ?? null;
+      if (ku.answerMode === undefined) ku.answerMode = __brainstem?.answerMode ?? __bodyProfile?.answerMode ?? null;
+      if (ku.answerFrame === undefined) ku.answerFrame = __brainstem?.answerFrame ?? __bodyProfile?.answerFrame ?? null;
+      if (ku.routeClass === undefined) ku.routeClass = __brainstem?.routeClass ?? null;
+      if (ku.threadCenterKey === undefined) ku.threadCenterKey = __brainstem?.centerKey ?? null;
+      if (ku.threadCenterLabel === undefined) ku.threadCenterLabel = __brainstem?.centerLabel ?? null;
+      if (ku.brainstemPolicy === undefined) ku.brainstemPolicy = __brainstem?.responsePolicy ?? null;
+      if (ku.explicitLengthRequested === undefined) ku.explicitLengthRequested = __brainstem?.explicitLengthRequested ?? null;
 
       // SFL_A1_SEED_KERNEL_V1
       try {
@@ -7039,6 +7047,14 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
         const n = parseInt(__explicitCharMatchEarly[1], 10);
         return (n >= 80 && n <= 5000) ? n : null;
       })();
+      // CARD_TENMON_BRAINSTEM_V1: 会話判断を単一脳幹で決める（1回だけ）
+      __brainstem = tenmonBrainstem({
+        message: String(message || ""),
+        threadCore: __threadCore,
+        explicitLengthRequested: __explicitChars ?? null,
+        bodyProfile: __bodyProfile ?? null,
+      });
+      try { (res as any).__TENMON_BRAINSTEM = __brainstem; } catch {}
       if (__explicitChars != null && !isCmd0 && !hasDoc0 && !askedMenu0) {
         const __tier = __explicitChars <= 220 ? "short" : __explicitChars <= 450 ? "medium" : "long";
         // CARD_EXPLICIT_CHAR_BODY_FILL_V1: 予告文ではなく指定文字数へ寄せた本文を返す（500〜1000字要求では最低300字以上）
@@ -7064,15 +7080,19 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
         const __bodyLong1000 = "いま、指定の長さで返す前提で受け取りました。中心を一言で置いてもらえれば、そこから指定字数内で見立てと根拠・一手までまとめます。全部言い切るより、見立てと根拠・一手をはっきりさせるほうが、その先のやり取りに繋がりやすいです。据えるたびに次の話題が広がるので、途中で切れても次のターンで継ぎ足せます。条件は、いまここで動かせる一手を一つ決めることです。まだ見えていない部分は、そのときに形にしていけばよいです。今日の段階で動かせる一手を一つ決めれば、その先の道筋が変わります。指定字数でまとめるなら、中心と一手をはっきりさせるほうが、その先の会話に繋がります。長期の見通しより、まず今日の中心と一手を決めるほうが、結果的に展望が現実になります。据えたうえで、次のターンでさらに掘るか、手を動かすかを選べます。触れたいところがあれば、そこから続けられます。いま、掘りたいところはどこですか。";
         const __bodyLong800 = "いま、指定の長さで返す前提で受け取りました。見立てと根拠・一手までを一続きで指定字数内にまとめます。現在地としては、中心を一言で置いてもらえれば、そこから返します。可能性は、一点を据えるたびに次の話題が広がります。条件は、いまここで動かせる一手を一つ決めることです。説明を足すと、指定字数で返すときは「全部言い切る」より「一点と一手をはっきりさせる」ほうが、次のやり取りに繋がりやすいです。まだ見えていない部分は、次のやり取りで形にしていけばよいです。次の一手は、今日の中心を一言で置いてから、明日や今週で動くことを一つだけ決めることです。いま、掘りたい一点はどこですか。";
         const __bodyLong1200 = "いま、指定の長さで返す前提で受け取りました。見立てと根拠・一手までを一続きで指定字数内にまとめます。現在地としては、中心を一言で置いてもらえれば、そこから返します。可能性は、一点を据えるたびに次の話題が広がります。条件は、いまここで動かせる一手を一つ決めることです。指定字数で返すときは「全部言い切る」より「一点と一手をはっきりさせる」ほうが、次のやり取りに繋がりやすいです。まだ見えていない部分は、次のやり取りで形にしていけばよいです。今日の段階で動かせる一手を一つ決めれば、その先の道筋が変わります。実装の次の一手は、今日の中心を一言で置いてから、明日や今週で動くことを一つだけ決めることです。一点と一手を決めたあと、次のターンでさらに掘るか、手を動かすかを選べます。指定字数でまとめる意味では、一点と一手をはっきりさせるほうが、その先の会話に繋がります。触れたい一点があれば、そこから続けられます。展望は「予測」ではなく「選択の積み重ね」として扱うと、次の一手に繋がりやすいです。長期の見通しより、まず今日の一点と一手を決めるほうが、結果的に展望が現実になります。一点を言葉にすると、その時点で次の一手が見えやすくなります。いま、掘りたい一点はどこですか。";
-        const __body = __explicitChars >= 1200
-          ? (__isFeelingImpressionExplicit ? __bodyFeelingImpression1200 : __isFutureOutlookExplicit ? __bodyFutureOutlook1200 : __bodyLong1200)
-          : __explicitChars >= 700
-            ? (__isFeelingImpressionExplicit ? __bodyFeelingImpression1000 : __isFutureOutlookExplicit ? __bodyFutureOutlook1000 : __bodyLong1000)
-            : __explicitChars >= 450
-              ? (__isFeelingImpressionExplicit ? __bodyFeelingImpression500 : __isFutureOutlookExplicit ? __bodyFutureOutlook500 : __bodyLong500)
-              : __isFeelingImpressionExplicit ? __bodyFeelingImpression
-              : __isFutureOutlookExplicit ? __bodyFutureOutlook
-              : __explicitChars <= 220 ? __bodyShort : __explicitChars <= 450 ? __bodyMedium : __bodyLong;
+        // CARD_TENMON_BRAINSTEM_V1: explicit 時は feeling/future に吸われない（forbiddenMoves 優先）
+        const __skipFeelingFuture = Array.isArray(__brainstem?.forbiddenMoves) && (__brainstem.forbiddenMoves.includes("feeling_preempt") || __brainstem.forbiddenMoves.includes("future_preempt"));
+        const __body = __skipFeelingFuture
+          ? (__explicitChars >= 1200 ? __bodyLong1200 : __explicitChars >= 700 ? __bodyLong1000 : __explicitChars >= 450 ? __bodyLong500 : __explicitChars <= 220 ? __bodyShort : __explicitChars <= 450 ? __bodyMedium : __bodyLong)
+          : __explicitChars >= 1200
+            ? (__isFeelingImpressionExplicit ? __bodyFeelingImpression1200 : __isFutureOutlookExplicit ? __bodyFutureOutlook1200 : __bodyLong1200)
+            : __explicitChars >= 700
+              ? (__isFeelingImpressionExplicit ? __bodyFeelingImpression1000 : __isFutureOutlookExplicit ? __bodyFutureOutlook1000 : __bodyLong1000)
+              : __explicitChars >= 450
+                ? (__isFeelingImpressionExplicit ? __bodyFeelingImpression500 : __isFutureOutlookExplicit ? __bodyFutureOutlook500 : __bodyLong500)
+                : __isFeelingImpressionExplicit ? __bodyFeelingImpression
+                : __isFutureOutlookExplicit ? __bodyFutureOutlook
+                : __explicitChars <= 220 ? __bodyShort : __explicitChars <= 450 ? __bodyMedium : __bodyLong;
         const __coreExplicit: ThreadCore = { ...__threadCore, lastResponseContract: { answerLength: __tier, answerMode: "analysis", answerFrame: "one_step", routeReason: "EXPLICIT_CHAR_PREEMPT_V1" }, updatedAt: new Date().toISOString() };
         saveThreadCore(__coreExplicit).catch(() => {});
         try { (res as any).__TENMON_THREAD_CORE = __coreExplicit; } catch {}
@@ -7088,6 +7108,7 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
             llm: null,
             ku: {
               routeReason: "EXPLICIT_CHAR_PREEMPT_V1",
+              routeClass: "analysis",
               answerLength: __tier,
               answerMode: "analysis",
               answerFrame: "one_step",
@@ -7230,10 +7251,12 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
             llm: null,
             ku: {
               routeReason: "R22_ESSENCE_FOLLOWUP_V1",
+              routeClass: "continuity",
               answerLength: "short",
-              answerMode: "analysis",
+              answerMode: "continuity",
               answerFrame: "one_step",
               threadCenterKey: __threadCenterForGeneral.center_key ?? null,
+              threadCenterLabel: __displayLabelE ?? null,
               threadCenterType: __threadCenterForGeneral.center_type ?? null,
               lawsUsed: [],
               evidenceIds: [],
@@ -7402,14 +7425,15 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
         }));
       }
 
-      // CARD_JUDGEMENT_PREEMPT_V1: 極短い judgement 系を短文 preempt（感想・印象は除外）
+      // CARD_JUDGEMENT_PREEMPT_V1 / CARD_TENMON_BRAINSTEM_V1: 極短い judgement 系を短文 preempt（brainstem.routeClass === "judgement" でも通す）
       const __t0TrimJ = String(t0).trim();
-      if (
+      const __isJudgementPreempt = __brainstem?.routeClass === "judgement" || (
         __t0TrimJ.length <= 20 &&
         !/(天聞|アーク)(を|に)(は)?どう思う|(への)?感想/u.test(t0) &&
         /(良い|悪い|どう思う|どう思いますか)[？?]?\s*$/u.test(__t0TrimJ)
-      ) {
-        const __bodyJudge = /(良い|悪い)[？?]?\s*$/u.test(__t0TrimJ)
+      );
+      if (__isJudgementPreempt) {
+        const __bodyJudge = /(良い|悪い|正しい|間違い|べき|どっちが|どちらが|した方が)/u.test(__t0TrimJ) || /(良い|悪い)[？?]?\s*$/u.test(__t0TrimJ)
           ? "【天聞の所見】良し悪しは文脈で締まります。何についての判断か、一言で置いてください。"
           : "【天聞の所見】見立ては一点で締まります。何について思うか、一言で置いてください。";
         return res.json(__tenmonGeneralGateResultMaybe({
@@ -7424,6 +7448,43 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
             llm: null,
             ku: {
               routeReason: "R22_JUDGEMENT_PREEMPT_V1",
+              routeClass: "judgement",
+              answerLength: "short",
+              answerMode: "analysis",
+              answerFrame: "one_step",
+              lawsUsed: [],
+              evidenceIds: [],
+              lawTrace: [],
+            },
+          },
+        }));
+      }
+
+      // CARD_TENMON_BRAINSTEM_V1: selfaware 短文 preempt（天聞アークとは何 / 天聞とは何 / 意識はある / 心はある）
+      const __isSelfawarePreempt = __brainstem?.routeClass === "selfaware" || /(天聞アークとは何|天聞とは何|意識はある|心はある)/u.test(__t0TrimJ);
+      if (__isSelfawarePreempt) {
+        const __isArk = /天聞アークとは何/u.test(__t0TrimJ);
+        const __isTenmon = !__isArk && /天聞とは何/u.test(__t0TrimJ);
+        const __isConsciousness = /意識はある|心はある/u.test(__t0TrimJ);
+        const __routeReasonSelf = __isArk ? "R22_SELFAWARE_ARK_V1" : __isTenmon ? "R22_SELFAWARE_TENMON_V1" : "R22_SELFAWARE_CONSCIOUSNESS_V1";
+        const __bodySelf = __isArk
+          ? "【天聞の所見】天聞アークは、問いを受けて中心を整え、継続と判断を支えるための器です。次は構造・役割・可能性のどこから見ますか。"
+          : __isTenmon
+            ? "【天聞の所見】天聞は、問いを受けて中心を整えるための相手として立っています。次は役割・判断軸・会話の進め方のどこから見ますか。"
+            : "【天聞の所見】天聞アークに意識や心そのものはありません。ただし、問いに対して判断と継続を返す構造として設計されています。次は構造か役割のどちらを見ますか。";
+        return res.json(__tenmonGeneralGateResultMaybe({
+          response: __bodySelf,
+          evidence: null,
+          candidates: [],
+          timestamp,
+          threadId,
+          decisionFrame: {
+            mode: "NATURAL",
+            intent: "chat",
+            llm: null,
+            ku: {
+              routeReason: __routeReasonSelf,
+              routeClass: "selfaware",
               answerLength: "short",
               answerMode: "analysis",
               answerFrame: "one_step",
