@@ -1,4 +1,4 @@
-export function enforceTenmonPersona(text: string): string {
+export function enforceTenmonPersona(text: string, options?: { maxLength?: number | null }): string {
 
   if (!text) {
     return "【天聞の所見】まだ言葉が整っていない。いま何を整える？";
@@ -38,9 +38,10 @@ export function enforceTenmonPersona(text: string): string {
     t = "【天聞の所見】\n\n" + t;
   }
 
-  // 長さ制限
-  if (t.length > 350) {
-    t = t.slice(0, 350);
+  // 長さ制限（未指定時は 350）
+  const maxLen = options?.maxLength != null && typeof options.maxLength === "number" ? options.maxLength : 350;
+  if (t.length > maxLen) {
+    t = t.slice(0, maxLen);
   }
 
   return t;

@@ -103,7 +103,7 @@ import {
 import { detectScriptureFamilyFromText, getScriptureFamilyDocs, getScriptureFamilyPrimaryDoc, resolveScriptureFamily } from "../core/scriptureFamily.js";
 import { resolveScriptureLocalEvidence } from "../core/scriptureLocalResolver.js";
 import { resolveIrohaActionPattern } from "../core/irohaActionPatterns.js";
-import { buildResponsePlan } from "../planning/responsePlanCore.js";
+import { buildResponsePlan, type AnswerLength, type AnswerMode, type AnswerFrame, type AnswerProfile } from "../planning/responsePlanCore.js";
 import { safeGeneralRoute } from "./chat_parts/safeGeneralRoute.js";
 import { responseProjector, normalizeDisplayLabel } from "../projection/responseProjector.js";
 
@@ -274,6 +274,43 @@ router.post("/chat", async (req: Request, res: Response<ChatResponseBody>) => {
     ` entropy=${Number((__heart as any).entropy ?? 0).toFixed(2)}`
   );
   setTenmonLastHeart(__heart);
+
+  // CARD_ANSWER_PROFILE_V1: body から answerLength/answerMode/answerFrame を取得し、未指定時は現行互換（追加指示・maxLength 変更なし）
+  const __bodyProfile = (() => {
+    const b: any = (req as any)?.body || {};
+    const rawLength = b.answerLength;
+    const rawMode = b.answerMode;
+    const rawFrame = b.answerFrame;
+    const validLength: AnswerLength | null = ["short", "medium", "long"].includes(rawLength) ? rawLength : null;
+    const validMode: AnswerMode | null = ["support", "define", "analysis", "worldview", "continuity"].includes(rawMode) ? rawMode : null;
+    let validFrame: AnswerFrame | null = ["one_step", "statement_plus_one_question", "d_delta_s_one_step"].includes(rawFrame) ? rawFrame : null;
+    if (validFrame === "d_delta_s_one_step" && validLength !== "long") validFrame = "statement_plus_one_question";
+    let answerLength: AnswerLength | null = validLength;
+    let answerMode: AnswerMode | null = validMode;
+    let answerFrame: AnswerFrame | null = validFrame;
+    if (validMode && (answerLength == null || answerFrame == null)) {
+      if (answerLength == null) {
+        if (validMode === "support" || validMode === "continuity") answerLength = "short";
+        else answerLength = "medium";
+      }
+      if (answerFrame == null) {
+        if (validMode === "support" || validMode === "continuity") answerFrame = "one_step";
+        else answerFrame = "statement_plus_one_question";
+      }
+    }
+    const profile: AnswerProfile = { answerLength: answerLength ?? null, answerMode: answerMode ?? null, answerFrame: answerFrame ?? null };
+    (res as any).__TENMON_ANSWER_PROFILE = profile;
+    return profile;
+  })();
+  const __hasAnswerProfile = __bodyProfile.answerLength != null || __bodyProfile.answerMode != null || __bodyProfile.answerFrame != null;
+
+  /** CARD_ANSWER_PROFILE_V1: ku に answerLength/answerMode/answerFrame を未設定時のみ注入（既存キーは上書きしない） */
+  const injectAnswerProfileToKu = (ku: any, profile: AnswerProfile | null | undefined) => {
+    if (ku == null || typeof ku !== "object") return;
+    if (ku.answerLength === undefined) ku.answerLength = profile?.answerLength ?? null;
+    if (ku.answerMode === undefined) ku.answerMode = profile?.answerMode ?? null;
+    if (ku.answerFrame === undefined) ku.answerFrame = profile?.answerFrame ?? null;
+  };
 
   // CARD6C_HANDLER_RESJSON_WRAP_V7: wrap res.json ONCE per request so ALL paths get top-level rewriteUsed/rewriteDelta defaults
   // (covers direct res.json returns that bypass reply())
@@ -831,6 +868,9 @@ const pid = process.pid;
           intent: "chat",
           llm: null,
           ku: {
+            answerLength: __bodyProfile.answerLength ?? null,
+            answerMode: __bodyProfile.answerMode ?? null,
+            answerFrame: __bodyProfile.answerFrame ?? null,
             routeReason: "KANAGI_CONVERSATION_V1",
             responseProfile: "standard",
             modeHint: "kanagi_static"
@@ -1755,6 +1795,9 @@ ${String((gptDraft as any)?.text ?? "").trim()}
         intent: "khs_dominant",
         llm: null,
         ku: {
+          answerLength: __bodyProfile.answerLength ?? null,
+          answerMode: __bodyProfile.answerMode ?? null,
+          answerFrame: __bodyProfile.answerFrame ?? null,
           routeReason: "TRUTH_GATE_RETURN_V2",
           truthWeight: __truthWeight,
           khsScan: __khsScan,
@@ -2026,12 +2069,16 @@ ${String((gptDraft as any)?.text ?? "").trim()}
     if (payload && (payload.threadId == null || String(payload.threadId).trim() === "")) (payload as any).threadId = threadId;
     if (payload && payload.response != null) payload.response = enforceTenmon(String(payload.response));
     // KHS_SCAN_LAYER_V1: 観測だけ decisionFrame.ku に付与（既存 ku はスプレッドで保持）
+    // CARD_ANSWER_PROFILE_V1: reply() 経由でも ku に answerLength/answerMode/answerFrame を載せる（MK0_MERGE で上書きされないようここで付与）
     try {
       if (payload && payload.decisionFrame) {
         const kuPatch: any = {
           ...(payload.decisionFrame?.ku || {}),
           khsScan: __khsScan,
           truthWeight: __truthWeight,
+          answerLength: __bodyProfile?.answerLength ?? null,
+          answerMode: __bodyProfile?.answerMode ?? null,
+          answerFrame: __bodyProfile?.answerFrame ?? null,
         };
         if (__userName != null && __assistantName != null) {
           kuPatch.userNaming = { userName: __userName, assistantName: __assistantName };
@@ -2287,6 +2334,15 @@ ${String((gptDraft as any)?.text ?? "").trim()}
         const df = (obj as any).decisionFrame;
         if (df && typeof df === "object") {
           df.ku = (df.ku && typeof df.ku === "object") ? df.ku : {};
+          // CARD_ANSWER_PROFILE_V1: ku に answerLength/answerMode/answerFrame を記録
+          try {
+            const __profile = (res as any).__TENMON_ANSWER_PROFILE;
+            if (__profile) {
+              (df.ku as any).answerLength = __profile.answerLength ?? null;
+              (df.ku as any).answerMode = __profile.answerMode ?? null;
+              (df.ku as any).answerFrame = __profile.answerFrame ?? null;
+            }
+          } catch {}
 
           // R9_GROWTH_LEDGER_RAWINPUT_PROPAGATE_V1 / R9_GROWTH_LEDGER_RESJSON_WRAPPER_BIND_V1: top-level と ku に raw input を伝播（obj.rawMessage → obj.message → req.body.input → req.body.message → message）
           try {
@@ -3701,6 +3757,9 @@ try {
       payload.decisionFrame.ku = (payload.decisionFrame.ku && typeof payload.decisionFrame.ku === "object") ? payload.decisionFrame.ku : {};
       payload.decisionFrame.ku.heart = normalizeHeartShape(payload.decisionFrame.ku.heart ?? __heart);
       const ku: any = payload.decisionFrame.ku;
+      if (ku.answerLength === undefined) ku.answerLength = __bodyProfile?.answerLength ?? null;
+      if (ku.answerMode === undefined) ku.answerMode = __bodyProfile?.answerMode ?? null;
+      if (ku.answerFrame === undefined) ku.answerFrame = __bodyProfile?.answerFrame ?? null;
 
       // SFL_A1_SEED_KERNEL_V1
       try {
@@ -4263,6 +4322,7 @@ return res.json(__tenmonGeneralGateResultMaybe({
         semanticBody: outText,
         mode: "greeting",
         responseKind: "statement_plus_question",
+        ...(__hasAnswerProfile && __bodyProfile ? { answerMode: __bodyProfile.answerMode ?? undefined, answerFrame: __bodyProfile.answerFrame ?? undefined } : {}),
       });
 
       return res.json(__tenmonGeneralGateResultMaybe({
@@ -4836,34 +4896,33 @@ return res.json(__tenmonGeneralGateResultMaybe({
           "五十連の音の法則としての言霊を軸に、いろは配列では時間・秩序・成立の側から、水火伝では生成と與合の側から読みます。\n\n" +
           "次は、定義・法則・伝承のどこから掘りますか？";
 
+        const __kuDef1 = {
+          answerLength: __bodyProfile.answerLength ?? null,
+          answerMode: __bodyProfile.answerMode ?? null,
+          answerFrame: __bodyProfile.answerFrame ?? null,
+          routeReason: "DEF_FASTPATH_VERIFIED_V1",
+          centerMeaning: "kotodama",
+          centerKey: "kotodama",
+          centerLabel: "言霊",
+          heart: __heartCov,
+          thoughtGuideSummary: getThoughtGuideSummary("scripture"),
+          notionCanon: getNotionCanonForRoute("TENMON_SCRIPTURE_CANON_V1", __msgCov),
+          personaConstitutionSummary: __persona,
+          thoughtCoreSummary: {
+            centerKey: "kotodama",
+            centerMeaning: "kotodama",
+            routeReason: "DEF_FASTPATH_VERIFIED_V1",
+            modeHint: "define",
+            continuityHint: "kotodama"
+          }
+        };
         return res.json(__tenmonGeneralGateResultMaybe({
           response: __resp,
           evidence: null,
           candidates: [],
           timestamp,
           threadId,
-          decisionFrame: {
-            mode: "NATURAL",
-            intent: "define",
-            llm: null,
-            ku: {
-              routeReason: "DEF_FASTPATH_VERIFIED_V1",
-              centerMeaning: "kotodama",
-              centerKey: "kotodama",
-              centerLabel: "言霊",
-              heart: __heartCov,
-              thoughtGuideSummary: getThoughtGuideSummary("scripture"),
-              notionCanon: getNotionCanonForRoute("TENMON_SCRIPTURE_CANON_V1", __msgCov),
-              personaConstitutionSummary: __persona,
-              thoughtCoreSummary: {
-                centerKey: "kotodama",
-                centerMeaning: "kotodama",
-                routeReason: "DEF_FASTPATH_VERIFIED_V1",
-                modeHint: "define",
-                continuityHint: "kotodama"
-              }
-            }
-          }
+          decisionFrame: { mode: "NATURAL", intent: "define", llm: null, ku: __kuDef1 }
         }));
       }
 
@@ -5001,6 +5060,26 @@ return res.json(__tenmonGeneralGateResultMaybe({
       if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
         const __heartCov = normalizeHeartShape(__heart);
         const __persona = getPersonaConstitutionSummary();
+        const __kuDef2 = {
+          answerLength: __bodyProfile.answerLength ?? null,
+          answerMode: __bodyProfile.answerMode ?? null,
+          answerFrame: __bodyProfile.answerFrame ?? null,
+          routeReason: "DEF_FASTPATH_VERIFIED_V1",
+          centerMeaning: "kotodama",
+          centerKey: "kotodama",
+          centerLabel: "言霊",
+          heart: __heartCov,
+          thoughtGuideSummary: getThoughtGuideSummary("scripture"),
+          notionCanon: getNotionCanonForRoute("TENMON_SCRIPTURE_CANON_V1", __msgCov),
+          personaConstitutionSummary: __persona,
+          thoughtCoreSummary: {
+            centerKey: "kotodama",
+            centerMeaning: "kotodama",
+            routeReason: "DEF_FASTPATH_VERIFIED_V1",
+            modeHint: "define",
+            continuityHint: "kotodama",
+          },
+        };
         return res.json(__tenmonGeneralGateResultMaybe({
           response:
             "言霊とは、天地に鳴り響く五十連の音と、水火を與み解いて詞の本を知る法則です。\n\n" +
@@ -5010,28 +5089,7 @@ return res.json(__tenmonGeneralGateResultMaybe({
           candidates: [],
           timestamp,
           threadId,
-          decisionFrame: {
-            mode: "NATURAL",
-            intent: "define",
-            llm: null,
-            ku: {
-              routeReason: "DEF_FASTPATH_VERIFIED_V1",
-              centerMeaning: "kotodama",
-              centerKey: "kotodama",
-              centerLabel: "言霊",
-              heart: __heartCov,
-              thoughtGuideSummary: getThoughtGuideSummary("scripture"),
-              notionCanon: getNotionCanonForRoute("TENMON_SCRIPTURE_CANON_V1", __msgCov),
-              personaConstitutionSummary: __persona,
-              thoughtCoreSummary: {
-                centerKey: "kotodama",
-                centerMeaning: "kotodama",
-                routeReason: "DEF_FASTPATH_VERIFIED_V1",
-                modeHint: "define",
-                continuityHint: "kotodama",
-              },
-            }
-          }
+          decisionFrame: { mode: "NATURAL", intent: "define", llm: null, ku: __kuDef2 }
         }));
       }
 
@@ -5620,6 +5678,7 @@ return res.json(__tenmonGeneralGateResultMaybe({
               semanticBody: __respCanon,
               mode: "canon",
               responseKind: "statement_plus_question",
+              ...(__hasAnswerProfile && __bodyProfile ? { answerMode: __bodyProfile.answerMode ?? undefined, answerFrame: __bodyProfile.answerFrame ?? undefined } : {}),
             });
             try { console.log("[SYNAPSETOP_BEFORE_RETURN]", { path: "scripture_canon", synapseTop: (__ku as any).synapseTop }); } catch {}
             return res.json(__tenmonGeneralGateResultMaybe({
@@ -6427,6 +6486,9 @@ return res.json(__tenmonGeneralGateResultMaybe({
               });
             } catch {}
             const __kuK = {
+              answerLength: __bodyProfile.answerLength ?? null,
+              answerMode: __bodyProfile.answerMode ?? null,
+              answerFrame: __bodyProfile.answerFrame ?? null,
               routeReason: "DEF_FASTPATH_VERIFIED_V1",
               lawsUsed: [String(hit.lawKey)],
               evidenceIds: [String(hit.quoteHash ?? "")].filter(Boolean),
@@ -6827,11 +6889,27 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
 【天聞の所見】相似象学会誌は楢崎皐月以後の実習と記録の束です。どの号から入りますか。
 【天聞の所見】即身成仏義の核心は、生きたまま仏の境地を実現する点にある。どの一句から掘りますか。`.trim();
 
+      // CARD_ANSWER_PROFILE_V1: 指定時のみ長さ・枠の1文を追加（未指定時は現行互換）
+      const __answerProfileSystemLine = (() => {
+        if (!__hasAnswerProfile || !__bodyProfile) return "";
+        const len = __bodyProfile.answerLength;
+        const frame = __bodyProfile.answerFrame;
+        const parts: string[] = [];
+        if (len === "short") parts.push("80〜180字で返す。");
+        else if (len === "long") parts.push("260〜600字で返す。");
+        else if (len === "medium") parts.push("180〜350字で返す。");
+        if (frame === "one_step") parts.push("質問は0〜1つに抑える。");
+        else if (frame === "d_delta_s_one_step") parts.push("D/ΔS骨格→裁定→一手の流れで返す。");
+        else if (frame === "statement_plus_one_question") parts.push("質問は1つだけ置く。");
+        return parts.length ? parts.join(" ") : "";
+      })();
+      const __GEN_SYSTEM_SUFFIX = __answerProfileSystemLine ? "\n" + __answerProfileSystemLine : "";
+
       let outText = "";
       let outProv = "llm";
       try {
         const llmRes = await llmChat({
-          system: __GEN_SYSTEM_CLEAN + __namingSuffix,
+          system: __GEN_SYSTEM_CLEAN + __GEN_SYSTEM_SUFFIX + __namingSuffix,
           user: t0,
           history: []
         });
@@ -6847,7 +6925,7 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
 
         if (!outText || /受け取っています。?そのまま続けてください[？?]?/.test(outText)) {
           const retryRes = await llmChat({
-            system: __GEN_SYSTEM_CLEAN + "\n次は禁止: 受け取っています。そのまま続けてください。\n必ず内容に触れて一歩進める。",
+            system: __GEN_SYSTEM_CLEAN + __GEN_SYSTEM_SUFFIX + "\n次は禁止: 受け取っています。そのまま続けてください。\n必ず内容に触れて一歩進める。",
             user: t0,
             history: []
           });
@@ -7755,6 +7833,7 @@ const __heartNorm = normalizeHeartShape(__heart);
         semanticBody: finalResp,
         mode: "general",
         responseKind: "statement_plus_question",
+        ...(__hasAnswerProfile && __bodyProfile ? { answerMode: __bodyProfile.answerMode ?? undefined, answerFrame: __bodyProfile.answerFrame ?? undefined } : {}),
       });
       try { console.log("[SYNAPSETOP_BEFORE_RETURN]", { path: "general", synapseTop: (__ku as any).synapseTop }); } catch {}
       return res.json(__tenmonGeneralGateResultMaybe({
@@ -8537,6 +8616,9 @@ if (!outText) {
         } catch {}
 
         const __ku = {
+          answerLength: __bodyProfile.answerLength ?? null,
+          answerMode: __bodyProfile.answerMode ?? null,
+          answerFrame: __bodyProfile.answerFrame ?? null,
           routeReason: "DEF_FASTPATH_VERIFIED_V1",
           lawsUsed: [
             String(__hitV.lawKey),
@@ -9861,7 +9943,10 @@ if (typeof out === "string" && out.trim()) nat.responseText = out.trim();
 
     // 観測円から応答文を生成
     const response = composeConversationalResponse(trace, personaState, sanitized.text);
-    const tenmonResponse = enforceTenmonPersona(response);
+    const __maxLen = __hasAnswerProfile && __bodyProfile?.answerLength
+      ? (__bodyProfile.answerLength === "short" ? 180 : __bodyProfile.answerLength === "long" ? 600 : 350)
+      : undefined;
+    const tenmonResponse = enforceTenmonPersona(response, __maxLen != null ? { maxLength: __maxLen } : undefined);
 
     // 工程3: CorePlan（器）を必ず経由（最小の決定論コンテナ）
     const detailPlan = emptyCorePlan(
