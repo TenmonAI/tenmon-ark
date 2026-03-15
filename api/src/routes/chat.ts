@@ -823,13 +823,13 @@ const pid = process.pid;
       let __response: string;
       if (__supportUiInput) {
         __routeReason = "SUPPORT_UI_INPUT_V1";
-        __response = "【天聞の所見】現在は Enter 送信・Shift+Enter 改行の挙動を確認・修正中です。入力欄の挙動を一度ご確認ください。";
+        __response = "【天聞の所見】Enter で送信、Shift+Enter で改行です。反応しない場合はページを再読み込みするか、別のブラウザで試してください。";
       } else if (__supportAuthAccess) {
         __routeReason = "SUPPORT_AUTH_ACCESS_V1";
-        __response = "【天聞の所見】登録後は login-local から入ります。登録メール・ログイン導線をご確認ください。";
+        __response = "【天聞の所見】登録後はログイン画面から入れます。合言葉の場合はログイン画面の「合言葉」欄、メール登録の場合は届いたメールのリンクから。届かない場合は迷惑フォルダをご確認ください。";
       } else {
         __routeReason = "SUPPORT_PRODUCT_USAGE_V1";
-        __response = "【天聞の所見】まず1つ質問を入れて会話から始めてください。設定や登録は右上の導線から。";
+        __response = "【天聞の所見】この欄に質問を1つ入力して Enter で送信すると会話が始まります。「メニュー」と送ると選択肢が出ます。設定・登録は画面右上のアイコンから。";
       }
       return res.json(__tenmonGeneralGateResultMaybe({
         response: __response,
@@ -6945,12 +6945,15 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
         return parts.length ? parts.join(" ") : "";
       })();
       const __GEN_SYSTEM_SUFFIX = __answerProfileSystemLine ? "\n" + __answerProfileSystemLine : "";
+      // CARD_GENERAL_WORLDVIEW_SHARPEN_V1: 未来・展望系だけ見立て先行を促す
+      const __isFutureOutlook = /(これから|未来|今後|この先|どうなる|どう見ますか|展望|見通し)/.test(t0);
+      const __worldviewSharpenLine = __isFutureOutlook ? "\n未来・展望系の質問には、まず一段の見立てを述べる。汎用の「どう見えますか」返しは避ける。" : "";
 
       let outText = "";
       let outProv = "llm";
       try {
         const llmRes = await llmChat({
-          system: __GEN_SYSTEM_CLEAN + __GEN_SYSTEM_SUFFIX + __namingSuffix,
+          system: __GEN_SYSTEM_CLEAN + __GEN_SYSTEM_SUFFIX + __worldviewSharpenLine + __namingSuffix,
           user: t0,
           history: []
         });
@@ -6966,7 +6969,7 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
 
         if (!outText || /受け取っています。?そのまま続けてください[？?]?/.test(outText)) {
           const retryRes = await llmChat({
-            system: __GEN_SYSTEM_CLEAN + __GEN_SYSTEM_SUFFIX + "\n次は禁止: 受け取っています。そのまま続けてください。\n必ず内容に触れて一歩進める。",
+            system: __GEN_SYSTEM_CLEAN + __GEN_SYSTEM_SUFFIX + __worldviewSharpenLine + "\n次は禁止: 受け取っています。そのまま続けてください。\n必ず内容に触れて一歩進める。",
             user: t0,
             history: []
           });
