@@ -4994,12 +4994,12 @@ return res.json(__tenmonGeneralGateResultMaybe({
         const __resp =
           "言霊とは、天地に鳴り響く五十連の音と、水火を與み解いて詞の本を知る法則です。\n\n" +
           "五十連の音の法則としての言霊を軸に、いろは配列では時間・秩序・成立の側から、水火伝では生成と與合の側から読みます。\n\n" +
-          "次は、定義・法則・伝承のどこから掘りますか？";
+          "まずは定義だけ押さえると、軸がぶれにくくなります。次は法則か背景のどちらを見るかで、理解の深さが変わります。";
 
         const __kuDef1 = {
-          answerLength: __bodyProfile.answerLength ?? null,
-          answerMode: __bodyProfile.answerMode ?? null,
-          answerFrame: __bodyProfile.answerFrame ?? null,
+          answerLength: "medium",
+          answerMode: "define",
+          answerFrame: "statement_plus_one_question",
           routeReason: "DEF_FASTPATH_VERIFIED_V1",
           centerMeaning: "kotodama",
           centerKey: "kotodama",
@@ -5161,9 +5161,9 @@ return res.json(__tenmonGeneralGateResultMaybe({
         const __heartCov = normalizeHeartShape(__heart);
         const __persona = getPersonaConstitutionSummary();
         const __kuDef2 = {
-          answerLength: __bodyProfile.answerLength ?? null,
-          answerMode: __bodyProfile.answerMode ?? null,
-          answerFrame: __bodyProfile.answerFrame ?? null,
+          answerLength: "medium",
+          answerMode: "define",
+          answerFrame: "statement_plus_one_question",
           routeReason: "DEF_FASTPATH_VERIFIED_V1",
           centerMeaning: "kotodama",
           centerKey: "kotodama",
@@ -5184,7 +5184,7 @@ return res.json(__tenmonGeneralGateResultMaybe({
           response:
             "言霊とは、天地に鳴り響く五十連の音と、水火を與み解いて詞の本を知る法則です。\n\n" +
             "五十連の音の法則としての言霊を軸に、いろは配列では時間・秩序・成立の側から、水火伝では生成と與合の側から読みます。\n\n" +
-            "次は、定義・法則・伝承のどこから掘りますか？",
+            "まずは定義だけ押さえると、軸がぶれにくくなります。次は法則か背景のどちらを見るかで、理解の深さが変わります。",
           evidence: null,
           candidates: [],
           timestamp,
@@ -6552,7 +6552,7 @@ return res.json(__tenmonGeneralGateResultMaybe({
               __summary +
               "\n\n【根拠】" + __quoteHead +
               `\n\n出典: ${String(hit.doc ?? "")} P${Number(hit.pdfPage ?? 0)}` +
-              "\n\n定義・法則・伝承のどこを深掘りしますか？";
+              "\n\nまずは定義だけ押さえると、軸がぶれにくくなります。次は法則か背景のどちらを見るかで、理解の深さが変わります。";
             const __composedK = responseComposer({
               response: String(__resp),
               rawMessage: String(message ?? ""),
@@ -6586,9 +6586,9 @@ return res.json(__tenmonGeneralGateResultMaybe({
               });
             } catch {}
             const __kuK = {
-              answerLength: __bodyProfile.answerLength ?? null,
-              answerMode: __bodyProfile.answerMode ?? null,
-              answerFrame: __bodyProfile.answerFrame ?? null,
+              answerLength: "medium",
+              answerMode: "define",
+              answerFrame: "statement_plus_one_question",
               routeReason: "DEF_FASTPATH_VERIFIED_V1",
               lawsUsed: [String(hit.lawKey)],
               evidenceIds: [String(hit.quoteHash ?? "")].filter(Boolean),
@@ -8874,7 +8874,7 @@ if (!outText) {
           "\n\n" +
           "【根拠】" + __quoteHead +
           `\n\n出典: ${String(__hitV.doc ?? "")} P${Number(__hitV.pdfPage ?? 0)}` +
-          "\n\n定義・法則・伝承のどこを深掘りしますか？";
+          "\n\nまずは定義だけ押さえると、軸がぶれにくくなります。次は法則か背景のどちらを見るかで、理解の深さが変わります。";
 
         const __composed = responseComposer({
           response: String(__resp),
@@ -8921,9 +8921,9 @@ if (!outText) {
         } catch {}
 
         const __ku = {
-          answerLength: __bodyProfile.answerLength ?? null,
-          answerMode: __bodyProfile.answerMode ?? null,
-          answerFrame: __bodyProfile.answerFrame ?? null,
+          answerLength: "medium",
+          answerMode: "define",
+          answerFrame: "statement_plus_one_question",
           routeReason: "DEF_FASTPATH_VERIFIED_V1",
           lawsUsed: [
             String(__hitV.lawKey),
