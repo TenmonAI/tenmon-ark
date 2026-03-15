@@ -7204,6 +7204,31 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
       const __continuityAnchorLine = __isContinuityAnchor
         ? "\n直前の中心（center_key）を土台に、冒頭の見立てで触れる。" : "";
 
+      // CARD_NATURAL_GENERAL_SHRINK_V2_FUTURE: future/展望系を LLM に流さず短文 preempt
+      if (__isFutureOutlook) {
+        return res.json(__tenmonGeneralGateResultMaybe({
+          response: "【天聞の所見】未来・展望は、いまの一点から見立てる。いま引っかかっている一点を一言で。",
+          evidence: null,
+          candidates: [],
+          timestamp,
+          threadId,
+          decisionFrame: {
+            mode: "NATURAL",
+            intent: "chat",
+            llm: null,
+            ku: {
+              routeReason: "R22_FUTURE_OUTLOOK_V1",
+              answerLength: "short",
+              answerMode: "analysis",
+              answerFrame: "one_step",
+              lawsUsed: [],
+              evidenceIds: [],
+              lawTrace: [],
+            },
+          },
+        }));
+      }
+
       let outText = "";
       let outProv = "llm";
       try {
