@@ -6932,6 +6932,36 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
         }
       } catch {}
 
+      // CARD_BOOK_MODE_PLACEHOLDER_V1: book mode 入口（本生成本体は未実装、専用 preempt と routeReason のみ）
+      const __isBookModeRequest = /本を書いて|章を書いて|第[一二三四五六七八九十\d]+章を書いて|続きを書いて|この続き|書籍として|長文で章立てして|3000\s*文字で|5000\s*文字で/.test(t0);
+      if (__isBookModeRequest && !isCmd0 && !hasDoc0 && !askedMenu0) {
+        const __targetLengthHint = /5000\s*文字/.test(t0) ? 5000 : /3000\s*文字/.test(t0) ? 3000 : null;
+        const __bodyBook = "長文執筆モードに入る前提で受け取りました。章構成と継続記憶を前提に扱います。まず今回の章題か、書き出しの中心を一つ置いてください。";
+        return res.json(__tenmonGeneralGateResultMaybe({
+          response: __bodyBook,
+          evidence: null,
+          candidates: [],
+          timestamp,
+          threadId,
+          decisionFrame: {
+            mode: "NATURAL",
+            intent: "chat",
+            llm: null,
+            ku: {
+              routeReason: "BOOK_PLACEHOLDER_V1",
+              answerLength: "long",
+              answerMode: "analysis",
+              answerFrame: "one_step",
+              bookModeRequested: true,
+              targetLengthHint: __targetLengthHint,
+              lawsUsed: [],
+              evidenceIds: [],
+              lawTrace: [],
+            },
+          },
+        }));
+      }
+
       // CARD_EXPLICIT_CHAR_PRIORITY_FIX_V1: 明示文字数がある場合は feeling/impression より先に explicit char preempt
       const __explicitCharMatchEarly = t0.match(/(\d+)\s*文字\s*(で(答えて|返して|書いて)?)?/);
       const __explicitChars = (() => {
