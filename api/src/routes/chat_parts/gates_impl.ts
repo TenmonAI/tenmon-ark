@@ -485,6 +485,7 @@ function __surfaceDetoneResponseV1(text: string): string {
 function __tenmonGeneralGateResultMaybe(x: any, rawMessageOverride?: string): any {
   try {
     if (!x || typeof x !== "object") return __applyReleaseThinAtExit(x);
+    const __incomingRouteClass = (x as any)?.decisionFrame?.ku?.routeClass;
     // R9_LEDGER_REAL_INPUT_FREEZE_V1: 実入力を payload と ku に固定（rawMessageOverride / global / payload 優先）
     const fromGlobal = typeof (globalThis as any)[__GATE_RAW_MESSAGE_KEY] === "string" ? (globalThis as any)[__GATE_RAW_MESSAGE_KEY] : "";
     const raw = String(
@@ -1211,7 +1212,45 @@ function __tenmonGeneralGateResultMaybe(x: any, rawMessageOverride?: string): an
           (x as any).response = __surfaceDetoneResponseV1(String((x as any).response || ""));
         }
       } catch {}
-    return __thinReleasePayloadV2(x);
+    if (__incomingRouteClass != null) {
+      const __df = (x as any)?.decisionFrame;
+      if (__df?.ku && typeof __df.ku === "object") (__df.ku as any).routeClass = __incomingRouteClass;
+    }
+    // CARD_DECISIONFRAME_ROUTECLASS_EXIT_TRACE_V1: 入口で拾った routeClass を出口で保持
+    
+      // CARD_DEFINE_ROUTECLASS_EXIT_FIX_V1:
+      // incoming routeClass が無い/落ちた場合でも、最終出口で routeReason から最小フォールバック復元する
+      try {
+        const __df: any = (x as any)?.decisionFrame;
+        if (__df && typeof __df === "object") {
+          if (!__df.ku || typeof __df.ku !== "object" || Array.isArray(__df.ku)) __df.ku = {};
+          const __ku: any = __df.ku;
+          const __rr = String(__ku.routeReason || (x as any)?.routeReason || "").trim();
+          const __rc = String(__ku.routeClass || "").trim();
+
+          if (!__rc) {
+            let __fallback: string | null = null;
+
+            if (__rr.startsWith("DEF_") || __rr === "SOUL_FASTPATH_VERIFIED_V1" || __rr === "KATAKAMUNA_FASTPATH_CANON_V1") {
+              __fallback = "define";
+            } else if (__rr === "EXPLICIT_CHAR_PREEMPT_V1") {
+              __fallback = "analysis";
+            } else if (__rr.startsWith("SUPPORT_")) {
+              __fallback = "support";
+            } else if (__rr.includes("SELFAWARE")) {
+              __fallback = "selfaware";
+            } else if (__rr.includes("JUDGEMENT")) {
+              __fallback = "judgement";
+            } else if (__rr.includes("CONTINUITY") || __rr.includes("FOLLOWUP")) {
+              __fallback = "continuity";
+            }
+
+            if (__fallback) __ku.routeClass = __fallback;
+          }
+        }
+      } catch {}
+
+return __thinReleasePayloadV2(x);
   } catch { return __thinReleasePayloadV2(x); }
 
     try {
