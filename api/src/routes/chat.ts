@@ -7158,6 +7158,72 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
         }));
       }
 
+      // CARD_JUDGEMENT_COMPARE_ROUTE_V1_COMPARE_FOLLOWUP: threadCenter ありの compare を短文 preempt（言霊秘書2音 grounded は従来優先）
+      if (__threadCenterForGeneral != null && /(違いは|どう違う|何が違う)/u.test(t0)) {
+        const __ckCmp = String(__threadCenterForGeneral.center_key || "").trim();
+        const __isKotodamaHishoCmp = /kotodama_hisho|言霊秘書/i.test(__ckCmp);
+        if (__isKotodamaHishoCmp) {
+          try {
+            const __histCmp = memoryReadSession(String(threadId || ""), 8) || [];
+            const __twoSoundsCmp = getLastTwoKotodamaSoundsFromHistory(__histCmp);
+            if (__twoSoundsCmp && __twoSoundsCmp.length >= 2) {
+              const __cmpBodyCmp = buildKotodamaCompareResponse(__twoSoundsCmp[0], __twoSoundsCmp[1]);
+              if (__cmpBodyCmp) {
+                return res.json(__tenmonGeneralGateResultMaybe({
+                  response: __cmpBodyCmp,
+                  evidence: null,
+                  candidates: [],
+                  timestamp,
+                  threadId,
+                  decisionFrame: {
+                    mode: "NATURAL",
+                    intent: "chat",
+                    llm: null,
+                    ku: {
+                      routeReason: "R22_COMPARE_FOLLOWUP_V1",
+                      answerLength: "short",
+                      answerMode: "analysis",
+                      answerFrame: "one_step",
+                      threadCenterKey: __threadCenterForGeneral.center_key ?? null,
+                      threadCenterType: __threadCenterForGeneral.center_type ?? null,
+                      lawsUsed: [],
+                      evidenceIds: [],
+                      lawTrace: [],
+                    },
+                  },
+                }));
+              }
+            }
+          } catch {}
+        }
+        const __bodyCmpPreempt = __ckCmp === "kotodama" || __isKotodamaHishoCmp
+          ? "【天聞の所見】言霊で比べるなら、違いは読む軸で見えてきます。比べたい二つを一言ずつ置いてください。"
+          : "【天聞の所見】この中心で比べるなら、まず軸を一つに絞ると違いが見えます。比べたい二つを一言ずつ置いてください。";
+        return res.json(__tenmonGeneralGateResultMaybe({
+          response: __bodyCmpPreempt,
+          evidence: null,
+          candidates: [],
+          timestamp,
+          threadId,
+          decisionFrame: {
+            mode: "NATURAL",
+            intent: "chat",
+            llm: null,
+            ku: {
+              routeReason: "R22_COMPARE_FOLLOWUP_V1",
+              answerLength: "short",
+              answerMode: "analysis",
+              answerFrame: "one_step",
+              threadCenterKey: __threadCenterForGeneral.center_key ?? null,
+              threadCenterType: __threadCenterForGeneral.center_type ?? null,
+              lawsUsed: [],
+              evidenceIds: [],
+              lawTrace: [],
+            },
+          },
+        }));
+      }
+
       // CARD_CONTINUITY_ANCHOR_PREEMPT_V1: continuity 表現を NATURAL_GENERAL の LLM に流さず、冒頭見立てで返す（儀式文禁止・気分/next-step で分岐）
       if (__isContinuityAnchor && __threadCenterForGeneral != null) {
         const __ckCont = String(__threadCenterForGeneral.center_key || "").trim();
