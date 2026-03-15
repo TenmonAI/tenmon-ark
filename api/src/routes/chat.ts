@@ -7309,6 +7309,39 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
         }));
       }
 
+      // CARD_JUDGEMENT_PREEMPT_V1: 極短い judgement 系を短文 preempt（感想・印象は除外）
+      const __t0TrimJ = String(t0).trim();
+      if (
+        __t0TrimJ.length <= 20 &&
+        !/(天聞|アーク)(を|に)(は)?どう思う|(への)?感想/u.test(t0) &&
+        /(良い|悪い|どう思う|どう思いますか)[？?]?\s*$/u.test(__t0TrimJ)
+      ) {
+        const __bodyJudge = /(良い|悪い)[？?]?\s*$/u.test(__t0TrimJ)
+          ? "【天聞の所見】良し悪しは文脈で締まります。何についての判断か、一言で置いてください。"
+          : "【天聞の所見】見立ては一点で締まります。何について思うか、一言で置いてください。";
+        return res.json(__tenmonGeneralGateResultMaybe({
+          response: __bodyJudge,
+          evidence: null,
+          candidates: [],
+          timestamp,
+          threadId,
+          decisionFrame: {
+            mode: "NATURAL",
+            intent: "chat",
+            llm: null,
+            ku: {
+              routeReason: "R22_JUDGEMENT_PREEMPT_V1",
+              answerLength: "short",
+              answerMode: "analysis",
+              answerFrame: "one_step",
+              lawsUsed: [],
+              evidenceIds: [],
+              lawTrace: [],
+            },
+          },
+        }));
+      }
+
       const __GEN_SYSTEM_CLEAN =
 `あなたは天聞アークです。
 必ず「【天聞の所見】」で始める。
