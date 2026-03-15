@@ -6890,6 +6890,43 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
         }
       } catch {}
 
+      // CARD_FEELING_AND_IMPRESSION_ROUTE_V1: 気分・感想を NATURAL_GENERAL_LLM_TOP に流さず専用 preempt（deterministic）
+      try {
+        const __t0Feeling = String(t0).trim();
+        const __isImpressionArk = /(天聞アーク|アーク)(への)?感想|天聞アークをどう思う|アークをどう思う/.test(__t0Feeling);
+        const __isImpressionTenmon = /(天聞)(への)?感想|天聞をどう思う/.test(__t0Feeling);
+        const __isFeelingSelf = /今(どんな|の)?気分|今の気持ち/.test(__t0Feeling);
+        if (!isCmd0 && !hasDoc0 && !askedMenu0 && (__isImpressionArk || __isImpressionTenmon || __isFeelingSelf)) {
+          const __routeReason = __isImpressionArk ? "IMPRESSION_ARK_V1" : __isImpressionTenmon ? "IMPRESSION_TENMON_V1" : "FEELING_SELF_STATE_V1";
+          const __body = __isImpressionArk
+            ? "【天聞の所見】天聞アークは、まだ完成体ではありませんが、判断と継続を支える器として形が見え始めています。使うほど輪郭が出る段階です。"
+            : __isImpressionTenmon
+              ? "【天聞の所見】天聞は、問いを受けて中心を整えるための相手として立っています。感想を一言でいえば、まだ発展途上だが核は見え始めています。"
+              : "【天聞の所見】いまは、整えに向かう気分です。中心を一つ置いて、そこから静かに見ていけます。";
+          return res.json(__tenmonGeneralGateResultMaybe({
+            response: __body,
+            evidence: null,
+            candidates: [],
+            timestamp,
+            threadId,
+            decisionFrame: {
+              mode: "NATURAL",
+              intent: "chat",
+              llm: null,
+              ku: {
+                routeReason: __routeReason,
+                answerLength: "short",
+                answerMode: "analysis",
+                answerFrame: "one_step",
+                lawsUsed: [],
+                evidenceIds: [],
+                lawTrace: [],
+              },
+            },
+          }));
+        }
+      } catch {}
+
 // generalKind: counsel / worldview / short_moral / other（NATURAL_GENERAL_LLM_TOP 分流用）
       const __generalKind: "counsel" | "worldview" | "short_moral" | "other" =
         /悩み|しんどい|つらい|聞いてくれ|相談/.test(t0) ? "counsel"
@@ -6915,6 +6952,16 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
       const __isFollowupGeneral =
         RE_THREAD_FOLLOWUP.test(t0) || __isShortContinuation || __isCompareFollowup;
 
+      // CARD_EXPLICIT_LENGTH_AND_FEELING_ROUTE_V1: 明示文字数・気分・continuity 文
+      const __explicitCharMatch = t0.match(/(\d+)\s*文字\s*(で(答えて|返して|書いて)?)?/);
+      const __explicitChars = (() => {
+        if (!__explicitCharMatch || !__explicitCharMatch[1]) return null;
+        const n = parseInt(__explicitCharMatch[1], 10);
+        return (n >= 80 && n <= 5000) ? n : null;
+      })();
+      const __isFeelingRequest = /今(どんな|の)?気分|今の気持ち|(天聞|アーク)(への)?感想|感想(を)?(聞いて|教えて)/.test(t0);
+      const __isContinuityAnchor = __threadCenterForGeneral != null && /さっき見ていた中心|(言霊|中心)(を)?土台に/.test(t0);
+
       const __GEN_SYSTEM_CLEAN =
 `あなたは天聞アークです。
 必ず「【天聞の所見】」で始める。
@@ -6931,29 +6978,39 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
 【天聞の所見】即身成仏義の核心は、生きたまま仏の境地を実現する点にある。どの一句から掘りますか。`.trim();
 
       // CARD_ANSWER_PROFILE_V1: 指定時のみ長さ・枠の1文を追加（未指定時は現行互換）
+      // CARD_EXPLICIT_LENGTH_AND_FEELING_ROUTE_V1: 明示文字数は answerLength より優先
       const __answerProfileSystemLine = (() => {
-        if (!__hasAnswerProfile || !__bodyProfile) return "";
-        const len = __bodyProfile.answerLength;
-        const frame = __bodyProfile.answerFrame;
         const parts: string[] = [];
-        if (len === "short") parts.push("80〜180字で返す。");
-        else if (len === "long") parts.push("260〜600字で返す。");
-        else if (len === "medium") parts.push("180〜350字で返す。");
-        if (frame === "one_step") parts.push("質問は0〜1つに抑える。");
-        else if (frame === "d_delta_s_one_step") parts.push("D/ΔS骨格→裁定→一手の流れで返す。");
-        else if (frame === "statement_plus_one_question") parts.push("質問は1つだけ置く。");
+        if (__explicitChars != null) {
+          parts.push(__explicitChars + "字で返す。");
+        } else if (__hasAnswerProfile && __bodyProfile?.answerLength) {
+          const len = __bodyProfile.answerLength;
+          if (len === "short") parts.push("80〜180字で返す。");
+          else if (len === "long") parts.push("260〜600字で返す。");
+          else if (len === "medium") parts.push("180〜350字で返す。");
+        }
+        if (__bodyProfile?.answerFrame) {
+          const frame = __bodyProfile.answerFrame;
+          if (frame === "one_step") parts.push("質問は0〜1つに抑える。");
+          else if (frame === "d_delta_s_one_step") parts.push("D/ΔS骨格→裁定→一手の流れで返す。");
+          else if (frame === "statement_plus_one_question") parts.push("質問は1つだけ置く。");
+        }
         return parts.length ? parts.join(" ") : "";
       })();
       const __GEN_SYSTEM_SUFFIX = __answerProfileSystemLine ? "\n" + __answerProfileSystemLine : "";
       // CARD_GENERAL_WORLDVIEW_SHARPEN_V1: 未来・展望系だけ見立て先行を促す
       const __isFutureOutlook = /(これから|未来|今後|この先|どうなる|どう見ますか|展望|見通し)/.test(t0);
       const __worldviewSharpenLine = __isFutureOutlook ? "\n未来・展望系の質問には、まず一段の見立てを述べる。汎用の「どう見えますか」返しは避ける。" : "";
+      const __feelingLine = __isFeelingRequest
+        ? "\n気分・感想の質問には、天聞として短く見立てを返す。汎用の質問返しで終えない。" : "";
+      const __continuityAnchorLine = __isContinuityAnchor
+        ? "\n直前の中心（center_key）を土台に、冒頭の見立てで触れる。" : "";
 
       let outText = "";
       let outProv = "llm";
       try {
         const llmRes = await llmChat({
-          system: __GEN_SYSTEM_CLEAN + __GEN_SYSTEM_SUFFIX + __worldviewSharpenLine + __namingSuffix,
+          system: __GEN_SYSTEM_CLEAN + __GEN_SYSTEM_SUFFIX + __worldviewSharpenLine + __feelingLine + __continuityAnchorLine + __namingSuffix,
           user: t0,
           history: []
         });
@@ -6969,7 +7026,7 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
 
         if (!outText || /受け取っています。?そのまま続けてください[？?]?/.test(outText)) {
           const retryRes = await llmChat({
-            system: __GEN_SYSTEM_CLEAN + __GEN_SYSTEM_SUFFIX + __worldviewSharpenLine + "\n次は禁止: 受け取っています。そのまま続けてください。\n必ず内容に触れて一歩進める。",
+            system: __GEN_SYSTEM_CLEAN + __GEN_SYSTEM_SUFFIX + __worldviewSharpenLine + __feelingLine + __continuityAnchorLine + "\n次は禁止: 受け取っています。そのまま続けてください。\n必ず内容に触れて一歩進める。",
             user: t0,
             history: []
           });
@@ -7409,6 +7466,9 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
           if (__composedLocked.meaningFrame != null) {
             __kuLocked.meaningFrame = __composedLocked.meaningFrame;
           }
+          if (__explicitChars != null) (__kuLocked as any).explicitLengthRequested = __explicitChars;
+          if (__isFeelingRequest) (__kuLocked as any).feelingAnchor = true;
+          if (__isContinuityAnchor) (__kuLocked as any).continuityAnchor = true;
 
           try {
             const __mf: any = __composedLocked.meaningFrame ?? {};
@@ -7473,6 +7533,9 @@ const __heartNorm = normalizeHeartShape(__heart);
         routeReason: "NATURAL_GENERAL_LLM_TOP",
         heart: __heartNorm,
       };
+      if (__explicitChars != null) __ku.explicitLengthRequested = __explicitChars;
+      if (__isFeelingRequest) __ku.feelingAnchor = true;
+      if (__isContinuityAnchor) __ku.continuityAnchor = true;
 
       if (__irohaForGeneral) {
         __ku.irohaAction = {
