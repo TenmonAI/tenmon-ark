@@ -2474,21 +2474,104 @@ ${String((gptDraft as any)?.text ?? "").trim()}
     const reserve = is1000 ? reserve1000 : reserve500;
     return __buildLongformV1({ lead, body, close, extras, reserveExtras: reserve, minChars, maxChars });
   };
-  const __bodyFeelingImpressionL = __buildFeelingLongform(320, 520);
-  const __bodyFutureOutlookL = __buildFutureLongform(320, 520);
-  const __bodyLongL = __buildGenericLongform(320, 520);
-  const __bodyFeelingImpression500L = __buildFeelingLongform(400, 650);
-  const __bodyFutureOutlook500L = __buildFutureLongform(400, 650);
-  const __bodyLong500L = __buildGenericLongform(400, 650);
-  const __bodyFeelingImpression1000L = __buildFeelingLongform(800, 1200);
-  const __bodyFutureOutlook1000L = __buildFutureLongform(800, 1200);
-  const __bodyLong1000L = __buildGenericLongform(800, 1200);
-  const __bodyFeelingImpression800L = __buildFeelingLongform(700, 950);
-  const __bodyFutureOutlook800L = __buildFutureLongform(700, 950);
-  const __bodyLong800L = __buildGenericLongform(700, 950);
-  const __bodyFeelingImpression1200L = __buildFeelingLongform(950, 1200);
-  const __bodyFutureOutlook1200L = __buildFutureLongform(950, 1200);
-  const __bodyLong1200L = __buildGenericLongform(950, 1200);
+
+  // CARD_LONGFORM_THEME_SPLIT_V1: feeling / future / generic で見立て・展開・着地を分離
+  function __buildFeelingLongformV1(minChars: number, maxChars: number): string {
+    const lead = "いまの状態は、問いを向けている時点で、すでに何か一点が触れている中心になっています。その中心がまだ言葉になっていなくても、立ち上がり方から読めます。";
+    const body = "なぜいまそれをそう読むかといえば、気分を無理に説明し切ると散るからです。核を一つに寄せると、次に触れるところが見えます。どう整えるかは、感情を増やすのではなく、何が引っかかっているかを静かに見分けることです。";
+    const close = "着地としては、今日いま動かせる一手を一つ決めると、気分は説明の対象ではなく進み方の手がかりになります。いま一番近い言葉は何ですか？";
+    const is1000 = maxChars >= 800;
+    const extras = is1000 ? [
+      "天聞アークは、気分そのものを言い当てるのではなく、問いの中にある中心を整えて返す器として立っています。",
+      "はっきりした答えが出ていなくても、焦点さえ取れれば次の一手は作れます。",
+      "散っているものを一つだけ手前に寄せることです。その言葉から次にどこへ触れるかが定まります。",
+      "現在地を言葉にすると、今日動かすことがはっきりします。次に深める観点は、その一手を動かしたあとで決めれば十分です。",
+      "どう扱うかは、一点を据えてから選ぶほうがぶれません。中心が決まると、何を足し何を省くかがしやすくなります。",
+      "いま一番引っかかっているのは、方向が見えないことか動けないことかのどちらかに寄っていることが多いです。",
+      "その手がかりを一言にすると、次のやり取りでどこを掘るかが自然に決まります。",
+      "今日動かすことを一つに絞ると、気分は追いかける対象ではなく進み方の指標に変わります。",
+      "まだ輪郭が曖昧な部分は、次のターンで少しずつ形にしていけばよいです。",
+      "核を保ったまま一段ずつ進めたほうが、結果として全体が整います。次に触れるところが定まれば、会話は深めやすくなります。",
+    ] : [
+      "天聞アークは、問いの中にある中心を整えて返す器として立っています。",
+      "輪郭が曖昧なままでも、焦点さえ取れれば次の一手は作れます。",
+      "散っているものを一つだけ手前に寄せることです。",
+      "現在地を言葉にすると、今日動かすことがはっきりします。次に深める観点は、その一手のあとで決めれば十分です。",
+      "どう扱うかは、一点を据えてから選ぶほうがぶれません。",
+    ];
+    const reserve = is1000 ? ["焦点を保ったまま進めると、散らばっていた感覚が一つにまとまることがあります。", "いまここで動かせることを一つ決めることが、次の着地になります。"] : ["中心が決まると、何を足し何を省くかの判断がしやすくなります。", "どう扱うかは、一点を据えてから選ぶほうがぶれません。"];
+    return __buildLongformV1({ lead, body, close, extras, reserveExtras: reserve, minChars, maxChars });
+  }
+  function __buildFutureLongformV1(minChars: number, maxChars: number): string {
+    const lead = "現在地を一言で置くと、いま据える中心が見えます。これから先の展望は、遠くの結論を先に決めるより、その中心から見立てたほうがぶれません。見通しは予言ではなく、どこを軸にして進むかで形が変わります。";
+    const body = "展望が決まる条件は、現在地・条件・動かせる範囲を分けて読むことです。変化の軸を見失わないことが、先の流れを具体にします。何が先に決まるべきかといえば、どこから現実に接続するかです。未来は一気に開くものではなく、中心を据え直すたびに更新されるものです。";
+    const close = "次に決める一手は、今日か今週の単位で動けることを一つ決めることです。次ターンで更新する観点は、その一手を動かしたあとで見えれば十分です。展望はその後の対話でいくらでも更新できます。いま一番軸にしたいのは何ですか？";
+    const is1000 = maxChars >= 800;
+    const extras = is1000 ? [
+      "長期の見通しを急いで固めるより、まず中心を一つ定めたほうが、結果として遠くまで見通せます。",
+      "いま曖昧なのは失敗ではなく、まだ焦点が広いだけです。焦点を絞れば、道筋は具体になります。",
+      "展望を持つとは、未来を断言することではなく、変化の軸を見失わないことです。",
+      "どこを中心に置くかが決まれば、次に足すべき情報と、まだ保留にしてよい部分が自然に分かれます。",
+      "現在地を一言で置くと、条件と動かせる範囲が見えやすくなります。今日の一手を一つ決めると、次ターンで更新すべき視点がはっきりします。",
+      "変化の軸を外さないことが、展望を具体化するうえでいちばん効きます。",
+      "いま手元にある中心から見通すと、可能性は据えるたびに広がり、見通しは決めるごとに更新されていきます。",
+      "未来を一般論で終わらせず、いまここで動かせる一手とセットにすると展望が具体になります。",
+      "今日の段階でどこを中心に据えるかを一つ決めることが、その先の道筋を変えます。",
+      "明日か今週、動くことを一つ決めると展望が具体化していきます。据えたうえで、次のターンで見通しを更新すればよいです。",
+      "次ターンで更新すべき視点は、その一手を動かしたあとで決めれば十分です。",
+      "長期の見通しより、まず今日の中心と一手を決めるほうが、結果的に展望が現実になります。",
+    ] : [
+      "長期の見通しを急いで固めるより、まず中心を一つ定めたほうが、遠くまで見通せます。",
+      "いま曖昧なのは、まだ焦点が広いだけです。焦点を絞れば、道筋は具体になります。",
+      "展望を持つとは、変化の軸を見失わないことです。",
+      "どこを中心に置くかが決まれば、次に足すべき情報と保留にしてよい部分が分かれます。",
+      "現在地を一言で置くと、条件と動かせる範囲が見えやすくなります。今日の一手を一つ決めると、次ターンで更新すべき視点がはっきりします。",
+    ];
+    const reserve = is1000 ? ["まだ見えていない部分は、次のやり取りで形にしていけばよいです。", "いま一番見たいところを一言で置くと、次の一手が決めやすくなります。"] : ["変化の軸を外さないことが、展望を具体化するうえでいちばん効きます。", "明日か今週、動くことを一つ決めると展望が具体化していきます。"];
+    return __buildLongformV1({ lead, body, close, extras, reserveExtras: reserve, minChars, maxChars });
+  }
+  function __buildGenericLongformV1(minChars: number, maxChars: number): string {
+    const lead = "中心を一つに寄せてから見立てることです。指定文字数で返す場合も、核を保ったまま展開したほうが読みやすくなります。";
+    const body = "核を保つ意味は、曖昧なまま長くすると説明は増えても手がかりが薄くなるからです。逆に、どこが核かを先に定めておくと、理由・背景・次に動くことがつながります。長文化の条件は、全部を言い切ることではなく、読み手が次にどこへ進めばよいかが分かることです。";
+    const close = "着地としては、今日の段階で動かせることを一つ残すのがちょうどよいです。次に進める一点を、必要なら次の往復でさらに深められます。いま中心に据えたいのは何ですか？";
+    const is1000 = maxChars >= 800;
+    const extras = is1000 ? [
+      "指定字数は、見立てと展開をきちんと通すための器として使うほうがよいです。",
+      "一度に全部を片づけるより、焦点を保ったまま一段ずつ進めたほうが、全体が整います。",
+      "むしろ残っているからこそ、次の対話で更新できます。中心が決まると、何を足し何を省くかがしやすくなります。",
+      "今日動かすことを一つ決めると、次に触れるところがはっきりします。核を保ったまま進めると、同義反復を抑えられます。",
+      "次に深める観点は、その一手を動かしたあとで決めれば十分です。手がかりが一つに絞られると、道筋が見えやすくなります。",
+      "見立てと根拠・一手をはっきりさせるほうが、その先の会話に繋がります。",
+      "据えるたびに次の話題が広がるので、途中で切れても次のターンで継ぎ足せます。",
+      "いまここで動かせる一手を一つ決めることが、条件になります。",
+      "そのときに形にしていけばよいです。今日か明日、動かせることを一つ決めると道筋が変わります。",
+      "触れたいところがあれば、そこから続けられます。掘りたいところを一言で置くと、指定字数内でまとめやすくなります。",
+    ] : [
+      "指定字数は、見立てと展開を通すための器として使うほうがよいです。",
+      "焦点を保ったまま一段ずつ進めたほうが、全体が整います。",
+      "むしろ残っているからこそ、次の対話で更新できます。",
+      "中心が決まると、何を足し何を省くかがしやすくなります。今日動かすことを一つ決めると、次に触れるところがはっきりします。",
+      "核を保ったまま進めると、同義反復を抑えられます。",
+    ];
+    const reserve = is1000 ? ["焦点を保ったまま一段ずつ進めたほうが、全体が整います。", "いま中心に据えたいことを一言で置いてください。"] : ["次に深める観点は、その一手を動かしたあとで決めれば十分です。", "手がかりが一つに絞られると、道筋が見えやすくなります。"];
+    return __buildLongformV1({ lead, body, close, extras, reserveExtras: reserve, minChars, maxChars });
+  }
+
+  const __bodyFeelingImpressionL = __buildFeelingLongformV1(320, 520);
+  const __bodyFutureOutlookL = __buildFutureLongformV1(320, 520);
+  const __bodyLongL = __buildGenericLongformV1(320, 520);
+  const __bodyFeelingImpression500L = __buildFeelingLongformV1(400, 650);
+  const __bodyFutureOutlook500L = __buildFutureLongformV1(400, 650);
+  const __bodyLong500L = __buildGenericLongformV1(400, 650);
+  const __bodyFeelingImpression1000L = __buildFeelingLongformV1(800, 1200);
+  const __bodyFutureOutlook1000L = __buildFutureLongformV1(800, 1200);
+  const __bodyLong1000L = __buildGenericLongformV1(800, 1200);
+  const __bodyFeelingImpression800L = __buildFeelingLongformV1(700, 950);
+  const __bodyFutureOutlook800L = __buildFutureLongformV1(700, 950);
+  const __bodyLong800L = __buildGenericLongformV1(700, 950);
+  const __bodyFeelingImpression1200L = __buildFeelingLongformV1(950, 1200);
+  const __bodyFutureOutlook1200L = __buildFutureLongformV1(950, 1200);
+  const __bodyLong1200L = __buildGenericLongformV1(950, 1200);
 
     const reply = (payload: any) => {
     // FALLBACK_TENMON_VOICE_V3_GUARD
