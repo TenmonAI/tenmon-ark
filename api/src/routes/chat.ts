@@ -7218,6 +7218,31 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
         }));
       }
 
+      // CARD_JUDGEMENT_COMPARE_ROUTE_V1_COMPARE_NO_CENTER: threadCenter なしの compare 系を短文 preempt
+      if (!__threadCenterForGeneral && /(違いは|どう違う|何が違う|比較して)/u.test(t0)) {
+        return res.json(__tenmonGeneralGateResultMaybe({
+          response: "【天聞の所見】比較の問いです。比べたい二つを一言ずつ置くと、答えが締まります。",
+          evidence: null,
+          candidates: [],
+          timestamp,
+          threadId,
+          decisionFrame: {
+            mode: "NATURAL",
+            intent: "chat",
+            llm: null,
+            ku: {
+              routeReason: "R22_COMPARE_ASK_V1",
+              answerLength: "short",
+              answerMode: "analysis",
+              answerFrame: "one_step",
+              lawsUsed: [],
+              evidenceIds: [],
+              lawTrace: [],
+            },
+          },
+        }));
+      }
+
       const __GEN_SYSTEM_CLEAN =
 `あなたは天聞アークです。
 必ず「【天聞の所見】」で始める。
