@@ -2312,6 +2312,45 @@ ${String((gptDraft as any)?.text ?? "").trim()}
     }
     return t.trim();
   }
+  // CARD_LONGFORM_1000_ENFORCE_V2: 1000字 future 専用供給文
+  const __futureLongformExtraPack1000V2: string[] = [
+    "展望がはっきりする条件は、現在地と動かせる範囲を分けて読むことです。",
+    "変化の軸を外さないことが、先の流れを具体にする判断の基準になります。",
+    "次に更新すべき観点は、その一手を動かしたあとで決めれば十分です。",
+    "長期の見通しより、今日の中心と一手を決めるほうが展望が現実になります。",
+    "どこを中心に置くかが決まれば、条件と保留にしてよい部分が分かれます。",
+    "見通しは据え直すたびに更新されるので、一気に固めなくてよいです。",
+    "明日か今週、動くことを一つ決めると展望が具体化していきます。",
+    "現在地を一言で置くと、展望が決まる条件が見えやすくなります。",
+    "変化の軸を保ったまま進めると、見通しは更新のたびに具体化します。",
+    "今日か明日で決める一手を一つに絞ると、次に決めることが明確になります。",
+    "判断の基準は、どこから現実に接続するかを見誤らないことです。",
+    "次に更新すべき観点は、その一手を動かしたあとで選べば十分です。",
+    "展望はその後の対話でいくらでも更新できます。",
+    "いま手元にある中心から見通すと、可能性は据えるたびに広がります。",
+  ];
+  function __forceTailPadV1(text: string, used: Set<string>, minChars: number, maxChars: number): string {
+    const padSentences = [
+      "中心を据え直すたびに道筋は更新されます。",
+      "一手を動かしたあとで視点を決めれば十分です。",
+      "焦点を絞れば道筋は具体になります。",
+      "保留にしてよい部分と足す情報が分かれます。",
+      "次のターンで見通しを更新すればよいです。",
+      "据えたうえで次の一手が決めやすくなります。",
+    ];
+    const normalize = (s: string) => String(s).trim().replace(/\s+/g, " ");
+    let out = String(text).trim();
+    for (const p of padSentences) {
+      if (out.length >= minChars || out.length >= maxChars) break;
+      const n = normalize(p);
+      if (used.has(n)) continue;
+      const candidate = out + "\n\n" + p;
+      if (candidate.length > maxChars) break;
+      out = candidate;
+      used.add(n);
+    }
+    return out.trim();
+  }
   function __expandToTargetRangeV1(base: string, extras: string[], minChars: number, maxChars: number, reserveExtras?: string[]): string {
     let out = String(base ?? "").trim();
     const used = new Set<string>();
@@ -2334,9 +2373,9 @@ ${String((gptDraft as any)?.text ?? "").trim()}
       out += "\n\n" + e;
       used.add(n);
     }
+    if (out.length < minChars) out = __forceTailPadV1(out, used, minChars, maxChars);
     out = __trimExtraQuestionsV1(out);
     out = __safeTrimToMaxCharsV1(out, maxChars);
-    out = __trimExtraQuestionsV1(out);
     return out.trim();
   }
   function __buildLongformV1(input: { lead: string; body: string; close: string; extras?: string[]; reserveExtras?: string[]; minChars: number; maxChars: number }): string {
@@ -2497,7 +2536,7 @@ ${String((gptDraft as any)?.text ?? "").trim()}
     const body = "展望が決まる条件は、現在地・条件・動かせる範囲を分けて読むことです。変化の軸を見失わないことが、先の流れを具体にします。何が先に決まるべきかといえば、どこから現実に接続するかです。未来は一気に開くものではなく、中心を据え直すたびに更新されるものです。";
     const close = "次に決める一手は、今日か今週の単位で動けることを一つ決めることです。次ターンで更新する観点は、その一手を動かしたあとで見えれば十分です。展望はその後の対話でいくらでも更新できます。いま一番軸にしたいのは何ですか？";
     const is1000 = maxChars >= 800;
-    const extras = is1000 ? [
+    const futureThemeExtras = is1000 ? [
       "長期の見通しを急いで固めるより、まず中心を一つ定めたほうが、結果として遠くまで見通せます。",
       "いま曖昧なのは失敗ではなく、まだ焦点が広いだけです。焦点を絞れば、道筋は具体になります。",
       "展望を持つとは、未来を断言することではなく、変化の軸を見失わないことです。",
@@ -2528,7 +2567,10 @@ ${String((gptDraft as any)?.text ?? "").trim()}
       "見通しは、条件と変化の軸が決まるごとに更新されていきます。",
       "次に決めることを一つに絞ると、展望が現実の選択肢になります。",
     ] : ["変化の軸を外さないことが、展望を具体化するうえでいちばん効きます。", "明日か今週、動くことを一つ決めると展望が具体化していきます。"];
-    return __buildLongformV1({ lead, body, close, extras, reserveExtras: reserve, minChars, maxChars });
+    const extras = is1000 ? [...futureThemeExtras, ...__futureLongformExtraPack1000V2] : futureThemeExtras;
+    const minC = is1000 ? 880 : minChars;
+    const maxC = is1000 ? 1200 : maxChars;
+    return __buildLongformV1({ lead, body, close, extras, reserveExtras: reserve, minChars: minC, maxChars: maxC });
   }
   function __buildGenericLongformV1(minChars: number, maxChars: number): string {
     const lead = "中心を一つに寄せてから見立てることです。指定文字数で返す場合も、核を保ったまま展開したほうが読みやすくなります。";
@@ -2564,7 +2606,7 @@ ${String((gptDraft as any)?.text ?? "").trim()}
   const __bodyFutureOutlook500L = __buildFutureLongformV1(400, 650);
   const __bodyLong500L = __buildGenericLongformV1(400, 650);
   const __bodyFeelingImpression1000L = __buildFeelingLongformV1(800, 1200);
-  const __bodyFutureOutlook1000L = __buildFutureLongformV1(800, 1200);
+  const __bodyFutureOutlook1000L = __buildFutureLongformV1(880, 1200);
   const __bodyLong1000L = __buildGenericLongformV1(800, 1200);
   const __bodyFeelingImpression800L = __buildFeelingLongformV1(700, 950);
   const __bodyFutureOutlook800L = __buildFutureLongformV1(700, 950);
