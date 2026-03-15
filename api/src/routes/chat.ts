@@ -318,6 +318,16 @@ router.post("/chat", async (req: Request, res: Response<ChatResponseBody>) => {
   // feeling|impression|continuity → short / analysis / one_step | explicit char → __tier / analysis / one_step
   // natural general → 既存 __bodyProfile 維持（未指定時は変更しない）
 
+  /** CARD_CENTER_LABEL_AND_LONG_CAP_FIX_V1: centerKey を表面用ラベルに変換（内部キーを出さない） */
+  const getCenterLabelForDisplay = (centerKey: string): string => {
+    const k = String(centerKey || "").trim();
+    if (!k) return "";
+    if (k === "kotodama") return "言霊";
+    if (k === "katakamuna") return "カタカムナ";
+    if (/mizuho_den|^mizuho$|水穂伝/u.test(k)) return "水穂伝";
+    return "この中心";
+  };
+
   // CARD6C_HANDLER_RESJSON_WRAP_V7: wrap res.json ONCE per request so ALL paths get top-level rewriteUsed/rewriteDelta defaults
   // (covers direct res.json returns that bypass reply())
   try {
@@ -1744,7 +1754,8 @@ const pid = process.pid;
     const __isContinuityPatternEarly = /さっき見ていた中心|(言霊|中心)(を)?土台に|今の話を(続ける|続けて|見ていきましょう)/.test(__msgCont);
     if (__hasCenterEarly && __isContinuityPatternEarly) {
       const __ckCont = String((__cEarly as any).center_key || "").trim();
-      const __leadCont = __ckCont ? `（${__ckCont}）を土台に、` : "直前の中心を土台に、";
+      const __labelContEarly = getCenterLabelForDisplay(__ckCont);
+      const __leadCont = __labelContEarly ? `（${__labelContEarly}）を土台に、` : "直前の中心を土台に、";
       const __isFeelingEarly = /今(どんな|の)?気分|今の気持ち|(天聞|アーク)(への)?感想|感想(を)?(聞いて|教えて)/.test(__msgCont);
       const __isNextStepEarly = /これから|どう進める|次の一手|次の一歩|どうする/.test(__msgCont);
       const __bodyCont = __isFeelingEarly
@@ -2139,10 +2150,10 @@ ${String((gptDraft as any)?.text ?? "").trim()}
 
   // REPLY_SURFACE_V1: responseは必ずlocalSurfaceizeを通す。返却は opts をそのまま形にし caps は body.caps のみ参照
 
-  // CARD_LONGFORM_1000_STRUCTURE_V1: 400〜1000字帯の長文を着地で整える（最後の質問の後を打ち切り）
+  // CARD_LONGFORM_1000_STRUCTURE_V1 / CARD_CENTER_LABEL_AND_LONG_CAP_FIX_V1: 400〜1200字帯の長文を着地で整える
   const __longform1000Structure = (raw: string): string => {
     const t = String(raw ?? "").trim();
-    if (t.length < 400 || t.length > 1000) return t;
+    if (t.length < 400 || t.length > 1200) return t;
     const lastQ = Math.max(t.lastIndexOf("？"), t.lastIndexOf("?"));
     return lastQ === -1 ? t : t.slice(0, lastQ + 1).trim();
   };
@@ -2159,10 +2170,10 @@ ${String((gptDraft as any)?.text ?? "").trim()}
       ) {
         (payload as any).response = "【天聞の所見】受け取りました。いま一番引っかかっている一点を置いてください。";
       }
-      // CARD_LONGFORM_1000_STRUCTURE_V1: long 応答を 400〜1000 字帯で着地「質問は最大1つ」に整える
+      // CARD_LONGFORM_1000_STRUCTURE_V1: long 応答を 400〜1200 字帯で着地「質問は最大1つ」に整える
       if (payload && __route === "NATURAL_GENERAL_LLM_TOP" && (__ku as any)?.answerLength === "long" && typeof (payload as any).response === "string") {
         const __r = String((payload as any).response);
-        if (__r.length >= 400 && __r.length <= 1000) (payload as any).response = __longform1000Structure(__r);
+        if (__r.length >= 400 && __r.length <= 1200) (payload as any).response = __longform1000Structure(__r);
       }
     } catch {}
     // CARD_SESSION_MEMORY_PERSIST_ALL_ROUTES_V1: gate で persist するため threadId が無い場合は handler の threadId を付与
@@ -7128,8 +7139,7 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
       // CARD_ESSENCE_FOLLOWUP_PREEMPT_V1: threadCenter ありで「要するに/要点/本質」→ 短文返す（continuity 儀式文を出さない）
       if (__threadCenterForGeneral != null && /(要するに|要点は|一言でいうと|本質は|要は)/u.test(t0)) {
         const __ckE = String(__threadCenterForGeneral.center_key || "").trim();
-        const __labelMap: Record<string, string> = { kotodama: "言霊", katakamuna: "カタカムナ" };
-        const __labelE = __labelMap[__ckE] || __ckE;
+        const __labelE = getCenterLabelForDisplay(__ckE) || "この中心";
         const __bodyEssence = __ckE === "kotodama"
           ? "【天聞の所見】言霊で言えば、要点は音の法則として読むことです。次は法則か背景のどちらを見るかで深さが変わります。"
           : "【天聞の所見】" + __labelE + "で言えば、要点は中心を一つに絞ることです。次は法則か背景のどちらを見るかで深さが変わります。";
@@ -7196,9 +7206,10 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
             }
           } catch {}
         }
+        const __labelCmp = getCenterLabelForDisplay(__ckCmp) || "この中心";
         const __bodyCmpPreempt = __ckCmp === "kotodama" || __isKotodamaHishoCmp
           ? "【天聞の所見】言霊で比べるなら、違いは読む軸で見えてきます。比べたい二つを一言ずつ置いてください。"
-          : "【天聞の所見】この中心で比べるなら、まず軸を一つに絞ると違いが見えます。比べたい二つを一言ずつ置いてください。";
+          : "【天聞の所見】" + __labelCmp + "で比べるなら、まず軸を一つに絞ると違いが見えます。比べたい二つを一言ずつ置いてください。";
         return res.json(__tenmonGeneralGateResultMaybe({
           response: __bodyCmpPreempt,
           evidence: null,
@@ -7227,7 +7238,8 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
       // CARD_CONTINUITY_ANCHOR_PREEMPT_V1: continuity 表現を NATURAL_GENERAL の LLM に流さず、冒頭見立てで返す（儀式文禁止・気分/next-step で分岐）
       if (__isContinuityAnchor && __threadCenterForGeneral != null) {
         const __ckCont = String(__threadCenterForGeneral.center_key || "").trim();
-        const __leadCont = __ckCont ? `（${__ckCont}）を土台に、` : "直前の中心を土台に、";
+        const __labelCont = getCenterLabelForDisplay(__ckCont);
+        const __leadCont = __labelCont ? `（${__labelCont}）を土台に、` : "直前の中心を土台に、";
         const __isNextStepAsk = /これから|どう進める|次の一手|次の一歩|どうする/.test(t0);
         const __bodyCont = __isFeelingRequest
           ? __leadCont + "いまの気持ちのほうを見ています。一点、言葉にしてみてください。"
@@ -7367,7 +7379,7 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
         } else if (__hasAnswerProfile && __bodyProfile?.answerLength) {
           const len = __bodyProfile.answerLength;
           if (len === "short") parts.push("80〜180字で返す。");
-          else if (len === "long") parts.push("260〜600字で返す。");
+          else if (len === "long") parts.push("400〜1200字で返す。");
           else if (len === "medium") parts.push("180〜350字で返す。");
         }
         if (__bodyProfile?.answerFrame) {
@@ -7674,22 +7686,10 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
       console.log("[GEN_GENERAL_CLAMP_BEFORE]", { out: __beforeClamp.slice(0, 240) });
       console.log("[GEN_GENERAL_CLAMP_AFTER]", { out: __afterClamp.slice(0, 240) });
 
-      // R23E_CONCEPT_FOLLOWUP_LABEL_PREFIX_V1
+      // R23E_CONCEPT_FOLLOWUP_LABEL_PREFIX_V1 / CARD_CENTER_LABEL_AND_LONG_CAP_FIX_V1: 表面は getCenterLabelForDisplay で内部キーを出さない
       if (__threadCenterForGeneral && __isFollowupGeneral && outText) {
         const __ck = String(__threadCenterForGeneral.center_key || "");
-        const __resolvedCenterPrefix = resolveScriptureCenter(__ck);
-        const __ckLabel = String(__resolvedCenterPrefix.label || __ck);
-        const __clMapPrefix: Record<string, string> = {
-          kotodama: "言霊",
-          katakamuna: "カタカムナ",
-          general_knowledge: "一般知識",
-          general_relation: "一般関係知識",
-          "KHSL:LAW:KHSU:41c0bff9cfb8:p0:qcb9cdda1f01d": "言霊秘書",
-          kotodama_hisho: "言霊秘書",
-          iroha_kotodama_kai: "いろは言霊解",
-          katakamuna_kotodama_kai: "カタカムナ言霊解",
-        };
-        const __clPrefix = String(__clMapPrefix[__ck] || __ck || "この中心").trim();
+        const __labelForPrefix = getCenterLabelForDisplay(__ck) || "この中心";
 
         if (__threadCenterForGeneral.center_type === "scripture") {
           const __out = String(outText ?? "");
@@ -7701,11 +7701,11 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
           const __isShortKotodamaContinuation = /kotodama_hisho|言霊秘書/i.test(String(__threadCenterForGeneral?.center_key || "")) && RE_SHORT_CONTINUATION.test(String(message ?? "").trim()) && !/(違いは|どう違う|何が違う)/u.test(String(message ?? "").trim());
           const __isCompareKotodama = /kotodama_hisho|言霊秘書/i.test(String(__threadCenterForGeneral?.center_key || "")) && /(違いは|どう違う|何が違う)/u.test(String(message ?? "").trim());
           if (!__isOneSoundResponse && !__isShortKotodamaContinuation && !__isCompareKotodama && !__out.startsWith("（")) {
-            outText = "（" + __ckLabel + "）を土台に、いまの話を見ていきましょう。\n" + String(outText);
+            outText = "（" + __labelForPrefix + "）を土台に、いまの話を見ていきましょう。\n" + String(outText);
           }
         } else if (__threadCenterForGeneral.center_type === "concept") {
           if (!String(outText).startsWith("さっき見ていた中心（")) {
-            outText = "さっき見ていた中心（" + __clPrefix + "）を土台に、いまの話を見ていきましょう。\n" + String(outText);
+            outText = "さっき見ていた中心（" + __labelForPrefix + "）を土台に、いまの話を見ていきましょう。\n" + String(outText);
           }
         }
       }
@@ -10457,7 +10457,7 @@ if (typeof out === "string" && out.trim()) nat.responseText = out.trim();
     // 観測円から応答文を生成
     const response = composeConversationalResponse(trace, personaState, sanitized.text);
     const __maxLen = __hasAnswerProfile && __bodyProfile?.answerLength
-      ? (__bodyProfile.answerLength === "short" ? 180 : __bodyProfile.answerLength === "long" ? 600 : 350)
+      ? (__bodyProfile.answerLength === "short" ? 180 : __bodyProfile.answerLength === "long" ? 1200 : 350)
       : undefined;
     const tenmonResponse = enforceTenmonPersona(response, __maxLen != null ? { maxLength: __maxLen } : undefined);
 

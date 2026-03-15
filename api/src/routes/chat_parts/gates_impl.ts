@@ -468,6 +468,20 @@ function __stripInternalContinuityLeadV1(text: string): string {
   return t;
 }
 
+// CARD_SURFACE_DETONE_V1 / CARD_CENTER_LABEL_AND_LONG_CAP_FIX_V1: 儀式文「さっき見ていた中心（…）を土台に、いまの話を見ていきましょう」系を確実に除去
+function __surfaceDetoneResponseV1(text: string): string {
+  let t = String(text || "").replace(/\r/g, "").trim();
+  if (!t) return t;
+  t = t.replace(/^【天聞の所見】\s*/u, "");
+  t = t.replace(/\n?さっき見ていた中心（[^）]+）を土台に、いまの話を見ていきましょう。?\s*\n?/gu, "");
+  t = t.replace(/さっき見ていた中心（言霊）を土台に、いまの話を見ていきましょう。?/gu, "");
+  t = t.replace(/さっき見ていた中心（[^）\n]+）を土台に、いまの話を見ていきましょう。?\s*/gu, "");
+  t = t.replace(/\n*中心を一つ置いて(ください|くださいね)。?\s*/gu, "\n");
+  t = t.replace(/\n*いま触れたい(一点|テーマ)を一つ置いてください。?\s*/gu, "\n");
+  t = t.replace(/\n{3,}/g, "\n\n").trim();
+  return t;
+}
+
 function __tenmonGeneralGateResultMaybe(x: any, rawMessageOverride?: string): any {
   try {
     if (!x || typeof x !== "object") return __applyReleaseThinAtExit(x);
@@ -1187,6 +1201,14 @@ function __tenmonGeneralGateResultMaybe(x: any, rawMessageOverride?: string): an
             __respNorm = __respNorm.replace(/([。、】【「」『』（）]) ([一-龠々ぁ-んァ-ヶー])/g, "$1$2");
           }
           (x as any).response = __respNorm;
+        }
+      } catch {}
+      // CARD_SURFACE_DETONE_V1: 通常会話・feeling/impression/define の前面のみラベル・定型文を除去（support/scripture/truth gate は触らない）
+      try {
+        const __rr = String((ku as any).routeReason || "");
+        const __applyDetone = /^NATURAL_GENERAL_LLM_TOP$|^FEELING_SELF_STATE_V1$|^IMPRESSION_TENMON_V1$|^IMPRESSION_ARK_V1$|^DEF_LLM_TOP$|^R22_|^N1_GREETING_LLM_TOP$/.test(__rr);
+        if (__applyDetone && typeof (x as any).response === "string") {
+          (x as any).response = __surfaceDetoneResponseV1(String((x as any).response || ""));
         }
       } catch {}
     return __thinReleasePayloadV2(x);
