@@ -1730,6 +1730,48 @@ const pid = process.pid;
       }));
     }
 
+  // CARD_CONTINUITY_ANCHOR_PREEMPT_V2: TRUTH_GATE より前に continuity を preempt（言霊等で KHS に当たり truth gate に吸われないようにする）
+  {
+    const __msgCont = String(message ?? "").trim();
+    const __cEarly = getLatestThreadCenter(threadId);
+    const __hasCenterEarly = __cEarly && (__cEarly as any).center_key;
+    const __isContinuityPatternEarly = /さっき見ていた中心|(言霊|中心)(を)?土台に|今の話を(続ける|続けて|見ていきましょう)/.test(__msgCont);
+    if (__hasCenterEarly && __isContinuityPatternEarly) {
+      const __ckCont = String((__cEarly as any).center_key || "").trim();
+      const __leadCont = __ckCont ? `（${__ckCont}）を土台に、` : "直前の中心を土台に、";
+      const __isFeelingEarly = /今(どんな|の)?気分|今の気持ち|(天聞|アーク)(への)?感想|感想(を)?(聞いて|教えて)/.test(__msgCont);
+      const __isNextStepEarly = /これから|どう進める|次の一手|次の一歩|どうする/.test(__msgCont);
+      const __bodyCont = __isFeelingEarly
+        ? __leadCont + "いまの気持ちのほうを見ています。一点、言葉にしてみてください。"
+        : __isNextStepEarly
+          ? __leadCont + "次の一手はここから。いま動かせることを一つだけ決めますか。"
+          : __leadCont + "いまの話を見ていきます。どこから掘りますか。";
+      return res.json(__tenmonGeneralGateResultMaybe({
+        response: __bodyCont,
+        evidence: null,
+        candidates: [],
+        timestamp,
+        threadId,
+        decisionFrame: {
+          mode: "NATURAL",
+          intent: "chat",
+          llm: null,
+          ku: {
+            routeReason: "CONTINUITY_ANCHOR_V1",
+            answerLength: "short",
+            answerMode: "analysis",
+            answerFrame: "one_step",
+            threadCenterKey: (__cEarly as any).center_key ?? null,
+            threadCenterType: (__cEarly as any).center_type ?? null,
+            lawsUsed: [],
+            evidenceIds: [],
+            lawTrace: [],
+          },
+        },
+      }));
+    }
+  }
+
   // TRUTH_GATE_RETURN_V2 (hard preempt) — definition Q のときはスキップし、後段の DEF ブロックで処理
   if (!__isDefinitionQPreempt && __truthWeight >= 0.6 && __khsScan?.matched) {
     // C2_LLM_POLISH_ONLY_GATE_V1: snapshot hard fields BEFORE any LLM
