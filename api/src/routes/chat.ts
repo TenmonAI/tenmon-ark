@@ -812,6 +812,46 @@ const pid = process.pid;
     }));
   }
 
+  // CARD_SUPPORT_ROUTE_SPLIT_V1: support 系を NATURAL_GENERAL_LLM_TOP に落とさず短文で返す
+  {
+    const __mSupport = String(message ?? "").trim();
+    const __supportUiInput = /enterで送信|shift\+enter|改行できない|入力できない|送信される|改行できません|入力できません/i.test(__mSupport);
+    const __supportAuthAccess = /ログインできない|登録できない|認証メール|founder会員|founder\s*会員|ログインできません|登録できません|認証が来ない|登録後どう入る/i.test(__mSupport);
+    const __supportProductUsage = /天聞アークはどう使えば|どう使えばいいか|何から始めるか|どこから入るか|どう使うのか|使い方|どこから入る|何を押せば|どう使う|どこで(使う|入る)|どこを押す/i.test(__mSupport);
+    if (__supportUiInput || __supportAuthAccess || __supportProductUsage) {
+      let __routeReason: string;
+      let __response: string;
+      if (__supportUiInput) {
+        __routeReason = "SUPPORT_UI_INPUT_V1";
+        __response = "【天聞の所見】現在は Enter 送信・Shift+Enter 改行の挙動を確認・修正中です。入力欄の挙動を一度ご確認ください。";
+      } else if (__supportAuthAccess) {
+        __routeReason = "SUPPORT_AUTH_ACCESS_V1";
+        __response = "【天聞の所見】登録後は login-local から入ります。登録メール・ログイン導線をご確認ください。";
+      } else {
+        __routeReason = "SUPPORT_PRODUCT_USAGE_V1";
+        __response = "【天聞の所見】まず1つ質問を入れて会話から始めてください。設定や登録は右上の導線から。";
+      }
+      return res.json(__tenmonGeneralGateResultMaybe({
+        response: __response,
+        evidence: null,
+        candidates: [],
+        timestamp: new Date().toISOString(),
+        threadId: String(body.threadId ?? ""),
+        decisionFrame: {
+          mode: "NATURAL",
+          intent: "chat",
+          llm: null,
+          ku: {
+            answerLength: "short",
+            answerMode: "support",
+            answerFrame: "one_step",
+            routeReason: __routeReason,
+          },
+        },
+      }));
+    }
+  }
+
   // [B1] deterministic force-menu trigger for Phase36-1
 
   const threadId = String(body.threadId ?? "default").trim();
@@ -6883,6 +6923,7 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
 最後は質問を1つだけ置く。
 「受け取っています。そのまま続けてください」は禁止。
 一般論・AI自己言及・相対化は避ける。
+まず一段、見立てや要点を返してから、必要なら質問は1つまで。「具体的にどのテーマで始めますか」「どの方向で話しますか」のような汎用締めは避ける。
 
 良い例:
 【天聞の所見】迷いが来ている。方向が見えないのか、動けないのか、まずどちらですか。
