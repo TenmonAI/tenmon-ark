@@ -7125,6 +7125,39 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
       const __isImpressionTenmon = /(天聞)(への)?感想|天聞をどう思う/.test(t0);
       const __isContinuityAnchor = __threadCenterForGeneral != null && /さっき見ていた中心|(言霊|中心)(を)?土台に|今の話を(続ける|続けて|見ていきましょう)/.test(t0);
 
+      // CARD_ESSENCE_FOLLOWUP_PREEMPT_V1: threadCenter ありで「要するに/要点/本質」→ 短文返す（continuity 儀式文を出さない）
+      if (__threadCenterForGeneral != null && /(要するに|要点は|一言でいうと|本質は|要は)/u.test(t0)) {
+        const __ckE = String(__threadCenterForGeneral.center_key || "").trim();
+        const __labelMap: Record<string, string> = { kotodama: "言霊", katakamuna: "カタカムナ" };
+        const __labelE = __labelMap[__ckE] || __ckE;
+        const __bodyEssence = __ckE === "kotodama"
+          ? "【天聞の所見】言霊で言えば、要点は音の法則として読むことです。次は法則か背景のどちらを見るかで深さが変わります。"
+          : "【天聞の所見】" + __labelE + "で言えば、要点は中心を一つに絞ることです。次は法則か背景のどちらを見るかで深さが変わります。";
+        return res.json(__tenmonGeneralGateResultMaybe({
+          response: __bodyEssence,
+          evidence: null,
+          candidates: [],
+          timestamp,
+          threadId,
+          decisionFrame: {
+            mode: "NATURAL",
+            intent: "chat",
+            llm: null,
+            ku: {
+              routeReason: "R22_ESSENCE_FOLLOWUP_V1",
+              answerLength: "short",
+              answerMode: "analysis",
+              answerFrame: "one_step",
+              threadCenterKey: __threadCenterForGeneral.center_key ?? null,
+              threadCenterType: __threadCenterForGeneral.center_type ?? null,
+              lawsUsed: [],
+              evidenceIds: [],
+              lawTrace: [],
+            },
+          },
+        }));
+      }
+
       // CARD_CONTINUITY_ANCHOR_PREEMPT_V1: continuity 表現を NATURAL_GENERAL の LLM に流さず、冒頭見立てで返す（儀式文禁止・気分/next-step で分岐）
       if (__isContinuityAnchor && __threadCenterForGeneral != null) {
         const __ckCont = String(__threadCenterForGeneral.center_key || "").trim();
