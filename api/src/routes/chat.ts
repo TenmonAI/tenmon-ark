@@ -2298,73 +2298,181 @@ ${String((gptDraft as any)?.text ?? "").trim()}
   function __safeTrimToMaxCharsV1(text: string, maxChars: number): string {
     let t = String(text ?? "").trim();
     if (!t || t.length <= maxChars) return t;
-    t = t.slice(0, maxChars);
-    const lastStop = Math.max(t.lastIndexOf("。"), t.lastIndexOf("？"), t.lastIndexOf("?"));
+    const slice = t.slice(0, maxChars);
+    const lastPara = slice.lastIndexOf("\n\n");
+    if (lastPara >= Math.floor(maxChars * 0.6)) {
+      t = t.slice(0, lastPara + 1).trim();
+      return t;
+    }
+    const lastStop = Math.max(slice.lastIndexOf("。"), slice.lastIndexOf("？"), slice.lastIndexOf("?"));
     if (lastStop >= Math.floor(maxChars * 0.7)) {
       t = t.slice(0, lastStop + 1);
+    } else {
+      t = slice;
     }
     return t.trim();
   }
-  function __expandToTargetRangeV1(base: string, extras: string[], minChars: number, maxChars: number): string {
+  function __expandToTargetRangeV1(base: string, extras: string[], minChars: number, maxChars: number, reserveExtras?: string[]): string {
     let out = String(base ?? "").trim();
     const used = new Set<string>();
-    for (const s of out.split(/\n+/).map((x) => x.trim()).filter(Boolean)) used.add(s);
+    const normalize = (s: string) => String(s).trim().replace(/\s+/g, " ");
+    const isNearDup = (e: string): boolean => {
+      const n = normalize(e);
+      if (used.has(n)) return true;
+      for (const u of used) {
+        if (u.length >= 15 && n.length >= 15 && (u.includes(n.slice(0, 20)) || n.includes(u.slice(0, 20)))) return true;
+      }
+      return false;
+    };
+    for (const line of out.split(/\n+/).map((x) => x.trim()).filter(Boolean)) used.add(normalize(line));
     for (const extra of extras) {
       const e = String(extra ?? "").trim();
       if (!e) continue;
-      if (used.has(e)) continue;
+      const n = normalize(e);
+      if (used.has(n) || isNearDup(e)) continue;
       if (out.length >= minChars) break;
       out += "\n\n" + e;
-      used.add(e);
+      used.add(n);
+    }
+    const reserve = Array.isArray(reserveExtras) ? reserveExtras : [];
+    for (const extra of reserve) {
+      const e = String(extra ?? "").trim();
+      if (!e) continue;
+      const n = normalize(e);
+      if (used.has(n) || isNearDup(e)) continue;
+      if (out.length >= minChars) break;
+      out += "\n\n" + e;
+      used.add(n);
     }
     out = __trimExtraQuestionsV1(out);
     out = __safeTrimToMaxCharsV1(out, maxChars);
     out = __trimExtraQuestionsV1(out);
     return out.trim();
   }
-  function __buildLongformV1(input: { lead: string; body: string; close: string; extras?: string[]; minChars: number; maxChars: number }): string {
+  function __buildLongformV1(input: { lead: string; body: string; close: string; extras?: string[]; reserveExtras?: string[]; minChars: number; maxChars: number }): string {
     const parts = [input.lead, input.body, input.close].map((x) => String(x ?? "").trim()).filter(Boolean);
     let out = parts.join("\n\n");
-    out = __expandToTargetRangeV1(out, Array.isArray(input.extras) ? input.extras : [], input.minChars, input.maxChars);
+    out = __expandToTargetRangeV1(out, Array.isArray(input.extras) ? input.extras : [], input.minChars, input.maxChars, input.reserveExtras);
     out = __trimExtraQuestionsV1(out);
     out = __safeTrimToMaxCharsV1(out, input.maxChars);
     return out.trim();
   }
   const __buildFeelingLongform = (minChars: number, maxChars: number): string => {
     const lead = "いまの気分は、外から断定するより、問いの立ち上がり方から読むほうが正確です。いまこうして言葉を向けている時点で、内側ではすでに何か一点が動いています。";
-    const body = "天聞として見るなら、その一点はまだ輪郭の粗い感覚ではあっても、完全な空白ではありません。気分を無理に説明し切ろうとすると散りますが、中心を一つに寄せると、次に触れるべきところが見えてきます。いま必要なのは感情を増やすことではなく、何が引っかかっているかを静かに見分けることです。";
+    const body = "天聞として見るなら、その一点はまだ輪郭の粗い感覚ではあっても、完全な空白ではありません。気分を無理に説明し切ろうとすると散りますが、核を一つに寄せると、次に触れるところが見えてきます。いま必要なのは感情を増やすことではなく、何が引っかかっているかを静かに見分けることです。";
     const close = "そのうえで、今日か明日で動かせる小さな行動を一つ決めると、気分は説明の対象ではなく、進み方の手がかりになります。いま一番近い言葉は何ですか？";
-    const extras = [
+    const extras500 = [
       "天聞アークは、気分そのものを言い当てるための器ではなく、問いの中にある中心を整えて返すための器として立っています。",
-      "だから、はっきりした答えが出ていなくても問題ありません。輪郭が曖昧なままでも、中心さえ取れれば次の一手は作れます。",
+      "だから、はっきりした答えが出ていなくても問題ありません。輪郭が曖昧なままでも、焦点さえ取れれば次の一手は作れます。",
       "いま必要なのは大きな整理ではなく、散っているものを一つだけ手前に寄せることです。",
       "気分を言語化すること自体が目的ではなく、その言葉から次にどこへ触れるかが定まることに意味があります。",
+      "現在地を言葉にすると、今日動かすことがはっきりします。",
+      "次に深める観点は、その一手を動かしたあとで決めれば十分です。",
     ];
-    return __buildLongformV1({ lead, body, close, extras, minChars, maxChars });
+    const reserve500 = [
+      "中心が決まると、何を足し、何を省くかの判断がしやすくなります。",
+      "どう扱うかは、一点を据えてから選ぶほうがぶれません。",
+    ];
+    const extras1000 = [
+      "天聞アークは、気分そのものを言い当てるための器ではなく、問いの中にある中心を整えて返すための器として立っています。",
+      "だから、はっきりした答えが出ていなくても問題ありません。輪郭が曖昧なままでも、焦点さえ取れれば次の一手は作れます。",
+      "いま必要なのは大きな整理ではなく、散っているものを一つだけ手前に寄せることです。",
+      "気分を言語化すること自体が目的ではなく、その言葉から次にどこへ触れるかが定まることに意味があります。",
+      "現在地を言葉にすると、今日動かすことがはっきりします。次に深める観点は、その一手を動かしたあとで決めれば十分です。",
+      "どう扱うかは、一点を据えてから選ぶほうがぶれません。中心が決まると、何を足し、何を省くかの判断がしやすくなります。",
+      "いま一番引っかかっているのは、方向が見えないことか、動けないことかのどちらかに寄っていることが多いです。",
+      "その手がかりを一言にすると、次のやり取りでどこを掘るかが自然に決まります。",
+      "今日動かすことを一つに絞ると、気分は追いかける対象ではなく、進み方の指標に変わります。",
+      "まだ輪郭が曖昧な部分は、次のターンで少しずつ形にしていけばよいです。",
+      "核を保ったまま一段ずつ進めたほうが、結果として全体が整います。",
+      "次に触れるところが定まれば、会話は深めやすくなります。",
+    ];
+    const reserve1000 = [
+      "焦点を保ったまま進めると、散らばっていた感覚が一つにまとまることがあります。",
+      "いまここで動かせることを一つ決めることが、次の着地になります。",
+    ];
+    const is1000 = maxChars >= 800;
+    const extras = is1000 ? extras1000 : extras500;
+    const reserve = is1000 ? reserve1000 : reserve500;
+    return __buildLongformV1({ lead, body, close, extras, reserveExtras: reserve, minChars, maxChars });
   };
   const __buildFutureLongform = (minChars: number, maxChars: number): string => {
     const lead = "これから先の展望は、遠くの結論を先に決めるより、いま手元にある中心から見立てたほうがぶれません。見通しは予言ではなく、どこを軸にして進むかで形が変わります。";
     const body = "いまの段階では、全部を一度に確定させる必要はありません。展望が曖昧に見える時ほど、現在地・条件・動かせる範囲を分けて読むと、先の流れが急に具体になります。未来は一気に開くものではなく、中心を据え直すたびに更新されるものです。だから大切なのは、可能性を並べることより、どこから現実に接続するかを見誤らないことです。";
     const close = "その意味で次の一手は、今日か今週の単位で動けることを一つ決めることです。展望はその後の対話でいくらでも更新できます。いま一番軸にしたいのは何ですか？";
-    const extras = [
+    const extras500 = [
       "長期の見通しを急いで固めるより、まず中心を一つ定めたほうが、結果として遠くまで見通せます。",
       "いま曖昧なのは失敗ではなく、まだ焦点が広いだけです。焦点を絞れば、そのぶんだけ道筋は具体になります。",
       "展望を持つとは、未来を断言することではなく、変化の軸を見失わないことです。",
       "どこを中心に置くかが決まれば、次に足すべき情報と、まだ保留にしてよい部分が自然に分かれます。",
+      "現在地を一言で置くと、条件と動かせる範囲が見えやすくなります。",
+      "今日の一手を一つ決めると、次ターンで更新すべき視点がはっきりします。",
     ];
-    return __buildLongformV1({ lead, body, close, extras, minChars, maxChars });
+    const reserve500 = [
+      "変化の軸を外さないことが、展望を具体化するうえでいちばん効きます。",
+      "明日か今週、動くことを一つ決めると展望が具体化していきます。",
+    ];
+    const extras1000 = [
+      "長期の見通しを急いで固めるより、まず中心を一つ定めたほうが、結果として遠くまで見通せます。",
+      "いま曖昧なのは失敗ではなく、まだ焦点が広いだけです。焦点を絞れば、そのぶんだけ道筋は具体になります。",
+      "展望を持つとは、未来を断言することではなく、変化の軸を見失わないことです。",
+      "どこを中心に置くかが決まれば、次に足すべき情報と、まだ保留にしてよい部分が自然に分かれます。",
+      "現在地を一言で置くと、条件と動かせる範囲が見えやすくなります。今日の一手を一つ決めると、次ターンで更新すべき視点がはっきりします。",
+      "変化の軸を外さないことが、展望を具体化するうえでいちばん効きます。",
+      "いま手元にある中心から見通すと、可能性は据えるたびに広がり、見通しは決めるごとに更新されていきます。",
+      "未来を一般論で終わらせず、いまここで動かせる一手とセットにすると展望が具体になります。",
+      "今日の段階でどこを中心に据えるかを一つ決めることが、その先の道筋を変えます。",
+      "明日か今週、動くことを一つ決めると、展望が具体化していきます。据えたうえで、次のターンで見通しを更新すればよいです。",
+      "次ターンで更新すべき視点は、その一手を動かしたあとで決めれば十分です。",
+      "長期の見通しより、まず今日の中心と一手を決めるほうが、結果的に展望が現実になります。",
+    ];
+    const reserve1000 = [
+      "まだ見えていない部分は、次のやり取りで形にしていけばよいです。",
+      "いま一番見たいところを一言で置くと、次の一手が決めやすくなります。",
+    ];
+    const is1000 = maxChars >= 800;
+    const extras = is1000 ? extras1000 : extras500;
+    const reserve = is1000 ? reserve1000 : reserve500;
+    return __buildLongformV1({ lead, body, close, extras, reserveExtras: reserve, minChars, maxChars });
   };
   const __buildGenericLongform = (minChars: number, maxChars: number): string => {
-    const lead = "いま必要なのは、話題を増やすことではなく、中心を一つに寄せてから見立てることです。指定文字数で返す場合も、量を満たすために広げるより、核を保ったまま展開したほうが読みやすくなります。";
-    const body = "中心が曖昧なまま長くすると、説明は増えても手がかりは薄くなります。逆に、どこが核かを先に定めておくと、理由・背景・次に動くことが自然につながります。長文で大切なのは全部を言い切ることではなく、読み手が次にどこへ進めばよいかが分かることです。";
+    const lead = "いま必要なのは、中心を一つに寄せてから見立てることです。指定文字数で返す場合も、核を保ったまま展開したほうが読みやすくなります。";
+    const body = "核が曖昧なまま長くすると、説明は増えても手がかりは薄くなります。逆に、どこが核かを先に定めておくと、理由・背景・次に動くことが自然につながります。長文で大切なのは全部を言い切ることではなく、読み手が次にどこへ進めばよいかが分かることです。";
     const close = "だから着地としては、今日の段階で動かせることを一つ残すのがちょうどよいです。必要なら次の往復でさらに深められます。いま中心に据えたいのは何ですか？";
-    const extras = [
+    const extras500 = [
       "指定字数は単なる長さではなく、見立てと展開をきちんと通すための器として使うほうがよいです。",
       "一度に全部を片づけるより、焦点を保ったまま一段ずつ進めたほうが、結果として全体が整います。",
-      "いま見えていない部分が残っていても問題ありません。むしろ残っているからこそ、次の対話で更新できます。",
+      "むしろ残っているからこそ、次の対話で更新できます。",
       "中心が決まると、何を足し、何を省くかの判断がしやすくなります。",
+      "今日動かすことを一つ決めると、次に触れるところがはっきりします。",
+      "核を保ったまま進めると、同義反復を抑えられます。",
     ];
-    return __buildLongformV1({ lead, body, close, extras, minChars, maxChars });
+    const reserve500 = [
+      "次に深める観点は、その一手を動かしたあとで決めれば十分です。",
+      "手がかりが一つに絞られると、道筋が見えやすくなります。",
+    ];
+    const extras1000 = [
+      "指定字数は単なる長さではなく、見立てと展開をきちんと通すための器として使うほうがよいです。",
+      "一度に全部を片づけるより、焦点を保ったまま一段ずつ進めたほうが、結果として全体が整います。",
+      "むしろ残っているからこそ、次の対話で更新できます。中心が決まると、何を足し、何を省くかの判断がしやすくなります。",
+      "今日動かすことを一つ決めると、次に触れるところがはっきりします。核を保ったまま進めると、同義反復を抑えられます。",
+      "次に深める観点は、その一手を動かしたあとで決めれば十分です。手がかりが一つに絞られると、道筋が見えやすくなります。",
+      "見立てと根拠・一手をはっきりさせるほうが、その先の会話に繋がります。",
+      "据えるたびに次の話題が広がるので、途中で切れても次のターンで継ぎ足せます。",
+      "いまここで動かせる一手を一つ決めることが、条件になります。",
+      "まだ見えていない部分は、そのときに形にしていけばよいです。",
+      "今日か明日、動かせることを一つ決めると道筋が変わります。言葉にするとその時点で道筋が見えやすくなります。",
+      "触れたいところがあれば、そこから続けられます。",
+      "掘りたいところを一言で置くと、指定字数内でまとめやすくなります。",
+    ];
+    const reserve1000 = [
+      "焦点を保ったまま一段ずつ進めたほうが、結果として全体が整います。",
+      "いま中心に据えたいことを一言で置いてください。",
+    ];
+    const is1000 = maxChars >= 800;
+    const extras = is1000 ? extras1000 : extras500;
+    const reserve = is1000 ? reserve1000 : reserve500;
+    return __buildLongformV1({ lead, body, close, extras, reserveExtras: reserve, minChars, maxChars });
   };
   const __bodyFeelingImpressionL = __buildFeelingLongform(320, 520);
   const __bodyFutureOutlookL = __buildFutureLongform(320, 520);
