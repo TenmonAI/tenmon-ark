@@ -321,6 +321,18 @@ router.post("/chat", async (req: Request, res: Response<ChatResponseBody>) => {
   // feeling|impression|continuity → short / analysis / one_step | explicit char → __tier / analysis / one_step
   // natural general → 既存 __bodyProfile 維持（未指定時は変更しない）
 
+  // CARD_EXPLICIT_PRIORITY_WIDEN_V1: 早期 explicit 文字数抽出（全角数字対応・500字/1000字等）
+  const __normalizeDigitsV1 = (s: string) => s.replace(/[０-９]/g, (ch) => String.fromCharCode(ch.charCodeAt(0) - 0xFEE0));
+  const __extractExplicitLengthV1 = (raw: string): number | null => {
+    const t = __normalizeDigitsV1(String(raw || "").trim());
+    const m = t.match(/(\d{2,5})\s*(?:文字|字)\s*(?:で(?:答えて|返して|書いて))?/u);
+    if (!m || !m[1]) return null;
+    const n = parseInt(m[1], 10);
+    if (!Number.isFinite(n)) return null;
+    if (n < 80 || n > 5000) return null;
+    return n;
+  };
+
   /** CARD_CENTER_LABEL_AND_LONG_CAP_FIX_V1: centerKey を表面用ラベルに変換（内部キーを出さない） */
   const getCenterLabelForDisplay = (centerKey: string): string => {
     const k = String(centerKey || "").trim();
@@ -898,18 +910,13 @@ const pid = process.pid;
   try {
     (res as any).__TENMON_THREAD_CORE = __threadCore;
   } catch {}
-  // CARD_TENMON_BRAINSTEM_WIRING_FIX_V1: 早期 explicit 抽出 + brainstem を 1 回だけ（support/selfaware/explicit 優先のため）
-  let __explicitChars: number | null = (() => {
-    const t = String(message || "").trim();
-    const m = t.match(/(\d+)\s*文字\s*(で(答えて|返して|書いて)?)?/);
-    if (!m || !m[1]) return null;
-    const n = parseInt(m[1], 10);
-    return (n >= 80 && n <= 5000) ? n : null;
-  })();
+  // CARD_TENMON_BRAINSTEM_WIRING_FIX_V1 / CARD_EXPLICIT_PRIORITY_WIDEN_V1: 早期 explicit 抽出（全角・500字/1000字対応）→ brainstem と preempt で同じ値
+  const __explicitCharsEarly = __extractExplicitLengthV1(String(message || ""));
+  let __explicitChars: number | null = __explicitCharsEarly;
   let __brainstem: BrainstemDecision | undefined = tenmonBrainstem({
     message: String(message || ""),
     threadCore: __threadCore,
-    explicitLengthRequested: __explicitChars ?? null,
+    explicitLengthRequested: __explicitCharsEarly ?? null,
     bodyProfile: __bodyProfile ?? null,
   });
   try { (res as any).__TENMON_BRAINSTEM = __brainstem; } catch {}
@@ -7187,7 +7194,7 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
               answerLength: __tier,
               answerMode: "analysis",
               answerFrame: "one_step",
-              explicitLengthRequested: __explicitChars,
+              explicitLengthRequested: __explicitCharsEarly,
               responseLength: __body.length,
               lawsUsed: [],
               evidenceIds: [],
@@ -7197,13 +7204,13 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
         }));
       }
 
-      // CARD_FEELING_AND_IMPRESSION_ROUTE_V1 / CARD_TENMON_BRAINSTEM_WIRING_FIX_V1: explicit 時は発火させない
+      // CARD_FEELING_AND_IMPRESSION_ROUTE_V1 / CARD_EXPLICIT_PRIORITY_WIDEN_V1: explicit 時は発火させない
       try {
         const __t0Feeling = String(t0).trim();
         const __isImpressionArk = /(天聞アーク|アーク)(への)?感想|天聞アークをどう思う|アークをどう思う/.test(__t0Feeling);
         const __isImpressionTenmon = /(天聞)(への)?感想|天聞をどう思う/.test(__t0Feeling);
         const __isFeelingSelf = /今(どんな|の)?気分|今の気持ち/.test(__t0Feeling);
-        if (!isCmd0 && !hasDoc0 && !askedMenu0 && __brainstem?.explicitLengthRequested == null && (__isImpressionArk || __isImpressionTenmon || __isFeelingSelf)) {
+        if (!isCmd0 && !hasDoc0 && !askedMenu0 && __explicitCharsEarly == null && (__isImpressionArk || __isImpressionTenmon || __isFeelingSelf)) {
           const __routeReason = __isImpressionArk ? "IMPRESSION_ARK_V1" : __isImpressionTenmon ? "IMPRESSION_TENMON_V1" : "FEELING_SELF_STATE_V1";
           const __body = __isImpressionArk
             ? "【天聞の所見】天聞アークは、まだ完成体ではありませんが、判断と継続を支える器として形が見え始めています。使うほど輪郭が出る段階です。"
@@ -7617,8 +7624,8 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
       const __continuityAnchorLine = __isContinuityAnchor
         ? "\n直前の中心（center_key）を土台に、冒頭の見立てで触れる。" : "";
 
-      // CARD_NATURAL_GENERAL_SHRINK_V2_FUTURE / CARD_TENMON_BRAINSTEM_WIRING_FIX_V1: explicit 時は発火させない
-      if (__brainstem?.explicitLengthRequested == null && __isFutureOutlook) {
+      // CARD_NATURAL_GENERAL_SHRINK_V2_FUTURE / CARD_EXPLICIT_PRIORITY_WIDEN_V1: explicit 時は発火させない
+      if (__explicitCharsEarly == null && __isFutureOutlook) {
         const __coreFuture: ThreadCore = { ...__threadCore, lastResponseContract: { answerLength: "short", answerMode: "analysis", answerFrame: "one_step", routeReason: "R22_FUTURE_OUTLOOK_V1" }, updatedAt: new Date().toISOString() };
         saveThreadCore(__coreFuture).catch(() => {});
         try { (res as any).__TENMON_THREAD_CORE = __coreFuture; } catch {}
