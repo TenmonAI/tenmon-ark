@@ -90,6 +90,8 @@ import { buildSynapseSeed } from "../synapse/fractalSeed.js";
 import { writeScriptureLearningLedger } from "../core/scriptureLearningLedger.js";
 import { buildKanagiGrowthLedgerEntryFromKu, insertKanagiGrowthLedgerEntry } from "../core/kanagiGrowthLedger.js";
 import { upsertThreadCenter, getLatestThreadCenter } from "../core/threadCenterMemory.js";
+import { loadThreadCore, saveThreadCore } from "../core/threadCoreStore.js";
+import { emptyThreadCore, centerLabelFromKey, type ThreadCore } from "../core/threadCore.js";
 import { upsertBookContinuation } from "../core/bookContinuationMemory.js";
 import {
   getKotodamaOneSoundEntry,
@@ -400,6 +402,19 @@ if (!(res as any).__TENMON_JSON_WRAP_V7) {
 
             if (obj.rewriteUsed === undefined) obj.rewriteUsed = false;
             if (obj.rewriteDelta === undefined) obj.rewriteDelta = 0;
+            // CARD_THREADCORE_MIN_V1: ku に threadCore 可視項目を追加（既存を壊さない）
+            try {
+              const __tc = (res as any).__TENMON_THREAD_CORE;
+              if (__tc && obj?.decisionFrame?.ku && typeof obj.decisionFrame.ku === "object") {
+                const ku = obj.decisionFrame.ku as any;
+                if (ku.threadCenterKey === undefined) ku.threadCenterKey = __tc.centerKey ?? undefined;
+                if (ku.threadCenterLabel === undefined) ku.threadCenterLabel = __tc.centerLabel ?? centerLabelFromKey(__tc.centerKey) ?? undefined;
+                if (ku.threadOpenLoops === undefined) ku.threadOpenLoops = Array.isArray(__tc.openLoops) ? __tc.openLoops : [];
+                if (ku.lastAnswerLength === undefined) ku.lastAnswerLength = __tc.lastResponseContract?.answerLength ?? undefined;
+                if (ku.lastAnswerMode === undefined) ku.lastAnswerMode = __tc.lastResponseContract?.answerMode ?? undefined;
+                if (ku.lastAnswerFrame === undefined) ku.lastAnswerFrame = __tc.lastResponseContract?.answerFrame ?? undefined;
+              }
+            } catch {}
             // also ensure decisionFrame.ku is object when decisionFrame exists (non-breaking)
             const df = obj.decisionFrame;
             if (df && typeof df === "object") {
@@ -872,6 +887,15 @@ const pid = process.pid;
 
   const threadId = String(body.threadId ?? "default").trim();
   const timestamp = new Date().toISOString();
+  let __threadCore: ThreadCore = emptyThreadCore(threadId);
+  try {
+    __threadCore = await loadThreadCore(threadId);
+  } catch {
+    __threadCore = emptyThreadCore(threadId);
+  }
+  try {
+    (res as any).__TENMON_THREAD_CORE = __threadCore;
+  } catch {}
   let __userName: string | undefined;
   let __assistantName: string | undefined;
   let __namingObs: { userId: string; userName?: string; assistantName?: string } | null = null;
@@ -1754,8 +1778,8 @@ const pid = process.pid;
     const __isContinuityPatternEarly = /さっき見ていた中心|(言霊|中心)(を)?土台に|今の話を(続ける|続けて|見ていきましょう)/.test(__msgCont);
     if (__hasCenterEarly && __isContinuityPatternEarly) {
       const __ckCont = String((__cEarly as any).center_key || "").trim();
-      const __labelContEarly = getCenterLabelForDisplay(__ckCont);
-      const __leadCont = __labelContEarly ? `（${__labelContEarly}）を土台に、` : "直前の中心を土台に、";
+      const __displayLabelEarly = __threadCore.centerLabel || centerLabelFromKey(__threadCore.centerKey) || getCenterLabelForDisplay(__ckCont) || "この中心";
+      const __leadCont = __displayLabelEarly ? __displayLabelEarly + "を土台に、" : "直前の中心を土台に、";
       const __isFeelingEarly = /今(どんな|の)?気分|今の気持ち|(天聞|アーク)(への)?感想|感想(を)?(聞いて|教えて)/.test(__msgCont);
       const __isNextStepEarly = /これから|どう進める|次の一手|次の一歩|どうする/.test(__msgCont);
       const __bodyCont = __isFeelingEarly
@@ -5027,6 +5051,9 @@ return res.json(__tenmonGeneralGateResultMaybe({
             continuityHint: "kotodama"
           }
         };
+        const __coreDef1: ThreadCore = { ...__threadCore, centerKey: "kotodama", centerLabel: "言霊", activeEntities: ["言霊"], lastResponseContract: { answerLength: "medium", answerMode: "define", answerFrame: "statement_plus_one_question", routeReason: "DEF_FASTPATH_VERIFIED_V1" }, updatedAt: new Date().toISOString() };
+        saveThreadCore(__coreDef1).catch(() => {});
+        try { (res as any).__TENMON_THREAD_CORE = __coreDef1; } catch {}
         return res.json(__tenmonGeneralGateResultMaybe({
           response: __resp,
           evidence: null,
@@ -5191,6 +5218,9 @@ return res.json(__tenmonGeneralGateResultMaybe({
             continuityHint: "kotodama",
           },
         };
+        const __coreDef2: ThreadCore = { ...__threadCore, centerKey: "kotodama", centerLabel: "言霊", activeEntities: ["言霊"], lastResponseContract: { answerLength: "medium", answerMode: "define", answerFrame: "statement_plus_one_question", routeReason: "DEF_FASTPATH_VERIFIED_V1" }, updatedAt: new Date().toISOString() };
+        saveThreadCore(__coreDef2).catch(() => {});
+        try { (res as any).__TENMON_THREAD_CORE = __coreDef2; } catch {}
         return res.json(__tenmonGeneralGateResultMaybe({
           response:
             "言霊とは、天地に鳴り響く五十連の音と、水火を與み解いて詞の本を知る法則です。\n\n" +
@@ -7043,6 +7073,9 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
               : __isFeelingImpressionExplicit ? __bodyFeelingImpression
               : __isFutureOutlookExplicit ? __bodyFutureOutlook
               : __explicitChars <= 220 ? __bodyShort : __explicitChars <= 450 ? __bodyMedium : __bodyLong;
+        const __coreExplicit: ThreadCore = { ...__threadCore, lastResponseContract: { answerLength: __tier, answerMode: "analysis", answerFrame: "one_step", routeReason: "EXPLICIT_CHAR_PREEMPT_V1" }, updatedAt: new Date().toISOString() };
+        saveThreadCore(__coreExplicit).catch(() => {});
+        try { (res as any).__TENMON_THREAD_CORE = __coreExplicit; } catch {}
         return res.json(__tenmonGeneralGateResultMaybe({
           response: __body,
           evidence: null,
@@ -7139,10 +7172,13 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
       // CARD_ESSENCE_FOLLOWUP_PREEMPT_V1: threadCenter ありで「要するに/要点/本質」→ 短文返す（continuity 儀式文を出さない）
       if (__threadCenterForGeneral != null && /(要するに|要点は|一言でいうと|本質は|要は)/u.test(t0)) {
         const __ckE = String(__threadCenterForGeneral.center_key || "").trim();
-        const __labelE = getCenterLabelForDisplay(__ckE) || "この中心";
+        const __displayLabelE = __threadCore.centerLabel || centerLabelFromKey(__threadCore.centerKey) || getCenterLabelForDisplay(__ckE) || "この中心";
         const __bodyEssence = __ckE === "kotodama"
           ? "【天聞の所見】言霊で言えば、要点は音の法則として読むことです。次は法則か背景のどちらを見るかで深さが変わります。"
-          : "【天聞の所見】" + __labelE + "で言えば、要点は中心を一つに絞ることです。次は法則か背景のどちらを見るかで深さが変わります。";
+          : "【天聞の所見】" + __displayLabelE + "で言えば、要点は中心を一つに絞ることです。次は法則か背景のどちらを見るかで深さが変わります。";
+        const __coreE: ThreadCore = { ...__threadCore, centerKey: __ckE || null, centerLabel: __displayLabelE || null, activeEntities: __displayLabelE ? [__displayLabelE] : [], lastResponseContract: { answerLength: "short", answerMode: "analysis", answerFrame: "one_step", routeReason: "R22_ESSENCE_FOLLOWUP_V1" }, updatedAt: new Date().toISOString() };
+        saveThreadCore(__coreE).catch(() => {});
+        try { (res as any).__TENMON_THREAD_CORE = __coreE; } catch {}
         return res.json(__tenmonGeneralGateResultMaybe({
           response: __bodyEssence,
           evidence: null,
@@ -7206,10 +7242,13 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
             }
           } catch {}
         }
-        const __labelCmp = getCenterLabelForDisplay(__ckCmp) || "この中心";
+        const __displayLabelCmp = __threadCore.centerLabel || centerLabelFromKey(__threadCore.centerKey) || getCenterLabelForDisplay(__ckCmp) || "この中心";
         const __bodyCmpPreempt = __ckCmp === "kotodama" || __isKotodamaHishoCmp
           ? "【天聞の所見】言霊で比べるなら、違いは読む軸で見えてきます。比べたい二つを一言ずつ置いてください。"
-          : "【天聞の所見】" + __labelCmp + "で比べるなら、まず軸を一つに絞ると違いが見えます。比べたい二つを一言ずつ置いてください。";
+          : "【天聞の所見】" + __displayLabelCmp + "で比べるなら、まず軸を一つに絞ると違いが見えます。比べたい二つを一言ずつ置いてください。";
+        const __coreCmp: ThreadCore = { ...__threadCore, centerKey: __ckCmp || null, centerLabel: __displayLabelCmp || null, activeEntities: __displayLabelCmp ? [__displayLabelCmp] : [], lastResponseContract: { answerLength: "short", answerMode: "analysis", answerFrame: "one_step", routeReason: "R22_COMPARE_FOLLOWUP_V1" }, updatedAt: new Date().toISOString() };
+        saveThreadCore(__coreCmp).catch(() => {});
+        try { (res as any).__TENMON_THREAD_CORE = __coreCmp; } catch {}
         return res.json(__tenmonGeneralGateResultMaybe({
           response: __bodyCmpPreempt,
           evidence: null,
@@ -7238,14 +7277,17 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
       // CARD_CONTINUITY_ANCHOR_PREEMPT_V1: continuity 表現を NATURAL_GENERAL の LLM に流さず、冒頭見立てで返す（儀式文禁止・気分/next-step で分岐）
       if (__isContinuityAnchor && __threadCenterForGeneral != null) {
         const __ckCont = String(__threadCenterForGeneral.center_key || "").trim();
-        const __labelCont = getCenterLabelForDisplay(__ckCont);
-        const __leadCont = __labelCont ? `（${__labelCont}）を土台に、` : "直前の中心を土台に、";
+        const __displayLabelCont = __threadCore.centerLabel || centerLabelFromKey(__threadCore.centerKey) || getCenterLabelForDisplay(__ckCont) || "この中心";
+        const __leadCont = __displayLabelCont ? __displayLabelCont + "を土台に、" : "直前の中心を土台に、";
         const __isNextStepAsk = /これから|どう進める|次の一手|次の一歩|どうする/.test(t0);
         const __bodyCont = __isFeelingRequest
           ? __leadCont + "いまの気持ちのほうを見ています。一点、言葉にしてみてください。"
           : __isNextStepAsk
             ? __leadCont + "次の一手はここから。いま動かせることを一つだけ決めますか。"
             : __leadCont + "いまの話を見ていきます。どこから掘りますか。";
+        const __coreCont: ThreadCore = { ...__threadCore, centerKey: __ckCont || null, centerLabel: __displayLabelCont || null, activeEntities: __displayLabelCont ? [__displayLabelCont] : [], lastResponseContract: { answerLength: "short", answerMode: "analysis", answerFrame: "one_step", routeReason: "CONTINUITY_ANCHOR_V1" }, updatedAt: new Date().toISOString() };
+        saveThreadCore(__coreCont).catch(() => {});
+        try { (res as any).__TENMON_THREAD_CORE = __coreCont; } catch {}
         return res.json(__tenmonGeneralGateResultMaybe({
           response: __bodyCont,
           evidence: null,
@@ -7401,6 +7443,9 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
 
       // CARD_NATURAL_GENERAL_SHRINK_V2_FUTURE: future/展望系を LLM に流さず短文 preempt
       if (__isFutureOutlook) {
+        const __coreFuture: ThreadCore = { ...__threadCore, lastResponseContract: { answerLength: "short", answerMode: "analysis", answerFrame: "one_step", routeReason: "R22_FUTURE_OUTLOOK_V1" }, updatedAt: new Date().toISOString() };
+        saveThreadCore(__coreFuture).catch(() => {});
+        try { (res as any).__TENMON_THREAD_CORE = __coreFuture; } catch {}
         return res.json(__tenmonGeneralGateResultMaybe({
           response: "【天聞の所見】未来・展望は、いまの一点から見立てる。いま引っかかっている一点を一言で。",
           evidence: null,
@@ -7686,10 +7731,10 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
       console.log("[GEN_GENERAL_CLAMP_BEFORE]", { out: __beforeClamp.slice(0, 240) });
       console.log("[GEN_GENERAL_CLAMP_AFTER]", { out: __afterClamp.slice(0, 240) });
 
-      // R23E_CONCEPT_FOLLOWUP_LABEL_PREFIX_V1 / CARD_CENTER_LABEL_AND_LONG_CAP_FIX_V1: 表面は getCenterLabelForDisplay で内部キーを出さない
+      // R23E_CONCEPT_FOLLOWUP_LABEL_PREFIX_V1 / CARD_THREADCORE_MIN_V1: 表面は ThreadCore 優先で内部キーを出さない
       if (__threadCenterForGeneral && __isFollowupGeneral && outText) {
         const __ck = String(__threadCenterForGeneral.center_key || "");
-        const __labelForPrefix = getCenterLabelForDisplay(__ck) || "この中心";
+        const __labelForPrefix = __threadCore.centerLabel || centerLabelFromKey(__threadCore.centerKey) || getCenterLabelForDisplay(__ck) || "この中心";
 
         if (__threadCenterForGeneral.center_type === "scripture") {
           const __out = String(outText ?? "");
@@ -9201,6 +9246,11 @@ if (!outText) {
         };
         if (__composed.meaningFrame != null) (__ku as any).meaningFrame = __composed.meaningFrame;
 
+        const __centerKeyDef = __term === "言霊" ? "kotodama" : String(__term || "").trim() || null;
+        const __centerLabelDef = __term === "言霊" ? "言霊" : (centerLabelFromKey(__centerKeyDef) || __centerKeyDef);
+        const __coreDef: ThreadCore = { ...__threadCore, centerKey: __centerKeyDef, centerLabel: __centerLabelDef, activeEntities: __centerLabelDef ? [__centerLabelDef] : [], lastResponseContract: { answerLength: "medium", answerMode: "define", answerFrame: "statement_plus_one_question", routeReason: "DEF_FASTPATH_VERIFIED_V1" }, updatedAt: new Date().toISOString() };
+        saveThreadCore(__coreDef).catch(() => {});
+        try { (res as any).__TENMON_THREAD_CORE = __coreDef; } catch {}
         return res.json(__tenmonGeneralGateResultMaybe({
           response: __respFinal,
           evidence: {
