@@ -2316,21 +2316,12 @@ ${String((gptDraft as any)?.text ?? "").trim()}
     let out = String(base ?? "").trim();
     const used = new Set<string>();
     const normalize = (s: string) => String(s).trim().replace(/\s+/g, " ");
-    const isNearDup = (e: string): boolean => {
-      const n = normalize(e);
-      if (used.has(n)) return true;
-      for (const u of used) {
-        if (u.length >= 15 && n.length >= 15 && (u.includes(n.slice(0, 20)) || n.includes(u.slice(0, 20)))) return true;
-      }
-      return false;
-    };
     for (const line of out.split(/\n+/).map((x) => x.trim()).filter(Boolean)) used.add(normalize(line));
     for (const extra of extras) {
       const e = String(extra ?? "").trim();
       if (!e) continue;
       const n = normalize(e);
-      if (used.has(n) || isNearDup(e)) continue;
-      if (out.length >= minChars) break;
+      if (used.has(n)) continue;
       out += "\n\n" + e;
       used.add(n);
     }
@@ -2339,8 +2330,7 @@ ${String((gptDraft as any)?.text ?? "").trim()}
       const e = String(extra ?? "").trim();
       if (!e) continue;
       const n = normalize(e);
-      if (used.has(n) || isNearDup(e)) continue;
-      if (out.length >= minChars) break;
+      if (used.has(n)) continue;
       out += "\n\n" + e;
       used.add(n);
     }
@@ -2520,6 +2510,11 @@ ${String((gptDraft as any)?.text ?? "").trim()}
       "明日か今週、動くことを一つ決めると展望が具体化していきます。据えたうえで、次のターンで見通しを更新すればよいです。",
       "次ターンで更新すべき視点は、その一手を動かしたあとで決めれば十分です。",
       "長期の見通しより、まず今日の中心と一手を決めるほうが、結果的に展望が現実になります。",
+      "現在地がはっきりすると、展望が決まる条件が見えやすくなります。",
+      "展望が決まる条件は、いま据えている中心と、動かせる範囲を分けて読むことです。",
+      "変化の軸を保ったまま進めると、見通しは更新のたびに具体化していきます。",
+      "今日か明日で決める一手を一つに絞ると、次に決めることが明確になります。",
+      "次ターンで更新する観点は、その一手を動かしたあとで選べば十分です。",
     ] : [
       "長期の見通しを急いで固めるより、まず中心を一つ定めたほうが、遠くまで見通せます。",
       "いま曖昧なのは、まだ焦点が広いだけです。焦点を絞れば、道筋は具体になります。",
@@ -2527,7 +2522,12 @@ ${String((gptDraft as any)?.text ?? "").trim()}
       "どこを中心に置くかが決まれば、次に足すべき情報と保留にしてよい部分が分かれます。",
       "現在地を一言で置くと、条件と動かせる範囲が見えやすくなります。今日の一手を一つ決めると、次ターンで更新すべき視点がはっきりします。",
     ];
-    const reserve = is1000 ? ["まだ見えていない部分は、次のやり取りで形にしていけばよいです。", "いま一番見たいところを一言で置くと、次の一手が決めやすくなります。"] : ["変化の軸を外さないことが、展望を具体化するうえでいちばん効きます。", "明日か今週、動くことを一つ決めると展望が具体化していきます。"];
+    const reserve = is1000 ? [
+      "まだ見えていない部分は、次のやり取りで形にしていけばよいです。",
+      "いま一番見たいところを一言で置くと、次の一手が決めやすくなります。",
+      "見通しは、条件と変化の軸が決まるごとに更新されていきます。",
+      "次に決めることを一つに絞ると、展望が現実の選択肢になります。",
+    ] : ["変化の軸を外さないことが、展望を具体化するうえでいちばん効きます。", "明日か今週、動くことを一つ決めると展望が具体化していきます。"];
     return __buildLongformV1({ lead, body, close, extras, reserveExtras: reserve, minChars, maxChars });
   }
   function __buildGenericLongformV1(minChars: number, maxChars: number): string {
