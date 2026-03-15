@@ -7160,6 +7160,31 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
         }));
       }
 
+      // CARD_NATURAL_GENERAL_SHRINK_V2_ESSENCE: 要するに/要点/本質系を threadCenter なし時だけ短文 preempt
+      if (!__threadCenterForGeneral && /(要するに|要点は|一言でいうと|本質は|要は)/u.test(t0)) {
+        return res.json(__tenmonGeneralGateResultMaybe({
+          response: "【天聞の所見】要点を聞いています。いまの中心を一言で置くと、答えが締まります。",
+          evidence: null,
+          candidates: [],
+          timestamp,
+          threadId,
+          decisionFrame: {
+            mode: "NATURAL",
+            intent: "chat",
+            llm: null,
+            ku: {
+              routeReason: "R22_ESSENCE_ASK_V1",
+              answerLength: "short",
+              answerMode: "analysis",
+              answerFrame: "one_step",
+              lawsUsed: [],
+              evidenceIds: [],
+              lawTrace: [],
+            },
+          },
+        }));
+      }
+
       const __GEN_SYSTEM_CLEAN =
 `あなたは天聞アークです。
 必ず「【天聞の所見】」で始める。
