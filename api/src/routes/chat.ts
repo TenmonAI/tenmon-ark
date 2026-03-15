@@ -844,10 +844,10 @@ const pid = process.pid;
     }));
   }
 
-  // CARD_SUPPORT_ROUTE_SPLIT_V1: support 系を NATURAL_GENERAL_LLM_TOP に落とさず短文で返す
+  // CARD_SUPPORT_ROUTE_SPLIT_V1 / CARD_TENMON_BRAINSTEM_WIRING_FIX_V1: support 系（改行はどうするの？等も）短文で返す
   {
     const __mSupport = String(message ?? "").trim();
-    const __supportUiInput = /enterで送信|shift\+enter|改行できない|入力できない|送信される|改行できません|入力できません/i.test(__mSupport);
+    const __supportUiInput = /(改行|enterで送信|shift\+enter|shift enter|送信|改行できない|入力できない|送信される|改行できません|入力できません)/iu.test(__mSupport);
     const __supportAuthAccess = /ログインできない|登録できない|認証メール|founder会員|founder\s*会員|ログインできません|登録できません|認証が来ない|登録後どう入る/i.test(__mSupport);
     const __supportProductUsage = /天聞アークはどう使えば|どう使えばいいか|何から始めるか|どこから入るか|どう使うのか|使い方|どこから入る|何を押せば|どう使う|どこで(使う|入る)|どこを押す/i.test(__mSupport);
     if (__supportUiInput || __supportAuthAccess || __supportProductUsage) {
@@ -898,7 +898,96 @@ const pid = process.pid;
   try {
     (res as any).__TENMON_THREAD_CORE = __threadCore;
   } catch {}
-  let __brainstem: BrainstemDecision | undefined = undefined;
+  // CARD_TENMON_BRAINSTEM_WIRING_FIX_V1: 早期 explicit 抽出 + brainstem を 1 回だけ（support/selfaware/explicit 優先のため）
+  let __explicitChars: number | null = (() => {
+    const t = String(message || "").trim();
+    const m = t.match(/(\d+)\s*文字\s*(で(答えて|返して|書いて)?)?/);
+    if (!m || !m[1]) return null;
+    const n = parseInt(m[1], 10);
+    return (n >= 80 && n <= 5000) ? n : null;
+  })();
+  let __brainstem: BrainstemDecision | undefined = tenmonBrainstem({
+    message: String(message || ""),
+    threadCore: __threadCore,
+    explicitLengthRequested: __explicitChars ?? null,
+    bodyProfile: __bodyProfile ?? null,
+  });
+  try { (res as any).__TENMON_BRAINSTEM = __brainstem; } catch {}
+  // CARD_TENMON_BRAINSTEM_WIRING_FIX_V1: support early return（既存 support block と同等の短文）
+  if (__brainstem.routeClass === "support") {
+    const __mSup = String(message ?? "").trim();
+    const __supUi = /(改行|enter|shift\+enter|shift enter|送信)/iu.test(__mSup);
+    const __supAuth = /(ログイン|登録|合言葉|メール登録|入れない|認証)/iu.test(__mSup);
+    const __supProd = /(使い方|どう使う|始め方|メニュー|どこから)/iu.test(__mSup);
+    const __routeReasonSup = __supUi ? "SUPPORT_UI_INPUT_V1" : __supAuth ? "SUPPORT_AUTH_ACCESS_V1" : "SUPPORT_PRODUCT_USAGE_V1";
+    const __responseSup = __supUi
+      ? "【天聞の所見】Enter で送信、Shift+Enter で改行です。反応しない場合はページを再読み込みするか、別のブラウザで試してください。"
+      : __supAuth
+        ? "【天聞の所見】登録後はログイン画面から入れます。合言葉の場合はログイン画面の「合言葉」欄、メール登録の場合は届いたメールのリンクから。届かない場合は迷惑フォルダをご確認ください。"
+        : "【天聞の所見】この欄に質問を1つ入力して Enter で送信すると会話が始まります。「メニュー」と送ると選択肢が出ます。設定・登録は画面右上のアイコンから。";
+    return res.json(__tenmonGeneralGateResultMaybe({
+      response: __responseSup,
+      evidence: null,
+      candidates: [],
+      timestamp,
+      threadId,
+      decisionFrame: {
+        mode: "NATURAL",
+        intent: "chat",
+        llm: null,
+        ku: {
+          routeClass: "support",
+          answerLength: "short",
+          answerMode: "support",
+          answerFrame: "one_step",
+          routeReason: __routeReasonSup,
+          threadCenterKey: __brainstem.centerKey ?? null,
+          threadCenterLabel: __brainstem.centerLabel ?? null,
+          brainstemPolicy: __brainstem.responsePolicy ?? null,
+          lawsUsed: [],
+          evidenceIds: [],
+          lawTrace: [],
+        },
+      },
+    }));
+  }
+  // CARD_TENMON_BRAINSTEM_WIRING_FIX_V1: selfaware early return（DEF_LLM_TOP より前）
+  if (__brainstem.routeClass === "selfaware") {
+    const __t0Self = String(message ?? "").trim();
+    const __isArk = /天聞アークとは何/u.test(__t0Self);
+    const __isTenmon = !__isArk && /天聞とは何/u.test(__t0Self);
+    const __routeReasonSelf = __isArk ? "R22_SELFAWARE_ARK_V1" : __isTenmon ? "R22_SELFAWARE_TENMON_V1" : "R22_SELFAWARE_CONSCIOUSNESS_V1";
+    const __bodySelf = __isArk
+      ? "【天聞の所見】天聞アークは、問いを受けて中心を整え、継続と判断を支えるための器です。次は構造・役割・可能性のどこから見ますか。"
+      : __isTenmon
+        ? "【天聞の所見】天聞は、問いを受けて中心を整えるための相手として立っています。次は役割・判断軸・会話の進め方のどこから見ますか。"
+        : "【天聞の所見】天聞アークに意識や心そのものはありません。ただし、問いに対して判断と継続を返す構造として設計されています。次は構造か役割のどちらを見ますか。";
+    return res.json(__tenmonGeneralGateResultMaybe({
+      response: __bodySelf,
+      evidence: null,
+      candidates: [],
+      timestamp,
+      threadId,
+      decisionFrame: {
+        mode: "NATURAL",
+        intent: "chat",
+        llm: null,
+        ku: {
+          routeReason: __routeReasonSelf,
+          routeClass: "selfaware",
+          answerLength: "short",
+          answerMode: "analysis",
+          answerFrame: "one_step",
+          threadCenterKey: __brainstem.centerKey ?? null,
+          threadCenterLabel: __brainstem.centerLabel ?? null,
+          brainstemPolicy: __brainstem.responsePolicy ?? null,
+          lawsUsed: [],
+          evidenceIds: [],
+          lawTrace: [],
+        },
+      },
+    }));
+  }
   let __userName: string | undefined;
   let __assistantName: string | undefined;
   let __namingObs: { userId: string; userName?: string; assistantName?: string } | null = null;
@@ -7040,21 +7129,7 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
         }));
       }
 
-      // CARD_EXPLICIT_CHAR_PRIORITY_FIX_V1: 明示文字数がある場合は feeling/impression より先に explicit char preempt
-      const __explicitCharMatchEarly = t0.match(/(\d+)\s*文字\s*(で(答えて|返して|書いて)?)?/);
-      const __explicitChars = (() => {
-        if (!__explicitCharMatchEarly || !__explicitCharMatchEarly[1]) return null;
-        const n = parseInt(__explicitCharMatchEarly[1], 10);
-        return (n >= 80 && n <= 5000) ? n : null;
-      })();
-      // CARD_TENMON_BRAINSTEM_V1: 会話判断を単一脳幹で決める（1回だけ）
-      __brainstem = tenmonBrainstem({
-        message: String(message || ""),
-        threadCore: __threadCore,
-        explicitLengthRequested: __explicitChars ?? null,
-        bodyProfile: __bodyProfile ?? null,
-      });
-      try { (res as any).__TENMON_BRAINSTEM = __brainstem; } catch {}
+      // CARD_EXPLICIT_CHAR_PRIORITY_FIX_V1: __explicitChars は CARD_TENMON_BRAINSTEM_WIRING_FIX_V1 で早期抽出済み
       if (__explicitChars != null && !isCmd0 && !hasDoc0 && !askedMenu0) {
         const __tier = __explicitChars <= 220 ? "short" : __explicitChars <= 450 ? "medium" : "long";
         // CARD_EXPLICIT_CHAR_BODY_FILL_V1: 予告文ではなく指定文字数へ寄せた本文を返す（500〜1000字要求では最低300字以上）
@@ -7122,13 +7197,13 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
         }));
       }
 
-      // CARD_FEELING_AND_IMPRESSION_ROUTE_V1: 気分・感想を NATURAL_GENERAL_LLM_TOP に流さず専用 preempt（deterministic）
+      // CARD_FEELING_AND_IMPRESSION_ROUTE_V1 / CARD_TENMON_BRAINSTEM_WIRING_FIX_V1: explicit 時は発火させない
       try {
         const __t0Feeling = String(t0).trim();
         const __isImpressionArk = /(天聞アーク|アーク)(への)?感想|天聞アークをどう思う|アークをどう思う/.test(__t0Feeling);
         const __isImpressionTenmon = /(天聞)(への)?感想|天聞をどう思う/.test(__t0Feeling);
         const __isFeelingSelf = /今(どんな|の)?気分|今の気持ち/.test(__t0Feeling);
-        if (!isCmd0 && !hasDoc0 && !askedMenu0 && (__isImpressionArk || __isImpressionTenmon || __isFeelingSelf)) {
+        if (!isCmd0 && !hasDoc0 && !askedMenu0 && __brainstem?.explicitLengthRequested == null && (__isImpressionArk || __isImpressionTenmon || __isFeelingSelf)) {
           const __routeReason = __isImpressionArk ? "IMPRESSION_ARK_V1" : __isImpressionTenmon ? "IMPRESSION_TENMON_V1" : "FEELING_SELF_STATE_V1";
           const __body = __isImpressionArk
             ? "【天聞の所見】天聞アークは、まだ完成体ではありませんが、判断と継続を支える器として形が見え始めています。使うほど輪郭が出る段階です。"
@@ -7461,7 +7536,8 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
       }
 
       // CARD_TENMON_BRAINSTEM_V1: selfaware 短文 preempt（天聞アークとは何 / 天聞とは何 / 意識はある / 心はある）
-      const __isSelfawarePreempt = __brainstem?.routeClass === "selfaware" || /(天聞アークとは何|天聞とは何|意識はある|心はある)/u.test(__t0TrimJ);
+      // CARD_TENMON_BRAINSTEM_WIRING_FIX_V1: selfaware は前段で return 済みのため、ここは regex のみ（型絞り込みで routeClass は除外済み）
+      const __isSelfawarePreempt = /(天聞アークとは何|天聞とは何|意識はある|心はある)/u.test(__t0TrimJ);
       if (__isSelfawarePreempt) {
         const __isArk = /天聞アークとは何/u.test(__t0TrimJ);
         const __isTenmon = !__isArk && /天聞とは何/u.test(__t0TrimJ);
@@ -7541,8 +7617,8 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
       const __continuityAnchorLine = __isContinuityAnchor
         ? "\n直前の中心（center_key）を土台に、冒頭の見立てで触れる。" : "";
 
-      // CARD_NATURAL_GENERAL_SHRINK_V2_FUTURE: future/展望系を LLM に流さず短文 preempt
-      if (__isFutureOutlook) {
+      // CARD_NATURAL_GENERAL_SHRINK_V2_FUTURE / CARD_TENMON_BRAINSTEM_WIRING_FIX_V1: explicit 時は発火させない
+      if (__brainstem?.explicitLengthRequested == null && __isFutureOutlook) {
         const __coreFuture: ThreadCore = { ...__threadCore, lastResponseContract: { answerLength: "short", answerMode: "analysis", answerFrame: "one_step", routeReason: "R22_FUTURE_OUTLOOK_V1" }, updatedAt: new Date().toISOString() };
         saveThreadCore(__coreFuture).catch(() => {});
         try { (res as any).__TENMON_THREAD_CORE = __coreFuture; } catch {}
