@@ -540,7 +540,8 @@ function __tenmonGeneralGateResultMaybe(x: any, rawMessageOverride?: string): an
           const __isReleaseLocked =
             __rr0.startsWith("RELEASE_PREEMPT_") ||
             __rr0.startsWith("STRICT_COMPARE_TASK_LOCK_");
-          if (empty && !__isReleaseLocked) { (__ku as any).routeReason = "K1_TRACE_EMPTY_GATED_V1"; }
+          const __isExplicitLong = ((__ku as any)?.explicitLengthRequested != null) || __rr0 === "EXPLICIT_CHAR_PREEMPT_V1" || String((__ku as any)?.answerLength || "") === "long";
+            if (empty && !__isReleaseLocked && !__isExplicitLong) { (__ku as any).routeReason = "K1_TRACE_EMPTY_GATED_V1"; }
       }
     } catch {}
     // R4_1_HEART_STATIC_KU_V2 / R2_HEART_PHASE_REASON_ALIGN_V1:
