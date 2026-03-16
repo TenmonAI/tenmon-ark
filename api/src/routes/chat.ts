@@ -7614,6 +7614,19 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
         }
       } catch {}
 
+  // CARD_GENERAL_ROUTE_SHRINK_V1: general 本文に入る前の deterministic 分類（既存 regex 再利用・広げすぎない）
+  function __classifyGeneralShrinkV1(message: string): { kind: "future_outlook" | "present_state" | "judgement" | "essence" | "compare" | "next_step" | "none"; confidence: number } {
+    const m = String(message ?? "").trim();
+    if (!m) return { kind: "none", confidence: 0 };
+    if (/^(次は|次の一手は|次の一歩は|では次は)[？?]?$/u.test(m) || (m.length <= 16 && /次(は|の一手|の一歩)/u.test(m)) || /(次の一手|どう進める|何からやる)/u.test(m)) return { kind: "next_step", confidence: 1 };
+    if (/(要するに|要点は|一言でいうと|本質は?|要は|核)/u.test(m)) return { kind: "essence", confidence: 1 };
+    if (/(違いは?|どう違う|何が違う|比較)/u.test(m)) return { kind: "compare", confidence: 1 };
+    if (/(これから|展望|先行き|どうなる|どう見ますか|未来|今後|この先|見通し)/u.test(m)) return { kind: "future_outlook", confidence: 1 };
+    if (/(今どんな気分|今の状態|いまどう)/u.test(m)) return { kind: "present_state", confidence: 1 };
+    if (/(どう思う|良いか悪いか|判断)/u.test(m)) return { kind: "judgement", confidence: 1 };
+    return { kind: "none", confidence: 0 };
+  }
+
 // generalKind: counsel / worldview / short_moral / other（NATURAL_GENERAL_LLM_TOP 分流用）
       const __generalKind: "counsel" | "worldview" | "short_moral" | "other" =
         /悩み|しんどい|つらい|聞いてくれ|相談/.test(t0) ? "counsel"
@@ -8021,6 +8034,74 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
               evidenceIds: [],
               lawTrace: [],
             },
+          },
+        }));
+      }
+
+      // CARD_GENERAL_ROUTE_SHRINK_V1: NATURAL_GENERAL_LLM_TOP に入る直前で deterministic 分流
+      const __shrink = __classifyGeneralShrinkV1(String(message ?? ""));
+      try { console.log("[GENERAL_SHRINK_CLASSIFY]", { raw: String(message ?? "").slice(0, 120), kind: __shrink.kind, confidence: __shrink.confidence }); } catch {}
+      if (__shrink.kind !== "none" && __shrink.confidence >= 0.5) {
+        const __rcShrink = __shrink.kind === "judgement" ? "judgement" : "analysis";
+        let __rrShrink: string;
+        let __bodyShrink: string;
+        switch (__shrink.kind) {
+          case "future_outlook":
+            __rrShrink = "R22_FUTURE_OUTLOOK_V1";
+            __bodyShrink = "【天聞の所見】未来・展望は、いまの一点から見立てる。いま引っかかっている一点を一言で。";
+            break;
+          case "present_state":
+            __rrShrink = "FEELING_SELF_STATE_V1";
+            __bodyShrink = "【天聞の所見】いまは、整えに向かう気分です。中心を一つ置いて、そこから静かに見ていけます。";
+            break;
+          case "judgement":
+            __rrShrink = "R22_JUDGEMENT_PREEMPT_V1";
+            __bodyShrink = /(良い|悪い|正しい|間違い|べき|どっちが|どちらが|した方が)/u.test(String(message ?? "").trim()) || /(良い|悪い)[？?]?\s*$/u.test(String(message ?? "").trim())
+              ? "【天聞の所見】良し悪しは文脈で締まります。何についての判断か、一言で置いてください。"
+              : "【天聞の所見】見立ては一点で締まります。何について思うか、一言で置いてください。";
+            break;
+          case "essence":
+            __rrShrink = "R22_ESSENCE_ASK_V1";
+            __bodyShrink = "【天聞の所見】要点を聞いています。いまの中心を一言で置くと、答えが締まります。";
+            break;
+          case "compare":
+            __rrShrink = "R22_COMPARE_ASK_V1";
+            __bodyShrink = "【天聞の所見】比較の問いです。比べたい二つを一言ずつ置くと、答えが締まります。";
+            break;
+          case "next_step":
+            __rrShrink = "R22_NEXTSTEP_FOLLOWUP_V1";
+            __bodyShrink = "【天聞の所見】次は、いまの中心を一つ保ったまま、見る角度を一つ決めると進みやすいです。";
+            break;
+          default:
+            __rrShrink = "NATURAL_GENERAL_LLM_TOP";
+            __bodyShrink = "【天聞の所見】いま一番引っかかっている一点を置いてください。";
+        }
+        const __kuShrink: any = {
+          routeReason: __rrShrink,
+          routeClass: __rcShrink,
+          answerLength: "short",
+          answerMode: "analysis",
+          answerFrame: "one_step",
+          lawsUsed: [],
+          evidenceIds: [],
+          lawTrace: [],
+        };
+        __applyBrainstemContractToKuV1(__kuShrink, __brainstem, __rcShrink);
+        try { console.log("[GENERAL_SHRINK_RETURN]", { rr: __kuShrink.routeReason, rc: __kuShrink.routeClass, len: __kuShrink.answerLength, mode: __kuShrink.answerMode, frame: __kuShrink.answerFrame }); } catch {}
+        const __coreShrink: ThreadCore = { ...__threadCore, lastResponseContract: { answerLength: __kuShrink.answerLength, answerMode: __kuShrink.answerMode, answerFrame: __kuShrink.answerFrame, routeReason: __rrShrink }, updatedAt: new Date().toISOString() };
+        saveThreadCore(__coreShrink).catch(() => {});
+        try { (res as any).__TENMON_THREAD_CORE = __coreShrink; } catch {}
+        return res.json(__tenmonGeneralGateResultMaybe({
+          response: __bodyShrink,
+          evidence: null,
+          candidates: [],
+          timestamp,
+          threadId,
+          decisionFrame: {
+            mode: "NATURAL",
+            intent: "chat",
+            llm: null,
+            ku: __kuShrink,
           },
         }));
       }
