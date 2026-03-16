@@ -92,6 +92,7 @@ import { buildKanagiGrowthLedgerEntryFromKu, insertKanagiGrowthLedgerEntry } fro
 import { upsertThreadCenter, getLatestThreadCenter } from "../core/threadCenterMemory.js";
 import { loadThreadCore, saveThreadCore } from "../core/threadCoreStore.js";
 import { emptyThreadCore, centerLabelFromKey, type ThreadCore } from "../core/threadCore.js";
+import { buildKnowledgeBinder, applyKnowledgeBinderToKu } from "../core/knowledgeBinder.js";
 import { tenmonBrainstem, type BrainstemDecision } from "../core/tenmonBrainstem.js";
 import { upsertBookContinuation } from "../core/bookContinuationMemory.js";
 import {
@@ -7562,6 +7563,7 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
         };
         __applyBrainstemContractToKuV1(__ku, __brainstem, "analysis");
         try { console.log("[BRAINSTEM_APPLY_EXPLICIT]", { rr: __ku.routeReason, rc: __ku.routeClass, len: __ku.answerLength, mode: __ku.answerMode, frame: __ku.answerFrame, centerKey: __ku.centerKey }); } catch {}
+        try { const __binderEx = buildKnowledgeBinder({ routeReason: "EXPLICIT_CHAR_PREEMPT_V1", message: String(message ?? ""), threadId: String(threadId ?? ""), ku: __ku, threadCore: __threadCore, threadCenter: null }); applyKnowledgeBinderToKu(__ku, __binderEx); } catch {}
         return res.json(__tenmonGeneralGateResultMaybe({
           response: __body,
           evidence: null,
@@ -7702,6 +7704,21 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
         const __coreNext: ThreadCore = { ...__threadCore, lastResponseContract: { answerLength: "short", answerMode: "analysis", answerFrame: "one_step", routeReason: "R22_NEXTSTEP_FOLLOWUP_V1" }, updatedAt: new Date().toISOString() };
         saveThreadCore(__coreNext).catch(() => {});
         try { (res as any).__TENMON_THREAD_CORE = __threadCore; } catch {}
+        const __kuNext: any = {
+          routeReason: "R22_NEXTSTEP_FOLLOWUP_V1",
+          answerLength: "short",
+          answerMode: "analysis",
+          answerFrame: "one_step",
+          threadCenterKey: __threadCore.centerKey ?? null,
+          threadCenterLabel: __threadCore.centerLabel ?? centerLabelFromKey(__threadCore.centerKey) ?? null,
+          lastAnswerLength: __threadCore.lastResponseContract?.answerLength ?? undefined,
+          lastAnswerMode: __threadCore.lastResponseContract?.answerMode ?? undefined,
+          lastAnswerFrame: __threadCore.lastResponseContract?.answerFrame ?? undefined,
+          lawsUsed: [],
+          evidenceIds: [],
+          lawTrace: [],
+        };
+        try { const __binderNext = buildKnowledgeBinder({ routeReason: "R22_NEXTSTEP_FOLLOWUP_V1", message: String(message ?? ""), threadId: String(threadId ?? ""), ku: __kuNext, threadCore: __threadCore, threadCenter: __threadCenterForGeneral ?? null }); applyKnowledgeBinderToKu(__kuNext, __binderNext); } catch {}
         return res.json(__tenmonGeneralGateResultMaybe({
           response: __bodyNext,
           evidence: null,
@@ -7712,20 +7729,7 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
             mode: "NATURAL",
             intent: "chat",
             llm: null,
-            ku: {
-              routeReason: "R22_NEXTSTEP_FOLLOWUP_V1",
-              answerLength: "short",
-              answerMode: "analysis",
-              answerFrame: "one_step",
-              threadCenterKey: __threadCore.centerKey ?? null,
-              threadCenterLabel: __threadCore.centerLabel ?? centerLabelFromKey(__threadCore.centerKey) ?? null,
-              lastAnswerLength: __threadCore.lastResponseContract?.answerLength ?? undefined,
-              lastAnswerMode: __threadCore.lastResponseContract?.answerMode ?? undefined,
-              lastAnswerFrame: __threadCore.lastResponseContract?.answerFrame ?? undefined,
-              lawsUsed: [],
-              evidenceIds: [],
-              lawTrace: [],
-            },
+            ku: __kuNext,
           },
         }));
       }
@@ -7740,6 +7744,22 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
         const __coreE: ThreadCore = { ...__threadCore, centerKey: __ckE || null, centerLabel: __displayLabelE || null, activeEntities: __displayLabelE ? [__displayLabelE] : [], lastResponseContract: { answerLength: "short", answerMode: "analysis", answerFrame: "one_step", routeReason: "R22_ESSENCE_FOLLOWUP_V1" }, updatedAt: new Date().toISOString() };
         saveThreadCore(__coreE).catch(() => {});
         try { (res as any).__TENMON_THREAD_CORE = __coreE; } catch {}
+        const __kuE: any = {
+          routeReason: "R22_ESSENCE_FOLLOWUP_V1",
+          routeClass: "continuity",
+          answerLength: "short",
+          answerMode: "continuity",
+          answerFrame: "one_step",
+          threadCenterKey: __threadCenterForGeneral.center_key ?? null,
+          threadCenterLabel: __displayLabelE ?? null,
+          threadCenterType: __threadCenterForGeneral.center_type ?? null,
+          centerKey: __ckE || null,
+          centerLabel: __displayLabelE ?? null,
+          lawsUsed: [],
+          evidenceIds: [],
+          lawTrace: [],
+        };
+        try { const __binderE = buildKnowledgeBinder({ routeReason: "R22_ESSENCE_FOLLOWUP_V1", message: String(message ?? ""), threadId: String(threadId ?? ""), ku: __kuE, threadCore: __threadCore, threadCenter: __threadCenterForGeneral }); applyKnowledgeBinderToKu(__kuE, __binderE); } catch {}
         return res.json(__tenmonGeneralGateResultMaybe({
           response: __bodyEssence,
           evidence: null,
@@ -7750,19 +7770,7 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
             mode: "NATURAL",
             intent: "chat",
             llm: null,
-            ku: {
-              routeReason: "R22_ESSENCE_FOLLOWUP_V1",
-              routeClass: "continuity",
-              answerLength: "short",
-              answerMode: "continuity",
-              answerFrame: "one_step",
-              threadCenterKey: __threadCenterForGeneral.center_key ?? null,
-              threadCenterLabel: __displayLabelE ?? null,
-              threadCenterType: __threadCenterForGeneral.center_type ?? null,
-              lawsUsed: [],
-              evidenceIds: [],
-              lawTrace: [],
-            },
+            ku: __kuE,
           },
         }));
       }
@@ -7778,6 +7786,18 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
             if (__twoSoundsCmp && __twoSoundsCmp.length >= 2) {
               const __cmpBodyCmp = buildKotodamaCompareResponse(__twoSoundsCmp[0], __twoSoundsCmp[1]);
               if (__cmpBodyCmp) {
+                const __kuCmpEarly: any = {
+                  routeReason: "R22_COMPARE_FOLLOWUP_V1",
+                  answerLength: "short",
+                  answerMode: "analysis",
+                  answerFrame: "one_step",
+                  threadCenterKey: __threadCenterForGeneral.center_key ?? null,
+                  threadCenterType: __threadCenterForGeneral.center_type ?? null,
+                  lawsUsed: [],
+                  evidenceIds: [],
+                  lawTrace: [],
+                };
+                try { const __binderCmpE = buildKnowledgeBinder({ routeReason: "R22_COMPARE_FOLLOWUP_V1", message: String(message ?? ""), threadId: String(threadId ?? ""), ku: __kuCmpEarly, threadCore: __threadCore, threadCenter: __threadCenterForGeneral }); applyKnowledgeBinderToKu(__kuCmpEarly, __binderCmpE); } catch {}
                 return res.json(__tenmonGeneralGateResultMaybe({
                   response: __cmpBodyCmp,
                   evidence: null,
@@ -7788,17 +7808,7 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
                     mode: "NATURAL",
                     intent: "chat",
                     llm: null,
-                    ku: {
-                      routeReason: "R22_COMPARE_FOLLOWUP_V1",
-                      answerLength: "short",
-                      answerMode: "analysis",
-                      answerFrame: "one_step",
-                      threadCenterKey: __threadCenterForGeneral.center_key ?? null,
-                      threadCenterType: __threadCenterForGeneral.center_type ?? null,
-                      lawsUsed: [],
-                      evidenceIds: [],
-                      lawTrace: [],
-                    },
+                    ku: __kuCmpEarly,
                   },
                 }));
               }
@@ -7812,6 +7822,20 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
         const __coreCmp: ThreadCore = { ...__threadCore, centerKey: __ckCmp || null, centerLabel: __displayLabelCmp || null, activeEntities: __displayLabelCmp ? [__displayLabelCmp] : [], lastResponseContract: { answerLength: "short", answerMode: "analysis", answerFrame: "one_step", routeReason: "R22_COMPARE_FOLLOWUP_V1" }, updatedAt: new Date().toISOString() };
         saveThreadCore(__coreCmp).catch(() => {});
         try { (res as any).__TENMON_THREAD_CORE = __coreCmp; } catch {}
+        const __kuCmp: any = {
+          routeReason: "R22_COMPARE_FOLLOWUP_V1",
+          answerLength: "short",
+          answerMode: "analysis",
+          answerFrame: "one_step",
+          threadCenterKey: __threadCenterForGeneral.center_key ?? null,
+          threadCenterType: __threadCenterForGeneral.center_type ?? null,
+          centerKey: __ckCmp || null,
+          centerLabel: __displayLabelCmp ?? null,
+          lawsUsed: [],
+          evidenceIds: [],
+          lawTrace: [],
+        };
+        try { const __binderCmp = buildKnowledgeBinder({ routeReason: "R22_COMPARE_FOLLOWUP_V1", message: String(message ?? ""), threadId: String(threadId ?? ""), ku: __kuCmp, threadCore: __threadCore, threadCenter: __threadCenterForGeneral }); applyKnowledgeBinderToKu(__kuCmp, __binderCmp); } catch {}
         return res.json(__tenmonGeneralGateResultMaybe({
           response: __bodyCmpPreempt,
           evidence: null,
@@ -7822,17 +7846,7 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
             mode: "NATURAL",
             intent: "chat",
             llm: null,
-            ku: {
-              routeReason: "R22_COMPARE_FOLLOWUP_V1",
-              answerLength: "short",
-              answerMode: "analysis",
-              answerFrame: "one_step",
-              threadCenterKey: __threadCenterForGeneral.center_key ?? null,
-              threadCenterType: __threadCenterForGeneral.center_type ?? null,
-              lawsUsed: [],
-              evidenceIds: [],
-              lawTrace: [],
-            },
+            ku: __kuCmp,
           },
         }));
       }
@@ -7851,6 +7865,20 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
         const __coreCont: ThreadCore = { ...__threadCore, centerKey: __ckCont || null, centerLabel: __displayLabelCont || null, activeEntities: __displayLabelCont ? [__displayLabelCont] : [], lastResponseContract: { answerLength: "short", answerMode: "analysis", answerFrame: "one_step", routeReason: "CONTINUITY_ANCHOR_V1" }, updatedAt: new Date().toISOString() };
         saveThreadCore(__coreCont).catch(() => {});
         try { (res as any).__TENMON_THREAD_CORE = __coreCont; } catch {}
+        const __kuCont: any = {
+          routeReason: "CONTINUITY_ANCHOR_V1",
+          answerLength: "short",
+          answerMode: "analysis",
+          answerFrame: "one_step",
+          threadCenterKey: __threadCenterForGeneral.center_key ?? null,
+          threadCenterType: __threadCenterForGeneral.center_type ?? null,
+          centerKey: __ckCont || null,
+          centerLabel: __displayLabelCont ?? null,
+          lawsUsed: [],
+          evidenceIds: [],
+          lawTrace: [],
+        };
+        try { const __binderCont = buildKnowledgeBinder({ routeReason: "CONTINUITY_ANCHOR_V1", message: String(message ?? ""), threadId: String(threadId ?? ""), ku: __kuCont, threadCore: __threadCore, threadCenter: __threadCenterForGeneral }); applyKnowledgeBinderToKu(__kuCont, __binderCont); } catch {}
         return res.json(__tenmonGeneralGateResultMaybe({
           response: __bodyCont,
           evidence: null,
@@ -7861,68 +7889,36 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
             mode: "NATURAL",
             intent: "chat",
             llm: null,
-            ku: {
-              routeReason: "CONTINUITY_ANCHOR_V1",
-              answerLength: "short",
-              answerMode: "analysis",
-              answerFrame: "one_step",
-              threadCenterKey: __threadCenterForGeneral.center_key ?? null,
-              threadCenterType: __threadCenterForGeneral.center_type ?? null,
-              lawsUsed: [],
-              evidenceIds: [],
-              lawTrace: [],
-            },
+            ku: __kuCont,
           },
         }));
       }
 
       // CARD_NATURAL_GENERAL_SHRINK_V2_ESSENCE: 要するに/要点/本質系を threadCenter なし時だけ短文 preempt
       if (!__threadCenterForGeneral && /(要するに|要点は|一言でいうと|本質は|要は)/u.test(t0)) {
+        const __kuEssenceAsk: any = { routeReason: "R22_ESSENCE_ASK_V1", answerLength: "short", answerMode: "analysis", answerFrame: "one_step", lawsUsed: [], evidenceIds: [], lawTrace: [] };
+        try { const __binderEA = buildKnowledgeBinder({ routeReason: "R22_ESSENCE_ASK_V1", message: String(message ?? ""), threadId: String(threadId ?? ""), ku: __kuEssenceAsk, threadCore: __threadCore, threadCenter: null }); applyKnowledgeBinderToKu(__kuEssenceAsk, __binderEA); } catch {}
         return res.json(__tenmonGeneralGateResultMaybe({
           response: "【天聞の所見】要点を聞いています。いまの中心を一言で置くと、答えが締まります。",
           evidence: null,
           candidates: [],
           timestamp,
           threadId,
-          decisionFrame: {
-            mode: "NATURAL",
-            intent: "chat",
-            llm: null,
-            ku: {
-              routeReason: "R22_ESSENCE_ASK_V1",
-              answerLength: "short",
-              answerMode: "analysis",
-              answerFrame: "one_step",
-              lawsUsed: [],
-              evidenceIds: [],
-              lawTrace: [],
-            },
-          },
+          decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: __kuEssenceAsk },
         }));
       }
 
       // CARD_JUDGEMENT_COMPARE_ROUTE_V1_COMPARE_NO_CENTER: threadCenter なしの compare 系を短文 preempt
       if (!__threadCenterForGeneral && /(違いは|どう違う|何が違う|比較して)/u.test(t0)) {
+        const __kuCompareAsk: any = { routeReason: "R22_COMPARE_ASK_V1", answerLength: "short", answerMode: "analysis", answerFrame: "one_step", lawsUsed: [], evidenceIds: [], lawTrace: [] };
+        try { const __binderCA = buildKnowledgeBinder({ routeReason: "R22_COMPARE_ASK_V1", message: String(message ?? ""), threadId: String(threadId ?? ""), ku: __kuCompareAsk, threadCore: __threadCore, threadCenter: null }); applyKnowledgeBinderToKu(__kuCompareAsk, __binderCA); } catch {}
         return res.json(__tenmonGeneralGateResultMaybe({
           response: "【天聞の所見】比較の問いです。比べたい二つを一言ずつ置くと、答えが締まります。",
           evidence: null,
           candidates: [],
           timestamp,
           threadId,
-          decisionFrame: {
-            mode: "NATURAL",
-            intent: "chat",
-            llm: null,
-            ku: {
-              routeReason: "R22_COMPARE_ASK_V1",
-              answerLength: "short",
-              answerMode: "analysis",
-              answerFrame: "one_step",
-              lawsUsed: [],
-              evidenceIds: [],
-              lawTrace: [],
-            },
-          },
+          decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: __kuCompareAsk },
         }));
       }
 
@@ -8048,26 +8044,15 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
         const __coreFuture: ThreadCore = { ...__threadCore, lastResponseContract: { answerLength: "short", answerMode: "analysis", answerFrame: "one_step", routeReason: "R22_FUTURE_OUTLOOK_V1" }, updatedAt: new Date().toISOString() };
         saveThreadCore(__coreFuture).catch(() => {});
         try { (res as any).__TENMON_THREAD_CORE = __coreFuture; } catch {}
+        const __kuFuture: any = { routeReason: "R22_FUTURE_OUTLOOK_V1", answerLength: "short", answerMode: "analysis", answerFrame: "one_step", lawsUsed: [], evidenceIds: [], lawTrace: [] };
+        try { const __binderFut = buildKnowledgeBinder({ routeReason: "R22_FUTURE_OUTLOOK_V1", message: String(message ?? ""), threadId: String(threadId ?? ""), ku: __kuFuture, threadCore: __threadCore, threadCenter: __threadCenterForGeneral ?? null }); applyKnowledgeBinderToKu(__kuFuture, __binderFut); } catch {}
         return res.json(__tenmonGeneralGateResultMaybe({
           response: "【天聞の所見】未来・展望は、いまの一点から見立てる。いま引っかかっている一点を一言で。",
           evidence: null,
           candidates: [],
           timestamp,
           threadId,
-          decisionFrame: {
-            mode: "NATURAL",
-            intent: "chat",
-            llm: null,
-            ku: {
-              routeReason: "R22_FUTURE_OUTLOOK_V1",
-              answerLength: "short",
-              answerMode: "analysis",
-              answerFrame: "one_step",
-              lawsUsed: [],
-              evidenceIds: [],
-              lawTrace: [],
-            },
-          },
+          decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: __kuFuture },
         }));
       }
 
@@ -10119,6 +10104,7 @@ if (!outText) {
         });
         __applyBrainstemContractToKuV1(__ku, __brainstem, "define");
         try { console.log("[BRAINSTEM_APPLY_DEFINE]", { rr: (__ku as any).routeReason, rc: (__ku as any).routeClass, len: (__ku as any).answerLength, mode: (__ku as any).answerMode, frame: (__ku as any).answerFrame, centerKey: (__ku as any).centerKey }); } catch {}
+        try { const __binder = buildKnowledgeBinder({ routeReason: "DEF_FASTPATH_VERIFIED_V1", message: String(message ?? ""), threadId: String(threadId ?? ""), ku: __ku, threadCore: __threadCore, threadCenter: null }); applyKnowledgeBinderToKu(__ku, __binder); } catch {}
         return res.json(__tenmonGeneralGateResultMaybe({
           response: __respFinal,
           evidence: {
@@ -10187,6 +10173,7 @@ if (!outText) {
         });
         __applyBrainstemContractToKuV1(__kuProposed, __brainstem, "define");
         try { console.log("[BRAINSTEM_APPLY_DEFINE]", { rr: (__kuProposed as any).routeReason, rc: (__kuProposed as any).routeClass, len: (__kuProposed as any).answerLength, mode: (__kuProposed as any).answerMode, frame: (__kuProposed as any).answerFrame, centerKey: (__kuProposed as any).centerKey }); } catch {}
+        try { const __binderP = buildKnowledgeBinder({ routeReason: "DEF_FASTPATH_PROPOSED_V1", message: String(message ?? ""), threadId: String(threadId ?? ""), ku: __kuProposed, threadCore: __threadCore, threadCenter: null }); applyKnowledgeBinderToKu(__kuProposed, __binderP); } catch {}
         return res.json(__tenmonGeneralGateResultMaybe({
           response: __resp,
           evidence: {

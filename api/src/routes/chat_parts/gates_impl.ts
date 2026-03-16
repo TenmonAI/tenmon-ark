@@ -371,6 +371,7 @@ function __thinReleasePayloadV2(x: any): any {
         df.ku && typeof df.ku === "object" && !Array.isArray(df.ku)
           ? { ...df.ku }
           : {};
+      const __binderFields = { binderSummary: ku.binderSummary, sourcePack: ku.sourcePack, centerPack: ku.centerPack };
 
       delete ku.intention;
       delete ku.kanagiSelf;
@@ -389,6 +390,9 @@ function __thinReleasePayloadV2(x: any): any {
       ku.lawTrace = Array.isArray(ku.lawTrace) ? ku.lawTrace : [];
       ku.rewriteUsed = Boolean(ku.rewriteUsed);
       ku.rewriteDelta = Number(ku.rewriteDelta || 0);
+      if (__binderFields.binderSummary !== undefined) ku.binderSummary = __binderFields.binderSummary;
+      if (__binderFields.sourcePack !== undefined) ku.sourcePack = __binderFields.sourcePack;
+      if (__binderFields.centerPack !== undefined) ku.centerPack = __binderFields.centerPack;
 
       df.ku = ku;
       out.decisionFrame = df;
