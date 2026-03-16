@@ -1323,6 +1323,101 @@ function __tenmonGeneralGateResultMaybe(x: any, rawMessageOverride?: string): an
         }
       } catch {}
 
+
+    // CARD_SYNAPSE_TOP_UNIFICATION_V1:
+    // 最終出口で synapseTop 契約を最小復元する
+    try {
+      const __dfS: any = (x as any)?.decisionFrame;
+      if (__dfS && typeof __dfS === "object") {
+        if (!__dfS.ku || typeof __dfS.ku !== "object" || Array.isArray(__dfS.ku)) __dfS.ku = {};
+        const __kuS: any = __dfS.ku;
+
+        if (!__kuS.synapseTop || typeof __kuS.synapseTop !== "object" || Array.isArray(__kuS.synapseTop)) {
+          __kuS.synapseTop = {};
+        }
+        const __synS: any = __kuS.synapseTop;
+
+        const __tidS = String((x as any)?.threadId || "").trim();
+        const __rrS = String(__kuS.routeReason || (x as any)?.routeReason || "").trim();
+        const __rcS = String(__kuS.routeClass || "").trim();
+        const __scriptureKeyS = String(__kuS.scriptureKey || "").trim();
+        const __centerKeyS = String(
+          __kuS.centerKey ||
+          __kuS.centerMeaning ||
+          __kuS.threadCenterKey ||
+          __kuS.thoughtCoreSummary?.centerKey ||
+          ""
+        ).trim();
+        const __centerLabelS = String(
+          __kuS.centerLabel ||
+          __kuS.threadCenterLabel ||
+          __kuS.thoughtCoreSummary?.centerMeaning ||
+          __centerKeyS ||
+          ""
+        ).trim();
+
+        const __threadCenterExisting = __synS.sourceThreadCenter || null;
+        const __threadCenterTypeS =
+          (__threadCenterExisting && String(__threadCenterExisting.centerType || "").trim()) ||
+          (__scriptureKeyS || __rrS === "TENMON_SCRIPTURE_CANON_V1" ? "scripture" : (__centerKeyS ? "concept" : ""));
+
+        if (!String(__synS.sourceRouteReason || "").trim() && __rrS) {
+          __synS.sourceRouteReason = __rrS;
+        }
+
+        if (!String(__synS.sourceRouteClass || "").trim() && __rcS) {
+          __synS.sourceRouteClass = __rcS;
+        }
+
+        if (!String(__synS.sourceCenterLabel || "").trim() && __centerLabelS) {
+          __synS.sourceCenterLabel = __centerLabelS;
+        }
+
+        if (!String(__synS.sourceScriptureKey || "").trim() && __scriptureKeyS) {
+          __synS.sourceScriptureKey = __scriptureKeyS;
+        }
+
+        if (!__synS.sourceThreadCenter && __threadCenterTypeS && __centerKeyS) {
+          __synS.sourceThreadCenter = {
+            centerType: __threadCenterTypeS,
+            centerKey: __centerKeyS,
+            sourceRouteReason: __rrS || null,
+          };
+        }
+
+        if (!String(__synS.sourceMemoryHint || "").trim() && __tidS && __centerKeyS) {
+          __synS.sourceMemoryHint = `thread:${__tidS} centerKey:${__centerKeyS}`;
+        }
+
+        if (!__synS.sourceThoughtCore && __kuS.thoughtCoreSummary && typeof __kuS.thoughtCoreSummary === "object") {
+          __synS.sourceThoughtCore = __kuS.thoughtCoreSummary;
+        }
+
+        if (!__synS.sourceHeart && __kuS.heart && typeof __kuS.heart === "object") {
+          __synS.sourceHeart = __kuS.heart;
+        }
+
+        if (!__synS.sourceKanagiSelf && __kuS.kanagiSelf && typeof __kuS.kanagiSelf === "object") {
+          __synS.sourceKanagiSelf = __kuS.kanagiSelf;
+        }
+
+        if (!__synS.sourceIntention && __kuS.intention && typeof __kuS.intention === "object") {
+          __synS.sourceIntention = __kuS.intention;
+        }
+
+        if (!String(__synS.sourceLedgerHint || "").trim()) {
+          __synS.sourceLedgerHint =
+            __rrS === "TENMON_SCRIPTURE_CANON_V1"
+              ? "ledger:scripture_continuity"
+              : (__rcS === "define"
+                  ? "ledger:define"
+                  : (__rcS === "continuity"
+                      ? "ledger:continuity"
+                      : "ledger:general"));
+        }
+      }
+    } catch {}
+
 return __thinReleasePayloadV2(x);
   } catch { return __thinReleasePayloadV2(x); }
 
