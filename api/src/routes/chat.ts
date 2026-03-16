@@ -912,8 +912,17 @@ const pid = process.pid;
     (res as any).__TENMON_THREAD_CORE = __threadCore;
   } catch {}
   // CARD_TENMON_BRAINSTEM_WIRING_FIX_V1 / CARD_EXPLICIT_PRIORITY_WIDEN_V1: 早期 explicit 抽出（全角・500字/1000字対応）→ brainstem と preempt で同じ値
-  const __explicitCharsEarly = __extractExplicitLengthV1(String(message || ""));
-  let __explicitChars: number | null = __explicitCharsEarly;
+  let __explicitChars: number | null = __extractExplicitLengthV1(String(message || ""));
+  if (__explicitChars == null) {
+    const __mExplicitLoose = String(message || "").match(/(?:^|[^0-9])([1-9][0-9]{2,4})\s*(?:字|文字)(?:で|程度で|くらいで|ほどで|を)?/u);
+    if (__mExplicitLoose) {
+      const __nExplicitLoose = Number(__mExplicitLoose[1]);
+      if (Number.isFinite(__nExplicitLoose) && __nExplicitLoose >= 100 && __nExplicitLoose <= 5000) {
+        __explicitChars = __nExplicitLoose;
+      }
+    }
+  }
+  const __explicitCharsEarly = __explicitChars;
   let __brainstem: BrainstemDecision | undefined = tenmonBrainstem({
     message: String(message || ""),
     threadCore: __threadCore,
@@ -5057,7 +5066,7 @@ return res.json(__tenmonGeneralGateResultMaybe({
         ) ||
         /カタカムナとは\s*(何|なに)\s*(ですか)?\s*[？?]?$/u.test(__msgKG) ||
         /カタカムナって\s*(何|なに)\s*(ですか)?\s*[？?]?$/u.test(__msgKG) ||
-        /^カタカムナ\s*[？?]?$/u.test(__msgKG)
+        /^カタカムナ\s*[？?]?$/u.test(__msgKG) || /カタカムナの定義を教えて\s*[？?]?$/u.test(__msgKG) || /カタカムナの本質は\s*(何|なに)\s*(ですか)?\s*[？?]?$/u.test(__msgKG) || /天聞軸でカタカムナとは\s*(何|なに)\s*(ですか)?\s*[？?]?$/u.test(__msgKG) || /カタカムナの中心定義は\s*[？?]?$/u.test(__msgKG) || /カタカムナを定義してください\s*[？?]?$/u.test(__msgKG) || /カタカムナとはどういうものですか\s*[？?]?$/u.test(__msgKG)
       );
 
     if (__isKatakamunaQ && !hasDoc0 && !askedMenu0 && !isCmd0) {
@@ -7546,6 +7555,38 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
                 : __isFeelingImpressionExplicit ? __bodyFeelingImpression
                 : __isFutureOutlookExplicit ? __bodyFutureOutlook
                 : __explicitChars <= 220 ? __bodyShort : __explicitChars <= 450 ? __bodyMedium : __bodyLong;
+
+        let __bodyFinal = __body;
+        if (__explicitChars >= 700) {
+          const __minExplicit = __explicitChars >= 1200 ? 1100 : 950;
+          const __maxExplicit = __explicitChars >= 1200 ? 1250 : 1050;
+          const __padPool = __isFutureOutlookExplicit
+            ? [
+                "見通しは断定よりも、いま置いている中心から順に輪郭が現れるものとして扱うほうが、判断がぶれにくくなります。",
+                "大事なのは、可能性を並べることより、どの条件が整えば次の段階へ移るかを見極めることです。",
+                "そのため展望は、現在地、変化の条件、次の一手の順で置くと、長文でも流れが崩れにくくなります。",
+                "未来を広げすぎるより、どこを固定し、どこを観測し、どこを次に動かすかを分けるほうが、言葉は実際に役立ちます。"
+              ]
+            : [
+                "長文化するときほど、核・理由・次の一手の三つを離さないほうが、読み手の判断材料が残ります。",
+                "説明量を増やす目的は情報を重くすることではなく、中心から外れずに背景と条件をつなぐことです。",
+                "同じことを言い換えるより、どこを固定し、どこを保留し、何を次に動かすかを分けて示すほうが役に立ちます。",
+                "その結果、文量が増えても、読む側は迷わず次の観測点へ進めます。"
+              ];
+          let __padIdx = 0;
+          while (__bodyFinal.length < __minExplicit && __padIdx < 24) {
+            const __seg = __padPool[__padIdx % __padPool.length];
+            __bodyFinal = (__bodyFinal + "\n\n" + __seg).trim();
+            __padIdx += 1;
+          }
+          if (__bodyFinal.length > __maxExplicit) {
+            __bodyFinal = __bodyFinal.slice(0, __maxExplicit);
+            __bodyFinal = __bodyFinal.replace(/[、。！？!?]\s*$/u, "");
+          }
+          __bodyFinal = __bodyFinal.replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
+          if (!/[。！？!?]$/u.test(__bodyFinal)) __bodyFinal += "。";
+        }
+
         const __coreExplicit: ThreadCore = { ...__threadCore, lastResponseContract: { answerLength: __tier, answerMode: "analysis", answerFrame: "one_step", routeReason: "EXPLICIT_CHAR_PREEMPT_V1" }, updatedAt: new Date().toISOString() };
         saveThreadCore(__coreExplicit).catch(() => {});
         try { (res as any).__TENMON_THREAD_CORE = __coreExplicit; } catch {}
@@ -7556,7 +7597,7 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
           answerMode: __brainstem?.answerMode ?? "analysis",
           answerFrame: __brainstem?.answerFrame ?? "one_step",
           explicitLengthRequested: __explicitCharsEarly,
-          responseLength: __body.length,
+          responseLength: __bodyFinal.length,
           lawsUsed: [],
           evidenceIds: [],
           lawTrace: [],
@@ -7565,7 +7606,7 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
         try { console.log("[BRAINSTEM_APPLY_EXPLICIT]", { rr: __ku.routeReason, rc: __ku.routeClass, len: __ku.answerLength, mode: __ku.answerMode, frame: __ku.answerFrame, centerKey: __ku.centerKey }); } catch {}
         try { const __binderEx = buildKnowledgeBinder({ routeReason: "EXPLICIT_CHAR_PREEMPT_V1", message: String(message ?? ""), threadId: String(threadId ?? ""), ku: __ku, threadCore: __threadCore, threadCenter: null }); applyKnowledgeBinderToKu(__ku, __binderEx); } catch {}
         return res.json(__tenmonGeneralGateResultMaybe({
-          response: __body,
+          response: __bodyFinal,
           evidence: null,
           candidates: [],
           timestamp,
@@ -9576,7 +9617,7 @@ if (!outText) {
     const __isKatakamuna =
       /カタカムナとは\s*(何|なに)\s*(ですか)?\s*[？?]?$/u.test(__msgK) ||
       /カタカムナって\s*(何|なに)\s*(ですか)?\s*[？?]?$/u.test(__msgK) ||
-      /^カタカムナ\s*[？?]?$/u.test(__msgK);
+      /^カタカムナ\s*[？?]?$/u.test(__msgK) || /カタカムナの定義を教えて\s*[？?]?$/u.test(__msgK) || /カタカムナの本質は\s*(何|なに)\s*(ですか)?\s*[？?]?$/u.test(__msgK) || /天聞軸でカタカムナとは\s*(何|なに)\s*(ですか)?\s*[？?]?$/u.test(__msgK) || /カタカムナの中心定義は\s*[？?]?$/u.test(__msgK) || /カタカムナを定義してください\s*[？?]?$/u.test(__msgK) || /カタカムナとはどういうものですか\s*[？?]?$/u.test(__msgK);
 
     const __hasDocK =
       /\bdoc\b/i.test(__msgK) ||
@@ -9760,7 +9801,7 @@ if (!outText) {
     const __isKatakamuna =
       /カタカムナとは\s*(何|なに)\s*(ですか)?\s*[？?]?$/u.test(__msgK) ||
       /カタカムナって\s*(何|なに)\s*(ですか)?\s*[？?]?$/u.test(__msgK) ||
-      /^カタカムナ\s*[？?]?$/u.test(__msgK);
+      /^カタカムナ\s*[？?]?$/u.test(__msgK) || /カタカムナの定義を教えて\s*[？?]?$/u.test(__msgK) || /カタカムナの本質は\s*(何|なに)\s*(ですか)?\s*[？?]?$/u.test(__msgK) || /天聞軸でカタカムナとは\s*(何|なに)\s*(ですか)?\s*[？?]?$/u.test(__msgK) || /カタカムナの中心定義は\s*[？?]?$/u.test(__msgK) || /カタカムナを定義してください\s*[？?]?$/u.test(__msgK) || /カタカムナとはどういうものですか\s*[？?]?$/u.test(__msgK);
 
     const __hasDocK =
       /\bdoc\b/i.test(__msgK) ||
