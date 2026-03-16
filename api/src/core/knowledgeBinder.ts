@@ -7,8 +7,8 @@ import { centerLabelFromKey } from "./threadCore.js";
 import { getThoughtGuideSummary } from "./thoughtGuide.js";
 import { getNotionCanonForRoute } from "./notionCanon.js";
 import { getPersonaConstitutionSummary } from "./personaConstitution.js";
+import { resolveGroundingRule } from "./sourceGraph.js";
 import type { ThreadCore } from "./threadCore.js";
-import { getSourceGraphNode, resolveSourceGraphDefaults } from "./sourceGraph.js";
 
 export type KnowledgeBinderInput = {
   routeReason: string;
@@ -25,12 +25,21 @@ export type KnowledgeBinderResult = {
   routeClass: string;
   sourcePack: string;
   centerPack: { centerKey: string | null; centerLabel: string | null };
+  groundedRequired: boolean;
+  groundingSelector: {
+    groundedPriority: "required" | "preferred" | "optional" | "none";
+    groundingMode: "canon" | "thread" | "hybrid" | "none";
+    unresolvedPolicy: "ask" | "fallback" | "hold";
+  };
   binderSummary: {
     centerKey: string | null;
     centerLabel: string | null;
     routeReason: string;
     routeClass: string;
     sourcePack: string;
+    groundedPriority: string;
+    groundingMode: string;
+    unresolvedPolicy: string;
     hasThreadCenter: boolean;
     hasThreadCore: boolean;
     hasThoughtGuide: boolean;
@@ -86,32 +95,29 @@ export function buildKnowledgeBinder(input: KnowledgeBinderInput): KnowledgeBind
     (threadCore?.centerLabel != null && String(threadCore.centerLabel).trim() !== "" ? String(threadCore.centerLabel).trim() : null) ??
     null;
 
-  const graphDefaults = resolveSourceGraphDefaults(routeReason, centerKey);
-  const routeClass =
-    (graphDefaults.routeClass != null && graphDefaults.routeClass !== "" ? graphDefaults.routeClass : null) ??
-    inferRouteClass(ku, routeReason);
-  let sourcePack =
-    (graphDefaults.sourcePack != null && graphDefaults.sourcePack !== "" ? graphDefaults.sourcePack : null) ??
-    inferSourcePack(routeReason, centerKey);
-  if (centerKey === "kotodama" && sourcePack !== "scripture") sourcePack = "seiten";
+  const routeClass = inferRouteClass(ku, routeReason);
+  const sourcePack = inferSourcePack(routeReason, centerKey);
+  const groundingRule = resolveGroundingRule(rr);
   const centerPack = { centerKey, centerLabel };
 
   const hasThreadCenter = threadCenter != null && (threadCenter.center_key != null || threadCenter.center_type != null);
   const hasThreadCore = threadCore != null && (threadCore.centerKey != null || threadCore.lastResponseContract != null);
 
-  const graphNode = getSourceGraphNode(routeReason);
-  const notionRouteForCanon = graphNode?.notionRoute ?? rr;
   let notionCanon: unknown[] = [];
   let thoughtGuideSummary: unknown | null = null;
   try {
-    notionCanon = getNotionCanonForRoute(notionRouteForCanon, String(message || ""));
+    notionCanon = getNotionCanonForRoute(rr, String(message || ""));
   } catch {}
   try {
-    if (graphNode?.thoughtGuideKey != null) thoughtGuideSummary = getThoughtGuideSummary(graphNode.thoughtGuideKey);
-    else if (centerKey === "kotodama" || rr === "DEF_FASTPATH_VERIFIED_V1" || rr === "DEF_FASTPATH_PROPOSED_V1") thoughtGuideSummary = getThoughtGuideSummary("kotodama");
-    else if (rr === "TENMON_SCRIPTURE_CANON_V1") thoughtGuideSummary = getThoughtGuideSummary("scripture");
-    else if (centerKey === "katakamuna") thoughtGuideSummary = getThoughtGuideSummary("katakamuna");
+    if (centerKey === "kotodama" || rr === "DEF_FASTPATH_VERIFIED_V1" || rr === "DEF_FASTPATH_PROPOSED_V1") {
+      thoughtGuideSummary = getThoughtGuideSummary("kotodama");
+    } else if (rr === "TENMON_SCRIPTURE_CANON_V1") {
+      thoughtGuideSummary = getThoughtGuideSummary("scripture");
+    } else if (centerKey === "katakamuna") {
+      thoughtGuideSummary = getThoughtGuideSummary("katakamuna");
+    }
   } catch {}
+
   let personaConstitutionSummary: unknown | null = null;
   try {
     personaConstitutionSummary = getPersonaConstitutionSummary();
@@ -123,6 +129,9 @@ export function buildKnowledgeBinder(input: KnowledgeBinderInput): KnowledgeBind
     routeReason: rr,
     routeClass,
     sourcePack,
+    groundedPriority: groundingRule.groundedPriority,
+    groundingMode: groundingRule.groundingMode,
+    unresolvedPolicy: groundingRule.unresolvedPolicy,
     hasThreadCenter,
     hasThreadCore,
     hasThoughtGuide: thoughtGuideSummary != null,
@@ -132,11 +141,24 @@ export function buildKnowledgeBinder(input: KnowledgeBinderInput): KnowledgeBind
 
   const sourceStackSummary: Record<string, unknown> | null = (() => {
     const items: Array<{ kind: string; key: string; label: string; routeReason: string }> = [];
-    if (centerKey && (rr === "DEF_FASTPATH_VERIFIED_V1" || rr === "DEF_FASTPATH_PROPOSED_V1" || rr === "R22_ESSENCE_FOLLOWUP_V1" || rr === "R22_COMPARE_FOLLOWUP_V1")) {
+    if (
+      centerKey &&
+      (
+        rr === "DEF_FASTPATH_VERIFIED_V1" ||
+        rr === "DEF_FASTPATH_PROPOSED_V1" ||
+        rr === "R22_ESSENCE_FOLLOWUP_V1" ||
+        rr === "R22_COMPARE_FOLLOWUP_V1" ||
+        rr === "R22_NEXTSTEP_FOLLOWUP_V1"
+      )
+    ) {
       items.push({ kind: "concept", key: centerKey, label: centerLabel || centerKey, routeReason: rr });
     }
     if (items.length === 0) return null;
-    return { sourceStack: items, primaryMeaning: centerLabel || centerKey, responseAxis: "concept" } as Record<string, unknown>;
+    return {
+      sourceStack: items,
+      primaryMeaning: centerLabel || centerKey,
+      responseAxis: routeClass === "continuity" ? "continuity" : "concept",
+    } as Record<string, unknown>;
   })();
 
   const thoughtCoreSummaryPatch: Record<string, unknown> = {
@@ -145,15 +167,38 @@ export function buildKnowledgeBinder(input: KnowledgeBinderInput): KnowledgeBind
     routeReason: rr,
     modeHint: routeClass === "define" ? "define" : routeClass === "continuity" ? "continuity" : "analysis",
     continuityHint: centerKey ?? undefined,
+    ...(routeClass === "continuity" ? { intentKind: "continuation_summary" } : {}),
   };
 
   const synapseTopPatch: Record<string, unknown> = {};
-  if (hasThreadCenter && threadCenter?.center_key) {
+  const threadCenterType =
+    threadCenter?.center_type != null && String(threadCenter.center_type).trim() !== ""
+      ? String(threadCenter.center_type).trim()
+      : (rr === "TENMON_SCRIPTURE_CANON_V1" ? "scripture" : (centerKey ? "concept" : ""));
+
+  if (threadCenterType && centerKey) {
     (synapseTopPatch as any).sourceThreadCenter = {
-      centerType: threadCenter.center_type ?? "concept",
-      centerKey: threadCenter.center_key,
+      centerType: threadCenterType,
+      centerKey,
       sourceRouteReason: rr,
     };
+  }
+
+  if (threadId && centerKey) {
+    (synapseTopPatch as any).sourceMemoryHint = `thread:${threadId} centerKey:${centerKey}`;
+  }
+
+  (synapseTopPatch as any).sourceRouteReason = rr;
+  (synapseTopPatch as any).sourceRouteClass = routeClass;
+  if (centerLabel) (synapseTopPatch as any).sourceCenterLabel = centerLabel;
+  if (rr === "TENMON_SCRIPTURE_CANON_V1") {
+    (synapseTopPatch as any).sourceLedgerHint = "ledger:scripture_continuity";
+  } else if (routeClass === "define") {
+    (synapseTopPatch as any).sourceLedgerHint = "ledger:define";
+  } else if (routeClass === "continuity") {
+    (synapseTopPatch as any).sourceLedgerHint = "ledger:continuity";
+  } else {
+    (synapseTopPatch as any).sourceLedgerHint = "ledger:general";
   }
 
   return {
@@ -162,6 +207,12 @@ export function buildKnowledgeBinder(input: KnowledgeBinderInput): KnowledgeBind
     routeClass,
     sourcePack,
     centerPack,
+    groundedRequired: groundingRule.groundedPriority === "required",
+    groundingSelector: {
+      groundedPriority: groundingRule.groundedPriority,
+      groundingMode: groundingRule.groundingMode,
+      unresolvedPolicy: groundingRule.unresolvedPolicy,
+    },
     binderSummary,
     notionCanon,
     thoughtGuideSummary,
@@ -175,24 +226,45 @@ export function buildKnowledgeBinder(input: KnowledgeBinderInput): KnowledgeBind
 /** CARD_KNOWLEDGE_BINDER_V1: binder 結果を ku に欠損補完・patch merge で適用 */
 export function applyKnowledgeBinderToKu(ku: Record<string, unknown>, binder: KnowledgeBinderResult): void {
   if (ku == null || typeof ku !== "object") return;
+
   (ku as any).binderSummary = binder.binderSummary;
   (ku as any).sourcePack = binder.sourcePack;
   (ku as any).centerPack = binder.centerPack;
-  if ((ku as any).centerKey == null || String((ku as any).centerKey).trim() === "") (ku as any).centerKey = binder.centerKey;
-  if ((ku as any).centerLabel == null || String((ku as any).centerLabel).trim() === "") (ku as any).centerLabel = binder.centerLabel;
-  if ((ku as any).routeClass == null || String((ku as any).routeClass).trim() === "") (ku as any).routeClass = binder.routeClass;
-  if (!Array.isArray((ku as any).notionCanon) || (ku as any).notionCanon.length === 0) (ku as any).notionCanon = binder.notionCanon;
-  if ((ku as any).thoughtGuideSummary == null) (ku as any).thoughtGuideSummary = binder.thoughtGuideSummary;
-  if ((ku as any).personaConstitutionSummary == null) (ku as any).personaConstitutionSummary = binder.personaConstitutionSummary;
+  (ku as any).groundedRequired = binder.groundedRequired;
+  (ku as any).groundingSelector = binder.groundingSelector;
+  (ku as any).groundedPriority = binder.groundingSelector.groundedPriority;
+  (ku as any).groundingMode = binder.groundingSelector.groundingMode;
+  (ku as any).unresolvedPolicy = binder.groundingSelector.unresolvedPolicy;
+
+  if ((ku as any).centerKey == null || String((ku as any).centerKey).trim() === "") {
+    (ku as any).centerKey = binder.centerKey;
+  }
+  if ((ku as any).centerLabel == null || String((ku as any).centerLabel).trim() === "") {
+    (ku as any).centerLabel = binder.centerLabel;
+  }
+  if ((ku as any).routeClass == null || String((ku as any).routeClass).trim() === "") {
+    (ku as any).routeClass = binder.routeClass;
+  }
+  if (!Array.isArray((ku as any).notionCanon) || (ku as any).notionCanon.length === 0) {
+    (ku as any).notionCanon = binder.notionCanon;
+  }
+  if ((ku as any).thoughtGuideSummary == null) {
+    (ku as any).thoughtGuideSummary = binder.thoughtGuideSummary;
+  }
+  if ((ku as any).personaConstitutionSummary == null) {
+    (ku as any).personaConstitutionSummary = binder.personaConstitutionSummary;
+  }
   if (binder.sourceStackSummary != null && ((ku as any).sourceStackSummary == null || typeof (ku as any).sourceStackSummary !== "object")) {
     (ku as any).sourceStackSummary = binder.sourceStackSummary;
   }
+
   const tcs = (ku as any).thoughtCoreSummary;
   if (tcs && typeof tcs === "object" && !Array.isArray(tcs)) {
     Object.assign(tcs, binder.thoughtCoreSummaryPatch);
   } else if (Object.keys(binder.thoughtCoreSummaryPatch).length > 0) {
     (ku as any).thoughtCoreSummary = { ...binder.thoughtCoreSummaryPatch };
   }
+
   const st = (ku as any).synapseTop;
   if (st && typeof st === "object" && !Array.isArray(st)) {
     Object.assign(st, binder.synapseTopPatch);

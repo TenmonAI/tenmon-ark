@@ -52,3 +52,37 @@ export function resolveSourceGraphDefaults(
     };
   return { routeClass: null, sourcePack: null, thoughtGuideKey: null, notionRoute: null };
 }
+export type GroundedPriority = "required" | "preferred" | "optional" | "none";
+export type GroundingMode = "canon" | "thread" | "hybrid" | "none";
+export type UnresolvedPolicy = "ask" | "fallback" | "hold";
+
+export type GroundingRule = {
+  groundedPriority: GroundedPriority;
+  groundingMode: GroundingMode;
+  unresolvedPolicy: UnresolvedPolicy;
+};
+
+const __GROUNDING_RULESET_V1: Record<string, GroundingRule> = {
+  DEF_FASTPATH_VERIFIED_V1: { groundedPriority: "required", groundingMode: "canon", unresolvedPolicy: "ask" },
+  DEF_FASTPATH_PROPOSED_V1: { groundedPriority: "preferred", groundingMode: "canon", unresolvedPolicy: "ask" },
+  TENMON_SCRIPTURE_CANON_V1: { groundedPriority: "required", groundingMode: "canon", unresolvedPolicy: "ask" },
+  R22_ESSENCE_FOLLOWUP_V1: { groundedPriority: "preferred", groundingMode: "thread", unresolvedPolicy: "ask" },
+  R22_COMPARE_FOLLOWUP_V1: { groundedPriority: "preferred", groundingMode: "thread", unresolvedPolicy: "ask" },
+  R22_NEXTSTEP_FOLLOWUP_V1: { groundedPriority: "preferred", groundingMode: "thread", unresolvedPolicy: "ask" },
+  CONTINUITY_ANCHOR_V1: { groundedPriority: "preferred", groundingMode: "thread", unresolvedPolicy: "ask" },
+  R22_FUTURE_OUTLOOK_V1: { groundedPriority: "optional", groundingMode: "none", unresolvedPolicy: "ask" },
+  R22_ESSENCE_ASK_V1: { groundedPriority: "optional", groundingMode: "none", unresolvedPolicy: "ask" },
+  R22_COMPARE_ASK_V1: { groundedPriority: "optional", groundingMode: "none", unresolvedPolicy: "ask" },
+  WORLDVIEW_ROUTE_V1: { groundedPriority: "optional", groundingMode: "none", unresolvedPolicy: "ask" },
+  EXPLICIT_CHAR_PREEMPT_V1: { groundedPriority: "none", groundingMode: "none", unresolvedPolicy: "fallback" },
+  SUPPORT_UI_INPUT_V1: { groundedPriority: "none", groundingMode: "none", unresolvedPolicy: "fallback" },
+};
+
+export function resolveGroundingRule(routeReason: string): GroundingRule {
+  const rr = String(routeReason || "").trim();
+  if (__GROUNDING_RULESET_V1[rr]) return __GROUNDING_RULESET_V1[rr];
+  if (/^SUPPORT_/.test(rr)) return { groundedPriority: "none", groundingMode: "none", unresolvedPolicy: "fallback" };
+  if (/FOLLOWUP/.test(rr) || rr === "CONTINUITY_ANCHOR_V1") return { groundedPriority: "preferred", groundingMode: "thread", unresolvedPolicy: "ask" };
+  if (/^DEF_/.test(rr)) return { groundedPriority: "preferred", groundingMode: "canon", unresolvedPolicy: "ask" };
+  return { groundedPriority: "optional", groundingMode: "none", unresolvedPolicy: "ask" };
+}
