@@ -920,6 +920,21 @@ const pid = process.pid;
     bodyProfile: __bodyProfile ?? null,
   });
   try { (res as any).__TENMON_BRAINSTEM = __brainstem; } catch {}
+  // CARD_BRAINSTEM_FULL_WIRING_V1: brainstem 契約を ku に補完（空値のみ・既存維持）
+  function __applyBrainstemContractToKuV1(ku: any, brainstem: BrainstemDecision | undefined, fallbackRouteClass?: string | null): void {
+    if (ku == null || typeof ku !== "object") return;
+    if (!brainstem) return;
+    const _rc = (ku.routeClass ?? fallbackRouteClass ?? brainstem.routeClass);
+    if (ku.routeClass == null || ku.routeClass === "") (ku as any).routeClass = _rc;
+    if (ku.answerLength == null || ku.answerLength === "") (ku as any).answerLength = brainstem.answerLength;
+    if (ku.answerMode == null || ku.answerMode === "") (ku as any).answerMode = brainstem.answerMode;
+    if (ku.answerFrame == null || ku.answerFrame === "") (ku as any).answerFrame = brainstem.answerFrame;
+    const _ck = brainstem.centerKey ?? null;
+    const _cl = brainstem.centerLabel ?? null;
+    if ((ku.centerKey == null || String(ku.centerKey).trim() === "") && _ck) (ku as any).centerKey = _ck;
+    if ((ku.centerMeaning == null || String(ku.centerMeaning).trim() === "") && _ck) (ku as any).centerMeaning = _ck;
+    if ((ku.centerLabel == null || String(ku.centerLabel).trim() === "") && _cl) (ku as any).centerLabel = _cl;
+  }
   // CARD_TENMON_BRAINSTEM_WIRING_FIX_V1: support early return（既存 support block と同等の短文）
   if (__brainstem.routeClass === "support") {
     const __mSup = String(message ?? "").trim();
@@ -7533,6 +7548,20 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
         const __coreExplicit: ThreadCore = { ...__threadCore, lastResponseContract: { answerLength: __tier, answerMode: "analysis", answerFrame: "one_step", routeReason: "EXPLICIT_CHAR_PREEMPT_V1" }, updatedAt: new Date().toISOString() };
         saveThreadCore(__coreExplicit).catch(() => {});
         try { (res as any).__TENMON_THREAD_CORE = __coreExplicit; } catch {}
+        const __ku: any = {
+          routeReason: "EXPLICIT_CHAR_PREEMPT_V1",
+          routeClass: __brainstem?.routeClass ?? "analysis",
+          answerLength: __brainstem?.answerLength ?? __tier,
+          answerMode: __brainstem?.answerMode ?? "analysis",
+          answerFrame: __brainstem?.answerFrame ?? "one_step",
+          explicitLengthRequested: __explicitCharsEarly,
+          responseLength: __body.length,
+          lawsUsed: [],
+          evidenceIds: [],
+          lawTrace: [],
+        };
+        __applyBrainstemContractToKuV1(__ku, __brainstem, "analysis");
+        try { console.log("[BRAINSTEM_APPLY_EXPLICIT]", { rr: __ku.routeReason, rc: __ku.routeClass, len: __ku.answerLength, mode: __ku.answerMode, frame: __ku.answerFrame, centerKey: __ku.centerKey }); } catch {}
         return res.json(__tenmonGeneralGateResultMaybe({
           response: __body,
           evidence: null,
@@ -7543,18 +7572,7 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
             mode: "NATURAL",
             intent: "chat",
             llm: null,
-            ku: {
-              routeReason: "EXPLICIT_CHAR_PREEMPT_V1",
-              routeClass: __brainstem?.routeClass ?? "analysis",
-              answerLength: __brainstem?.answerLength ?? __tier,
-              answerMode: __brainstem?.answerMode ?? "analysis",
-              answerFrame: __brainstem?.answerFrame ?? "one_step",
-              explicitLengthRequested: __explicitCharsEarly,
-              responseLength: __body.length,
-              lawsUsed: [],
-              evidenceIds: [],
-              lawTrace: [],
-            },
+            ku: __ku,
           },
         }));
       }
@@ -8820,6 +8838,8 @@ const __heartNorm = normalizeHeartShape(__heart);
         };
         try { console.log("[SYNAPSETOP_AFTER_ASSIGN_GENERAL]", { keys: Object.keys((__ku as any).synapseTop || {}) }); } catch {}
       } catch {}
+      __applyBrainstemContractToKuV1(__ku, __brainstem, (__ku as any).routeClass || "general");
+      try { console.log("[BRAINSTEM_APPLY_GENERAL]", { rr: (__ku as any).routeReason, rc: (__ku as any).routeClass, len: (__ku as any).answerLength, mode: (__ku as any).answerMode, frame: (__ku as any).answerFrame, centerKey: (__ku as any).centerKey }); } catch {}
 
       console.log("[GEN_GENERAL_PRE_GATE]", { out: __canonicalBody.slice(0, 240) });
       // FIX_GENERAL_COMPOSED_BYPASS_V1: general 本文は __canonicalBody（CLAMP_AFTER 由来）のみ採用。trimStart / 追加 replace / 追加整形は行わない。
@@ -9865,6 +9885,8 @@ if (!outText) {
           answerMode: (__ku as any).answerMode,
           answerFrame: (__ku as any).answerFrame,
         });
+        __applyBrainstemContractToKuV1(__ku, __brainstem, "define");
+        try { console.log("[BRAINSTEM_APPLY_DEFINE]", { rr: (__ku as any).routeReason, rc: (__ku as any).routeClass, len: (__ku as any).answerLength, mode: (__ku as any).answerMode, frame: (__ku as any).answerFrame, centerKey: (__ku as any).centerKey }); } catch {}
         return res.json(__tenmonGeneralGateResultMaybe({
           response: __respFinal,
           evidence: {
@@ -9931,6 +9953,8 @@ if (!outText) {
           answerMode: (__kuProposed as any).answerMode,
           answerFrame: (__kuProposed as any).answerFrame,
         });
+        __applyBrainstemContractToKuV1(__kuProposed, __brainstem, "define");
+        try { console.log("[BRAINSTEM_APPLY_DEFINE]", { rr: (__kuProposed as any).routeReason, rc: (__kuProposed as any).routeClass, len: (__kuProposed as any).answerLength, mode: (__kuProposed as any).answerMode, frame: (__kuProposed as any).answerFrame, centerKey: (__kuProposed as any).centerKey }); } catch {}
         return res.json(__tenmonGeneralGateResultMaybe({
           response: __resp,
           evidence: {
