@@ -7627,6 +7627,39 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
     return { kind: "none", confidence: 0 };
   }
 
+  // CARD_GROUNDING_SELECTOR_V1: grounded / canon / concept / general / unresolved を1回だけ選択
+  type GroundingSelectorKind =
+    | "grounded_required"
+    | "scripture_canon"
+    | "subconcept_canon"
+    | "concept_canon"
+    | "natural_general"
+    | "unresolved";
+  function __selectGroundingModeV1(input: {
+    rawMessage: string;
+    wantsDetail: boolean;
+    hasDocPage: boolean;
+    isCmd: boolean;
+    threadCenterType?: string | null;
+    threadCenterKey?: string | null;
+  }): { kind: GroundingSelectorKind; reason: string; confidence: number } {
+    const { rawMessage, wantsDetail, hasDocPage, isCmd, threadCenterType, threadCenterKey } = input;
+    const raw = String(rawMessage ?? "").trim();
+    if (hasDocPage || (wantsDetail && (/\bdoc\b/i.test(raw) || /pdfPage\s*=\s*\d+/i.test(raw)))) {
+      return { kind: "grounded_required", reason: "doc/pdfPage_or_detail", confidence: 1 };
+    }
+    if (threadCenterType === "scripture" && raw.length <= 80 && (/さっき見ていた中心|(言霊|中心)(を)?土台に|今の話を(続ける|続けて|見ていきましょう)/u.test(raw) || /^(次は|次の一手|違いは|どう違う|要するに|要点は)/u.test(raw) || /^[ァ-ヴー]+\s*[は？?]?\s*$/u.test(raw))) {
+      return { kind: "scripture_canon", reason: "scripture_followup", confidence: 1 };
+    }
+    if (!isCmd && /(言霊|カタカムナ)(とは|って)(何|なに)(ですか)?\s*[？?]?$/u.test(raw) || /(とは|って)(何|なに)(ですか)?\s*[？?]?$/u.test(raw) && /(言霊|カタカムナ|本質|核)/u.test(raw)) {
+      return { kind: "concept_canon", reason: "concept_definition", confidence: 0.9 };
+    }
+    if (wantsDetail && raw.length > 20) {
+      return { kind: "unresolved", reason: "detail_context_strong", confidence: 0.6 };
+    }
+    return { kind: "natural_general", reason: "default", confidence: 0.5 };
+  }
+
 // generalKind: counsel / worldview / short_moral / other（NATURAL_GENERAL_LLM_TOP 分流用）
       const __generalKind: "counsel" | "worldview" | "short_moral" | "other" =
         /悩み|しんどい|つらい|聞いてくれ|相談/.test(t0) ? "counsel"
@@ -8106,6 +8139,70 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
         }));
       }
 
+      // CARD_GROUNDING_SELECTOR_V1: general 本文生成の前に根拠モードを1回だけ選択
+      const __grounding = __selectGroundingModeV1({
+        rawMessage: String(message ?? ""),
+        wantsDetail: /#詳細/.test(String(message ?? "")),
+        hasDocPage: /\bdoc\b/i.test(t0) || /pdfPage\s*=\s*\d+/i.test(t0),
+        isCmd: isCmd0,
+        threadCenterType: __threadCenterForGeneral?.center_type ?? null,
+        threadCenterKey: __threadCenterForGeneral?.center_key ?? null,
+      });
+      try {
+        console.log("[GROUNDING_SELECTOR_V1]", {
+          raw: String(message ?? "").slice(0, 120),
+          kind: __grounding.kind,
+          reason: __grounding.reason,
+          confidence: __grounding.confidence,
+          tcType: __threadCenterForGeneral?.center_type ?? null,
+          tcKey: __threadCenterForGeneral?.center_key ?? null,
+        });
+      } catch {}
+      if (__grounding.kind === "unresolved") {
+        const __kuUnres: any = {
+          routeReason: "GROUNDING_SELECTOR_UNRESOLVED_V1",
+          routeClass: "analysis",
+          answerLength: "short",
+          answerMode: "analysis",
+          answerFrame: "one_step",
+          groundingSelector: { kind: __grounding.kind, reason: __grounding.reason, confidence: __grounding.confidence },
+          lawsUsed: [],
+          evidenceIds: [],
+          lawTrace: [],
+        };
+        __applyBrainstemContractToKuV1(__kuUnres, __brainstem, "analysis");
+        return res.json(__tenmonGeneralGateResultMaybe({
+          response: "【天聞の所見】いまの問いを、根拠付きで答えるにはもう一歩だけ焦点を絞ります。何について、どの層で知りたいか一言で置いてください。",
+          evidence: null,
+          candidates: [],
+          timestamp,
+          threadId,
+          decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: __kuUnres },
+        }));
+      }
+      if (__grounding.kind === "grounded_required") {
+        const __kuGr: any = {
+          routeReason: "GROUNDING_SELECTOR_GROUNDED_V1",
+          routeClass: "analysis",
+          answerLength: "short",
+          answerMode: "analysis",
+          answerFrame: "one_step",
+          groundingSelector: { kind: __grounding.kind, reason: __grounding.reason, confidence: __grounding.confidence },
+          lawsUsed: [],
+          evidenceIds: [],
+          lawTrace: [],
+        };
+        __applyBrainstemContractToKuV1(__kuGr, __brainstem, "analysis");
+        return res.json(__tenmonGeneralGateResultMaybe({
+          response: "【天聞の所見】根拠指定を検出しました。検索結果と接続します。",
+          evidence: null,
+          candidates: [],
+          timestamp,
+          threadId,
+          decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: __kuGr },
+        }));
+      }
+
       let outText = "";
       let outProv = "llm";
       try {
@@ -8543,6 +8640,7 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
             seedSurface: __seedSurface,
             seedPolicy: __seedPolicy,
           };
+          if (typeof __grounding !== "undefined") __kuLocked.groundingSelector = { kind: __grounding.kind, reason: __grounding.reason, confidence: __grounding.confidence };
           if (__irohaForGeneral) {
             __kuLocked.irohaAction = {
               actionKey: __irohaForGeneral.actionKey,
@@ -8621,6 +8719,12 @@ const __heartNorm = normalizeHeartShape(__heart);
         routeReason: "NATURAL_GENERAL_LLM_TOP",
         heart: __heartNorm,
       };
+      if (typeof __grounding !== "undefined") {
+        __ku.groundingSelector = { kind: __grounding.kind, reason: __grounding.reason, confidence: __grounding.confidence };
+        if (__grounding.kind === "scripture_canon" && (!__ku.routeReason || __ku.routeReason === "NATURAL_GENERAL_LLM_TOP")) {
+          __ku.routeReason = "TENMON_SCRIPTURE_CANON_V1";
+        }
+      }
       if (__explicitChars != null) __ku.explicitLengthRequested = __explicitChars;
       if (__isFeelingRequest) __ku.feelingAnchor = true;
       if (__isContinuityAnchor) __ku.continuityAnchor = true;
