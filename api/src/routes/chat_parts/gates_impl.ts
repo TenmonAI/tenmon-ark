@@ -1418,6 +1418,87 @@ function __tenmonGeneralGateResultMaybe(x: any, rawMessageOverride?: string): an
       }
     } catch {}
 
+    // CARD_FINALIZE_SINGLE_EXIT_V1:
+    // 単一出口で routeClass / answer contract を最小フォールバック復元
+    try {
+      const __dfF: any = (x as any)?.decisionFrame;
+      if (__dfF && typeof __dfF === "object") {
+        if (!__dfF.ku || typeof __dfF.ku !== "object" || Array.isArray(__dfF.ku)) __dfF.ku = {};
+        const __kuF: any = __dfF.ku;
+
+        const __rrF = String(__kuF.routeReason || (x as any)?.routeReason || "").trim();
+        const __rcF = String(__kuF.routeClass || "").trim();
+        const __lenF = String(__kuF.answerLength || "").trim();
+        const __modeF = String(__kuF.answerMode || "").trim();
+        const __frameF = String(__kuF.answerFrame || "").trim();
+
+        if (!__rcF) {
+          let __rcResolved: string | null = null;
+
+          if (__rrF === "CONTINUITY_ANCHOR_V1" || /FOLLOWUP/.test(__rrF)) {
+            __rcResolved = "continuity";
+          } else if (
+            __rrF.startsWith("DEF_") ||
+            __rrF === "SOUL_FASTPATH_VERIFIED_V1" ||
+            __rrF === "KATAKAMUNA_FASTPATH_CANON_V1"
+          ) {
+            __rcResolved = "define";
+          } else if (
+            __rrF === "EXPLICIT_CHAR_PREEMPT_V1" ||
+            __rrF === "R22_FUTURE_OUTLOOK_V1" ||
+            __rrF === "R22_ESSENCE_ASK_V1" ||
+            __rrF === "R22_COMPARE_ASK_V1" ||
+            __rrF === "WORLDVIEW_ROUTE_V1"
+          ) {
+            __rcResolved = "analysis";
+          } else if (__rrF.startsWith("SUPPORT_")) {
+            __rcResolved = "support";
+          } else if (__rrF.includes("SELFAWARE")) {
+            __rcResolved = "selfaware";
+          } else if (__rrF.includes("JUDGEMENT")) {
+            __rcResolved = "judgement";
+          }
+
+          if (__rcResolved) __kuF.routeClass = __rcResolved;
+        }
+
+        if (!__lenF || !__modeF || !__frameF) {
+          let __fallbackLen: string | null = null;
+          let __fallbackMode: string | null = null;
+          let __fallbackFrame: string | null = null;
+
+          if (__rrF === "EXPLICIT_CHAR_PREEMPT_V1") {
+            __fallbackLen = "long";
+            __fallbackMode = "analysis";
+            __fallbackFrame = "one_step";
+          } else if (
+            __rrF === "R22_FUTURE_OUTLOOK_V1" ||
+            __rrF === "R22_ESSENCE_ASK_V1" ||
+            __rrF === "R22_COMPARE_ASK_V1" ||
+            __rrF === "WORLDVIEW_ROUTE_V1" ||
+            __rrF === "CONTINUITY_ANCHOR_V1" ||
+            /FOLLOWUP/.test(__rrF)
+          ) {
+            __fallbackLen = "short";
+            __fallbackMode = "analysis";
+            __fallbackFrame = "one_step";
+          } else if (
+            __rrF.startsWith("DEF_") ||
+            __rrF === "SOUL_FASTPATH_VERIFIED_V1" ||
+            __rrF === "KATAKAMUNA_FASTPATH_CANON_V1"
+          ) {
+            __fallbackLen = "medium";
+            __fallbackMode = "define";
+            __fallbackFrame = "statement_plus_one_question";
+          }
+
+          if (!String(__kuF.answerLength || "").trim() && __fallbackLen) __kuF.answerLength = __fallbackLen;
+          if (!String(__kuF.answerMode || "").trim() && __fallbackMode) __kuF.answerMode = __fallbackMode;
+          if (!String(__kuF.answerFrame || "").trim() && __fallbackFrame) __kuF.answerFrame = __fallbackFrame;
+        }
+      }
+    } catch {}
+
 return __thinReleasePayloadV2(x);
   } catch { return __thinReleasePayloadV2(x); }
 
