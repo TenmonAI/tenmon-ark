@@ -8,6 +8,7 @@ import { getThoughtGuideSummary } from "./thoughtGuide.js";
 import { getNotionCanonForRoute } from "./notionCanon.js";
 import { getPersonaConstitutionSummary } from "./personaConstitution.js";
 import type { ThreadCore } from "./threadCore.js";
+import { getSourceGraphNode, resolveSourceGraphDefaults } from "./sourceGraph.js";
 
 export type KnowledgeBinderInput = {
   routeReason: string;
@@ -85,20 +86,29 @@ export function buildKnowledgeBinder(input: KnowledgeBinderInput): KnowledgeBind
     (threadCore?.centerLabel != null && String(threadCore.centerLabel).trim() !== "" ? String(threadCore.centerLabel).trim() : null) ??
     null;
 
-  const routeClass = inferRouteClass(ku, routeReason);
-  const sourcePack = inferSourcePack(routeReason, centerKey);
+  const graphDefaults = resolveSourceGraphDefaults(routeReason, centerKey);
+  const routeClass =
+    (graphDefaults.routeClass != null && graphDefaults.routeClass !== "" ? graphDefaults.routeClass : null) ??
+    inferRouteClass(ku, routeReason);
+  let sourcePack =
+    (graphDefaults.sourcePack != null && graphDefaults.sourcePack !== "" ? graphDefaults.sourcePack : null) ??
+    inferSourcePack(routeReason, centerKey);
+  if (centerKey === "kotodama" && sourcePack !== "scripture") sourcePack = "seiten";
   const centerPack = { centerKey, centerLabel };
 
   const hasThreadCenter = threadCenter != null && (threadCenter.center_key != null || threadCenter.center_type != null);
   const hasThreadCore = threadCore != null && (threadCore.centerKey != null || threadCore.lastResponseContract != null);
 
+  const graphNode = getSourceGraphNode(routeReason);
+  const notionRouteForCanon = graphNode?.notionRoute ?? rr;
   let notionCanon: unknown[] = [];
   let thoughtGuideSummary: unknown | null = null;
   try {
-    notionCanon = getNotionCanonForRoute(rr, String(message || ""));
+    notionCanon = getNotionCanonForRoute(notionRouteForCanon, String(message || ""));
   } catch {}
   try {
-    if (centerKey === "kotodama" || rr === "DEF_FASTPATH_VERIFIED_V1" || rr === "DEF_FASTPATH_PROPOSED_V1") thoughtGuideSummary = getThoughtGuideSummary("kotodama");
+    if (graphNode?.thoughtGuideKey != null) thoughtGuideSummary = getThoughtGuideSummary(graphNode.thoughtGuideKey);
+    else if (centerKey === "kotodama" || rr === "DEF_FASTPATH_VERIFIED_V1" || rr === "DEF_FASTPATH_PROPOSED_V1") thoughtGuideSummary = getThoughtGuideSummary("kotodama");
     else if (rr === "TENMON_SCRIPTURE_CANON_V1") thoughtGuideSummary = getThoughtGuideSummary("scripture");
     else if (centerKey === "katakamuna") thoughtGuideSummary = getThoughtGuideSummary("katakamuna");
   } catch {}
