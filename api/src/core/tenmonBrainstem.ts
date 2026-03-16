@@ -60,7 +60,7 @@ export type BrainstemInput = {
 
 const RE_SUPPORT_UI = /(改行|enter|shift\+enter|shift enter|送信)/iu;
 const RE_SUPPORT_AUTH = /(ログイン|登録|合言葉|メール登録|入れない|認証)/iu;
-const RE_SUPPORT_PRODUCT = /(使い方|利用方法|利用手順|使う流れ|どう使う|どう利用|始め方|どう始め|最初に何|まず何|何を入力|何ができる|操作方法|質問方法|どうやって質問|この欄|この画面の使い方|ここでの質問|手順を|使う方法|使い始め)/iu;
+const RE_SUPPORT_PRODUCT = /(使い方|利用方法|利用手順|使う流れ|どう使う|どう利用|使えば|始め方|どう始め|最初に何|まず何|何を入力|何ができる|操作方法|質問方法|どうやって質問|この欄|この画面の使い方|ここでの質問|手順を|使う方法|使い始め)/iu;
 const RE_JUDGEMENT = /(良い|悪い|正しい|間違い|べき|どっちが|どちらが|した方が)/u;
 const RE_FEELING = /(気分|どんな気分|どう感じる|感情)/u;
 const RE_IMPRESSION = /(感想|印象)/u;
