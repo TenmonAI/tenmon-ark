@@ -58,7 +58,7 @@ function inferRouteClass(ku: Record<string, unknown>, routeReason: string): stri
 
 function inferSourcePack(routeReason: string, centerKey: string | null): string {
   const rr = String(routeReason || "").trim();
-  if (rr === "DEF_FASTPATH_VERIFIED_V1" || centerKey === "kotodama") return "seiten";
+  if (rr === "DEF_FASTPATH_VERIFIED_V1" || rr === "DEF_FASTPATH_PROPOSED_V1" || centerKey === "kotodama") return "seiten";
   if (rr === "TENMON_SCRIPTURE_CANON_V1") return "scripture";
   if (rr === "EXPLICIT_CHAR_PREEMPT_V1") return "explicit";
   if (/^R22_(FUTURE_OUTLOOK|ESSENCE_FOLLOWUP|ESSENCE_ASK|COMPARE_FOLLOWUP|COMPARE_ASK|NEXTSTEP_FOLLOWUP)_V1$/.test(rr)) return "natural_analysis";
@@ -98,7 +98,7 @@ export function buildKnowledgeBinder(input: KnowledgeBinderInput): KnowledgeBind
     notionCanon = getNotionCanonForRoute(rr, String(message || ""));
   } catch {}
   try {
-    if (centerKey === "kotodama" || rr === "DEF_FASTPATH_VERIFIED_V1") thoughtGuideSummary = getThoughtGuideSummary("kotodama");
+    if (centerKey === "kotodama" || rr === "DEF_FASTPATH_VERIFIED_V1" || rr === "DEF_FASTPATH_PROPOSED_V1") thoughtGuideSummary = getThoughtGuideSummary("kotodama");
     else if (rr === "TENMON_SCRIPTURE_CANON_V1") thoughtGuideSummary = getThoughtGuideSummary("scripture");
     else if (centerKey === "katakamuna") thoughtGuideSummary = getThoughtGuideSummary("katakamuna");
   } catch {}
@@ -122,7 +122,7 @@ export function buildKnowledgeBinder(input: KnowledgeBinderInput): KnowledgeBind
 
   const sourceStackSummary: Record<string, unknown> | null = (() => {
     const items: Array<{ kind: string; key: string; label: string; routeReason: string }> = [];
-    if (centerKey && (rr === "DEF_FASTPATH_VERIFIED_V1" || rr === "R22_ESSENCE_FOLLOWUP_V1" || rr === "R22_COMPARE_FOLLOWUP_V1")) {
+    if (centerKey && (rr === "DEF_FASTPATH_VERIFIED_V1" || rr === "DEF_FASTPATH_PROPOSED_V1" || rr === "R22_ESSENCE_FOLLOWUP_V1" || rr === "R22_COMPARE_FOLLOWUP_V1")) {
       items.push({ kind: "concept", key: centerKey, label: centerLabel || centerKey, routeReason: rr });
     }
     if (items.length === 0) return null;
