@@ -8928,24 +8928,71 @@ const __heartNorm = normalizeHeartShape(__heart);
         }
       } catch {}
 
-      try {
-        const __mf: any = __composed.meaningFrame ?? {};
-        const __persona = getPersonaConstitutionSummary();
-        writeScriptureLearningLedger({
-          threadId: String(threadId || ""),
-          message: String(message ?? ""),
-          routeReason: "NATURAL_GENERAL_LLM_TOP",
-          scriptureKey: null,
-          subconceptKey: null,
-          conceptKey: null,
-          thoughtGuideKey: null,
-          personaConstitutionKey: __persona?.constitutionKey ?? null,
-          hasEvidence: Boolean(__mf.hasEvidence),
-          hasLawTrace: Boolean(__mf.hasLawTrace),
-          resolvedLevel: "general",
-          unresolvedNote: null,
-        });
-      } catch {}
+              // CARD_LEDGER_DISCIPLINE_V1_RETRY:
+        try {
+          const __mf: any = __composed.meaningFrame ?? {};
+          const __persona = getPersonaConstitutionSummary();
+          const __kuLedger: any = (__ku && typeof __ku === "object") ? __ku : {};
+
+          const __rrLedger =
+            String(__kuLedger.routeReason || "NATURAL_GENERAL_LLM_TOP").trim() || "NATURAL_GENERAL_LLM_TOP";
+
+          const __threadCenterLedger: any =
+            __kuLedger.threadCenter ||
+            ((__kuLedger.synapseTop || {}).sourceThreadCenter) ||
+            null;
+
+          const __threadCenterTypeLedger =
+            String((__threadCenterLedger as any)?.centerType || "").trim();
+          const __threadCenterKeyLedger =
+            String((__threadCenterLedger as any)?.centerKey || "").trim();
+
+          let __scriptureKeyLedger =
+            String(__kuLedger.scriptureKey || "").trim() || null;
+          let __subconceptKeyLedger =
+            String(__kuLedger.subconceptKey || "").trim() || null;
+          let __conceptKeyLedger =
+            String(__kuLedger.conceptKey || "").trim() || null;
+
+          if (!__scriptureKeyLedger && __threadCenterTypeLedger === "scripture" && __threadCenterKeyLedger) {
+            __scriptureKeyLedger = __threadCenterKeyLedger;
+          }
+
+          if (!__conceptKeyLedger && __threadCenterTypeLedger === "concept" && __threadCenterKeyLedger) {
+            __conceptKeyLedger = __threadCenterKeyLedger;
+          }
+
+          if (!__conceptKeyLedger) {
+            const __centerKeyLedger = String(__kuLedger.centerKey || "").trim();
+            if (__centerKeyLedger && __threadCenterTypeLedger !== "scripture") {
+              __conceptKeyLedger = __centerKeyLedger;
+            }
+          }
+
+          const __thoughtGuideKeyLedger =
+            String(__kuLedger.thoughtGuideKey || "").trim() || null;
+
+          const __resolvedLevelLedger =
+            __scriptureKeyLedger ? "scripture" :
+            __subconceptKeyLedger ? "subconcept" :
+            __conceptKeyLedger ? "concept" :
+            (__rrLedger.startsWith("DEF_FASTPATH_") ? "verified" : "general");
+
+          writeScriptureLearningLedger({
+            threadId: String(threadId || ""),
+            message: String(message ?? ""),
+            routeReason: __rrLedger,
+            scriptureKey: __scriptureKeyLedger,
+            subconceptKey: __subconceptKeyLedger,
+            conceptKey: __conceptKeyLedger,
+            thoughtGuideKey: __thoughtGuideKeyLedger,
+            personaConstitutionKey: __persona?.constitutionKey ?? null,
+            hasEvidence: Boolean(__mf.hasEvidence),
+            hasLawTrace: Boolean(__mf.hasLawTrace),
+            resolvedLevel: __resolvedLevelLedger as any,
+            unresolvedNote: null,
+          });
+        } catch {}
 
       // R10_SYNAPSE_TOP_BIND_V2: routing 前に synapseTop を一度だけ束ねる（decisionFrame.ku から参照するための reconciled view）。
       try {
