@@ -4593,7 +4593,8 @@ try {
           const __isDefRoute =
             __rr === "DEF_DICT_HIT" ||
             __rr === "DEF_FASTPATH_VERIFIED_V1" ||
-            __rr === "DEF_LLM_TOP";
+            __rr === "DEF_LLM_TOP" ||
+            __rr === "KOTODAMA_ONE_SOUND_GROUNDED_V2";
           const __mfAny: any = ku.meaningFrame || null;
           if (__tidCenter && __isDefRoute && String(__centerKey || "").trim()) {
             upsertThreadCenter({
@@ -10195,158 +10196,110 @@ if (!outText) {
     try { (res as any).__TENMON_THREAD_CORE = __coreDef; } catch {}
   };
 
-  // CARD_KOTODAMA_ONE_SOUND_GROUNDED_V1:
+  // CARD_KOTODAMA_ONE_SOUND_GROUNDED_V2:
   // 「ヒの言霊とは何ですか」などの一音定義を generic define に落とさず、
-  // 既存 kotodamaOneSoundLawIndex へ直結する最短 fastpath。
+  // kotodamaOneSoundLawIndex へ直結する grounded fastpath。
   try {
     const __msgSoundRaw = String(message ?? "").trim();
-    const __msgSound = normalizeCoreTermForRouting(__msgSoundRaw);
+    const __msgSoundNorm = normalizeCoreTermForRouting(__msgSoundRaw).replace(/\s+/gu, "");
+    const __mOneSound = __msgSoundNorm.match(
+      /^([アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヰヱヲン])(?:の)?(?:言霊|言灵)(?:とは|って何|ってなに|とは何|とはなに|とは何ですか|とはなにですか|って何ですか|ってなにですか)?$/u
+    );
 
-    const __soundDefMatch =
-      __msgSound.match(/^([ァ-ヴーぁ-ん])\s*の\s*言(?:霊|灵|靈)\s*とは\s*(?:何|なに)(?:ですか)?\s*[？?]?$/u) ||
-      __msgSound.match(/^([ァ-ヴーぁ-ん])\s*の\s*言(?:霊|灵|靈)\s*の\s*(?:意味|定義)\s*は\s*[？?]?$/u) ||
-      __msgSound.match(/^([ァ-ヴーぁ-ん])\s*の\s*言(?:霊|灵|靈)\s*[？?]?$/u);
-
-    const __hasDocSound =
-      /\bdoc\b/i.test(__msgSound) ||
-      /pdfPage\s*=\s*\d+/i.test(__msgSound) ||
-      /#詳細/.test(__msgSound);
-
-    const __isCmdSound =
-      __msgSound.startsWith("#") || __msgSound.startsWith("/");
-
-    if (__soundDefMatch && !__hasDocSound && !__isCmdSound) {
-      const __soundRaw = String(__soundDefMatch[1] ?? "").trim();
-      const __sound = /[ぁ-ん]/u.test(__soundRaw)
-        ? __soundRaw.replace(/[ぁ-ん]/g, (ch) =>
-            String.fromCharCode(ch.charCodeAt(0) + 0x60)
-          )
-        : __soundRaw;
-
+    if (__mOneSound) {
+      const __sound = String(__mOneSound[1] || "");
       const __entry = getKotodamaOneSoundEntry(__sound);
 
       if (__entry) {
-        const __hist = memoryReadSession(String(threadId || ""), 8) || [];
-        const __prevSound = getPreviousSoundFromHistory(__hist);
+        const __preferred = String(__entry.preferredMeaning || "").trim();
+        const __wf = String(__entry.waterFireHint || "").trim();
 
-        const __body = buildKotodamaOneSoundResponse(__entry, {
-          previousSound: __prevSound || undefined,
-        });
+        const __ground = Array.isArray(__entry.textualGrounding)
+          ? __entry.textualGrounding.map((v: any) => String(v || "").trim()).filter(Boolean).slice(0, 3)
+          : [];
 
-        try {
-          upsertThreadCenter({
-            threadId: String(threadId || ""),
-            centerType: "scripture",
-            centerKey: "kotodama_hisho",
-            centerReason: "KOTODAMA_ONE_SOUND_GROUNDED_V1",
-            sourceRouteReason: "KOTODAMA_ONE_SOUND_GROUNDED_V1",
-            sourceScriptureKey: "kotodama_hisho",
-            sourceTopicClass: "scripture",
-            confidence: 0.95,
-          });
-        } catch {}
+        const __nextAxes = Array.isArray(__entry.nextAxes)
+          ? __entry.nextAxes.map((v: any) => String(v || "").trim()).filter(Boolean).slice(0, 2)
+          : [];
 
-        const __sourceStackSummary: any = {
-          sourceKinds: getKotodamaOneSoundSourceKinds(__entry),
-          primaryMeaning: __entry.preferredMeaning,
-          currentSound: __sound,
-        };
+        const __groundLine = __ground.length
+          ? `言霊秘書系では、${__ground.map((v) => `「${v}」`).join("・")}を軸に読みます。`
+          : "";
 
-        if (__entry.textualGrounding?.length) {
-          __sourceStackSummary.textualGroundingHit = true;
-        }
+        const __nextLine = __nextAxes.length
+          ? `次は「${__nextAxes.join("」か「")}」のどちらから見るかで、${__sound}の位置が締まります。`
+          : `次は前後音との関係から見ると、${__sound}の位置が締まります。`;
 
-        const __notionMeta = getKotodamaOneSoundNotionMeta(__entry);
-        if (__notionMeta) Object.assign(__sourceStackSummary, __notionMeta);
+        const __response =
+          `【天聞の所見】${__sound}は、${__preferred}${__wf ? ` ${__wf}` : ""}\n\n` +
+          `${__groundLine}${__sound}を単独の象徴にせず、水火と前後音の位置で読むと芯が立ちます。\n\n` +
+          `${__nextLine}`;
 
-        const __fts = searchKotodamaFts(__sound, 3);
-        const __topFts = __fts.length > 0 ? __fts[0] : null;
-        if (__topFts) {
-          Object.assign(__sourceStackSummary, {
-            ftsHit: true,
-            ftsDoc: __topFts.doc,
-            ftsPage: __topFts.pdfPage,
-            ftsSnippetHead: String(__topFts.snippet || "").slice(0, 80),
-          });
-        }
-
-        const __ku: any = {
-          routeReason: "KOTODAMA_ONE_SOUND_GROUNDED_V1",
+        const __kuSound: any = {
+          routeReason: "KOTODAMA_ONE_SOUND_GROUNDED_V2",
+          originRouteReason: "KOTODAMA_ONE_SOUND_GROUNDED_V2",
           routeClass: "define",
-          answerLength: "medium",
-          answerMode: "define",
-          answerFrame: "statement_plus_one_question",
-          scriptureKey: "kotodama_hisho",
-          centerKey: "kotodama_hisho",
-          centerMeaning: "kotodama_hisho",
-          centerLabel: __entry.displayLabel,
-          sourcePack: "seiten",
+          centerKey: "kotodama",
+          centerLabel: "言霊",
+          centerMeaning: "kotodama",
+          term: __sound,
+          sourcePack: "scripture",
           groundedRequired: true,
           groundingSelector: {
             groundedPriority: "required",
             groundingMode: "canon",
             unresolvedPolicy: "ask",
           },
-          sourceStackSummary: __sourceStackSummary,
-          thoughtCoreSummary: {
-            centerKey: "kotodama_hisho",
-            centerMeaning: __entry.displayLabel,
-            routeReason: "KOTODAMA_ONE_SOUND_GROUNDED_V1",
-            modeHint: "kotodama_one_sound",
-            continuityHint: __sound,
-            sourceStackSummary: { ...__sourceStackSummary },
+          answerLength: "medium",
+          answerMode: "define",
+          answerFrame: "statement_plus_one_question",
+          sourceStackSummary: {
+            primaryMeaning: "言霊",
+            responseAxis: "scripture",
+            sourceKinds: ["scripture", "concept", "one_sound"],
+            currentSound: __sound,
           },
-          heart: normalizeHeartShape(__heart),
-          lawsUsed: [],
-          evidenceIds: [],
-          lawTrace: [],
+          thoughtCoreSummary: {
+            centerKey: "kotodama",
+            centerMeaning: "kotodama",
+            continuityHint: __sound,
+            routeReason: "KOTODAMA_ONE_SOUND_GROUNDED_V2",
+            modeHint: "define",
+            intentKind: "define",
+            sourceStackSummary: {
+              primaryMeaning: "言霊",
+              responseAxis: "scripture",
+              sourceKinds: ["scripture", "concept", "one_sound"],
+              currentSound: __sound,
+            },
+          },
+          notionHint: (__entry as any).notionHint ?? null,
+          notionTopics: (__entry as any).notionTopics ?? null,
         };
 
         try {
-          const __binder = buildKnowledgeBinder({
-            routeReason: "KOTODAMA_ONE_SOUND_GROUNDED_V1",
+          const __binderSound = buildKnowledgeBinder({
+            routeReason: "KOTODAMA_ONE_SOUND_GROUNDED_V2",
             message: String(message ?? ""),
             threadId: String(threadId ?? ""),
-            ku: __ku,
+            ku: __kuSound,
             threadCore: __threadCore,
             threadCenter: null,
           });
-          applyKnowledgeBinderToKu(__ku, __binder);
+          applyKnowledgeBinderToKu(__kuSound, __binderSound);
         } catch {}
 
-        const __core: ThreadCore = {
-          ...__threadCore,
-          centerKey: "kotodama_hisho",
-          centerLabel: __entry.displayLabel,
-          activeEntities: [__entry.displayLabel],
-          lastResponseContract: {
-            answerLength: "medium",
-            answerMode: "define",
-            answerFrame: "statement_plus_one_question",
-            routeReason: "KOTODAMA_ONE_SOUND_GROUNDED_V1",
-          },
-          updatedAt: new Date().toISOString(),
-        };
-        saveThreadCore(__core).catch(() => {});
-        try { (res as any).__TENMON_THREAD_CORE = __core; } catch {}
-
-        return res.json(__tenmonGeneralGateResultMaybe({
-          response: __body,
-          evidence: null,
-          candidates: [],
-          timestamp,
-          threadId,
-          decisionFrame: {
-            mode: "NATURAL",
-            intent: "define",
-            llm: null,
-            ku: __ku,
-          },
-        }));
+        return reply({
+          response: __response,
+          mode: "NATURAL",
+          sourcePack: "scripture",
+          groundingMode: "canon",
+          decisionFrame: { mode: "NATURAL", intent: "define", llm: null, ku: __kuSound },
+        });
       }
     }
   } catch (e) {
-    try { console.error("[CARD_KOTODAMA_ONE_SOUND_GROUNDED_V1]", e); } catch {}
+    try { console.error("[CARD_KOTODAMA_ONE_SOUND_GROUNDED_V2]", e); } catch {}
   }
 
 
