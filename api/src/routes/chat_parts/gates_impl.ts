@@ -12,6 +12,7 @@ import { projectResponseSurface } from "../../projection/responseProjector.js";
 import { inferExpressionPlan, inferComfortTuning } from "../../expression/expressionPlanner.js";
 import { buildBrainstemDecisionFromKu } from "../../chat/brainstem/brainstem.js";
 import { upsertThreadCenter } from "../../core/threadCenterMemory.js";
+import { buildKnowledgeBinder, applyKnowledgeBinderToKu } from "../../core/knowledgeBinder.js";
 
 type GeneralFrontKind = "greeting" | "meta_conversation" | "present_state" | "none";
 
@@ -1502,6 +1503,98 @@ function __tenmonGeneralGateResultMaybe(x: any, rawMessageOverride?: string): an
         }
       }
     } catch {}
+// CARD_DEFINE_BINDER_EXIT_FALLBACK_V2:
+// define 単一路を含む single exit で binderSummary/sourcePack 欠損時のみ補完
+try {
+  const __dfB: any = (x as any)?.decisionFrame;
+  if (__dfB && typeof __dfB === "object") {
+    if (!__dfB.ku || typeof __dfB.ku !== "object" || Array.isArray(__dfB.ku)) __dfB.ku = {};
+    const __kuB: any = __dfB.ku;
+
+    const __needBinder =
+      __kuB.binderSummary == null ||
+      __kuB.sourcePack == null ||
+      String(__kuB.sourcePack || "").trim() === "";
+
+    if (__needBinder) {
+      const __rrB = String(__kuB.routeReason || (x as any)?.routeReason || "").trim();
+      const __tidB = String((x as any)?.threadId || "").trim();
+      const __rawB =
+        String((x as any)?.rawMessage || "") ||
+        String((x as any)?.message || "") ||
+        String(__kuB.inputText || "") ||
+        "";
+
+      const __centerKeyB = String(
+        __kuB.centerKey ||
+        __kuB.centerMeaning ||
+        __kuB.threadCenterKey ||
+        __kuB.synapseTop?.sourceThreadCenter?.centerKey ||
+        ""
+      ).trim();
+
+      const __centerLabelB = String(
+        __kuB.centerLabel ||
+        __kuB.threadCenterLabel ||
+        __kuB.synapseTop?.sourceCenterLabel ||
+        __centerKeyB ||
+        ""
+      ).trim();
+
+      const __threadCenterB =
+        __kuB.synapseTop?.sourceThreadCenter && typeof __kuB.synapseTop.sourceThreadCenter === "object"
+          ? {
+              center_type: String(__kuB.synapseTop.sourceThreadCenter.centerType || "concept"),
+              center_key: String(__kuB.synapseTop.sourceThreadCenter.centerKey || "").trim() || null,
+            }
+          : (__centerKeyB
+              ? {
+                  center_type: (__kuB.scriptureKey || __rrB === "TENMON_SCRIPTURE_CANON_V1") ? "scripture" : "concept",
+                  center_key: __centerKeyB,
+                }
+              : null);
+
+      const __threadCoreB =
+        (__centerKeyB || __centerLabelB || __kuB.lastAnswerLength || __kuB.answerLength)
+          ? {
+              threadId: __tidB,
+              centerKey: __centerKeyB || null,
+              centerLabel: __centerLabelB || null,
+              activeEntities: __centerLabelB ? [__centerLabelB] : [],
+              openLoops: Array.isArray(__kuB.threadOpenLoops) ? __kuB.threadOpenLoops : [],
+              commitments: Array.isArray(__kuB.threadCommitments) ? __kuB.threadCommitments : [],
+              lastResponseContract: {
+                answerLength: __kuB.lastAnswerLength || __kuB.answerLength || null,
+                answerMode: __kuB.lastAnswerMode || __kuB.answerMode || null,
+                answerFrame: __kuB.lastAnswerFrame || __kuB.answerFrame || null,
+                routeReason: __rrB || null,
+              },
+              updatedAt: String((x as any)?.timestamp || new Date().toISOString()),
+            }
+          : null;
+
+      const __binderB = buildKnowledgeBinder({
+        routeReason: __rrB,
+        message: __rawB,
+        threadId: __tidB,
+        ku: __kuB,
+        threadCore: __threadCoreB as any,
+        threadCenter: __threadCenterB as any,
+      });
+      applyKnowledgeBinderToKu(__kuB, __binderB);
+
+      try {
+        console.log("[BINDER_EXIT_APPLY]", {
+          rr: __rrB,
+          rc: __kuB.routeClass || null,
+          sourcePack: __kuB.sourcePack || null,
+          centerKey: __kuB.centerKey || null,
+        });
+      } catch {}
+    }
+  }
+} catch {}
+
 
 return __thinReleasePayloadV2(x);
   } catch { return __thinReleasePayloadV2(x); }
