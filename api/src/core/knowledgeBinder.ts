@@ -266,6 +266,9 @@ export function applyKnowledgeBinderToKu(ku: Record<string, unknown>, binder: Kn
   if ((ku as any).personaConstitutionSummary == null) {
     (ku as any).personaConstitutionSummary = binder.personaConstitutionSummary;
   }
+  if ((ku as any).lineageSummary == null && binder.lineageSummary != null) {
+    (ku as any).lineageSummary = binder.lineageSummary;
+  }
   if (binder.sourceStackSummary != null && ((ku as any).sourceStackSummary == null || typeof (ku as any).sourceStackSummary !== "object")) {
     (ku as any).sourceStackSummary = binder.sourceStackSummary;
   }
