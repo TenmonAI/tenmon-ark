@@ -2356,6 +2356,62 @@ ${String((gptDraft as any)?.text ?? "").trim()}
     "散っているものを一つ手前に寄せることから始められます。",
     "その一手を動かしたあとで、次に深める観点を決めれば十分です。",
   ];
+
+  const __normalizeLongformParagraphsV2 = (text: string): string => {
+    const parts = [x.strip() for x in str(text or "").replace("\r", "").split("\n\n")]
+    parts = [x for x in parts if x]
+    if not parts:
+      return ""
+    seen = set()
+    out = []
+    for part in parts:
+      key = " ".join(part.split())
+      if key in seen:
+        continue
+      seen.add(key)
+      out.append(part)
+    return "\n\n".join(out).strip()
+  };
+
+  const __longformThemeTagV2 = (raw: string): "feeling" | "future" | "generic" => {
+    const t = String(raw || "").trim();
+    if (/(気分|気持ち|感じ|心境|いまどんな|今どんな)/u.test(t)) return "feeling";
+    if (/(展望|これから先|未来|どう見ますか|先行き)/u.test(t)) return "future";
+    return "generic";
+  };
+
+  const __longformCloseV2 = (theme: "feeling" | "future" | "generic"): string => {
+    if (theme === "feeling") {
+      return "いまの状態を無理に結論づけるより、重さの正体を一つだけ見極めるほうが次の動きに繋がります。";
+    }
+    if (theme === "future") {
+      return "展望は気分ではなく、中心と条件が揃ったところから具体化します。";
+    }
+    return "長文でも、核と次の一手が見えていれば読み手は迷いません。";
+  };
+
+  const __longformReserveByThemeV2 = (theme: "feeling" | "future" | "generic"): string[] => {
+    if (theme === "feeling") {
+      return [
+        "疲れなのか迷いなのか焦りなのかで、整え方は変わります。",
+        "いまの感覚を一語で置けると、次の観測が正確になります。",
+        "重さの種類が分かるだけでも、無駄な消耗は減らせます。"
+      ];
+    }
+    if (theme === "future") {
+      return [
+        "条件が見えないまま展望だけを語ると、言葉が先に空転します。",
+        "次の変化点を一つ定めると、先の景色はかなり読みやすくなります。",
+        "見通しは大きな夢より、先に動く一点から立ち上がります。"
+      ];
+    }
+    return [
+      "情報を増やすより、何を残すかを決めるほうが全体は整います。",
+      "読み手が次に進める状態を作ることが、長文の役目です。",
+      "焦点が通っていれば、文量は重さではなく器になります。"
+    ];
+  };
+
   const __forceTailPadV1 = (text: string, minChars: number, maxChars: number): string => {
     const shortPads = [
       "焦点が定まると次の一手が見えます。",
