@@ -65,6 +65,7 @@ function inferRouteClass(ku: Record<string, unknown>, routeReason: string): stri
   if (rc != null && String(rc).trim() !== "") return String(rc);
   const rr = String(routeReason || "");
   if (rr === "DEF_FASTPATH_VERIFIED_V1" || rr === "DEF_FASTPATH_PROPOSED_V1") return "define";
+  if (rr === "KATAKAMUNA_CANON_ROUTE_V1") return "define";
   if (rr === "EXPLICIT_CHAR_PREEMPT_V1") return "analysis";
   if (/^R22_/.test(rr)) return rr === "R22_ESSENCE_FOLLOWUP_V1" ? "continuity" : "analysis";
   if (/^SUPPORT_/.test(rr)) return "support";
@@ -75,6 +76,7 @@ function inferRouteClass(ku: Record<string, unknown>, routeReason: string): stri
 function inferSourcePack(routeReason: string, centerKey: string | null): string {
   const rr = String(routeReason || "").trim();
   if (rr === "DEF_FASTPATH_VERIFIED_V1" || rr === "DEF_FASTPATH_PROPOSED_V1" || centerKey === "kotodama") return "seiten";
+  if (rr === "KATAKAMUNA_CANON_ROUTE_V1" || centerKey === "katakamuna") return "scripture";
   if (rr === "TENMON_SCRIPTURE_CANON_V1") return "scripture";
   if (rr === "EXPLICIT_CHAR_PREEMPT_V1") return "explicit";
   if (/^R22_(FUTURE_OUTLOOK|ESSENCE_FOLLOWUP|ESSENCE_ASK|COMPARE_FOLLOWUP|COMPARE_ASK|NEXTSTEP_FOLLOWUP)_V1$/.test(rr)) return "natural_analysis";

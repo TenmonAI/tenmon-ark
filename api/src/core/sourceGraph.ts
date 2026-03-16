@@ -66,6 +66,7 @@ const __GROUNDING_RULESET_V1: Record<string, GroundingRule> = {
   DEF_FASTPATH_VERIFIED_V1: { groundedPriority: "required", groundingMode: "canon", unresolvedPolicy: "ask" },
   DEF_FASTPATH_PROPOSED_V1: { groundedPriority: "preferred", groundingMode: "canon", unresolvedPolicy: "ask" },
   TENMON_SCRIPTURE_CANON_V1: { groundedPriority: "required", groundingMode: "canon", unresolvedPolicy: "ask" },
+  KATAKAMUNA_CANON_ROUTE_V1: { groundedPriority: "required", groundingMode: "canon", unresolvedPolicy: "ask" },
   R22_ESSENCE_FOLLOWUP_V1: { groundedPriority: "preferred", groundingMode: "thread", unresolvedPolicy: "ask" },
   R22_COMPARE_FOLLOWUP_V1: { groundedPriority: "preferred", groundingMode: "thread", unresolvedPolicy: "ask" },
   R22_NEXTSTEP_FOLLOWUP_V1: { groundedPriority: "preferred", groundingMode: "thread", unresolvedPolicy: "ask" },
@@ -83,6 +84,7 @@ export function resolveGroundingRule(routeReason: string): GroundingRule {
   if (__GROUNDING_RULESET_V1[rr]) return __GROUNDING_RULESET_V1[rr];
   if (/^SUPPORT_/.test(rr)) return { groundedPriority: "none", groundingMode: "none", unresolvedPolicy: "fallback" };
   if (/FOLLOWUP/.test(rr) || rr === "CONTINUITY_ANCHOR_V1") return { groundedPriority: "preferred", groundingMode: "thread", unresolvedPolicy: "ask" };
+  if (rr === "KATAKAMUNA_CANON_ROUTE_V1") return { groundedPriority: "required", groundingMode: "canon", unresolvedPolicy: "ask" };
   if (/^DEF_/.test(rr)) return { groundedPriority: "preferred", groundingMode: "canon", unresolvedPolicy: "ask" };
   return { groundedPriority: "optional", groundingMode: "none", unresolvedPolicy: "ask" };
 }
