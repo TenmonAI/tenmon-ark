@@ -11431,7 +11431,7 @@ if (typeof out === "string" && out.trim()) nat.responseText = out.trim();
         const maxRules = 8;
         const maxChars = 1200;
 
-        const picked = [];
+        const picked: Array<{ title: string; text: string }> = [];
         let usedChars = 0;
 
         for (const r of rules.slice(0, maxRules)) {
