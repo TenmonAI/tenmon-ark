@@ -4337,10 +4337,18 @@ try {
       payload.decisionFrame.ku = (payload.decisionFrame.ku && typeof payload.decisionFrame.ku === "object") ? payload.decisionFrame.ku : {};
       payload.decisionFrame.ku.heart = normalizeHeartShape(payload.decisionFrame.ku.heart ?? __heart);
       const ku: any = payload.decisionFrame.ku;
-      if (ku.answerLength === undefined) ku.answerLength = __brainstem?.answerLength ?? __bodyProfile?.answerLength ?? null;
-      if (ku.answerMode === undefined) ku.answerMode = __brainstem?.answerMode ?? __bodyProfile?.answerMode ?? null;
-      if (ku.answerFrame === undefined) ku.answerFrame = __brainstem?.answerFrame ?? __bodyProfile?.answerFrame ?? null;
-      if (ku.routeClass === undefined) ku.routeClass = __brainstem?.routeClass ?? null;
+      // CARD_BRAINSTEM_FULL_WIRING_V1: rc/answerLength/answerMode/answerFrame は brainstem 確定値優先。explicitLengthRequested 等 route 固有値は保持
+      if (__brainstem) {
+        ku.routeClass = __brainstem.routeClass;
+        ku.answerLength = __brainstem.answerLength;
+        ku.answerMode = __brainstem.answerMode;
+        ku.answerFrame = __brainstem.answerFrame;
+      } else {
+        if (ku.answerLength === undefined) ku.answerLength = __bodyProfile?.answerLength ?? null;
+        if (ku.answerMode === undefined) ku.answerMode = __bodyProfile?.answerMode ?? null;
+        if (ku.answerFrame === undefined) ku.answerFrame = __bodyProfile?.answerFrame ?? null;
+        if (ku.routeClass === undefined) ku.routeClass = null;
+      }
       if (ku.threadCenterKey === undefined) ku.threadCenterKey = __brainstem?.centerKey ?? null;
       if (ku.threadCenterLabel === undefined) ku.threadCenterLabel = __brainstem?.centerLabel ?? null;
       if (ku.brainstemPolicy === undefined) ku.brainstemPolicy = __brainstem?.responsePolicy ?? null;
@@ -7537,10 +7545,10 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
             llm: null,
             ku: {
               routeReason: "EXPLICIT_CHAR_PREEMPT_V1",
-              routeClass: "analysis",
-              answerLength: __tier,
-              answerMode: "analysis",
-              answerFrame: "one_step",
+              routeClass: __brainstem?.routeClass ?? "analysis",
+              answerLength: __brainstem?.answerLength ?? __tier,
+              answerMode: __brainstem?.answerMode ?? "analysis",
+              answerFrame: __brainstem?.answerFrame ?? "one_step",
               explicitLengthRequested: __explicitCharsEarly,
               responseLength: __body.length,
               lawsUsed: [],
@@ -8924,6 +8932,12 @@ const __heartNorm = normalizeHeartShape(__heart);
         ...(__hasAnswerProfile && __bodyProfile ? { answerMode: __bodyProfile.answerMode ?? undefined, answerFrame: __bodyProfile.answerFrame ?? undefined } : {}),
       });
       try { console.log("[SYNAPSETOP_BEFORE_RETURN]", { path: "general", synapseTop: (__ku as any).synapseTop }); } catch {}
+      if (__brainstem) {
+        (__ku as any).routeClass = __brainstem.routeClass;
+        (__ku as any).answerLength = __brainstem.answerLength;
+        (__ku as any).answerMode = __brainstem.answerMode;
+        (__ku as any).answerFrame = __brainstem.answerFrame;
+      }
       return res.json(__tenmonGeneralGateResultMaybe({
         response: finalResp,
         evidence: null,
@@ -9572,7 +9586,99 @@ if (!outText) {
 
 
 
-// DEF_FASTPATH_VERIFIED_V1
+  // CARD_DEFINE_EXIT_SINGLE_PATH_V1
+  const __buildDefineDecisionKuV1 = (input: {
+    routeReason: string;
+    term: string;
+    lawsUsed: string[];
+    evidenceIds: string[];
+    lawTrace: Array<{ lawKey: string; unitId: string; op: string }>;
+    khsLawsUsed?: Array<{ lawKey: string; unitId: string; status: string; operator: string }>;
+    khsEvidenceIds?: string[];
+    khsLawTrace?: Array<{ lawKey: string; unitId: string; op: string }>;
+    answerLength?: string | null;
+    answerMode?: string | null;
+    answerFrame?: string | null;
+    routeClass?: string | null;
+    sourcePack?: string | null;
+    groundedRequired?: boolean | null;
+    thoughtGuideSummary?: any;
+    notionCanon?: any[];
+    personaConstitutionSummary?: any;
+    meaningFrame?: any;
+  }) => {
+    const __termLocal = String(input.term || "").trim();
+    const __centerKeyLocal =
+      __termLocal === "言霊" ? "kotodama" : String(__termLocal || "").trim() || null;
+    const __centerLabelLocal =
+      __termLocal === "言霊"
+        ? "言霊"
+        : (centerLabelFromKey(__centerKeyLocal) || __centerKeyLocal);
+
+    const __kuDefine: any = {
+      routeClass: input.routeClass ?? "define",
+      answerLength: input.answerLength ?? (__brainstem?.answerLength ?? "medium"),
+      answerMode: input.answerMode ?? (__brainstem?.answerMode ?? "define"),
+      answerFrame: input.answerFrame ?? (__brainstem?.answerFrame ?? "statement_plus_one_question"),
+      routeReason: String(input.routeReason || "DEF_FASTPATH_VERIFIED_V1"),
+      centerMeaning: __centerKeyLocal,
+      centerKey: __centerKeyLocal,
+      centerLabel: __centerLabelLocal,
+      lawsUsed: Array.isArray(input.lawsUsed) ? input.lawsUsed : [],
+      evidenceIds: Array.isArray(input.evidenceIds) ? input.evidenceIds : [],
+      lawTrace: Array.isArray(input.lawTrace) ? input.lawTrace : [],
+      term: __termLocal,
+      heart: normalizeHeartShape(__heart),
+      sourcePack: input.sourcePack ?? null,
+      groundedRequired: input.groundedRequired ?? null,
+      thoughtGuideSummary: input.thoughtGuideSummary ?? null,
+      notionCanon: Array.isArray(input.notionCanon) ? input.notionCanon : [],
+      personaConstitutionSummary: input.personaConstitutionSummary ?? getPersonaConstitutionSummary(),
+    };
+
+    if (input.khsLawsUsed || input.khsEvidenceIds || input.khsLawTrace) {
+      __kuDefine.khs = {
+        lawsUsed: Array.isArray(input.khsLawsUsed) ? input.khsLawsUsed : [],
+        evidenceIds: Array.isArray(input.khsEvidenceIds) ? input.khsEvidenceIds : [],
+        lawTrace: Array.isArray(input.khsLawTrace) ? input.khsLawTrace : [],
+      };
+    }
+    if (input.meaningFrame != null) __kuDefine.meaningFrame = input.meaningFrame;
+    return __kuDefine;
+  };
+
+  const __persistDefineThreadCoreV1 = (input: {
+    term: string;
+    routeReason: string;
+    answerLength?: string | null;
+    answerMode?: string | null;
+    answerFrame?: string | null;
+  }) => {
+    const __termLocal = String(input.term || "").trim();
+    const __centerKeyLocal =
+      __termLocal === "言霊" ? "kotodama" : String(__termLocal || "").trim() || null;
+    const __centerLabelLocal =
+      __termLocal === "言霊"
+        ? "言霊"
+        : (centerLabelFromKey(__centerKeyLocal) || __centerKeyLocal);
+    const __coreDef: ThreadCore = {
+      ...__threadCore,
+      centerKey: __centerKeyLocal,
+      centerLabel: __centerLabelLocal,
+      activeEntities: __centerLabelLocal ? [__centerLabelLocal] : [],
+      lastResponseContract: {
+        answerLength: (input.answerLength ?? "medium") as "short" | "medium" | "long",
+        answerMode: input.answerMode ?? "define",
+        answerFrame: input.answerFrame ?? "statement_plus_one_question",
+        routeReason: input.routeReason ?? "DEF_FASTPATH_VERIFIED_V1"
+      },
+      updatedAt: new Date().toISOString()
+    };
+    saveThreadCore(__coreDef).catch(() => {});
+    try { (res as any).__TENMON_THREAD_CORE = __coreDef; } catch {}
+  };
+
+  // DEF_FASTPATH_VERIFIED_V1
   try {
     const __msg0Raw = String(message ?? "").trim();
     const __msg0 = normalizeCoreTermForRouting(__msg0Raw);
@@ -9703,84 +9809,62 @@ if (!outText) {
           });
         } catch {}
 
-        const __ku = {
-          answerLength: "medium",
-          answerMode: "define",
-          answerFrame: "statement_plus_one_question",
+        const __lawsUsedDef = [
+          String(__hitV.lawKey),
+          ...(__hitExplain?.lawKey ? [String(__hitExplain.lawKey)] : [])
+        ];
+        const __evidenceIdsDef = [
+          String(__hitV.quoteHash ?? ""),
+          ...(__hitExplain?.quoteHash ? [String(__hitExplain.quoteHash)] : [])
+        ].filter(Boolean);
+        const __lawTraceDef = [
+          {
+            lawKey: String(__hitV.lawKey),
+            unitId: String(__hitV.unitId),
+            op: "OP_DEFINE"
+          },
+          ...(__hitExplain?.lawKey ? [{
+            lawKey: String(__hitExplain.lawKey),
+            unitId: String(__hitExplain.unitId),
+            op: "OP_EXPLAINS"
+          }] : [])
+        ];
+        const __ku = __buildDefineDecisionKuV1({
           routeReason: "DEF_FASTPATH_VERIFIED_V1",
-          lawsUsed: [
-            String(__hitV.lawKey),
-            ...(__hitExplain?.lawKey ? [String(__hitExplain.lawKey)] : [])
-          ],
-          evidenceIds: [
-            String(__hitV.quoteHash ?? ""),
-            ...(__hitExplain?.quoteHash ? [String(__hitExplain.quoteHash)] : [])
-          ].filter(Boolean),
-          lawTrace: [
+          term: __term,
+          lawsUsed: __lawsUsedDef,
+          evidenceIds: __evidenceIdsDef,
+          lawTrace: __lawTraceDef,
+          khsLawsUsed: [
             {
               lawKey: String(__hitV.lawKey),
               unitId: String(__hitV.unitId),
-              op: "OP_DEFINE"
+              status: "verified",
+              operator: String(__hitV.operator ?? "OP_DEFINE")
             },
             ...(__hitExplain?.lawKey ? [{
               lawKey: String(__hitExplain.lawKey),
               unitId: String(__hitExplain.unitId),
-              op: "OP_EXPLAINS"
+              status: "verified",
+              operator: String(__hitExplain.operator ?? "OP_EXPLAINS")
             }] : [])
           ],
-          term: __term,
-          heart: normalizeHeartShape(__heart),
-          khs: {
-            lawsUsed: [
-              {
-                lawKey: String(__hitV.lawKey),
-                unitId: String(__hitV.unitId),
-                status: "verified",
-                operator: String(__hitV.operator ?? "OP_DEFINE")
-              },
-              ...(__hitExplain?.lawKey ? [{
-                lawKey: String(__hitExplain.lawKey),
-                unitId: String(__hitExplain.unitId),
-                status: "verified",
-                operator: String(__hitExplain.operator ?? "OP_EXPLAINS")
-              }] : [])
-            ],
-            evidenceIds: [
-              String(__hitV.quoteHash ?? ""),
-              ...(__hitExplain?.quoteHash ? [String(__hitExplain.quoteHash)] : [])
-            ].filter(Boolean),
-            lawTrace: [
-              {
-                lawKey: String(__hitV.lawKey),
-                unitId: String(__hitV.unitId),
-                op: "OP_DEFINE"
-              },
-              ...(__hitExplain?.lawKey ? [{
-                lawKey: String(__hitExplain.lawKey),
-                unitId: String(__hitExplain.unitId),
-                op: "OP_EXPLAINS"
-              }] : [])
-            ]
-          },
+          khsEvidenceIds: __evidenceIdsDef,
+          khsLawTrace: __lawTraceDef,
           sourcePack: __term === "言霊" ? "seiten" : null,
           groundedRequired: __term === "言霊" ? true : null,
-          thoughtGuideSummary:
-            __term === "言霊"
-              ? getThoughtGuideSummary("kotodama")
-              : null,
-          notionCanon:
-            __term === "言霊"
-              ? getNotionCanonForRoute("DEF_FASTPATH_VERIFIED_V1", String(message ?? ""))
-              : [],
-          personaConstitutionSummary: getPersonaConstitutionSummary()
-        };
-        if (__composed.meaningFrame != null) (__ku as any).meaningFrame = __composed.meaningFrame;
-
-        const __centerKeyDef = __term === "言霊" ? "kotodama" : String(__term || "").trim() || null;
-        const __centerLabelDef = __term === "言霊" ? "言霊" : (centerLabelFromKey(__centerKeyDef) || __centerKeyDef);
-        const __coreDef: ThreadCore = { ...__threadCore, centerKey: __centerKeyDef, centerLabel: __centerLabelDef, activeEntities: __centerLabelDef ? [__centerLabelDef] : [], lastResponseContract: { answerLength: "medium", answerMode: "define", answerFrame: "statement_plus_one_question", routeReason: "DEF_FASTPATH_VERIFIED_V1" }, updatedAt: new Date().toISOString() };
-        saveThreadCore(__coreDef).catch(() => {});
-        try { (res as any).__TENMON_THREAD_CORE = __coreDef; } catch {}
+          thoughtGuideSummary: __term === "言霊" ? getThoughtGuideSummary("kotodama") : null,
+          notionCanon: __term === "言霊" ? getNotionCanonForRoute("DEF_FASTPATH_VERIFIED_V1", String(message ?? "")) : [],
+          personaConstitutionSummary: getPersonaConstitutionSummary(),
+          meaningFrame: __composed.meaningFrame ?? null,
+        });
+        __persistDefineThreadCoreV1({
+          term: __term,
+          routeReason: "DEF_FASTPATH_VERIFIED_V1",
+          answerLength: (__ku as any).answerLength,
+          answerMode: (__ku as any).answerMode,
+          answerFrame: (__ku as any).answerFrame,
+        });
         return res.json(__tenmonGeneralGateResultMaybe({
           response: __respFinal,
           evidence: {
@@ -9827,6 +9911,26 @@ if (!outText) {
           `\n\n出典: ${String(__hitP.doc ?? "")} P${Number(__hitP.pdfPage ?? 0)}` +
           "\n\nこの定義候補を、さらに verified 根拠に寄せて深めますか？";
 
+        const __kuProposed: any = __buildDefineDecisionKuV1({
+          routeReason: "DEF_FASTPATH_PROPOSED_V1",
+          routeClass: "define",
+          term: __term,
+          lawsUsed: [String(__hitP.lawKey)],
+          evidenceIds: [String(__hitP.quoteHash ?? "")].filter(Boolean),
+          lawTrace: [
+            { lawKey: String(__hitP.lawKey), unitId: String(__hitP.unitId), op: "OP_DEFINE" }
+          ],
+          answerLength: __brainstem?.answerLength ?? "medium",
+          answerMode: __brainstem?.answerMode ?? "define",
+          answerFrame: __brainstem?.answerFrame ?? "statement_plus_one_question",
+        });
+        __persistDefineThreadCoreV1({
+          term: __term,
+          routeReason: "DEF_FASTPATH_PROPOSED_V1",
+          answerLength: (__kuProposed as any).answerLength,
+          answerMode: (__kuProposed as any).answerMode,
+          answerFrame: (__kuProposed as any).answerFrame,
+        });
         return res.json(__tenmonGeneralGateResultMaybe({
           response: __resp,
           evidence: {
@@ -9841,20 +9945,7 @@ if (!outText) {
             mode: "NATURAL",
             intent: "define",
             llm: null,
-            ku: {
-              routeReason: "DEF_FASTPATH_PROPOSED_V1",
-              lawsUsed: [String(__hitP.lawKey)],
-              evidenceIds: [String(__hitP.quoteHash ?? "")].filter(Boolean),
-              lawTrace: [
-                {
-                  lawKey: String(__hitP.lawKey),
-                  unitId: String(__hitP.unitId),
-                  op: "OP_DEFINE"
-                }
-              ],
-              term: __term,
-              heart: normalizeHeartShape(__heart)
-            }
+            ku: __kuProposed,
           }
         }));
       }
