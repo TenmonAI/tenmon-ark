@@ -125,7 +125,7 @@ export function upsertThreadCenter(input: ThreadCenterInput): void {
       db.prepare(
         `UPDATE thread_center_memory
          SET center_key = ?,
-             center_reason = ?,
+             center_reason = COALESCE(NULLIF(?, ''), center_reason),
              next_axes_json = ?,
              source_route_reason = ?,
              source_scripture_key = ?,
