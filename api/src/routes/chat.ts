@@ -10337,6 +10337,109 @@ if (!outText) {
     try { console.error("[RESPONSE_FRAME_VARIATION_ENGINE_V1]", e); } catch {}
   }
 
+
+  // CARD_KOTODAMA_ONE_SOUND_HARD_PREEMPT_V3_SAFE:
+  // 一音言霊を generic define / DEF_FASTPATH_VERIFIED_V1 より前で固定捕捉する。
+  try {
+    const __msgOneSoundRawV3 = String(message ?? "").trim();
+    const __msgOneSoundNormV3 = normalizeCoreTermForRouting(__msgOneSoundRawV3).replace(/\s+/gu, "");
+    const __mOneSoundV3 = __msgOneSoundNormV3.match(
+      /^([アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヰヱヲン])(?:の)?(?:言霊|言灵)(?:とは|って何|ってなに|とは何|とはなに|とは何ですか|とはなにですか|って何ですか|ってなにですか)?$/u
+    );
+
+    if (__mOneSoundV3) {
+      const __soundV3 = String(__mOneSoundV3[1] || "");
+      const __entryV3 = getKotodamaOneSoundEntry(__soundV3);
+
+      if (__entryV3) {
+        const __preferredV3 = String(__entryV3.preferredMeaning || "").trim();
+        const __waterFireV3 = String(__entryV3.waterFireHint || "").trim();
+        const __groundsV3 = Array.isArray(__entryV3.textualGrounding)
+          ? __entryV3.textualGrounding.map((v: any) => String(v || "").trim()).filter(Boolean).slice(0, 3)
+          : [];
+        const __nextAxesV3 = Array.isArray(__entryV3.nextAxes)
+          ? __entryV3.nextAxes.map((v: any) => String(v || "").trim()).filter(Boolean).slice(0, 2)
+          : [];
+
+        const __groundLineV3 = __groundsV3.length
+          ? `言霊秘書系では、${__groundsV3.map((v) => `「${v}」`).join("・")}を軸に読みます。`
+          : "";
+        const __nextLineV3 = __nextAxesV3.length
+          ? `次は「${__nextAxesV3.join("」か「")}」のどちらから見るかで、${__soundV3}の位置が締まります。`
+          : `次は前後音との関係から見ると、${__soundV3}の位置が締まります。`;
+
+        const __responseV3 =
+          `【天聞の所見】${__soundV3}は、${__preferredV3}${__waterFireV3 ? ` ${__waterFireV3}` : ""}\n\n` +
+          `${__groundLineV3}${__soundV3}を単独の象徴にせず、水火と前後音の位置で読むと芯が立ちます。\n\n` +
+          `${__nextLineV3}`;
+
+        const __kuOneSoundV3: any = {
+          routeReason: "KOTODAMA_ONE_SOUND_GROUNDED_V3",
+          originRouteReason: "KOTODAMA_ONE_SOUND_GROUNDED_V3",
+          routeClass: "define",
+          centerKey: "kotodama",
+          centerLabel: "言霊",
+          centerMeaning: "kotodama",
+          term: __soundV3,
+          sourcePack: "scripture",
+          groundedRequired: true,
+          groundingSelector: {
+            groundedPriority: "required",
+            groundingMode: "canon",
+            unresolvedPolicy: "ask",
+          },
+          answerLength: "medium",
+          answerMode: "define",
+          answerFrame: "statement_plus_one_question",
+          sourceStackSummary: {
+            primaryMeaning: "言霊",
+            responseAxis: "scripture",
+            sourceKinds: ["scripture", "concept", "one_sound"],
+            currentSound: __soundV3,
+          },
+          thoughtCoreSummary: {
+            centerKey: "kotodama",
+            centerMeaning: "kotodama",
+            continuityHint: __soundV3,
+            routeReason: "KOTODAMA_ONE_SOUND_GROUNDED_V3",
+            modeHint: "define",
+            intentKind: "define",
+            sourceStackSummary: {
+              primaryMeaning: "言霊",
+              responseAxis: "scripture",
+              sourceKinds: ["scripture", "concept", "one_sound"],
+              currentSound: __soundV3,
+            },
+          },
+          notionHint: __entryV3.notionHint ?? null,
+          notionTopics: __entryV3.notionTopics ?? null,
+        };
+
+        try {
+          const __binderOneSoundV3 = buildKnowledgeBinder({
+            routeReason: "KOTODAMA_ONE_SOUND_GROUNDED_V3",
+            message: String(message ?? ""),
+            threadId: String(threadId ?? ""),
+            ku: __kuOneSoundV3,
+            threadCore: __threadCore,
+            threadCenter: null,
+          });
+          applyKnowledgeBinderToKu(__kuOneSoundV3, __binderOneSoundV3);
+        } catch {}
+
+        return reply({
+          response: __responseV3,
+          mode: "NATURAL",
+          sourcePack: "scripture",
+          groundingMode: "canon",
+          decisionFrame: { mode: "NATURAL", intent: "define", llm: null, ku: __kuOneSoundV3 },
+        });
+      }
+    }
+  } catch (e) {
+    try { console.error("[CARD_KOTODAMA_ONE_SOUND_HARD_PREEMPT_V3_SAFE]", e); } catch {}
+  }
+
   // DEF_FASTPATH_VERIFIED_V1
   try {
     const __msg0Raw = String(message ?? "").trim();
