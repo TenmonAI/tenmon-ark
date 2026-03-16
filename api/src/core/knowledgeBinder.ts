@@ -8,6 +8,7 @@ import { getThoughtGuideSummary } from "./thoughtGuide.js";
 import { getNotionCanonForRoute } from "./notionCanon.js";
 import { getPersonaConstitutionSummary } from "./personaConstitution.js";
 import { resolveGroundingRule } from "./sourceGraph.js";
+import { buildScriptureLineageSummary } from "./scriptureLineageEngine.js";
 import type { ThreadCore } from "./threadCore.js";
 
 export type KnowledgeBinderInput = {
@@ -45,6 +46,7 @@ export type KnowledgeBinderResult = {
     hasThoughtGuide: boolean;
     hasNotionCanon: boolean;
     hasPersonaConstitution: boolean;
+    hasLineage: boolean;
   };
   notionCanon: unknown[];
   thoughtGuideSummary: unknown | null;
@@ -52,6 +54,7 @@ export type KnowledgeBinderResult = {
   sourceStackSummary: Record<string, unknown> | null;
   thoughtCoreSummaryPatch: Record<string, unknown>;
   synapseTopPatch: Record<string, unknown>;
+  lineageSummary: unknown | null;
 };
 
 function inferRouteClass(ku: Record<string, unknown>, routeReason: string): string {
@@ -123,6 +126,13 @@ export function buildKnowledgeBinder(input: KnowledgeBinderInput): KnowledgeBind
     personaConstitutionSummary = getPersonaConstitutionSummary();
   } catch {}
 
+  const lineageSummary = buildScriptureLineageSummary({
+    routeReason: rr,
+    centerKey,
+    centerLabel,
+    scriptureKey: ku.scriptureKey != null ? String(ku.scriptureKey) : null,
+  });
+
   const binderSummary = {
     centerKey,
     centerLabel,
@@ -137,6 +147,7 @@ export function buildKnowledgeBinder(input: KnowledgeBinderInput): KnowledgeBind
     hasThoughtGuide: thoughtGuideSummary != null,
     hasNotionCanon: Array.isArray(notionCanon) && notionCanon.length > 0,
     hasPersonaConstitution: personaConstitutionSummary != null,
+    hasLineage: lineageSummary != null,
   };
 
   const sourceStackSummary: Record<string, unknown> | null = (() => {
@@ -220,6 +231,7 @@ export function buildKnowledgeBinder(input: KnowledgeBinderInput): KnowledgeBind
     sourceStackSummary,
     thoughtCoreSummaryPatch,
     synapseTopPatch,
+    lineageSummary,
   };
 }
 
