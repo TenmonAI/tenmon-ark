@@ -326,7 +326,7 @@ router.post("/chat", async (req: Request, res: Response<ChatResponseBody>) => {
   const __normalizeDigitsV1 = (s: string) => s.replace(/[０-９]/g, (ch) => String.fromCharCode(ch.charCodeAt(0) - 0xFEE0));
   const __extractExplicitLengthV1 = (raw: string): number | null => {
     const t = __normalizeDigitsV1(String(raw || "").trim());
-    const m = t.match(/(\d{2,5})\s*(?:文字|字)\s*(?:で(?:答えて|返して|書いて))?/u);
+    const m = t.match(/(?:^|.*?)(\d{2,5})\s*(?:文字|字)\s*(?:で(?:答えて|返して|書いて)?|で)?/u);
     if (!m || !m[1]) return null;
     const n = parseInt(m[1], 10);
     if (!Number.isFinite(n)) return null;
@@ -914,14 +914,34 @@ const pid = process.pid;
   // CARD_TENMON_BRAINSTEM_WIRING_FIX_V1 / CARD_EXPLICIT_PRIORITY_WIDEN_V1: 早期 explicit 抽出（全角・500字/1000字対応）→ brainstem と preempt で同じ値
   let __explicitChars: number | null = __extractExplicitLengthV1(String(message || ""));
   if (__explicitChars == null) {
-    const __mExplicitLoose = String(message || "").match(/(?:^|[^0-9])([1-9][0-9]{2,4})\s*(?:字|文字)(?:で|程度で|くらいで|ほどで|を)?/u);
+    const __msgExplicitNorm = __normalizeDigitsV1(String(message || ""));
+    const __mExplicitLoose = __msgExplicitNorm.match(/(?:^|[^0-9])([1-9][0-9]{2,4})\s*(?:字|文字)(?:で|程度で|くらいで|ほどで|を)?/u);
     if (__mExplicitLoose) {
       const __nExplicitLoose = Number(__mExplicitLoose[1]);
       if (Number.isFinite(__nExplicitLoose) && __nExplicitLoose >= 100 && __nExplicitLoose <= 5000) {
         __explicitChars = __nExplicitLoose;
       }
     }
+    if (__explicitChars == null) {
+      const __mExplicitLastResort = __msgExplicitNorm.match(/([1-9][0-9]{2,4})\s*(?:文字|字)/u);
+      if (__mExplicitLastResort) {
+        const __nExplicitLastResort = Number(__mExplicitLastResort[1]);
+        if (Number.isFinite(__nExplicitLastResort) && __nExplicitLastResort >= 100 && __nExplicitLastResort <= 5000) {
+          __explicitChars = __nExplicitLastResort;
+        }
+      }
+    }
   }
+  try {
+    console.log("[EXPLICIT_OBS_LAST1_V1]", JSON.stringify({
+      raw: String(message || ""),
+      norm: __normalizeDigitsV1(String(message || "")),
+      extract: __extractExplicitLengthV1(String(message || "")),
+      looseHit: !!(String(message || "") ? __normalizeDigitsV1(String(message || "")).match(/(?:^|[^0-9])([1-9][0-9]{2,4})\s*(?:字|文字)(?:で|程度で|くらいで|ほどで|を)?/u) : null),
+      lastResortHit: !!(String(message || "") ? __normalizeDigitsV1(String(message || "")).match(/([1-9][0-9]{2,4})\s*(?:文字|字)/u) : null),
+      explicitChars: __explicitChars
+    }));
+  } catch {}
   const __explicitCharsEarly = __explicitChars;
   let __brainstem: BrainstemDecision | undefined = tenmonBrainstem({
     message: String(message || ""),
@@ -930,6 +950,7 @@ const pid = process.pid;
     bodyProfile: __bodyProfile ?? null,
   });
   try { (res as any).__TENMON_BRAINSTEM = __brainstem; } catch {}
+
   // CARD_BRAINSTEM_FULL_WIRING_V1: brainstem 契約を ku に補完（空値のみ・既存維持）
   function __applyBrainstemContractToKuV1(ku: any, brainstem: BrainstemDecision | undefined, fallbackRouteClass?: string | null): void {
     if (ku == null || typeof ku !== "object") return;
@@ -2652,6 +2673,122 @@ ${String((gptDraft as any)?.text ?? "").trim()}
   const __bodyFutureOutlook1200L = __buildFutureLongformV1(950, 1200);
   const __bodyLong1200L = __buildGenericLongformV1(950, 1200);
 
+  // CARD_EXPLICIT_GLOBAL_LATE_PREEMPT_V10:
+  // longform 変数定義後に 1 回だけ explicit を最優先で返す。
+  {
+    const __msgExplicitGlobal = String(message ?? "").trim();
+    const __isCmdExplicitGlobal = __msgExplicitGlobal.startsWith("#") || __msgExplicitGlobal.startsWith("/");
+    const __hasDocExplicitGlobal = /\bdoc\b/i.test(__msgExplicitGlobal) || /pdfPage\s*=\s*\d+/i.test(__msgExplicitGlobal) || /#詳細/.test(__msgExplicitGlobal);
+    const __askedMenuExplicitGlobal = /(メニュー|方向性|選択肢|1\)|2\)|3\)|\/menu|^menu\b)/i.test(__msgExplicitGlobal);
+    const __isFeelingImpressionExplicitGlobal =
+      /今(どんな|の)?気分|今の気持ち/.test(__msgExplicitGlobal) &&
+      /(天聞|アーク)(への)?感想|感想(を)?(聞いて|教えて)|天聞をどう思う|アークをどう思う/.test(__msgExplicitGlobal);
+    const __isFutureOutlookExplicitGlobal =
+      /(これから|未来|今後|この先|どうなる|どう見ますか|展望|見通し|方向性)/.test(__msgExplicitGlobal);
+
+    if (__explicitCharsEarly != null && !__isCmdExplicitGlobal && !__hasDocExplicitGlobal && !__askedMenuExplicitGlobal) {
+      const __tier = __explicitCharsEarly <= 220 ? "short" : __explicitCharsEarly <= 450 ? "medium" : "long";
+      const __skipFeelingFuture =
+        Array.isArray(__brainstem?.forbiddenMoves) &&
+        (__brainstem.forbiddenMoves.includes("feeling_preempt") || __brainstem.forbiddenMoves.includes("future_preempt"));
+
+      const __body = __skipFeelingFuture
+        ? (__explicitCharsEarly >= 1200 ? __bodyLong1200L : __explicitCharsEarly >= 700 ? __bodyLong1000L : __explicitCharsEarly >= 450 ? __bodyLong500L : __bodyLongL)
+        : __explicitCharsEarly >= 1200
+          ? (__isFeelingImpressionExplicitGlobal ? __bodyFeelingImpression1200L : __isFutureOutlookExplicitGlobal ? __bodyFutureOutlook1200L : __bodyLong1200L)
+          : __explicitCharsEarly >= 700
+            ? (__isFeelingImpressionExplicitGlobal ? __bodyFeelingImpression1000L : __isFutureOutlookExplicitGlobal ? __bodyFutureOutlook1000L : __bodyLong1000L)
+            : __explicitCharsEarly >= 450
+              ? (__isFeelingImpressionExplicitGlobal ? __bodyFeelingImpression500L : __isFutureOutlookExplicitGlobal ? __bodyFutureOutlook500L : __bodyLong500L)
+              : __isFeelingImpressionExplicitGlobal ? __bodyFeelingImpressionL
+              : __isFutureOutlookExplicitGlobal ? __bodyFutureOutlookL
+              : __bodyLongL;
+
+      let __bodyFinal = __body;
+      if (__explicitCharsEarly >= 700) {
+        const __minExplicit = __explicitCharsEarly >= 1200 ? 1100 : 950;
+        const __maxExplicit = __explicitCharsEarly >= 1200 ? 1250 : 1050;
+        const __padPool = __isFutureOutlookExplicitGlobal
+          ? [
+              "見通しは断定よりも、いま置いている中心から順に輪郭が現れるものとして扱うほうが、判断がぶれにくくなります。",
+              "大事なのは、可能性を並べることより、どの条件が整えば次の段階へ移るかを見極めることです。",
+              "そのため展望は、現在地、変化の条件、次の一手の順で置くと、長文でも流れが崩れにくくなります。",
+              "未来を広げすぎるより、どこを固定し、どこを観測し、どこを次に動かすかを分けるほうが、言葉は実際に役立ちます。"
+            ]
+          : [
+              "長文化するときほど、核・理由・次の一手の三つを離さないほうが、読み手の判断材料が残ります。",
+              "説明量を増やす目的は情報を重くすることではなく、中心から外れずに背景と条件をつなぐことです。",
+              "同じことを言い換えるより、どこを固定し、どこを保留し、何を次に動かすかを分けて示すほうが役に立ちます。",
+              "その結果、文量が増えても、読む側は迷わず次の観測点へ進めます。"
+            ];
+        let __padIdx = 0;
+        while (__bodyFinal.length < __minExplicit && __padIdx < 24) {
+          const __seg = __padPool[__padIdx % __padPool.length];
+          __bodyFinal = (__bodyFinal + "\n\n" + __seg).trim();
+          __padIdx += 1;
+        }
+        if (__bodyFinal.length > __maxExplicit) {
+          __bodyFinal = __bodyFinal.slice(0, __maxExplicit);
+          __bodyFinal = __bodyFinal.replace(/[、。！？!?]\s*$/u, "");
+        }
+        __bodyFinal = __bodyFinal.replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
+        if (!/[。！？!?]$/u.test(__bodyFinal)) __bodyFinal += "。";
+      }
+
+      const __coreExplicit: ThreadCore = {
+        ...__threadCore,
+        lastResponseContract: {
+          answerLength: __tier,
+          answerMode: "analysis",
+          answerFrame: "one_step",
+          routeReason: "EXPLICIT_CHAR_PREEMPT_V1"
+        },
+        updatedAt: new Date().toISOString()
+      };
+      saveThreadCore(__coreExplicit).catch(() => {});
+      try { (res as any).__TENMON_THREAD_CORE = __coreExplicit; } catch {}
+
+      const __kuExplicitGlobal: any = {
+        routeReason: "EXPLICIT_CHAR_PREEMPT_V1",
+        routeClass: __brainstem?.routeClass ?? "analysis",
+        answerLength: __brainstem?.answerLength ?? __tier,
+        answerMode: __brainstem?.answerMode ?? "analysis",
+        answerFrame: __brainstem?.answerFrame ?? "one_step",
+        explicitLengthRequested: __explicitCharsEarly,
+        responseLength: __bodyFinal.length,
+        lawsUsed: [],
+        evidenceIds: [],
+        lawTrace: [],
+      };
+      __applyBrainstemContractToKuV1(__kuExplicitGlobal, __brainstem, "analysis");
+      try {
+        const __binderEx = buildKnowledgeBinder({
+          routeReason: "EXPLICIT_CHAR_PREEMPT_V1",
+          message: String(message ?? ""),
+          threadId: String(threadId ?? ""),
+          ku: __kuExplicitGlobal,
+          threadCore: __threadCore,
+          threadCenter: null
+        });
+        applyKnowledgeBinderToKu(__kuExplicitGlobal, __binderEx);
+      } catch {}
+
+      return res.json(__tenmonGeneralGateResultMaybe({
+        response: __bodyFinal,
+        evidence: null,
+        candidates: [],
+        timestamp,
+        threadId,
+        decisionFrame: {
+          mode: "NATURAL",
+          intent: "chat",
+          llm: null,
+          ku: __kuExplicitGlobal,
+        },
+      }));
+    }
+  }
+
     const reply = (payload: any) => {
     // FALLBACK_TENMON_VOICE_V3_GUARD
     try {
@@ -3484,7 +3621,10 @@ ${String((gptDraft as any)?.text ?? "").trim()}
         const __cleaned = __sanitizeOut(msg, resp);
         const __tid = String((obj as any)?.threadId ?? "");
         const __raw = String((obj as any)?.rawMessage ?? (obj as any)?.message ?? msg ?? "");
-        const __final = __clampPointLine(__raw, __tid, __cleaned);
+        const __isExplicitPointClampBypass =
+          String((obj as any)?.decisionFrame?.ku?.routeReason ?? "") === "EXPLICIT_CHAR_PREEMPT_V1" ||
+          ((obj as any)?.decisionFrame?.ku?.explicitLengthRequested != null);
+        const __final = __isExplicitPointClampBypass ? __cleaned : __clampPointLine(__raw, __tid, __cleaned);
         obj = { ...(obj as any), response: __final };
 
         }
@@ -3522,7 +3662,10 @@ ${String((gptDraft as any)?.text ?? "").trim()}
           const hasDoc = /\bdoc\b/i.test(raw) || /pdfPage\s*=\s*\d+/i.test(raw);
           const isCmd = raw.trim().startsWith("#");
 
-          if (!isSmoke && mode === "HYBRID" && !wantsDetail && !hasDoc && !isCmd) {
+          const __isExplicitPointBypass =
+            String((obj as any)?.decisionFrame?.ku?.routeReason ?? "") === "EXPLICIT_CHAR_PREEMPT_V1" ||
+            ((obj as any)?.decisionFrame?.ku?.explicitLengthRequested != null);
+          if (!isSmoke && mode === "HYBRID" && !wantsDetail && !hasDoc && !isCmd && !__isExplicitPointBypass) {
             const cands = (obj as any)?.candidates;
             const c0 = (Array.isArray(cands) && cands.length) ? cands[0] : null;
 
@@ -11203,7 +11346,7 @@ if (usable.length === 0) {
     /って\s*(何|なに)\s*(ですか)?[？?]?$/u.test(trimmed) ||
     /とは[？?]?$/.test(trimmed);
 
-  if (isJapanese && !wantsDetail && !hasDocPage && !isDefinitionLike) {
+  if (isJapanese && !wantsDetail && !hasDocPage && !isDefinitionLike && __explicitCharsEarly == null) {
     const conv = await conversationEngine({
       message: trimmed,
       threadId
@@ -12034,8 +12177,9 @@ if (__hasMenu && !__askedMenu) {
     // - NO fabrication: point derived only from candidates[0] doc/pdfPage text or snippet
     try {
       const isSmoke = /^smoke/i.test(String(threadId || ""));
+      const __skipHybridSeasoningForExplicit = (__explicitCharsEarly != null);
       // CARD5_FIX_SCOPE_DECISIONFRAME_V1: decisionFrame not in scope here; final HYBRID return implies HYBRID path
-      if (!isSmoke && !wantsDetail && !hasDocPage && !trimmed.startsWith("#")) {
+      if (!isSmoke && !wantsDetail && !hasDocPage && !trimmed.startsWith("#") && !__skipHybridSeasoningForExplicit) {
         let point = "";
         try {
           const c0: any = (Array.isArray(candidates) && candidates.length) ? candidates[0] : null;
@@ -12071,8 +12215,52 @@ if (__hasMenu && !__askedMenu) {
       }
     } catch {}
 
+    const __explicitFinalResponse = (() => {
+      if (__explicitCharsEarly == null) return finalResponse;
+      const __msgExplicitFinal = String(message ?? "").trim();
+      const __isFeelingExplicitFinal =
+        /今(どんな|の)?気分|今の気持ち/.test(__msgExplicitFinal) &&
+        /(天聞|アーク)(への)?感想|感想(を)?(聞いて|教えて)|天聞をどう思う|アークをどう思う/.test(__msgExplicitFinal);
+      const __isFutureExplicitFinal =
+        /(これから|未来|今後|この先|どうなる|どう見ますか|展望|見通し|方向性)/.test(__msgExplicitFinal);
+
+      let __pickedExplicitFinal =
+        __isFeelingExplicitFinal ? __bodyFeelingImpressionL :
+        __isFutureExplicitFinal ? __bodyFutureOutlookL :
+        __bodyLongL;
+
+      if (__explicitCharsEarly >= 1200) {
+        __pickedExplicitFinal =
+          __isFeelingExplicitFinal ? __bodyFeelingImpression1200L :
+          __isFutureExplicitFinal ? __bodyFutureOutlook1200L :
+          __bodyLong1200L;
+      } else if (__explicitCharsEarly >= 700) {
+        __pickedExplicitFinal =
+          __isFeelingExplicitFinal ? __bodyFeelingImpression1000L :
+          __isFutureExplicitFinal ? __bodyFutureOutlook1000L :
+          __bodyLong1000L;
+      } else if (__explicitCharsEarly >= 450) {
+        __pickedExplicitFinal =
+          __isFeelingExplicitFinal ? __bodyFeelingImpression500L :
+          __isFutureExplicitFinal ? __bodyFutureOutlook500L :
+          __bodyLong500L;
+      }
+
+      if (__explicitCharsEarly >= 700 && __explicitCharsEarly < 1200) {
+        const __maxExplicitFinal = 1050;
+        if (__pickedExplicitFinal.length > __maxExplicitFinal) {
+          let __cut = __pickedExplicitFinal.slice(0, __maxExplicitFinal);
+          const __lastStop = Math.max(__cut.lastIndexOf("。"), __cut.lastIndexOf("？"), __cut.lastIndexOf("?"));
+          if (__lastStop >= 880) __cut = __cut.slice(0, __lastStop + 1);
+          __pickedExplicitFinal = __cut.trim();
+        }
+      }
+
+      return __pickedExplicitFinal;
+    })();
+
     const payload = {
-      response: finalResponse,
+      response: __explicitFinalResponse,
       trace,
       provisional: true,
       detailPlan,
@@ -12080,7 +12268,21 @@ if (__hasMenu && !__askedMenu) {
       evidence,
       caps: capsPayload ?? undefined,
       timestamp: new Date().toISOString(),
-      decisionFrame: { mode: "HYBRID", intent: "chat", llm: null, ku: {} },
+      decisionFrame: {
+        mode: "HYBRID",
+        intent: "chat",
+        llm: null,
+        ku: (__explicitCharsEarly != null)
+          ? {
+              routeReason: "EXPLICIT_CHAR_PREEMPT_V1",
+              routeClass: "analysis",
+              answerLength: "long",
+              answerMode: "analysis",
+              answerFrame: "one_step",
+              explicitLengthRequested: __explicitCharsEarly,
+            }
+          : {}
+      },
     };
     // ARK_THREAD_SEED_SAVE_V1
     try {
