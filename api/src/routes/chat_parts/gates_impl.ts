@@ -1217,6 +1217,79 @@ function __tenmonGeneralGateResultMaybe(x: any, rawMessageOverride?: string): an
       if (__df?.ku && typeof __df.ku === "object") (__df.ku as any).routeClass = __incomingRouteClass;
     }
     // CARD_DECISIONFRAME_ROUTECLASS_EXIT_TRACE_V1: 入口で拾った routeClass を出口で保持
+    // CARD_FOLLOWUP_REHYDRATION_V1:
+    // continuity/follow-up の最終出口で center / thoughtCore / synapseTop を thread memory から再水和する
+    try {
+      const __dfR: any = (x as any)?.decisionFrame;
+      if (__dfR && typeof __dfR === "object") {
+        if (!__dfR.ku || typeof __dfR.ku !== "object" || Array.isArray(__dfR.ku)) __dfR.ku = {};
+        const __kuR: any = __dfR.ku;
+
+        const __rrR = String(__kuR.routeReason || (x as any)?.routeReason || "").trim();
+        const __rcR = String(__kuR.routeClass || "").trim();
+        const __isFollowupR =
+          __rcR === "continuity" ||
+          __rrR === "CONTINUITY_ANCHOR_V1" ||
+          __rrR.includes("FOLLOWUP");
+
+        if (__isFollowupR) {
+          const __tidR = String((x as any)?.threadId || "").trim();
+          const __threadCenterKeyR = String(__kuR.threadCenterKey || (x as any)?.threadCenterKey || "").trim();
+          const __threadCenterLabelR = String(__kuR.threadCenterLabel || (x as any)?.threadCenterLabel || "").trim();
+          const __lastLenR = __kuR.lastAnswerLength ?? (x as any)?.lastAnswerLength ?? null;
+          const __lastModeR = __kuR.lastAnswerMode ?? (x as any)?.lastAnswerMode ?? null;
+          const __lastFrameR = __kuR.lastAnswerFrame ?? (x as any)?.lastAnswerFrame ?? null;
+
+          if (!String(__kuR.threadCenterKey || "").trim() && __threadCenterKeyR) __kuR.threadCenterKey = __threadCenterKeyR;
+          if (!String(__kuR.threadCenterLabel || "").trim() && __threadCenterLabelR) __kuR.threadCenterLabel = __threadCenterLabelR;
+
+          if (!String(__kuR.centerKey || "").trim() && __threadCenterKeyR) __kuR.centerKey = __threadCenterKeyR;
+          if (!String(__kuR.centerMeaning || "").trim() && __threadCenterKeyR) __kuR.centerMeaning = __threadCenterKeyR;
+          if (!String(__kuR.centerLabel || "").trim() && __threadCenterLabelR) __kuR.centerLabel = __threadCenterLabelR;
+
+          if (__kuR.lastAnswerLength == null && __lastLenR != null) __kuR.lastAnswerLength = __lastLenR;
+          if (__kuR.lastAnswerMode == null && __lastModeR != null) __kuR.lastAnswerMode = __lastModeR;
+          if (__kuR.lastAnswerFrame == null && __lastFrameR != null) __kuR.lastAnswerFrame = __lastFrameR;
+
+          if (!__kuR.thoughtCoreSummary || typeof __kuR.thoughtCoreSummary !== "object" || Array.isArray(__kuR.thoughtCoreSummary)) {
+            __kuR.thoughtCoreSummary = {};
+          }
+          const __tcsR: any = __kuR.thoughtCoreSummary;
+
+          if (!String(__tcsR.centerKey || "").trim() && __threadCenterKeyR) __tcsR.centerKey = __threadCenterKeyR;
+          if (!String(__tcsR.centerMeaning || "").trim() && __threadCenterKeyR) __tcsR.centerMeaning = __threadCenterKeyR;
+          if (!String(__tcsR.routeReason || "").trim() && __rrR) __tcsR.routeReason = __rrR;
+          if (!String(__tcsR.modeHint || "").trim()) __tcsR.modeHint = "continuity";
+          if (!String(__tcsR.continuityHint || "").trim() && __threadCenterKeyR) __tcsR.continuityHint = __threadCenterKeyR;
+          if (!String(__tcsR.intentKind || "").trim()) __tcsR.intentKind = "continuation_summary";
+
+          if (!__tcsR.sourceStackSummary || typeof __tcsR.sourceStackSummary !== "object" || Array.isArray(__tcsR.sourceStackSummary)) {
+            __tcsR.sourceStackSummary = {};
+          }
+          const __ssR: any = __tcsR.sourceStackSummary;
+          if (!String(__ssR.primaryMeaning || "").trim() && __threadCenterLabelR) __ssR.primaryMeaning = __threadCenterLabelR;
+          if (!String(__ssR.responseAxis || "").trim()) __ssR.responseAxis = "continuity";
+          if (!Array.isArray(__ssR.sourceKinds) || __ssR.sourceKinds.length === 0) {
+            __ssR.sourceKinds = ["thread_center", "thread_core"];
+          }
+
+          if (!__kuR.synapseTop || typeof __kuR.synapseTop !== "object" || Array.isArray(__kuR.synapseTop)) {
+            __kuR.synapseTop = {};
+          }
+          const __synR: any = __kuR.synapseTop;
+          if (!__synR.sourceThreadCenter && __threadCenterKeyR) {
+            __synR.sourceThreadCenter = {
+              centerType: "concept",
+              centerKey: __threadCenterKeyR,
+              sourceRouteReason: __rrR || null
+            };
+          }
+          if (!String(__synR.sourceMemoryHint || "").trim() && __tidR && __threadCenterKeyR) {
+            __synR.sourceMemoryHint = `thread:${__tidR} centerKey:${__threadCenterKeyR}`;
+          }
+        }
+      }
+    } catch {}
     
       // CARD_DEFINE_ROUTECLASS_EXIT_FIX_V1:
       // incoming routeClass が無い/落ちた場合でも、最終出口で routeReason から最小フォールバック復元する
