@@ -7410,7 +7410,23 @@ return res.json(__tenmonGeneralGateResultMaybe({
                   answerMode: "analysis",
                   answerFrame: "framed_define",
                 };
-            
+
+                const __coreAbstractDefTop: ThreadCore = {
+                  ...__threadCore,
+                  centerKey: __abstractPickDefTop.centerKey,
+                  centerLabel: __abstractPickDefTop.centerLabel,
+                  activeEntities: __abstractPickDefTop.centerLabel ? [__abstractPickDefTop.centerLabel] : [],
+                  lastResponseContract: {
+                    answerLength: "medium",
+                    answerMode: "analysis",
+                    answerFrame: "framed_define",
+                    routeReason: "ABSTRACT_FRAME_VARIATION_V1",
+                  },
+                  updatedAt: new Date().toISOString(),
+                };
+                saveThreadCore(__coreAbstractDefTop).catch(() => {});
+                try { (res as any).__TENMON_THREAD_CORE = __coreAbstractDefTop; } catch {}
+
                 return reply({
                   response: __abstractPickDefTop.response,
                   mode: "NATURAL",
@@ -10423,6 +10439,23 @@ if (!outText) {
         answerMode: "analysis",
         answerFrame: "framed_define",
       };
+
+      const __coreAbstract: ThreadCore = {
+        ...__threadCore,
+        centerKey: __abstractFrame.centerKey ?? null,
+        centerLabel: __abstractFrame.centerLabel ?? null,
+        activeEntities: __abstractFrame.centerLabel ? [__abstractFrame.centerLabel] : [],
+        lastResponseContract: {
+          answerLength: "medium",
+          answerMode: "analysis",
+          answerFrame: "framed_define",
+          routeReason: String(__abstractFrame.routeReason || "ABSTRACT_FRAME_VARIATION_V1"),
+        },
+        updatedAt: new Date().toISOString(),
+      };
+      saveThreadCore(__coreAbstract).catch(() => {});
+      try { (res as any).__TENMON_THREAD_CORE = __coreAbstract; } catch {}
+
       return reply({
         response: __abstractFrame.response,
         mode: "NATURAL",
