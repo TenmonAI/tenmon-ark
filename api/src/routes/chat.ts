@@ -7415,7 +7415,7 @@ return res.json(__tenmonGeneralGateResultMaybe({
                   ...__threadCore,
                   centerKey: __abstractPickDefTop.centerKey,
                   centerLabel: __abstractPickDefTop.centerLabel,
-                  activeEntities: __abstractPickDefTop.centerLabel ? [__abstractPickDefTop.centerLabel] : [],
+                  activeEntities: [__abstractPickDefTop.centerLabel],
                   lastResponseContract: {
                     answerLength: "medium",
                     answerMode: "analysis",
@@ -7426,6 +7426,23 @@ return res.json(__tenmonGeneralGateResultMaybe({
                 };
                 saveThreadCore(__coreAbstractDefTop).catch(() => {});
                 try { (res as any).__TENMON_THREAD_CORE = __coreAbstractDefTop; } catch {}
+                try {
+                  upsertThreadCenter({
+                    threadId: String(threadId || ""),
+                    centerType: "concept",
+                    centerKey: __abstractPickDefTop.centerKey,
+                    centerReason: JSON.stringify({
+                      answerLength: "medium",
+                      answerMode: "analysis",
+                      answerFrame: "framed_define",
+                      routeReason: "ABSTRACT_FRAME_VARIATION_V1",
+                      openLoops: [],
+                      commitments: [],
+                    }),
+                    sourceRouteReason: "ABSTRACT_FRAME_VARIATION_V1",
+                    confidence: 0.9,
+                  });
+                } catch {}
 
                 return reply({
                   response: __abstractPickDefTop.response,
@@ -10442,19 +10459,36 @@ if (!outText) {
 
       const __coreAbstract: ThreadCore = {
         ...__threadCore,
-        centerKey: __abstractFrame.centerKey ?? null,
-        centerLabel: __abstractFrame.centerLabel ?? null,
-        activeEntities: __abstractFrame.centerLabel ? [__abstractFrame.centerLabel] : [],
+        centerKey: __abstractFrame.centerKey,
+        centerLabel: __abstractFrame.centerLabel,
+        activeEntities: [__abstractFrame.centerLabel],
         lastResponseContract: {
           answerLength: "medium",
           answerMode: "analysis",
           answerFrame: "framed_define",
-          routeReason: String(__abstractFrame.routeReason || "ABSTRACT_FRAME_VARIATION_V1"),
+          routeReason: __abstractFrame.routeReason,
         },
         updatedAt: new Date().toISOString(),
       };
       saveThreadCore(__coreAbstract).catch(() => {});
       try { (res as any).__TENMON_THREAD_CORE = __coreAbstract; } catch {}
+      try {
+        upsertThreadCenter({
+          threadId: String(threadId || ""),
+          centerType: "concept",
+          centerKey: __abstractFrame.centerKey,
+          centerReason: JSON.stringify({
+            answerLength: "medium",
+            answerMode: "analysis",
+            answerFrame: "framed_define",
+            routeReason: __abstractFrame.routeReason,
+            openLoops: [],
+            commitments: [],
+          }),
+          sourceRouteReason: __abstractFrame.routeReason,
+          confidence: 0.9,
+        });
+      } catch {}
 
       return reply({
         response: __abstractFrame.response,
