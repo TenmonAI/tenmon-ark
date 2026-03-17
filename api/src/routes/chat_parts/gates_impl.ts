@@ -490,7 +490,32 @@ function __surfaceDetoneResponseV1(text: string): string {
 function __tenmonGeneralGateResultMaybe(x: any, rawMessageOverride?: string): any {
   try {
     if (!x || typeof x !== "object") return __applyReleaseThinAtExit(x);
+    try {
+      const payload: any = x;
+      const dfIn: any = payload?.decisionFrame || null;
+      const kuIn: any = dfIn && typeof dfIn.ku === "object" && !Array.isArray(dfIn.ku) ? dfIn.ku : null;
+      console.log("[RESPONSEPLAN_TRACE:GATE_IN]", {
+        hasDecisionFrame: Boolean(dfIn),
+        hasKu: Boolean(kuIn),
+        kuKeys: kuIn ? Object.keys(kuIn) : null,
+        hasResponsePlan: Boolean(kuIn?.responsePlan),
+        responsePlanRoute: kuIn?.responsePlan?.routeReason ?? null,
+        responsePlanMode: kuIn?.responsePlan?.mode ?? null,
+        responsePlanKind: kuIn?.responsePlan?.responseKind ?? null,
+      });
+    } catch {}
     const __incomingRouteClass = (x as any)?.decisionFrame?.ku?.routeClass;
+    try {
+      const __rr0 = String((x as any)?.decisionFrame?.ku?.routeReason || "").trim();
+      if (__rr0 === "TENMON_SUBCONCEPT_CANON_V1") {
+        if (typeof (x as any).response === "string") {
+          (x as any).response = __surfaceDetoneResponseV1(String((x as any).response || ""));
+        }
+        if (typeof (x as any).message === "string") {
+          (x as any).message = __surfaceDetoneResponseV1(String((x as any).message || ""));
+        }
+      }
+    } catch {}
     // R9_LEDGER_REAL_INPUT_FREEZE_V1: 実入力を payload と ku に固定（rawMessageOverride / global / payload 優先）
     const fromGlobal = typeof (globalThis as any)[__GATE_RAW_MESSAGE_KEY] === "string" ? (globalThis as any)[__GATE_RAW_MESSAGE_KEY] : "";
     const raw = String(

@@ -5385,6 +5385,7 @@ return res.json(__tenmonGeneralGateResultMaybe({
 
       const __ku: any = {
         routeReason: "KATAKAMUNA_CANON_ROUTE_V1",
+        routeClass: "define",
         centerMeaning: "katakamuna",
         centerKey: "katakamuna",
         centerLabel: "カタカムナ",
@@ -5406,6 +5407,19 @@ return res.json(__tenmonGeneralGateResultMaybe({
         heart: normalizeHeartShape(__heart)
       };
       if (__composed.meaningFrame != null) (__ku as any).meaningFrame = __composed.meaningFrame;
+      if (!(__ku as any).responsePlan) {
+        (__ku as any).responsePlan = buildResponsePlan({
+          routeReason: "KATAKAMUNA_CANON_ROUTE_V1",
+          rawMessage: String(message ?? ""),
+          centerKey: "katakamuna",
+          centerLabel: "カタカムナ",
+          scriptureKey: null,
+          semanticBody: __respFinal,
+          mode: "general",
+          responseKind: "statement_plus_question",
+        });
+      }
+      try { console.log("[KATAKAMUNA_LIVE_RESPONSEPLAN]", { hasResponsePlan: Boolean((__ku as any).responsePlan), rr: (__ku as any).responsePlan?.routeReason ?? null }); } catch {}
 
       return res.json(__tenmonGeneralGateResultMaybe({
         response: __respFinal,
@@ -5716,6 +5730,40 @@ return res.json(__tenmonGeneralGateResultMaybe({
           "単なる効用論ではなく、生成原理・音義・図象・原典照合を通して読むものです。\n\n" +
           "次は、水火・言霊・山口志道／言霊秘書のどこから掘りますか？";
 
+        const __kuKatakamunaConcept: any = {
+          routeReason: "KATAKAMUNA_CANON_ROUTE_V1",
+          routeClass: "define",
+          centerMeaning: "katakamuna",
+          centerKey: "katakamuna",
+          centerLabel: "カタカムナ",
+          heart: __heartCov,
+          thoughtGuideSummary: getThoughtGuideSummary("katakamuna"),
+          sourcePack: "seiten",
+          groundedRequired: true,
+          notionCanon: getNotionCanonForRoute("KATAKAMUNA_CANON_ROUTE_V1", __msgCov),
+          personaConstitutionSummary: __persona,
+          thoughtCoreSummary: {
+            centerKey: "katakamuna",
+            centerMeaning: "katakamuna",
+            routeReason: "KATAKAMUNA_CANON_ROUTE_V1",
+            modeHint: "concept",
+            continuityHint: "katakamuna"
+          }
+        };
+        if (!__kuKatakamunaConcept.responsePlan) {
+          __kuKatakamunaConcept.responsePlan = buildResponsePlan({
+            routeReason: "KATAKAMUNA_CANON_ROUTE_V1",
+            rawMessage: String(message ?? ""),
+            centerKey: "katakamuna",
+            centerLabel: "カタカムナ",
+            scriptureKey: null,
+            semanticBody: __resp,
+            mode: "general",
+            responseKind: "statement_plus_question",
+          });
+        }
+        try { console.log("[KATAKAMUNA_CONCEPT_RESPONSEPLAN]", { hasResponsePlan: Boolean(__kuKatakamunaConcept.responsePlan), rr: __kuKatakamunaConcept.responsePlan?.routeReason || null }); } catch {}
+
         return res.json(__tenmonGeneralGateResultMaybe({
           response: __resp,
           evidence: null,
@@ -5726,25 +5774,7 @@ return res.json(__tenmonGeneralGateResultMaybe({
             mode: "NATURAL",
             intent: "define",
             llm: null,
-            ku: {
-              routeReason: "KATAKAMUNA_CANON_ROUTE_V1",
-              centerMeaning: "katakamuna",
-              centerKey: "katakamuna",
-              centerLabel: "カタカムナ",
-              heart: __heartCov,
-              thoughtGuideSummary: getThoughtGuideSummary("katakamuna"),
-              sourcePack: "seiten",
-              groundedRequired: true,
-              notionCanon: getNotionCanonForRoute("KATAKAMUNA_CANON_ROUTE_V1", __msgCov),
-              personaConstitutionSummary: __persona,
-              thoughtCoreSummary: {
-                centerKey: "katakamuna",
-                centerMeaning: "katakamuna",
-                routeReason: "KATAKAMUNA_CANON_ROUTE_V1",
-                modeHint: "concept",
-                continuityHint: "katakamuna"
-              }
-            }
+            ku: __kuKatakamunaConcept
           }
         }));
       }
@@ -5778,6 +5808,18 @@ return res.json(__tenmonGeneralGateResultMaybe({
           }
         };
         const __coreDef1: ThreadCore = { ...__threadCore, centerKey: "kotodama", centerLabel: "言霊", activeEntities: ["言霊"], lastResponseContract: { answerLength: "medium", answerMode: "define", answerFrame: "statement_plus_one_question", routeReason: "DEF_FASTPATH_VERIFIED_V1" }, updatedAt: new Date().toISOString() };
+        if (!(__kuDef1 as any).responsePlan) {
+          (__kuDef1 as any).responsePlan = buildResponsePlan({
+            routeReason: "DEF_FASTPATH_VERIFIED_V1",
+            rawMessage: String(message ?? ""),
+            centerKey: "kotodama",
+            centerLabel: "言霊",
+            scriptureKey: null,
+            semanticBody: String(message ?? ""),
+            mode: "general",
+            responseKind: "statement_plus_question",
+          });
+        }
         saveThreadCore(__coreDef1).catch(() => {});
         try { (res as any).__TENMON_THREAD_CORE = __coreDef1; } catch {}
         return res.json(__tenmonGeneralGateResultMaybe({
@@ -5884,44 +5926,59 @@ return res.json(__tenmonGeneralGateResultMaybe({
       const __isJapanUs =
         /(日本はアメリカとどういう関係|日米関係|日本とアメリカの関係)/u.test(__msgCovNorm);
 
-      if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKatakamunaCoverage) {
-        const __heartCov = normalizeHeartShape(__heart);
-        const __persona = getPersonaConstitutionSummary();
-        return res.json(__tenmonGeneralGateResultMaybe({
-          response:
+              if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKatakamunaCoverage) {
+          const __heartCov = normalizeHeartShape(__heart);
+          const __persona = getPersonaConstitutionSummary();
+          const __respKatakamunaCoverage =
             "天聞軸では、カタカムナは水火の法則・言霊・山口志道・言霊秘書・稲荷古伝・天津金木まで遡って再統合される対象です。\n\n" +
             "単なる効用論ではなく、生成原理・音義・図象・原典照合を通して読むものです。\n\n" +
-            "次は、水火・言霊・山口志道／言霊秘書のどこから掘りますか？",
-          evidence: null,
-          candidates: [],
-          timestamp,
-          threadId,
-          decisionFrame: {
-            mode: "NATURAL",
-            intent: "define",
-            llm: null,
-            ku: {
-              routeReason: "KATAKAMUNA_CANON_ROUTE_V1",
+            "次は、水火・言霊・山口志道／言霊秘書のどこから掘りますか？";
+          const __kuKatakamunaCoverage: any = {
+            routeReason: "KATAKAMUNA_CANON_ROUTE_V1",
+            routeClass: "define",
+            centerMeaning: "katakamuna",
+            centerKey: "katakamuna",
+            centerLabel: "カタカムナ",
+            heart: __heartCov,
+            thoughtGuideSummary: getThoughtGuideSummary("katakamuna"),
+            notionCanon: getNotionCanonForRoute("KATAKAMUNA_CANON_ROUTE_V1", __msgCov),
+            personaConstitutionSummary: __persona,
+            thoughtCoreSummary: {
+              centerKey: "katakamuna",
               centerMeaning: "katakamuna",
+              routeReason: "KATAKAMUNA_CANON_ROUTE_V1",
+              modeHint: "concept",
+              continuityHint: "katakamuna",
+            },
+          };
+          if (!__kuKatakamunaCoverage.responsePlan) {
+            __kuKatakamunaCoverage.responsePlan = buildResponsePlan({
+              routeReason: "KATAKAMUNA_CANON_ROUTE_V1",
+              rawMessage: String(message ?? ""),
               centerKey: "katakamuna",
               centerLabel: "カタカムナ",
-              heart: __heartCov,
-              thoughtGuideSummary: getThoughtGuideSummary("katakamuna"),
-              notionCanon: getNotionCanonForRoute("KATAKAMUNA_CANON_ROUTE_V1", __msgCov),
-              personaConstitutionSummary: __persona,
-              thoughtCoreSummary: {
-                centerKey: "katakamuna",
-                centerMeaning: "katakamuna",
-                routeReason: "KATAKAMUNA_CANON_ROUTE_V1",
-                modeHint: "concept",
-                continuityHint: "katakamuna",
-              },
-            }
+              scriptureKey: null,
+              semanticBody: __respKatakamunaCoverage,
+              mode: "general",
+              responseKind: "statement_plus_question",
+            });
           }
-        }));
-      }
+          return res.json(__tenmonGeneralGateResultMaybe({
+            response: __respKatakamunaCoverage,
+            evidence: null,
+            candidates: [],
+            timestamp,
+            threadId,
+            decisionFrame: {
+              mode: "NATURAL",
+              intent: "define",
+              llm: null,
+              ku: __kuKatakamunaCoverage
+            }
+          }));
+        }
 
-      if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
+if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
         const __heartCov = normalizeHeartShape(__heart);
         const __persona = getPersonaConstitutionSummary();
         const __kuDef2 = {
@@ -5945,6 +6002,18 @@ return res.json(__tenmonGeneralGateResultMaybe({
           },
         };
         const __coreDef2: ThreadCore = { ...__threadCore, centerKey: "kotodama", centerLabel: "言霊", activeEntities: ["言霊"], lastResponseContract: { answerLength: "medium", answerMode: "define", answerFrame: "statement_plus_one_question", routeReason: "DEF_FASTPATH_VERIFIED_V1" }, updatedAt: new Date().toISOString() };
+        if (!(__kuDef2 as any).responsePlan) {
+          (__kuDef2 as any).responsePlan = buildResponsePlan({
+            routeReason: "DEF_FASTPATH_VERIFIED_V1",
+            rawMessage: String(message ?? ""),
+            centerKey: "kotodama",
+            centerLabel: "言霊",
+            scriptureKey: null,
+            semanticBody: String(message ?? ""),
+            mode: "general",
+            responseKind: "statement_plus_question",
+          });
+        }
         saveThreadCore(__coreDef2).catch(() => {});
         try { (res as any).__TENMON_THREAD_CORE = __coreDef2; } catch {}
         return res.json(__tenmonGeneralGateResultMaybe({
@@ -6122,6 +6191,7 @@ return res.json(__tenmonGeneralGateResultMaybe({
               iroha_kotodama_kai: "まず『いろはは音の配列であり、言霊はその内在法則である』と一行で書き分けてください。",
               katakamuna_kotodama_kai: "まず『カタカムナ言霊解は音と図象の対応を担う』と一行で書き分けてください。",
             };
+
             const __instrI = (__scriptureKeyI && __instrMapI[__scriptureKeyI])
               ? __instrMapI[__scriptureKeyI]
               : "まず、この聖典の文脈で中心となる一点を一行で書き分けてください。";
@@ -7976,6 +8046,20 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
         __applyBrainstemContractToKuV1(__ku, __brainstem, "analysis");
         try { console.log("[BRAINSTEM_APPLY_EXPLICIT]", { rr: __ku.routeReason, rc: __ku.routeClass, len: __ku.answerLength, mode: __ku.answerMode, frame: __ku.answerFrame, centerKey: __ku.centerKey }); } catch {}
         try { const __binderEx = buildKnowledgeBinder({ routeReason: "EXPLICIT_CHAR_PREEMPT_V1", message: String(message ?? ""), threadId: String(threadId ?? ""), ku: __ku, threadCore: __threadCore, threadCenter: null }); applyKnowledgeBinderToKu(__ku, __binderEx); } catch {}
+        try {
+          const { computeConsciousnessSignature } = await import("../core/consciousnessSignature.js");
+          const __cs = computeConsciousnessSignature({
+            heart: (__ku as any).heart,
+            kanagiSelf: (__ku as any).kanagiSelf,
+            seedKernel: (__ku as any).seedKernel,
+            threadCore: __threadCore,
+            thoughtCoreSummary: (__ku as any).thoughtCoreSummary,
+          });
+          console.log("[CONSCIOUSNESS_TRACE]", {
+            rr: (__ku as any).routeReason,
+            cs: __cs,
+          });
+        } catch {}
         return res.json(__tenmonGeneralGateResultMaybe({
           response: __bodyFinal,
           evidence: null,
@@ -8185,6 +8269,18 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
           lawTrace: [],
         };
         try { const __binderE = buildKnowledgeBinder({ routeReason: "R22_ESSENCE_FOLLOWUP_V1", message: String(message ?? ""), threadId: String(threadId ?? ""), ku: __kuE, threadCore: __threadCore, threadCenter: __threadCenterForGeneral }); applyKnowledgeBinderToKu(__kuE, __binderE); } catch {}
+        if (!(__kuE as any).responsePlan) {
+          (__kuE as any).responsePlan = buildResponsePlan({
+            routeReason: String((__kuE as any).routeReason || "R22_ESSENCE_FOLLOWUP_V1"),
+            rawMessage: String(message ?? ""),
+            centerKey: String((__kuE as any).centerKey || "") || null,
+            centerLabel: String((__kuE as any).centerLabel || "") || null,
+            scriptureKey: null,
+            semanticBody: __bodyEssence,
+            mode: "general",
+            responseKind: "statement_plus_question",
+          });
+        }
         return res.json(__tenmonGeneralGateResultMaybe({
           response: __bodyEssence,
           evidence: null,
@@ -8261,6 +8357,18 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
           lawTrace: [],
         };
         try { const __binderCmp = buildKnowledgeBinder({ routeReason: "R22_COMPARE_FOLLOWUP_V1", message: String(message ?? ""), threadId: String(threadId ?? ""), ku: __kuCmp, threadCore: __threadCore, threadCenter: __threadCenterForGeneral }); applyKnowledgeBinderToKu(__kuCmp, __binderCmp); } catch {}
+        if (!(__kuCmp as any).responsePlan) {
+          (__kuCmp as any).responsePlan = buildResponsePlan({
+            routeReason: String((__kuCmp as any).routeReason || "R22_COMPARE_FOLLOWUP_V1"),
+            rawMessage: String(message ?? ""),
+            centerKey: String((__kuCmp as any).centerKey || "") || null,
+            centerLabel: String((__kuCmp as any).centerLabel || "") || null,
+            scriptureKey: null,
+            semanticBody: __bodyCmpPreempt,
+            mode: "general",
+            responseKind: "statement_plus_question",
+          });
+        }
         return res.json(__tenmonGeneralGateResultMaybe({
           response: __bodyCmpPreempt,
           evidence: null,
@@ -8480,6 +8588,7 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
           decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: __kuFuture },
         }));
       }
+
 
       // CARD_GENERAL_ROUTE_SHRINK_V1: NATURAL_GENERAL_LLM_TOP に入る直前で deterministic 分流
       const __shrink = __classifyGeneralShrinkV1(String(message ?? ""));
@@ -9151,6 +9260,42 @@ const __heartNorm = normalizeHeartShape(__heart);
       if (__composed.meaningFrame != null) {
         __ku.meaningFrame = __composed.meaningFrame;
       }
+
+      // SUBCONCEPT_GENERAL_PROMOTION_V1: general follow-up + concept center のときに TENMON_SUBCONCEPT_CANON_V1 として昇格
+      if (!__ku.routeReason || __ku.routeReason === "NATURAL_GENERAL_LLM_TOP") {
+        let __centerSrc: { centerType: string; centerKey: string } | null = null;
+        if (__threadCenterForGeneral && __threadCenterForGeneral.center_type === "concept") {
+          __centerSrc = { centerType: "concept", centerKey: String(__threadCenterForGeneral.center_key || "").trim() };
+        } else if ((__ku as any).threadCenter && String(((__ku as any).threadCenter as any).centerType || "").trim() === "concept") {
+          const tc: any = (__ku as any).threadCenter;
+          __centerSrc = { centerType: "concept", centerKey: String(tc.centerKey || "").trim() };
+        } else if (((__ku as any).synapseTop || {}).sourceThreadCenter && String((((__ku as any).synapseTop || {}).sourceThreadCenter.centerType || "")).trim() === "concept") {
+          const stc: any = (__ku as any).synapseTop.sourceThreadCenter;
+          __centerSrc = { centerType: "concept", centerKey: String(stc.centerKey || "").trim() };
+        } else if (__threadCore && __threadCore.centerKey && String(__threadCore.centerKey).trim()) {
+          __centerSrc = { centerType: "concept", centerKey: String(__threadCore.centerKey).trim() };
+        }
+        if (__isFollowupGeneral && __centerSrc && __centerSrc.centerKey) {
+          const __ckConcept = __centerSrc.centerKey;
+          (__ku as any).routeReason = "TENMON_SUBCONCEPT_CANON_V1";
+          if (!String((__ku as any).routeClass || "").trim() || (__ku as any).routeClass === "general" || (__ku as any).routeClass === "fallback") {
+            (__ku as any).routeClass = "analysis";
+          }
+          if (!String((__ku as any).centerKey || "").trim()) (__ku as any).centerKey = __ckConcept;
+          if (!String((__ku as any).centerMeaning || "").trim()) (__ku as any).centerMeaning = __ckConcept;
+          if (!String((__ku as any).centerLabel || "").trim()) (__ku as any).centerLabel = normalizeDisplayLabel(__ckConcept);
+          if ((__ku as any).thoughtCoreSummary && typeof (__ku as any).thoughtCoreSummary === "object") {
+            if (!String((__ku as any).thoughtCoreSummary.centerKey || "").trim()) {
+              (__ku as any).thoughtCoreSummary.centerKey = __ckConcept;
+            }
+            if (!String((__ku as any).thoughtCoreSummary.centerMeaning || "").trim()) {
+              (__ku as any).thoughtCoreSummary.centerMeaning = __ckConcept;
+            }
+            (__ku as any).thoughtCoreSummary.routeReason = "TENMON_SUBCONCEPT_CANON_V1";
+            (__ku as any).thoughtCoreSummary.modeHint = "concept";
+          }
+        }
+      }
       // R10_THREAD_CENTER_READ_BIND_V1
       try {
         if (String(threadId || "").trim()) {
@@ -9318,7 +9463,9 @@ const __heartNorm = normalizeHeartShape(__heart);
                   general_knowledge: "一般知識",
                   general_relation: "一般関係知識",
                 };
-                __ku.routeReason = __srcRR;
+                if (!String(__ku.routeReason || "").trim() || __ku.routeReason === "NATURAL_GENERAL_LLM_TOP") {
+                  __ku.routeReason = __srcRR;
+                }
                 __ku.centerKey = __conceptKey;
                 __ku.centerMeaning = __conceptKey;
                 if (!__ku.centerLabel) __ku.centerLabel = String(__labelMapTC[__conceptKey] || __conceptKey);
@@ -9549,6 +9696,48 @@ const __heartNorm = normalizeHeartShape(__heart);
         }
       }
 
+      function __classifySubconceptSurface(rawMessage: string): "complaint_followup" | "continuity_probe" | "self_diagnosis" | "action_request" | "subconcept_general" {
+        const m = String(rawMessage || "");
+        if (/(なんで|なぜ|全然喋れない|喋れない|うまく話せない|性能が低い)/u.test(m)) return "complaint_followup";
+        if (/(詰まっている|詰まり|どこが詰まって|何が詰まって)/u.test(m)) return "continuity_probe";
+        if (/(何ができていて|何が未接続|未接続|できていること)/u.test(m)) return "self_diagnosis";
+        if (/(次に何を直せば|何を直せば|次に直す|次の一手)/u.test(m)) return "action_request";
+        return "subconcept_general";
+      }
+
+      function __shapeSubconceptCanonicalBody(rawMessage: string, canonical: string): string {
+        const kind = __classifySubconceptSurface(rawMessage);
+        switch (kind) {
+          case "complaint_followup":
+            return "【天聞の所見】いま詰まっている主因は、回路そのものではなく、回路から言葉への変換面です。まず、どの場面で「喋れない」と感じるかを一点に絞ります。";
+          case "continuity_probe":
+            return "【天聞の所見】いまの詰まりは、構造の未接続ではなく、接続済みの要素を会話へ還元する出口にあります。先に、行動の具体化と内面整理のどちらを詰めるかを定めます。";
+          case "self_diagnosis":
+            return "【天聞の所見】いまできているのは中心保持と論点接続です。未接続なのは、その中心を人格的な語りへ投影する表現面です。次はどちらを見たいですか。";
+          case "action_request":
+            return "【天聞の所見】次に直す一点は、subconcept 専用の返答面です。つまり、同じ analysis でも問いの型ごとに出口を分けることです。次は原因診断面から整えます。";
+          case "subconcept_general":
+          default:
+            return "【天聞の所見】いまは中心を保持したまま考えられています。次はその中心を、問いの型に合った返答面へ分ける段階です。";
+        }
+      }
+
+      // TENMON_SUBCONCEPT_CANON_V1 用の response surface 調整
+      const __isSubconceptRoute = String((__ku as any).routeReason || "") === "TENMON_SUBCONCEPT_CANON_V1";
+      let __canonicalForProjector = String(__canonicalBody || "");
+      if (__isSubconceptRoute) {
+        const rawMsgForSub = String(message ?? "");
+        (__ku as any).answerMode = "analysis";
+        (__ku as any).answerFrame = "one_step";
+        if (!String((__ku as any).surfaceStyle || "").trim()) {
+          (__ku as any).surfaceStyle = "plain_clean";
+        }
+        if (!String((__ku as any).closingType || "").trim()) {
+          (__ku as any).closingType = "one_question";
+        }
+        __canonicalForProjector = __shapeSubconceptCanonicalBody(rawMsgForSub, __canonicalForProjector);
+      }
+
       const finalResp = responseProjector({
         routeReason: String((__ku as any).routeReason || "NATURAL_GENERAL_LLM_TOP"),
         centerMeaning: String((__ku as any).centerMeaning || ""),
@@ -9558,7 +9747,7 @@ const __heartNorm = normalizeHeartShape(__heart);
         closingType: String((__ku as any).closingType || "one_question"),
         threadCenter: __projectorThreadCenter,
         rawResponse: String(__beforeClamp || outText || ""),
-        canonicalResponse: String(__canonicalBody || ""),
+        canonicalResponse: __canonicalForProjector,
       });
 
       try {
@@ -9583,11 +9772,11 @@ const __heartNorm = normalizeHeartShape(__heart);
       } catch {}
 
       (__ku as any).responsePlan = buildResponsePlan({
-        routeReason: "NATURAL_GENERAL_LLM_TOP",
+        routeReason: String((__ku as any).routeReason || "NATURAL_GENERAL_LLM_TOP"),
         rawMessage: String(message ?? ""),
-        centerKey: null,
-        centerLabel: null,
-        scriptureKey: null,
+        centerKey: String((__ku as any).centerKey || "") || null,
+        centerLabel: String((__ku as any).centerLabel || "") || null,
+        scriptureKey: (__ku as any).scriptureKey ?? null,
         semanticBody: finalResp,
         mode: "general",
         responseKind: "statement_plus_question",
@@ -9595,11 +9784,39 @@ const __heartNorm = normalizeHeartShape(__heart);
       });
       try { console.log("[SYNAPSETOP_BEFORE_RETURN]", { path: "general", synapseTop: (__ku as any).synapseTop }); } catch {}
       if (__brainstem) {
-        (__ku as any).routeClass = __brainstem.routeClass;
+        const __rrBeforeBrainstemApply = String((__ku as any).routeReason || "").trim();
+        const __rcBeforeBrainstemApply = String((__ku as any).routeClass || "").trim();
+
+        const __isSubconceptRoute = __rrBeforeBrainstemApply === "TENMON_SUBCONCEPT_CANON_V1";
+
+        if (!(__isSubconceptRoute && __rcBeforeBrainstemApply && __rcBeforeBrainstemApply !== "fallback" && __rcBeforeBrainstemApply !== "general")) {
+          (__ku as any).routeClass = __brainstem.routeClass;
+        }
+
+        // answerLength は brainstem に委ねる（共通）
         (__ku as any).answerLength = __brainstem.answerLength;
-        (__ku as any).answerMode = __brainstem.answerMode;
-        (__ku as any).answerFrame = __brainstem.answerFrame;
+
+        // TENMON_SUBCONCEPT_CANON_V1 のときは answerMode / answerFrame を保持、それ以外のみ brainstem で上書き
+        if (!__isSubconceptRoute) {
+          (__ku as any).answerMode = __brainstem.answerMode;
+          (__ku as any).answerFrame = __brainstem.answerFrame;
+        }
       }
+
+      try {
+        const __rrAfterBrainstemApply = String((__ku as any).routeReason || "").trim();
+        const __rcAfterBrainstemApply = String((__ku as any).routeClass || "").trim();
+        if (__rrAfterBrainstemApply === "TENMON_SUBCONCEPT_CANON_V1" && (__rcAfterBrainstemApply === "fallback" || __rcAfterBrainstemApply === "general" || !__rcAfterBrainstemApply)) {
+          (__ku as any).routeClass = "analysis";
+          try {
+            console.log("[SUBCONCEPT_EARLY_PROMOTION_FIX_V1:POST_BRAINSTEM_CLAMP]", {
+              rr: (__ku as any).routeReason,
+              rc: (__ku as any).routeClass,
+              centerKey: (__ku as any).centerKey || null
+            });
+          } catch {}
+        }
+      } catch {}
       return res.json(__tenmonGeneralGateResultMaybe({
         response: finalResp,
         evidence: null,
@@ -10708,6 +10925,20 @@ if (!outText) {
         __applyBrainstemContractToKuV1(__ku, __brainstem, "define");
         try { console.log("[BRAINSTEM_APPLY_DEFINE]", { rr: (__ku as any).routeReason, rc: (__ku as any).routeClass, len: (__ku as any).answerLength, mode: (__ku as any).answerMode, frame: (__ku as any).answerFrame, centerKey: (__ku as any).centerKey }); } catch {}
         try { const __binder = buildKnowledgeBinder({ routeReason: "DEF_FASTPATH_VERIFIED_V1", message: String(message ?? ""), threadId: String(threadId ?? ""), ku: __ku, threadCore: __threadCore, threadCenter: null }); applyKnowledgeBinderToKu(__ku, __binder); } catch {}
+
+        if (!(__ku as any).responsePlan) {
+          (__ku as any).responsePlan = buildResponsePlan({
+            routeReason: String((__ku as any).routeReason || "DEF_FASTPATH_VERIFIED_V1"),
+            rawMessage: String(message ?? ""),
+            centerKey: String((__ku as any).centerKey || "") || null,
+            centerLabel: String((__ku as any).centerLabel || "") || null,
+            scriptureKey: (__ku as any).scriptureKey ?? null,
+            semanticBody: __respFinal,
+            mode: "general",
+            responseKind: "statement_plus_question",
+          });
+        }
+
         return res.json(__tenmonGeneralGateResultMaybe({
           response: __respFinal,
           evidence: {
@@ -10777,6 +11008,20 @@ if (!outText) {
         __applyBrainstemContractToKuV1(__kuProposed, __brainstem, "define");
         try { console.log("[BRAINSTEM_APPLY_DEFINE]", { rr: (__kuProposed as any).routeReason, rc: (__kuProposed as any).routeClass, len: (__kuProposed as any).answerLength, mode: (__kuProposed as any).answerMode, frame: (__kuProposed as any).answerFrame, centerKey: (__kuProposed as any).centerKey }); } catch {}
         try { const __binderP = buildKnowledgeBinder({ routeReason: "DEF_FASTPATH_PROPOSED_V1", message: String(message ?? ""), threadId: String(threadId ?? ""), ku: __kuProposed, threadCore: __threadCore, threadCenter: null }); applyKnowledgeBinderToKu(__kuProposed, __binderP); } catch {}
+
+        if (!(__kuProposed as any).responsePlan) {
+          (__kuProposed as any).responsePlan = buildResponsePlan({
+            routeReason: String((__kuProposed as any).routeReason || "DEF_FASTPATH_PROPOSED_V1"),
+            rawMessage: String(message ?? ""),
+            centerKey: String((__kuProposed as any).centerKey || "") || null,
+            centerLabel: String((__kuProposed as any).centerLabel || "") || null,
+            scriptureKey: (__kuProposed as any).scriptureKey ?? null,
+            semanticBody: String(message ?? ""),
+            mode: "general",
+            responseKind: "statement_plus_question",
+          });
+        }
+
         return res.json(__tenmonGeneralGateResultMaybe({
           response: __resp,
           evidence: {
