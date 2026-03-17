@@ -167,14 +167,17 @@ export async function saveThreadCore(core: ThreadCore): Promise<void> {
     if (row && typeof row.id === "number") {
       db.prepare(
         `UPDATE thread_center_memory
-         SET center_type = ?, center_key = ?, center_reason = ?, source_route_reason = ?, updated_at = ?
+         SET center_key = COALESCE(?, center_key),
+             center_reason = ?,
+             source_route_reason = ?,
+             updated_at = ?
          WHERE id = ?`
-      ).run(centerType, centerKey, contractJson, routeReason, now, row.id);
+      ).run(core.centerKey ?? null, contractJson, routeReason, now, row.id);
     } else {
       upsertThreadCenter({
         threadId: tid,
-        centerType,
-        centerKey,
+        centerType: "concept",
+        centerKey: core.centerKey ?? null,
         sourceRouteReason: routeReason,
         centerReason: contractJson,
       });
