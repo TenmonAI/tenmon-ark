@@ -3,6 +3,7 @@
 import { DatabaseSync } from "node:sqlite";
 import crypto from "node:crypto";
 import { getDbPath } from "../../db/index.js";
+import { computeConsciousnessSignature } from "../../core/consciousnessSignature.js";
 
 export function writeSynapseLogV1(args: {
   threadId: string;
@@ -15,6 +16,12 @@ export function writeSynapseLogV1(args: {
   gitSha?: string;
   lawsUsed?: any[];
   evidenceIds?: any[];
+  consciousnessSignatureCandidate?: {
+    phase4?: string;
+    polarity?: string;
+    centerMode?: string;
+    transitionState?: string;
+  };
 }): void {
   try {
     const ts = args.timestamp || new Date().toISOString();
@@ -30,6 +37,38 @@ export function writeSynapseLogV1(args: {
       seedId = crypto.createHash("sha256").update(JSON.stringify(laws)+JSON.stringify(evi)).digest("hex").slice(0,24);
     }
     const meta:any = { v:"X9", git:String(args.gitSha||""), seedId, nLaws:laws.length, nEvi:evi.length };
+    try {
+      if (args.consciousnessSignatureCandidate && typeof args.consciousnessSignatureCandidate === "object") {
+        meta.consciousnessSignatureCandidate = {
+          phase4: args.consciousnessSignatureCandidate.phase4 ?? null,
+          polarity: args.consciousnessSignatureCandidate.polarity ?? null,
+          centerMode: args.consciousnessSignatureCandidate.centerMode ?? null,
+          transitionState: args.consciousnessSignatureCandidate.transitionState ?? null,
+        };
+      } else {
+        const cs = computeConsciousnessSignature({
+          heart: args.heart,
+          kanagiSelf: null,
+          seedKernel: null,
+          threadCore: null,
+          thoughtCoreSummary: null,
+        });
+        meta.consciousnessSignatureCandidate = {
+          phase4: cs.phase4 ?? null,
+          polarity: cs.polarity ?? null,
+          centerMode: cs.centerMode ?? null,
+          transitionState: null,
+        };
+      }
+    } catch {}
+    if (args.consciousnessSignatureCandidate && typeof args.consciousnessSignatureCandidate === "object") {
+      meta.consciousnessSignatureCandidate = {
+        phase4: args.consciousnessSignatureCandidate.phase4 ?? null,
+        polarity: args.consciousnessSignatureCandidate.polarity ?? null,
+        centerMode: args.consciousnessSignatureCandidate.centerMode ?? null,
+        transitionState: args.consciousnessSignatureCandidate.transitionState ?? null,
+      };
+    }
     const db = new DatabaseSync(getDbPath("kokuzo.sqlite"));
     const stmt = db.prepare(
       "INSERT OR IGNORE INTO synapse_log" +

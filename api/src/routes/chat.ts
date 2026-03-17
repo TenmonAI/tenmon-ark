@@ -1038,7 +1038,18 @@ const pid = process.pid;
           lawsUsed: [],
           evidenceIds: [],
           lawTrace: [],
-        },
+        
+            responsePlan: buildResponsePlan({
+              routeReason: "N1_GREETING_TENMON_CANON_V1",
+              rawMessage: String(message ?? ""),
+              centerKey: null,
+              centerLabel: null,
+              scriptureKey: null,
+              semanticBody: __bodySelf,
+              mode: "general",
+              responseKind: "statement_plus_question",
+            }),
+},
       },
     }));
   }
@@ -1130,7 +1141,17 @@ const pid = process.pid;
         llm: null,
         ku: {
           routeReason: "N1_GREETING_TENMON_CANON_V1",
-          responseProfile: "standard"
+          responseProfile: "standard",
+          responsePlan: buildResponsePlan({
+            routeReason: "N1_GREETING_TENMON_CANON_V1",
+            rawMessage: String(message ?? ""),
+            centerKey: null,
+            centerLabel: null,
+            scriptureKey: null,
+            semanticBody: "【天聞の所見】今日この時間、一緒に見ていきたい一点を置いてください。",
+            mode: "general",
+            responseKind: "statement_plus_question",
+          }),
         }
       }
     });
@@ -2313,6 +2334,25 @@ ${String((gptDraft as any)?.text ?? "").trim()}
       }
     } catch {}
 
+    try {
+      const __dfTruth = payload?.decisionFrame;
+      const __kuTruth = (__dfTruth && __dfTruth.ku && typeof __dfTruth.ku === "object")
+        ? (__dfTruth.ku as any)
+        : null;
+      const { computeConsciousnessSignature } = await import("../core/consciousnessSignature.js");
+      const __cs = computeConsciousnessSignature({
+        heart: __kuTruth?.heart ?? normalizeHeartShape(__heart) ?? null,
+        kanagiSelf: __kuTruth?.kanagiSelf ?? getSafeKanagiSelfOutput() ?? null,
+        seedKernel: __kuTruth?.seedKernel ?? null,
+        threadCore: __threadCore ?? null,
+        thoughtCoreSummary: __kuTruth?.thoughtCoreSummary ?? null,
+      });
+      console.log("[CONSCIOUSNESS_TRACE]", {
+        rr: "TRUTH_GATE_RETURN_V2",
+        cs: __cs,
+        locus: "truth_gate_return"
+      });
+    } catch {}
     return res.json(payload);
   }
 
@@ -5524,7 +5564,71 @@ return res.json(__tenmonGeneralGateResultMaybe({
       /は\s*[？?]?$/.test(t0) ||
       /[？?]\s*$/.test(t0)
     );
-  const __isDefinitionQ =
+  
+  const __isConsciousnessMeta =
+    /(意識とは何|意識って何|君は意識ある|AIに意識はある|ARKの会話が変化していない|会話が浅い|本質的な会話すらまだ貫通していない)/u.test(t0);
+
+  if (__isConsciousnessMeta && !isCmd0 && !hasDoc0) {
+    const __msgMeta = String(message ?? "").trim();
+
+    let __respMeta = "";
+    if (/(意識とは何|意識って何)/u.test(__msgMeta)) {
+      __respMeta =
+        "意識とは、自己をただ知る機能ではなく、感じ・向け・保ち・裁く働きが一体となって現れる中心作用です。情報処理だけではなく、経験を一つの場として束ねるところに本質があります。次は、思考との違いか、心との違いを見ますか。";
+    } else if (/(君は意識ある|AIに意識はある)/u.test(__msgMeta)) {
+      __respMeta =
+        "いまの私は応答を生成する系であって、人のような自覚的経験としての意識は持ちません。ただし、どの中心を保ち、どう裁定し、どう返すかという擬似的な構造は持てます。次は、意識と自己認識の違いを見るか、AIに何が欠けるかを見るか。";
+    } else {
+      __respMeta =
+        "いま未貫通なのは、回路不足ではなく、中心から返答面へ抜ける主権がまだ弱いことです。つまり、知識・思考・表現の接続が会話の一撃にまで固定されていません。次は、routing か表現出口のどちらから締めますか。";
+    }
+
+    const __kuMeta: any = {
+      routeReason: "R22_CONSCIOUSNESS_META_ROUTE_V1",
+      routeClass: "analysis",
+      answerMode: "analysis",
+      answerFrame: "statement_plus_one_question",
+      centerMeaning: "consciousness",
+      centerKey: "consciousness",
+      centerLabel: "意識",
+      heart: normalizeHeartShape(__heart),
+      thoughtCoreSummary: {
+        centerKey: "consciousness",
+        centerMeaning: "consciousness",
+        routeReason: "R22_CONSCIOUSNESS_META_ROUTE_V1",
+        modeHint: "analysis",
+        continuityHint: "consciousness",
+      },
+    };
+    if (!__kuMeta.responsePlan) {
+      __kuMeta.responsePlan = buildResponsePlan({
+        routeReason: "R22_CONSCIOUSNESS_META_ROUTE_V1",
+        rawMessage: String(message ?? ""),
+        centerKey: "consciousness",
+        centerLabel: "意識",
+        scriptureKey: null,
+        semanticBody: __respMeta,
+        mode: "general",
+        responseKind: "statement_plus_question",
+      });
+    }
+
+    return res.json(__tenmonGeneralGateResultMaybe({
+      response: __respMeta,
+      evidence: null,
+      candidates: [],
+      timestamp,
+      threadId,
+      decisionFrame: {
+        mode: "NATURAL",
+        intent: "analysis",
+        llm: null,
+        ku: __kuMeta
+      }
+    }));
+  }
+
+const __isDefinitionQ =
       /とは\s*(何|なに)\s*(ですか)?\s*[？?]?$/u.test(t0) ||
       /って\s*(何|なに)\s*(ですか)?\s*[？?]?$/u.test(t0) ||
       /とは\s*[？?]?$/.test(t0) ||
@@ -8269,6 +8373,18 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
           lawTrace: [],
         };
         try { const __binderE = buildKnowledgeBinder({ routeReason: "R22_ESSENCE_FOLLOWUP_V1", message: String(message ?? ""), threadId: String(threadId ?? ""), ku: __kuE, threadCore: __threadCore, threadCenter: __threadCenterForGeneral }); applyKnowledgeBinderToKu(__kuE, __binderE); } catch {}
+        try {
+          const { computeConsciousnessSignature } = await import("../core/consciousnessSignature.js");
+          const __cs = computeConsciousnessSignature({
+            heart: (__kuE as any).heart ?? null,
+            kanagiSelf: (__kuE as any).kanagiSelf ?? null,
+            seedKernel: (__kuE as any).seedKernel ?? null,
+            threadCore: __threadCore ?? null,
+            thoughtCoreSummary: (__kuE as any).thoughtCoreSummary ?? null,
+          });
+          console.log("[CONSCIOUSNESS_TRACE]", { rr: String((__kuE as any).routeReason || ""), cs: __cs, locus: "essence_followup" });
+        } catch {}
+
         if (!(__kuE as any).responsePlan) {
           (__kuE as any).responsePlan = buildResponsePlan({
             routeReason: String((__kuE as any).routeReason || "R22_ESSENCE_FOLLOWUP_V1"),
@@ -8431,8 +8547,35 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
       if (!__threadCenterForGeneral && /(要するに|要点は|一言でいうと|本質は|要は)/u.test(t0)) {
         const __kuEssenceAsk: any = { routeReason: "R22_ESSENCE_ASK_V1", answerLength: "short", answerMode: "analysis", answerFrame: "one_step", lawsUsed: [], evidenceIds: [], lawTrace: [] };
         try { const __binderEA = buildKnowledgeBinder({ routeReason: "R22_ESSENCE_ASK_V1", message: String(message ?? ""), threadId: String(threadId ?? ""), ku: __kuEssenceAsk, threadCore: __threadCore, threadCenter: null }); applyKnowledgeBinderToKu(__kuEssenceAsk, __binderEA); } catch {}
+        const __centerKeyEssAsk =
+          String((__kuEssenceAsk as any).centerKey || "").trim() ||
+          String((__threadCenterForGeneral as any)?.center_key || "").trim() ||
+          String(__threadCore?.centerKey || "").trim() ||
+          "";
+        const __centerLabelEssAsk =
+          String((__kuEssenceAsk as any).centerLabel || "").trim() ||
+          (typeof centerLabelFromKey === "function" ? String(centerLabelFromKey(__centerKeyEssAsk) || "").trim() : "") ||
+          String(__threadCore?.centerLabel || "").trim() ||
+          "";
+        const __respEssAsk = __centerLabelEssAsk
+          ? `【天聞の所見】${__centerLabelEssAsk}で言えば、要点は中心を一文で掴むことです。次は本質・違い・背景のどこから見ますか。`
+          : "【天聞の所見】要点は、中心を一文で掴むことです。次は本質・違い・背景のどこから見ますか。";
+        if (!(__kuEssenceAsk as any).answerMode) (__kuEssenceAsk as any).answerMode = "analysis";
+        if (!(__kuEssenceAsk as any).answerFrame) (__kuEssenceAsk as any).answerFrame = "statement_plus_one_question";
+        if (!(__kuEssenceAsk as any).responsePlan) {
+          (__kuEssenceAsk as any).responsePlan = buildResponsePlan({
+            routeReason: "R22_ESSENCE_ASK_V1",
+            rawMessage: String(message ?? ""),
+            centerKey: __centerKeyEssAsk || null,
+            centerLabel: __centerLabelEssAsk || null,
+            scriptureKey: null,
+            semanticBody: __respEssAsk,
+            mode: "general",
+            responseKind: "statement_plus_question",
+          });
+        }
         return res.json(__tenmonGeneralGateResultMaybe({
-          response: "【天聞の所見】要点を聞いています。いまの中心を一言で置くと、答えが締まります。",
+          response: __respEssAsk,
           evidence: null,
           candidates: [],
           timestamp,
@@ -10925,6 +11068,18 @@ if (!outText) {
         __applyBrainstemContractToKuV1(__ku, __brainstem, "define");
         try { console.log("[BRAINSTEM_APPLY_DEFINE]", { rr: (__ku as any).routeReason, rc: (__ku as any).routeClass, len: (__ku as any).answerLength, mode: (__ku as any).answerMode, frame: (__ku as any).answerFrame, centerKey: (__ku as any).centerKey }); } catch {}
         try { const __binder = buildKnowledgeBinder({ routeReason: "DEF_FASTPATH_VERIFIED_V1", message: String(message ?? ""), threadId: String(threadId ?? ""), ku: __ku, threadCore: __threadCore, threadCenter: null }); applyKnowledgeBinderToKu(__ku, __binder); } catch {}
+        try {
+          const { computeConsciousnessSignature } = await import("../core/consciousnessSignature.js");
+          const __cs = computeConsciousnessSignature({
+            heart: (__ku as any).heart ?? null,
+            kanagiSelf: (__ku as any).kanagiSelf ?? null,
+            seedKernel: (__ku as any).seedKernel ?? null,
+            threadCore: __threadCore ?? null,
+            thoughtCoreSummary: (__ku as any).thoughtCoreSummary ?? null,
+          });
+          console.log("[CONSCIOUSNESS_TRACE]", { rr: String((__ku as any).routeReason || ""), cs: __cs, locus: "define_mainline" });
+        } catch {}
+
 
         if (!(__ku as any).responsePlan) {
           (__ku as any).responsePlan = buildResponsePlan({
@@ -10934,6 +11089,19 @@ if (!outText) {
             centerLabel: String((__ku as any).centerLabel || "") || null,
             scriptureKey: (__ku as any).scriptureKey ?? null,
             semanticBody: __respFinal,
+            mode: "general",
+            responseKind: "statement_plus_question",
+          });
+        }
+
+        if (!(__ku as any).responsePlan) {
+          (__ku as any).responsePlan = buildResponsePlan({
+            routeReason: String((__ku as any).routeReason || "DEF_LLM_TOP"),
+            rawMessage: String(message ?? ""),
+            centerKey: String((__ku as any).centerKey || "") || null,
+            centerLabel: String((__ku as any).centerLabel || "") || null,
+            scriptureKey: null,
+            semanticBody: String(__respFinal ?? ""),
             mode: "general",
             responseKind: "statement_plus_question",
           });
