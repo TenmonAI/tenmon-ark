@@ -8090,6 +8090,19 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
           }
         }
       } catch {}
+      if (
+        !__threadCenterForGeneral &&
+        __threadCore &&
+        __threadCore.centerKey &&
+        String(__threadCore.centerKey).trim()
+      ) {
+        __threadCenterForGeneral = {
+          center_type: "concept",
+          center_key: String(__threadCore.centerKey).trim(),
+          source_route_reason:
+            __threadCore.lastResponseContract?.routeReason ?? undefined,
+        };
+      }
       const __isShortContinuation =
         t0.length <= 15 &&
         RE_SHORT_CONTINUATION.test(t0) &&
