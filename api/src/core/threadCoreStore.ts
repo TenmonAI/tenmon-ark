@@ -86,7 +86,7 @@ export async function loadThreadCore(threadId: string): Promise<ThreadCore> {
 }
 
 /**
- * ThreadCore を保存。既存行があれば center_key / source_route_reason を更新、なければ upsert。
+ * ThreadCore を保存。既存行があれば center_type / center_key / source_route_reason を更新、なければ upsert。
  * 失敗しても throw せず chat を落とさない。
  */
 export async function saveThreadCore(core: ThreadCore): Promise<void> {
@@ -95,12 +95,29 @@ export async function saveThreadCore(core: ThreadCore): Promise<void> {
   try {
     const db = getDb("kokuzo");
     const now = new Date().toISOString();
+
     const row = db
       .prepare(
-        `SELECT id FROM thread_center_memory WHERE thread_id = ? ORDER BY updated_at DESC LIMIT 1`
+        `SELECT id, center_type, center_key, source_route_reason
+         FROM thread_center_memory
+         WHERE thread_id = ?
+         ORDER BY updated_at DESC, id DESC
+         LIMIT 1`
       )
-      .get(tid) as { id: number } | undefined;
-    const routeReason = core.lastResponseContract?.routeReason ?? null;
+      .get(tid) as
+      | {
+          id: number;
+          center_type?: string | null;
+          center_key?: string | null;
+          source_route_reason?: string | null;
+        }
+      | undefined;
+
+    const routeReason =
+      core.lastResponseContract?.routeReason ??
+      row?.source_route_reason ??
+      null;
+
     const contractJson = (() => {
       const base =
         core.lastResponseContract != null
@@ -110,24 +127,54 @@ export async function saveThreadCore(core: ThreadCore): Promise<void> {
               answerFrame: core.lastResponseContract.answerFrame ?? null,
               routeReason: core.lastResponseContract.routeReason ?? null,
             }
-          : { answerLength: null, answerMode: null, answerFrame: null, routeReason };
+          : {
+              answerLength: null,
+              answerMode: null,
+              answerFrame: null,
+              routeReason,
+            };
       return JSON.stringify({
         ...base,
         openLoops: Array.isArray(core.openLoops) ? core.openLoops : [],
         commitments: Array.isArray(core.commitments) ? core.commitments : [],
       });
     })();
+
+    const incomingCenterKey =
+      core.centerKey != null && String(core.centerKey).trim()
+        ? String(core.centerKey).trim()
+        : null;
+
+    const preservedCenterKey =
+      row?.center_key != null && String(row.center_key).trim()
+        ? String(row.center_key).trim()
+        : null;
+
+    const centerKey = incomingCenterKey ?? preservedCenterKey ?? null;
+
+    const rawCenterType =
+      row?.center_type != null && String(row.center_type).trim()
+        ? String(row.center_type).trim()
+        : "concept";
+
+    const centerType: "concept" | "scripture" | "general" =
+      rawCenterType === "scripture" ||
+      rawCenterType === "concept" ||
+      rawCenterType === "general"
+        ? rawCenterType
+        : "concept";
+
     if (row && typeof row.id === "number") {
       db.prepare(
         `UPDATE thread_center_memory
-         SET center_key = ?, center_reason = ?, source_route_reason = ?, updated_at = ?
+         SET center_type = ?, center_key = ?, center_reason = ?, source_route_reason = ?, updated_at = ?
          WHERE id = ?`
-      ).run(core.centerKey ?? null, contractJson, routeReason, now, row.id);
+      ).run(centerType, centerKey, contractJson, routeReason, now, row.id);
     } else {
       upsertThreadCenter({
         threadId: tid,
-        centerType: "concept",
-        centerKey: core.centerKey ?? null,
+        centerType,
+        centerKey,
         sourceRouteReason: routeReason,
         centerReason: contractJson,
       });
