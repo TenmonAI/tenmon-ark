@@ -1593,15 +1593,13 @@ const pid = process.pid;
     return parts.join(" OR ");
   }
 
-  const __kotodamaOneSoundMatchA = __msgDef.match(/^(.{1,4})\s*の\s*言霊の意味は\s*[？?]?\s*$/u);
-  const __kotodamaOneSoundMatchB = __msgDef.match(/^([ぁ-んァ-ン])\s*とは\s*[？?]?\s*$/u);
-  let __kotodamaOneSoundMatch: RegExpMatchArray | null = __kotodamaOneSoundMatchA;
-  if (!__kotodamaOneSoundMatch && __kotodamaOneSoundMatchB) {
-    try {
-      const c = getLatestThreadCenter(String(threadId || ""));
-      if (c && (c.center_key === "kotodama_hisho" || c.center_type === "concept")) __kotodamaOneSoundMatch = __kotodamaOneSoundMatchB;
-    } catch {}
-  }
+  const __kotodamaOneSoundMatchA = __msgDef.match(
+    /^(.{1,4})\s*の\s*言霊(?:の意味は)?\s*(?:とは\s*(?:何|なに)\s*(?:ですか)?\s*[？?]?|[？?])?\s*$/u
+  );
+  const __kotodamaOneSoundMatchB = __msgDef.match(
+    /^([ぁ-んァ-ン])\s*(?:とは\s*(?:何|なに)\s*(?:ですか)?\s*[？?]?|とは\s*[？?]?|[？?])\s*$/u
+  );
+  let __kotodamaOneSoundMatch: RegExpMatchArray | null = __kotodamaOneSoundMatchA || __kotodamaOneSoundMatchB;
   // 言霊一音「Xは？」を fastpath で拾い、前置きを付けない（ヒ/イ/リ/シ/ソ/カ等）
   if (!__kotodamaOneSoundMatch && !/(違いは|どう違う|何が違う)/u.test(__msgDef)) {
     const __shortC = __msgDef.match(RE_SHORT_CONTINUATION);
