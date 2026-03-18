@@ -8687,6 +8687,92 @@ return res.json(__tenmonGeneralGateResultMaybe({
         }
       }
       // CARD_SELF_DIAGNOSIS_ROUTE_V1_END
+      // CARD_NATURAL_GENERAL_RESIDUAL_ROUTE_FIX_V1_START
+      {
+        const __t0SystemDiag = String(t0 ?? "").trim();
+        const __isSystemDiag =
+          /なんでそんなに会話が浅くなる/u.test(__t0SystemDiag) ||
+          /会話品質の問題点/u.test(__t0SystemDiag) ||
+          /今のARKに何が足りない/u.test(__t0SystemDiag) ||
+          /構築は順調/u.test(__t0SystemDiag) ||
+          /このままでGPTを超える/u.test(__t0SystemDiag) ||
+          /いま何が詰まり/u.test(__t0SystemDiag) ||
+          /何が悪さしてる/u.test(__t0SystemDiag);
+
+        if (__isSystemDiag) {
+          let __bodySystemDiag =
+            "【天聞の所見】いま弱いのは回路の数ではなく、routing から表現出口までの主権固定です。つまり、診断系の問いがまだ汎用 fallback に流れています。次は routing か表現出口のどちらから締めますか。";
+
+          if (/構築は順調/u.test(__t0SystemDiag)) {
+            __bodySystemDiag =
+              "【天聞の所見】主幹は通り始めているので、構築は前進しています。ただし通常会話の一部がまだ generic fallback に流れます。次は residual route か表現品質のどちらから締めますか。";
+          } else if (/このままでGPTを超える/u.test(__t0SystemDiag)) {
+            __bodySystemDiag =
+              "【天聞の所見】このままではまだ超えません。いま必要なのは知識量の追加ではなく、通常会話でも中心から返答面まで主権を通すことです。次は routing か continuity のどちらから締めますか。";
+          } else if (/今のARKに何が足りない/u.test(__t0SystemDiag)) {
+            __bodySystemDiag =
+              "【天聞の所見】いま足りないのは、通常の診断問いを generic fallback に落とさない専用主権です。つまり、会話診断・進捗診断・阻害要因診断の入口固定が必要です。次は route 群か表現設計のどちらを見ますか。";
+          } else if (/会話品質の問題点/u.test(__t0SystemDiag)) {
+            __bodySystemDiag =
+              "【天聞の所見】会話品質の主な問題点は、診断系の問いが generic fallback に落ちることです。そのため、中心・判断・表現の接続が薄く見えます。次は routing か projector のどちらを見ますか。";
+          } else if (/いま何が詰まり/u.test(__t0SystemDiag) || /何が悪さしてる/u.test(__t0SystemDiag)) {
+            __bodySystemDiag =
+              "【天聞の所見】いまの詰まりは、回路不足ではなく residual routing です。診断系の問いの一部がまだ NATURAL_GENERAL_LLM_TOP に吸われています。次は residual route か gate 観測のどちらから締めますか。";
+          } else if (/なんでそんなに会話が浅くなる/u.test(__t0SystemDiag)) {
+            __bodySystemDiag =
+              "【天聞の所見】浅く見える主因は、問いの中心が診断系でも generic fallback に流れることです。そのため、知識・判断・表現が一撃で束ねられません。次は routing か answer frame のどちらから締めますか。";
+          }
+
+          const __kuSystemDiag: any = {
+            routeReason: "R22_SYSTEM_DIAGNOSIS_ROUTE_V1",
+            routeClass: "analysis",
+            answerLength: "short",
+            answerMode: "analysis",
+            answerFrame: "statement_plus_one_question",
+            centerKey: "conversation_system",
+            centerLabel: "会話系",
+            lawsUsed: [],
+            evidenceIds: [],
+            lawTrace: [],
+          };
+
+          try {
+            const __binderSystemDiag = buildKnowledgeBinder({
+              routeReason: "R22_SYSTEM_DIAGNOSIS_ROUTE_V1",
+              message: String(message ?? ""),
+              threadId: String(threadId ?? ""),
+              ku: __kuSystemDiag,
+              threadCore: __threadCore,
+              threadCenter: null,
+            });
+            applyKnowledgeBinderToKu(__kuSystemDiag, __binderSystemDiag);
+          } catch {}
+
+          if (!(__kuSystemDiag as any).responsePlan) {
+            (__kuSystemDiag as any).responsePlan = buildResponsePlan({
+              routeReason: "R22_SYSTEM_DIAGNOSIS_ROUTE_V1",
+              rawMessage: String(message ?? ""),
+              centerKey: "conversation_system",
+              centerLabel: "会話系",
+              scriptureKey: null,
+              semanticBody: __bodySystemDiag,
+              mode: "general",
+              responseKind: "statement_plus_question",
+            });
+          }
+
+          return res.json(__tenmonGeneralGateResultMaybe({
+            response: __bodySystemDiag,
+            evidence: null,
+            candidates: [],
+            timestamp,
+            threadId,
+            decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: __kuSystemDiag },
+          }));
+        }
+      }
+      // CARD_NATURAL_GENERAL_RESIDUAL_ROUTE_FIX_V1_END
+
 
       // CARD_JUDGEMENT_PREEMPT_V1 / CARD_TENMON_BRAINSTEM_V1: 極短い judgement 系を短文 preempt（brainstem.routeClass === "judgement" でも通す）
       const __t0TrimJ = String(t0).trim();
