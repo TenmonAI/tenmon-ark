@@ -8922,7 +8922,7 @@ try {
           responseKind: "statement_plus_question",
           answerMode: "analysis",
           answerFrame: "one_step",
-          semanticBody: "【天聞の所見】判断軸はすでに出ています。結論から言うと、この方針は通っています。次に詰めるなら一点だけ選んで深掘ります。",
+          semanticBody: "【天聞の所見】次に直すべきは、通常会話の残差ではなく ask-overuse の解消です。判断系は問い返しを減らし、対象を固定して短く裁定する段階に入っています。",
         });
         return res.json(__tenmonGeneralGateResultMaybe({
           response: __bodyJudge,
