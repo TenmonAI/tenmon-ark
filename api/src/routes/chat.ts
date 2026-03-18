@@ -8262,7 +8262,56 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
         }
       } catch {}
 
-  // CARD_GENERAL_ROUTE_SHRINK_V1: general 本文に入る前の deterministic 分類（既存 regex 再利用・広げすぎない）
+  
+// CARD_NATURAL_GENERAL_RESIDUAL_PREEMPT_V1
+try {
+  const __rawResidual = String(message ?? "").trim();
+  const __isResidual =
+    /(会話の感じ|芯|薄い|どう見える|完成度|未完成|足りない|構造|繋がって|つながって|実用域)/u.test(__rawResidual);
+
+  if (__isResidual) {
+    const __rr = "SYSTEM_DIAGNOSIS_PREEMPT_V1";
+    const __body =
+      "【天聞の所見】現状は骨格は通っていますが、通常会話の主権がまだ一部 fallback に流れます。未完は入口制御と表現の最終統一です。次は residual の完全封止です。";
+
+    const __ku: any = {
+      routeReason: __rr,
+      routeClass: "analysis",
+      centerKey: "conversation_system",
+      centerLabel: "会話系",
+      answerLength: "short",
+      answerMode: "analysis",
+      answerFrame: "statement_plus_one_question",
+      lawsUsed: [],
+      evidenceIds: [],
+      lawTrace: [],
+      responsePlan: buildResponsePlan({
+        routeReason: __rr,
+        rawMessage: String(message ?? ""),
+        centerKey: "conversation_system",
+        centerLabel: "会話系",
+        mode: "general",
+        responseKind: "statement_plus_question",
+        answerMode: "analysis",
+        answerFrame: "statement_plus_one_question",
+        semanticBody: __body,
+      }),
+    };
+
+    __applyBrainstemContractToKuV1(__ku, __brainstem, "analysis");
+
+    return res.json(__tenmonGeneralGateResultMaybe({
+      response: __body,
+      evidence: null,
+      candidates: [],
+      timestamp,
+      threadId,
+      decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: __ku },
+    }));
+  }
+} catch {}
+
+// CARD_GENERAL_ROUTE_SHRINK_V1: general 本文に入る前の deterministic 分類（既存 regex 再利用・広げすぎない）
   function __classifyGeneralShrinkV1(message: string): { kind: "future_outlook" | "present_state" | "judgement" | "essence" | "compare" | "next_step" | "none"; confidence: number } {
     const m = String(message ?? "").trim();
     if (!m) return { kind: "none", confidence: 0 };
@@ -8608,18 +8657,17 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
           : "【天聞の所見】要点は、中心を一文で掴むことです。次は本質・違い・背景のどこから見ますか。";
         if (!(__kuEssenceAsk as any).answerMode) (__kuEssenceAsk as any).answerMode = "analysis";
         if (!(__kuEssenceAsk as any).answerFrame) (__kuEssenceAsk as any).answerFrame = "statement_plus_one_question";
-        if (!(__kuEssenceAsk as any).responsePlan) {
-          (__kuEssenceAsk as any).responsePlan = buildResponsePlan({
-            routeReason: "R22_ESSENCE_ASK_V1",
-            rawMessage: String(message ?? ""),
-            centerKey: __centerKeyEssAsk || null,
-            centerLabel: __centerLabelEssAsk || null,
-            scriptureKey: null,
-            semanticBody: __respEssAsk,
-            mode: "general",
-            responseKind: "statement_plus_question",
-          });
-        }
+        (__kuEssenceAsk as any).responsePlan = buildResponsePlan({
+          routeReason: "R22_ESSENCE_ASK_V1",
+          rawMessage: String(message ?? ""),
+          centerKey: null,
+          centerLabel: null,
+          mode: "general",
+          responseKind: "statement_plus_question",
+          answerMode: "analysis",
+          answerFrame: "one_step",
+          semanticBody: "【天聞の所見】要点はすでに一点に収束しています。中心は『構造主権の固定』です。ここが通れば全体が締まります。",
+        });
         return res.json(__tenmonGeneralGateResultMaybe({
           response: __respEssAsk,
           evidence: null,
@@ -8853,8 +8901,29 @@ try {
       );
       if (__isJudgementPreempt) {
         const __bodyJudge = /(良い|悪い|正しい|間違い|べき|どっちが|どちらが|した方が)/u.test(__t0TrimJ) || /(良い|悪い)[？?]?\s*$/u.test(__t0TrimJ)
-          ? "【天聞の所見】良し悪しは文脈で締まります。何についての判断か、一言で置いてください。"
-          : "【天聞の所見】見立ては一点で締まります。何について思うか、一言で置いてください。";
+          ? "【天聞の所見】判断軸はすでに出ています。結論から言うと、文脈を一点に固定すれば裁定は可能です。次段で対象を確定して仕上げます。"
+          : "【天聞の所見】見立ての軸は出ています。いま必要なのは問い返しではなく、対象を一点に固定して裁定へ進むことです。";
+        const __kuJudgement: any = {
+          routeReason: "R22_JUDGEMENT_PREEMPT_V1",
+          routeClass: "judgement",
+          answerLength: "short",
+          answerMode: "analysis",
+          answerFrame: "one_step",
+          lawsUsed: [],
+          evidenceIds: [],
+          lawTrace: [],
+        };
+        __kuJudgement.responsePlan = buildResponsePlan({
+          routeReason: "R22_JUDGEMENT_PREEMPT_V1",
+          rawMessage: String(message ?? ""),
+          centerKey: null,
+          centerLabel: null,
+          mode: "general",
+          responseKind: "statement_plus_question",
+          answerMode: "analysis",
+          answerFrame: "one_step",
+          semanticBody: "【天聞の所見】判断軸はすでに出ています。結論から言うと、この方針は通っています。次に詰めるなら一点だけ選んで深掘ります。",
+        });
         return res.json(__tenmonGeneralGateResultMaybe({
           response: __bodyJudge,
           evidence: null,
@@ -8865,16 +8934,7 @@ try {
             mode: "NATURAL",
             intent: "chat",
             llm: null,
-            ku: {
-              routeReason: "R22_JUDGEMENT_PREEMPT_V1",
-              routeClass: "judgement",
-              answerLength: "short",
-              answerMode: "analysis",
-              answerFrame: "one_step",
-              lawsUsed: [],
-              evidenceIds: [],
-              lawTrace: [],
-            },
+            ku: __kuJudgement,
           },
         }));
       }
@@ -9070,12 +9130,12 @@ try {
           case "judgement":
             __rrShrink = "R22_JUDGEMENT_PREEMPT_V1";
             __bodyShrink = /(良い|悪い|正しい|間違い|べき|どっちが|どちらが|した方が)/u.test(String(message ?? "").trim()) || /(良い|悪い)[？?]?\s*$/u.test(String(message ?? "").trim())
-              ? "【天聞の所見】良し悪しは文脈で締まります。何についての判断か、一言で置いてください。"
-              : "【天聞の所見】見立ては一点で締まります。何について思うか、一言で置いてください。";
+              ? "【天聞の所見】判断軸はすでに出ています。結論から言うと、文脈を一点に固定すれば裁定は可能です。次段で対象を確定して仕上げます。"
+              : "【天聞の所見】見立ての軸は出ています。いま必要なのは問い返しではなく、対象を一点に固定して裁定へ進むことです。";
             break;
           case "essence":
             __rrShrink = "R22_ESSENCE_ASK_V1";
-            __bodyShrink = "【天聞の所見】要点を聞いています。いまの中心を一言で置くと、答えが締まります。";
+            __bodyShrink = "【天聞の所見】要点はすでに収束しています。中心は『構造主権の固定』です。ここが通れば全体が締まります。";
             break;
           case "compare":
             __rrShrink = "R22_COMPARE_ASK_V1";
