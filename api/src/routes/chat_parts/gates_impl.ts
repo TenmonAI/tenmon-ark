@@ -490,29 +490,7 @@ function __surfaceDetoneResponseV1(text: string): string {
 function __tenmonGeneralGateResultMaybe(x: any, rawMessageOverride?: string): any {
   try {
     if (!x || typeof x !== "object") return __applyReleaseThinAtExit(x);
-    try {
-      const payload: any = x;
-      const dfIn: any = payload?.decisionFrame || null;
-      const kuIn: any = dfIn && typeof dfIn.ku === "object" && !Array.isArray(dfIn.ku) ? dfIn.ku : null;
-      if (String(kuIn?.routeReason || "") === "R22_SYSTEM_DIAGNOSIS_ROUTE_V1") {
-        console.log("[SYSTEM_DIAG_GATE_TRACE]", {
-          at: "gate_in_before_any_mutation",
-          response: payload?.response ?? null,
-          message: payload?.message ?? null,
-          rawMessage: payload?.rawMessage ?? null,
-          responsePlanBody: kuIn?.responsePlan?.semanticBody ?? null,
-        });
-      }
-      console.log("[RESPONSEPLAN_TRACE:GATE_IN]", {
-        hasDecisionFrame: Boolean(dfIn),
-        hasKu: Boolean(kuIn),
-        kuKeys: kuIn ? Object.keys(kuIn) : null,
-        hasResponsePlan: Boolean(kuIn?.responsePlan),
-        responsePlanRoute: kuIn?.responsePlan?.routeReason ?? null,
-        responsePlanMode: kuIn?.responsePlan?.mode ?? null,
-        responsePlanKind: kuIn?.responsePlan?.responseKind ?? null,
-      });
-    } catch {}
+    
     const __incomingRouteClass = (x as any)?.decisionFrame?.ku?.routeClass;
     try {
       const __rr0 = String((x as any)?.decisionFrame?.ku?.routeReason || "").trim();
@@ -1646,22 +1624,28 @@ try {
   });
 } catch {}
 
-// SYSTEM_DIAGNOSIS_RESPONSE_SINGLE_SOURCE_LOCK_V2
+// FINAL_SURFACE_SINGLE_SOURCE_LOCK_V1
 try {
   const __dfOut: any = (x as any)?.decisionFrame || null;
   const __kuOut: any =
     __dfOut && __dfOut.ku && typeof __dfOut.ku === "object" && !Array.isArray(__dfOut.ku)
       ? __dfOut.ku
       : null;
+  const __rr = String(__kuOut?.routeReason || "");
+  const __rpBody = String(__kuOut?.responsePlan?.semanticBody || "").trim();
 
-  if (
-    __kuOut &&
-    String(__kuOut.routeReason || "") === "R22_SYSTEM_DIAGNOSIS_ROUTE_V1"
-  ) {
-    const __rpBody = String(__kuOut?.responsePlan?.semanticBody || "").trim();
-    if (__rpBody) {
-      (x as any).response = __surfaceDetoneResponseV1(__rpBody);
-    }
+  const __singleSourceRoutes = new Set([
+    "SYSTEM_DIAGNOSIS_PREEMPT_V1",
+    "R22_COMPARE_ASK_V1",
+    "BOOK_PLACEHOLDER_V1",
+    "ABSTRACT_FRAME_VARIATION_V1",
+    "TENMON_KOTODAMA_HISYO_FRONT_V1",
+    "R22_JUDGEMENT_PREEMPT_V1",
+    "R22_ESSENCE_ASK_V1",
+  ]);
+
+  if (__singleSourceRoutes.has(__rr) && __rpBody) {
+    (x as any).response = __surfaceDetoneResponseV1(__rpBody);
   }
 } catch {}
 
@@ -1672,37 +1656,51 @@ try {
       ? __dfTrace.ku
       : null;
 
-  if (String(__kuTrace?.routeReason || "") === "R22_SYSTEM_DIAGNOSIS_ROUTE_V1") {
-    console.log("[SYSTEM_DIAG_FINAL_TRACE_V1]", {
-      response: (x as any)?.response ?? null,
-      responsePlanBody: __kuTrace?.responsePlan?.semanticBody ?? null,
-      same:
-        String((x as any)?.response ?? "").trim() ===
-        String(__kuTrace?.responsePlan?.semanticBody ?? "").replace(/^【天聞の所見】\s*/u, "").trim(),
+  const __rr = String(__kuTrace?.routeReason || "");
+  const __rpBody = String(__kuTrace?.responsePlan?.semanticBody || "").trim();
+  const __resp = String((x as any)?.response || "").trim();
+
+  const __singleSourceRoutes = new Set([
+    "SYSTEM_DIAGNOSIS_PREEMPT_V1",
+    "R22_COMPARE_ASK_V1",
+    "BOOK_PLACEHOLDER_V1",
+    "ABSTRACT_FRAME_VARIATION_V1",
+    "TENMON_KOTODAMA_HISYO_FRONT_V1",
+    "R22_JUDGEMENT_PREEMPT_V1",
+    "R22_ESSENCE_ASK_V1",
+  ]);
+
+  if (__singleSourceRoutes.has(__rr)) {
+    console.log("[SURFACE_SINGLE_SOURCE_LOCK_V1]", {
+      routeReason: __rr,
+      hasResponsePlan: Boolean(__kuTrace?.responsePlan),
+      responseHead: __resp.slice(0, 160),
+      responsePlanHead: __rpBody.slice(0, 160),
+      same: __resp === __surfaceDetoneResponseV1(__rpBody),
     });
   }
 } catch {}
 
-
+// FINAL_SURFACE_SINGLE_SOURCE_LOCK_V1
 try {
-  const __dfCmp: any = (x as any)?.decisionFrame || null;
-  const __kuCmp: any =
-    __dfCmp && __dfCmp.ku && typeof __dfCmp.ku === "object" && !Array.isArray(__dfCmp.ku)
-      ? __dfCmp.ku
+  const __df: any = (x as any)?.decisionFrame || null;
+  const __ku: any =
+    __df && __df.ku && typeof __df.ku === "object" && !Array.isArray(__df.ku)
+      ? __df.ku
       : null;
 
-  if (String(__kuCmp?.routeReason || "") === "R22_COMPARE_ASK_V1") {
-    console.log("[COMPARE_RESPONSEPLAN_FINAL_TRACE_V1]", {
-      hasDecisionFrame: Boolean(__dfCmp),
-      hasKu: Boolean(__kuCmp),
-      hasResponsePlan: Boolean(__kuCmp?.responsePlan),
-      responsePlanType: __kuCmp?.responsePlan == null ? null : typeof __kuCmp.responsePlan,
-      responsePlanRoute: __kuCmp?.responsePlan?.routeReason ?? null,
-      kuKeys: __kuCmp ? Object.keys(__kuCmp) : null,
-      response: (x as any)?.response ?? null,
-    });
+  const __rpBody = String(__ku?.responsePlan?.semanticBody || "").trim();
+
+  if (__rpBody) {
+    // responsePlan がある場合は必ずそれを最終出力にする
+    (x as any).response = __surfaceDetoneResponseV1(__rpBody);
   }
 } catch {}
+
+
+
+
+
 
 return __thinReleasePayloadV2(x);
   } catch { return __thinReleasePayloadV2(x); }
