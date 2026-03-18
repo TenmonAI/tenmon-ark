@@ -1622,6 +1622,21 @@ try {
 } catch {}
 
 
+try {
+  const __dfOut: any = (x as any)?.decisionFrame || null;
+  const __kuOut: any = __dfOut && typeof __dfOut.ku === "object" && !Array.isArray(__dfOut.ku) ? __dfOut.ku : null;
+  console.log("[RESPONSEPLAN_TRACE:GATE_OUT]", {
+    hasDecisionFrame: Boolean(__dfOut),
+    hasKu: Boolean(__kuOut),
+    kuKeys: __kuOut ? Object.keys(__kuOut) : null,
+    hasResponsePlan: Boolean(__kuOut?.responsePlan),
+    responsePlanRoute: __kuOut?.responsePlan?.routeReason ?? null,
+    responsePlanMode: __kuOut?.responsePlan?.mode ?? null,
+    responsePlanKind: __kuOut?.responsePlan?.responseKind ?? null,
+    rr: __kuOut?.routeReason ?? null,
+  });
+} catch {}
+
 return __thinReleasePayloadV2(x);
   } catch { return __thinReleasePayloadV2(x); }
 

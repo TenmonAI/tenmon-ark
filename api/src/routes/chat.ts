@@ -8588,7 +8588,29 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
       if (!__threadCenterForGeneral && /(違いは|どう違う|何が違う|比較して)/u.test(t0)) {
         const __kuCompareAsk: any = { routeReason: "R22_COMPARE_ASK_V1", answerLength: "short", answerMode: "analysis", answerFrame: "one_step", lawsUsed: [], evidenceIds: [], lawTrace: [] };
         try { const __binderCA = buildKnowledgeBinder({ routeReason: "R22_COMPARE_ASK_V1", message: String(message ?? ""), threadId: String(threadId ?? ""), ku: __kuCompareAsk, threadCore: __threadCore, threadCenter: null }); applyKnowledgeBinderToKu(__kuCompareAsk, __binderCA); } catch {}
-        return res.json(__tenmonGeneralGateResultMaybe({
+        
+        if (!(__kuCompareAsk as any).responsePlan) {
+          (__kuCompareAsk as any).responsePlan = buildResponsePlan({
+            routeReason: String((__kuCompareAsk as any).routeReason || "R22_COMPARE_ASK_V1"),
+            rawMessage: String(message ?? ""),
+            centerKey: String((__kuCompareAsk as any).centerKey || "") || null,
+            centerLabel: String((__kuCompareAsk as any).centerLabel || "") || null,
+            scriptureKey: null,
+            semanticBody: "比較の問いです。比べたい二つを一言ずつ置くと、答えが締まります。",
+            mode: "general",
+            responseKind: "statement_plus_question",
+          });
+        }
+
+        try {
+          console.log("[COMPARE_ASK_PRE_RETURN_TRACE]", {
+            hasResponsePlan: Boolean((__kuCompareAsk as any).responsePlan),
+            responsePlanRoute: (__kuCompareAsk as any).responsePlan?.routeReason ?? null,
+            kuKeys: Object.keys((__kuCompareAsk as any) || {}),
+          });
+        } catch {}
+
+return res.json(__tenmonGeneralGateResultMaybe({
           response: "【天聞の所見】比較の問いです。比べたい二つを一言ずつ置くと、答えが締まります。",
           evidence: null,
           candidates: [],
@@ -8597,6 +8619,74 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
           decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: __kuCompareAsk },
         }));
       }
+
+
+
+
+
+
+
+
+      // CARD_SELF_DIAGNOSIS_ROUTE_V1_START
+      {
+        const __t0SelfDiag = String(t0 ?? "").trim();
+        const __isSelfDiag =
+          /なんで.*喋れない/u.test(__t0SelfDiag) ||
+          /なぜ.*喋れない/u.test(__t0SelfDiag) ||
+          /会話.*薄い/u.test(__t0SelfDiag) ||
+          /本質的な会話.*貫通していない/u.test(__t0SelfDiag) ||
+          /変化していない/u.test(__t0SelfDiag) ||
+          /高度な知能回路.*全然喋れない/u.test(__t0SelfDiag);
+
+        if (__isSelfDiag) {
+          const __bodySelfDiag =
+            "【天聞の所見】いま未貫通なのは、回路不足ではなく、中心から返答面へ抜ける主権がまだ弱いことです。つまり、知識・思考・表現の接続が会話の一撃にまで固定されていません。次は、routing か表現出口のどちらから締めますか。";
+          const __kuSelfDiag: any = {
+            routeReason: "R22_SELF_DIAGNOSIS_ROUTE_V1",
+            routeClass: "analysis",
+            answerLength: "short",
+            answerMode: "analysis",
+            answerFrame: "statement_plus_one_question",
+            centerKey: "conversation_system",
+            centerLabel: "会話系",
+            lawsUsed: [],
+            evidenceIds: [],
+            lawTrace: [],
+          };
+          try {
+            const __binderSelfDiag = buildKnowledgeBinder({
+              routeReason: "R22_SELF_DIAGNOSIS_ROUTE_V1",
+              message: String(message ?? ""),
+              threadId: String(threadId ?? ""),
+              ku: __kuSelfDiag,
+              threadCore: __threadCore,
+              threadCenter: null,
+            });
+            applyKnowledgeBinderToKu(__kuSelfDiag, __binderSelfDiag);
+          } catch {}
+          if (!(__kuSelfDiag as any).responsePlan) {
+            (__kuSelfDiag as any).responsePlan = buildResponsePlan({
+              routeReason: "R22_SELF_DIAGNOSIS_ROUTE_V1",
+              rawMessage: String(message ?? ""),
+              centerKey: "conversation_system",
+              centerLabel: "会話系",
+              scriptureKey: null,
+              semanticBody: __bodySelfDiag,
+              mode: "general",
+              responseKind: "statement_plus_question",
+            });
+          }
+          return res.json(__tenmonGeneralGateResultMaybe({
+            response: __bodySelfDiag,
+            evidence: null,
+            candidates: [],
+            timestamp,
+            threadId,
+            decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: __kuSelfDiag },
+          }));
+        }
+      }
+      // CARD_SELF_DIAGNOSIS_ROUTE_V1_END
 
       // CARD_JUDGEMENT_PREEMPT_V1 / CARD_TENMON_BRAINSTEM_V1: 極短い judgement 系を短文 preempt（brainstem.routeClass === "judgement" でも通す）
       const __t0TrimJ = String(t0).trim();
