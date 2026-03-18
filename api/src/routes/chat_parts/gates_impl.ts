@@ -1692,7 +1692,6 @@ try {
   const __rpBody = String(__ku?.responsePlan?.semanticBody || "").trim();
 
   if (__rpBody) {
-    // responsePlan がある場合は必ずそれを最終出力にする
     (x as any).response = __surfaceDetoneResponseV1(__rpBody);
   }
 } catch {}
