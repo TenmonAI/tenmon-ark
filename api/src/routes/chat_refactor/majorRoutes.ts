@@ -573,3 +573,57 @@ export function trySystemDiagnosisPreemptExitV1(args: {
   return true;
 }
 
+/** PATCH50_GENERAL_JUDGEMENT_ESSENCE_EXTRACT_V1: judgement 早期判定＋exit を一括。一致時 true。 */
+export function tryJudgementPreemptExitV1(args: {
+  res: any;
+  __tenmonGeneralGateResultMaybe: any;
+  message: any;
+  timestamp: any;
+  threadId: any;
+  brainstemRouteClass?: string | null;
+}): boolean {
+  const __t0TrimJ = String(args.message ?? "").trim();
+  const __isJudgementPreempt =
+    args.brainstemRouteClass === "judgement" ||
+    (__t0TrimJ.length <= 20 &&
+      !/(天聞|アーク)(を|に)(は)?どう思う|(への)?感想/u.test(__t0TrimJ) &&
+      /(良い|悪い|どう思う|どう思いますか|いい)[？?]?\s*$/u.test(__t0TrimJ));
+  if (!__isJudgementPreempt) return false;
+  exitJudgementPreemptV1({
+    res: args.res,
+    __tenmonGeneralGateResultMaybe: args.__tenmonGeneralGateResultMaybe,
+    __t0TrimJ,
+    message: args.message,
+    timestamp: args.timestamp,
+    threadId: args.threadId,
+  });
+  return true;
+}
+
+/** PATCH50_GENERAL_JUDGEMENT_ESSENCE_EXTRACT_V1: essence 早期判定＋exit を一括。一致時 true。threadCenter なし時のみ。 */
+export function tryEssenceAskExitV1(args: {
+  res: any;
+  __tenmonGeneralGateResultMaybe: any;
+  message: any;
+  timestamp: any;
+  threadId: any;
+  __threadCore: any;
+  __threadCenterForGeneral: any;
+  centerLabelFromKey: any;
+}): boolean {
+  if (args.__threadCenterForGeneral) return false;
+  const msg = String(args.message ?? "").trim();
+  if (!/(要するに|要点は|一言でいうと|本質は|要は)/u.test(msg)) return false;
+  exitEssenceAskPreemptV1({
+    res: args.res,
+    __tenmonGeneralGateResultMaybe: args.__tenmonGeneralGateResultMaybe,
+    message: args.message,
+    timestamp: args.timestamp,
+    threadId: args.threadId,
+    __threadCore: args.__threadCore,
+    __threadCenterForGeneral: args.__threadCenterForGeneral,
+    centerLabelFromKey: args.centerLabelFromKey,
+  });
+  return true;
+}
+

@@ -123,6 +123,8 @@ import {
   exitFutureOutlookPreemptV1,
   tryFutureOutlookExitV1,
   trySystemDiagnosisPreemptExitV1,
+  tryJudgementPreemptExitV1,
+  tryEssenceAskExitV1,
 } from "./chat_refactor/majorRoutes.js";
 import { parseAnswerProfileFromBody, injectAnswerProfileToKu, normalizeChatEntryFromBody } from "./chat_refactor/entry.js";
 import { responseProjector, normalizeDisplayLabel } from "../projection/responseProjector.js";
@@ -8724,9 +8726,9 @@ try {
         }));
       }
 
-      // CARD_NATURAL_GENERAL_SHRINK_V2_ESSENCE: 要するに/要点/本質系を threadCenter なし時だけ短文 preempt
-      if (!__threadCenterForGeneral && /(要するに|要点は|一言でいうと|本質は|要は)/u.test(t0)) {
-        return exitEssenceAskPreemptV1({
+      // CARD_NATURAL_GENERAL_SHRINK_V2_ESSENCE: 要するに/要点/本質系を threadCenter なし時だけ短文 preempt（PATCH50: 判定＋exit は majorRoutes に集約）
+      if (
+        tryEssenceAskExitV1({
           res,
           __tenmonGeneralGateResultMaybe,
           message,
@@ -8735,8 +8737,9 @@ try {
           __threadCore,
           __threadCenterForGeneral,
           centerLabelFromKey,
-        });
-      }
+        })
+      )
+        return;
 
       // CARD_JUDGEMENT_COMPARE_ROUTE_V1_COMPARE_NO_CENTER: threadCenter なしの compare 系を短文 preempt
       if (!__threadCenterForGeneral && /(違いは|どう違う|何が違う|比較して)/u.test(t0)) {
@@ -8952,23 +8955,19 @@ try {
       // CARD_NATURAL_GENERAL_RESIDUAL_ROUTE_FIX_V1_END
 
 
-      // CARD_JUDGEMENT_PREEMPT_V1 / CARD_TENMON_BRAINSTEM_V1: 極短い judgement 系を短文 preempt（brainstem.routeClass === "judgement" でも通す）
+      // CARD_JUDGEMENT_PREEMPT_V1 / CARD_TENMON_BRAINSTEM_V1: 極短い judgement 系を短文 preempt（PATCH50: 判定＋exit は majorRoutes に集約）
       const __t0TrimJ = String(t0).trim();
-      const __isJudgementPreempt = __brainstem?.routeClass === "judgement" || (
-        __t0TrimJ.length <= 20 &&
-        !/(天聞|アーク)(を|に)(は)?どう思う|(への)?感想/u.test(t0) &&
-        /(良い|悪い|どう思う|どう思いますか|いい)[？?]?\s*$/u.test(__t0TrimJ)
-      );
-      if (__isJudgementPreempt) {
-        return exitJudgementPreemptV1({
+      if (
+        tryJudgementPreemptExitV1({
           res,
           __tenmonGeneralGateResultMaybe,
-          __t0TrimJ,
           message,
           timestamp,
           threadId,
-        });
-      }
+          brainstemRouteClass: __brainstem?.routeClass ?? null,
+        })
+      )
+        return;
 
       // CARD_TENMON_BRAINSTEM_V1: selfaware 短文 preempt（天聞アークとは何 / 天聞とは何 / 意識はある / 心はある）
       // CARD_TENMON_BRAINSTEM_WIRING_FIX_V1: selfaware は前段で return 済みのため、ここは regex のみ（型絞り込みで routeClass は除外済み）
