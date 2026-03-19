@@ -130,6 +130,7 @@ import {
   getGeneralShrinkPayloadV1,
   exitGroundingUnresolvedV1,
   exitGroundingGroundedRequiredV1,
+  exitSystemDiagnosisRouteV1,
 } from "./chat_refactor/majorRoutes.js";
 import { parseAnswerProfileFromBody, injectAnswerProfileToKu, normalizeChatEntryFromBody } from "./chat_refactor/entry.js";
 import { selectGroundingModeV1, getGeneralKind } from "./chat_refactor/general.js";
@@ -8873,52 +8874,15 @@ try {
               "【天聞の所見】浅く見える主因は、問いの中心が診断系でも generic fallback に流れることです。そのため、知識・判断・表現が一撃で束ねられません。次は routing か answer frame のどちらから締めますか。";
           }
 
-          const __kuSystemDiag: any = {
-            routeReason: "R22_SYSTEM_DIAGNOSIS_ROUTE_V1",
-            routeClass: "analysis",
-            answerLength: "short",
-            answerMode: "analysis",
-            answerFrame: "statement_plus_one_question",
-            centerKey: "conversation_system",
-            centerLabel: "会話系",
-            lawsUsed: [],
-            evidenceIds: [],
-            lawTrace: [],
-          };
-
-          try {
-            const __binderSystemDiag = buildKnowledgeBinder({
-              routeReason: "R22_SYSTEM_DIAGNOSIS_ROUTE_V1",
-              message: String(message ?? ""),
-              threadId: String(threadId ?? ""),
-              ku: __kuSystemDiag,
-              threadCore: __threadCore,
-              threadCenter: null,
-            });
-            applyKnowledgeBinderToKu(__kuSystemDiag, __binderSystemDiag);
-          } catch {}
-
-          if (!(__kuSystemDiag as any).responsePlan) {
-            (__kuSystemDiag as any).responsePlan = buildResponsePlan({
-              routeReason: "R22_SYSTEM_DIAGNOSIS_ROUTE_V1",
-              rawMessage: String(message ?? ""),
-              centerKey: "conversation_system",
-              centerLabel: "会話系",
-              scriptureKey: null,
-              semanticBody: __bodySystemDiag,
-              mode: "general",
-              responseKind: "statement_plus_question",
-            });
-          }
-
-          return res.json(__tenmonGeneralGateResultMaybe({
+          return exitSystemDiagnosisRouteV1({
+            res,
+            __tenmonGeneralGateResultMaybe,
             response: __bodySystemDiag,
-            evidence: null,
-            candidates: [],
+            message,
             timestamp,
             threadId,
-            decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: __kuSystemDiag },
-          }));
+            threadCore: __threadCore,
+          });
         }
       }
       // CARD_NATURAL_GENERAL_RESIDUAL_ROUTE_FIX_V1_END

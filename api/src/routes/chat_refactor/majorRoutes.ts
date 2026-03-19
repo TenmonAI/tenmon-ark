@@ -483,6 +483,64 @@ export function exitFutureOutlookPreemptV1(args: {
   });
 }
 
+/** PATCH65_RESIDUAL_FINAL_SWEEP_V1: R22_SYSTEM_DIAGNOSIS_ROUTE_V1 の exit 組み立てを集約 */
+export function exitSystemDiagnosisRouteV1(args: {
+  res: any;
+  __tenmonGeneralGateResultMaybe: any;
+  response: string;
+  message: any;
+  timestamp: any;
+  threadId: any;
+  threadCore?: any;
+}) {
+  const { res, __tenmonGeneralGateResultMaybe, response, message, timestamp, threadId, threadCore } = args;
+  const ku: any = {
+    routeReason: "R22_SYSTEM_DIAGNOSIS_ROUTE_V1",
+    routeClass: "analysis",
+    answerLength: "short",
+    answerMode: "analysis",
+    answerFrame: "statement_plus_one_question",
+    centerKey: "conversation_system",
+    centerLabel: "会話系",
+    lawsUsed: [],
+    evidenceIds: [],
+    lawTrace: [],
+  };
+  try {
+    const binder = buildKnowledgeBinder({
+      routeReason: "R22_SYSTEM_DIAGNOSIS_ROUTE_V1",
+      message: String(message ?? ""),
+      threadId: String(threadId ?? ""),
+      ku,
+      threadCore: threadCore ?? null,
+      threadCenter: null,
+    });
+    applyKnowledgeBinderToKu(ku, binder);
+  } catch {}
+
+  if (!(ku as any).responsePlan) {
+    (ku as any).responsePlan = buildResponsePlan({
+      routeReason: "R22_SYSTEM_DIAGNOSIS_ROUTE_V1",
+      rawMessage: String(message ?? ""),
+      centerKey: "conversation_system",
+      centerLabel: "会話系",
+      scriptureKey: null,
+      semanticBody: response,
+      mode: "general",
+      responseKind: "statement_plus_question",
+    });
+  }
+
+  return finalizeSingleExitV1(res, __tenmonGeneralGateResultMaybe, {
+    response,
+    evidence: null,
+    candidates: [],
+    timestamp,
+    threadId,
+    decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku },
+  });
+}
+
 /** PATCH55_GENERAL_GROUNDING_UNRESOLVED_EXTRACT_V1: grounding unresolved 時 exit（routeReason / 本文不変） */
 export function exitGroundingUnresolvedV1(args: {
   res: any;
