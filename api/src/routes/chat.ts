@@ -133,6 +133,7 @@ import {
 } from "./chat_refactor/majorRoutes.js";
 import { parseAnswerProfileFromBody, injectAnswerProfileToKu, normalizeChatEntryFromBody } from "./chat_refactor/entry.js";
 import { selectGroundingModeV1, getGeneralKind } from "./chat_refactor/general.js";
+import { parseDefineFastpathCandidate } from "./chat_refactor/define.js";
 import { responseProjector, normalizeDisplayLabel } from "../projection/responseProjector.js";
 
 // FIX_PRE_GATE_GENERAL_SURFACE_V1: 先頭・末尾欠損・不要前置き混入を止血。引用あり/なしの「いまの言葉を…と受け取りました。」を安全に除去。
@@ -11139,25 +11140,9 @@ if (!outText) {
   try {
     const __msg0Raw = String(message ?? "").trim();
     const __msg0 = normalizeCoreTermForRouting(__msg0Raw);
-    const __defFast =
-      /とは\s*(何|なに)\s*(ですか)?\s*[？?]?$/u.test(__msg0) ||
-      /って\s*(何|なに)\s*(ですか)?\s*[？?]?$/u.test(__msg0);
-
-    const __hasDocFast =
-      /\bdoc\b/i.test(__msg0) ||
-      /pdfPage\s*=\s*\d+/i.test(__msg0) ||
-      /#詳細/.test(__msg0);
-
-    const __isCmdFast =
-      __msg0.startsWith("#") || __msg0.startsWith("/");
-
-    if (__defFast && !__hasDocFast && !__isCmdFast) {
-      const __term = __msg0
-        .replace(/[?？]/g, "")
-        .replace(/って\s*(何|なに)\s*(ですか)?$/u, "")
-        .replace(/とは\s*(何|なに)\s*(ですか)?$/u, "")
-        .replace(/とは$/u, "")
-        .trim();
+    const __defFastCandidate = parseDefineFastpathCandidate(__msg0);
+    if (__defFastCandidate.shouldHandle) {
+      const __term = __defFastCandidate.term;
 
       const __dbFast = new DatabaseSync(getDbPath("kokuzo.sqlite"), { readOnly: true });
 
