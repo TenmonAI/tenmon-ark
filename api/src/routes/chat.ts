@@ -133,7 +133,12 @@ import {
 } from "./chat_refactor/majorRoutes.js";
 import { parseAnswerProfileFromBody, injectAnswerProfileToKu, normalizeChatEntryFromBody } from "./chat_refactor/entry.js";
 import { selectGroundingModeV1, getGeneralKind } from "./chat_refactor/general.js";
-import { parseDefineFastpathCandidate } from "./chat_refactor/define.js";
+import {
+  parseDefineFastpathCandidate,
+  buildDefineVerifiedFastpathBody,
+  buildDefineVerifiedEvidenceArtifacts,
+  buildDefineResponsePlanInput,
+} from "./chat_refactor/define.js";
 import { responseProjector, normalizeDisplayLabel } from "../projection/responseProjector.js";
 
 // FIX_PRE_GATE_GENERAL_SURFACE_V1: 先頭・末尾欠損・不要前置き混入を止血。引用あり/なしの「いまの言葉を…と受け取りました。」を安全に除去。
@@ -11186,26 +11191,15 @@ if (!outText) {
 
       if (__hitV?.lawKey && __hitV?.unitId) {
         const __quote = String(__hitV.quote ?? "").trim();
-        let __summary =
-          String(__hitV.summary ?? "").trim() ||
-          "言霊とは、天地に鳴り響く五十連の音と、水火を與み解いて詞の本を知る法則です。";
-
-        // R10_KOTODAMA_CROSS_SCRIPTURE_DEEPEN_V1: 言霊定義に、五十連・いろは・水火伝を同一読解系として束ねる補助意味を一段だけ追加
-        if (__term === "言霊") {
-          __summary +=
-            " 五十連の音の法則としての言霊を軸に、いろは配列では時間・秩序・成立の側から、水火伝では生成と與合の側から読み、これらを同じ読解系として束ねていきます。";
-        }
-
-        const __quoteHead =
-          (__quote || "").replace(/\s+/g, " ").trim().slice(0, 180);
-
-        const __resp =
-          "【天聞の所見】\n" +
-          __summary +
-          "\n\n" +
-          "【根拠】" + __quoteHead +
-          `\n\n出典: ${String(__hitV.doc ?? "")} P${Number(__hitV.pdfPage ?? 0)}` +
-          "\n\nまずは定義だけ押さえると、軸がぶれにくくなります。次は法則か背景のどちらを見るかで、理解の深さが変わります。";
+        const __verifiedBody = buildDefineVerifiedFastpathBody({
+          term: __term,
+          summary: __hitV.summary,
+          quote: __quote,
+          doc: __hitV.doc,
+          pdfPage: __hitV.pdfPage,
+        });
+        const __quoteHead = __verifiedBody.quoteHead;
+        const __resp = __verifiedBody.response;
 
         const __composed = responseComposer({
           response: String(__resp),
@@ -11251,46 +11245,17 @@ if (!outText) {
           });
         } catch {}
 
-        const __lawsUsedDef = [
-          String(__hitV.lawKey),
-          ...(__hitExplain?.lawKey ? [String(__hitExplain.lawKey)] : [])
-        ];
-        const __evidenceIdsDef = [
-          String(__hitV.quoteHash ?? ""),
-          ...(__hitExplain?.quoteHash ? [String(__hitExplain.quoteHash)] : [])
-        ].filter(Boolean);
-        const __lawTraceDef = [
-          {
-            lawKey: String(__hitV.lawKey),
-            unitId: String(__hitV.unitId),
-            op: "OP_DEFINE"
-          },
-          ...(__hitExplain?.lawKey ? [{
-            lawKey: String(__hitExplain.lawKey),
-            unitId: String(__hitExplain.unitId),
-            op: "OP_EXPLAINS"
-          }] : [])
-        ];
+        const __verifiedArtifacts = buildDefineVerifiedEvidenceArtifacts(__hitV, __hitExplain);
+        const __lawsUsedDef = __verifiedArtifacts.lawsUsed;
+        const __evidenceIdsDef = __verifiedArtifacts.evidenceIds;
+        const __lawTraceDef = __verifiedArtifacts.lawTrace;
         const __ku = __buildDefineDecisionKuV1({
           routeReason: "DEF_FASTPATH_VERIFIED_V1",
           term: __term,
           lawsUsed: __lawsUsedDef,
           evidenceIds: __evidenceIdsDef,
           lawTrace: __lawTraceDef,
-          khsLawsUsed: [
-            {
-              lawKey: String(__hitV.lawKey),
-              unitId: String(__hitV.unitId),
-              status: "verified",
-              operator: String(__hitV.operator ?? "OP_DEFINE")
-            },
-            ...(__hitExplain?.lawKey ? [{
-              lawKey: String(__hitExplain.lawKey),
-              unitId: String(__hitExplain.unitId),
-              status: "verified",
-              operator: String(__hitExplain.operator ?? "OP_EXPLAINS")
-            }] : [])
-          ],
+          khsLawsUsed: __verifiedArtifacts.khsLawsUsed,
           khsEvidenceIds: __evidenceIdsDef,
           khsLawTrace: __lawTraceDef,
           sourcePack: __term === "言霊" ? "seiten" : null,
@@ -11324,29 +11289,29 @@ if (!outText) {
 
 
         if (!(__ku as any).responsePlan) {
-          (__ku as any).responsePlan = buildResponsePlan({
-            routeReason: String((__ku as any).routeReason || "DEF_FASTPATH_VERIFIED_V1"),
-            rawMessage: String(message ?? ""),
-            centerKey: String((__ku as any).centerKey || "") || null,
-            centerLabel: String((__ku as any).centerLabel || "") || null,
-            scriptureKey: (__ku as any).scriptureKey ?? null,
-            semanticBody: __respFinal,
-            mode: "general",
-            responseKind: "statement_plus_question",
-          });
+          (__ku as any).responsePlan = buildResponsePlan(
+            buildDefineResponsePlanInput({
+              routeReason: String((__ku as any).routeReason || "DEF_FASTPATH_VERIFIED_V1"),
+              rawMessage: String(message ?? ""),
+              centerKey: String((__ku as any).centerKey || "") || null,
+              centerLabel: String((__ku as any).centerLabel || "") || null,
+              scriptureKey: (__ku as any).scriptureKey ?? null,
+              semanticBody: __respFinal,
+            })
+          );
         }
 
         if (!(__ku as any).responsePlan) {
-          (__ku as any).responsePlan = buildResponsePlan({
-            routeReason: String((__ku as any).routeReason || "DEF_LLM_TOP"),
-            rawMessage: String(message ?? ""),
-            centerKey: String((__ku as any).centerKey || "") || null,
-            centerLabel: String((__ku as any).centerLabel || "") || null,
-            scriptureKey: null,
-            semanticBody: String(__respFinal ?? ""),
-            mode: "general",
-            responseKind: "statement_plus_question",
-          });
+          (__ku as any).responsePlan = buildResponsePlan(
+            buildDefineResponsePlanInput({
+              routeReason: String((__ku as any).routeReason || "DEF_LLM_TOP"),
+              rawMessage: String(message ?? ""),
+              centerKey: String((__ku as any).centerKey || "") || null,
+              centerLabel: String((__ku as any).centerLabel || "") || null,
+              scriptureKey: null,
+              semanticBody: String(__respFinal ?? ""),
+            })
+          );
         }
 
         return res.json(__tenmonGeneralGateResultMaybe({
