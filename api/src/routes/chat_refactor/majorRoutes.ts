@@ -483,6 +483,71 @@ export function exitFutureOutlookPreemptV1(args: {
   });
 }
 
+/** PATCH55_GENERAL_GROUNDING_UNRESOLVED_EXTRACT_V1: grounding unresolved 時 exit（routeReason / 本文不変） */
+export function exitGroundingUnresolvedV1(args: {
+  res: any;
+  __tenmonGeneralGateResultMaybe: any;
+  grounding: { kind: string; reason: string; confidence: number };
+  timestamp: any;
+  threadId: any;
+  applyBrainstemContractToKu?: (ku: any) => void;
+}) {
+  const { res, __tenmonGeneralGateResultMaybe, grounding, timestamp, threadId, applyBrainstemContractToKu } = args;
+  const ku: any = {
+    routeReason: "GROUNDING_SELECTOR_UNRESOLVED_V1",
+    routeClass: "analysis",
+    answerLength: "short",
+    answerMode: "analysis",
+    answerFrame: "one_step",
+    groundingSelector: { kind: grounding.kind, reason: grounding.reason, confidence: grounding.confidence },
+    lawsUsed: [],
+    evidenceIds: [],
+    lawTrace: [],
+  };
+  if (typeof applyBrainstemContractToKu === "function") applyBrainstemContractToKu(ku);
+  return finalizeSingleExitV1(res, __tenmonGeneralGateResultMaybe, {
+    response:
+      "【天聞の所見】いまの問いを、根拠付きで答えるにはもう一歩だけ焦点を絞ります。何について、どの層で知りたいか一言で置いてください。",
+    evidence: null,
+    candidates: [],
+    timestamp,
+    threadId,
+    decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku },
+  });
+}
+
+/** PATCH55_GENERAL_GROUNDING_UNRESOLVED_EXTRACT_V1: grounding grounded_required 時 exit（routeReason / 本文不変） */
+export function exitGroundingGroundedRequiredV1(args: {
+  res: any;
+  __tenmonGeneralGateResultMaybe: any;
+  grounding: { kind: string; reason: string; confidence: number };
+  timestamp: any;
+  threadId: any;
+  applyBrainstemContractToKu?: (ku: any) => void;
+}) {
+  const { res, __tenmonGeneralGateResultMaybe, grounding, timestamp, threadId, applyBrainstemContractToKu } = args;
+  const ku: any = {
+    routeReason: "GROUNDING_SELECTOR_GROUNDED_V1",
+    routeClass: "analysis",
+    answerLength: "short",
+    answerMode: "analysis",
+    answerFrame: "one_step",
+    groundingSelector: { kind: grounding.kind, reason: grounding.reason, confidence: grounding.confidence },
+    lawsUsed: [],
+    evidenceIds: [],
+    lawTrace: [],
+  };
+  if (typeof applyBrainstemContractToKu === "function") applyBrainstemContractToKu(ku);
+  return finalizeSingleExitV1(res, __tenmonGeneralGateResultMaybe, {
+    response: "【天聞の所見】根拠指定を検出しました。検索結果と接続します。",
+    evidence: null,
+    candidates: [],
+    timestamp,
+    threadId,
+    decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku },
+  });
+}
+
 /** PATCH49_GENERAL_SYSTEM_FUTURE_EXTRACT_V1: future 早期判定＋本文＋exit を一括。一致時 true。 */
 export function tryFutureOutlookExitV1(args: {
   res: any;

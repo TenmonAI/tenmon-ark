@@ -128,6 +128,8 @@ import {
   tryResidualPreemptExitV1,
   classifyGeneralShrinkV1,
   getGeneralShrinkPayloadV1,
+  exitGroundingUnresolvedV1,
+  exitGroundingGroundedRequiredV1,
 } from "./chat_refactor/majorRoutes.js";
 import { parseAnswerProfileFromBody, injectAnswerProfileToKu, normalizeChatEntryFromBody } from "./chat_refactor/entry.js";
 import { selectGroundingModeV1, getGeneralKind } from "./chat_refactor/general.js";
@@ -9113,50 +9115,24 @@ try {
           tcKey: __threadCenterForGeneral?.center_key ?? null,
         });
       } catch {}
-      if (__grounding.kind === "unresolved") {
-        const __kuUnres: any = {
-          routeReason: "GROUNDING_SELECTOR_UNRESOLVED_V1",
-          routeClass: "analysis",
-          answerLength: "short",
-          answerMode: "analysis",
-          answerFrame: "one_step",
-          groundingSelector: { kind: __grounding.kind, reason: __grounding.reason, confidence: __grounding.confidence },
-          lawsUsed: [],
-          evidenceIds: [],
-          lawTrace: [],
-        };
-        __applyBrainstemContractToKuV1(__kuUnres, __brainstem, "analysis");
-        return res.json(__tenmonGeneralGateResultMaybe({
-          response: "【天聞の所見】いまの問いを、根拠付きで答えるにはもう一歩だけ焦点を絞ります。何について、どの層で知りたいか一言で置いてください。",
-          evidence: null,
-          candidates: [],
+      if (__grounding.kind === "unresolved")
+        return exitGroundingUnresolvedV1({
+          res,
+          __tenmonGeneralGateResultMaybe,
+          grounding: __grounding,
           timestamp,
           threadId,
-          decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: __kuUnres },
-        }));
-      }
-      if (__grounding.kind === "grounded_required") {
-        const __kuGr: any = {
-          routeReason: "GROUNDING_SELECTOR_GROUNDED_V1",
-          routeClass: "analysis",
-          answerLength: "short",
-          answerMode: "analysis",
-          answerFrame: "one_step",
-          groundingSelector: { kind: __grounding.kind, reason: __grounding.reason, confidence: __grounding.confidence },
-          lawsUsed: [],
-          evidenceIds: [],
-          lawTrace: [],
-        };
-        __applyBrainstemContractToKuV1(__kuGr, __brainstem, "analysis");
-        return res.json(__tenmonGeneralGateResultMaybe({
-          response: "【天聞の所見】根拠指定を検出しました。検索結果と接続します。",
-          evidence: null,
-          candidates: [],
+          applyBrainstemContractToKu: (ku) => __applyBrainstemContractToKuV1(ku, __brainstem, "analysis"),
+        });
+      if (__grounding.kind === "grounded_required")
+        return exitGroundingGroundedRequiredV1({
+          res,
+          __tenmonGeneralGateResultMaybe,
+          grounding: __grounding,
           timestamp,
           threadId,
-          decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: __kuGr },
-        }));
-      }
+          applyBrainstemContractToKu: (ku) => __applyBrainstemContractToKuV1(ku, __brainstem, "analysis"),
+        });
 
       let outText = "";
       let outProv = "llm";
