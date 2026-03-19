@@ -1,8 +1,8 @@
 # SEALED_RUNTIME_SET_CURRENT_V1
 
-- **current sealed baseline:** 622dafb
+- **current sealed baseline:** bdb99e9
 - **branch:** 2026-03-04-e5hp
-- **generated_at_utc:** 20260319T203200Z
+- **generated_at_utc:** 20260319T204100Z
 
 ## 1. 封印列
 
@@ -25,6 +25,7 @@
 - 89cbdb1 — define 実装 P59 (verified payload builders → define.ts)
 - 299da6c — define 実装 P60 (proposed payload builders → define.ts)
 - 622dafb — define 実装 P62 (define/scripture boundary gate predicates → define.ts)
+- bdb99e9 — residual final sweep P65 (R22 system diagnosis route exit helper extract)
 
 ## 2. 最上位 gate
 
