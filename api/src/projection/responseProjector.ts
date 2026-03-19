@@ -24,6 +24,8 @@ export type ProjectorInput = {
     centerLabel?: string | null;
     scriptureKey?: string | null;
     routeReason?: string | null;
+    /** 本文差分用（内部キーを本文に出さないこと） */
+    rawMessage?: string | null;
   } | null;
 };
 
@@ -110,17 +112,31 @@ function buildSemanticResponseHead(input: ProjectorInput): string | null {
   const slots = input.semanticSlots || {};
   const ss: any = (slots.sourceStackSummary && typeof slots.sourceStackSummary === "object") ? slots.sourceStackSummary : {};
   const tg: any = (slots.thoughtGuideSummary && typeof slots.thoughtGuideSummary === "object") ? slots.thoughtGuideSummary : {};
+  const rawMsg = s(slots.rawMessage);
 
   const sound = normalizeKotodamaSound(
     ss.currentSound || tg.currentSound || slots.centerLabel || input.centerLabel
   );
-  if (!sound) return null;
 
   const laws = Array.isArray(slots.lawsUsed) ? slots.lawsUsed : [];
   const evidences = Array.isArray(slots.evidenceIds) ? slots.evidenceIds : [];
   const hasNotionCanon = slots.notionCanon != null && String(slots.notionCanon).trim() !== "";
   const rr = s(slots.routeReason || input.routeReason);
   const scriptureKey = s(slots.scriptureKey);
+  const ck = s(slots.centerKey || input.centerKey);
+  const cl = s(slots.centerLabel || input.centerLabel);
+
+  const isIrohaAxis =
+    Boolean(sound) ? false : (
+      /いろは/u.test(rawMsg) ||
+      scriptureKey === "iroha_kotodama_kai" ||
+      ck === "iroha_kotodama_kai" ||
+      /いろは/u.test(cl)
+    );
+  const isDanshariAxis =
+    Boolean(sound) || isIrohaAxis ? false : /断捨離/u.test(rawMsg);
+
+  if (!sound && !isIrohaAxis && !isDanshariAxis) return null;
 
   const toneMap: Record<string, string> = {
     ハ: "「ハ」は放つ・ひらく側の音です。",
@@ -128,7 +144,12 @@ function buildSemanticResponseHead(input: ProjectorInput): string | null {
     ム: "「ム」は内へ収め、核へ戻す音です。",
     ヒ: "「ヒ」は火のように輪郭を照らす音です。",
   };
-  const lead = toneMap[sound] || `「${sound}」は今回の中心音です。`;
+  const lead = sound
+    ? (toneMap[sound] || `「${sound}」は今回の中心音です。`)
+    : isIrohaAxis
+      ? "いろは軸は、五十音の連なりとして「音の位相」を読む面を前に出します。"
+      : "断捨離軸は、要／不要／手放しの判断構造として読みます。";
+
   const evidenceLine =
     laws.length > 0 && evidences.length > 0
       ? "今回は lawsUsed / evidenceIds の束を切り替えて読んでいます。"

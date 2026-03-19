@@ -2166,20 +2166,31 @@ ${String((gptDraft as any)?.text ?? "").trim()}
       return map[x] || x;
     })();
     const __semanticHead = (() => {
-      if (!__soundHit) return "";
+      const __msgTrim = String(message ?? "").trim();
+      const __irohaHit = /いろは/u.test(__msgTrim);
+      const __danshariHit = /断捨離/u.test(__msgTrim);
+      if (!__soundHit && !__irohaHit && !__danshariHit) return "";
+
       const __tone: Record<string, string> = {
         ハ: "「ハ」は放つ・ひらく側の音です。",
         ヘ: "「ヘ」は隔てをほどき、通路を作る音です。",
         ム: "「ム」は内へ収め、核へ戻す音です。",
         ヒ: "「ヒ」は火のように輪郭を照らす音です。",
       };
-      const __lead = __tone[__soundHit] || `「${__soundHit}」は今回の中心音です。`;
+      const __lead = __soundHit
+        ? (__tone[__soundHit] || `「${__soundHit}」は今回の中心音です。`)
+        : __irohaHit
+          ? "いろは軸は、五十音の連なりとして「音の位相」を読む面を前に出します。"
+          : "断捨離軸は、要／不要／手放しの判断構造として読みます。";
+
       const __hasLawEvidence =
         Array.isArray(__khsScan?.lawKeys) && (__khsScan?.lawKeys?.length ?? 0) > 0 &&
         Array.isArray(__khsScan?.evidenceIds) && (__khsScan?.evidenceIds?.length ?? 0) > 0;
       const __centerHint = __sourceDoc || ((__khsScan?.lawKeys?.[0] != null) ? String(__khsScan.lawKeys[0]) : "");
       const __evidenceLine = __hasLawEvidence
-        ? "今回は lawsUsed / evidenceIds をこの音に合わせて束ねています。"
+        ? (__soundHit
+          ? "今回は lawsUsed / evidenceIds をこの音に合わせて束ねています。"
+          : "今回は lawsUsed / evidenceIds の束をこの問いに合わせて切り替えて読んでいます。")
         : "今回は中心束を固定したうえで読んでいます。";
       const __centerLine = __centerHint
         ? `中心は ${__centerHint} です。`
@@ -10185,6 +10196,7 @@ const __heartNorm = normalizeHeartShape(__heart);
           centerLabel: String((__ku as any).centerLabel || ""),
           scriptureKey: String((__ku as any).scriptureKey || ""),
           routeReason: String((__ku as any).routeReason || "NATURAL_GENERAL_LLM_TOP"),
+          rawMessage: String(message ?? ""),
         },
       });
 
