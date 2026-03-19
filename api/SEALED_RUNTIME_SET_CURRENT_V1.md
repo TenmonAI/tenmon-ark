@@ -76,3 +76,4 @@
 - runtime の再現に必要な最小集合だけを sealed runtime set とする
 - docs-only 文書は必要に応じて個別 commit 可
 - no-touch / 観測物 / stub はこの封印列に混ぜない
+- final seal 判定: `CHAT_SAFE_REFACTOR_PATCH67_FINAL_SEAL_V1`（build/health/PATCH29 acceptance PASS）
