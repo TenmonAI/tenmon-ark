@@ -142,3 +142,37 @@ export function buildDefineResponsePlanInput(input: {
     responseKind: "statement_plus_question" as const,
   };
 }
+
+/** P60: proposed define fastpath の本文組み立て（routeReason/contract は触らない） */
+export function buildDefineProposedFastpathBody(input: {
+  summary: unknown;
+  quote: unknown;
+  doc: unknown;
+  pdfPage: unknown;
+}): { response: string; quoteHead: string } {
+  const quote = String(input.quote ?? "").trim();
+  const response =
+    "【天聞の所見】\n" +
+    (String(input.summary ?? "").trim() || quote.slice(0, 220)) +
+    `\n\n出典: ${String(input.doc ?? "")} P${Number(input.pdfPage ?? 0)}` +
+    "\n\nこの定義候補を、さらに verified 根拠に寄せて深めますか？";
+  return { response, quoteHead: quote.slice(0, 120) };
+}
+
+/** P60: proposed define fastpath の law/evidence/lawTrace 組み立て */
+export function buildDefineProposedEvidenceArtifacts(hitP: DefineHitLike): {
+  lawsUsed: string[];
+  evidenceIds: string[];
+  lawTrace: Array<{ lawKey: string; unitId: string; op: string }>;
+} {
+  const lawsUsed = [String((hitP as any)?.lawKey ?? "")].filter(Boolean);
+  const evidenceIds = [String((hitP as any)?.quoteHash ?? "")].filter(Boolean);
+  const lawTrace = [
+    {
+      lawKey: String((hitP as any)?.lawKey ?? ""),
+      unitId: String((hitP as any)?.unitId ?? ""),
+      op: "OP_DEFINE",
+    },
+  ].filter((x) => Boolean(x.lawKey));
+  return { lawsUsed, evidenceIds, lawTrace };
+}

@@ -138,6 +138,8 @@ import {
   buildDefineVerifiedFastpathBody,
   buildDefineVerifiedEvidenceArtifacts,
   buildDefineResponsePlanInput,
+  buildDefineProposedFastpathBody,
+  buildDefineProposedEvidenceArtifacts,
 } from "./chat_refactor/define.js";
 import { responseProjector, normalizeDisplayLabel } from "../projection/responseProjector.js";
 
@@ -11353,22 +11355,22 @@ if (!outText) {
       `).get(__term);
 
       if (__hitP?.lawKey && __hitP?.unitId) {
-        const __quote = String(__hitP.quote ?? "").trim();
-        const __resp =
-          "【天聞の所見】\n" +
-          (String(__hitP.summary ?? "").trim() || __quote.slice(0, 220)) +
-          `\n\n出典: ${String(__hitP.doc ?? "")} P${Number(__hitP.pdfPage ?? 0)}` +
-          "\n\nこの定義候補を、さらに verified 根拠に寄せて深めますか？";
+        const __proposedBody = buildDefineProposedFastpathBody({
+          summary: __hitP.summary,
+          quote: __hitP.quote,
+          doc: __hitP.doc,
+          pdfPage: __hitP.pdfPage,
+        });
+        const __resp = __proposedBody.response;
+        const __proposedArtifacts = buildDefineProposedEvidenceArtifacts(__hitP);
 
         const __kuProposed: any = __buildDefineDecisionKuV1({
           routeReason: "DEF_FASTPATH_PROPOSED_V1",
           routeClass: "define",
           term: __term,
-          lawsUsed: [String(__hitP.lawKey)],
-          evidenceIds: [String(__hitP.quoteHash ?? "")].filter(Boolean),
-          lawTrace: [
-            { lawKey: String(__hitP.lawKey), unitId: String(__hitP.unitId), op: "OP_DEFINE" }
-          ],
+          lawsUsed: __proposedArtifacts.lawsUsed,
+          evidenceIds: __proposedArtifacts.evidenceIds,
+          lawTrace: __proposedArtifacts.lawTrace,
           answerLength: __brainstem?.answerLength ?? "medium",
           answerMode: __brainstem?.answerMode ?? "define",
           answerFrame: __brainstem?.answerFrame ?? "statement_plus_one_question",
@@ -11385,16 +11387,16 @@ if (!outText) {
         try { const __binderP = buildKnowledgeBinder({ routeReason: "DEF_FASTPATH_PROPOSED_V1", message: String(message ?? ""), threadId: String(threadId ?? ""), ku: __kuProposed, threadCore: __threadCore, threadCenter: null }); applyKnowledgeBinderToKu(__kuProposed, __binderP); } catch {}
 
         if (!(__kuProposed as any).responsePlan) {
-          (__kuProposed as any).responsePlan = buildResponsePlan({
-            routeReason: String((__kuProposed as any).routeReason || "DEF_FASTPATH_PROPOSED_V1"),
-            rawMessage: String(message ?? ""),
-            centerKey: String((__kuProposed as any).centerKey || "") || null,
-            centerLabel: String((__kuProposed as any).centerLabel || "") || null,
-            scriptureKey: (__kuProposed as any).scriptureKey ?? null,
-            semanticBody: String(message ?? ""),
-            mode: "general",
-            responseKind: "statement_plus_question",
-          });
+          (__kuProposed as any).responsePlan = buildResponsePlan(
+            buildDefineResponsePlanInput({
+              routeReason: String((__kuProposed as any).routeReason || "DEF_FASTPATH_PROPOSED_V1"),
+              rawMessage: String(message ?? ""),
+              centerKey: String((__kuProposed as any).centerKey || "") || null,
+              centerLabel: String((__kuProposed as any).centerLabel || "") || null,
+              scriptureKey: (__kuProposed as any).scriptureKey ?? null,
+              semanticBody: String(message ?? ""),
+            })
+          );
         }
 
         return res.json(__tenmonGeneralGateResultMaybe({
@@ -11402,7 +11404,7 @@ if (!outText) {
           evidence: {
             doc: String(__hitP.doc ?? ""),
             pdfPage: Number(__hitP.pdfPage ?? 0),
-            quote: __quote.slice(0, 120)
+            quote: __proposedBody.quoteHead
           },
           candidates: [],
           timestamp,
