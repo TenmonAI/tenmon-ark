@@ -140,6 +140,8 @@ import {
   buildDefineResponsePlanInput,
   buildDefineProposedFastpathBody,
   buildDefineProposedEvidenceArtifacts,
+  isCoreScriptureBookPreemptMessage,
+  shouldEnterScriptureBoundaryGate,
 } from "./chat_refactor/define.js";
 import { responseProjector, normalizeDisplayLabel } from "../projection/responseProjector.js";
 
@@ -6333,8 +6335,7 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
     let __scripturePreemptHit: any = null;
     try {
       const __msgScriptPre = String(message ?? "").trim();
-      const __isCoreScriptureBook =
-        /(法華経|言霊秘書|いろは言[霊灵靈]解|イロハ言[霊灵靈]解|カタカムナ言[霊灵靈]解|水穂伝)/u.test(__msgScriptPre);
+      const __isCoreScriptureBook = isCoreScriptureBookPreemptMessage(__msgScriptPre);
 
       if (!isTestTid0 && !hasDoc0 && !askedMenu0 && !isCmd0 && __isCoreScriptureBook) {
         __scripturePreemptHit = resolveScriptureQuery(__msgScriptPre);
@@ -6370,7 +6371,18 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
         }
       } catch {}
 
-      if (!isTestTid0 && (__scripturePreemptHit || __isScriptureDef || __isDefinitionQ || __scriptureCenterKey) && !hasDoc0 && !askedMenu0 && !isCmd0) {
+      if (
+        shouldEnterScriptureBoundaryGate({
+          isTestTid: isTestTid0,
+          hasDoc: hasDoc0,
+          askedMenu: askedMenu0,
+          isCmd: isCmd0,
+          scripturePreemptHit: __scripturePreemptHit,
+          isScriptureDef: __isScriptureDef,
+          isDefinitionQ: __isDefinitionQ,
+          scriptureCenterKey: __scriptureCenterKey,
+        })
+      ) {
         console.log("[SCRIPTURE_GATE_FLAGS]", {
           isTestTid0,
           __isScriptureDef,

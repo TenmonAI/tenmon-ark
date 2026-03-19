@@ -176,3 +176,27 @@ export function buildDefineProposedEvidenceArtifacts(hitP: DefineHitLike): {
   ].filter((x) => Boolean(x.lawKey));
   return { lawsUsed, evidenceIds, lawTrace };
 }
+
+/** P62: scripture preempt のコア書籍判定（boundary 判定の pure 化） */
+export function isCoreScriptureBookPreemptMessage(message: string): boolean {
+  const msg = String(message ?? "").trim();
+  return /(法華経|言霊秘書|いろは言[霊灵靈]解|イロハ言[霊灵靈]解|カタカムナ言[霊灵靈]解|水穂伝)/u.test(msg);
+}
+
+/** P62: scripture gate へ入るかどうかの境界条件（route/contract には触れない） */
+export function shouldEnterScriptureBoundaryGate(input: {
+  isTestTid: boolean;
+  hasDoc: boolean;
+  askedMenu: boolean;
+  isCmd: boolean;
+  scripturePreemptHit: unknown;
+  isScriptureDef: boolean;
+  isDefinitionQ: boolean;
+  scriptureCenterKey: string | null;
+}): boolean {
+  if (input.isTestTid) return false;
+  if (input.hasDoc || input.askedMenu || input.isCmd) return false;
+  return Boolean(
+    input.scripturePreemptHit || input.isScriptureDef || input.isDefinitionQ || input.scriptureCenterKey
+  );
+}
