@@ -1,9 +1,17 @@
 # CHAT_REFACTOR_SEALED_BASELINE_V1
 
-- **chat refactor sealed baseline:** HEAD = **bdb99e9**
-- **封印列:** dc74b17 → be3f7ff → 4615619 → 09824dc → 7be4039 → 259b979 → 6a29b55 → b4fe15a → d9bf4d9 → d7e0a52 → 9eebfb1 → dde73bc → 5ace077 → cb47aac → 89cbdb1 → 299da6c → 622dafb → bdb99e9
+- **chat refactor 文書上のコミット handoff 点:** **bf978c3**（P67 までを含む **git 上の最新コミット**）
+- **封印列（bdb99e9 以降追記）:** … → 622dafb → **bdb99e9 (P65)** → a3165cf → 2be7fc6 → f354e18 → 6938adb → 3d943f0 → **bf978c3 (P67)**
+- **P68 / P69:** `api/src/routes/chat.ts` の **未コミット差分**として到達済み（検証 PASS）。**SHA は P71 final seal コミットで確定**する。
 - **no-touch 維持:** `api/src/db/kokuzo_schema.sql` および未追跡観測物は封印列に含めない。
-- **residual final sweep 完了:** P65 で R22 system diagnosis route exit を majorRoutes helper に集約し、主線の residual 最小残差を解消。現在地は bdb99e9。
-- **mainline final seal 完了:** P67 で handoff/runtime/baseline 同期後の最終判定を実施（PASS）。
 
-以後の作業はこの封印点（bdb99e9）から分岐して進める。
+## カード対応（P65〜P69）
+
+| カード | 状態 |
+|--------|------|
+| P65 residual final sweep | コミット **bdb99e9** |
+| P67 route preempt / system diagnosis balance | コミット **bf978c3** |
+| P68 explicit content center lock | 作業ツリー（P71 seal 予定） |
+| P69 worldview internal mapping | 作業ツリー（P71 seal 予定） |
+
+以後の **コミット済み**作業の分岐点は **bf978c3**。P68/P69 を含む **実効 runtime** は P71 完了後の SHA を参照すること。
