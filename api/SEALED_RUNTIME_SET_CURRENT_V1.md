@@ -1,8 +1,8 @@
 # SEALED_RUNTIME_SET_CURRENT_V1
 
-- **current sealed baseline:** 5ace077
+- **current sealed baseline:** 299da6c
 - **branch:** 2026-03-04-e5hp
-- **generated_at_utc:** 20260319T090900Z
+- **generated_at_utc:** 20260319T202200Z
 
 ## 1. 封印列
 
@@ -21,6 +21,9 @@
 - 9eebfb1 — general 実装 P53 (selectGroundingModeV1 → general.ts)
 - dde73bc — general 実装 P54 (getGeneralKind → general.ts)
 - 5ace077 — general 実装 P55 (grounding unresolved/grounded_required exit → majorRoutes)
+- cb47aac — define 実装 P58 (define fastpath candidate parse → define.ts)
+- 89cbdb1 — define 実装 P59 (verified payload builders → define.ts)
+- 299da6c — define 実装 P60 (proposed payload builders → define.ts)
 
 ## 2. 最上位 gate
 
@@ -37,6 +40,7 @@
 | `api/src/routes/chat_refactor/finalize.ts` |
 | `api/src/routes/chat_refactor/entry.ts` |
 | `api/src/routes/chat_refactor/general.ts` |
+| `api/src/routes/chat_refactor/define.ts` |
 | `api/scripts/patch29_final_acceptance_sweep_v1.sh` |
 | `api/scripts/chat_refactor_runner_v1.sh` |
 
@@ -48,7 +52,7 @@
 | 観測物 | `api/probe.*.json`, `ABSTRACT_CENTER_*.txt` |
 | 補助資料 | `api/CHAT_SAFE_REFACTOR_*_REPORT.md`, `CARD_*.md` |
 | 大型分析資料 | `FINAL_REPORT_V1/`, `RECONCILE_AUDIT_V1/`, `WORLD_CLASS_ANALYSIS_V1/`, `WORLD_CLASS_ANALYSIS_V2/` |
-| stub | `api/src/routes/chat_refactor/define.ts` |
+| stub | なし（define.ts / general.ts は runtime 対象化済み） |
 
 ## 5. 再現手順
 
