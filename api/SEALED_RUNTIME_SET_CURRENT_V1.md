@@ -1,8 +1,8 @@
 # SEALED_RUNTIME_SET_CURRENT_V1
 
-- **current sealed baseline:** 6a29b55
+- **current sealed baseline:** d7e0a52
 - **branch:** 2026-03-04-e5hp
-- **generated_at_utc:** 20260319T082400Z
+- **generated_at_utc:** 20260319T084800Z
 
 ## 1. 封印列
 
@@ -15,6 +15,9 @@
 - 7be4039 — stub/debris policy bundle
 - 259b979 — entry batch P41/P42/P44 (parseAnswerProfile, injectAnswerProfileToKu, normalizeChatEntry)
 - 6a29b55 — chat refactor runner runtime dependency
+- b4fe15a — general batch P49 (systemdiag/future try* extract)
+- d9bf4d9 — general batch P50 (judgement/essence try* extract)
+- d7e0a52 — general batch P51 (residual preempt + shrink/classify to majorRoutes)
 
 ## 2. 最上位 gate
 
