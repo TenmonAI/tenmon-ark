@@ -133,7 +133,7 @@ import {
   exitSystemDiagnosisRouteV1,
 } from "./chat_refactor/majorRoutes.js";
 import { parseAnswerProfileFromBody, injectAnswerProfileToKu, normalizeChatEntryFromBody } from "./chat_refactor/entry.js";
-import { selectGroundingModeV1, getGeneralKind } from "./chat_refactor/general.js";
+import { selectGroundingModeV1, getGeneralKind, shouldBypassArkConversationDiagnosticsPreemptV1 } from "./chat_refactor/general.js";
 import {
   parseDefineFastpathCandidate,
   buildDefineVerifiedFastpathBody,
@@ -9078,7 +9078,7 @@ try {
           lawTrace: [],
         };
 
-        if (__isSystemDiagShrink) {
+        if (__isSystemDiagShrink && !shouldBypassArkConversationDiagnosticsPreemptV1(__rawSysDiagShrink)) {
           const __bodySys = "【天聞の所見】天聞アークの現状は、骨格層はかなり接続済みです。通っているのは憲法・思考・原典・監査の主幹で、未完は一般会話の主権と表現末端です。次の一手は、system diagnosis と通常会話 residual の入口固定です。";
           const __coreShrinkSys: ThreadCore = {
             ...__threadCore,

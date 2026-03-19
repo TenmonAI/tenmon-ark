@@ -58,3 +58,23 @@ export function getGeneralKind(message: string): GeneralKind {
   if (/恨まない|許せない|許したい|責めたくない/.test(t)) return "short_moral";
   return "other";
 }
+
+/**
+ * P67_ROUTE_PREEMPT_BALANCE_V1:
+ * SYSTEM_DIAGNOSIS_PREEMPT_V1 / residual 会話系 preempt の対象外にする質問。
+ * 判断構造・内部設計モデル・概念説明（システム稼働・現状診断の依頼ではない）。
+ */
+export function shouldBypassArkConversationDiagnosticsPreemptV1(message: string): boolean {
+  const m = String(message ?? "").trim();
+  if (!m) return false;
+  if (/(判断構造|意識構造|心構造|魂核構造|魂核|設計モデル)/u.test(m)) return true;
+  if (/断捨離/u.test(m) && /(説明|教え|定義|として|片付け)/u.test(m)) return true;
+  if (
+    /天聞アーク/u.test(m) &&
+    /(世界観|意識|心構造|魂核|設計モデル|内部)(の|を|は|、|で)?/u.test(m) &&
+    /(説明|要約|教え|どうなって|どういう|一文|設計)/u.test(m)
+  ) {
+    return true;
+  }
+  return false;
+}

@@ -6,6 +6,7 @@
 import { buildKnowledgeBinder, applyKnowledgeBinderToKu } from "../../core/knowledgeBinder.js";
 import { buildResponsePlan, type AnswerMode, type AnswerFrame } from "../../planning/responsePlanCore.js";
 import { localSurfaceize } from "../../tenmon/surface/localSurfaceize.js";
+import { shouldBypassArkConversationDiagnosticsPreemptV1 } from "./general.js";
 import { finalizeSingleExitV1 } from "./finalize.js";
 
 export function exitJudgementPreemptV1(args: {
@@ -662,6 +663,7 @@ export function trySystemDiagnosisPreemptExitV1(args: {
   setResThreadCore?: (core: any) => void;
 }): boolean {
   const msg = String(args.message ?? "").trim();
+  if (shouldBypassArkConversationDiagnosticsPreemptV1(msg)) return false;
   if (
     !/天聞アーク|TENMON[- ]?ARK|内部構造|構造|接続|繋がって|つながって|どこまで|構築状況|完成度|現状|診断|解析/u.test(
       msg
@@ -706,6 +708,7 @@ export function tryJudgementPreemptExitV1(args: {
   brainstemRouteClass?: string | null;
 }): boolean {
   const __t0TrimJ = String(args.message ?? "").trim();
+  if (shouldBypassArkConversationDiagnosticsPreemptV1(__t0TrimJ)) return false;
   const __isJudgementPreempt =
     args.brainstemRouteClass === "judgement" ||
     (__t0TrimJ.length <= 20 &&
@@ -760,6 +763,7 @@ export function tryResidualPreemptExitV1(args: {
   applyBrainstemContractToKu?: (ku: any) => void;
 }): boolean {
   const msg = String(args.message ?? "").trim();
+  if (shouldBypassArkConversationDiagnosticsPreemptV1(msg)) return false;
   if (
     !/(会話の感じ|芯|薄い|どう見える|完成度|未完成|足りない|構造|繋がって|つながって|実用域)/u.test(msg)
   )
@@ -793,6 +797,7 @@ export function classifyGeneralShrinkV1(
 ): { kind: GeneralShrinkKind; confidence: number } {
   const m = String(message ?? "").trim();
   if (!m) return { kind: "none", confidence: 0 };
+  if (shouldBypassArkConversationDiagnosticsPreemptV1(m)) return { kind: "none", confidence: 0 };
   if (
     /^(次は|次の一手は|次の一歩は|では次は)[？?]?$/u.test(m) ||
     (m.length <= 16 && /次(は|の一手|の一歩)/u.test(m)) ||
@@ -806,7 +811,12 @@ export function classifyGeneralShrinkV1(
     return { kind: "future_outlook", confidence: 1 };
   if (/(今どんな気分|今の状態|いまどう)/u.test(m))
     return { kind: "present_state", confidence: 1 };
-  if (/(どう思う|良いか悪いか|判断)/u.test(m)) return { kind: "judgement", confidence: 1 };
+  if (
+    /(どう思う|良いか悪いか)/u.test(m) ||
+    (/判断/u.test(m) && !/判断構造/u.test(m))
+  ) {
+    return { kind: "judgement", confidence: 1 };
+  }
   return { kind: "none", confidence: 0 };
 }
 
