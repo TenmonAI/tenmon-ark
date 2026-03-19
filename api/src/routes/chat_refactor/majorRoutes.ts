@@ -5,6 +5,7 @@
 
 import { buildKnowledgeBinder, applyKnowledgeBinderToKu } from "../../core/knowledgeBinder.js";
 import { buildResponsePlan, type AnswerMode, type AnswerFrame } from "../../planning/responsePlanCore.js";
+import { localSurfaceize } from "../../tenmon/surface/localSurfaceize.js";
 import { finalizeSingleExitV1 } from "./finalize.js";
 
 export function exitJudgementPreemptV1(args: {
@@ -320,6 +321,8 @@ export function exitSelfAwarePreemptV1(args: {
     threadId,
     kuExtras,
   } = args;
+  const __msg = String(message ?? "").trim();
+  const surfaceResponse = localSurfaceize(response, __msg);
   const ku: any = {
     routeReason,
     routeClass: "selfaware",
@@ -334,7 +337,7 @@ export function exitSelfAwarePreemptV1(args: {
     lawTrace: [],
     responsePlan: buildResponsePlan({
       routeReason,
-      rawMessage: String(message ?? ""),
+      rawMessage: __msg,
       centerKey: null,
       centerLabel: null,
       scriptureKey: null,
@@ -342,11 +345,11 @@ export function exitSelfAwarePreemptV1(args: {
       responseKind: "statement_plus_question",
       answerMode: "analysis" as AnswerMode,
       answerFrame: "one_step" as AnswerFrame,
-      semanticBody: response,
+      semanticBody: surfaceResponse,
     }),
   };
   return finalizeSingleExitV1(res, __tenmonGeneralGateResultMaybe, {
-    response,
+    response: surfaceResponse,
     evidence: null,
     candidates: [],
     timestamp,
@@ -383,6 +386,8 @@ export function exitSystemDiagnosisPreemptV1(args: {
     centerLabel = "会話系",
     applyBrainstemContractToKu,
   } = args;
+  const __msg = String(message ?? "").trim();
+  const surfaceResponse = localSurfaceize(response, __msg);
   const rr = "SYSTEM_DIAGNOSIS_PREEMPT_V1";
   const ku: any = {
     routeReason: rr,
@@ -397,7 +402,7 @@ export function exitSystemDiagnosisPreemptV1(args: {
     lawTrace: [],
     responsePlan: buildResponsePlan({
       routeReason: rr,
-      rawMessage: String(message ?? ""),
+      rawMessage: __msg,
       centerKey: centerKey ?? "conversation_system",
       centerLabel: centerLabel ?? "会話系",
       scriptureKey: null,
@@ -405,12 +410,12 @@ export function exitSystemDiagnosisPreemptV1(args: {
       responseKind: "statement_plus_question",
       answerMode: "analysis" as AnswerMode,
       answerFrame: "statement_plus_one_question" as AnswerFrame,
-      semanticBody: response,
+      semanticBody: surfaceResponse,
     }),
   };
   if (typeof applyBrainstemContractToKu === "function") applyBrainstemContractToKu(ku);
   return finalizeSingleExitV1(res, __tenmonGeneralGateResultMaybe, {
-    response,
+    response: surfaceResponse,
     evidence: null,
     candidates: [],
     timestamp,
@@ -431,6 +436,8 @@ export function exitFutureOutlookPreemptV1(args: {
   threadCenterForGeneral?: any;
 }) {
   const { res, __tenmonGeneralGateResultMaybe, response, message, timestamp, threadId, threadCore, threadCenterForGeneral } = args;
+  const __msg = String(message ?? "").trim();
+  const surfaceResponse = localSurfaceize(response, __msg);
   const ku: any = {
     routeReason: "R22_FUTURE_OUTLOOK_V1",
     routeClass: "analysis",
@@ -442,7 +449,7 @@ export function exitFutureOutlookPreemptV1(args: {
     lawTrace: [],
     responsePlan: buildResponsePlan({
       routeReason: "R22_FUTURE_OUTLOOK_V1",
-      rawMessage: String(message ?? ""),
+      rawMessage: __msg,
       centerKey: null,
       centerLabel: null,
       scriptureKey: null,
@@ -450,14 +457,14 @@ export function exitFutureOutlookPreemptV1(args: {
       responseKind: "statement_plus_question",
       answerMode: "analysis" as AnswerMode,
       answerFrame: "one_step" as AnswerFrame,
-      semanticBody: response,
+      semanticBody: surfaceResponse,
     }),
   };
   if (threadCore != null) {
     try {
       const binder = buildKnowledgeBinder({
         routeReason: "R22_FUTURE_OUTLOOK_V1",
-        message: String(message ?? ""),
+        message: __msg,
         threadId: String(threadId ?? ""),
         ku,
         threadCore,
@@ -467,7 +474,7 @@ export function exitFutureOutlookPreemptV1(args: {
     } catch {}
   }
   return finalizeSingleExitV1(res, __tenmonGeneralGateResultMaybe, {
-    response,
+    response: surfaceResponse,
     evidence: null,
     candidates: [],
     timestamp,

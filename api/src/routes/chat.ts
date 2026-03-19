@@ -4960,7 +4960,7 @@ try {
     }
 
 return res.json(__tenmonGeneralGateResultMaybe({
-      response: __cleanLlmFrame(__composed.response),
+      response: localSurfaceize(__cleanLlmFrame(__composed.response), trimmed),
       timestamp: payload.timestamp,
       trace: payload.trace,
       provisional: payload.provisional,
