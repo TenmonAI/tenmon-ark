@@ -46,3 +46,15 @@ export function selectGroundingModeV1(input: {
   }
   return { kind: "natural_general", reason: "default", confidence: 0.5 };
 }
+
+/** P54: NATURAL_GENERAL_LLM_TOP 分流用の general kind（counsel / worldview / short_moral / other） */
+export type GeneralKind = "counsel" | "worldview" | "short_moral" | "other";
+
+/** CARD: generalKind 算出（本文・routeReason は変えない） */
+export function getGeneralKind(message: string): GeneralKind {
+  const t = String(message ?? "").trim();
+  if (/悩み|しんどい|つらい|聞いてくれ|相談/.test(t)) return "counsel";
+  if (/(なんで|なぜ|どうして).*(する|起きる)/.test(t)) return "worldview";
+  if (/恨まない|許せない|許したい|責めたくない/.test(t)) return "short_moral";
+  return "other";
+}

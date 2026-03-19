@@ -130,7 +130,7 @@ import {
   getGeneralShrinkPayloadV1,
 } from "./chat_refactor/majorRoutes.js";
 import { parseAnswerProfileFromBody, injectAnswerProfileToKu, normalizeChatEntryFromBody } from "./chat_refactor/entry.js";
-import { selectGroundingModeV1 } from "./chat_refactor/general.js";
+import { selectGroundingModeV1, getGeneralKind } from "./chat_refactor/general.js";
 import { responseProjector, normalizeDisplayLabel } from "../projection/responseProjector.js";
 
 // FIX_PRE_GATE_GENERAL_SURFACE_V1: 先頭・末尾欠損・不要前置き混入を止血。引用あり/なしの「いまの言葉を…と受け取りました。」を安全に除去。
@@ -8396,12 +8396,8 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
     return;
 
   // CARD_GROUNDING_SELECTOR_V1: grounded / canon / concept / general / unresolved（P53: general.ts に移管）
-// generalKind: counsel / worldview / short_moral / other（NATURAL_GENERAL_LLM_TOP 分流用）
-      const __generalKind: "counsel" | "worldview" | "short_moral" | "other" =
-        /悩み|しんどい|つらい|聞いてくれ|相談/.test(t0) ? "counsel"
-        : /(なんで|なぜ|どうして).*(する|起きる)/.test(t0) ? "worldview"
-        : /恨まない|許せない|許したい|責めたくない/.test(t0) ? "short_moral"
-        : "other";
+      // generalKind（P54: general.ts に移管）
+      const __generalKind = getGeneralKind(t0);
       let __threadCenterForGeneral: { center_type: string; center_key: string; source_route_reason?: string } | null = null;
       try {
         const tidForCenter = String(threadId || "").trim();
