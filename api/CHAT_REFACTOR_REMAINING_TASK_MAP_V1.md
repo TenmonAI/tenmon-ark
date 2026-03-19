@@ -1,31 +1,35 @@
 # CHAT_REFACTOR_REMAINING_TASK_MAP_V1
 
-- **基準点:** 09824dc
-- **封印列:** dc74b17 → be3f7ff → 4615619 → 09824dc
+- **baseline:** e6b1816
+- **branch:** 2026-03-04-e5hp
+- **no-touch:** `api/src/db/kokuzo_schema.sql`
 
-## 残タスク量
+## 完了済み（封印反映済み）
 
-### A. chat refactor 主幹の残り（3〜5カード）
+- entry batch
+- general batch
+- general implementation batch
+- define implementation batch
+- sealed runtime set / handoff 同期
 
-1. surface 統一
-2. runtime 主系の整理
-3. stub / 残骸方針の確定
-4. sealed runtime set の継続運用
+## 残タスク（3系統へ圧縮）
 
-### B. chat refactor 中層接続（5〜10カード）
+### A. define/scripture boundary の最終残差
 
-1. define / entry / general の再編
-2. center / continuity / memory 接続の洗練
-3. response planning の一元化
+- define 側に残る scripture 境界判定・分岐の最終薄化
+- routeReason / contract / 本文を不変で維持したまま整理
 
-### C. 天聞アーク全体の残層（中長距離）
+### B. residual / route sovereignty / NATURAL_GENERAL 最終掃除
 
-1. 会話主権の最終化
-2. 原典接続の深化
-3. memory / ledger / learning の本接続
-4. UI / Founder運用 / 実用導線
-5. PWA / 会員 / DB / 運用系
+- residual route の最終掃除
+- NATURAL_GENERAL の主権固定（fallback 流入の最小化）
+- acceptance を壊さない範囲で最小差分調整
 
-## 次にやる1カード
+### C. final handoff / final seal
 
-**CHAT_SAFE_REFACTOR_PATCH32_SYSTEM_SELFAWARE_FUTURE_SURFACE_UNIFY_V1**
+- 残差解消後の handoff 最終同期
+- sealed baseline / runtime set の最終封印
+
+## 次カード候補（1つ）
+
+- CHAT_SAFE_REFACTOR_PATCH65_RESIDUAL_FINAL_SWEEP_V1
