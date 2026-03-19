@@ -2155,9 +2155,40 @@ ${String((gptDraft as any)?.text ?? "").trim()}
     // FIX_TRUTH_GATE_LLM_CONNECTION_V1: LLM失敗時は固定 fallback にし、弱い一般文にしない
     const TRUTH_GATE_FALLBACK_RESPONSE =
       "この問いはKHS（verified）に強く接続しています。\n\n次のどれで進めますか？\n1) 定義（引用）\n2) 構造（水火（イキ））\n3) 実践（次の一手）\n\n番号で答えてください。";
-    const __responseStable = (finalTextView && finalTextView.trim().length >= 30)
+    const __rawStable = (finalTextView && finalTextView.trim().length >= 30)
       ? finalTextView
       : TRUTH_GATE_FALLBACK_RESPONSE;
+    const __soundHit = (() => {
+      const m = String(message ?? "").trim().match(/([ハヘムひへむ])\s*(?:の)?\s*言霊/u);
+      if (!m) return "";
+      const x = String(m[1] || "");
+      const map: Record<string, string> = { ひ: "ヒ", へ: "ヘ", む: "ム", は: "ハ" };
+      return map[x] || x;
+    })();
+    const __semanticHead = (() => {
+      if (!__soundHit) return "";
+      const __tone: Record<string, string> = {
+        ハ: "「ハ」は放つ・ひらく側の音です。",
+        ヘ: "「ヘ」は隔てをほどき、通路を作る音です。",
+        ム: "「ム」は内へ収め、核へ戻す音です。",
+        ヒ: "「ヒ」は火のように輪郭を照らす音です。",
+      };
+      const __lead = __tone[__soundHit] || `「${__soundHit}」は今回の中心音です。`;
+      const __hasLawEvidence =
+        Array.isArray(__khsScan?.lawKeys) && (__khsScan?.lawKeys?.length ?? 0) > 0 &&
+        Array.isArray(__khsScan?.evidenceIds) && (__khsScan?.evidenceIds?.length ?? 0) > 0;
+      const __centerHint = __sourceDoc || ((__khsScan?.lawKeys?.[0] != null) ? String(__khsScan.lawKeys[0]) : "");
+      const __evidenceLine = __hasLawEvidence
+        ? "今回は lawsUsed / evidenceIds をこの音に合わせて束ねています。"
+        : "今回は中心束を固定したうえで読んでいます。";
+      const __centerLine = __centerHint
+        ? `中心は ${__centerHint} です。`
+        : "中心は KHS verified 軸です。";
+      return `【天聞の所見】${__lead}${__evidenceLine}${__centerLine}`;
+    })();
+    const __responseStable = __semanticHead
+      ? `${__semanticHead}\n${String(__rawStable || "").replace(/^【天聞の所見】\s*/u, "").trim()}`
+      : __rawStable;
 
     const payload = {
       response: __responseStable,
@@ -10144,6 +10175,17 @@ const __heartNorm = normalizeHeartShape(__heart);
         threadCenter: __projectorThreadCenter,
         rawResponse: String(__beforeClamp || outText || ""),
         canonicalResponse: __canonicalForProjector,
+        semanticSlots: {
+          lawsUsed: Array.isArray((__ku as any).lawsUsed) ? (__ku as any).lawsUsed : [],
+          evidenceIds: Array.isArray((__ku as any).evidenceIds) ? (__ku as any).evidenceIds : [],
+          thoughtGuideSummary: (__ku as any).thoughtGuideSummary ?? null,
+          notionCanon: (__ku as any).notionCanon ?? null,
+          sourceStackSummary: (__ku as any).sourceStackSummary ?? null,
+          centerKey: String((__ku as any).centerKey || ""),
+          centerLabel: String((__ku as any).centerLabel || ""),
+          scriptureKey: String((__ku as any).scriptureKey || ""),
+          routeReason: String((__ku as any).routeReason || "NATURAL_GENERAL_LLM_TOP"),
+        },
       });
 
       try {

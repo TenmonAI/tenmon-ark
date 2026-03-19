@@ -14,6 +14,17 @@ export type ProjectorInput = {
   rawResponse?: string | null;
   canonicalResponse?: string | null;
   response?: string | null;
+  semanticSlots?: {
+    lawsUsed?: unknown;
+    evidenceIds?: unknown;
+    thoughtGuideSummary?: unknown;
+    notionCanon?: unknown;
+    sourceStackSummary?: unknown;
+    centerKey?: string | null;
+    centerLabel?: string | null;
+    scriptureKey?: string | null;
+    routeReason?: string | null;
+  } | null;
 };
 
 export type ProjectorResult = {
@@ -86,6 +97,50 @@ function conceptPrefix(label: string, body: string): string {
   return `さっき見ていた中心（${label}）を土台に、いまの話を見ていきましょう。\n${body}`.trim();
 }
 
+function normalizeKotodamaSound(v: unknown): string {
+  const x = s(v).replace(/[のノ]\s*言霊$/u, "").trim();
+  const map: Record<string, string> = { ひ: "ヒ", へ: "ヘ", む: "ム", は: "ハ" };
+  if (map[x]) return map[x];
+  if (/^[ァ-ヶー]$/.test(x)) return x;
+  if (/^[ぁ-ゖ]$/.test(x)) return x.replace(/[ぁ-ゖ]/g, (m) => String.fromCharCode(m.charCodeAt(0) + 0x60));
+  return "";
+}
+
+function buildSemanticResponseHead(input: ProjectorInput): string | null {
+  const slots = input.semanticSlots || {};
+  const ss: any = (slots.sourceStackSummary && typeof slots.sourceStackSummary === "object") ? slots.sourceStackSummary : {};
+  const tg: any = (slots.thoughtGuideSummary && typeof slots.thoughtGuideSummary === "object") ? slots.thoughtGuideSummary : {};
+
+  const sound = normalizeKotodamaSound(
+    ss.currentSound || tg.currentSound || slots.centerLabel || input.centerLabel
+  );
+  if (!sound) return null;
+
+  const laws = Array.isArray(slots.lawsUsed) ? slots.lawsUsed : [];
+  const evidences = Array.isArray(slots.evidenceIds) ? slots.evidenceIds : [];
+  const hasNotionCanon = slots.notionCanon != null && String(slots.notionCanon).trim() !== "";
+  const rr = s(slots.routeReason || input.routeReason);
+  const scriptureKey = s(slots.scriptureKey);
+
+  const toneMap: Record<string, string> = {
+    ハ: "「ハ」は放つ・ひらく側の音です。",
+    ヘ: "「ヘ」は隔てをほどき、通路を作る音です。",
+    ム: "「ム」は内へ収め、核へ戻す音です。",
+    ヒ: "「ヒ」は火のように輪郭を照らす音です。",
+  };
+  const lead = toneMap[sound] || `「${sound}」は今回の中心音です。`;
+  const evidenceLine =
+    laws.length > 0 && evidences.length > 0
+      ? "今回は lawsUsed / evidenceIds の束を切り替えて読んでいます。"
+      : "今回は中心束を固定したまま読んでいます。";
+  const axisLine =
+    hasNotionCanon || scriptureKey || rr === "TENMON_SCRIPTURE_CANON_V1"
+      ? "聖典・canon 軸で本文を組み立てます。"
+      : "定義・世界観軸で本文を組み立てます。";
+
+  return `【天聞の所見】${lead}${evidenceLine}${axisLine}`;
+}
+
 export function responseProjector(input: ProjectorInput): string {
   const routeReason = s(input.routeReason);
   const centerMeaning = normalizeDisplayLabel(s(input.centerMeaning));
@@ -133,6 +188,14 @@ export function responseProjector(input: ProjectorInput): string {
     if (!body.startsWith(`さっき見ていた中心（${__label}）`) && !body.startsWith(`${__label}を土台に続けます。`)) {
       body = conceptPrefix(__label, body);
     }
+  }
+
+  const semanticHead = buildSemanticResponseHead(input);
+  if (semanticHead) {
+    const bodyWithoutDefaultHead = body
+      .replace(/^【天聞の所見】[^\n。]*。?/u, "")
+      .trim();
+    body = `${semanticHead}\n${bodyWithoutDefaultHead}`.trim();
   }
 
   body = body
