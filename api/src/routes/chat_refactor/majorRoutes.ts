@@ -483,3 +483,93 @@ export function exitFutureOutlookPreemptV1(args: {
   });
 }
 
+/** PATCH49_GENERAL_SYSTEM_FUTURE_EXTRACT_V1: future 早期判定＋本文＋exit を一括。一致時 true。 */
+export function tryFutureOutlookExitV1(args: {
+  res: any;
+  __tenmonGeneralGateResultMaybe: any;
+  message: any;
+  timestamp: any;
+  threadId: any;
+  threadCore: any;
+  threadCenterForGeneral?: any;
+  saveThreadCore: (core: any) => void | Promise<void>;
+  setResThreadCore?: (core: any) => void;
+}): boolean {
+  const msg = String(args.message ?? "").trim();
+  if (!/(これから|未来|今後|この先|どうなる|どう見ますか|展望|見通し)/u.test(msg)) return false;
+  const body =
+    "【天聞の所見】未来・展望は、いまの一点から見立てる。いま引っかかっている一点を一言で。";
+  const core = {
+    ...args.threadCore,
+    lastResponseContract: {
+      answerLength: "short",
+      answerMode: "analysis",
+      answerFrame: "one_step",
+      routeReason: "R22_FUTURE_OUTLOOK_V1",
+    },
+    updatedAt: new Date().toISOString(),
+  };
+  Promise.resolve(args.saveThreadCore(core)).catch(() => {});
+  try {
+    if (typeof args.setResThreadCore === "function") args.setResThreadCore(core);
+  } catch {}
+  exitFutureOutlookPreemptV1({
+    res: args.res,
+    __tenmonGeneralGateResultMaybe: args.__tenmonGeneralGateResultMaybe,
+    response: body,
+    message: args.message,
+    timestamp: args.timestamp,
+    threadId: args.threadId,
+    threadCore: args.threadCore,
+    threadCenterForGeneral: args.threadCenterForGeneral ?? null,
+  });
+  return true;
+}
+
+/** PATCH49_GENERAL_SYSTEM_FUTURE_EXTRACT_V1: system diagnosis 早期判定＋本文＋exit を一括。一致時 true。 */
+export function trySystemDiagnosisPreemptExitV1(args: {
+  res: any;
+  __tenmonGeneralGateResultMaybe: any;
+  message: any;
+  timestamp: any;
+  threadId: any;
+  threadCore: any;
+  applyBrainstemContractToKu?: (ku: any) => void;
+  saveThreadCore: (core: any) => void | Promise<void>;
+  setResThreadCore?: (core: any) => void;
+}): boolean {
+  const msg = String(args.message ?? "").trim();
+  if (
+    !/天聞アーク|TENMON[- ]?ARK|内部構造|構造|接続|繋がって|つながって|どこまで|構築状況|完成度|現状|診断|解析/u.test(
+      msg
+    )
+  )
+    return false;
+  const body =
+    "【天聞の所見】天聞アークの現状は、骨格層はかなり接続済みです。通っているのは憲法・思考・原典・監査の主幹で、未完は一般会話の主権と表現末端です。次の一手は、system diagnosis と通常会話 residual の入口固定です。";
+  const core = {
+    ...args.threadCore,
+    lastResponseContract: {
+      answerLength: "short",
+      answerMode: "analysis",
+      answerFrame: "statement_plus_one_question",
+      routeReason: "SYSTEM_DIAGNOSIS_PREEMPT_V1",
+    },
+    updatedAt: new Date().toISOString(),
+  };
+  Promise.resolve(args.saveThreadCore(core)).catch(() => {});
+  try {
+    if (typeof args.setResThreadCore === "function") args.setResThreadCore(core);
+  } catch {}
+  exitSystemDiagnosisPreemptV1({
+    res: args.res,
+    __tenmonGeneralGateResultMaybe: args.__tenmonGeneralGateResultMaybe,
+    response: body,
+    message: args.message,
+    timestamp: args.timestamp,
+    threadId: args.threadId,
+    applyBrainstemContractToKu: args.applyBrainstemContractToKu,
+  });
+  return true;
+}
+

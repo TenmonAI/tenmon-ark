@@ -121,6 +121,8 @@ import {
   exitSelfAwarePreemptV1,
   exitSystemDiagnosisPreemptV1,
   exitFutureOutlookPreemptV1,
+  tryFutureOutlookExitV1,
+  trySystemDiagnosisPreemptExitV1,
 } from "./chat_refactor/majorRoutes.js";
 import { parseAnswerProfileFromBody, injectAnswerProfileToKu, normalizeChatEntryFromBody } from "./chat_refactor/entry.js";
 import { responseProjector, normalizeDisplayLabel } from "../projection/responseProjector.js";
@@ -9041,62 +9043,46 @@ try {
       const __continuityAnchorLine = __isContinuityAnchor
         ? "\n直前の中心（center_key）を土台に、冒頭の見立てで触れる。" : "";
 
-      // CARD_NATURAL_GENERAL_SHRINK_V2_FUTURE / CARD_EXPLICIT_PRIORITY_WIDEN_V1: explicit 時は発火させない
-      if (__explicitCharsEarly == null && __isFutureOutlook) {
-        const __bodyFuture = "【天聞の所見】未来・展望は、いまの一点から見立てる。いま引っかかっている一点を一言で。";
-        const __coreFuture: ThreadCore = { ...__threadCore, lastResponseContract: { answerLength: "short", answerMode: "analysis", answerFrame: "one_step", routeReason: "R22_FUTURE_OUTLOOK_V1" }, updatedAt: new Date().toISOString() };
-        saveThreadCore(__coreFuture).catch(() => {});
-        try { (res as any).__TENMON_THREAD_CORE = __coreFuture; } catch {}
-        return exitFutureOutlookPreemptV1({
+      // CARD_NATURAL_GENERAL_SHRINK_V2_FUTURE / CARD_EXPLICIT_PRIORITY_WIDEN_V1: explicit 時は発火させない（PATCH49: 判定＋exit は majorRoutes に集約）
+      if (
+        __explicitCharsEarly == null &&
+        tryFutureOutlookExitV1({
           res,
           __tenmonGeneralGateResultMaybe,
-          response: __bodyFuture,
           message,
           timestamp,
           threadId,
           threadCore: __threadCore,
           threadCenterForGeneral: __threadCenterForGeneral ?? null,
-        });
-      }
-
-
-      // CARD_GENERAL_ROUTE_SHRINK_V1: NATURAL_GENERAL_LLM_TOP に入る直前で deterministic 分流
-      const __rawSystemDiagPre = String(message ?? "").trim();
-      const __isSystemDiagPre =
-        /天聞アーク|TENMON[- ]?ARK|内部構造|構造|接続|繋がって|つながって|どこまで|構築状況|完成度|現状|診断|解析/u.test(__rawSystemDiagPre);
-
-      if (__isSystemDiagPre) {
-        const __bodySys =
-          "【天聞の所見】天聞アークの現状は、骨格層はかなり接続済みです。通っているのは憲法・思考・原典・監査の主幹で、未完は一般会話の主権と表現末端です。次の一手は、system diagnosis と通常会話 residual の入口固定です。";
-        try {
-          console.log("[SYSTEM_DIAG_PREEMPT_V3_HIT]", {
-            raw: __rawSystemDiagPre,
-            rr: "SYSTEM_DIAGNOSIS_PREEMPT_V1",
-            rc: "analysis",
-          });
-        } catch {}
-        const __coreSys: ThreadCore = {
-          ...__threadCore,
-          lastResponseContract: {
-            answerLength: "short",
-            answerMode: "analysis",
-            answerFrame: "statement_plus_one_question",
-            routeReason: "SYSTEM_DIAGNOSIS_PREEMPT_V1",
+          saveThreadCore,
+          setResThreadCore: (c) => {
+            try {
+              (res as any).__TENMON_THREAD_CORE = c;
+            } catch {}
           },
-          updatedAt: new Date().toISOString(),
-        };
-        saveThreadCore(__coreSys).catch(() => {});
-        try { (res as any).__TENMON_THREAD_CORE = __coreSys; } catch {}
-        return exitSystemDiagnosisPreemptV1({
+        })
+      )
+        return;
+
+      // CARD_GENERAL_ROUTE_SHRINK_V1: NATURAL_GENERAL_LLM_TOP に入る直前で deterministic 分流（PATCH49: 判定＋exit は majorRoutes に集約）
+      if (
+        trySystemDiagnosisPreemptExitV1({
           res,
           __tenmonGeneralGateResultMaybe,
-          response: __bodySys,
           message,
           timestamp,
           threadId,
+          threadCore: __threadCore,
           applyBrainstemContractToKu: (ku) => __applyBrainstemContractToKuV1(ku, __brainstem, "analysis"),
-        });
-      }
+          saveThreadCore,
+          setResThreadCore: (c) => {
+            try {
+              (res as any).__TENMON_THREAD_CORE = c;
+            } catch {}
+          },
+        })
+      )
+        return;
 
       const __shrink = __classifyGeneralShrinkV1(String(message ?? ""));
       try { console.log("[GENERAL_SHRINK_CLASSIFY]", { raw: String(message ?? "").slice(0, 120), kind: __shrink.kind, confidence: __shrink.confidence }); } catch {}
