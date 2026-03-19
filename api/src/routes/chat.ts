@@ -122,6 +122,7 @@ import {
   exitSystemDiagnosisPreemptV1,
   exitFutureOutlookPreemptV1,
 } from "./chat_refactor/majorRoutes.js";
+import { parseAnswerProfileFromBody, injectAnswerProfileToKu, normalizeChatEntryFromBody } from "./chat_refactor/entry.js";
 import { responseProjector, normalizeDisplayLabel } from "../projection/responseProjector.js";
 
 // FIX_PRE_GATE_GENERAL_SURFACE_V1: 先頭・末尾欠損・不要前置き混入を止血。引用あり/なしの「いまの言葉を…と受け取りました。」を安全に除去。
@@ -292,42 +293,10 @@ router.post("/chat", async (req: Request, res: Response<ChatResponseBody>) => {
   );
   setTenmonLastHeart(__heart);
 
-  // CARD_ANSWER_PROFILE_V1: body から answerLength/answerMode/answerFrame を取得し、未指定時は現行互換（追加指示・maxLength 変更なし）
-  const __bodyProfile = (() => {
-    const b: any = (req as any)?.body || {};
-    const rawLength = b.answerLength;
-    const rawMode = b.answerMode;
-    const rawFrame = b.answerFrame;
-    const validLength: AnswerLength | null = ["short", "medium", "long"].includes(rawLength) ? rawLength : null;
-    const validMode: AnswerMode | null = ["support", "define", "analysis", "worldview", "continuity"].includes(rawMode) ? rawMode : null;
-    let validFrame: AnswerFrame | null = ["one_step", "statement_plus_one_question", "d_delta_s_one_step"].includes(rawFrame) ? rawFrame : null;
-    if (validFrame === "d_delta_s_one_step" && validLength !== "long") validFrame = "statement_plus_one_question";
-    let answerLength: AnswerLength | null = validLength;
-    let answerMode: AnswerMode | null = validMode;
-    let answerFrame: AnswerFrame | null = validFrame;
-    if (validMode && (answerLength == null || answerFrame == null)) {
-      if (answerLength == null) {
-        if (validMode === "support" || validMode === "continuity") answerLength = "short";
-        else answerLength = "medium";
-      }
-      if (answerFrame == null) {
-        if (validMode === "support" || validMode === "continuity") answerFrame = "one_step";
-        else answerFrame = "statement_plus_one_question";
-      }
-    }
-    const profile: AnswerProfile = { answerLength: answerLength ?? null, answerMode: answerMode ?? null, answerFrame: answerFrame ?? null };
-    (res as any).__TENMON_ANSWER_PROFILE = profile;
-    return profile;
-  })();
+  // CARD_ANSWER_PROFILE_V1: body から answerLength/answerMode/answerFrame を取得し、未指定時は現行互換（PATCH41 entry 抽出）
+  const __bodyProfile = parseAnswerProfileFromBody((req as any)?.body);
+  (res as any).__TENMON_ANSWER_PROFILE = __bodyProfile;
   const __hasAnswerProfile = __bodyProfile.answerLength != null || __bodyProfile.answerMode != null || __bodyProfile.answerFrame != null;
-
-  /** CARD_ANSWER_PROFILE_V1: ku に answerLength/answerMode/answerFrame を未設定時のみ注入（既存キーは上書きしない） */
-  const injectAnswerProfileToKu = (ku: any, profile: AnswerProfile | null | undefined) => {
-    if (ku == null || typeof ku !== "object") return;
-    if (ku.answerLength === undefined) ku.answerLength = profile?.answerLength ?? null;
-    if (ku.answerMode === undefined) ku.answerMode = profile?.answerMode ?? null;
-    if (ku.answerFrame === undefined) ku.answerFrame = profile?.answerFrame ?? null;
-  };
 
   // CARD_RESPONSE_FRAME_LIBRARY_V1_PHASE1: route ごとの既定割当（参照用）
   // support → short / support / one_step | define → medium / define / statement_plus_one_question
@@ -846,10 +815,11 @@ const pid = process.pid;
   const r = getReadiness();
   console.log(`[CHAT-HANDLER] PID=${pid} uptime=${uptime}s handlerTime=${new Date().toISOString()} stage=${r.stage}`);
   
-  // input または message のどちらでも受け付ける（後方互換性のため）
-  const messageRaw = (req.body as any)?.input || (req.body as any)?.message;
+  // input または message のどちらでも受け付ける（PATCH44 entry 抽出）
   const body = (req.body ?? {}) as any;
-  const message = String(messageRaw ?? "").trim();
+  const __entry = normalizeChatEntryFromBody(body);
+  const message = __entry.message;
+  const messageRaw = message;
   // R9_LEDGER_REAL_INPUT_FREEZE_V1: gate 経由 append で実入力を使うため
   try { (globalThis as any).__tenmon_gate_raw_message_v1 = message; } catch {}
 
@@ -1038,7 +1008,7 @@ const pid = process.pid;
 
   // [B1] deterministic force-menu trigger for Phase36-1
 
-  const threadId = String(body.threadId ?? "default").trim();
+  const threadId = __entry.threadId;
   const timestamp = new Date().toISOString();
   let __threadCore: ThreadCore = emptyThreadCore(threadId);
   try {
