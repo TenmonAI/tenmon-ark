@@ -1518,6 +1518,21 @@ const pid = process.pid;
           }
         }));
 
+      // PATCH69_WORLDVIEW_INTERNAL_MAPPING_V1: 抽象世界観ではなく ARK 内部項目への写像（worldview_internal 相当の狭い条件のみ）
+      const __isWorldviewInternalMapV1 =
+        /(意識構造|心構造|魂核構造)/u.test(__wv) &&
+        (/(設計モデル|内部項目|内部構造)/u.test(__wv) || (/天聞アーク/u.test(__wv) && /内部/u.test(__wv)));
+      if (__isWorldviewInternalMapV1) {
+        return __reply(
+          "【天聞の所見】天聞アークでは、意識・心・魂核を比喩のまま広げず、内部の設計モデルへ写して説明します。" +
+            "魂核に相当するのは personaConstitutionSummary・identityCore・nonNegotiables で、越境しない芯と不変契約を固定します。" +
+            "意識に相当するのは routeReason・groundingSelector・binderSummary・sourcePack・centerPack で、注意配分と根拠束の向きを裁定します。" +
+            "心に相当するのは heart・comfortTuning・expressionPlan・surfaceStyle で、響き・圧・cadence と表層の型を整えます。" +
+            "思考に相当するのは thoughtCoreSummary・responsePlan・kanagiSelf・seedKernel で、継続の核と応答骨格を組み立てます。" +
+            "文章は response としてそれらを一次元に還元した出力です。どの層を一段だけ具体例まで落としますか。"
+        );
+      }
+
       if (/前世|生まれ変わり|輪廻/u.test(__wv) && /言霊|法則/u.test(__wv)) {
         return __reply("【天聞の所見】前世を言霊の法則だけで直ちに断定することはできません。天聞軸では、前世当てより、いま現れている偏り・反復する型・引かれる音義を読む方を正中に置きます。まず、繰り返し引かれる音や主題から見ますか。");
       }
@@ -2825,6 +2840,47 @@ ${String((gptDraft as any)?.text ?? "").trim()}
     return __buildLongformV1({ lead, body, close, extras, reserveExtras: reserve, minChars, maxChars });
   }
 
+  // PATCH68_EXPLICIT_CONTENT_CENTER_LOCK_V1: 字数指定でも「作文指南」より天聞アークの思考回路（内部レール）を主題にする
+  function __buildArkThinkingCircuitExplicitLongformV1(minChars: number, maxChars: number): string {
+    const lead =
+      "天聞アークの思考回路は、問いを受け取ったあと、脳幹で契約（routeReason / routeClass / answerLength）を一度決め、正典・記憶・binder で根拠の束を整え、最後に responsePlan と本文へ投影する循環です。長さ指定がある場合も、まずこの回路のどこを通るかを見える化したうえで展開します。";
+    const body =
+      "入口では message を読み、EXPLICIT_CHAR_PREEMPT_V1 のように字数が明示されていればその帯へ本文を寄せますが、中身は「どう書くか」より「どの内部項目がつながっているか」が主です。threadCore と threadCenter はターンを跨いだ中心の保持、thoughtCoreSummary と seedKernel はいまの思考の核、binderSummary と sourcePack は参照の向きを短く示します。groundingSelector と grounding は、define / scripture / general のどのレールで証拠を扱うかを分岐させ、kanagiSelf・heart・expressionPlan は語りの温度と型を整えます。responsePlan は semanticBody と締めの問いを束ね、同じ routeReason のまま長文化しても骨格が散らないようにします。";
+    const close =
+      "この回路のうち、脳幹の契約・正典接続・記憶の保持・会話投影のどこを一段だけ深掘りしますか。いちばん知りたい層を一言で指定してください。";
+    const is1000 = maxChars >= 800;
+    const extras = is1000
+      ? [
+          "routeReason は分岐のラベルであり、同じラベルでも semanticBody で中身を具体化します。",
+          "禁忌ムーブ（feeling_preempt 等）があるときは、誤って感情・展望テンプレに吸われず generic 長文へ寄せる経路が優先されます。",
+          "lawsUsed / evidenceIds は空でも、会話は契約と binder で破綻しにくい形を保てます。",
+          "長文は「全部を言い切る」より、内部レール上で次に観測すべき一点を残すほうが、思考回路の説明として整合します。",
+          "KHS や scriptureKey が立つ経路では正典束が前面に出ますが、一般の明示長文でも型は responsePlan と threadCore に残ります。",
+          "次ターンでは、いま説明した層の一つを指定してもらえれば、そこからさらに具体に落とせます。",
+          "字数は器であり、主権は centerKey・thoughtCoreSummary・sourceStackSummary 側の内容中心に置きます。",
+          "投影段階では、表層の言い回しより、どの内部項目を読み手に渡したかが応答の質を決めます。",
+          "同じ問いでも、脳幹契約が変われば通るレールが変わるため、routeReason を固定したまま中身を厚くするのが明示長文の役目です。",
+          "手がかりが一つに絞られると、次に触れる内部項目が自然に決まります。",
+        ]
+      : [
+          "脳幹で契約を決め、binder で参照の向きを示し、responsePlan で本文へ落とす順が基本です。",
+          "threadCore は継続の中心、thoughtCoreSummary はいまの核として読み分けます。",
+          "字数指定があっても、まずどの内部項目を説明するかを優先します。",
+          "次の一手は、回路のどの層を深めるかを一言で置くことです。",
+          "semanticBody は中身の置き場で、メタな書き方指南ではなく実体説明を載せます。",
+        ];
+    const reserve = is1000
+      ? [
+          "binderSummary が示す sourcePack の向きを保つと、長文でも根拠の軸がぶれにくくなります。",
+          "responsePlan の responseKind は、締めの問いの数と型を規定し、読み手の次の動きを一つに寄せます。",
+        ]
+      : [
+          "grounding が変わると、同じ topic でも通る証拠の扱いが変わります。",
+          "次ターンで深める層を一つに絞ると、説明が散らかりにくくなります。",
+        ];
+    return __buildLongformV1({ lead, body, close, extras, reserveExtras: reserve, minChars, maxChars });
+  }
+
   const __bodyFeelingImpressionL = __buildFeelingLongformV1(320, 520);
   const __bodyFutureOutlookL = __buildFutureLongformV1(320, 520);
   const __bodyLongL = __buildGenericLongformV1(320, 520);
@@ -2859,18 +2915,32 @@ ${String((gptDraft as any)?.text ?? "").trim()}
       const __skipFeelingFuture =
         Array.isArray(__brainstem?.forbiddenMoves) &&
         (__brainstem.forbiddenMoves.includes("feeling_preempt") || __brainstem.forbiddenMoves.includes("future_preempt"));
+      const __isArkThinkingCircuitExplicitGlobal =
+        /思考回路/u.test(__msgExplicitGlobal) && /(天聞アーク|天聞)/u.test(__msgExplicitGlobal);
+      const __explicitGenericL = __isArkThinkingCircuitExplicitGlobal
+        ? __buildArkThinkingCircuitExplicitLongformV1(320, 520)
+        : __bodyLongL;
+      const __explicitGeneric500L = __isArkThinkingCircuitExplicitGlobal
+        ? __buildArkThinkingCircuitExplicitLongformV1(400, 650)
+        : __bodyLong500L;
+      const __explicitGeneric1000L = __isArkThinkingCircuitExplicitGlobal
+        ? __buildArkThinkingCircuitExplicitLongformV1(800, 1200)
+        : __bodyLong1000L;
+      const __explicitGeneric1200L = __isArkThinkingCircuitExplicitGlobal
+        ? __buildArkThinkingCircuitExplicitLongformV1(950, 1200)
+        : __bodyLong1200L;
 
       const __body = __skipFeelingFuture
-        ? (__explicitCharsEarly >= 1200 ? __bodyLong1200L : __explicitCharsEarly >= 700 ? __bodyLong1000L : __explicitCharsEarly >= 450 ? __bodyLong500L : __bodyLongL)
+        ? (__explicitCharsEarly >= 1200 ? __explicitGeneric1200L : __explicitCharsEarly >= 700 ? __explicitGeneric1000L : __explicitCharsEarly >= 450 ? __explicitGeneric500L : __explicitGenericL)
         : __explicitCharsEarly >= 1200
-          ? (__isFeelingImpressionExplicitGlobal ? __bodyFeelingImpression1200L : __isFutureOutlookExplicitGlobal ? __bodyFutureOutlook1200L : __bodyLong1200L)
+          ? (__isFeelingImpressionExplicitGlobal ? __bodyFeelingImpression1200L : __isFutureOutlookExplicitGlobal ? __bodyFutureOutlook1200L : __explicitGeneric1200L)
           : __explicitCharsEarly >= 700
-            ? (__isFeelingImpressionExplicitGlobal ? __bodyFeelingImpression1000L : __isFutureOutlookExplicitGlobal ? __bodyFutureOutlook1000L : __bodyLong1000L)
+            ? (__isFeelingImpressionExplicitGlobal ? __bodyFeelingImpression1000L : __isFutureOutlookExplicitGlobal ? __bodyFutureOutlook1000L : __explicitGeneric1000L)
             : __explicitCharsEarly >= 450
-              ? (__isFeelingImpressionExplicitGlobal ? __bodyFeelingImpression500L : __isFutureOutlookExplicitGlobal ? __bodyFutureOutlook500L : __bodyLong500L)
+              ? (__isFeelingImpressionExplicitGlobal ? __bodyFeelingImpression500L : __isFutureOutlookExplicitGlobal ? __bodyFutureOutlook500L : __explicitGeneric500L)
               : __isFeelingImpressionExplicitGlobal ? __bodyFeelingImpressionL
               : __isFutureOutlookExplicitGlobal ? __bodyFutureOutlookL
-              : __bodyLongL;
+              : __explicitGenericL;
 
       let __bodyFinal = __body;
       if (__explicitCharsEarly >= 700) {
@@ -2883,7 +2953,14 @@ ${String((gptDraft as any)?.text ?? "").trim()}
               "そのため展望は、現在地、変化の条件、次の一手の順で置くと、長文でも流れが崩れにくくなります。",
               "未来を広げすぎるより、どこを固定し、どこを観測し、どこを次に動かすかを分けるほうが、言葉は実際に役立ちます。"
             ]
-          : [
+          : __isArkThinkingCircuitExplicitGlobal
+            ? [
+                "脳幹では routeReason を固定しつつ routeClass と answerLength で出口の型を揃え、長文でも契約が散らばりにくくします。",
+                "binderSummary と sourcePack は、いまどの根拠束に立っているかを短く示し、次ターンで同じ軸を維持しやすくします。",
+                "responsePlan の semanticBody は本文の中身置き場であり、字数を満たすための同義反復より内部項目の連結を優先します。",
+                "thoughtCoreSummary と seedKernel が示す核を外さないと、長文化しても思考回路の説明として筋が通ります。"
+              ]
+            : [
               "長文化するときほど、核・理由・次の一手の三つを離さないほうが、読み手の判断材料が残ります。",
               "説明量を増やす目的は情報を重くすることではなく、中心から外れずに背景と条件をつなぐことです。",
               "同じことを言い換えるより、どこを固定し、どこを保留し、何を次に動かすかを分けて示すほうが役に立ちます。",
@@ -8307,19 +8384,33 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
         const __bodyLong1000 = __bodyLong1000L;
         const __bodyLong800 = __bodyLong800L;
         const __bodyLong1200 = __bodyLong1200L;
+        const __isArkThinkingCircuitExplicit =
+          /思考回路/u.test(t0) && /(天聞アーク|天聞)/u.test(t0);
+        const __explicitGenericLong = __isArkThinkingCircuitExplicit
+          ? __buildArkThinkingCircuitExplicitLongformV1(320, 520)
+          : __bodyLong;
+        const __explicitGeneric500 = __isArkThinkingCircuitExplicit
+          ? __buildArkThinkingCircuitExplicitLongformV1(400, 650)
+          : __bodyLong500;
+        const __explicitGeneric1000 = __isArkThinkingCircuitExplicit
+          ? __buildArkThinkingCircuitExplicitLongformV1(800, 1200)
+          : __bodyLong1000;
+        const __explicitGeneric1200 = __isArkThinkingCircuitExplicit
+          ? __buildArkThinkingCircuitExplicitLongformV1(950, 1200)
+          : __bodyLong1200;
         // CARD_TENMON_BRAINSTEM_V1: explicit 時は feeling/future に吸われない（forbiddenMoves 優先）
         const __skipFeelingFuture = Array.isArray(__brainstem?.forbiddenMoves) && (__brainstem.forbiddenMoves.includes("feeling_preempt") || __brainstem.forbiddenMoves.includes("future_preempt"));
         const __body = __skipFeelingFuture
-          ? (__explicitChars >= 1200 ? __bodyLong1200 : __explicitChars >= 700 ? __bodyLong1000 : __explicitChars >= 450 ? __bodyLong500 : __explicitChars <= 220 ? __bodyShort : __explicitChars <= 450 ? __bodyMedium : __bodyLong)
+          ? (__explicitChars >= 1200 ? __explicitGeneric1200 : __explicitChars >= 700 ? __explicitGeneric1000 : __explicitChars >= 450 ? __explicitGeneric500 : __explicitChars <= 220 ? __bodyShort : __explicitChars <= 450 ? __bodyMedium : __explicitGenericLong)
           : __explicitChars >= 1200
-            ? (__isFeelingImpressionExplicit ? __bodyFeelingImpression1200 : __isFutureOutlookExplicit ? __bodyFutureOutlook1200 : __bodyLong1200)
+            ? (__isFeelingImpressionExplicit ? __bodyFeelingImpression1200 : __isFutureOutlookExplicit ? __bodyFutureOutlook1200 : __explicitGeneric1200)
             : __explicitChars >= 700
-              ? (__isFeelingImpressionExplicit ? __bodyFeelingImpression1000 : __isFutureOutlookExplicit ? __bodyFutureOutlook1000 : __bodyLong1000)
+              ? (__isFeelingImpressionExplicit ? __bodyFeelingImpression1000 : __isFutureOutlookExplicit ? __bodyFutureOutlook1000 : __explicitGeneric1000)
               : __explicitChars >= 450
-                ? (__isFeelingImpressionExplicit ? __bodyFeelingImpression500 : __isFutureOutlookExplicit ? __bodyFutureOutlook500 : __bodyLong500)
+                ? (__isFeelingImpressionExplicit ? __bodyFeelingImpression500 : __isFutureOutlookExplicit ? __bodyFutureOutlook500 : __explicitGeneric500)
                 : __isFeelingImpressionExplicit ? __bodyFeelingImpression
                 : __isFutureOutlookExplicit ? __bodyFutureOutlook
-                : __explicitChars <= 220 ? __bodyShort : __explicitChars <= 450 ? __bodyMedium : __bodyLong;
+                : __explicitChars <= 220 ? __bodyShort : __explicitChars <= 450 ? __bodyMedium : __explicitGenericLong;
 
         let __bodyFinal = __body;
         if (__explicitChars >= 700) {
@@ -8332,7 +8423,14 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
                 "そのため展望は、現在地、変化の条件、次の一手の順で置くと、長文でも流れが崩れにくくなります。",
                 "未来を広げすぎるより、どこを固定し、どこを観測し、どこを次に動かすかを分けるほうが、言葉は実際に役立ちます。"
               ]
-            : [
+            : __isArkThinkingCircuitExplicit
+              ? [
+                  "脳幹では routeReason を固定しつつ routeClass と answerLength で出口の型を揃え、長文でも契約が散らばりにくくします。",
+                  "binderSummary と sourcePack は、いまどの根拠束に立っているかを短く示し、次ターンで同じ軸を維持しやすくします。",
+                  "responsePlan の semanticBody は本文の中身置き場であり、字数を満たすための同義反復より内部項目の連結を優先します。",
+                  "thoughtCoreSummary と seedKernel が示す核を外さないと、長文化しても思考回路の説明として筋が通ります。"
+                ]
+              : [
                 "長文化するときほど、核・理由・次の一手の三つを離さないほうが、読み手の判断材料が残ります。",
                 "説明量を増やす目的は情報を重くすることではなく、中心から外れずに背景と条件をつなぐことです。",
                 "同じことを言い換えるより、どこを固定し、どこを保留し、何を次に動かすかを分けて示すほうが役に立ちます。",
