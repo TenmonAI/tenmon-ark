@@ -125,6 +125,9 @@ import {
   trySystemDiagnosisPreemptExitV1,
   tryJudgementPreemptExitV1,
   tryEssenceAskExitV1,
+  tryResidualPreemptExitV1,
+  classifyGeneralShrinkV1,
+  getGeneralShrinkPayloadV1,
 } from "./chat_refactor/majorRoutes.js";
 import { parseAnswerProfileFromBody, injectAnswerProfileToKu, normalizeChatEntryFromBody } from "./chat_refactor/entry.js";
 import { responseProjector, normalizeDisplayLabel } from "../projection/responseProjector.js";
@@ -8378,39 +8381,18 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
       } catch {}
 
   
-// CARD_NATURAL_GENERAL_RESIDUAL_PREEMPT_V1
-try {
-  const __rawResidual = String(message ?? "").trim();
-  const __isResidual =
-    /(会話の感じ|芯|薄い|どう見える|完成度|未完成|足りない|構造|繋がって|つながって|実用域)/u.test(__rawResidual);
-
-  if (__isResidual) {
-    const __body =
-      "【天聞の所見】現状は骨格は通っていますが、通常会話の主権がまだ一部 fallback に流れます。未完は入口制御と表現の最終統一です。次は residual の完全封止です。";
-    return exitSystemDiagnosisPreemptV1({
+// CARD_NATURAL_GENERAL_RESIDUAL_PREEMPT_V1（PATCH51: 判定＋exit は majorRoutes に集約）
+  if (
+    tryResidualPreemptExitV1({
       res,
       __tenmonGeneralGateResultMaybe,
-      response: __body,
       message,
       timestamp,
       threadId,
       applyBrainstemContractToKu: (ku) => __applyBrainstemContractToKuV1(ku, __brainstem, "analysis"),
-    });
-  }
-} catch {}
-
-// CARD_GENERAL_ROUTE_SHRINK_V1: general 本文に入る前の deterministic 分類（既存 regex 再利用・広げすぎない）
-  function __classifyGeneralShrinkV1(message: string): { kind: "future_outlook" | "present_state" | "judgement" | "essence" | "compare" | "next_step" | "none"; confidence: number } {
-    const m = String(message ?? "").trim();
-    if (!m) return { kind: "none", confidence: 0 };
-    if (/^(次は|次の一手は|次の一歩は|では次は)[？?]?$/u.test(m) || (m.length <= 16 && /次(は|の一手|の一歩)/u.test(m)) || /(次の一手|どう進める|何からやる)/u.test(m)) return { kind: "next_step", confidence: 1 };
-    if (/(要するに|要点は|一言でいうと|本質は?|要は|核)/u.test(m)) return { kind: "essence", confidence: 1 };
-    if (/(違いは?|どう違う|何が違う|比較)/u.test(m)) return { kind: "compare", confidence: 1 };
-    if (/(これから|展望|先行き|どうなる|どう見ますか|未来|今後|この先|見通し)/u.test(m)) return { kind: "future_outlook", confidence: 1 };
-    if (/(今どんな気分|今の状態|いまどう)/u.test(m)) return { kind: "present_state", confidence: 1 };
-    if (/(どう思う|良いか悪いか|判断)/u.test(m)) return { kind: "judgement", confidence: 1 };
-    return { kind: "none", confidence: 0 };
-  }
+    })
+  )
+    return;
 
   // CARD_GROUNDING_SELECTOR_V1: grounded / canon / concept / general / unresolved を1回だけ選択
   type GroundingSelectorKind =
@@ -9083,46 +9065,15 @@ try {
       )
         return;
 
-      const __shrink = __classifyGeneralShrinkV1(String(message ?? ""));
+      const __shrink = classifyGeneralShrinkV1(String(message ?? ""));
       try { console.log("[GENERAL_SHRINK_CLASSIFY]", { raw: String(message ?? "").slice(0, 120), kind: __shrink.kind, confidence: __shrink.confidence }); } catch {}
       if (__shrink.kind !== "none" && __shrink.confidence >= 0.5) {
         const __rawSysDiagShrink = String(message ?? "").trim();
         const __isSystemDiagShrink = /天聞アーク|TENMON[- ]?ARK|内部構造|構造|接続|繋がって|つながって|どこまで|構築状況|完成度|現状|診断|解析/u.test(__rawSysDiagShrink);
-        const __rcShrink = __shrink.kind === "judgement" ? "judgement" : "analysis";
-        let __rrShrink: string;
-        let __bodyShrink: string;
-        switch (__shrink.kind) {
-          case "future_outlook":
-            __rrShrink = "R22_FUTURE_OUTLOOK_V1";
-            __bodyShrink = "【天聞の所見】未来・展望は、いまの一点から見立てる。いま引っかかっている一点を一言で。";
-            break;
-          case "present_state":
-            __rrShrink = "FEELING_SELF_STATE_V1";
-            __bodyShrink = "【天聞の所見】いまは、整えに向かう気分です。中心を一つ置いて、そこから静かに見ていけます。";
-            break;
-          case "judgement":
-            __rrShrink = "R22_JUDGEMENT_PREEMPT_V1";
-            __bodyShrink = /(良い|悪い|正しい|間違い|べき|どっちが|どちらが|した方が)/u.test(String(message ?? "").trim()) || /(良い|悪い)[？?]?\s*$/u.test(String(message ?? "").trim())
-              ? "【天聞の所見】判断軸はすでに出ています。結論から言うと、文脈を一点に固定すれば裁定は可能です。次段で対象を確定して仕上げます。"
-              : "【天聞の所見】見立ての軸は出ています。いま必要なのは問い返しではなく、対象を一点に固定して裁定へ進むことです。";
-            break;
-          case "essence":
-            __rrShrink = "R22_ESSENCE_ASK_V1";
-            __bodyShrink =
-              "【天聞の所見】要点を聞いています。いまの中心を一言で置くと、答えが締まります。";
-            break;
-          case "compare":
-            __rrShrink = "R22_COMPARE_ASK_V1";
-            __bodyShrink = "【天聞の所見】比較の問いです。比べたい二つを一言ずつ置くと、答えが締まります。";
-            break;
-          case "next_step":
-            __rrShrink = "R22_NEXTSTEP_FOLLOWUP_V1";
-            __bodyShrink = "【天聞の所見】次は、いまの中心を一つ保ったまま、見る角度を一つ決めると進みやすいです。";
-            break;
-          default:
-            __rrShrink = "NATURAL_GENERAL_LLM_TOP";
-            __bodyShrink = "【天聞の所見】いま一番引っかかっている一点を置いてください。";
-        }
+        const __payloadShrink = getGeneralShrinkPayloadV1(__shrink.kind, String(message ?? ""));
+        const __rrShrink = __payloadShrink.rr;
+        const __bodyShrink = __payloadShrink.body;
+        const __rcShrink = __payloadShrink.routeClass;
         const __kuShrink: any = {
           routeReason: __rrShrink,
           routeClass: __rcShrink,

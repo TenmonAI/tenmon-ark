@@ -627,3 +627,123 @@ export function tryEssenceAskExitV1(args: {
   return true;
 }
 
+/** PATCH51_GENERAL_SHRINK_FALLBACK_V1: residual preempt 早期判定＋exit を一括。一致時 true。 */
+export function tryResidualPreemptExitV1(args: {
+  res: any;
+  __tenmonGeneralGateResultMaybe: any;
+  message: any;
+  timestamp: any;
+  threadId: any;
+  applyBrainstemContractToKu?: (ku: any) => void;
+}): boolean {
+  const msg = String(args.message ?? "").trim();
+  if (
+    !/(会話の感じ|芯|薄い|どう見える|完成度|未完成|足りない|構造|繋がって|つながって|実用域)/u.test(msg)
+  )
+    return false;
+  const body =
+    "【天聞の所見】現状は骨格は通っていますが、通常会話の主権がまだ一部 fallback に流れます。未完は入口制御と表現の最終統一です。次は residual の完全封止です。";
+  exitSystemDiagnosisPreemptV1({
+    res: args.res,
+    __tenmonGeneralGateResultMaybe: args.__tenmonGeneralGateResultMaybe,
+    response: body,
+    message: args.message,
+    timestamp: args.timestamp,
+    threadId: args.threadId,
+    applyBrainstemContractToKu: args.applyBrainstemContractToKu,
+  });
+  return true;
+}
+
+export type GeneralShrinkKind =
+  | "future_outlook"
+  | "present_state"
+  | "judgement"
+  | "essence"
+  | "compare"
+  | "next_step"
+  | "none";
+
+/** PATCH51_GENERAL_SHRINK_FALLBACK_V1: general 本文前の deterministic 分類（既存 regex 再利用）。 */
+export function classifyGeneralShrinkV1(
+  message: string
+): { kind: GeneralShrinkKind; confidence: number } {
+  const m = String(message ?? "").trim();
+  if (!m) return { kind: "none", confidence: 0 };
+  if (
+    /^(次は|次の一手は|次の一歩は|では次は)[？?]?$/u.test(m) ||
+    (m.length <= 16 && /次(は|の一手|の一歩)/u.test(m)) ||
+    /(次の一手|どう進める|何からやる)/u.test(m)
+  )
+    return { kind: "next_step", confidence: 1 };
+  if (/(要するに|要点は|一言でいうと|本質は?|要は|核)/u.test(m))
+    return { kind: "essence", confidence: 1 };
+  if (/(違いは?|どう違う|何が違う|比較)/u.test(m)) return { kind: "compare", confidence: 1 };
+  if (/(これから|展望|先行き|どうなる|どう見ますか|未来|今後|この先|見通し)/u.test(m))
+    return { kind: "future_outlook", confidence: 1 };
+  if (/(今どんな気分|今の状態|いまどう)/u.test(m))
+    return { kind: "present_state", confidence: 1 };
+  if (/(どう思う|良いか悪いか|判断)/u.test(m)) return { kind: "judgement", confidence: 1 };
+  return { kind: "none", confidence: 0 };
+}
+
+/** PATCH51_GENERAL_SHRINK_FALLBACK_V1: shrink kind + message から rr / body / routeClass を返す。 */
+export function getGeneralShrinkPayloadV1(
+  kind: GeneralShrinkKind,
+  message: string
+): { rr: string; body: string; routeClass: "judgement" | "analysis" } {
+  const m = String(message ?? "").trim();
+  switch (kind) {
+    case "future_outlook":
+      return {
+        rr: "R22_FUTURE_OUTLOOK_V1",
+        body:
+          "【天聞の所見】未来・展望は、いまの一点から見立てる。いま引っかかっている一点を一言で。",
+        routeClass: "analysis",
+      };
+    case "present_state":
+      return {
+        rr: "FEELING_SELF_STATE_V1",
+        body:
+          "【天聞の所見】いまは、整えに向かう気分です。中心を一つ置いて、そこから静かに見ていけます。",
+        routeClass: "analysis",
+      };
+    case "judgement":
+      return {
+        rr: "R22_JUDGEMENT_PREEMPT_V1",
+        body:
+          /(良い|悪い|正しい|間違い|べき|どっちが|どちらが|した方が)/u.test(m) ||
+          /(良い|悪い)[？?]?\s*$/u.test(m)
+            ? "【天聞の所見】判断軸はすでに出ています。結論から言うと、文脈を一点に固定すれば裁定は可能です。次段で対象を確定して仕上げます。"
+            : "【天聞の所見】見立ての軸は出ています。いま必要なのは問い返しではなく、対象を一点に固定して裁定へ進むことです。",
+        routeClass: "judgement",
+      };
+    case "essence":
+      return {
+        rr: "R22_ESSENCE_ASK_V1",
+        body:
+          "【天聞の所見】要点を聞いています。いまの中心を一言で置くと、答えが締まります。",
+        routeClass: "analysis",
+      };
+    case "compare":
+      return {
+        rr: "R22_COMPARE_ASK_V1",
+        body: "【天聞の所見】比較の問いです。比べたい二つを一言ずつ置くと、答えが締まります。",
+        routeClass: "analysis",
+      };
+    case "next_step":
+      return {
+        rr: "R22_NEXTSTEP_FOLLOWUP_V1",
+        body:
+          "【天聞の所見】次は、いまの中心を一つ保ったまま、見る角度を一つ決めると進みやすいです。",
+        routeClass: "analysis",
+      };
+    default:
+      return {
+        rr: "NATURAL_GENERAL_LLM_TOP",
+        body: "【天聞の所見】いま一番引っかかっている一点を置いてください。",
+        routeClass: "analysis",
+      };
+  }
+}
+
