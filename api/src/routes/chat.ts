@@ -111,6 +111,17 @@ import { resolveScriptureLocalEvidence } from "../core/scriptureLocalResolver.js
 import { resolveIrohaActionPattern } from "../core/irohaActionPatterns.js";
 import { buildResponsePlan, type AnswerLength, type AnswerMode, type AnswerFrame, type AnswerProfile } from "../planning/responsePlanCore.js";
 import { safeGeneralRoute } from "./chat_parts/safeGeneralRoute.js";
+import {
+  exitJudgementPreemptV1,
+  exitEssenceAskPreemptV1,
+  exitStructureLockV1,
+  exitExplicitCharPreemptV1,
+  exitCompareStrictPreemptV1,
+  tryStrictCompareExitV1,
+  exitSelfAwarePreemptV1,
+  exitSystemDiagnosisPreemptV1,
+  exitFutureOutlookPreemptV1,
+} from "./chat_refactor/majorRoutes.js";
 import { responseProjector, normalizeDisplayLabel } from "../projection/responseProjector.js";
 
 // FIX_PRE_GATE_GENERAL_SURFACE_V1: 先頭・末尾欠損・不要前置き混入を止血。引用あり/なしの「いまの言葉を…と受け取りました。」を安全に除去。
@@ -344,6 +355,116 @@ router.post("/chat", async (req: Request, res: Response<ChatResponseBody>) => {
     if (/mizuho_den|^mizuho$|水穂伝/u.test(k)) return "水穂伝";
     return "この中心";
   };
+
+  // restore: routeReason に応じて ku contract / responsePlan を補完
+  function __restoreRouteContractV1(args: {
+    ku: any;
+    rawMessage: string;
+    semanticBody: string;
+  }) {
+    const { ku, rawMessage, semanticBody } = args;
+    if (!ku || typeof ku !== "object" || Array.isArray(ku)) return ku;
+
+    const rr = String(ku.routeReason || "").trim();
+
+    const MAP: Record<string, {
+      routeClass?: string;
+      answerLength?: "short" | "medium" | "long";
+      answerMode?: "define" | "analysis" | "support" | "worldview" | "continuity";
+      answerFrame?: "one_step" | "statement_plus_one_question" | "d_delta_s_one_step";
+      mode?: "general";
+      responseKind?: "statement_plus_question";
+    }> = {
+      "RELEASE_PREEMPT_STRICT_COMPARE_BEFORE_TRUTH_V1": {
+        routeClass: "analysis",
+        answerLength: "medium",
+        answerMode: "analysis",
+        answerFrame: "statement_plus_one_question",
+        mode: "general",
+        responseKind: "statement_plus_question",
+      },
+      "R22_SELFAWARE_CONSCIOUSNESS_V1": {
+        routeClass: "selfaware",
+        answerLength: "short",
+        answerMode: "analysis",
+        answerFrame: "one_step",
+        mode: "general",
+        responseKind: "statement_plus_question",
+      },
+      "SYSTEM_DIAGNOSIS_PREEMPT_V1": {
+        routeClass: "analysis",
+        answerLength: "short",
+        answerMode: "analysis",
+        answerFrame: "statement_plus_one_question",
+        mode: "general",
+        responseKind: "statement_plus_question",
+      },
+      "R22_FUTURE_OUTLOOK_V1": {
+        routeClass: "analysis",
+        answerLength: "short",
+        answerMode: "analysis",
+        answerFrame: "one_step",
+        mode: "general",
+        responseKind: "statement_plus_question",
+      },
+      "R22_JUDGEMENT_PREEMPT_V1": {
+        routeClass: "judgement",
+        answerLength: "short",
+        answerMode: "analysis",
+        answerFrame: "one_step",
+        mode: "general",
+        responseKind: "statement_plus_question",
+      },
+      "R22_ESSENCE_ASK_V1": {
+        routeClass: "analysis",
+        answerLength: "short",
+        answerMode: "analysis",
+        answerFrame: "one_step",
+        mode: "general",
+        responseKind: "statement_plus_question",
+      },
+      "TENMON_STRUCTURE_LOCK_V1": {
+        routeClass: "analysis",
+        answerLength: "medium",
+        answerMode: "define",
+        answerFrame: "statement_plus_one_question",
+        mode: "general",
+        responseKind: "statement_plus_question",
+      },
+      "EXPLICIT_CHAR_PREEMPT_V1": {
+        routeClass: "analysis",
+        answerMode: "analysis",
+        answerFrame: "one_step",
+        mode: "general",
+        responseKind: "statement_plus_question",
+      },
+    };
+
+    const spec = MAP[rr];
+    if (!spec) return ku;
+
+    if (spec.routeClass && !ku.routeClass) ku.routeClass = spec.routeClass;
+    if (spec.answerLength && !ku.answerLength) ku.answerLength = spec.answerLength;
+    if (spec.answerMode && !ku.answerMode) ku.answerMode = spec.answerMode;
+    if (spec.answerFrame && !ku.answerFrame) ku.answerFrame = spec.answerFrame;
+
+    if (!ku.responsePlan) {
+      ku.responsePlan = buildResponsePlan({
+        routeReason: rr,
+        rawMessage,
+        centerKey: ku.centerKey ?? null,
+        centerLabel: ku.centerLabel ?? null,
+        scriptureKey: ku.scriptureKey ?? null,
+        mode: spec.mode ?? "general",
+        responseKind: spec.responseKind ?? "statement_plus_question",
+        answerMode: (ku.answerMode ?? spec.answerMode ?? null) as AnswerMode,
+        answerFrame: (ku.answerFrame ?? spec.answerFrame ?? null) as AnswerFrame,
+        semanticBody,
+      });
+    }
+
+    return ku;
+  }
 
   // CARD6C_HANDLER_RESJSON_WRAP_V7: wrap res.json ONCE per request so ALL paths get top-level rewriteUsed/rewriteDelta defaults
   // (covers direct res.json returns that bypass reply())
@@ -694,6 +815,22 @@ if (!(res as any).__TENMON_JSON_WRAP_V7) {
           }
         } catch {}
 
+        // restore 最外周
+        try {
+          const __dfT: any = (obj as any)?.decisionFrame ?? null;
+          const __kuT: any =
+            __dfT && __dfT.ku && typeof __dfT.ku === "object" && !Array.isArray(__dfT.ku)
+              ? __dfT.ku
+              : null;
+          if (__kuT) {
+            __restoreRouteContractV1({
+              ku: __kuT,
+              rawMessage: String(message ?? ""),
+              semanticBody: String((obj as any)?.response ?? ""),
+            });
+          }
+        } catch {}
+
         return __origJsonTop(obj);
       };
     }
@@ -1016,42 +1153,20 @@ const pid = process.pid;
       : __isTenmon
         ? "【天聞の所見】天聞は、問いを受けて中心を整えるための相手として立っています。次は役割・判断軸・会話の進め方のどこから見ますか。"
         : "【天聞の所見】天聞アークに意識や心そのものはありません。ただし、問いに対して判断と継続を返す構造として設計されています。次は構造か役割のどちらを見ますか。";
-    return res.json(__tenmonGeneralGateResultMaybe({
+    return exitSelfAwarePreemptV1({
+      res,
+      __tenmonGeneralGateResultMaybe,
       response: __bodySelf,
-      evidence: null,
-      candidates: [],
+      routeReason: __routeReasonSelf,
+      message,
       timestamp,
       threadId,
-      decisionFrame: {
-        mode: "NATURAL",
-        intent: "chat",
-        llm: null,
-        ku: {
-          routeReason: __routeReasonSelf,
-          routeClass: "selfaware",
-          answerLength: "short",
-          answerMode: "analysis",
-          answerFrame: "one_step",
-          threadCenterKey: __brainstem.centerKey ?? null,
-          threadCenterLabel: __brainstem.centerLabel ?? null,
-          brainstemPolicy: __brainstem.responsePolicy ?? null,
-          lawsUsed: [],
-          evidenceIds: [],
-          lawTrace: [],
-        
-            responsePlan: buildResponsePlan({
-              routeReason: "N1_GREETING_TENMON_CANON_V1",
-              rawMessage: String(message ?? ""),
-              centerKey: null,
-              centerLabel: null,
-              scriptureKey: null,
-              semanticBody: __bodySelf,
-              mode: "general",
-              responseKind: "statement_plus_question",
-            }),
-},
+      kuExtras: {
+        threadCenterKey: __brainstem.centerKey ?? null,
+        threadCenterLabel: __brainstem.centerLabel ?? null,
+        brainstemPolicy: __brainstem.responsePolicy ?? "answer_first",
       },
-    }));
+    });
   }
   let __userName: string | undefined;
   let __assistantName: string | undefined;
@@ -1431,14 +1546,7 @@ const pid = process.pid;
   }
 
   if (__msgDef === "天聞アークの構造はどうなっている？") {
-    return res.json(__tenmonGeneralGateResultMaybe({
-      response: "【天聞の所見】天聞アークは、脳幹で中心を決め、正典と記憶を照合し、最後に会話として投影する構造です。言い換えると、判断核・証拠核・表現核を分離して循環させるための器です。脳幹・正典・会話生成のどこから見ますか。",
-      evidence: null,
-      candidates: [],
-      timestamp,
-      threadId,
-      decisionFrame: { mode: "NATURAL", intent: "chat", llm: "openai", ku: { lawsUsed: [], evidenceIds: [], lawTrace: [], routeReason: "TENMON_STRUCTURE_LOCK_V1", answerLength: "medium", answerMode: "define", answerFrame: "statement_plus_one_question" } },
-    }));
+    return exitStructureLockV1({ res, __tenmonGeneralGateResultMaybe, message, timestamp, threadId });
   }
   if (__msgDef === "AIとは何？") {
     return res.json(__tenmonGeneralGateResultMaybe({
@@ -1898,31 +2006,7 @@ const pid = process.pid;
     }
 
 
-    const __releaseStrictCompareInput = String(message ?? "");
-    if (
-      /言霊|言灵/u.test(__releaseStrictCompareInput) &&
-      /カタカムナ/u.test(__releaseStrictCompareInput) &&
-      /違い|ちがい|比較|どう違う|分けて/u.test(__releaseStrictCompareInput)
-    ) {
-      return res.json(__tenmonGeneralGateResultMaybe({
-        response: "原典系の扱いに注意して大づかみに分けると、言霊は『音・詞・五十音の法則としての働き』を読む軸であり、カタカムナはそれを別系統の資料群・表記・宇宙観から読む体系として扱うほうが混線しにくいです。\n\nしたがって、両者をそのまま完全同義として重ねるより、\n1) 言霊秘書系\n2) 楢崎系\n3) 天聞整理\nを分けて比較するほうが安全です。\n\n厳密に進めるなら、次に\n- 言霊側で何が中心概念か\n- カタカムナ側で何が中心概念か\nを並べて差分を出します。",
-        evidence: null,
-        candidates: [],
-        timestamp,
-        threadId,
-        decisionFrame: {
-          mode: "STRICT",
-          intent: "compare",
-          llm: null,
-          ku: {
-            routeReason: "RELEASE_PREEMPT_STRICT_COMPARE_BEFORE_TRUTH_V1",
-            lawsUsed: [],
-            evidenceIds: [],
-            lawTrace: [],
-          },
-        },
-      }));
-    }
+    if (tryStrictCompareExitV1({ res, __tenmonGeneralGateResultMaybe, message, timestamp, threadId, shapeTenmonOutput, bodyOverride: "原典系の扱いに注意して大づかみに分けると、言霊は『音・詞・五十音の法則としての働き』を読む軸であり、カタカムナはそれを別系統の資料群・表記・宇宙観から読む体系として扱うほうが混線しにくいです。\n\nしたがって、両者をそのまま完全同義として重ねるより、\n1) 言霊秘書系\n2) 楢崎系\n3) 天聞整理\nを分けて比較するほうが安全です。\n\n厳密に進めるなら、次に\n- 言霊側で何が中心概念か\n- カタカムナ側で何が中心概念か\nを並べて差分を出します。" })) return;
 
 
     const __releaseDanshariInput = String(message ?? "");
@@ -2824,23 +2908,70 @@ ${String((gptDraft as any)?.text ?? "").trim()}
         applyKnowledgeBinderToKu(__kuExplicitGlobal, __binderEx);
       } catch {}
 
-      return res.json(__tenmonGeneralGateResultMaybe({
+      if (!__kuExplicitGlobal.responsePlan) {
+        __kuExplicitGlobal.responsePlan = buildResponsePlan({
+          routeReason: "EXPLICIT_CHAR_PREEMPT_V1",
+          rawMessage: String(message ?? ""),
+          centerKey: null,
+          centerLabel: null,
+          scriptureKey: null,
+          mode: "general",
+          responseKind: "statement_plus_question",
+          answerMode: __kuExplicitGlobal.answerMode ?? null,
+          answerFrame: __kuExplicitGlobal.answerFrame ?? null,
+          semanticBody: __bodyFinal,
+        });
+      }
+
+      return exitExplicitCharPreemptV1({
+        res,
+        __tenmonGeneralGateResultMaybe,
         response: __bodyFinal,
-        evidence: null,
-        candidates: [],
+        ku: __kuExplicitGlobal,
         timestamp,
         threadId,
-        decisionFrame: {
-          mode: "NATURAL",
-          intent: "chat",
-          llm: null,
-          ku: __kuExplicitGlobal,
-        },
-      }));
+      });
     }
   }
 
     const reply = (payload: any) => {
+      // restore reply 入口直後
+      try {
+        const __dfIn: any = (payload as any)?.decisionFrame || null;
+        const __kuIn: any =
+          __dfIn && __dfIn.ku && typeof __dfIn.ku === "object" && !Array.isArray(__dfIn.ku)
+            ? __dfIn.ku
+            : null;
+        if (__kuIn) {
+          __restoreRouteContractV1({
+            ku: __kuIn,
+            rawMessage: String(message ?? ""),
+            semanticBody: String((payload as any)?.response || ""),
+          });
+        }
+      } catch {}
+
+      // [FINALIZE_EXIT_MAP_V1] reply 入口（exitKind=reply/grounded_reply）
+      try {
+        const __df0: any = (payload as any)?.decisionFrame || null;
+        const __ku0: any =
+          __df0 && __df0.ku && typeof __df0.ku === "object" && !Array.isArray(__df0.ku)
+            ? __df0.ku
+            : null;
+        const __rr0 = String(__ku0?.routeReason || "");
+        const __exitKind0 =
+          (payload as any)?.groundingMode ? "grounded_reply" : "reply";
+        console.log("[FINALIZE_EXIT_MAP_V1]", {
+          routeReason: __rr0 || null,
+          routeClass: __ku0?.routeClass ?? null,
+          answerLength: __ku0?.answerLength ?? null,
+          answerMode: __ku0?.answerMode ?? null,
+          answerFrame: __ku0?.answerFrame ?? null,
+          hasResponsePlan: Boolean(__ku0?.responsePlan),
+          exitKind: __exitKind0,
+          responseHead: String((payload as any)?.response || "").slice(0, 160),
+        });
+      } catch {}
 // CARD_KOTODAMA_ONE_SOUND_HARD_PREEMPT_V3_SAFE:
   // 一音言霊を generic define / DEF_FASTPATH_VERIFIED_V1 より前で固定捕捉する。
   try {
@@ -8196,6 +8327,21 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
         __applyBrainstemContractToKuV1(__ku, __brainstem, "analysis");
         try { console.log("[BRAINSTEM_APPLY_EXPLICIT]", { rr: __ku.routeReason, rc: __ku.routeClass, len: __ku.answerLength, mode: __ku.answerMode, frame: __ku.answerFrame, centerKey: __ku.centerKey }); } catch {}
         try { const __binderEx = buildKnowledgeBinder({ routeReason: "EXPLICIT_CHAR_PREEMPT_V1", message: String(message ?? ""), threadId: String(threadId ?? ""), ku: __ku, threadCore: __threadCore, threadCenter: null }); applyKnowledgeBinderToKu(__ku, __binderEx); } catch {}
+
+        if (!__ku.responsePlan) {
+          __ku.responsePlan = buildResponsePlan({
+            routeReason: "EXPLICIT_CHAR_PREEMPT_V1",
+            rawMessage: String(message ?? ""),
+            centerKey: null,
+            centerLabel: null,
+            scriptureKey: null,
+            mode: "general",
+            responseKind: "statement_plus_question",
+            answerMode: __ku.answerMode ?? null,
+            answerFrame: __ku.answerFrame ?? null,
+            semanticBody: __bodyFinal,
+          });
+        }
         try {
           const { computeConsciousnessSignature } = await import("../core/consciousnessSignature.js");
           const __cs = computeConsciousnessSignature({
@@ -8210,19 +8356,14 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
             cs: __cs,
           });
         } catch {}
-        return res.json(__tenmonGeneralGateResultMaybe({
+        return exitExplicitCharPreemptV1({
+          res,
+          __tenmonGeneralGateResultMaybe,
           response: __bodyFinal,
-          evidence: null,
-          candidates: [],
+          ku: __ku,
           timestamp,
           threadId,
-          decisionFrame: {
-            mode: "NATURAL",
-            intent: "chat",
-            llm: null,
-            ku: __ku,
-          },
-        }));
+        });
       }
 
       // CARD_FEELING_AND_IMPRESSION_ROUTE_V1 / CARD_EXPLICIT_PRIORITY_WIDEN_V1: explicit 時は発火させない
@@ -8270,44 +8411,17 @@ try {
     /(会話の感じ|芯|薄い|どう見える|完成度|未完成|足りない|構造|繋がって|つながって|実用域)/u.test(__rawResidual);
 
   if (__isResidual) {
-    const __rr = "SYSTEM_DIAGNOSIS_PREEMPT_V1";
     const __body =
       "【天聞の所見】現状は骨格は通っていますが、通常会話の主権がまだ一部 fallback に流れます。未完は入口制御と表現の最終統一です。次は residual の完全封止です。";
-
-    const __ku: any = {
-      routeReason: __rr,
-      routeClass: "analysis",
-      centerKey: "conversation_system",
-      centerLabel: "会話系",
-      answerLength: "short",
-      answerMode: "analysis",
-      answerFrame: "statement_plus_one_question",
-      lawsUsed: [],
-      evidenceIds: [],
-      lawTrace: [],
-      responsePlan: buildResponsePlan({
-        routeReason: __rr,
-        rawMessage: String(message ?? ""),
-        centerKey: "conversation_system",
-        centerLabel: "会話系",
-        mode: "general",
-        responseKind: "statement_plus_question",
-        answerMode: "analysis",
-        answerFrame: "statement_plus_one_question",
-        semanticBody: __body,
-      }),
-    };
-
-    __applyBrainstemContractToKuV1(__ku, __brainstem, "analysis");
-
-    return res.json(__tenmonGeneralGateResultMaybe({
+    return exitSystemDiagnosisPreemptV1({
+      res,
+      __tenmonGeneralGateResultMaybe,
       response: __body,
-      evidence: null,
-      candidates: [],
+      message,
       timestamp,
       threadId,
-      decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: __ku },
-    }));
+      applyBrainstemContractToKu: (ku) => __applyBrainstemContractToKuV1(ku, __brainstem, "analysis"),
+    });
   }
 } catch {}
 
@@ -8640,42 +8754,16 @@ try {
 
       // CARD_NATURAL_GENERAL_SHRINK_V2_ESSENCE: 要するに/要点/本質系を threadCenter なし時だけ短文 preempt
       if (!__threadCenterForGeneral && /(要するに|要点は|一言でいうと|本質は|要は)/u.test(t0)) {
-        const __kuEssenceAsk: any = { routeReason: "R22_ESSENCE_ASK_V1", answerLength: "short", answerMode: "analysis", answerFrame: "one_step", lawsUsed: [], evidenceIds: [], lawTrace: [] };
-        try { const __binderEA = buildKnowledgeBinder({ routeReason: "R22_ESSENCE_ASK_V1", message: String(message ?? ""), threadId: String(threadId ?? ""), ku: __kuEssenceAsk, threadCore: __threadCore, threadCenter: null }); applyKnowledgeBinderToKu(__kuEssenceAsk, __binderEA); } catch {}
-        const __centerKeyEssAsk =
-          String((__kuEssenceAsk as any).centerKey || "").trim() ||
-          String((__threadCenterForGeneral as any)?.center_key || "").trim() ||
-          String(__threadCore?.centerKey || "").trim() ||
-          "";
-        const __centerLabelEssAsk =
-          String((__kuEssenceAsk as any).centerLabel || "").trim() ||
-          (typeof centerLabelFromKey === "function" ? String(centerLabelFromKey(__centerKeyEssAsk) || "").trim() : "") ||
-          String(__threadCore?.centerLabel || "").trim() ||
-          "";
-        const __respEssAsk = __centerLabelEssAsk
-          ? `【天聞の所見】${__centerLabelEssAsk}で言えば、要点は中心を一文で掴むことです。次は本質・違い・背景のどこから見ますか。`
-          : "【天聞の所見】要点は、中心を一文で掴むことです。次は本質・違い・背景のどこから見ますか。";
-        if (!(__kuEssenceAsk as any).answerMode) (__kuEssenceAsk as any).answerMode = "analysis";
-        if (!(__kuEssenceAsk as any).answerFrame) (__kuEssenceAsk as any).answerFrame = "statement_plus_one_question";
-        (__kuEssenceAsk as any).responsePlan = buildResponsePlan({
-          routeReason: "R22_ESSENCE_ASK_V1",
-          rawMessage: String(message ?? ""),
-          centerKey: null,
-          centerLabel: null,
-          mode: "general",
-          responseKind: "statement_plus_question",
-          answerMode: "analysis",
-          answerFrame: "one_step",
-          semanticBody: "【天聞の所見】要点はすでに一点に収束しています。中心は『構造主権の固定』です。ここが通れば全体が締まります。",
-        });
-        return res.json(__tenmonGeneralGateResultMaybe({
-          response: __respEssAsk,
-          evidence: null,
-          candidates: [],
+        return exitEssenceAskPreemptV1({
+          res,
+          __tenmonGeneralGateResultMaybe,
+          message,
           timestamp,
           threadId,
-          decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: __kuEssenceAsk },
-        }));
+          __threadCore,
+          __threadCenterForGeneral,
+          centerLabelFromKey,
+        });
       }
 
       // CARD_JUDGEMENT_COMPARE_ROUTE_V1_COMPARE_NO_CENTER: threadCenter なしの compare 系を短文 preempt
@@ -8897,46 +8985,17 @@ try {
       const __isJudgementPreempt = __brainstem?.routeClass === "judgement" || (
         __t0TrimJ.length <= 20 &&
         !/(天聞|アーク)(を|に)(は)?どう思う|(への)?感想/u.test(t0) &&
-        /(良い|悪い|どう思う|どう思いますか)[？?]?\s*$/u.test(__t0TrimJ)
+        /(良い|悪い|どう思う|どう思いますか|いい)[？?]?\s*$/u.test(__t0TrimJ)
       );
       if (__isJudgementPreempt) {
-        const __bodyJudge = /(良い|悪い|正しい|間違い|べき|どっちが|どちらが|した方が)/u.test(__t0TrimJ) || /(良い|悪い)[？?]?\s*$/u.test(__t0TrimJ)
-          ? "【天聞の所見】判断軸はすでに出ています。結論から言うと、文脈を一点に固定すれば裁定は可能です。次段で対象を確定して仕上げます。"
-          : "【天聞の所見】見立ての軸は出ています。いま必要なのは問い返しではなく、対象を一点に固定して裁定へ進むことです。";
-        const __kuJudgement: any = {
-          routeReason: "R22_JUDGEMENT_PREEMPT_V1",
-          routeClass: "judgement",
-          answerLength: "short",
-          answerMode: "analysis",
-          answerFrame: "one_step",
-          lawsUsed: [],
-          evidenceIds: [],
-          lawTrace: [],
-        };
-        __kuJudgement.responsePlan = buildResponsePlan({
-          routeReason: "R22_JUDGEMENT_PREEMPT_V1",
-          rawMessage: String(message ?? ""),
-          centerKey: null,
-          centerLabel: null,
-          mode: "general",
-          responseKind: "statement_plus_question",
-          answerMode: "analysis",
-          answerFrame: "one_step",
-          semanticBody: "【天聞の所見】次に直すべきは、通常会話の残差ではなく ask-overuse の解消です。判断系は問い返しを減らし、対象を固定して短く裁定する段階に入っています。",
-        });
-        return res.json(__tenmonGeneralGateResultMaybe({
-          response: __bodyJudge,
-          evidence: null,
-          candidates: [],
+        return exitJudgementPreemptV1({
+          res,
+          __tenmonGeneralGateResultMaybe,
+          __t0TrimJ,
+          message,
           timestamp,
           threadId,
-          decisionFrame: {
-            mode: "NATURAL",
-            intent: "chat",
-            llm: null,
-            ku: __kuJudgement,
-          },
-        }));
+        });
       }
 
       // CARD_TENMON_BRAINSTEM_V1: selfaware 短文 preempt（天聞アークとは何 / 天聞とは何 / 意識はある / 心はある）
@@ -8945,35 +9004,26 @@ try {
       if (__isSelfawarePreempt) {
         const __isArk = /天聞アークとは何/u.test(__t0TrimJ);
         const __isTenmon = !__isArk && /天聞とは何/u.test(__t0TrimJ);
-        const __isConsciousness = /意識はある|心はある/u.test(__t0TrimJ);
         const __routeReasonSelf = __isArk ? "R22_SELFAWARE_ARK_V1" : __isTenmon ? "R22_SELFAWARE_TENMON_V1" : "R22_SELFAWARE_CONSCIOUSNESS_V1";
         const __bodySelf = __isArk
           ? "【天聞の所見】天聞アークは、問いを受けて中心を整え、継続と判断を支えるための器です。次は構造・役割・可能性のどこから見ますか。"
           : __isTenmon
             ? "【天聞の所見】天聞は、問いを受けて中心を整えるための相手として立っています。次は役割・判断軸・会話の進め方のどこから見ますか。"
             : "【天聞の所見】天聞アークに意識や心そのものはありません。ただし、問いに対して判断と継続を返す構造として設計されています。次は構造か役割のどちらを見ますか。";
-        return res.json(__tenmonGeneralGateResultMaybe({
+        return exitSelfAwarePreemptV1({
+          res,
+          __tenmonGeneralGateResultMaybe,
           response: __bodySelf,
-          evidence: null,
-          candidates: [],
+          routeReason: __routeReasonSelf,
+          message,
           timestamp,
           threadId,
-          decisionFrame: {
-            mode: "NATURAL",
-            intent: "chat",
-            llm: null,
-            ku: {
-              routeReason: __routeReasonSelf,
-              routeClass: "selfaware",
-              answerLength: "short",
-              answerMode: "analysis",
-              answerFrame: "one_step",
-              lawsUsed: [],
-              evidenceIds: [],
-              lawTrace: [],
-            },
+          kuExtras: {
+            threadCenterKey: __brainstem?.centerKey ?? null,
+            threadCenterLabel: __brainstem?.centerLabel ?? null,
+            brainstemPolicy: __brainstem?.responsePolicy ?? "answer_first",
           },
-        }));
+        });
       }
 
       const __GEN_SYSTEM_CLEAN =
@@ -9023,19 +9073,20 @@ try {
 
       // CARD_NATURAL_GENERAL_SHRINK_V2_FUTURE / CARD_EXPLICIT_PRIORITY_WIDEN_V1: explicit 時は発火させない
       if (__explicitCharsEarly == null && __isFutureOutlook) {
+        const __bodyFuture = "【天聞の所見】未来・展望は、いまの一点から見立てる。いま引っかかっている一点を一言で。";
         const __coreFuture: ThreadCore = { ...__threadCore, lastResponseContract: { answerLength: "short", answerMode: "analysis", answerFrame: "one_step", routeReason: "R22_FUTURE_OUTLOOK_V1" }, updatedAt: new Date().toISOString() };
         saveThreadCore(__coreFuture).catch(() => {});
         try { (res as any).__TENMON_THREAD_CORE = __coreFuture; } catch {}
-        const __kuFuture: any = { routeReason: "R22_FUTURE_OUTLOOK_V1", answerLength: "short", answerMode: "analysis", answerFrame: "one_step", lawsUsed: [], evidenceIds: [], lawTrace: [] };
-        try { const __binderFut = buildKnowledgeBinder({ routeReason: "R22_FUTURE_OUTLOOK_V1", message: String(message ?? ""), threadId: String(threadId ?? ""), ku: __kuFuture, threadCore: __threadCore, threadCenter: __threadCenterForGeneral ?? null }); applyKnowledgeBinderToKu(__kuFuture, __binderFut); } catch {}
-        return res.json(__tenmonGeneralGateResultMaybe({
-          response: "【天聞の所見】未来・展望は、いまの一点から見立てる。いま引っかかっている一点を一言で。",
-          evidence: null,
-          candidates: [],
+        return exitFutureOutlookPreemptV1({
+          res,
+          __tenmonGeneralGateResultMaybe,
+          response: __bodyFuture,
+          message,
           timestamp,
           threadId,
-          decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: __kuFuture },
-        }));
+          threadCore: __threadCore,
+          threadCenterForGeneral: __threadCenterForGeneral ?? null,
+        });
       }
 
 
@@ -9045,69 +9096,36 @@ try {
         /天聞アーク|TENMON[- ]?ARK|内部構造|構造|接続|繋がって|つながって|どこまで|構築状況|完成度|現状|診断|解析/u.test(__rawSystemDiagPre);
 
       if (__isSystemDiagPre) {
-        const __rrSys = "SYSTEM_DIAGNOSIS_PREEMPT_V1";
         const __bodySys =
           "【天聞の所見】天聞アークの現状は、骨格層はかなり接続済みです。通っているのは憲法・思考・原典・監査の主幹で、未完は一般会話の主権と表現末端です。次の一手は、system diagnosis と通常会話 residual の入口固定です。";
-
-        const __kuSys: any = {
-          routeReason: __rrSys,
-          routeClass: "analysis",
-          centerKey: "conversation_system",
-          centerLabel: "会話系",
-          answerLength: "short",
-          answerMode: "analysis",
-          answerFrame: "statement_plus_one_question",
-          lawsUsed: [],
-          evidenceIds: [],
-          lawTrace: [],
-          responsePlan: buildResponsePlan({
-            routeReason: __rrSys,
-            rawMessage: String(message ?? ""),
-            centerKey: "conversation_system",
-            centerLabel: "会話系",
-            mode: "general",
-            responseKind: "statement_plus_question",
-            answerMode: "analysis",
-            answerFrame: "statement_plus_one_question",
-            semanticBody: __bodySys,
-          }),
-        };
-
-        __applyBrainstemContractToKuV1(__kuSys, __brainstem, "analysis");
         try {
           console.log("[SYSTEM_DIAG_PREEMPT_V3_HIT]", {
             raw: __rawSystemDiagPre,
-            rr: __kuSys.routeReason,
-            rc: __kuSys.routeClass,
+            rr: "SYSTEM_DIAGNOSIS_PREEMPT_V1",
+            rc: "analysis",
           });
         } catch {}
-
         const __coreSys: ThreadCore = {
           ...__threadCore,
           lastResponseContract: {
-            answerLength: __kuSys.answerLength,
-            answerMode: __kuSys.answerMode,
-            answerFrame: __kuSys.answerFrame,
-            routeReason: __rrSys,
+            answerLength: "short",
+            answerMode: "analysis",
+            answerFrame: "statement_plus_one_question",
+            routeReason: "SYSTEM_DIAGNOSIS_PREEMPT_V1",
           },
           updatedAt: new Date().toISOString(),
         };
         saveThreadCore(__coreSys).catch(() => {});
         try { (res as any).__TENMON_THREAD_CORE = __coreSys; } catch {}
-
-        return res.json(__tenmonGeneralGateResultMaybe({
+        return exitSystemDiagnosisPreemptV1({
+          res,
+          __tenmonGeneralGateResultMaybe,
           response: __bodySys,
-          evidence: null,
-          candidates: [],
+          message,
           timestamp,
           threadId,
-          decisionFrame: {
-            mode: "NATURAL",
-            intent: "chat",
-            llm: null,
-            ku: __kuSys,
-          },
-        }));
+          applyBrainstemContractToKu: (ku) => __applyBrainstemContractToKuV1(ku, __brainstem, "analysis"),
+        });
       }
 
       const __shrink = __classifyGeneralShrinkV1(String(message ?? ""));
@@ -9135,7 +9153,8 @@ try {
             break;
           case "essence":
             __rrShrink = "R22_ESSENCE_ASK_V1";
-            __bodyShrink = "【天聞の所見】要点はすでに収束しています。中心は『構造主権の固定』です。ここが通れば全体が締まります。";
+            __bodyShrink =
+              "【天聞の所見】要点を聞いています。いまの中心を一言で置くと、答えが締まります。";
             break;
           case "compare":
             __rrShrink = "R22_COMPARE_ASK_V1";
@@ -9161,25 +9180,27 @@ try {
         };
 
         if (__isSystemDiagShrink) {
-          __rrShrink = "SYSTEM_DIAGNOSIS_PREEMPT_V1";
-          __bodyShrink = "【天聞の所見】天聞アークの現状は、骨格層はかなり接続済みです。通っているのは憲法・思考・原典・監査の主幹で、未完は一般会話の主権と表現末端です。次の一手は、system diagnosis と通常会話 residual の入口固定です。";
-          __kuShrink.routeReason = "SYSTEM_DIAGNOSIS_PREEMPT_V1";
-          __kuShrink.routeClass = "analysis";
-          __kuShrink.centerKey = "conversation_system";
-          __kuShrink.centerLabel = "会話系";
-          __kuShrink.answerMode = "analysis";
-          __kuShrink.answerFrame = "statement_plus_one_question";
-          __kuShrink.answerLength = "short";
-          __kuShrink.responsePlan = buildResponsePlan({
-            routeReason: "SYSTEM_DIAGNOSIS_PREEMPT_V1",
-            rawMessage: String(message ?? ""),
-            centerKey: "conversation_system",
-            centerLabel: "会話系",
-            mode: "general",
-            responseKind: "statement_plus_question",
-            answerMode: "analysis",
-            answerFrame: "statement_plus_one_question",
-            semanticBody: __bodyShrink,
+          const __bodySys = "【天聞の所見】天聞アークの現状は、骨格層はかなり接続済みです。通っているのは憲法・思考・原典・監査の主幹で、未完は一般会話の主権と表現末端です。次の一手は、system diagnosis と通常会話 residual の入口固定です。";
+          const __coreShrinkSys: ThreadCore = {
+            ...__threadCore,
+            lastResponseContract: {
+              answerLength: "short",
+              answerMode: "analysis",
+              answerFrame: "statement_plus_one_question",
+              routeReason: "SYSTEM_DIAGNOSIS_PREEMPT_V1",
+            },
+            updatedAt: new Date().toISOString(),
+          };
+          saveThreadCore(__coreShrinkSys).catch(() => {});
+          try { (res as any).__TENMON_THREAD_CORE = __coreShrinkSys; } catch {}
+          return exitSystemDiagnosisPreemptV1({
+            res,
+            __tenmonGeneralGateResultMaybe,
+            response: __bodySys,
+            message,
+            timestamp,
+            threadId,
+            applyBrainstemContractToKu: (ku) => __applyBrainstemContractToKuV1(ku, __brainstem, "analysis"),
           });
         }
         __applyBrainstemContractToKuV1(__kuShrink, __brainstem, __rcShrink);
@@ -10377,31 +10398,7 @@ const __heartNorm = normalizeHeartShape(__heart);
     }
     // do not treat "definition / meaning" as support-mode
 
-    const __strictCompareInput = String(message ?? "");
-    if (
-      /言霊|言灵/u.test(__strictCompareInput) &&
-      /カタカムナ/u.test(__strictCompareInput) &&
-      /違い|ちがい|比較|どう違う|分けて/u.test(__strictCompareInput)
-    ) {
-      return reply({
-        response: shapeTenmonOutput(__strictCompareInput, ""),
-        evidence: null,
-        candidates: [],
-        timestamp,
-        threadId,
-        decisionFrame: {
-          mode: "STRICT",
-          intent: "compare",
-          llm: null,
-          ku: {
-            routeReason: "STRICT_COMPARE_TASK_LOCK_V3",
-            lawsUsed: [],
-            evidenceIds: [],
-            lawTrace: [],
-          },
-        },
-      });
-    }
+    if (tryStrictCompareExitV1({ res, __tenmonGeneralGateResultMaybe, message, timestamp, threadId, shapeTenmonOutput })) return;
 
     const isDefinitionQ0 =
       /(とは(何|なに)|って(何|なに)|意味|定義|概念|何ですか|なにですか)\b/.test(t0) ||
@@ -12679,31 +12676,7 @@ if (typeof out === "string" && out.trim()) nat.responseText = out.trim();
 
   
   
-    const __strictCompareInput = String(message ?? "");
-    if (
-      /言霊|言灵/u.test(__strictCompareInput) &&
-      /カタカムナ/u.test(__strictCompareInput) &&
-      /違い|ちがい|比較|どう違う|分けて/u.test(__strictCompareInput)
-    ) {
-      return reply({
-        response: shapeTenmonOutput(__strictCompareInput, ""),
-        evidence: null,
-        candidates: [],
-        timestamp,
-        threadId,
-        decisionFrame: {
-          mode: "STRICT",
-          intent: "compare",
-          llm: null,
-          ku: {
-            routeReason: "STRICT_COMPARE_TASK_LOCK_V1",
-            lawsUsed: [],
-            evidenceIds: [],
-            lawTrace: [],
-          },
-        },
-      });
-    }
+    if (tryStrictCompareExitV1({ res, __tenmonGeneralGateResultMaybe, message, timestamp, threadId, shapeTenmonOutput })) return;
 
 // P0-PH38-DOC_EQ_ROUTE-02: doc=... pdfPage=... は #pin 相当で GROUNDED に合流（.pdf不要）
   const mDocEq = message.match(/\bdoc\s*=\s*([^\s]+)/i);
