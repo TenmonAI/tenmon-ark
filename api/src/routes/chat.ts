@@ -130,6 +130,7 @@ import {
   getGeneralShrinkPayloadV1,
 } from "./chat_refactor/majorRoutes.js";
 import { parseAnswerProfileFromBody, injectAnswerProfileToKu, normalizeChatEntryFromBody } from "./chat_refactor/entry.js";
+import { selectGroundingModeV1 } from "./chat_refactor/general.js";
 import { responseProjector, normalizeDisplayLabel } from "../projection/responseProjector.js";
 
 // FIX_PRE_GATE_GENERAL_SURFACE_V1: 先頭・末尾欠損・不要前置き混入を止血。引用あり/なしの「いまの言葉を…と受け取りました。」を安全に除去。
@@ -8394,39 +8395,7 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
   )
     return;
 
-  // CARD_GROUNDING_SELECTOR_V1: grounded / canon / concept / general / unresolved を1回だけ選択
-  type GroundingSelectorKind =
-    | "grounded_required"
-    | "scripture_canon"
-    | "subconcept_canon"
-    | "concept_canon"
-    | "natural_general"
-    | "unresolved";
-  function __selectGroundingModeV1(input: {
-    rawMessage: string;
-    wantsDetail: boolean;
-    hasDocPage: boolean;
-    isCmd: boolean;
-    threadCenterType?: string | null;
-    threadCenterKey?: string | null;
-  }): { kind: GroundingSelectorKind; reason: string; confidence: number } {
-    const { rawMessage, wantsDetail, hasDocPage, isCmd, threadCenterType, threadCenterKey } = input;
-    const raw = String(rawMessage ?? "").trim();
-    if (hasDocPage || (wantsDetail && (/\bdoc\b/i.test(raw) || /pdfPage\s*=\s*\d+/i.test(raw)))) {
-      return { kind: "grounded_required", reason: "doc/pdfPage_or_detail", confidence: 1 };
-    }
-    if (threadCenterType === "scripture" && raw.length <= 80 && (/さっき見ていた中心|(言霊|中心)(を)?土台に|今の話を(続ける|続けて|見ていきましょう)/u.test(raw) || /^(次は|次の一手|違いは|どう違う|要するに|要点は)/u.test(raw) || /^[ァ-ヴー]+\s*[は？?]?\s*$/u.test(raw))) {
-      return { kind: "scripture_canon", reason: "scripture_followup", confidence: 1 };
-    }
-    if (!isCmd && /(言霊|カタカムナ)(とは|って)(何|なに)(ですか)?\s*[？?]?$/u.test(raw) || /(とは|って)(何|なに)(ですか)?\s*[？?]?$/u.test(raw) && /(言霊|カタカムナ|本質|核)/u.test(raw)) {
-      return { kind: "concept_canon", reason: "concept_definition", confidence: 0.9 };
-    }
-    if (wantsDetail && raw.length > 20) {
-      return { kind: "unresolved", reason: "detail_context_strong", confidence: 0.6 };
-    }
-    return { kind: "natural_general", reason: "default", confidence: 0.5 };
-  }
-
+  // CARD_GROUNDING_SELECTOR_V1: grounded / canon / concept / general / unresolved（P53: general.ts に移管）
 // generalKind: counsel / worldview / short_moral / other（NATURAL_GENERAL_LLM_TOP 分流用）
       const __generalKind: "counsel" | "worldview" | "short_moral" | "other" =
         /悩み|しんどい|つらい|聞いてくれ|相談/.test(t0) ? "counsel"
@@ -9130,7 +9099,7 @@ try {
       }
 
       // CARD_GROUNDING_SELECTOR_V1: general 本文生成の前に根拠モードを1回だけ選択
-      const __grounding = __selectGroundingModeV1({
+      const __grounding = selectGroundingModeV1({
         rawMessage: String(message ?? ""),
         wantsDetail: /#詳細/.test(String(message ?? "")),
         hasDocPage: /\bdoc\b/i.test(t0) || /pdfPage\s*=\s*\d+/i.test(t0),
