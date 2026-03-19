@@ -1,8 +1,8 @@
 # SEALED_RUNTIME_SET_CURRENT_V1
 
-- **current sealed baseline:** 7be4039
+- **current sealed baseline:** 6a29b55
 - **branch:** 2026-03-04-e5hp
-- **generated_at_utc:** 20260319T074310Z
+- **generated_at_utc:** 20260319T082400Z
 
 ## 1. 封印列
 
@@ -12,7 +12,9 @@
 - be3f7ff — finalize.ts runtime dependency
 - 4615619 — be3f7ff seal policy docs
 - 09824dc — chat refactor sealed baseline v1
-- 7be4039 — current baseline
+- 7be4039 — stub/debris policy bundle
+- 259b979 — entry batch P41/P42/P44 (parseAnswerProfile, injectAnswerProfileToKu, normalizeChatEntry)
+- 6a29b55 — chat refactor runner runtime dependency
 
 ## 2. 最上位 gate
 
@@ -27,7 +29,9 @@
 | `api/src/routes/chat.ts` |
 | `api/src/routes/chat_refactor/majorRoutes.ts` |
 | `api/src/routes/chat_refactor/finalize.ts` |
+| `api/src/routes/chat_refactor/entry.ts` |
 | `api/scripts/patch29_final_acceptance_sweep_v1.sh` |
+| `api/scripts/chat_refactor_runner_v1.sh` |
 
 ## 4. runtime 対象外
 
@@ -37,9 +41,15 @@
 | 観測物 | `api/probe.*.json`, `ABSTRACT_CENTER_*.txt` |
 | 補助資料 | `api/CHAT_SAFE_REFACTOR_*_REPORT.md`, `CARD_*.md` |
 | 大型分析資料 | `FINAL_REPORT_V1/`, `RECONCILE_AUDIT_V1/`, `WORLD_CLASS_ANALYSIS_V1/`, `WORLD_CLASS_ANALYSIS_V2/` |
-| stub | `api/src/routes/chat_refactor/define.ts`, `entry.ts`, `general.ts` |
+| stub | `api/src/routes/chat_refactor/define.ts`, `general.ts` |
 
 ## 5. 再現手順
+
+**共通 runner（推奨）**
+
+- `api/scripts/chat_refactor_runner_v1.sh <CARD名>` で build → restart → health → patch29 を一括実行。最後に PASS/FAIL を表示。
+
+**手動**
 
 1. `cd /opt/tenmon-ark-repo/api`
 2. `npm run build`
