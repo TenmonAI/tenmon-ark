@@ -9184,6 +9184,9 @@ try {
       const __researchComparativeSynthesisLineV91 = RE_RESEARCH_COMPARATIVE_SYNTHESIS_V91.test(String(t0 || ""))
         ? "\n比較研究として: 比較軸→相違→接点→混同回避（取り違えやすい点を一文）→次に掘る軸、を自然文に織り込み密度を上げる。浅い「違うだけ」で終えない。根拠の捏造・過度な断定はしない。"
         : "";
+      // PATCH93_RUNTIME_STYLE_STABILITY_V1: NATURAL_GENERAL llm の最終表面（口調・段落・締め）の極端な揺れを抑える（routeReason は不変／各PATCH条件行と両立）
+      const __runtimeStyleStabilityLineV93 =
+        "\n表面安定（P93）: 同一スレ内で口調・段落のリズム・締めを極端に変えない。空の橋文だけで終えない。人格・形式・原典・Founder・各条件付き行と矛盾させない。";
 
       // CARD_NATURAL_GENERAL_SHRINK_V2_FUTURE / CARD_EXPLICIT_PRIORITY_WIDEN_V1: explicit 時は発火させない（PATCH49: 判定＋exit は majorRoutes に集約）
       if (
@@ -9332,7 +9335,7 @@ try {
       let outProv = "llm";
       try {
         const llmRes = await llmChat({
-          system: __GEN_SYSTEM_CLEAN + __GEN_SYSTEM_SUFFIX + __worldviewSharpenLine + __feelingLine + __continuityAnchorLine + __founderCocreationLineV85 + __founderCocreationLineV92 + __humanStateReadingLineV86 + __danshariDialogueLineV87 + __languageStructureDeepenLineV88 + __scriptureCanonComposerLineV89 + __researchComparativeSynthesisLineV91 + __namingSuffix,
+          system: __GEN_SYSTEM_CLEAN + __GEN_SYSTEM_SUFFIX + __worldviewSharpenLine + __feelingLine + __continuityAnchorLine + __founderCocreationLineV85 + __founderCocreationLineV92 + __humanStateReadingLineV86 + __danshariDialogueLineV87 + __languageStructureDeepenLineV88 + __scriptureCanonComposerLineV89 + __researchComparativeSynthesisLineV91 + __runtimeStyleStabilityLineV93 + __namingSuffix,
           user: t0,
           history: []
         });
@@ -9348,7 +9351,7 @@ try {
 
         if (!outText || /受け取っています。?そのまま続けてください[？?]?/.test(outText)) {
           const retryRes = await llmChat({
-            system: __GEN_SYSTEM_CLEAN + __GEN_SYSTEM_SUFFIX + __worldviewSharpenLine + __feelingLine + __continuityAnchorLine + __founderCocreationLineV85 + __founderCocreationLineV92 + __humanStateReadingLineV86 + __danshariDialogueLineV87 + __languageStructureDeepenLineV88 + __scriptureCanonComposerLineV89 + __researchComparativeSynthesisLineV91 + "\n次は禁止: 受け取っています。そのまま続けてください。\n必ず内容に触れて一歩進める。",
+            system: __GEN_SYSTEM_CLEAN + __GEN_SYSTEM_SUFFIX + __worldviewSharpenLine + __feelingLine + __continuityAnchorLine + __founderCocreationLineV85 + __founderCocreationLineV92 + __humanStateReadingLineV86 + __danshariDialogueLineV87 + __languageStructureDeepenLineV88 + __scriptureCanonComposerLineV89 + __researchComparativeSynthesisLineV91 + __runtimeStyleStabilityLineV93 + "\n次は禁止: 受け取っています。そのまま続けてください。\n必ず内容に触れて一歩進める。",
             user: t0,
             history: []
           });
