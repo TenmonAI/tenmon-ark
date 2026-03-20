@@ -1,0 +1,60 @@
+{
+  "schema": "SANSKRIT_KOTODAMA_SOURCES_V1",
+  "version": 1,
+  "description": "Source layer registry for classical_sanskrit / bhs / kotodama. Place PDFs under TENMON_DATA_DIR/sources/sanskrit_kotodama/v1/<layer>/<source_id>/original/. page_count=null until ingested.",
+  "base_dir_env": "TENMON_DATA_DIR",
+  "default_base_dir": "/opt/tenmon-ark-data",
+  "sources_root_relative": "sources/sanskrit_kotodama/v1",
+  "page_anchor": {
+    "format": "{source_id}#p{pdf_page}",
+    "pdf_page_origin": "1-based physical page index in the PDF (first page = 1).",
+    "printed_page_mapping": "Optional future sidecar: extracted/meta/printed_page_map.json per source."
+  },
+  "extraction_policy": {
+    "text_first": "pdftotext -layout → extracted/text/",
+    "scan_fallback": "PDF page rasterization (e.g. api/tools/nas_pdf_pages_ingest_poppler_v1.py) then OCR; do not use ocr_page.sh (KHS-only) for this layer.",
+    "note": "Grammar/morphology observation before interpretive layering; no mystical skipping."
+  },
+  "sources": [
+    {
+      "source_id": "classical_skt_grammar_placeholder_v1",
+      "title": "Classical Sanskrit grammar reference (placeholder — replace with licensed edition metadata)",
+      "layer": "classical_sanskrit",
+      "language": "sa-en",
+      "page_count": null,
+      "edition": null,
+      "storage_relative_path": "classical_sanskrit/classical_skt_grammar_placeholder_v1",
+      "rule_index_hint": "SANSKRIT_RULE_INDEX_V1"
+    },
+    {
+      "source_id": "bhs_grammar_placeholder_v1",
+      "title": "BHS grammar reference (placeholder — replace with licensed edition metadata)",
+      "layer": "bhs",
+      "language": "sa-en",
+      "page_count": null,
+      "edition": null,
+      "storage_relative_path": "bhs/bhs_grammar_placeholder_v1",
+      "rule_index_hint": "SANSKRIT_RULE_INDEX_V1"
+    },
+    {
+      "source_id": "bhs_dictionary_placeholder_v1",
+      "title": "BHS / Buddhist Sanskrit dictionary (placeholder — replace with licensed edition metadata)",
+      "layer": "bhs",
+      "language": "sa-en",
+      "page_count": null,
+      "edition": null,
+      "storage_relative_path": "bhs/bhs_dictionary_placeholder_v1",
+      "rule_index_hint": "SANSKRIT_RULE_INDEX_V1"
+    },
+    {
+      "source_id": "kotodama_canon_corpus_placeholder_v1",
+      "title": "Kotodama / Tenmon primary corpus slot (placeholder — internal or licensed texts)",
+      "layer": "kotodama",
+      "language": "ja",
+      "page_count": null,
+      "edition": null,
+      "storage_relative_path": "kotodama/kotodama_canon_corpus_placeholder_v1",
+      "rule_index_hint": "KOTODAMA_RULE_INDEX_V1"
+    }
+  ]
+}
