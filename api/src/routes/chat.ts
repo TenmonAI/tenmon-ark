@@ -9177,7 +9177,7 @@ try {
       const RE_RESEARCH_COMPARATIVE_SYNTHESIS_V91 =
         /(違い|相違|対比|比較して|比較を).{0,80}研究的に|接点.{0,40}研究的に|研究的に.{0,72}(違い|接点|相違|比較|説明)/u;
       const __researchComparativeSynthesisLineV91 = RE_RESEARCH_COMPARATIVE_SYNTHESIS_V91.test(String(t0 || ""))
-        ? "\n比較研究として: 比較軸を先に置き、相違点と接点を分けて書く。混同しやすい見立てを一文で避ける。次に掘る軸を1つ示す。根拠の捏造・過度な断定はしない。"
+        ? "\n比較研究として: 比較軸→相違→接点→混同回避（取り違えやすい点を一文）→次に掘る軸、を自然文に織り込み密度を上げる。浅い「違うだけ」で終えない。根拠の捏造・過度な断定はしない。"
         : "";
 
       // CARD_NATURAL_GENERAL_SHRINK_V2_FUTURE / CARD_EXPLICIT_PRIORITY_WIDEN_V1: explicit 時は発火させない（PATCH49: 判定＋exit は majorRoutes に集約）
