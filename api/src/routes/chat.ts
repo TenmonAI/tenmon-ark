@@ -9134,6 +9134,12 @@ try {
         !__isFeelingRequest && RE_HUMAN_STATE_READING_V86.test(String(t0 || ""))
           ? "\n相談・迷いの文脈: まず問いへの見立てと次の一歩を先に述べる。病名・治療・医学的診断・断定は禁止。そのうえで会話技法として、相手のいまの状態を一段だけ静かに映す一文を末尾に付けてよい（焦り・散り・詰まり・圧・ためらいなどの手前を映す程度。説教・命令にしない）。"
           : "";
+      // PATCH87_DANSHARI_DIALOGUE_TECHNIQUE_V1: 選別・残す核・削るノイズを判断会話として（片付け論に潰さない／P78 D/ΔS と両立）
+      const RE_DANSHARI_DIALOGUE_V87 =
+        /(断捨離|残す核|選別|本質が残|どこを削|削れば|ノイズ|改善要望が多|何から採る|要素が多すぎ|話が散って|論点が散って|残すべきか分から|計画.{0,10}本質)/u;
+      const __danshariDialogueLineV87 = RE_DANSHARI_DIALOGUE_V87.test(String(t0 || ""))
+        ? "\n断捨離を会話技法として扱う: 部屋の片付け比喩だけで終えない。残す核・削るノイズ（周辺）・次に一つだけ動かす手を本文で明示する。D/ΔSの見立て→裁定→一手に沿って整理し、Founder共創・人心読みの指示と内容がかみ合うよう冗長に重ねない。"
+        : "";
 
       // CARD_NATURAL_GENERAL_SHRINK_V2_FUTURE / CARD_EXPLICIT_PRIORITY_WIDEN_V1: explicit 時は発火させない（PATCH49: 判定＋exit は majorRoutes に集約）
       if (
@@ -9282,7 +9288,7 @@ try {
       let outProv = "llm";
       try {
         const llmRes = await llmChat({
-          system: __GEN_SYSTEM_CLEAN + __GEN_SYSTEM_SUFFIX + __worldviewSharpenLine + __feelingLine + __continuityAnchorLine + __founderCocreationLineV85 + __humanStateReadingLineV86 + __namingSuffix,
+          system: __GEN_SYSTEM_CLEAN + __GEN_SYSTEM_SUFFIX + __worldviewSharpenLine + __feelingLine + __continuityAnchorLine + __founderCocreationLineV85 + __humanStateReadingLineV86 + __danshariDialogueLineV87 + __namingSuffix,
           user: t0,
           history: []
         });
@@ -9298,7 +9304,7 @@ try {
 
         if (!outText || /受け取っています。?そのまま続けてください[？?]?/.test(outText)) {
           const retryRes = await llmChat({
-            system: __GEN_SYSTEM_CLEAN + __GEN_SYSTEM_SUFFIX + __worldviewSharpenLine + __feelingLine + __continuityAnchorLine + __founderCocreationLineV85 + __humanStateReadingLineV86 + "\n次は禁止: 受け取っています。そのまま続けてください。\n必ず内容に触れて一歩進める。",
+            system: __GEN_SYSTEM_CLEAN + __GEN_SYSTEM_SUFFIX + __worldviewSharpenLine + __feelingLine + __continuityAnchorLine + __founderCocreationLineV85 + __humanStateReadingLineV86 + __danshariDialogueLineV87 + "\n次は禁止: 受け取っています。そのまま続けてください。\n必ず内容に触れて一歩進める。",
             user: t0,
             history: []
           });
