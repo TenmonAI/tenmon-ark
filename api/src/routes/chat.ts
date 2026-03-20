@@ -9148,6 +9148,11 @@ try {
         __isTenmonFounderCookieV85 && RE_FOUNDER_COCREATION_CONSULT_V85.test(String(t0 || ""))
           ? "\nFounder向け: 説教調・事務連絡調を避け、同じ堤で育てる口調にする。改善・実装可否は断定より見立てと次の一歩を一緒に置く。"
           : "";
+      // PATCH92_FOUNDER_COCREATION_SURFACE_V2: 提案・保留・採用・実装候補の語りを人間的に（V85 と同条件で重ねる／routeReason は不変）
+      const __founderCocreationLineV92 =
+        __isTenmonFounderCookieV85 && RE_FOUNDER_COCREATION_CONSULT_V85.test(String(t0 || ""))
+          ? "\n共創の言い回し: 提案は一緒に置く、保留は理由を短く、採用は何を取り込むか明示、実装候補は小さく切って次の一手。承認ゲート・命令口調に寄せない。冗長に重ねない。"
+          : "";
       // PATCH86_HUMAN_STATE_READING_V1: 迷い・圧・焦り等を会話技法として一段だけ映す（医療化・断定しない／P85 と両立）
       const RE_HUMAN_STATE_READING_V86 =
         /(分からなくて|止まって|止まっている|まとまらない|焦って|焦っている|詰まっ|散っ(て|ている)|圧が|ためらい|迷っ|どう整理|何から手をつけ|どこから直し|全然ダメ|つまずいて|息苦し|追われて|困って|いっぱいいっぱい|手が付けられない)/u;
@@ -9327,7 +9332,7 @@ try {
       let outProv = "llm";
       try {
         const llmRes = await llmChat({
-          system: __GEN_SYSTEM_CLEAN + __GEN_SYSTEM_SUFFIX + __worldviewSharpenLine + __feelingLine + __continuityAnchorLine + __founderCocreationLineV85 + __humanStateReadingLineV86 + __danshariDialogueLineV87 + __languageStructureDeepenLineV88 + __scriptureCanonComposerLineV89 + __researchComparativeSynthesisLineV91 + __namingSuffix,
+          system: __GEN_SYSTEM_CLEAN + __GEN_SYSTEM_SUFFIX + __worldviewSharpenLine + __feelingLine + __continuityAnchorLine + __founderCocreationLineV85 + __founderCocreationLineV92 + __humanStateReadingLineV86 + __danshariDialogueLineV87 + __languageStructureDeepenLineV88 + __scriptureCanonComposerLineV89 + __researchComparativeSynthesisLineV91 + __namingSuffix,
           user: t0,
           history: []
         });
@@ -9343,7 +9348,7 @@ try {
 
         if (!outText || /受け取っています。?そのまま続けてください[？?]?/.test(outText)) {
           const retryRes = await llmChat({
-            system: __GEN_SYSTEM_CLEAN + __GEN_SYSTEM_SUFFIX + __worldviewSharpenLine + __feelingLine + __continuityAnchorLine + __founderCocreationLineV85 + __humanStateReadingLineV86 + __danshariDialogueLineV87 + __languageStructureDeepenLineV88 + __scriptureCanonComposerLineV89 + __researchComparativeSynthesisLineV91 + "\n次は禁止: 受け取っています。そのまま続けてください。\n必ず内容に触れて一歩進める。",
+            system: __GEN_SYSTEM_CLEAN + __GEN_SYSTEM_SUFFIX + __worldviewSharpenLine + __feelingLine + __continuityAnchorLine + __founderCocreationLineV85 + __founderCocreationLineV92 + __humanStateReadingLineV86 + __danshariDialogueLineV87 + __languageStructureDeepenLineV88 + __scriptureCanonComposerLineV89 + __researchComparativeSynthesisLineV91 + "\n次は禁止: 受け取っています。そのまま続けてください。\n必ず内容に触れて一歩進める。",
             user: t0,
             history: []
           });
