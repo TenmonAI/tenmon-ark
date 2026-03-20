@@ -9140,6 +9140,12 @@ try {
       const __danshariDialogueLineV87 = RE_DANSHARI_DIALOGUE_V87.test(String(t0 || ""))
         ? "\n断捨離を会話技法として扱う: 部屋の片付け比喩だけで終えない。残す核・削るノイズ（周辺）・次に一つだけ動かす手を本文で明示する。D/ΔSの見立て→裁定→一手に沿って整理し、Founder共創・人心読みの指示と内容がかみ合うよう冗長に重ねない。"
         : "";
+      // PATCH88_LANGUAGE_STRUCTURE_DEEPEN_V1: 言葉/言霊/真言・辞・五十音・形仮名・水火 を会話に一段深く（講義・断定・正典合成との矛盾回避）
+      const RE_LANGUAGE_STRUCTURE_DEEPEN_V88 =
+        /(言葉[・･\sと]+言[霊灵靈][・･\sと]+真言|言[霊灵靈][・･\sと]+真言|辞とは|辞って何|五十音は|五十音を何|形仮名|形がな|水火.{0,16}ことば|ことば.{0,16}水火|いろは.{0,24}秩序|秩序.{0,16}いろは|カタカムナは.{0,10}(何|示す))/u;
+      const __languageStructureDeepenLineV88 = RE_LANGUAGE_STRUCTURE_DEEPEN_V88.test(String(t0 || ""))
+        ? "\n言語構造系: 一般論で潰さず一段だけ芯を通す。言葉=記号の約束、言霊=音・詞・水火の法則軸、真言=声明の拘束線、辞=語と秩序の束、五十音=生成循環の座標、形仮名=火水運動としての字形変化。混同せず区別して述べる。講義調・宗教断定を避け、正典合成と矛盾させない。"
+        : "";
 
       // CARD_NATURAL_GENERAL_SHRINK_V2_FUTURE / CARD_EXPLICIT_PRIORITY_WIDEN_V1: explicit 時は発火させない（PATCH49: 判定＋exit は majorRoutes に集約）
       if (
@@ -9288,7 +9294,7 @@ try {
       let outProv = "llm";
       try {
         const llmRes = await llmChat({
-          system: __GEN_SYSTEM_CLEAN + __GEN_SYSTEM_SUFFIX + __worldviewSharpenLine + __feelingLine + __continuityAnchorLine + __founderCocreationLineV85 + __humanStateReadingLineV86 + __danshariDialogueLineV87 + __namingSuffix,
+          system: __GEN_SYSTEM_CLEAN + __GEN_SYSTEM_SUFFIX + __worldviewSharpenLine + __feelingLine + __continuityAnchorLine + __founderCocreationLineV85 + __humanStateReadingLineV86 + __danshariDialogueLineV87 + __languageStructureDeepenLineV88 + __namingSuffix,
           user: t0,
           history: []
         });
@@ -9304,7 +9310,7 @@ try {
 
         if (!outText || /受け取っています。?そのまま続けてください[？?]?/.test(outText)) {
           const retryRes = await llmChat({
-            system: __GEN_SYSTEM_CLEAN + __GEN_SYSTEM_SUFFIX + __worldviewSharpenLine + __feelingLine + __continuityAnchorLine + __founderCocreationLineV85 + __humanStateReadingLineV86 + __danshariDialogueLineV87 + "\n次は禁止: 受け取っています。そのまま続けてください。\n必ず内容に触れて一歩進める。",
+            system: __GEN_SYSTEM_CLEAN + __GEN_SYSTEM_SUFFIX + __worldviewSharpenLine + __feelingLine + __continuityAnchorLine + __founderCocreationLineV85 + __humanStateReadingLineV86 + __danshariDialogueLineV87 + __languageStructureDeepenLineV88 + "\n次は禁止: 受け取っています。そのまま続けてください。\n必ず内容に触れて一歩進める。",
             user: t0,
             history: []
           });
