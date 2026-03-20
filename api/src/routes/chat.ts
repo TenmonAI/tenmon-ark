@@ -9146,6 +9146,12 @@ try {
       const __languageStructureDeepenLineV88 = RE_LANGUAGE_STRUCTURE_DEEPEN_V88.test(String(t0 || ""))
         ? "\n言語構造系: 一般論で潰さず一段だけ芯を通す。言葉=記号の約束、言霊=音・詞・水火の法則軸、真言=声明の拘束線、辞=語と秩序の束、五十音=生成循環の座標、形仮名=火水運動としての字形変化。混同せず区別して述べる。講義調・宗教断定を避け、正典合成と矛盾させない。"
         : "";
+      // PATCH89_SCRIPTURE_CANON_COMPOSER_V1: 聖典・原典質問で「原典層」の説明構成を安定化（routeReason は不変）
+      const RE_SCRIPTURE_CANON_COMPOSER_V89 =
+        /(法華経|言[霊灵靈]秘書|いろは言[霊灵靈]解|イロハ言[霊灵靈]解|カタカムナ言[霊灵靈]解|布斗麻邇|聖典|原典(層|接続|として)|正典|経典|陀羅尼|涅槃|般若|華厳)/u;
+      const __scriptureCanonComposerLineV89 = RE_SCRIPTURE_CANON_COMPOSER_V89.test(String(t0 || ""))
+        ? "\n聖典・原典の質問: 一般論や引用の羅列で終えない。位置づけ→原典接続→いまどの層の話か→次に掘る軸、を自然文で組み立てる。説教・無根拠断定・引用の貼り付け過ぎを避け、正典合成の流れと矛盾させない。"
+        : "";
 
       // CARD_NATURAL_GENERAL_SHRINK_V2_FUTURE / CARD_EXPLICIT_PRIORITY_WIDEN_V1: explicit 時は発火させない（PATCH49: 判定＋exit は majorRoutes に集約）
       if (
@@ -9294,7 +9300,7 @@ try {
       let outProv = "llm";
       try {
         const llmRes = await llmChat({
-          system: __GEN_SYSTEM_CLEAN + __GEN_SYSTEM_SUFFIX + __worldviewSharpenLine + __feelingLine + __continuityAnchorLine + __founderCocreationLineV85 + __humanStateReadingLineV86 + __danshariDialogueLineV87 + __languageStructureDeepenLineV88 + __namingSuffix,
+          system: __GEN_SYSTEM_CLEAN + __GEN_SYSTEM_SUFFIX + __worldviewSharpenLine + __feelingLine + __continuityAnchorLine + __founderCocreationLineV85 + __humanStateReadingLineV86 + __danshariDialogueLineV87 + __languageStructureDeepenLineV88 + __scriptureCanonComposerLineV89 + __namingSuffix,
           user: t0,
           history: []
         });
@@ -9310,7 +9316,7 @@ try {
 
         if (!outText || /受け取っています。?そのまま続けてください[？?]?/.test(outText)) {
           const retryRes = await llmChat({
-            system: __GEN_SYSTEM_CLEAN + __GEN_SYSTEM_SUFFIX + __worldviewSharpenLine + __feelingLine + __continuityAnchorLine + __founderCocreationLineV85 + __humanStateReadingLineV86 + __danshariDialogueLineV87 + __languageStructureDeepenLineV88 + "\n次は禁止: 受け取っています。そのまま続けてください。\n必ず内容に触れて一歩進める。",
+            system: __GEN_SYSTEM_CLEAN + __GEN_SYSTEM_SUFFIX + __worldviewSharpenLine + __feelingLine + __continuityAnchorLine + __founderCocreationLineV85 + __humanStateReadingLineV86 + __danshariDialogueLineV87 + __languageStructureDeepenLineV88 + __scriptureCanonComposerLineV89 + "\n次は禁止: 受け取っています。そのまま続けてください。\n必ず内容に触れて一歩進める。",
             user: t0,
             history: []
           });
