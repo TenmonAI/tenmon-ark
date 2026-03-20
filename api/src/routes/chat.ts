@@ -134,6 +134,7 @@ import {
 } from "./chat_refactor/majorRoutes.js";
 import { parseAnswerProfileFromBody, injectAnswerProfileToKu, normalizeChatEntryFromBody } from "./chat_refactor/entry.js";
 import { selectGroundingModeV1, getGeneralKind, shouldBypassArkConversationDiagnosticsPreemptV1 } from "./chat_refactor/general.js";
+import { applyFinalAnswerConstitutionAndWisdomReducerV1 } from "./chat_refactor/finalize.js";
 import {
   parseDefineFastpathCandidate,
   buildDefineVerifiedFastpathBody,
@@ -927,7 +928,8 @@ const pid = process.pid;
 
   // wrap res.json so ANY {response: "..."} is sanitized before leaving the server
   const __origJson = (res as any).json.bind(res);
-  (res as any).json = (obj: any) => __origJson(obj);
+  (res as any).json = (obj: any) =>
+    __origJson(applyFinalAnswerConstitutionAndWisdomReducerV1(obj));
 
   function buildLlmStatusFromResult(r: any) {
     return {
