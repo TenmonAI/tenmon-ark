@@ -9127,6 +9127,13 @@ try {
         __isTenmonFounderCookieV85 && RE_FOUNDER_COCREATION_CONSULT_V85.test(String(t0 || ""))
           ? "\nFounder向け: 説教調・事務連絡調を避け、同じ堤で育てる口調にする。改善・実装可否は断定より見立てと次の一歩を一緒に置く。"
           : "";
+      // PATCH86_HUMAN_STATE_READING_V1: 迷い・圧・焦り等を会話技法として一段だけ映す（医療化・断定しない／P85 と両立）
+      const RE_HUMAN_STATE_READING_V86 =
+        /(分からなくて|止まって|止まっている|まとまらない|焦って|焦っている|詰まっ|散っ(て|ている)|圧が|ためらい|迷っ|どう整理|何から手をつけ|どこから直し|全然ダメ|つまずいて|息苦し|追われて|困って|いっぱいいっぱい|手が付けられない)/u;
+      const __humanStateReadingLineV86 =
+        !__isFeelingRequest && RE_HUMAN_STATE_READING_V86.test(String(t0 || ""))
+          ? "\n相談・迷いの文脈: まず問いへの見立てと次の一歩を先に述べる。病名・治療・医学的診断・断定は禁止。そのうえで会話技法として、相手のいまの状態を一段だけ静かに映す一文を末尾に付けてよい（焦り・散り・詰まり・圧・ためらいなどの手前を映す程度。説教・命令にしない）。"
+          : "";
 
       // CARD_NATURAL_GENERAL_SHRINK_V2_FUTURE / CARD_EXPLICIT_PRIORITY_WIDEN_V1: explicit 時は発火させない（PATCH49: 判定＋exit は majorRoutes に集約）
       if (
@@ -9275,7 +9282,7 @@ try {
       let outProv = "llm";
       try {
         const llmRes = await llmChat({
-          system: __GEN_SYSTEM_CLEAN + __GEN_SYSTEM_SUFFIX + __worldviewSharpenLine + __feelingLine + __continuityAnchorLine + __founderCocreationLineV85 + __namingSuffix,
+          system: __GEN_SYSTEM_CLEAN + __GEN_SYSTEM_SUFFIX + __worldviewSharpenLine + __feelingLine + __continuityAnchorLine + __founderCocreationLineV85 + __humanStateReadingLineV86 + __namingSuffix,
           user: t0,
           history: []
         });
@@ -9291,7 +9298,7 @@ try {
 
         if (!outText || /受け取っています。?そのまま続けてください[？?]?/.test(outText)) {
           const retryRes = await llmChat({
-            system: __GEN_SYSTEM_CLEAN + __GEN_SYSTEM_SUFFIX + __worldviewSharpenLine + __feelingLine + __continuityAnchorLine + __founderCocreationLineV85 + "\n次は禁止: 受け取っています。そのまま続けてください。\n必ず内容に触れて一歩進める。",
+            system: __GEN_SYSTEM_CLEAN + __GEN_SYSTEM_SUFFIX + __worldviewSharpenLine + __feelingLine + __continuityAnchorLine + __founderCocreationLineV85 + __humanStateReadingLineV86 + "\n次は禁止: 受け取っています。そのまま続けてください。\n必ず内容に触れて一歩進める。",
             user: t0,
             history: []
           });
