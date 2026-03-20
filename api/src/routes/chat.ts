@@ -165,8 +165,9 @@ const router: IRouter = Router();
 
 // R10_THREAD_CONTINUITY_SCRIPTURE_CENTER_FIX_V2: same-thread follow-up 検出用（scripture continuity 補助）
 // FIX_THREAD_CONTINUITY_ROUTE_BIND_V3: scripture center を 2〜3ターン目でも route 裁定に使うため、follow-up 句を拡張。
+// PATCH84_DIALOGUE_CONTINUITY_MEMORY_V1: 「その続きで／その流れで／今の流れ」等を follow-up として継続中心へ接続
 const RE_THREAD_FOLLOWUP =
-  /(そのうち|その前提で|今の話|今の件|どちらが中心|その中心|次の一歩だけ|次の一歩|一つだけ示して|そこから|整理ですか、それとも保留ですか)/;
+  /(そのうち|その前提で|その続き(で|を)|その流れ(で|を)|今の話|今の件|今の流れ|この流れ|先の話|前の話|どちらが中心|その中心|次の一歩だけ|次の一歩|一つだけ示して|そこから|整理ですか、それとも保留ですか)/;
 
 // R22_SHORT_CONTINUATION_V1: 「ヒは？」「じゃあイは？」等の短文継続（直前 threadCenter scripture/concept へ再接続）
 const RE_SHORT_CONTINUATION = /^(じゃあ|では)?([ぁ-んァ-ンa-zA-Z]{1,4})は[？?]?$/u;
@@ -9112,8 +9113,11 @@ try {
       const __worldviewSharpenLine = __isFutureOutlook ? "\n未来・展望系の質問には、まず一段の見立てを述べる。汎用の「どう見えますか」返しは避ける。" : "";
       const __feelingLine = __isFeelingRequest
         ? "\n気分・感想の質問には、天聞として短く見立てを返す。汎用の質問返しで終えない。" : "";
-      const __continuityAnchorLine = __isContinuityAnchor
-        ? "\n直前の中心（center_key）を土台に、冒頭の見立てで触れる。" : "";
+      // PATCH84: follow-up 全般で LLM system に継続指示（人格・研究/資料軸を急に切らない）
+      const __continuityAnchorLine =
+        __threadCenterForGeneral != null && (__isContinuityAnchor || __isFollowupGeneral)
+          ? "\n継続対話: 直近の中心に沿い、冒頭で一文だけ接続してから本題へ。法則軸・資料軸をいきなり切らない。"
+          : "";
 
       // CARD_NATURAL_GENERAL_SHRINK_V2_FUTURE / CARD_EXPLICIT_PRIORITY_WIDEN_V1: explicit 時は発火させない（PATCH49: 判定＋exit は majorRoutes に集約）
       if (
