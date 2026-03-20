@@ -12,6 +12,14 @@ export type AnswerProfile = {
   answerFrame?: AnswerFrame | null;
 };
 
+/** FINAL_DENSITY_CONTRACT_AND_GENERAL_SOURCEPACK_V1 */
+export type DensityContractV1 = {
+  densityTarget: "medium" | "high";
+  mustGroundOneLayer: boolean;
+  mustCompressToCenterClaim: boolean;
+  mustEndWithActionOrAxis: boolean;
+};
+
 export type ResponsePlan = {
   routeReason: string;
   centerKey?: string | null;
@@ -21,6 +29,8 @@ export type ResponsePlan = {
   responseKind: "statement" | "statement_plus_question" | "instruction";
   semanticBody: string;
   answerFrame?: AnswerFrame | null;
+  /** 密度契約（projector / reducer が参照。任意） */
+  densityContract?: DensityContractV1 | null;
 };
 
 export function buildResponsePlan(input: {

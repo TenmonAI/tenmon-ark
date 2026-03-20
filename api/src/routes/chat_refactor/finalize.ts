@@ -3,6 +3,80 @@
  * 主要出口を single-exit 化する最小ヘルパ。
  */
 
+import type { DensityContractV1 } from "../../planning/responsePlanCore.js";
+
+/** FINAL_DENSITY_CONTRACT_AND_GENERAL_SOURCEPACK_V1: 密度対象 route（routeReason 不変・PATCH29 期待と独立） */
+const DENSITY_CONTRACT_ROUTE_REASONS = new Set<string>([
+  "TENMON_STRUCTURE_LOCK_V1",
+  "R22_ESSENCE_ASK_V1",
+  "R22_JUDGEMENT_PREEMPT_V1",
+  "WORLDVIEW_ROUTE_V1",
+  "R22_RELATIONAL_WORLDVIEW_V1",
+  "R22_SELFAWARE_CONSCIOUSNESS_V1",
+  "TENMON_SCRIPTURE_CANON_V1",
+  "SCRIPTURE_LOCAL_RESOLVER_V4",
+  "TENMON_RESEARCH_RESPONSE_LOOP_V1",
+  "RELEASE_PREEMPT_STRICT_COMPARE_BEFORE_TRUTH_V1",
+  "SYSTEM_DIAGNOSIS_PREEMPT_V1",
+  "R22_FUTURE_OUTLOOK_V1",
+  "EXPLICIT_CHAR_PREEMPT_V1",
+  "NATURAL_GENERAL_LLM_TOP",
+]);
+
+function hasNonEmptySourcePack(ku: any): boolean {
+  const laws = Array.isArray(ku?.lawsUsed) ? ku.lawsUsed.length : 0;
+  const evi = Array.isArray(ku?.evidenceIds) ? ku.evidenceIds.length : 0;
+  const ss = ku?.sourceStackSummary;
+  if (laws > 0 || evi > 0) return true;
+  if (ss && typeof ss === "object" && !Array.isArray(ss)) {
+    const pm = String((ss as any).primaryMeaning ?? "").trim();
+    const ra = String((ss as any).responseAxis ?? "").trim();
+    if (pm.length > 0 || ra.length > 0) return true;
+  }
+  return false;
+}
+
+function isDensityEligibleKu(ku: any): boolean {
+  const rr = String(ku?.routeReason ?? "").trim();
+  const am = String(ku?.answerMode ?? "").trim();
+  if (DENSITY_CONTRACT_ROUTE_REASONS.has(rr)) return true;
+  if (am === "define" || am === "analysis") return true;
+  return false;
+}
+
+/** responsePlan に密度契約を付与し、空の source pack に最小束を足す（DB 不要） */
+function applyDensityContractAndMinimalSourcePackV1(ku: any): void {
+  if (!ku || typeof ku !== "object") return;
+  if (!isDensityEligibleKu(ku)) return;
+
+  const rr = String(ku.routeReason ?? "").trim();
+  const rp = ku.responsePlan && typeof ku.responsePlan === "object" ? ku.responsePlan : null;
+  if (rp && !rp.densityContract) {
+    const dc: DensityContractV1 = {
+      densityTarget: "high",
+      mustGroundOneLayer: true,
+      mustCompressToCenterClaim: true,
+      mustEndWithActionOrAxis: true,
+    };
+    rp.densityContract = dc;
+  }
+
+  if (hasNonEmptySourcePack(ku)) return;
+
+  const center =
+    String(ku.centerLabel || ku.centerKey || ku.threadCenterKey || ku.threadCenterLabel || "").trim() ||
+    "この問い";
+  ku.sourceStackSummary = {
+    ...(typeof ku.sourceStackSummary === "object" && ku.sourceStackSummary ? ku.sourceStackSummary : {}),
+    primaryMeaning: center.slice(0, 160),
+    responseAxis: "tenmon_density_contract_v1",
+    thoughtGuideSummary:
+      "脳幹契約（routeReason / responsePlan）を一文の中心命題へ圧縮し、根拠束（law/evidence/source）が空でも『見立ての芯』を本文に残す。",
+  };
+  if (!Array.isArray(ku.lawsUsed)) ku.lawsUsed = [];
+  if (ku.lawsUsed.length === 0) ku.lawsUsed.push("TENMON_DENSITY_SURFACE_PACK_V1");
+}
+
 export function finalizeSingleExitV1(
   res: any,
   __tenmonGeneralGateResultMaybe: any,
@@ -45,6 +119,8 @@ export function applyFinalAnswerConstitutionAndWisdomReducerV1(payload: any): an
   const ku: any = df && df.ku && typeof df.ku === "object" ? df.ku : null;
   if (!ku) return out;
 
+  applyDensityContractAndMinimalSourcePackV1(ku);
+
   const responsePlan = ku.responsePlan && typeof ku.responsePlan === "object" ? ku.responsePlan : null;
   const centerContract =
     String(
@@ -70,10 +146,17 @@ export function applyFinalAnswerConstitutionAndWisdomReducerV1(payload: any): an
     : "";
 
   let body = String(out.response || "").trim();
-  body = body
-    .replace(/^\s*（[^）]{0,36}）を土台に、いまの話を見ていきましょう。?\s*/u, "")
-    .replace(/受け取っています。?そのまま続けてください。?/gu, "")
-    .trim();
+  const rr = String(ku.routeReason ?? "").trim();
+  const densityNoLighten =
+    DENSITY_CONTRACT_ROUTE_REASONS.has(rr) || String(ku.answerMode ?? "") === "define" || String(ku.answerMode ?? "") === "analysis";
+  if (!densityNoLighten) {
+    body = body
+      .replace(/^\s*（[^）]{0,36}）を土台に、いまの話を見ていきましょう。?\s*/u, "")
+      .replace(/受け取っています。?そのまま続けてください。?/gu, "")
+      .trim();
+  } else {
+    body = body.replace(/受け取っています。?そのまま続けてください。?/gu, "").trim();
+  }
 
   const head = `【天聞の所見】${centerContract}について、今回は${mission}として答えます。`;
   const step =
