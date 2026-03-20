@@ -7,6 +7,7 @@ import { getDb } from "../db/index.js";
 import { upsertThreadCenter } from "./threadCenterMemory.js";
 import {
   type ThreadCore,
+  type ThreadDialogueContract,
   type ThreadResponseContract,
   emptyThreadCore,
   centerLabelFromKey,
@@ -27,9 +28,10 @@ function parseCenterReason(row: Row): {
   contract: ThreadResponseContract | null;
   openLoops: string[];
   commitments: string[];
+  dialogueContract: ThreadDialogueContract | null;
 } {
   const rr = row.source_route_reason;
-  const empty = { contract: rr ? { routeReason: rr } : null, openLoops: [] as string[], commitments: [] as string[] };
+  const empty = { contract: rr ? { routeReason: rr } : null, openLoops: [] as string[], commitments: [] as string[], dialogueContract: null as ThreadDialogueContract | null };
   try {
     const s = row.center_reason;
     if (!s || typeof s !== "string") return empty;
@@ -46,7 +48,20 @@ function parseCenterReason(row: Row): {
         : rr ? { routeReason: rr } : null;
     const openLoops = Array.isArray(parsed.openLoops) ? (parsed.openLoops as string[]).filter((x): x is string => typeof x === "string") : [];
     const commitments = Array.isArray(parsed.commitments) ? (parsed.commitments as string[]).filter((x): x is string => typeof x === "string") : [];
-    return { contract, openLoops, commitments };
+    const dcRaw = parsed.dialogueContract;
+    const dialogueContract: ThreadDialogueContract | null =
+      dcRaw && typeof dcRaw === "object"
+        ? {
+            centerKey: (dcRaw as any).centerKey != null ? String((dcRaw as any).centerKey) : null,
+            centerLabel: (dcRaw as any).centerLabel != null ? String((dcRaw as any).centerLabel) : null,
+            user_intent_mode: (dcRaw as any).user_intent_mode != null ? String((dcRaw as any).user_intent_mode) : null,
+            answer_depth: (dcRaw as any).answer_depth != null ? String((dcRaw as any).answer_depth) : null,
+            grounding_policy: (dcRaw as any).grounding_policy != null ? String((dcRaw as any).grounding_policy) : null,
+            continuity_goal: (dcRaw as any).continuity_goal != null ? String((dcRaw as any).continuity_goal) : null,
+            next_best_move: (dcRaw as any).next_best_move != null ? String((dcRaw as any).next_best_move) : null,
+          }
+        : null;
+    return { contract, openLoops, commitments, dialogueContract };
   } catch {
     return empty;
   }
@@ -69,7 +84,7 @@ export async function loadThreadCore(threadId: string): Promise<ThreadCore> {
     if (!row) return emptyThreadCore(tid);
     const centerKey = row.center_key != null ? String(row.center_key) : null;
     const centerLabel = centerLabelFromKey(centerKey);
-    const { contract, openLoops, commitments } = parseCenterReason(row);
+    const { contract, openLoops, commitments, dialogueContract } = parseCenterReason(row);
     return {
       threadId: tid,
       centerKey,
@@ -77,6 +92,7 @@ export async function loadThreadCore(threadId: string): Promise<ThreadCore> {
       activeEntities: centerLabel ? [centerLabel] : [],
       openLoops,
       commitments,
+      dialogueContract,
       lastResponseContract: contract,
       updatedAt: String(row.updated_at || new Date().toISOString()),
     };
@@ -137,6 +153,18 @@ export async function saveThreadCore(core: ThreadCore): Promise<void> {
         ...base,
         openLoops: Array.isArray(core.openLoops) ? core.openLoops : [],
         commitments: Array.isArray(core.commitments) ? core.commitments : [],
+        dialogueContract:
+          core.dialogueContract && typeof core.dialogueContract === "object"
+            ? {
+                centerKey: core.dialogueContract.centerKey ?? null,
+                centerLabel: core.dialogueContract.centerLabel ?? null,
+                user_intent_mode: core.dialogueContract.user_intent_mode ?? null,
+                answer_depth: core.dialogueContract.answer_depth ?? null,
+                grounding_policy: core.dialogueContract.grounding_policy ?? null,
+                continuity_goal: core.dialogueContract.continuity_goal ?? null,
+                next_best_move: core.dialogueContract.next_best_move ?? null,
+              }
+            : null,
       });
     })();
 

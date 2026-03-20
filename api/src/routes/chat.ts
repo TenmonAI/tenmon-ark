@@ -544,6 +544,16 @@ if (!(res as any).__TENMON_JSON_WRAP_V7) {
                 if (ku.lastAnswerLength === undefined) ku.lastAnswerLength = __tc.lastResponseContract?.answerLength ?? undefined;
                 if (ku.lastAnswerMode === undefined) ku.lastAnswerMode = __tc.lastResponseContract?.answerMode ?? undefined;
                 if (ku.lastAnswerFrame === undefined) ku.lastAnswerFrame = __tc.lastResponseContract?.answerFrame ?? undefined;
+                const __dc = (__tc.dialogueContract && typeof __tc.dialogueContract === "object") ? __tc.dialogueContract : null;
+                if (__dc) {
+                  if (ku.dialogueContractCenterKey === undefined) ku.dialogueContractCenterKey = __dc.centerKey ?? __tc.centerKey ?? undefined;
+                  if (ku.dialogueContractCenterLabel === undefined) ku.dialogueContractCenterLabel = __dc.centerLabel ?? __tc.centerLabel ?? centerLabelFromKey(__tc.centerKey) ?? undefined;
+                  if (ku.user_intent_mode === undefined) ku.user_intent_mode = __dc.user_intent_mode ?? undefined;
+                  if (ku.answer_depth === undefined) ku.answer_depth = __dc.answer_depth ?? undefined;
+                  if (ku.grounding_policy === undefined) ku.grounding_policy = __dc.grounding_policy ?? undefined;
+                  if (ku.continuity_goal === undefined) ku.continuity_goal = __dc.continuity_goal ?? undefined;
+                  if (ku.next_best_move === undefined) ku.next_best_move = __dc.next_best_move ?? undefined;
+                }
               }
             } catch {}
             // also ensure decisionFrame.ku is object when decisionFrame exists (non-breaking)
@@ -1042,6 +1052,23 @@ const pid = process.pid;
     __threadCore = await loadThreadCore(threadId);
   } catch {
     __threadCore = emptyThreadCore(threadId);
+  }
+  // THREAD_CENTER_TO_DIALOGUE_CONTRACT_V1: thread center を継続対話用の最小契約へ昇格（非破壊）
+  if (!__threadCore.dialogueContract) {
+    const __frameNow = String(__threadCore.lastResponseContract?.answerFrame || "one_step").trim();
+    __threadCore.dialogueContract = {
+      centerKey: __threadCore.centerKey ?? null,
+      centerLabel: __threadCore.centerLabel ?? centerLabelFromKey(__threadCore.centerKey) ?? null,
+      user_intent_mode: __threadCore.lastResponseContract?.answerMode ?? "analysis",
+      answer_depth: __threadCore.lastResponseContract?.answerLength ?? "medium",
+      grounding_policy: "canon_or_context",
+      continuity_goal: "keep_center_and_next_step",
+      next_best_move:
+        __frameNow === "statement_plus_one_question"
+          ? "ask_one_axis"
+          : "keep_center_one_step",
+    };
+    saveThreadCore(__threadCore).catch(() => {});
   }
   try {
     (res as any).__TENMON_THREAD_CORE = __threadCore;

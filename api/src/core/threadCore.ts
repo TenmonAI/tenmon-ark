@@ -9,6 +9,16 @@ export type ThreadResponseContract = {
   routeReason?: string | null;
 };
 
+export type ThreadDialogueContract = {
+  centerKey?: string | null;
+  centerLabel?: string | null;
+  user_intent_mode?: string | null;
+  answer_depth?: string | null;
+  grounding_policy?: string | null;
+  continuity_goal?: string | null;
+  next_best_move?: string | null;
+};
+
 export type ThreadCore = {
   threadId: string;
   centerKey: string | null;
@@ -16,6 +26,7 @@ export type ThreadCore = {
   activeEntities: string[];
   openLoops: string[];
   commitments: string[];
+  dialogueContract: ThreadDialogueContract | null;
   lastResponseContract: ThreadResponseContract | null;
   updatedAt: string;
 };
@@ -28,6 +39,7 @@ export function emptyThreadCore(threadId: string): ThreadCore {
     activeEntities: [],
     openLoops: [],
     commitments: [],
+    dialogueContract: null,
     lastResponseContract: null,
     updatedAt: new Date().toISOString(),
   };
