@@ -2,8 +2,11 @@ import { Router, type IRouter, type Request, type Response } from "express";
 import { getSessionId } from "../memory/sessionId.js";
 import { memoryClearSession, memoryReadSession } from "../memory/index.js";
 import type { MemoryClearResponseBody, MemoryReadResponseBody } from "../types/memory.js";
+import { userDeviceMemorySyncV1Router } from "./userDeviceMemorySyncV1.js";
 
 const router: IRouter = Router();
+
+router.use("/memory/user-device-sync", userDeviceMemorySyncV1Router);
 
 router.get("/memory/read", (req: Request, res: Response<MemoryReadResponseBody>) => {
   const sessionId = getSessionId(req);

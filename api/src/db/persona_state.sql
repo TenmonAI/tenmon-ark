@@ -24,3 +24,52 @@ CREATE TABLE IF NOT EXISTS naming_flow (
   assistantName TEXT,
   updatedAt TEXT NOT NULL
 );
+
+-- USER_DEVICE_MEMORY_SYNC_ENGINE_V1 (persona.sqlite — kokuzo_schema.sql は no-touch)
+CREATE TABLE IF NOT EXISTS user_shared_profile_slice (
+  userId TEXT NOT NULL,
+  sliceKey TEXT NOT NULL CHECK(sliceKey IN ('naming','persona','style','inheritance')),
+  payloadJson TEXT NOT NULL,
+  updatedAt TEXT NOT NULL,
+  PRIMARY KEY (userId, sliceKey)
+);
+
+CREATE TABLE IF NOT EXISTS user_sync_committed_item (
+  userId TEXT NOT NULL,
+  itemId TEXT NOT NULL,
+  kind TEXT NOT NULL CHECK(kind IN ('fact','seed')),
+  contentHash TEXT NOT NULL,
+  payloadJson TEXT NOT NULL,
+  committedAt TEXT NOT NULL,
+  PRIMARY KEY (userId, kind, itemId)
+);
+
+CREATE TABLE IF NOT EXISTS user_device_sync_state (
+  userId TEXT NOT NULL,
+  deviceId TEXT NOT NULL,
+  lastPullAt TEXT,
+  lastPushAt TEXT,
+  updatedAt TEXT NOT NULL,
+  PRIMARY KEY (userId, deviceId)
+);
+
+CREATE TABLE IF NOT EXISTS user_sync_log (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  userId TEXT NOT NULL,
+  deviceId TEXT,
+  eventType TEXT NOT NULL,
+  payloadJson TEXT,
+  createdAt TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS user_sync_conflict_log (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  userId TEXT NOT NULL,
+  deviceId TEXT,
+  kind TEXT NOT NULL,
+  detailJson TEXT,
+  createdAt TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_user_sync_log_uid ON user_sync_log(userId, createdAt);
+CREATE INDEX IF NOT EXISTS idx_user_sync_conflict_uid ON user_sync_conflict_log(userId, createdAt);
