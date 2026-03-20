@@ -22,6 +22,9 @@ export type KotodamaOneSoundEntry = {
   textualGrounding?: string[] | null;
 };
 
+/** PATCH90: VPS/Notion で一段深く整備した音（従来の段落型 deep 応答を維持） */
+const PATCH90_EXPANDED_DEPTH_SOUNDS: ReadonlySet<string> = new Set(["ハ", "ヘ", "ム", "ウ"]);
+
 /** 言霊50音 front law index。母音・カ〜ワ行・んを揃え、音ごとの差・比較・読み解きに対応。Notion は補助軸。 */
 const INDEX: Record<string, KotodamaOneSoundEntry> = {
   ア: {
@@ -190,10 +193,55 @@ function buildGroundingClause(phrases: string[]): string {
   return take + "といった語で表されるように、";
 }
 
+function firstClauseOfPreferredMeaning(pm: string): string {
+  const t = String(pm ?? "").trim();
+  if (!t) return "気の一相";
+  const i = t.indexOf("。");
+  return (i >= 0 ? t.slice(0, i) : t).trim() || "気の一相";
+}
+
+/** PATCH90: 全系列・中核／一言法則／生成作用／次軸の最低線（音ごとの preferred/waterFire で差別化） */
+function buildKotodamaOneSoundResponseFullSeriesV90(
+  entry: KotodamaOneSoundEntry,
+  opts?: KotodamaOneSoundResponseOptions
+): string {
+  const pm = String(entry.preferredMeaning || "").trim();
+  const wfRaw = String(entry.waterFireHint || "").trim();
+  const wf =
+    wfRaw.startsWith("水火") || wfRaw.startsWith("水火（")
+      ? wfRaw
+      : "水火（イキ）の與みのなかでは、" + wfRaw;
+  const axesList = Array.isArray(entry.nextAxes) && entry.nextAxes.length
+    ? entry.nextAxes.map((a) => String(a || "").trim()).filter(Boolean).slice(0, 3)
+    : ["いろは配列での位置", "水火での役割", "言霊秘書の該当箇所"];
+  const axes = axesList.join("、");
+  const firstClause = firstClauseOfPreferredMeaning(pm);
+  const lawLine = "一言法則：「" + entry.sound + "」を、" + firstClause + "として読む。";
+  const groundingNote = entry.textualGrounding?.length
+    ? "（言霊秘書系の語感：" +
+      entry.textualGrounding
+        .slice(0, 2)
+        .map((g) => "「" + String(g) + "」")
+        .join("・") +
+      "）"
+    : "";
+  const rel = opts?.previousSound ? getRelationHint(opts.previousSound, entry.sound) : "";
+  const parts: string[] = [];
+  if (rel) parts.push(rel.trim());
+  parts.push("中核：" + pm);
+  parts.push(lawLine + groundingNote);
+  parts.push("生成作用：" + wf);
+  parts.push("次に掘る軸：" + axes + "のいずれから進めますか？");
+  return "【天聞の所見】" + parts.join("\n");
+}
+
 export function buildKotodamaOneSoundResponse(
   entry: KotodamaOneSoundEntry,
   opts?: KotodamaOneSoundResponseOptions
 ): string {
+  if (!PATCH90_EXPANDED_DEPTH_SOUNDS.has(entry.sound)) {
+    return buildKotodamaOneSoundResponseFullSeriesV90(entry, opts);
+  }
   const axes = entry.nextAxes.length >= 2
     ? entry.nextAxes.slice(0, 3).join("／")
     : "その音といろは配列の関係／水火での役割／言霊秘書の該当箇所";

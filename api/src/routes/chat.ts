@@ -3091,35 +3091,27 @@ ${String((gptDraft as any)?.text ?? "").trim()}
   try {
     const __msgOneSoundRawV3 = String(message ?? "").trim();
     const __msgOneSoundNormV3 = normalizeCoreTermForRouting(__msgOneSoundRawV3).replace(/\s+/gu, "");
-    const __mOneSoundV3 = __msgOneSoundNormV3.match(
-      /^([アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヰヱヲン])(?:の)?(?:言霊|言灵)(?:とは|って何|ってなに|とは何|とはなに|とは何ですか|とはなにですか|って何ですか|ってなにですか)?$/u
+    const __oneSoundKReV90 =
+      /^([アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヰヱヲン])(?:の)?(?:言霊|言灵)/u;
+    let __mOneSoundV3 = __msgOneSoundNormV3.match(
+      new RegExp(
+        __oneSoundKReV90.source +
+          "(?:を一言法則として|の一言法則として)",
+        "u"
+      )
     );
+    if (!__mOneSoundV3) {
+      __mOneSoundV3 = __msgOneSoundNormV3.match(
+        /^([アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヰヱヲン])(?:の)?(?:言霊|言灵)(?:とは|って何|ってなに|とは何|とはなに|とは何ですか|とはなにですか|って何ですか|ってなにですか)?$/u
+      );
+    }
 
     if (__mOneSoundV3) {
       const __soundV3 = String(__mOneSoundV3[1] || "");
       const __entryV3 = getKotodamaOneSoundEntry(__soundV3);
 
       if (__entryV3) {
-        const __preferredV3 = String(__entryV3.preferredMeaning || "").trim();
-        const __waterFireV3 = String(__entryV3.waterFireHint || "").trim();
-        const __groundsV3 = Array.isArray(__entryV3.textualGrounding)
-          ? __entryV3.textualGrounding.map((v: any) => String(v || "").trim()).filter(Boolean).slice(0, 3)
-          : [];
-        const __nextAxesV3 = Array.isArray(__entryV3.nextAxes)
-          ? __entryV3.nextAxes.map((v: any) => String(v || "").trim()).filter(Boolean).slice(0, 2)
-          : [];
-
-        const __groundLineV3 = __groundsV3.length
-          ? `言霊秘書系では、${__groundsV3.map((v) => `「${v}」`).join("・")}を軸に読みます。`
-          : "";
-        const __nextLineV3 = __nextAxesV3.length
-          ? `次は「${__nextAxesV3.join("」か「")}」のどちらから見るかで、${__soundV3}の位置が締まります。`
-          : `次は前後音との関係から見ると、${__soundV3}の位置が締まります。`;
-
-        const __responseV3 =
-          `【天聞の所見】${__soundV3}は、${__preferredV3}${__waterFireV3 ? ` ${__waterFireV3}` : ""}\n\n` +
-          `${__groundLineV3}${__soundV3}を単独の象徴にせず、水火と前後音の位置で読むと芯が立ちます。\n\n` +
-          `${__nextLineV3}`;
+        const __responseV3 = buildKotodamaOneSoundResponse(__entryV3);
 
         const __kuOneSoundV3: any = {
           routeReason: "KOTODAMA_ONE_SOUND_GROUNDED_V4",
@@ -11125,38 +11117,23 @@ if (!outText) {
   try {
     const __msgSoundRaw = String(message ?? "").trim();
     const __msgSoundNorm = normalizeCoreTermForRouting(__msgSoundRaw).replace(/\s+/gu, "");
-    const __mOneSound = __msgSoundNorm.match(
-      /^([アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヰヱヲン])(?:の)?(?:言霊|言灵)(?:とは|って何|ってなに|とは何|とはなに|とは何ですか|とはなにですか|って何ですか|ってなにですか)?$/u
+    const __oneSoundKReGroundedV90 =
+      /^([アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヰヱヲン])(?:の)?(?:言霊|言灵)/u;
+    let __mOneSound = __msgSoundNorm.match(
+      new RegExp(__oneSoundKReGroundedV90.source + "(?:を一言法則として|の一言法則として)", "u")
     );
+    if (!__mOneSound) {
+      __mOneSound = __msgSoundNorm.match(
+        /^([アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヰヱヲン])(?:の)?(?:言霊|言灵)(?:とは|って何|ってなに|とは何|とはなに|とは何ですか|とはなにですか|って何ですか|ってなにですか)?$/u
+      );
+    }
 
     if (__mOneSound) {
       const __sound = String(__mOneSound[1] || "");
       const __entry = getKotodamaOneSoundEntry(__sound);
 
       if (__entry) {
-        const __preferred = String(__entry.preferredMeaning || "").trim();
-        const __wf = String(__entry.waterFireHint || "").trim();
-
-        const __ground = Array.isArray(__entry.textualGrounding)
-          ? __entry.textualGrounding.map((v: any) => String(v || "").trim()).filter(Boolean).slice(0, 3)
-          : [];
-
-        const __nextAxes = Array.isArray(__entry.nextAxes)
-          ? __entry.nextAxes.map((v: any) => String(v || "").trim()).filter(Boolean).slice(0, 2)
-          : [];
-
-        const __groundLine = __ground.length
-          ? `言霊秘書系では、${__ground.map((v) => `「${v}」`).join("・")}を軸に読みます。`
-          : "";
-
-        const __nextLine = __nextAxes.length
-          ? `次は「${__nextAxes.join("」か「")}」のどちらから見るかで、${__sound}の位置が締まります。`
-          : `次は前後音との関係から見ると、${__sound}の位置が締まります。`;
-
-        const __response =
-          `【天聞の所見】${__sound}は、${__preferred}${__wf ? ` ${__wf}` : ""}\n\n` +
-          `${__groundLine}${__sound}を単独の象徴にせず、水火と前後音の位置で読むと芯が立ちます。\n\n` +
-          `${__nextLine}`;
+        const __response = buildKotodamaOneSoundResponse(__entry);
 
         const __kuSound: any = {
           routeReason: "KOTODAMA_ONE_SOUND_GROUNDED_V2",
