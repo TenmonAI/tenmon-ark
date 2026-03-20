@@ -320,6 +320,9 @@ router.post("/chat", async (req: Request, res: Response<ChatResponseBody>) => {
   (res as any).__TENMON_ANSWER_PROFILE = __bodyProfile;
   const __hasAnswerProfile = __bodyProfile.answerLength != null || __bodyProfile.answerMode != null || __bodyProfile.answerFrame != null;
 
+  // PATCH85_FOUNDER_COCREATION_SURFACE_V1: Founder セッション（共創トーン用・一般経路の system へ最小接続）
+  const __isTenmonFounderCookieV85 = (req as any).cookies?.tenmon_founder === "1";
+
   // CARD_RESPONSE_FRAME_LIBRARY_V1_PHASE1: route ごとの既定割当（参照用）
   // support → short / support / one_step | define → medium / define / statement_plus_one_question
   // feeling|impression|continuity → short / analysis / one_step | explicit char → __tier / analysis / one_step
@@ -9118,6 +9121,12 @@ try {
         __threadCenterForGeneral != null && (__isContinuityAnchor || __isFollowupGeneral)
           ? "\n継続対話: 直近の中心に沿い、冒頭で一文だけ接続してから本題へ。法則軸・資料軸をいきなり切らない。"
           : "";
+      const RE_FOUNDER_COCREATION_CONSULT_V85 =
+        /(改善|提案|実装|可否|バグ|不具合|要望|フィードバック|仕様|設計|優先順位|ロードマップ|機能追加|育てて|共創|feature|bug|feedback|implement)/iu;
+      const __founderCocreationLineV85 =
+        __isTenmonFounderCookieV85 && RE_FOUNDER_COCREATION_CONSULT_V85.test(String(t0 || ""))
+          ? "\nFounder向け: 説教調・事務連絡調を避け、同じ堤で育てる口調にする。改善・実装可否は断定より見立てと次の一歩を一緒に置く。"
+          : "";
 
       // CARD_NATURAL_GENERAL_SHRINK_V2_FUTURE / CARD_EXPLICIT_PRIORITY_WIDEN_V1: explicit 時は発火させない（PATCH49: 判定＋exit は majorRoutes に集約）
       if (
@@ -9266,7 +9275,7 @@ try {
       let outProv = "llm";
       try {
         const llmRes = await llmChat({
-          system: __GEN_SYSTEM_CLEAN + __GEN_SYSTEM_SUFFIX + __worldviewSharpenLine + __feelingLine + __continuityAnchorLine + __namingSuffix,
+          system: __GEN_SYSTEM_CLEAN + __GEN_SYSTEM_SUFFIX + __worldviewSharpenLine + __feelingLine + __continuityAnchorLine + __founderCocreationLineV85 + __namingSuffix,
           user: t0,
           history: []
         });
@@ -9282,7 +9291,7 @@ try {
 
         if (!outText || /受け取っています。?そのまま続けてください[？?]?/.test(outText)) {
           const retryRes = await llmChat({
-            system: __GEN_SYSTEM_CLEAN + __GEN_SYSTEM_SUFFIX + __worldviewSharpenLine + __feelingLine + __continuityAnchorLine + "\n次は禁止: 受け取っています。そのまま続けてください。\n必ず内容に触れて一歩進める。",
+            system: __GEN_SYSTEM_CLEAN + __GEN_SYSTEM_SUFFIX + __worldviewSharpenLine + __feelingLine + __continuityAnchorLine + __founderCocreationLineV85 + "\n次は禁止: 受け取っています。そのまま続けてください。\n必ず内容に触れて一歩進める。",
             user: t0,
             history: []
           });
