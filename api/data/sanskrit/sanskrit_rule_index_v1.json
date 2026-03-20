@@ -1,0 +1,24 @@
+{
+  "schema": "SANSKRIT_RULE_INDEX_V1",
+  "version": 1,
+  "description": "Classical Sanskrit normative grammar rule index (sandhi, prefix, morphology, compound, examples). Anchors reference sources in sanskrit_kotodama_sources_v1.json (classical_sanskrit layer).",
+  "categories": ["sandhi", "prefix", "morphology", "compound", "examples"],
+  "entries": [
+    {
+      "rule_id": "skt_placeholder_sandhi_v1",
+      "category": "sandhi",
+      "title": "Placeholder: sandhi rule slot (replace with edition-specific rows)",
+      "source_id": "classical_skt_grammar_placeholder_v1",
+      "page_anchor": "classical_skt_grammar_placeholder_v1#p1",
+      "summary": "Observational slot — cite source page before interpretive claims."
+    },
+    {
+      "rule_id": "skt_placeholder_morphology_v1",
+      "category": "morphology",
+      "title": "Placeholder: morphology rule slot",
+      "source_id": "classical_skt_grammar_placeholder_v1",
+      "page_anchor": "classical_skt_grammar_placeholder_v1#p1",
+      "summary": "Observational slot for inflection/derivation patterns per licensed grammar."
+    }
+  ]
+}
