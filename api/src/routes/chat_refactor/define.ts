@@ -43,6 +43,14 @@ type DefineHitLike = {
   quoteHash?: unknown;
 } | null | undefined;
 
+/** KOTODAMA_DEFINE_RENDERER_REPAIR_V1: 言霊 verified 本文の最低契約（本質・原理・次軸・180字以上）。先頭は「言霊とは、」で responseComposer の kotodama 置換を避ける */
+const KOTODAMA_DEF_FASTPATH_SEMANTIC_V1 =
+  "言霊とは、天地に鳴り響く五十連の音として立ち、水火を與み解いて詞の本を知る法則として作用する本質を持つものです。" +
+  "\n\n" +
+  "生成原理として、いろは配列では時間・秩序・成立の筋を読み、水火伝では生成と與合の相互作用を読み、五十連の音律へ戻して束ねます。" +
+  "\n\n" +
+  "次軸としては、法則の核・秩序の読み・水火の生成理解のどれを深めるかで答えの粒が変わります。次は、五十連・いろは秩序・水火生成のどこから詰めますか。";
+
 /** P59: verified define fastpath の本文組み立て（routeReason/contract は触らない） */
 export function buildDefineVerifiedFastpathBody(input: {
   term: string;
@@ -51,14 +59,17 @@ export function buildDefineVerifiedFastpathBody(input: {
   doc: unknown;
   pdfPage: unknown;
 }): { response: string; quoteHead: string } {
-  let s =
-    String(input.summary ?? "").trim() ||
-    "言霊とは、天地に鳴り響く五十連の音と、水火を與み解いて詞の本を知る法則です。";
-  if (input.term === "言霊") {
-    s +=
-      " 五十連の音の法則としての言霊を軸に、いろは配列では時間・秩序・成立の側から、水火伝では生成と與合の側から読み、これらを同じ読解系として束ねていきます。";
+  let s: string;
+  if (String(input.term ?? "").trim() === "言霊") {
+    s = KOTODAMA_DEF_FASTPATH_SEMANTIC_V1;
+  } else {
+    s =
+      String(input.summary ?? "").trim() ||
+      "言霊とは、天地に鳴り響く五十連の音と、水火を與み解いて詞の本を知る法則です。";
   }
   const quoteHead = String(input.quote ?? "").replace(/\s+/g, " ").trim().slice(0, 180);
+  const tailCommon =
+    "\n\nまずは定義だけ押さえると、軸がぶれにくくなります。次は法則か背景のどちらを見るかで、理解の深さが変わります。";
   const response =
     "【天聞の所見】\n" +
     s +
@@ -66,7 +77,7 @@ export function buildDefineVerifiedFastpathBody(input: {
     "【根拠】" +
     quoteHead +
     `\n\n出典: ${String(input.doc ?? "")} P${Number(input.pdfPage ?? 0)}` +
-    "\n\nまずは定義だけ押さえると、軸がぶれにくくなります。次は法則か背景のどちらを見るかで、理解の深さが変わります。";
+    (String(input.term ?? "").trim() === "言霊" ? "" : tailCommon);
   return { response, quoteHead };
 }
 

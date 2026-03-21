@@ -3,6 +3,8 @@
  * P53: selectGroundingModeV1 を chat.ts から移管（CARD_GROUNDING_SELECTOR_V1）
  */
 
+import { isTenmonPrincipleOrCanonProbeMessageV1 } from "./humanReadableLawLayerV1.js";
+
 export type GroundingSelectorKind =
   | "grounded_required"
   | "scripture_canon"
@@ -67,6 +69,8 @@ export function getGeneralKind(message: string): GeneralKind {
 export function shouldBypassArkConversationDiagnosticsPreemptV1(message: string): boolean {
   const m = String(message ?? "").trim();
   if (!m) return false;
+  /** MAINLINE_PRINCIPLE_DEPTH_ROUTE_BYPASS_V1: 原理・Ω・原典・言霊等は会話系診断 preempt から除外 */
+  if (isTenmonPrincipleOrCanonProbeMessageV1(m)) return true;
   if (/(判断構造|意識構造|心構造|魂核構造|魂核|設計モデル)/u.test(m)) return true;
   if (/断捨離/u.test(m) && /(説明|教え|定義|として|片付け)/u.test(m)) return true;
   if (
