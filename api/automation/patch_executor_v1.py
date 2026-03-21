@@ -21,18 +21,33 @@ def _card_get(card: Dict[str, Any], key: str, default: Any = None) -> Any:
     return card.get(key, default)
 
 
-def execute_patch(card: Dict[str, Any], *, dry_run: bool = True) -> PatchResult:
+def execute_patch(
+    card: Dict[str, Any],
+    *,
+    dry_run: bool = True,
+    human_gate_bypass: bool = False,
+) -> PatchResult:
     """Apply patch per card.class / patchStrategy. No file writes in library mode."""
     cls = _card_get(card, "class", "")
     strategy = _card_get(card, "patchStrategy") or {}
     mode = strategy.get("mode", "none")
 
-    if _card_get(card, "requiresHumanJudgement") or cls == "human_gate":
+    if not human_gate_bypass and (
+        _card_get(card, "requiresHumanJudgement") or cls == "human_gate"
+    ):
         return PatchResult(
             ok=False,
             mode=mode,
             message="human_judgement_required",
             skipped_reason="HUMAN_GATE",
+        )
+
+    if human_gate_bypass and (_card_get(card, "requiresHumanJudgement") or cls == "human_gate"):
+        return PatchResult(
+            ok=True,
+            mode=mode,
+            message="human_gate_approved_bypass",
+            skipped_reason="HUMAN_GATE_APPROVED",
         )
 
     if mode == "none":

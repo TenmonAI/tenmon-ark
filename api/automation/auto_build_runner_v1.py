@@ -20,6 +20,7 @@ if str(_AUTOMATION_DIR) not in sys.path:
     sys.path.insert(0, str(_AUTOMATION_DIR))
 
 from acceptance_selector_v1 import profile_to_dict_list, select_acceptance_steps
+from human_gate_store_v1 import create_pending_gate, get_gate_record, is_approved
 from patch_executor_v1 import execute_patch
 from path_guard_v1 import allowed_only_violations, classify_mixed_commit_roots, violates_forbidden
 
@@ -78,6 +79,10 @@ def find_card(catalog: Dict[str, Any], name: str) -> Optional[Dict[str, Any]]:
     return None
 
 
+def _card_needs_human_gate(card: Dict[str, Any]) -> bool:
+    return bool(card.get("requiresHumanJudgement") or card.get("class") == "human_gate")
+
+
 def validate_diff_scope(card: Dict[str, Any], changed: List[str]) -> Tuple[bool, Dict[str, Any]]:
     forbidden = card.get("forbiddenPaths") or []
     allowed = card.get("allowedPaths") or []
@@ -102,6 +107,7 @@ def run_pipeline(
     repo_root: Path,
     dry_run: bool,
     execute_checks: bool,
+    gate_request_id: Optional[str] = None,
 ) -> Dict[str, Any]:
     automation_dir = repo_root / "api" / "automation"
     catalog_path = automation_dir / "card_catalog_v1.json"
@@ -121,6 +127,7 @@ def run_pipeline(
         "timestamp": ts,
         "gitShaBefore": (sha_before or "").strip(),
         "dryRun": dry_run,
+        "gateRequestIdInput": gate_request_id,
     }
 
     # OBSERVE
@@ -147,9 +154,61 @@ def run_pipeline(
         record.update({"ok": False, "fail": "precheck", "phase": "STOP"})
         return record
 
-    # PATCH
+    # PATCH (+ human gate store)
     record["phase"] = "PATCH"
-    pr = execute_patch(card, dry_run=dry_run)
+    human_bypass = False
+    if _card_needs_human_gate(card):
+        if gate_request_id:
+            if is_approved(gate_request_id):
+                human_bypass = True
+                record["gateRequestId"] = gate_request_id
+            else:
+                gr = get_gate_record(gate_request_id)
+                record["gateRequestId"] = gate_request_id
+                record["gateStatus"] = (gr or {}).get("status")
+                record.update(
+                    {
+                        "ok": False,
+                        "fail": "human_gate_not_approved",
+                        "phase": "STOP",
+                        "hint": "Use human_gate_cli_v1.py approve when status is pending",
+                    }
+                )
+                record["patchResult"] = {
+                    "ok": False,
+                    "message": "human_gate_not_approved",
+                    "skipped": "HUMAN_GATE_WAIT",
+                }
+                return record
+        else:
+            rid = create_pending_gate(
+                card_name,
+                {
+                    "gitShaBefore": (sha_before or "").strip(),
+                    "dryRun": dry_run,
+                    "timestamp": ts,
+                },
+            )
+            record["gateRequestId"] = rid
+            record["patchResult"] = {
+                "ok": False,
+                "message": "human_judgement_required",
+                "skipped": "HUMAN_GATE",
+            }
+            record.update(
+                {
+                    "ok": False,
+                    "fail": "human_judgement_required",
+                    "phase": "STOP",
+                    "hint": "Approve via: python3 api/automation/human_gate_cli_v1.py approve "
+                    + rid
+                    + " --by <name> [--note ...]; then re-run with --gate-request-id "
+                    + rid,
+                }
+            )
+            return record
+
+    pr = execute_patch(card, dry_run=dry_run, human_gate_bypass=human_bypass)
     record["patchResult"] = {"ok": pr.ok, "mode": pr.mode, "message": pr.message, "skipped": pr.skipped_reason}
     if pr.skipped_reason == "HUMAN_GATE":
         record.update({"ok": False, "fail": "human_judgement_required", "phase": "STOP"})
@@ -198,6 +257,11 @@ def main() -> int:
     ap.add_argument("--card", required=True, help="cardName from catalog")
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--execute-checks", action="store_true", help="Run npm/curl acceptance commands")
+    ap.add_argument(
+        "--gate-request-id",
+        default=None,
+        help="If human gate was approved for this id, continue past PATCH",
+    )
     args = ap.parse_args()
 
     root = args.repo_root or repo_root_from(Path.cwd())
@@ -206,6 +270,7 @@ def main() -> int:
         repo_root=root,
         dry_run=args.dry_run,
         execute_checks=args.execute_checks,
+        gate_request_id=args.gate_request_id,
     )
     print(json.dumps(out, ensure_ascii=False, indent=2))
     return 0 if out.get("ok") else 1

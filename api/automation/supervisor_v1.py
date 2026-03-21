@@ -19,6 +19,7 @@ if str(_AUTOMATION_DIR) not in sys.path:
     sys.path.insert(0, str(_AUTOMATION_DIR))
 
 from auto_build_runner_v1 import repo_root_from, run_pipeline
+from human_gate_store_v1 import create_pending_gate
 from regression_guard_v1 import run_minimal_guards
 
 
@@ -137,6 +138,11 @@ def main() -> int:
     ap.add_argument("--card", default=None)
     ap.add_argument("--simulate", default=None, help="Comma-separated card names")
     ap.add_argument("--execute-checks", action="store_true")
+    ap.add_argument(
+        "--gate-request-id",
+        default=None,
+        help="Passed to runner when executing human-gated cards",
+    )
     args = ap.parse_args()
 
     here = Path(__file__).resolve().parent
@@ -168,7 +174,15 @@ def main() -> int:
             repo_root=root,
             dry_run=args.dry_run,
             execute_checks=args.execute_checks,
+            gate_request_id=args.gate_request_id,
         )
+        if rec.get("fail") == "human_judgement_required" and not rec.get("gateRequestId"):
+            rid = create_pending_gate(
+                card_name,
+                {"source": "supervisor_fallback", "gitShaBefore": rec.get("gitShaBefore")},
+            )
+            rec["gateRequestId"] = rid
+            rec["gateRecordSource"] = "supervisor_fallback"
         reg = run_minimal_guards(root, build_ok=bool(rec.get("ok")), health_ok=True)
         rec["regressionGuard"] = reg
         ds = rec.get("diffScope") or {}
