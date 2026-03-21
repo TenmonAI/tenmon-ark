@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tenmon-ark.local/automation/patch_plan_schema_v1.json",
+  "title": "AUTO_BUILD_PATCH_PLANNER_V1 output",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "generatedAt",
+    "sourceAudit",
+    "sourceTrunkMap",
+    "planVersion",
+    "parallelPolicy",
+    "bundles",
+    "remainingCards",
+    "recommendedNextCard"
+  ],
+  "properties": {
+    "generatedAt": { "type": "string" },
+    "sourceAudit": { "type": "object" },
+    "sourceTrunkMap": { "type": "object" },
+    "planVersion": { "type": "integer" },
+    "parallelPolicy": { "type": "string", "const": "single_flight" },
+    "bundles": {
+      "type": "array",
+      "minItems": 6,
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "required": [
+          "bundleId",
+          "title",
+          "targetTrunk",
+          "goal",
+          "cards",
+          "targetFiles",
+          "riskLevel",
+          "humanGateRequired",
+          "preconditions",
+          "postconditions",
+          "acceptanceProfiles",
+          "estimatedPatchScope",
+          "rollbackAnchor"
+        ],
+        "properties": {
+          "bundleId": { "type": "string" },
+          "title": { "type": "string" },
+          "targetTrunk": { "type": "string" },
+          "goal": { "type": "string" },
+          "cards": { "type": "array", "items": { "type": "string" } },
+          "targetFiles": { "type": "array", "items": { "type": "string" } },
+          "riskLevel": { "type": "string", "enum": ["low", "medium", "high"] },
+          "humanGateRequired": { "type": "boolean" },
+          "preconditions": { "type": "array", "items": { "type": "string" } },
+          "postconditions": { "type": "array", "items": { "type": "string" } },
+          "acceptanceProfiles": { "type": "array", "items": { "type": "string" } },
+          "estimatedPatchScope": { "type": "string" },
+          "rollbackAnchor": { "type": "string" }
+        }
+      }
+    },
+    "remainingCards": { "type": "array", "items": { "type": "string" } },
+    "recommendedNextCard": { "type": ["string", "null"] },
+    "meta": { "type": "object" }
+  }
+}
