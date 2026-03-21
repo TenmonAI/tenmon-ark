@@ -139,3 +139,6 @@ api/answer
 reports/
 api/web/
 .quarantine_untracked/
+
+# Experimental API probe captures (local / CI artifacts; not seal artifacts)
+api/probe.*.json
