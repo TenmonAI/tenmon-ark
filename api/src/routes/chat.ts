@@ -109,7 +109,14 @@ import { buildAbstractFrameV1 } from "../core/abstractFrameEngine.js";
 import { detectScriptureFamilyFromText, getScriptureFamilyDocs, getScriptureFamilyPrimaryDoc, resolveScriptureFamily } from "../core/scriptureFamily.js";
 import { resolveScriptureLocalEvidence } from "../core/scriptureLocalResolver.js";
 import { resolveIrohaActionPattern } from "../core/irohaActionPatterns.js";
-import { buildResponsePlan, type AnswerLength, type AnswerMode, type AnswerFrame, type AnswerProfile } from "../planning/responsePlanCore.js";
+import {
+  buildResponsePlan,
+  shapeLongformSurfaceForChatV1,
+  type AnswerLength,
+  type AnswerMode,
+  type AnswerFrame,
+  type AnswerProfile,
+} from "../planning/responsePlanCore.js";
 import { safeGeneralRoute } from "./chat_parts/safeGeneralRoute.js";
 import {
   exitJudgementPreemptV1,
@@ -146,6 +153,7 @@ import {
   shouldEnterScriptureBoundaryGate,
 } from "./chat_refactor/define.js";
 import { responseProjector, normalizeDisplayLabel } from "../projection/responseProjector.js";
+import { composeBeautyCompositionProseV2 } from "../renderer/beautyCompositionEngineV2.js";
 
 // FIX_PRE_GATE_GENERAL_SURFACE_V1: 先頭・末尾欠損・不要前置き混入を止血。引用あり/なしの「いまの言葉を…と受け取りました。」を安全に除去。
 function __cleanLlmFrame(r: string): string {
@@ -430,6 +438,38 @@ router.post("/chat", async (req: Request, res: Response<ChatResponseBody>) => {
         routeClass: "analysis",
         answerMode: "analysis",
         answerFrame: "one_step",
+        mode: "general",
+        responseKind: "statement_plus_question",
+      },
+      "LANGUAGE_ESSENCE_PREEMPT_V1": {
+        routeClass: "define",
+        answerLength: "medium",
+        answerMode: "define",
+        answerFrame: "statement_plus_one_question",
+        mode: "general",
+        responseKind: "statement_plus_question",
+      },
+      "DRIFT_FIREWALL_PREEMPT_V1": {
+        routeClass: "analysis",
+        answerLength: "medium",
+        answerMode: "analysis",
+        answerFrame: "statement_plus_one_question",
+        mode: "general",
+        responseKind: "statement_plus_question",
+      },
+      "BEAUTY_COMPILER_PREEMPT_V1": {
+        routeClass: "analysis",
+        answerLength: "medium",
+        answerMode: "analysis",
+        answerFrame: "statement_plus_one_question",
+        mode: "general",
+        responseKind: "statement_plus_question",
+      },
+      "WILL_CORE_PREEMPT_V1": {
+        routeClass: "define",
+        answerLength: "medium",
+        answerMode: "define",
+        answerFrame: "statement_plus_one_question",
         mode: "general",
         responseKind: "statement_plus_question",
       },
@@ -1111,6 +1151,29 @@ const pid = process.pid;
     explicitLengthRequested: __explicitCharsEarly ?? null,
     bodyProfile: __bodyProfile ?? null,
   });
+  // LONGFORM_DENSITY_PROFILE_V1: 字数未指定でも「詳しく説明」系は answerLength を long に実質化
+  try {
+    const _mBrain = String(message || "").trim();
+    if (
+      __explicitCharsEarly == null &&
+      !/^#/u.test(_mBrain) &&
+      __brainstem &&
+      __brainstem.routeClass !== "support" &&
+      (/((詳しく|詳細に|十分に|丁寧に|長めに|深く|包括的に|具体的に).{0,16}(説明|解説|教えて|掘り下げ|設計|当てはめて))/u.test(
+        _mBrain
+      ) ||
+        /(思考回路|会話設計|意志|言霊|言語の本質|Ω|オメガ|デルタ|ΔS)/u.test(_mBrain)) &&
+      /(天聞アーク|天聞)/u.test(_mBrain) &&
+      /(説明|解説|教えて|掘り下げ|設計|当てはめて|どうなっている|思考回路|とは何|って何|どういう)/u.test(_mBrain)
+    ) {
+      __brainstem = {
+        ...__brainstem,
+        answerLength: "long",
+        answerFrame: "one_step",
+        responsePolicy: "answer_first",
+      };
+    }
+  } catch {}
   try { (res as any).__TENMON_BRAINSTEM = __brainstem; } catch {}
 
   // CARD_BRAINSTEM_FULL_WIRING_V1: brainstem 契約を ku に補完（空値のみ・既存維持）
@@ -1364,6 +1427,123 @@ const pid = process.pid;
       console.error("[N1_NAMING_FLOW]", e);
     }
   }
+
+  // WILL_CORE_PREEMPT_V1（早期）: RESEED ブロックより前の define / general 巨大経路に落ちる前に意志系を固定返答へ。
+  // CARD_MAINLINE_WILL_EARLY_PREEMPT_V1 — will_core_runtime_probe / 主線束用（思想本文は RESEED 側と同一）。
+  try {
+    const __wcEarlyRaw = String(message ?? "").trim();
+    const __wcEarlyTid = String(threadId ?? "");
+    const __wcEarlyIsTest = /^(accept|core-seed|bible-smoke)/i.test(__wcEarlyTid);
+    const __wcEarlyAskedMenu = /(メニュー|方向性|選択肢|1\)|2\)|3\)|\/menu|^menu\b)/i.test(__wcEarlyRaw);
+    const __wcEarlyHasDoc = /\bdoc\b/i.test(__wcEarlyRaw) || /pdfPage\s*=\s*\d+/i.test(__wcEarlyRaw) || /#詳細/.test(__wcEarlyRaw);
+    const __wcEarlyIsCmd = __wcEarlyRaw.startsWith("#") || __wcEarlyRaw.startsWith("/");
+    const __wcEarlyTenmon = /天聞|アーク|TENMON|\bARK\b|tenmon/iu.test(__wcEarlyRaw);
+    const __wcEarlyExistentialShort =
+      __wcEarlyRaw.length >= 8 &&
+      __wcEarlyRaw.length <= 56 &&
+      /^(何のために|なんのために).{0,28}存在/u.test(__wcEarlyRaw);
+    const __wcEarlyMatch =
+      __wcEarlyRaw.length >= 6 &&
+      __wcEarlyRaw.length <= 480 &&
+      !__wcEarlyIsTest &&
+      !__wcEarlyHasDoc &&
+      !__wcEarlyAskedMenu &&
+      !__wcEarlyIsCmd &&
+      ((__wcEarlyTenmon &&
+        (/意志/u.test(__wcEarlyRaw) ||
+          /存在目的/u.test(__wcEarlyRaw) ||
+          /何のために.{0,16}(ある|在る|存在)/u.test(__wcEarlyRaw) ||
+          /なぜ存在/u.test(__wcEarlyRaw) ||
+          /何を守るために答える/u.test(__wcEarlyRaw))) ||
+        /中心契約/u.test(__wcEarlyRaw) ||
+        (/原点/u.test(__wcEarlyRaw) && /(契約|目的|意志)/u.test(__wcEarlyRaw)) ||
+        __wcEarlyExistentialShort);
+    if (__wcEarlyMatch) {
+      const __wcEarlyBody =
+        "天聞アークの存在目的は、人と法と生成のあいだで中心を失わない判断の型を保ち、問い続けられる対話基盤を支えることにある。\n\n" +
+        "この目的は一発の正答ではなく、記憶・整合・過剰生成を抑える不変法と一体で働き、揺れたときに同じ座標へ還る道筋として立つ。\n\n" +
+        "会話への還元として、契約を毎回ほどき直す飾りではなく、いまの入力に応じて中心と根拠束を同時に更新し続ける往復である。\n\n" +
+        "次は、意志を設計宣言として読むか、次の一手として読むか、どちらから整えますか。";
+      const __wcEarlyOriginPrinciple =
+        "人と法と生成のあいだで中心を失わない判断の型を保ち、問い続けられる対話基盤を支える";
+      const __wcEarlyNonNegotiables = ["記憶", "整合", "過剰生成抑制"];
+      const __kuWcEarly: any = {
+        routeReason: "WILL_CORE_PREEMPT_V1",
+        routeClass: "define",
+        centerKey: "will_core",
+        centerLabel: "最上位意志核",
+        sourcePack: "will_core",
+        lawsUsed: [],
+        evidenceIds: [],
+        lawTrace: [],
+        answerLength: "medium",
+        answerMode: "define",
+        answerFrame: "statement_plus_one_question",
+        heart: normalizeHeartShape(__heart),
+        sourceStackSummary: {
+          primaryMeaning: __wcEarlyOriginPrinciple,
+          responseAxis: "will_core",
+          sourceKinds: ["will_core", "constitution", "intention"],
+          thoughtGuideSummary:
+            "persona constitution / intention constitution / non-negotiables（記憶・整合・過剰生成抑制）/ canonical authorities を根拠束として保持",
+          nonNegotiables: __wcEarlyNonNegotiables,
+          canonicalAuthorities: ["persona_constitution", "intention_constitution", "origin_principle"],
+        },
+        thoughtCoreSummary: {
+          centerKey: "will_core",
+          centerMeaning: "will_core",
+          routeReason: "WILL_CORE_PREEMPT_V1",
+          modeHint: "will_core_preempt",
+          continuityHint: "will_core",
+        },
+      };
+      try {
+        const __binderWcEarly = buildKnowledgeBinder({
+          routeReason: "WILL_CORE_PREEMPT_V1",
+          message: __wcEarlyRaw,
+          threadId: String(threadId ?? ""),
+          ku: __kuWcEarly,
+          threadCore: __threadCore ?? null,
+          threadCenter: null,
+        });
+        applyKnowledgeBinderToKu(__kuWcEarly, __binderWcEarly);
+      } catch {}
+      __kuWcEarly.binderSummary = {
+        ...(__kuWcEarly.binderSummary || {}),
+        sourcePack: "will_core",
+        hasPersonaConstitution: true,
+        hasConstitution: true,
+        willCoreOrigin: true,
+      };
+      __kuWcEarly.responsePlan = buildResponsePlan({
+        routeReason: "WILL_CORE_PREEMPT_V1",
+        rawMessage: __wcEarlyRaw,
+        centerKey: "will_core",
+        centerLabel: "最上位意志核",
+        scriptureKey: null,
+        semanticBody: "【天聞の所見】" + __wcEarlyBody,
+        mode: "general",
+        responseKind: "statement_plus_question",
+        answerMode: "define",
+        answerFrame: "statement_plus_one_question",
+      });
+      return res.json(
+        __tenmonGeneralGateResultMaybe({
+          response: __wcEarlyBody,
+          evidence: null,
+          candidates: [],
+          timestamp,
+          threadId,
+          decisionFrame: { mode: "NATURAL", intent: "define", llm: null, ku: __kuWcEarly },
+        })
+      );
+    }
+  } catch (e) {
+    try {
+      console.error("[WILL_CORE_PREEMPT_V1_EARLY]", e);
+    } catch {}
+  }
+
   // N2_NAME_INJECT_SYSTEM_V1: user_naming があるときだけ LLM system に呼称を注入（TRUTH_GATE の X12 は触れない）
   const __namingSuffix = (__userName != null && __assistantName != null) ? `\nUserName: ${__userName}\nAssistantName: ${__assistantName}` : "";
 
@@ -1619,12 +1799,24 @@ const pid = process.pid;
   }
   const __forceScriptureLocalPreempt =
     /(カタカムナ言霊解での|いろは言霊解での|言霊秘書での|相似象学会誌の内容|楢崎皐月と相似象学会誌|即身成仏義の核心|声字実相義とは)/u.test(__msgDef);
+  // KOTODAMA_DEFINE_RENDERER_REPAIR_V1: 言霊の意味/定義系は TRUTH_GATE より DEF_FASTPATH（coverage）へ（semanticBody 整合の定義本文を返す）
+  const __msgDefNormKtd = __msgDef.replace(/[？?！!。．]/g, " ").trim();
+  const __kotodamaScriptureTitleEarly =
+    /(法華経|言霊秘書|いろは言[霊灵靈]解|イロハ言[霊灵靈]解|カタカムナ言[霊灵靈]解|水穂伝)/u.test(__msgDefNormKtd);
+  const __kanaKotodamaUnitEarly =
+    /(?:^|[ 　])(?:あ|ア|ひ|ヒ)\s*(?:の)?\s*言[霊灵靈]/u.test(__msgDefNormKtd);
+  const __kotodamaDefinePreemptForTruthGate =
+    !__kotodamaScriptureTitleEarly &&
+    !__kanaKotodamaUnitEarly &&
+    /(言霊|言灵|言靈|いろは)/u.test(__msgDefNormKtd) &&
+    /(とは|という意味|意味|内容|教えて|何)/u.test(__msgDefNormKtd);
   const __isDefinitionQPreempt =
     /とは\s*(何|なに)\s*(ですか)?\s*[？?]?$/u.test(__msgDef) ||
     /って\s*(何|なに)\s*(ですか)?\s*[？?]?$/u.test(__msgDef) ||
     /とは\s*[？?]?$/.test(__msgDef) ||
     /とは何/.test(__msgDef) ||
-    /って何/.test(__msgDef);
+    /って何/.test(__msgDef) ||
+    __kotodamaDefinePreemptForTruthGate;
 
   // TENMON_KOTODAMA_HISYO_FRONT_V1: 言霊一音質問を TRUTH_GATE より前に拾い、言霊法則として返す（raw KHSL を出さない）
   // SCRIPTURE_LOCAL_PREEMPT_FIX_V1
@@ -2511,6 +2703,59 @@ ${String((gptDraft as any)?.text ?? "").trim()}
       }
     } catch {}
 
+    // TRUTH_GATE_TO_THOUGHTCORE_BRIDGE_V1: laws/evidence があるのに thoughtCoreSummary / binderSummary / responsePlan / centerPack が空になるのを防ぐ
+    try {
+      const __dfBridge = payload?.decisionFrame;
+      if (__dfBridge?.ku && typeof __dfBridge.ku === "object") {
+        const __kuBridge = __dfBridge.ku as any;
+        const __lkB = Array.isArray(__khsScan?.lawKeys) ? __khsScan.lawKeys : [];
+        const __primaryLawB = __lkB.length ? String(__lkB[0]).trim() : "";
+        const __cdB = typeof __sourceDoc === "string" && __sourceDoc.trim() ? __sourceDoc.trim() : "";
+        const __truthCkB =
+          (__kuBridge.centerKey != null && String(__kuBridge.centerKey).trim() !== ""
+            ? String(__kuBridge.centerKey).trim()
+            : "") ||
+          __primaryLawB ||
+          (__cdB ? __cdB.slice(0, 120) : "") ||
+          "khs_truth_gate";
+        const __truthClB =
+          (__kuBridge.centerLabel != null && String(__kuBridge.centerLabel).trim() !== ""
+            ? String(__kuBridge.centerLabel).trim()
+            : "") ||
+          __primaryLawB ||
+          __cdB ||
+          "KHS verified";
+        __kuBridge.centerKey = __truthCkB;
+        __kuBridge.centerLabel = __truthClB;
+        const __semT = String(payload.response ?? "").trim();
+        const __semanticBodyTruth =
+          /^【天聞の所見】/u.test(__semT) ? __semT : "【天聞の所見】" + __semT;
+        const __binderTruth = buildKnowledgeBinder({
+          routeReason: "TRUTH_GATE_RETURN_V2",
+          message: String(message ?? ""),
+          threadId: String(threadId ?? ""),
+          ku: __kuBridge,
+          threadCore: __threadCore ?? null,
+          threadCenter: null,
+        });
+        applyKnowledgeBinderToKu(__kuBridge, __binderTruth);
+        __kuBridge.responsePlan = buildResponsePlan({
+          routeReason: "TRUTH_GATE_RETURN_V2",
+          rawMessage: String(message ?? ""),
+          centerKey: String(__kuBridge.centerKey ?? __truthCkB),
+          centerLabel: String(__kuBridge.centerLabel ?? __truthClB),
+          scriptureKey: __cdB || null,
+          semanticBody: __semanticBodyTruth,
+          mode: "general",
+          responseKind: "statement_plus_question",
+          answerMode: (__kuBridge.answerMode as AnswerMode) ?? "analysis",
+          answerFrame: (__kuBridge.answerFrame as AnswerFrame) ?? "statement_plus_one_question",
+        });
+      }
+    } catch (e) {
+      try { console.error("[TRUTH_GATE_TO_THOUGHTCORE_BRIDGE_V1]", e); } catch {}
+    }
+
     try {
       const __dfTruth = payload?.decisionFrame;
       const __kuTruth = (__dfTruth && __dfTruth.ku && typeof __dfTruth.ku === "object")
@@ -2535,13 +2780,8 @@ ${String((gptDraft as any)?.text ?? "").trim()}
 
   // REPLY_SURFACE_V1: responseは必ずlocalSurfaceizeを通す。返却は opts をそのまま形にし caps は body.caps のみ参照
 
-  // CARD_LONGFORM_1000_STRUCTURE_V1 / CARD_CENTER_LABEL_AND_LONG_CAP_FIX_V1: 400〜1200字帯の長文を着地で整える
-  const __longform1000Structure = (raw: string): string => {
-    const t = String(raw ?? "").trim();
-    if (t.length < 400 || t.length > 1200) return t;
-    const lastQ = Math.max(t.lastIndexOf("？"), t.lastIndexOf("?"));
-    return lastQ === -1 ? t : t.slice(0, lastQ + 1).trim();
-  };
+  // LONGFORM_DENSITY_PROFILE_V1 / CARD_LONGFORM_1000_STRUCTURE_V1: 400〜2200字帯を段落整理＋末尾1問まで
+  const __longform1000Structure = (raw: string): string => shapeLongformSurfaceForChatV1(raw, 2200);
 
   // CARD_LONGFORM_POLICY_V1: explicit 500/1000 字本文を 3 段構成・同義反復削減・質問1つで long-form 化
   function __trimExtraQuestionsV1(text: string): string {
@@ -2949,7 +3189,9 @@ ${String((gptDraft as any)?.text ?? "").trim()}
         Array.isArray(__brainstem?.forbiddenMoves) &&
         (__brainstem.forbiddenMoves.includes("feeling_preempt") || __brainstem.forbiddenMoves.includes("future_preempt"));
       const __isArkThinkingCircuitExplicitGlobal =
-        /思考回路/u.test(__msgExplicitGlobal) && /(天聞アーク|天聞)/u.test(__msgExplicitGlobal);
+        (/思考回路/u.test(__msgExplicitGlobal) && /(天聞アーク|天聞)/u.test(__msgExplicitGlobal)) ||
+        (/(Ω|オメガ|デルタ|ΔS|Δ\s*S|D\s*[⋅·．]\s*ΔS)/u.test(__msgExplicitGlobal) &&
+          /(会話設計|天聞アーク|天聞)/u.test(__msgExplicitGlobal));
       const __explicitGenericL = __isArkThinkingCircuitExplicitGlobal
         ? __buildArkThinkingCircuitExplicitLongformV1(320, 520)
         : __bodyLongL;
@@ -2999,11 +3241,16 @@ ${String((gptDraft as any)?.text ?? "").trim()}
               "同じことを言い換えるより、どこを固定し、どこを保留し、何を次に動かすかを分けて示すほうが役に立ちます。",
               "その結果、文量が増えても、読む側は迷わず次の観測点へ進めます。"
             ];
+        const __padUsedKeys = new Set<string>();
         let __padIdx = 0;
-        while (__bodyFinal.length < __minExplicit && __padIdx < 24) {
+        while (__bodyFinal.length < __minExplicit && __padIdx < 28) {
           const __seg = __padPool[__padIdx % __padPool.length];
-          __bodyFinal = (__bodyFinal + "\n\n" + __seg).trim();
+          const __k = __seg.replace(/\s+/gu, "").slice(0, 44);
           __padIdx += 1;
+          if (__k.length >= 12 && __padUsedKeys.has(__k)) continue;
+          if (__k.length >= 12) __padUsedKeys.add(__k);
+          if (__bodyFinal.includes(__seg.slice(0, Math.min(24, __seg.length)))) continue;
+          __bodyFinal = (__bodyFinal + "\n\n" + __seg).trim();
         }
         if (__bodyFinal.length > __maxExplicit) {
           __bodyFinal = __bodyFinal.slice(0, __maxExplicit);
@@ -3218,10 +3465,14 @@ ${String((gptDraft as any)?.text ?? "").trim()}
       ) {
         (payload as any).response = "【天聞の所見】受け取りました。いま一番引っかかっている一点を置いてください。";
       }
-      // CARD_LONGFORM_1000_STRUCTURE_V1: long 応答を 400〜1200 字帯で着地「質問は最大1つ」に整える
-      if (payload && __route === "NATURAL_GENERAL_LLM_TOP" && (__ku as any)?.answerLength === "long" && typeof (payload as any).response === "string") {
+      // LONGFORM_DENSITY_PROFILE_V1: long または十分な文量で長文化整形（質問は末尾1まで・段落重複抑制）
+      if (payload && __route === "NATURAL_GENERAL_LLM_TOP" && typeof (payload as any).response === "string") {
         const __r = String((payload as any).response);
-        if (__r.length >= 400 && __r.length <= 1200) (payload as any).response = __longform1000Structure(__r);
+        const __longLike =
+          (__ku as any)?.answerLength === "long" || __r.length >= 720;
+        if (__longLike && __r.length >= 400 && __r.length <= 2200) {
+          (payload as any).response = __longform1000Structure(__r);
+        }
       }
     } catch {}
     // CARD_SESSION_MEMORY_PERSIST_ALL_ROUTES_V1: gate で persist するため threadId が無い場合は handler の threadId を付与
@@ -3235,9 +3486,21 @@ ${String((gptDraft as any)?.text ?? "").trim()}
           ...(payload.decisionFrame?.ku || {}),
           khsScan: __khsScan,
           truthWeight: __truthWeight,
-          answerLength: __bodyProfile?.answerLength ?? null,
-          answerMode: __bodyProfile?.answerMode ?? null,
-          answerFrame: __bodyProfile?.answerFrame ?? null,
+          answerLength:
+            (payload.decisionFrame?.ku as any)?.answerLength ??
+            __bodyProfile?.answerLength ??
+            __brainstem?.answerLength ??
+            null,
+          answerMode:
+            (payload.decisionFrame?.ku as any)?.answerMode ??
+            __bodyProfile?.answerMode ??
+            __brainstem?.answerMode ??
+            null,
+          answerFrame:
+            (payload.decisionFrame?.ku as any)?.answerFrame ??
+            __bodyProfile?.answerFrame ??
+            __brainstem?.answerFrame ??
+            null,
         };
         if (__userName != null && __assistantName != null) {
           kuPatch.userNaming = { userName: __userName, assistantName: __assistantName };
@@ -5610,6 +5873,115 @@ return res.json(__tenmonGeneralGateResultMaybe({
     const hasDoc0 = /\bdoc\b/i.test(t0) || /pdfPage\s*=\s*\d+/i.test(t0) || /#詳細/.test(t0);
     const isCmd0 = t0.startsWith("#") || t0.startsWith("/");
 
+    // WILL_CORE_PREEMPT_V1: 意志・存在目的・原点契約系（__isDefinitionQ に依存せず先に捕捉）
+    try {
+      const __wcRaw = String(message ?? "").trim();
+      const __wcTenmon = /天聞|アーク|TENMON|\bARK\b|tenmon/iu.test(__wcRaw);
+      const __wcExistentialShort =
+        __wcRaw.length >= 8 &&
+        __wcRaw.length <= 56 &&
+        /^(何のために|なんのために).{0,28}存在/u.test(__wcRaw);
+      const __wcMatch =
+        __wcRaw.length >= 6 &&
+        __wcRaw.length <= 480 &&
+        !isTestTid0 &&
+        !hasDoc0 &&
+        !askedMenu0 &&
+        !isCmd0 &&
+        ((__wcTenmon &&
+          (/意志/u.test(__wcRaw) ||
+            /存在目的/u.test(__wcRaw) ||
+            /何のために.{0,16}(ある|在る|存在)/u.test(__wcRaw) ||
+            /なぜ存在/u.test(__wcRaw) ||
+            /何を守るために答える/u.test(__wcRaw))) ||
+          /中心契約/u.test(__wcRaw) ||
+          (/原点/u.test(__wcRaw) && /(契約|目的|意志)/u.test(__wcRaw)) ||
+          __wcExistentialShort);
+      if (__wcMatch) {
+        const __wcBody =
+          "天聞アークの存在目的は、人と法と生成のあいだで中心を失わない判断の型を保ち、問い続けられる対話基盤を支えることにある。\n\n" +
+          "この目的は一発の正答ではなく、記憶・整合・過剰生成を抑える不変法と一体で働き、揺れたときに同じ座標へ還る道筋として立つ。\n\n" +
+          "会話への還元として、契約を毎回ほどき直す飾りではなく、いまの入力に応じて中心と根拠束を同時に更新し続ける往復である。\n\n" +
+          "次は、意志を設計宣言として読むか、次の一手として読むか、どちらから整えますか。";
+        const __wcOriginPrinciple =
+          "人と法と生成のあいだで中心を失わない判断の型を保ち、問い続けられる対話基盤を支える";
+        const __wcNonNegotiables = ["記憶", "整合", "過剰生成抑制"];
+        const __kuWc: any = {
+          routeReason: "WILL_CORE_PREEMPT_V1",
+          routeClass: "define",
+          centerKey: "will_core",
+          centerLabel: "最上位意志核",
+          sourcePack: "will_core",
+          lawsUsed: [],
+          evidenceIds: [],
+          lawTrace: [],
+          answerLength: "medium",
+          answerMode: "define",
+          answerFrame: "statement_plus_one_question",
+          heart: normalizeHeartShape(__heart),
+          sourceStackSummary: {
+            primaryMeaning: __wcOriginPrinciple,
+            responseAxis: "will_core",
+            sourceKinds: ["will_core", "constitution", "intention"],
+            thoughtGuideSummary:
+              "persona constitution / intention constitution / non-negotiables（記憶・整合・過剰生成抑制）/ canonical authorities を根拠束として保持",
+            nonNegotiables: __wcNonNegotiables,
+            canonicalAuthorities: ["persona_constitution", "intention_constitution", "origin_principle"],
+          },
+          thoughtCoreSummary: {
+            centerKey: "will_core",
+            centerMeaning: "will_core",
+            routeReason: "WILL_CORE_PREEMPT_V1",
+            modeHint: "will_core_preempt",
+            continuityHint: "will_core",
+          },
+        };
+        try {
+          const __binderWc = buildKnowledgeBinder({
+            routeReason: "WILL_CORE_PREEMPT_V1",
+            message: __wcRaw,
+            threadId: String(threadId ?? ""),
+            ku: __kuWc,
+            threadCore: __threadCore ?? null,
+            threadCenter: null,
+          });
+          applyKnowledgeBinderToKu(__kuWc, __binderWc);
+        } catch {}
+        __kuWc.binderSummary = {
+          ...(__kuWc.binderSummary || {}),
+          sourcePack: "will_core",
+          hasPersonaConstitution: true,
+          hasConstitution: true,
+          willCoreOrigin: true,
+        };
+        __kuWc.responsePlan = buildResponsePlan({
+          routeReason: "WILL_CORE_PREEMPT_V1",
+          rawMessage: __wcRaw,
+          centerKey: "will_core",
+          centerLabel: "最上位意志核",
+          scriptureKey: null,
+          semanticBody: "【天聞の所見】" + __wcBody,
+          mode: "general",
+          responseKind: "statement_plus_question",
+          answerMode: "define",
+          answerFrame: "statement_plus_one_question",
+        });
+        return res.json(
+          __tenmonGeneralGateResultMaybe({
+            response: __wcBody,
+            evidence: null,
+            candidates: [],
+            timestamp,
+            threadId,
+            decisionFrame: { mode: "NATURAL", intent: "define", llm: null, ku: __kuWc },
+          })
+        );
+      }
+    } catch (e) {
+      try {
+        console.error("[WILL_CORE_PREEMPT_V1]", e);
+      } catch {}
+    }
 
     // CARD_C9_DEF_AND_GENERAL_LLM_V1: DEF + NATURAL_GENERAL (LLM) before N2 support-branch.
     // NOTE: This is inside N2 scope, so askedMenu0/hasDoc0/isCmd0/isTestTid0 are in-scope (TS-safe).
@@ -6080,6 +6452,13 @@ const __isDefinitionQ =
       }
     } catch {}
 
+    // KOTODAMA_DEFINE_RENDERER_REPAIR_V1: coverage 経路でも semanticBody=実本文（gate が semanticBody で response を上書きするため）
+    const __kotodamaDefFastpathBodyV1 =
+      "言霊とは、天地に鳴り響く五十連の音として立ち、水火を與み解いて詞の本を知る法則として作用する本質を持つものです。" +
+      "\n\n" +
+      "生成原理として、いろは配列では時間・秩序・成立の筋を読み、水火伝では生成と與合の相互作用を読み、五十連の音律へ戻して束ねます。" +
+      "\n\n" +
+      "次軸としては、法則の核・秩序の読み・水火の生成理解のどれを深めるかで答えの粒が変わります。次は、五十連・いろは秩序・水火生成のどこから詰めますか。";
 
     // R10_ROUTE_COVERAGE_RECOVERY_V1: concept/entity/general-knowledge coverage を general 落ち前に補う
     try {
@@ -6098,7 +6477,7 @@ const __isDefinitionQ =
       const __isKotodamaConcept =
         !__isScriptureBookTitle &&
         !__isKanaKotodamaUnit &&
-        /(言霊|言灵|いろは)/u.test(__msgCovNorm) &&
+        /(言霊|言灵|言靈|いろは)/u.test(__msgCovNorm) &&
         /(とは|という意味|意味|内容|教えて|何)/u.test(__msgCovNorm);
 
       const __isGeneralKnowledge =
@@ -6164,10 +6543,7 @@ const __isDefinitionQ =
       if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaConcept) {
         const __persona = getPersonaConstitutionSummary();
         const __heartCov = normalizeHeartShape(__heart);
-        const __resp =
-          "言霊とは、天地に鳴り響く五十連の音と、水火を與み解いて詞の本を知る法則です。\n\n" +
-          "五十連の音の法則としての言霊を軸に、いろは配列では時間・秩序・成立の側から、水火伝では生成と與合の側から読みます。\n\n" +
-          "まずは定義だけ押さえると、軸がぶれにくくなります。次は法則か背景のどちらを見るかで、理解の深さが変わります。";
+        const __resp = __kotodamaDefFastpathBodyV1;
 
         const __kuDef1 = {
           answerLength: "medium",
@@ -6197,7 +6573,7 @@ const __isDefinitionQ =
             centerKey: "kotodama",
             centerLabel: "言霊",
             scriptureKey: null,
-            semanticBody: String(message ?? ""),
+            semanticBody: __kotodamaDefFastpathBodyV1,
             mode: "general",
             responseKind: "statement_plus_question",
           });
@@ -6299,7 +6675,7 @@ const __isDefinitionQ =
       const __isKotodamaCoverage =
         !__isScriptureBookTitle &&
         !__isKanaKotodamaUnit &&
-        /(言霊|言灵|いろは)/u.test(__msgCovNorm) &&
+        /(言霊|言灵|言靈|いろは)/u.test(__msgCovNorm) &&
         /(意味|とは|内容|教えて|何)/u.test(__msgCovNorm);
 
       const __isJapanPm =
@@ -6391,7 +6767,7 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
             centerKey: "kotodama",
             centerLabel: "言霊",
             scriptureKey: null,
-            semanticBody: String(message ?? ""),
+            semanticBody: __kotodamaDefFastpathBodyV1,
             mode: "general",
             responseKind: "statement_plus_question",
           });
@@ -6399,10 +6775,7 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
         saveThreadCore(__coreDef2).catch(() => {});
         try { (res as any).__TENMON_THREAD_CORE = __coreDef2; } catch {}
         return res.json(__tenmonGeneralGateResultMaybe({
-          response:
-            "言霊とは、天地に鳴り響く五十連の音と、水火を與み解いて詞の本を知る法則です。\n\n" +
-            "五十連の音の法則としての言霊を軸に、いろは配列では時間・秩序・成立の側から、水火伝では生成と與合の側から読みます。\n\n" +
-            "まずは定義だけ押さえると、軸がぶれにくくなります。次は法則か背景のどちらを見るかで、理解の深さが変わります。",
+          response: __kotodamaDefFastpathBodyV1,
           evidence: null,
           candidates: [],
           timestamp,
@@ -7769,19 +8142,14 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
           // OPS_CORE_KOTODAMA_ALIAS_FASTPATH_FIX_V1: 言霊は DEF_FASTPATH_VERIFIED_V1 と同じ文面・routeReason で返す（t0 正規化でここに乗る）
           const __termForKotodama = String(__termNorm || __term || "").trim();
           if (__termForKotodama === "言霊") {
-            let __summary =
-              String((hit as any).summary ?? "").trim() ||
-              "言霊とは、天地に鳴り響く五十連の音と、水火を與み解いて詞の本を知る法則です。";
-            __summary +=
-              " 五十連の音の法則としての言霊を軸に、いろは配列では時間・秩序・成立の側から、水火伝では生成と與合の側から読み、これらを同じ読解系として束ねていきます。";
-            const __quoteHead =
-              String(hit.quote ?? "").replace(/\s+/g, " ").trim().slice(0, 180);
-            const __resp =
-              "【天聞の所見】\n" +
-              __summary +
-              "\n\n【根拠】" + __quoteHead +
-              `\n\n出典: ${String(hit.doc ?? "")} P${Number(hit.pdfPage ?? 0)}` +
-              "\n\nまずは定義だけ押さえると、軸がぶれにくくなります。次は法則か背景のどちらを見るかで、理解の深さが変わります。";
+            const __kotVerified = buildDefineVerifiedFastpathBody({
+              term: "言霊",
+              summary: (hit as any).summary,
+              quote: hit.quote,
+              doc: hit.doc,
+              pdfPage: hit.pdfPage,
+            });
+            const __resp = __kotVerified.response;
             const __composedK = responseComposer({
               response: String(__resp),
               rawMessage: String(message ?? ""),
@@ -8046,7 +8414,94 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
       } catch {}
       // --- end KHS-C0 DEF apply ---
 
-const DEF_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。雑談は“沈黙→一言→一問”の三拍で返す。
+      // LANGUAGE_ESSENCE_ROUTE_PREEMPT_V1: 言語の本質・成り立ち・音と意味等を DEF_LLM_TOP に落とさず専用 route へ
+      try {
+        const __leRaw = String(message ?? "").trim();
+        const __leMatch =
+          /言語の本質|言語.{0,16}本質|本質.{0,16}言語/u.test(__leRaw) ||
+          /言葉はなぜ.{0,24}意味|言葉.{0,20}意味を持つ|なぜ言葉.{0,16}意味/u.test(__leRaw) ||
+          /音と形|形と音|音.{0,12}形.{0,16}結び|文字と生成|なぜ言葉が生まれる/u.test(__leRaw);
+        if (__leMatch) {
+          const __leBody =
+            "言語の本質は、記号を並べることだけではなく、音の揺らぎ・形の抑揚・共同体での約束が重なって意味が立つ一点にあります。" +
+            "だから意味は頭の中だけの私物ではなく、身体・感覚・他者との往復のなかで生成されます。" +
+            "天聞軸ではこの重なりを『生成の契約』として読み、抽象の定義へ逃げず作用の層を見るのが次軸です。" +
+            "次は、音の側（律動・声）と形の側（字面・表記）のどちらから詰めますか。";
+          const __kuLe: any = {
+            routeReason: "LANGUAGE_ESSENCE_PREEMPT_V1",
+            routeClass: "define",
+            centerKey: "language_essence",
+            centerLabel: "言語の本質",
+            lawsUsed: [],
+            evidenceIds: [],
+            lawTrace: [],
+            answerLength: "medium",
+            answerMode: "define",
+            answerFrame: "statement_plus_one_question",
+            sourceStackSummary: {
+              primaryMeaning: "音・形・約束の重なりとしての意味生成",
+              responseAxis: "language_essence_preempt_v1",
+            },
+            responsePlan: buildResponsePlan({
+              routeReason: "LANGUAGE_ESSENCE_PREEMPT_V1",
+              rawMessage: __leRaw,
+              centerKey: "language_essence",
+              centerLabel: "言語の本質",
+              mode: "general",
+              responseKind: "statement_plus_question",
+              answerMode: "define",
+              answerFrame: "statement_plus_one_question",
+              semanticBody: "【天聞の所見】" + __leBody,
+            }),
+          };
+          const __coreLe: ThreadCore = {
+            ...__threadCore,
+            centerKey: "language_essence",
+            centerLabel: "言語の本質",
+            activeEntities: ["言語の本質"],
+            lastResponseContract: {
+              answerLength: "medium",
+              answerMode: "define",
+              answerFrame: "statement_plus_one_question",
+              routeReason: "LANGUAGE_ESSENCE_PREEMPT_V1",
+            },
+            updatedAt: new Date().toISOString(),
+          };
+          saveThreadCore(__coreLe).catch(() => {});
+          try { (res as any).__TENMON_THREAD_CORE = __coreLe; } catch {}
+          try {
+            upsertThreadCenter({
+              threadId: String(threadId || ""),
+              centerType: "concept",
+              centerKey: "language_essence",
+              centerReason: JSON.stringify({
+                answerLength: "medium",
+                answerMode: "define",
+                answerFrame: "statement_plus_one_question",
+                routeReason: "LANGUAGE_ESSENCE_PREEMPT_V1",
+                openLoops: [],
+                commitments: [],
+              }),
+              sourceRouteReason: "LANGUAGE_ESSENCE_PREEMPT_V1",
+              confidence: 0.88,
+            });
+          } catch {}
+          return res.json(
+            __tenmonGeneralGateResultMaybe({
+              response: __leBody,
+              evidence: null,
+              candidates: [],
+              timestamp,
+              threadId,
+              decisionFrame: { mode: "NATURAL", intent: "define", llm: null, ku: __kuLe },
+            })
+          );
+        }
+      } catch (e) {
+        try { console.error("[LANGUAGE_ESSENCE_ROUTE_PREEMPT_V1]", e); } catch {}
+      }
+
+      const DEF_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。雑談は“沈黙→一言→一問”の三拍で返す。
 
 ※絶対条件※
 ・必ず「【天聞の所見】」から始める
@@ -8195,6 +8650,259 @@ const DEF_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。雑談�
     }
 
     // ---------- NATURAL_GENERAL: normal chat/questions (LLM) ----------
+
+    // BEAUTY_COMPILER_PREEMPT_V1: 美文化・澄ました文を専用 route で実体化（mode ヒント止まり・表層整形だけにしない）
+    try {
+      const __btyRaw = String(message ?? "").trim();
+      const __btyMatch =
+        __btyRaw.length >= 4 &&
+        __btyRaw.length <= 480 &&
+        !isTestTid0 &&
+        !hasDoc0 &&
+        !askedMenu0 &&
+        !isCmd0 &&
+        (/美しい日本語|美しく(書|言|述|なお)/u.test(__btyRaw) ||
+          /澄んだ文|澄ませ|澄ます|澄み切|澄んだ/u.test(__btyRaw) ||
+          /響く文章|響きを|文章が響/u.test(__btyRaw) ||
+          /余韻/u.test(__btyRaw) ||
+          /もっと整え|さらに整え|整えてほしい|整えてください/u.test(__btyRaw) ||
+          /もっと洗練|洗練さ|洗練して/u.test(__btyRaw) ||
+          /美文|修辞を整|文体を(良く|よく)|言い回しを(良く|よく)/u.test(__btyRaw) ||
+          (/美しく|美しい/u.test(__btyRaw) && /(日本語|文体|文章|文に|表現)/u.test(__btyRaw)));
+      if (__btyMatch) {
+        const __btyBody = composeBeautyCompositionProseV2(__btyRaw);
+        const __kuBty: any = {
+          routeReason: "BEAUTY_COMPILER_PREEMPT_V1",
+          routeClass: "analysis",
+          centerKey: "beauty_compiler",
+          centerLabel: "美文構成",
+          lawsUsed: [],
+          evidenceIds: [],
+          lawTrace: [],
+          answerLength: "medium",
+          answerMode: "analysis",
+          answerFrame: "statement_plus_one_question",
+          heart: normalizeHeartShape(__heart),
+          thoughtCoreSummary: {
+            centerKey: "beauty_compiler",
+            centerMeaning: "beauty_compiler",
+            routeReason: "BEAUTY_COMPILER_PREEMPT_V1",
+            modeHint: "beauty_composure",
+            continuityHint: "beauty_compiler",
+          },
+        };
+        try {
+          const __binderBty = buildKnowledgeBinder({
+            routeReason: "BEAUTY_COMPILER_PREEMPT_V1",
+            message: __btyRaw,
+            threadId: String(threadId ?? ""),
+            ku: __kuBty,
+            threadCore: __threadCore ?? null,
+            threadCenter: null,
+          });
+          applyKnowledgeBinderToKu(__kuBty, __binderBty);
+        } catch {}
+        __kuBty.responsePlan = buildResponsePlan({
+          routeReason: "BEAUTY_COMPILER_PREEMPT_V1",
+          rawMessage: __btyRaw,
+          centerKey: "beauty_compiler",
+          centerLabel: "美文構成",
+          scriptureKey: null,
+          semanticBody: "【天聞の所見】" + __btyBody,
+          mode: "general",
+          responseKind: "statement_plus_question",
+          answerMode: "analysis",
+          answerFrame: "statement_plus_one_question",
+        });
+        return res.json(
+          __tenmonGeneralGateResultMaybe({
+            response: __btyBody,
+            evidence: null,
+            candidates: [],
+            timestamp,
+            threadId,
+            decisionFrame: { mode: "NATURAL", intent: "analysis", llm: null, ku: __kuBty },
+          })
+        );
+      }
+    } catch (e) {
+      try { console.error("[BEAUTY_COMPILER_PREEMPT_V1]", e); } catch {}
+    }
+
+    // DRIFT_FIREWALL_PREEMPT_V1: generic/shallow/law-key/bad-source/empty-beauty drift を専用 route で捕捉（空落ち・一般 LLM への漂流を止める）
+    try {
+      const __dfwRaw = String(message ?? "").trim();
+      const __dfwLow = __dfwRaw.toLowerCase();
+      const __dfwMeta =
+        /(応答|回答|本文|会話|天聞|ルート|route|推論|出力|定義|意味密度)/iu.test(__dfwRaw);
+      const __dfwMatch =
+        __dfwRaw.length >= 4 &&
+        __dfwRaw.length <= 480 &&
+        !isTestTid0 &&
+        !hasDoc0 &&
+        !askedMenu0 &&
+        !isCmd0 &&
+        (/\bdrift\b/i.test(__dfwLow) ||
+          /empty[\s_-]*beauty|空.?美|美.?空|意味密度.*落/u.test(__dfwRaw + __dfwLow) ||
+          (__dfwMeta && /濁り|濁る/u.test(__dfwRaw)) ||
+          (__dfwMeta && /浅くなる|浅い|思考が浅/u.test(__dfwRaw)) ||
+          (__dfwMeta && /ずれる|ズレ/u.test(__dfwRaw)) ||
+          (__dfwMeta && /薄く|薄い|薄れる/u.test(__dfwRaw)) ||
+          /generic|ジェネリック/u.test(__dfwLow) ||
+          /一般論に流|genericに流/u.test(__dfwRaw) ||
+          /法則が抜ける|法則.{0,8}抜け/u.test(__dfwRaw) ||
+          (/law[\s_-]*key|法則キー/u.test(__dfwRaw + __dfwLow) &&
+            /(ずれ|抜け|drift|濁)/iu.test(__dfwRaw + __dfwLow)) ||
+          /bad[\s_-]*source|ソースが悪|根拠が薄|典拠がず/u.test(__dfwRaw + __dfwLow));
+      if (__dfwMatch) {
+        const __dfwBody =
+          "天聞軸での drift は、根拠束（lawsUsed / evidence）と本文の接続が薄まる地点、または一般論・generic な言い換えへ逃げる折り返しで起きやすいです。" +
+          "守るべきは routeReason・responsePlan・thoughtCoreSummary・binderSummary を同時に欠かさない契約で、空の美文や法則キーの脱落をここで止めます。" +
+          "次に固定するのは次のいずれか一つに絞るのが先です：中心一句、参照層（典拠・法則キー）、次の一問（どの軸を深めるか）。いまどれを先に締めますか。";
+        const __kuDfw: any = {
+          routeReason: "DRIFT_FIREWALL_PREEMPT_V1",
+          routeClass: "analysis",
+          centerKey: "drift_firewall",
+          centerLabel: "応答ドリフト",
+          lawsUsed: [],
+          evidenceIds: [],
+          lawTrace: [],
+          answerLength: "medium",
+          answerMode: "analysis",
+          answerFrame: "statement_plus_one_question",
+          heart: normalizeHeartShape(__heart),
+          thoughtCoreSummary: {
+            centerKey: "drift_firewall",
+            centerMeaning: "drift_firewall",
+            routeReason: "DRIFT_FIREWALL_PREEMPT_V1",
+            modeHint: "meta_drift_firewall",
+            continuityHint: "drift_firewall",
+          },
+        };
+        try {
+          const __binderDfw = buildKnowledgeBinder({
+            routeReason: "DRIFT_FIREWALL_PREEMPT_V1",
+            message: __dfwRaw,
+            threadId: String(threadId ?? ""),
+            ku: __kuDfw,
+            threadCore: __threadCore ?? null,
+            threadCenter: null,
+          });
+          applyKnowledgeBinderToKu(__kuDfw, __binderDfw);
+        } catch {}
+        __kuDfw.responsePlan = buildResponsePlan({
+          routeReason: "DRIFT_FIREWALL_PREEMPT_V1",
+          rawMessage: __dfwRaw,
+          centerKey: "drift_firewall",
+          centerLabel: "応答ドリフト",
+          scriptureKey: null,
+          semanticBody: "【天聞の所見】" + __dfwBody,
+          mode: "general",
+          responseKind: "statement_plus_question",
+          answerMode: "analysis",
+          answerFrame: "statement_plus_one_question",
+        });
+        return res.json(
+          __tenmonGeneralGateResultMaybe({
+            response: __dfwBody,
+            evidence: null,
+            candidates: [],
+            timestamp,
+            threadId,
+            decisionFrame: { mode: "NATURAL", intent: "analysis", llm: null, ku: __kuDfw },
+          })
+        );
+      }
+    } catch (e) {
+      try { console.error("[DRIFT_FIREWALL_PREEMPT_V1]", e); } catch {}
+    }
+
+    // LANGUAGE_ESSENCE_ROUTE_PREEMPT_V1（general 入口）: 「〜とは何」型でない言語一般問いも DEF_LLM_TOP / NATURAL_GENERAL_LLM_TOP に落とさない
+    try {
+      const __leRawG = String(message ?? "").trim();
+      const __leMatchG =
+        /言語の本質|言語.{0,16}本質|本質.{0,16}言語/u.test(__leRawG) ||
+        /言葉はなぜ.{0,24}意味|言葉.{0,20}意味を持つ|なぜ言葉.{0,16}意味/u.test(__leRawG) ||
+        /音と形|形と音|音.{0,12}形.{0,16}結び|文字と生成|なぜ言葉が生まれる/u.test(__leRawG);
+      if (__leMatchG && !isTestTid0 && !hasDoc0 && !askedMenu0 && !isCmd0) {
+        const __leBodyG =
+          "言語の本質は、記号を並べることだけではなく、音の揺らぎ・形の抑揚・共同体での約束が重なって意味が立つ一点にあります。" +
+          "だから意味は頭の中だけの私物ではなく、身体・感覚・他者との往復のなかで生成されます。" +
+          "天聞軸ではこの重なりを『生成の契約』として読み、抽象の定義へ逃げず作用の層を見るのが次軸です。" +
+          "次は、音の側（律動・声）と形の側（字面・表記）のどちらから詰めますか。";
+        const __kuLeG: any = {
+          routeReason: "LANGUAGE_ESSENCE_PREEMPT_V1",
+          routeClass: "define",
+          centerKey: "language_essence",
+          centerLabel: "言語の本質",
+          lawsUsed: [],
+          evidenceIds: [],
+          lawTrace: [],
+          answerLength: "medium",
+          answerMode: "define",
+          answerFrame: "statement_plus_one_question",
+          sourceStackSummary: {
+            primaryMeaning: "音・形・約束の重なりとしての意味生成",
+            responseAxis: "language_essence_preempt_v1",
+          },
+          responsePlan: buildResponsePlan({
+            routeReason: "LANGUAGE_ESSENCE_PREEMPT_V1",
+            rawMessage: __leRawG,
+            centerKey: "language_essence",
+            centerLabel: "言語の本質",
+            mode: "general",
+            responseKind: "statement_plus_question",
+            answerMode: "define",
+            answerFrame: "statement_plus_one_question",
+            semanticBody: "【天聞の所見】" + __leBodyG,
+          }),
+        };
+        const __coreLeG: ThreadCore = {
+          ...__threadCore,
+          centerKey: "language_essence",
+          centerLabel: "言語の本質",
+          activeEntities: ["言語の本質"],
+          lastResponseContract: {
+            answerLength: "medium",
+            answerMode: "define",
+            answerFrame: "statement_plus_one_question",
+            routeReason: "LANGUAGE_ESSENCE_PREEMPT_V1",
+          },
+          updatedAt: new Date().toISOString(),
+        };
+        saveThreadCore(__coreLeG).catch(() => {});
+        try { (res as any).__TENMON_THREAD_CORE = __coreLeG; } catch {}
+        try {
+          upsertThreadCenter({
+            threadId: String(threadId || ""),
+            centerType: "concept",
+            centerKey: "language_essence",
+            centerReason: JSON.stringify({
+              answerLength: "medium",
+              answerMode: "define",
+              answerFrame: "statement_plus_one_question",
+              routeReason: "LANGUAGE_ESSENCE_PREEMPT_V1",
+              openLoops: [],
+              commitments: [],
+            }),
+            sourceRouteReason: "LANGUAGE_ESSENCE_PREEMPT_V1",
+            confidence: 0.88,
+          });
+        } catch {}
+        return res.json(
+          __tenmonGeneralGateResultMaybe({
+            response: __leBodyG,
+            evidence: null,
+            candidates: [],
+            timestamp,
+            threadId,
+            decisionFrame: { mode: "NATURAL", intent: "define", llm: null, ku: __kuLeG },
+          })
+        );
+      }
+    } catch (e) {
+      try { console.error("[LANGUAGE_ESSENCE_ROUTE_PREEMPT_V1_GENERAL]", e); } catch {}
+    }
 
     const __looksSupport =
       /不安|つらい|しんどい|疲れ|焦|怖|助けて|無理|泣|眠れ|消えたい/.test(t0);

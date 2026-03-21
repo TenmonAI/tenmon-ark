@@ -64,6 +64,7 @@ function inferRouteClass(ku: Record<string, unknown>, routeReason: string): stri
   const rc = ku.routeClass;
   if (rc != null && String(rc).trim() !== "") return String(rc);
   const rr = String(routeReason || "");
+  if (rr === "TRUTH_GATE_RETURN_V2") return "analysis";
   if (rr === "DEF_FASTPATH_VERIFIED_V1" || rr === "DEF_FASTPATH_PROPOSED_V1") return "define";
   if (rr === "KATAKAMUNA_CANON_ROUTE_V1") return "define";
   if (rr === "EXPLICIT_CHAR_PREEMPT_V1") return "analysis";
@@ -75,6 +76,8 @@ function inferRouteClass(ku: Record<string, unknown>, routeReason: string): stri
 
 function inferSourcePack(routeReason: string, centerKey: string | null): string {
   const rr = String(routeReason || "").trim();
+  if (rr === "WILL_CORE_PREEMPT_V1" || centerKey === "will_core") return "will_core";
+  if (rr === "TRUTH_GATE_RETURN_V2") return "scripture";
   if (rr === "DEF_FASTPATH_VERIFIED_V1" || rr === "DEF_FASTPATH_PROPOSED_V1" || centerKey === "kotodama") return "seiten";
   if (rr === "KATAKAMUNA_CANON_ROUTE_V1" || centerKey === "katakamuna") return "scripture";
   if (rr === "TENMON_SCRIPTURE_CANON_V1") return "scripture";
@@ -168,6 +171,7 @@ export function buildKnowledgeBinder(input: KnowledgeBinderInput): KnowledgeBind
       (
         rr === "DEF_FASTPATH_VERIFIED_V1" ||
         rr === "DEF_FASTPATH_PROPOSED_V1" ||
+        rr === "TRUTH_GATE_RETURN_V2" ||
         rr === "R22_ESSENCE_FOLLOWUP_V1" ||
         rr === "R22_COMPARE_FOLLOWUP_V1" ||
         rr === "R22_NEXTSTEP_FOLLOWUP_V1"
@@ -213,7 +217,9 @@ export function buildKnowledgeBinder(input: KnowledgeBinderInput): KnowledgeBind
   (synapseTopPatch as any).sourceRouteReason = rr;
   (synapseTopPatch as any).sourceRouteClass = routeClass;
   if (centerLabel) (synapseTopPatch as any).sourceCenterLabel = centerLabel;
-  if (rr === "TENMON_SCRIPTURE_CANON_V1") {
+  if (rr === "TRUTH_GATE_RETURN_V2") {
+    (synapseTopPatch as any).sourceLedgerHint = "ledger:truth_gate";
+  } else if (rr === "TENMON_SCRIPTURE_CANON_V1") {
     (synapseTopPatch as any).sourceLedgerHint = "ledger:scripture_continuity";
   } else if (routeClass === "define") {
     (synapseTopPatch as any).sourceLedgerHint = "ledger:define";

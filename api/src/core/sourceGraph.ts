@@ -63,6 +63,7 @@ export type GroundingRule = {
 };
 
 const __GROUNDING_RULESET_V1: Record<string, GroundingRule> = {
+  TRUTH_GATE_RETURN_V2: { groundedPriority: "required", groundingMode: "canon", unresolvedPolicy: "ask" },
   DEF_FASTPATH_VERIFIED_V1: { groundedPriority: "required", groundingMode: "canon", unresolvedPolicy: "ask" },
   DEF_FASTPATH_PROPOSED_V1: { groundedPriority: "preferred", groundingMode: "canon", unresolvedPolicy: "ask" },
   TENMON_SCRIPTURE_CANON_V1: { groundedPriority: "required", groundingMode: "canon", unresolvedPolicy: "ask" },

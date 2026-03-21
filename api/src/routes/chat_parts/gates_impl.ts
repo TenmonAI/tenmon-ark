@@ -3,6 +3,7 @@
 
 import { getIntentionHintForKu } from "../../core/intentionConstitution.js";
 import { tryAppendKanagiGrowthLedgerFromPayload } from "../../core/kanagiGrowthLedger.js";
+import { tryHydratePriorRuleFeedbackV1 } from "../../core/selfLearningRuleFeedbackV1.js";
 import { computeKanagiSelfKernel, getSafeKanagiSelfOutput } from "../../core/kanagiSelfKernel.js";
 import { resolveScriptureQuery } from "../../core/scriptureCanon.js";
 import { memoryPersistMessage } from "../../memory/index.js";
@@ -513,6 +514,11 @@ function __tenmonGeneralGateResultMaybe(x: any, rawMessageOverride?: string): an
     const df = (x as any).decisionFrame || {};
     const ku = df.ku || {};
     if (ku && typeof ku === "object" && ((ku as any).inputText == null || String((ku as any).inputText ?? "").trim() === "")) (ku as any).inputText = raw;
+    try {
+      if ((x as any).decisionFrame && typeof (x as any).decisionFrame === "object") {
+        tryHydratePriorRuleFeedbackV1((x as any).decisionFrame as Record<string, unknown>);
+      }
+    } catch {}
     // K1_1_HYBRID_TRACE_ENFORCE_v1 (scope-safe: df/ku in this block)
     try {
       if ((df as any).mode === "HYBRID") {

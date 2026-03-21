@@ -4,6 +4,10 @@
  */
 import { getDb } from "../db/index.js";
 import { shouldUseDanshariCommunication } from "./danshariCommunication.js";
+import {
+  SELF_LEARNING_RFB_LEDGER_MARKER,
+  buildSelfLearningRuleFeedbackV1,
+} from "./selfLearningRuleFeedbackV1.js";
 
 export type KanagiGrowthLedgerEntry = {
   inputText: string;
@@ -155,6 +159,22 @@ export function buildKanagiGrowthLedgerEntryFromKu(
       shouldPersist: toShouldPersistOrRecombineVal(ks?.shouldPersist) ? 1 : null,
       shouldRecombine: toShouldPersistOrRecombineVal(ks?.shouldRecombine) ? 1 : null,
     }) ? "danshari_communication" : null;
+
+  let unresolvedClass: string | null = null;
+  let nextGrowthAxis: string | null = null;
+  if (
+    toShouldPersistOrRecombineVal(ks?.shouldPersist) ||
+    toShouldPersistOrRecombineVal(ks?.shouldRecombine)
+  ) {
+    try {
+      const rfb = buildSelfLearningRuleFeedbackV1(ku);
+      unresolvedClass = SELF_LEARNING_RFB_LEDGER_MARKER;
+      nextGrowthAxis = JSON.stringify(rfb).slice(0, 12000);
+    } catch {
+      /* ignore */
+    }
+  }
+
   return {
     inputText,
     routeReason,
@@ -174,8 +194,8 @@ export function buildKanagiGrowthLedgerEntryFromKu(
     driftRisk: driftRiskVal,
     shouldPersist: toShouldPersistOrRecombineVal(ks?.shouldPersist),
     shouldRecombine: toShouldPersistOrRecombineVal(ks?.shouldRecombine),
-    unresolvedClass: null,
-    nextGrowthAxis: null,
+    unresolvedClass,
+    nextGrowthAxis,
     note: noteVal,
   };
 }
