@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tenmon-ark.local/automation/chatts_exit_contract_schema_v1.json",
+  "title": "chat.ts exit contract lock report V1",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "version",
+    "cardName",
+    "targetPath",
+    "generatedAt",
+    "exitSites",
+    "contractSummary",
+    "contractDriftCandidates",
+    "trunkRequiredExitContracts"
+  ],
+  "properties": {
+    "version": { "type": "integer", "const": 1 },
+    "cardName": { "type": "string", "const": "CHAT_TRUNK_EXIT_CONTRACT_LOCK_V1" },
+    "targetPath": { "type": "string" },
+    "generatedAt": { "type": "string" },
+    "lineCount": { "type": "integer" },
+    "exitSites": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "required": ["line", "kind", "preview"],
+        "properties": {
+          "line": { "type": "integer", "minimum": 1 },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "return_res_json",
+              "bare_res_json",
+              "return_reply",
+              "return_object",
+              "early_return"
+            ]
+          },
+          "preview": { "type": "string" },
+          "usesGeneralGateWrapper": { "type": "boolean" },
+          "hasDecisionFrame": { "type": "boolean" },
+          "routeReasonLiteral": { "type": ["string", "null"] },
+          "modeLiteral": { "type": ["string", "null"] },
+          "intentLiteral": { "type": ["string", "null"] },
+          "kuObjectMentioned": { "type": "boolean" },
+          "lawsUsedDefaultPolicy": { "type": "string" },
+          "evidenceIdsDefaultPolicy": { "type": "string" },
+          "lawTraceDefaultPolicy": { "type": "string" },
+          "rewriteUsedRewriteDeltaPolicy": { "type": "string" },
+          "threadIdPropagation": { "type": "string" },
+          "synapseTopAttachPoint": { "type": "string" },
+          "responsePlanAttachPoint": { "type": "string" }
+        }
+      }
+    },
+    "contractSummary": { "type": "object" },
+    "contractDriftCandidates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["line", "driftKind", "note"],
+        "properties": {
+          "line": { "type": "integer" },
+          "driftKind": { "type": "string" },
+          "note": { "type": "string" }
+        }
+      }
+    },
+    "trunkRequiredExitContracts": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": { "type": "string" }
+      }
+    },
+    "meta": { "type": "object" }
+  }
+}

@@ -1,5 +1,5 @@
 {
-  "$comment": "DAG: PATCH_PLANNER -> PATCH_GENERATOR -> CURSOR_BRIDGE -> CHAT_TRUNK_EXIT_CONTRACT_LOCK_V1.",
+  "$comment": "DAG: PATCH_PLANNER -> PATCH_GENERATOR -> CURSOR_BRIDGE -> CHAT_TRUNK_EXIT_CONTRACT_LOCK_V1 (exit contract static report + chat_refactor lock).",
   "version": 1,
   "nodes": [
     "AUTO_BUILD_CONDUCTOR_V1",

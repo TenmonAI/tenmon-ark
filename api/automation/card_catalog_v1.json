@@ -247,13 +247,33 @@
     {
       "cardName": "CHAT_TRUNK_EXIT_CONTRACT_LOCK_V1",
       "class": "runtime_safe_patch",
-      "objective": "Lock exit contracts in chat_refactor modules only; not chat.ts body rewrite.",
-      "allowedPaths": ["api/src/routes/chat_refactor/**"],
+      "objective": "Static exit contract report for chat.ts (read-only) + lock exit shape via chat_refactor min_diff; not chat.ts body rewrite.",
+      "allowedPaths": [
+        "api/src/routes/chat_refactor/**",
+        "api/automation/chatts_exit_contract_lock_v1.py",
+        "api/automation/chatts_exit_contract_schema_v1.json",
+        "api/docs/constitution/CHAT_TRUNK_EXIT_CONTRACT_LOCK_V1.md",
+        "api/automation/reports/**"
+      ],
       "forbiddenPaths": ["api/src/routes/chat.ts", "client/**", "dist/**", "api/src/db/kokuzo_schema.sql"],
       "requiresHumanJudgement": false,
-      "prechecks": [{ "id": "build_ok", "kind": "command", "command": "cd api && npm run build" }],
+      "prechecks": [
+        { "id": "build_ok", "kind": "command", "command": "cd api && npm run build" },
+        { "id": "exit_lock_script", "kind": "file_exists", "path": "api/automation/chatts_exit_contract_lock_v1.py" }
+      ],
       "patchStrategy": { "mode": "min_diff" },
-      "postchecks": [],
+      "postchecks": [
+        {
+          "id": "exit_contract_emit",
+          "kind": "command",
+          "command": "python3 api/automation/chatts_exit_contract_lock_v1.py --repo-root . --emit-report --check-json"
+        },
+        {
+          "id": "exit_contract_schema",
+          "kind": "command",
+          "command": "python3 -m json.tool api/automation/chatts_exit_contract_schema_v1.json >/dev/null"
+        }
+      ],
       "acceptanceProfile": "api_health",
       "nextOnPass": "RESPONSE_FINALIZER_EXTRACT_V1",
       "nextOnFail": "STOP",
