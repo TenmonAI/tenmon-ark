@@ -1,0 +1,107 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tenmon-ark.local/automation/chatts_trunk_domain_schema_v1.json",
+  "title": "chat.ts trunk domain map V1",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "version",
+    "cardName",
+    "targetPath",
+    "lineCount",
+    "trunks",
+    "recommendedSplitSequence",
+    "unsafeMixedZones",
+    "wrapperCriticalZones"
+  ],
+  "properties": {
+    "version": { "type": "integer", "const": 1 },
+    "cardName": { "type": "string", "const": "CHAT_TRUNK_DOMAIN_MAP_V1" },
+    "targetPath": { "type": "string" },
+    "sourceAuditVersion": { "type": "integer" },
+    "lineCount": { "type": "integer", "minimum": 0 },
+    "trunks": {
+      "type": "array",
+      "minItems": 6,
+      "maxItems": 6,
+      "items": {
+        "type": "object",
+        "required": [
+          "trunk",
+          "routeReasons",
+          "returnCount",
+          "lineRange",
+          "duplicateRisk",
+          "contractRisk",
+          "suggestedTargetFile",
+          "splitPriorityScore"
+        ],
+        "properties": {
+          "trunk": {
+            "type": "string",
+            "enum": [
+              "define",
+              "scripture",
+              "general",
+              "continuity",
+              "support_selfdiag",
+              "infra_wrapper"
+            ]
+          },
+          "routeReasons": { "type": "array", "items": { "type": "string" } },
+          "returnCount": { "type": "integer", "minimum": 0 },
+          "lineRange": {
+            "oneOf": [
+              {
+                "type": "object",
+                "required": ["startLine", "endLine"],
+                "properties": {
+                  "startLine": { "type": "integer", "minimum": 1 },
+                  "endLine": { "type": "integer", "minimum": 1 }
+                }
+              },
+              { "type": "null" }
+            ]
+          },
+          "duplicateRisk": { "type": "number", "minimum": 0 },
+          "contractRisk": { "type": "number", "minimum": 0 },
+          "suggestedTargetFile": { "type": "string" },
+          "splitPriorityScore": { "type": "number", "minimum": 0 }
+        }
+      }
+    },
+    "recommendedSplitSequence": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "unsafeMixedZones": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["startLine", "endLine", "distinctTrunks", "riskScore"],
+        "properties": {
+          "startLine": { "type": "integer" },
+          "endLine": { "type": "integer" },
+          "distinctTrunks": { "type": "array", "items": { "type": "string" } },
+          "riskScore": { "type": "number" },
+          "note": { "type": "string" }
+        }
+      }
+    },
+    "wrapperCriticalZones": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["startLine", "endLine", "infraLineHits", "riskScore"],
+        "properties": {
+          "startLine": { "type": "integer" },
+          "endLine": { "type": "integer" },
+          "infraLineHits": { "type": "integer" },
+          "riskScore": { "type": "number" },
+          "note": { "type": "string" }
+        }
+      }
+    },
+    "meta": { "type": "object" }
+  }
+}

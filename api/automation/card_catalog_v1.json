@@ -104,18 +104,38 @@
     },
     {
       "cardName": "CHAT_TRUNK_DOMAIN_MAP_V1",
-      "class": "docs",
-      "objective": "Document chat trunk domain map (docs only).",
-      "allowedPaths": ["api/docs/**"],
+      "class": "audit",
+      "objective": "Static trunk domain map for chat.ts returns and routeReasons (post AUTO_BUILD_CHATTS_AUDIT_SUITE_V1); JSON map + constitution; no chat.ts edits.",
+      "allowedPaths": [
+        "api/automation/chatts_trunk_domain_map_v1.py",
+        "api/automation/chatts_trunk_domain_schema_v1.json",
+        "api/docs/constitution/CHAT_TRUNK_DOMAIN_MAP_V1.md",
+        "api/automation/reports/**"
+      ],
       "forbiddenPaths": ["api/src/routes/chat.ts", "client/**", "dist/**", "api/src/db/kokuzo_schema.sql"],
       "requiresHumanJudgement": false,
-      "prechecks": [],
-      "patchStrategy": { "mode": "min_diff" },
-      "postchecks": [],
+      "prechecks": [
+        { "id": "chat_ts", "kind": "file_exists", "path": "api/src/routes/chat.ts" },
+        { "id": "suite_metrics", "kind": "file_exists", "path": "api/automation/chatts_metrics_v1.py" },
+        { "id": "trunk_map_script", "kind": "file_exists", "path": "api/automation/chatts_trunk_domain_map_v1.py" }
+      ],
+      "patchStrategy": { "mode": "none", "notes": "read-only scan; reports via CLI" },
+      "postchecks": [
+        {
+          "id": "trunk_domain_map",
+          "kind": "command",
+          "command": "python3 api/automation/chatts_trunk_domain_map_v1.py --repo-root . --emit-report --check-json"
+        },
+        {
+          "id": "trunk_schema_json",
+          "kind": "command",
+          "command": "python3 -m json.tool api/automation/chatts_trunk_domain_schema_v1.json >/dev/null"
+        }
+      ],
       "acceptanceProfile": "build_only",
       "nextOnPass": "CHAT_TRUNK_EXIT_CONTRACT_LOCK_V1",
       "nextOnFail": "STOP",
-      "rollbackStrategy": { "autoRollbackAllowed": true, "scope": "docs_only" },
+      "rollbackStrategy": { "autoRollbackAllowed": false, "scope": "none" },
       "sealPolicy": { "requiresAcceptancePass": true, "mixedCommitForbidden": true }
     },
     {

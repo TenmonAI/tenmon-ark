@@ -1,5 +1,5 @@
 {
-  "$comment": "DAG: edge { before, after } means after depends on before (before must complete first).",
+  "$comment": "DAG: edge { before, after } means after depends on before (before must complete first). CHAT_TRUNK_DOMAIN_MAP_V1 follows AUTO_BUILD_CHATTS_AUDIT_SUITE_V1 (static domain map; no chat.ts edit).",
   "version": 1,
   "nodes": [
     "AUTO_BUILD_CONDUCTOR_V1",
