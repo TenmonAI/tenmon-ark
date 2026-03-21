@@ -1,0 +1,91 @@
+編集対象:
+- /opt/tenmon-ark-repo/api/src/core/threadCoreStore.ts のみ
+
+目的:
+- follow-up で core.centerKey が null のとき、既存 thread_center_memory.center_key を空で上書きしない
+- 「人生とは？」後の「要するに？」「本質は？」「比較すると？」で center_key=life を保持する
+- chat.ts は触らない
+- 最小diffのみ
+
+やること:
+
+1) Row 型に center_type を追加
+現状:
+type Row = {
+  id?: number;
+  thread_id: string;
+  center_type: string;
+  center_key: string | null;
+  center_reason: string | null;
+  source_route_reason: string | null;
+  updated_at: string;
+};
+
+そのままでよい。変更不要。
+
+2) saveThreadCore() の row 取得を置換
+
+置換前:
+const row = db
+  .prepare(
+    `SELECT id FROM thread_center_memory WHERE thread_id = ? ORDER BY updated_at DESC LIMIT 1`
+  )
+  .get(tid) as { id: number } | undefined;
+
+置換後:
+const row = db
+  .prepare(
+    `SELECT id, center_type, center_key
+       FROM thread_center_memory
+      WHERE thread_id = ?
+      ORDER BY updated_at DESC
+      LIMIT 1`
+  )
+  .get(tid) as { id: number; center_type?: string | null; center_key?: string | null } | undefined;
+
+3) update 時に center_key を preserve する
+
+置換前:
+if (row && typeof row.id === "number") {
+  db.prepare(
+    `UPDATE thread_center_memory
+     SET center_key = ?, center_reason = ?, source_route_reason = ?, updated_at = ?
+     WHERE id = ?`
+  ).run(core.centerKey ?? null, contractJson, routeReason, now, row.id);
+} else {
+  upsertThreadCenter({
+    threadId: tid,
+    centerType: "concept",
+    centerKey: core.centerKey ?? null,
+    sourceRouteReason: routeReason,
+    centerReason: contractJson,
+  });
+}
+
+置換後:
+if (row && typeof row.id === "number") {
+  const nextCenterKey =
+    core.centerKey != null && String(core.centerKey).trim() !== ""
+      ? String(core.centerKey)
+      : (row.center_key != null && String(row.center_key).trim() !== "" ? String(row.center_key) : null);
+
+  db.prepare(
+    `UPDATE thread_center_memory
+     SET center_key = ?, center_reason = ?, source_route_reason = ?, updated_at = ?
+     WHERE id = ?`
+  ).run(nextCenterKey, contractJson, routeReason, now, row.id);
+} else {
+  upsertThreadCenter({
+    threadId: tid,
+    centerType: "concept",
+    centerKey: core.centerKey ?? null,
+    sourceRouteReason: routeReason,
+    centerReason: contractJson,
+  });
+}
+
+禁止:
+- chat.ts は触らない
+- update SQL に center_type は足さない
+- routeReason / contractJson の契約は変えない
+- one-sound / support / explicit / katakamuna / self-aware は触らない

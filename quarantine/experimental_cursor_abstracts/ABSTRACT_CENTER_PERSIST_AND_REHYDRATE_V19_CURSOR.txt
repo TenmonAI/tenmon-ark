@@ -1,0 +1,104 @@
+編集対象:
+- /opt/tenmon-ark-repo/api/src/routes/chat.ts
+- /opt/tenmon-ark-repo/api/src/core/threadCoreStore.ts
+
+目的:
+- 「人生とは？」後の follow-up で centerKey=life を保持する
+- R22_ESSENCE_ASK_V1 / R22_COMPARE_ASK_V1 が thread_center_memory の center_key を空に上書きしない
+- one-sound / support / explicit / katakamuna を壊さない
+- 最小diffのみ
+
+1) chat.ts
+ABSTRACT_FRAME_VARIATION_V1 の2箇所で reply() の直前に saveThreadCore を追加する。
+
+A. __abstractPickDefTop 側
+既存:
+if (__abstractPickDefTop) {
+  const __kuAbstractDefTop: any = { ... };
+  return reply({
+    response: __abstractPickDefTop.response,
+    ...
+  });
+}
+
+この return reply の直前に追加:
+try {
+  const __coreAbstractDefTop: ThreadCore = {
+    ...__threadCore,
+    centerKey: __abstractPickDefTop.centerKey,
+    centerLabel: __abstractPickDefTop.centerLabel,
+    activeEntities: __abstractPickDefTop.centerLabel ? [__abstractPickDefTop.centerLabel] : [],
+    lastResponseContract: {
+      answerLength: "medium",
+      answerMode: "analysis",
+      answerFrame: "framed_define",
+      routeReason: "ABSTRACT_FRAME_VARIATION_V1",
+    },
+    updatedAt: new Date().toISOString(),
+  };
+  saveThreadCore(__coreAbstractDefTop).catch(() => {});
+  try { (res as any).__TENMON_THREAD_CORE = __coreAbstractDefTop; } catch {}
+} catch {}
+
+B. __abstractFrame 側
+既存:
+if (__abstractFrame) {
+  const __kuAbstract: any = { ... };
+  return reply({
+    response: __abstractFrame.response,
+    ...
+  });
+}
+
+この return reply の直前に追加:
+try {
+  const __coreAbstract: ThreadCore = {
+    ...__threadCore,
+    centerKey: __abstractFrame.centerKey,
+    centerLabel: __abstractFrame.centerLabel,
+    activeEntities: __abstractFrame.centerLabel ? [__abstractFrame.centerLabel] : [],
+    lastResponseContract: {
+      answerLength: "medium",
+      answerMode: "analysis",
+      answerFrame: "framed_define",
+      routeReason: "ABSTRACT_FRAME_VARIATION_V1",
+    },
+    updatedAt: new Date().toISOString(),
+  };
+  saveThreadCore(__coreAbstract).catch(() => {});
+  try { (res as any).__TENMON_THREAD_CORE = __coreAbstract; } catch {}
+} catch {}
+
+2) threadCoreStore.ts
+saveThreadCore() だけ直す。
+
+既存:
+const row = db
+  .prepare(
+    `SELECT id FROM thread_center_memory WHERE thread_id = ? ORDER BY updated_at DESC LIMIT 1`
+  )
+  .get(tid) as { id: number } | undefined;
+
+これを次に置換:
+const row = db
+  .prepare(
+    `SELECT id, center_key, center_type FROM thread_center_memory WHERE thread_id = ? ORDER BY updated_at DESC LIMIT 1`
+  )
+  .get(tid) as { id: number; center_key: string | null; center_type: string | null } | undefined;
+
+saveThreadCore() 内で contractJson の後に追加:
+const nextCenterKey = core.centerKey ?? row?.center_key ?? null;
+const nextCenterType = (row?.center_type ?? "concept") as "concept" | "scripture";
+
+UPDATE は center_key に nextCenterKey を使う:
+).run(nextCenterKey, contractJson, routeReason, now, row.id);
+
+else 側は core.centerKey が無いとき新規 upsert しない:
+if (!core.centerKey) return;
+
+upsertThreadCenter は centerType: nextCenterType, centerKey: nextCenterKey を使う。
+
+禁止:
+- 新 routeReason 追加禁止
+- one-sound ブロックを触らない
+- ask/followup の文面は触らない

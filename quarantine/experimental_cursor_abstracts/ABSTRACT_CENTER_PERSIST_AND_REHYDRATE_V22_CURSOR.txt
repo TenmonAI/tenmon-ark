@@ -1,0 +1,89 @@
+編集対象:
+- /opt/tenmon-ark-repo/api/src/routes/chat.ts のみ
+
+目的:
+- 人生とは？ の直後の follow-up で centerKey=life を保持する
+- getLatestThreadCenter() が空でも __threadCore.centerKey / centerLabel から follow-up を成立させる
+- R22_ESSENCE_ASK_V1 / R22_COMPARE_ASK_V1 に落ちる場合でも centerKey=life を持たせる
+- one-sound / support / explicit / katakamuna / self-aware は触らない
+- 最小diffのみ
+
+やること:
+
+1) __threadCenterForGeneral 読み込み直後に fallback center を追加
+
+いまの:
+let __threadCenterForGeneral: { center_type: string; center_key: string; source_route_reason?: string } | null = null;
+try {
+  const tidForCenter = String(threadId || "").trim();
+  if (tidForCenter) {
+    const c = getLatestThreadCenter(tidForCenter);
+    if (c && c.center_key) {
+      __threadCenterForGeneral = { center_type: c.center_type, center_key: c.center_key, source_route_reason: c.source_route_reason ?? undefined };
+    }
+  }
+} catch {}
+
+この直後に追加:
+
+if (
+  !__threadCenterForGeneral &&
+  (__threadCore.centerKey || __threadCore.centerLabel)
+) {
+  const __fallbackCenterKey =
+    __threadCore.centerKey ??
+    (__threadCore.centerLabel === "人生" ? "life" : null);
+  const __fallbackCenterLabel =
+    __threadCore.centerLabel ??
+    (__fallbackCenterKey === "life" ? "人生" : null);
+
+  if (__fallbackCenterKey) {
+    __threadCenterForGeneral = {
+      center_type: "concept",
+      center_key: __fallbackCenterKey,
+      source_route_reason: String(__threadCore.lastResponseContract?.routeReason || "THREADCORE_FALLBACK"),
+    };
+  }
+}
+
+2) R22_ESSENCE_ASK_V1 の __kuEssenceAsk に center を載せる
+
+置換前:
+const __kuEssenceAsk: any = { routeReason: "R22_ESSENCE_ASK_V1", answerLength: "short", answerMode: "analysis", answerFrame: "one_step", lawsUsed: [], evidenceIds: [], lawTrace: [] };
+
+置換後:
+const __kuEssenceAsk: any = {
+  routeReason: "R22_ESSENCE_ASK_V1",
+  answerLength: "short",
+  answerMode: "analysis",
+  answerFrame: "one_step",
+  centerKey: __threadCore.centerKey ?? (__threadCore.centerLabel === "人生" ? "life" : null),
+  centerLabel: __threadCore.centerLabel ?? ((__threadCore.centerKey ?? null) === "life" ? "人生" : null),
+  lawsUsed: [],
+  evidenceIds: [],
+  lawTrace: []
+};
+
+3) R22_COMPARE_ASK_V1 の __kuCompareAsk に center を載せる
+
+置換前:
+const __kuCompareAsk: any = { routeReason: "R22_COMPARE_ASK_V1", answerLength: "short", answerMode: "analysis", answerFrame: "one_step", lawsUsed: [], evidenceIds: [], lawTrace: [] };
+
+置換後:
+const __kuCompareAsk: any = {
+  routeReason: "R22_COMPARE_ASK_V1",
+  answerLength: "short",
+  answerMode: "analysis",
+  answerFrame: "one_step",
+  centerKey: __threadCore.centerKey ?? (__threadCore.centerLabel === "人生" ? "life" : null),
+  centerLabel: __threadCore.centerLabel ?? ((__threadCore.centerKey ?? null) === "life" ? "人生" : null),
+  lawsUsed: [],
+  evidenceIds: [],
+  lawTrace: []
+};
+
+禁止:
+- threadCoreStore.ts は触らない
+- abstract 文面変更禁止
+- saveThreadCore 契約変更禁止
+- one-sound / support / explicit / katakamuna / self-aware 触らない

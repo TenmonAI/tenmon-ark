@@ -1,0 +1,127 @@
+編集対象:
+- /opt/tenmon-ark-repo/api/src/routes/chat.ts のみ
+
+目的:
+- abstract define 後、DB center が取れなくても __threadCore.centerKey=life から follow-up を成立させる
+- R22_ESSENCE_ASK_V1 / R22_COMPARE_ASK_V1 に落ちる場合でも center を保持する
+- thread_center_memory の center_key を空で潰さない
+- one-sound / support / explicit / katakamuna / self-aware は触らない
+- 最小diffのみ
+
+ROOT CAUSE:
+- abstract define は centerKey=life を返している
+- follow-up では __threadCenterForGeneral が null のため ask系に落ちる
+- ask系の後で center_key='' の concept 行が最新になり、以降も follow-up が復帰できない
+
+修正は 2 点だけ。
+
+1) __threadCenterForGeneral の fallback を追加
+アンカー:
+let __threadCenterForGeneral: { center_type: string; center_key: string; source_route_reason?: string } | null = null;
+try {
+  const tidForCenter = String(threadId || "").trim();
+  if (tidForCenter) {
+    const c = getLatestThreadCenter(tidForCenter);
+    if (c && c.center_key) {
+      __threadCenterForGeneral = { center_type: c.center_type, center_key: c.center_key, source_route_reason: c.source_route_reason ?? undefined };
+    }
+  }
+} catch {}
+
+この直後に追加:
+if (
+  !__threadCenterForGeneral &&
+  __threadCore.centerKey &&
+  String(__threadCore.centerKey).trim()
+) {
+  __threadCenterForGeneral = {
+    center_type: "concept",
+    center_key: String(__threadCore.centerKey).trim(),
+    source_route_reason:
+      __threadCore.lastResponseContract?.routeReason || undefined,
+  };
+}
+
+2) ask系 short preempt に center を引き継ぐ
+A.
+if (!__threadCenterForGeneral && /(要するに|要点は|一言でいうと|本質は|要は)/u.test(t0)) {
+
+これを:
+const __fallbackCenterKeyE =
+  __threadCore.centerKey && String(__threadCore.centerKey).trim()
+    ? String(__threadCore.centerKey).trim()
+    : null;
+const __fallbackCenterLabelE =
+  __threadCore.centerLabel ||
+  (__fallbackCenterKeyE === "life" ? "人生" : centerLabelFromKey(__fallbackCenterKeyE)) ||
+  (__fallbackCenterKeyE || null);
+
+if (!__threadCenterForGeneral && __fallbackCenterKeyE && /(要するに|要点は|一言でいうと|本質は|要は)/u.test(t0)) {
+
+置換後の __kuEssenceAsk は center を持つ:
+const __kuEssenceAsk: any = {
+  routeReason: "R22_ESSENCE_FOLLOWUP_V1",
+  routeClass: "continuity",
+  answerLength: "short",
+  answerMode: "analysis",
+  answerFrame: "one_step",
+  centerKey: __fallbackCenterKeyE,
+  centerLabel: __fallbackCenterLabelE,
+  threadCenterKey: __fallbackCenterKeyE,
+  threadCenterLabel: __fallbackCenterLabelE,
+  threadCenterType: "concept",
+  lawsUsed: [],
+  evidenceIds: [],
+  lawTrace: []
+};
+
+response は中心あり文に変える:
+const __essenceAskBody =
+  __fallbackCenterKeyE === "life"
+    ? "【天聞の所見】人生で言えば、要点は何を中心に据えて選び直すかです。次は法則か背景のどちらを見るかで深さが変わります。"
+    : "【天聞の所見】" + String(__fallbackCenterLabelE || "この中心") + "で言えば、要点は中心を一つに絞ることです。次は法則か背景のどちらを見るかで深さが変わります。";
+
+return の response は __essenceAskBody にする。
+
+B.
+if (!__threadCenterForGeneral && /(違いは|どう違う|何が違う|比較して)/u.test(t0)) {
+
+これを:
+const __fallbackCenterKeyC =
+  __threadCore.centerKey && String(__threadCore.centerKey).trim()
+    ? String(__threadCore.centerKey).trim()
+    : null;
+const __fallbackCenterLabelC =
+  __threadCore.centerLabel ||
+  (__fallbackCenterKeyC === "life" ? "人生" : centerLabelFromKey(__fallbackCenterKeyC)) ||
+  (__fallbackCenterKeyC || null);
+
+if (!__threadCenterForGeneral && __fallbackCenterKeyC && /(違いは|どう違う|何が違う|比較して)/u.test(t0)) {
+
+置換後の __kuCompareAsk:
+const __kuCompareAsk: any = {
+  routeReason: "R22_COMPARE_FOLLOWUP_V1",
+  routeClass: "analysis",
+  answerLength: "short",
+  answerMode: "analysis",
+  answerFrame: "one_step",
+  centerKey: __fallbackCenterKeyC,
+  centerLabel: __fallbackCenterLabelC,
+  threadCenterKey: __fallbackCenterKeyC,
+  threadCenterLabel: __fallbackCenterLabelC,
+  threadCenterType: "concept",
+  lawsUsed: [],
+  evidenceIds: [],
+  lawTrace: []
+};
+
+response:
+const __compareAskBody =
+  "【天聞の所見】" + String(__fallbackCenterLabelC || "この中心") + "で比べるなら、まず比べたい二つを一言ずつ置くと違いが締まります。";
+
+return の response は __compareAskBody にする。
+
+禁止:
+- saveThreadCore の契約変更禁止
+- threadCoreStore.ts 触らない
+- one-sound / support / explicit / katakamuna / self-aware 触らない

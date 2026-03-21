@@ -1,0 +1,127 @@
+編集対象:
+- /opt/tenmon-ark-repo/api/src/routes/chat.ts のみ
+
+目的:
+- ABSTRACT_FRAME_VARIATION_V1 の返答時に thread center を保存する
+- その後の「要するに？」「本質は？」「比較すると？」で centerKey=life を落とさない
+- R22_ESSENCE_ASK_V1 / R22_COMPARE_ASK_V1 に落ちても center を消さない
+- one-sound / support / explicit / katakamuna を壊さない
+
+前提観測:
+- abs-life-v16 / v17 で ABSTRACT_FRAME_VARIATION_V1 は centerKey=life を返している
+- しかし follow-up 後の thread_center_memory は center_key='' で R22_COMPARE_ASK_V1 に上書きされている
+- 原因は ask 系 short preempt が null center のまま saveThreadCore / center overwrite を起こしていること
+- 修正対象は threadCoreStore.ts ではなく chat.ts だけでよい
+
+やることは 3 点だけ:
+
+A. ABSTRACT_FRAME_VARIATION_V1 の 2 箇所で center を保存
+1) __abstractPickDefTop の return reply 直前
+2) __abstractFrame の return reply 直前
+
+以下を最小diffで追加:
+try {
+  const __coreAbstract = {
+    ...__threadCore,
+    centerKey: __abstractPickDefTop.centerKey,   // 低位側は __abstractFrame.centerKey
+    centerLabel: __abstractPickDefTop.centerLabel, // 低位側は __abstractFrame.centerLabel
+    activeEntities: [__abstractPickDefTop.centerLabel], // 低位側も同様
+    lastResponseContract: {
+      answerLength: "medium",
+      answerMode: "analysis",
+      answerFrame: "framed_define",
+      routeReason: "ABSTRACT_FRAME_VARIATION_V1",
+    },
+    updatedAt: new Date().toISOString(),
+  };
+  saveThreadCore(__coreAbstract).catch(() => {});
+  (res as any).__TENMON_THREAD_CORE = __coreAbstract;
+} catch {}
+
+B. R22_ESSENCE_ASK_V1 で center を保持
+現状:
+if (!__threadCenterForGeneral && /(要するに|要点は|一言でいうと|本質は|要は)/u.test(t0)) {
+
+このブロックの先頭で:
+const __fallbackCenterKeyEA = __threadCore.centerKey ?? null;
+const __fallbackCenterLabelEA = __threadCore.centerLabel ?? centerLabelFromKey(__threadCore.centerKey) ?? null;
+
+__kuEssenceAsk に追加:
+centerKey: __fallbackCenterKeyEA,
+centerLabel: __fallbackCenterLabelEA,
+threadCenterKey: __fallbackCenterKeyEA,
+threadCenterLabel: __fallbackCenterLabelEA,
+
+そして return の直前で:
+if (__fallbackCenterKeyEA || __fallbackCenterLabelEA) {
+  const __coreEA = {
+    ...__threadCore,
+    centerKey: __fallbackCenterKeyEA,
+    centerLabel: __fallbackCenterLabelEA,
+    activeEntities: __fallbackCenterLabelEA ? [__fallbackCenterLabelEA] : __threadCore.activeEntities,
+    lastResponseContract: {
+      answerLength: "short",
+      answerMode: "analysis",
+      answerFrame: "one_step",
+      routeReason: "R22_ESSENCE_FOLLOWUP_V1",
+    },
+    updatedAt: new Date().toISOString(),
+  };
+  saveThreadCore(__coreEA).catch(() => {});
+  try { (res as any).__TENMON_THREAD_CORE = __coreEA; } catch {}
+}
+
+文言は center がある場合だけ分岐:
+const __essenceAskResponse =
+  __fallbackCenterLabelEA
+    ? "【天聞の所見】" + __fallbackCenterLabelEA + "で言えば、要点は中心を一つに絞ることです。次は法則か背景のどちらを見るかで深さが変わります。"
+    : "【天聞の所見】要点を聞いています。いまの中心を一言で置くと、答えが締まります。";
+
+decisionFrame.ku.routeReason は center がある場合 "R22_ESSENCE_FOLLOWUP_V1"、ない場合は従来どおり "R22_ESSENCE_ASK_V1"
+
+C. R22_COMPARE_ASK_V1 で center を保持
+現状:
+if (!__threadCenterForGeneral && /(違いは|どう違う|何が違う|比較して)/u.test(t0)) {
+
+このブロックの先頭で:
+const __fallbackCenterKeyCA = __threadCore.centerKey ?? null;
+const __fallbackCenterLabelCA = __threadCore.centerLabel ?? centerLabelFromKey(__threadCore.centerKey) ?? null;
+
+__kuCompareAsk に追加:
+centerKey: __fallbackCenterKeyCA,
+centerLabel: __fallbackCenterLabelCA,
+threadCenterKey: __fallbackCenterKeyCA,
+threadCenterLabel: __fallbackCenterLabelCA,
+
+center がある場合だけ文言を変更:
+const __compareAskResponse =
+  __fallbackCenterLabelCA
+    ? "【天聞の所見】" + __fallbackCenterLabelCA + "で比べるなら、まず軸を一つに絞ると違いが見えます。比べたい二つを一言ずつ置いてください。"
+    : "【天聞の所見】比較の問いです。比べたい二つを一言ずつ置くと、答えが締まります。";
+
+return 前で:
+if (__fallbackCenterKeyCA || __fallbackCenterLabelCA) {
+  const __coreCA = {
+    ...__threadCore,
+    centerKey: __fallbackCenterKeyCA,
+    centerLabel: __fallbackCenterLabelCA,
+    activeEntities: __fallbackCenterLabelCA ? [__fallbackCenterLabelCA] : __threadCore.activeEntities,
+    lastResponseContract: {
+      answerLength: "short",
+      answerMode: "analysis",
+      answerFrame: "one_step",
+      routeReason: "R22_COMPARE_FOLLOWUP_V1",
+    },
+    updatedAt: new Date().toISOString(),
+  };
+  saveThreadCore(__coreCA).catch(() => {});
+  try { (res as any).__TENMON_THREAD_CORE = __coreCA; } catch {}
+}
+
+decisionFrame.ku.routeReason は center がある場合 "R22_COMPARE_FOLLOWUP_V1"、ない場合は従来どおり "R22_COMPARE_ASK_V1"
+
+禁止:
+- threadCoreStore.ts は触らない
+- sourceGraph.ts は触らない
+- 新規 routeReason 追加禁止
+- one-sound ブロックは触らない

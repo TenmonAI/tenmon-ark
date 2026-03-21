@@ -1,0 +1,63 @@
+編集対象:
+- /opt/tenmon-ark-repo/api/src/routes/chat.ts のみ
+
+目的:
+- ABSTRACT_FRAME_VARIATION_V1 の返答時に、thread_center_memory に center_key=life を残す
+- その後の「要するに？」「本質は？」「比較すると？」で __threadCenterForGeneral が null にならないようにする
+- R22_ESSENCE_ASK_V1 / R22_COMPARE_ASK_V1 に落とさない
+- one-sound / support / explicit / katakamuna / abstract define を壊さない
+
+必須条件:
+- 最小diff
+- saveThreadCore の契約は壊さない
+- upsertThreadCenter を ABSTRACT_FRAME_VARIATION_V1 の return 直前 2 箇所に追加
+- centerType は concept
+- centerKey は __abstractPickDefTop.centerKey または __abstractFrame.centerKey
+- centerReason は JSON.stringify({
+    answerLength: "medium",
+    answerMode: "analysis",
+    answerFrame: "framed_define",
+    routeReason: "ABSTRACT_FRAME_VARIATION_V1",
+    openLoops: [],
+    commitments: [],
+  })
+- sourceRouteReason は "ABSTRACT_FRAME_VARIATION_V1"
+- confidence は 0.9
+
+差し込み位置:
+1)
+if (__abstractPickDefTop) {
+  ...
+  return reply({
+直前
+
+2)
+if (__abstractFrame) {
+  ...
+  return reply({
+直前
+
+追加コード形:
+try {
+  upsertThreadCenter({
+    threadId: String(threadId || ""),
+    centerType: "concept",
+    centerKey: __abstractPickDefTop.centerKey,   // または __abstractFrame.centerKey
+    centerReason: JSON.stringify({
+      answerLength: "medium",
+      answerMode: "analysis",
+      answerFrame: "framed_define",
+      routeReason: "ABSTRACT_FRAME_VARIATION_V1",
+      openLoops: [],
+      commitments: [],
+    }),
+    sourceRouteReason: "ABSTRACT_FRAME_VARIATION_V1",
+    confidence: 0.9,
+  });
+} catch {}
+
+禁止:
+- threadCoreStore.ts は触らない
+- follow-up ブロックは触らない
+- sourceGraph.ts は触らない
+- 新規 routeReason 追加禁止

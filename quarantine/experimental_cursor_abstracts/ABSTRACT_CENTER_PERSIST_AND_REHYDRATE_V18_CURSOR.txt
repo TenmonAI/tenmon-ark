@@ -1,0 +1,198 @@
+編集対象:
+- /opt/tenmon-ark-repo/api/src/routes/chat.ts のみ
+
+目的:
+- ABSTRACT_FRAME_VARIATION_V1 のあと、人生系 follow-up が R22_ESSENCE_ASK_V1 / R22_COMPARE_ASK_V1 に落ちても centerKey=life を保持する
+- thread_center_memory の center_key を空文字で上書きしない
+- one-sound / support / explicit / katakamuna は壊さない
+- 最小diffのみ
+
+観測で確定している事実:
+- 「人生とは？」は ABSTRACT_FRAME_VARIATION_V1 / centerKey=life で返る
+- その後の「要するに？」「本質は？」「比較すると？」は
+  - R22_ESSENCE_ASK_V1 / centerKey=null
+  - R22_COMPARE_ASK_V1 / centerKey=null
+- DB の thread_center_memory は follow-up 後に
+  - center_type=concept
+  - center_key=''（空）
+  - source_route_reason=R22_COMPARE_ASK_V1
+  に上書きされている
+- つまり abstract define 後に center が保存されていないか、ask系が null で上書きしている
+
+やることは 4 点だけ:
+
+A. ABSTRACT_FRAME_VARIATION_V1 の2箇所で saveThreadCore を入れる
+1) chat.ts の ABSTRACT_RETURN_TOP 側
+   既存:
+   if (__abstractPickDefTop) {
+     const __kuAbstractDefTop ...
+     return reply({
+       response: __abstractPickDefTop.response,
+       ...
+     });
+   }
+
+   この return reply 直前に追加:
+   try {
+     const __coreAbstractTop: ThreadCore = {
+       ...__threadCore,
+       centerKey: __abstractPickDefTop.centerKey,
+       centerLabel: __abstractPickDefTop.centerLabel,
+       activeEntities: __abstractPickDefTop.centerLabel ? [__abstractPickDefTop.centerLabel] : [],
+       lastResponseContract: {
+         answerLength: "medium",
+         answerMode: "analysis",
+         answerFrame: "framed_define",
+         routeReason: "ABSTRACT_FRAME_VARIATION_V1",
+       },
+       updatedAt: new Date().toISOString(),
+     };
+     saveThreadCore(__coreAbstractTop).catch(() => {});
+     try { (res as any).__TENMON_THREAD_CORE = __coreAbstractTop; } catch {}
+   } catch {}
+
+2) chat.ts の ABSTRACT_RETURN_LOW 側
+   既存:
+   if (__abstractFrame) {
+     const __kuAbstract ...
+     return reply({
+       response: __abstractFrame.response,
+       ...
+     });
+   }
+
+   この return reply 直前に追加:
+   try {
+     const __coreAbstractLow: ThreadCore = {
+       ...__threadCore,
+       centerKey: __abstractFrame.centerKey,
+       centerLabel: __abstractFrame.centerLabel,
+       activeEntities: __abstractFrame.centerLabel ? [__abstractFrame.centerLabel] : [],
+       lastResponseContract: {
+         answerLength: "medium",
+         answerMode: "analysis",
+         answerFrame: "framed_define",
+         routeReason: "ABSTRACT_FRAME_VARIATION_V1",
+       },
+       updatedAt: new Date().toISOString(),
+     };
+     saveThreadCore(__coreAbstractLow).catch(() => {});
+     try { (res as any).__TENMON_THREAD_CORE = __coreAbstractLow; } catch {}
+   } catch {}
+
+B. __threadCenterForGeneral の読込を「DB優先 + threadCore fallback」にする
+chat.ts の FOLLOWUP_BLOCK 先頭付近:
+既存:
+if (c && c.center_key) {
+  __threadCenterForGeneral = { center_type: c.center_type, center_key: c.center_key, source_route_reason: c.source_route_reason ?? undefined };
+}
+
+これを次へ置換:
+if (c && (c.center_key || (__threadCore.centerKey && c.center_type === "concept"))) {
+  __threadCenterForGeneral = {
+    center_type: c.center_type,
+    center_key: String(c.center_key || __threadCore.centerKey || "").trim(),
+    source_route_reason: c.source_route_reason ?? undefined,
+  };
+} else if (__threadCore.centerKey) {
+  __threadCenterForGeneral = {
+    center_type: "concept",
+    center_key: String(__threadCore.centerKey || "").trim(),
+    source_route_reason: __threadCore.lastResponseContract?.routeReason ?? undefined,
+  };
+}
+
+C. R22_ESSENCE_ASK_V1 で center が threadCore にあれば ASK ではなく FOLLOWUP として返す
+chat.ts の
+if (!__threadCenterForGeneral && /(要するに|要点は|一言でいうと|本質は|要は)/u.test(t0)) {
+  ...
+}
+を次の流れに変える:
+
+- ブロック冒頭で:
+  const __fallbackCenterKeyEA = String(__threadCore.centerKey || "").trim() || null;
+  const __fallbackCenterLabelEA = __threadCore.centerLabel || centerLabelFromKey(__threadCore.centerKey) || null;
+  const __hasFallbackCenterEA = Boolean(__fallbackCenterKeyEA);
+
+- response を分岐:
+  const __essenceAskResponse =
+    __hasFallbackCenterEA
+      ? "【天聞の所見】" + (__fallbackCenterLabelEA || "この中心") + "で言えば、要点は中心を一つに絞ることです。次は法則か背景のどちらを見るかで深さが変わります。"
+      : "【天聞の所見】要点を聞いています。いまの中心を一言で置くと、答えが締まります。";
+
+- ku を分岐:
+  routeReason: __hasFallbackCenterEA ? "R22_ESSENCE_FOLLOWUP_V1" : "R22_ESSENCE_ASK_V1",
+  centerKey: __fallbackCenterKeyEA,
+  centerLabel: __fallbackCenterLabelEA,
+  threadCenterKey: __fallbackCenterKeyEA,
+  threadCenterLabel: __fallbackCenterLabelEA,
+
+- return 直前で center がある場合のみ saveThreadCore:
+  if (__hasFallbackCenterEA) {
+    const __coreEA: ThreadCore = {
+      ...__threadCore,
+      centerKey: __fallbackCenterKeyEA,
+      centerLabel: __fallbackCenterLabelEA,
+      activeEntities: __fallbackCenterLabelEA ? [__fallbackCenterLabelEA] : __threadCore.activeEntities,
+      lastResponseContract: {
+        answerLength: "short",
+        answerMode: "analysis",
+        answerFrame: "one_step",
+        routeReason: "R22_ESSENCE_FOLLOWUP_V1",
+      },
+      updatedAt: new Date().toISOString(),
+    };
+    saveThreadCore(__coreEA).catch(() => {});
+    try { (res as any).__TENMON_THREAD_CORE = __coreEA; } catch {}
+  }
+
+D. R22_COMPARE_ASK_V1 も同じ方式
+chat.ts の
+if (!__threadCenterForGeneral && /(違いは|どう違う|何が違う|比較して)/u.test(t0)) {
+  ...
+}
+を次の流れに変える:
+
+- ブロック冒頭で:
+  const __fallbackCenterKeyCA = String(__threadCore.centerKey || "").trim() || null;
+  const __fallbackCenterLabelCA = __threadCore.centerLabel || centerLabelFromKey(__threadCore.centerKey) || null;
+  const __hasFallbackCenterCA = Boolean(__fallbackCenterKeyCA);
+
+- response を分岐:
+  const __compareAskResponse =
+    __hasFallbackCenterCA
+      ? "【天聞の所見】" + (__fallbackCenterLabelCA || "この中心") + "で比べるなら、まず軸を一つに絞ると違いが見えます。比べたい二つを一言ずつ置いてください。"
+      : "【天聞の所見】比較の問いです。比べたい二つを一言ずつ置くと、答えが締まります。";
+
+- ku を分岐:
+  routeReason: __hasFallbackCenterCA ? "R22_COMPARE_FOLLOWUP_V1" : "R22_COMPARE_ASK_V1",
+  centerKey: __fallbackCenterKeyCA,
+  centerLabel: __fallbackCenterLabelCA,
+  threadCenterKey: __fallbackCenterKeyCA,
+  threadCenterLabel: __fallbackCenterLabelCA,
+
+- return 直前で center がある場合のみ saveThreadCore:
+  if (__hasFallbackCenterCA) {
+    const __coreCA: ThreadCore = {
+      ...__threadCore,
+      centerKey: __fallbackCenterKeyCA,
+      centerLabel: __fallbackCenterLabelCA,
+      activeEntities: __fallbackCenterLabelCA ? [__fallbackCenterLabelCA] : __threadCore.activeEntities,
+      lastResponseContract: {
+        answerLength: "short",
+        answerMode: "analysis",
+        answerFrame: "one_step",
+        routeReason: "R22_COMPARE_FOLLOWUP_V1",
+      },
+      updatedAt: new Date().toISOString(),
+    };
+    saveThreadCore(__coreCA).catch(() => {});
+    try { (res as any).__TENMON_THREAD_CORE = __coreCA; } catch {}
+  }
+
+禁止:
+- threadCoreStore.ts を触らない
+- sourceGraph.ts を触らない
+- routeReason の新設禁止
+- one-sound ブロックを触らない
+- support / explicit / katakamuna / self-aware は触らない

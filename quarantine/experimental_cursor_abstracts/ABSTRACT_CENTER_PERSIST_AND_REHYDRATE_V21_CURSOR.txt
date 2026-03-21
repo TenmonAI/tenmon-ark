@@ -1,0 +1,142 @@
+編集対象:
+- /opt/tenmon-ark-repo/api/src/routes/chat.ts
+- /opt/tenmon-ark-repo/api/src/core/threadCoreStore.ts
+
+目的:
+- 「人生とは？」後の follow-up で centerKey=life を保持する
+- R22_ESSENCE_ASK_V1 / R22_COMPARE_ASK_V1 が thread_center_memory.center_key を空で上書きしない
+- one-sound / support / explicit / katakamuna は触らない
+- 最小diffのみ
+
+重要:
+前回は git diff が空だった。今回は編集完了後に必ず diff が出ること。
+chat.ts だけでなく threadCoreStore.ts も必ず編集する。
+
+1) api/src/core/threadCoreStore.ts
+
+saveThreadCore() の中だけ編集。
+
+置換前:
+const row = db
+  .prepare(
+    `SELECT id FROM thread_center_memory WHERE thread_id = ? ORDER BY updated_at DESC LIMIT 1`
+  )
+  .get(tid) as { id: number } | undefined;
+
+置換後:
+const row = db
+  .prepare(
+    `SELECT id, center_key, center_type FROM thread_center_memory WHERE thread_id = ? ORDER BY updated_at DESC LIMIT 1`
+  )
+  .get(tid) as { id: number; center_key: string | null; center_type: string | null } | undefined;
+
+contractJson の直後に追加:
+const nextCenterKey = core.centerKey ?? row?.center_key ?? null;
+const nextCenterType = row?.center_type === "scripture" ? "scripture" : "concept";
+
+UPDATE の run を置換:
+).run(nextCenterKey, contractJson, routeReason, now, row.id);
+
+else 側を置換:
+if (!nextCenterKey) return;
+upsertThreadCenter({
+  threadId: tid,
+  centerType: nextCenterType,
+  centerKey: nextCenterKey,
+  sourceRouteReason: routeReason,
+  centerReason: contractJson,
+});
+
+2) api/src/routes/chat.ts
+
+A. ABSTRACT_RETURN_TOP 側
+if (__abstractPickDefTop) { ... return reply(...) } の return 直前に追加:
+
+try {
+  const __coreAbstractDefTop: ThreadCore = {
+    ...__threadCore,
+    centerKey: __abstractPickDefTop.centerKey,
+    centerLabel: __abstractPickDefTop.centerLabel,
+    activeEntities: __abstractPickDefTop.centerLabel ? [__abstractPickDefTop.centerLabel] : [],
+    lastResponseContract: {
+      answerLength: "medium",
+      answerMode: "analysis",
+      answerFrame: "framed_define",
+      routeReason: "ABSTRACT_FRAME_VARIATION_V1",
+    },
+    updatedAt: new Date().toISOString(),
+  };
+  saveThreadCore(__coreAbstractDefTop).catch(() => {});
+  try { (res as any).__TENMON_THREAD_CORE = __coreAbstractDefTop; } catch {}
+} catch {}
+
+B. ABSTRACT_RETURN_LOW 側
+if (__abstractFrame) { ... return reply(...) } の return 直前に追加:
+
+try {
+  const __coreAbstract: ThreadCore = {
+    ...__threadCore,
+    centerKey: __abstractFrame.centerKey,
+    centerLabel: __abstractFrame.centerLabel,
+    activeEntities: __abstractFrame.centerLabel ? [__abstractFrame.centerLabel] : [],
+    lastResponseContract: {
+      answerLength: "medium",
+      answerMode: "analysis",
+      answerFrame: "framed_define",
+      routeReason: "ABSTRACT_FRAME_VARIATION_V1",
+    },
+    updatedAt: new Date().toISOString(),
+  };
+  saveThreadCore(__coreAbstract).catch(() => {});
+  try { (res as any).__TENMON_THREAD_CORE = __coreAbstract; } catch {}
+} catch {}
+
+C. ASK 系の center 保持
+R22_ESSENCE_ASK_V1 の __kuEssenceAsk 作成直前に追加:
+const __fallbackCenterKeyEA =
+  __threadCore.centerKey ??
+  (__threadCore.centerLabel === "人生" ? "life" : null);
+const __fallbackCenterLabelEA =
+  __threadCore.centerLabel ??
+  (__fallbackCenterKeyEA === "life" ? "人生" : null);
+
+__kuEssenceAsk を以下に変更:
+const __kuEssenceAsk: any = {
+  routeReason: "R22_ESSENCE_ASK_V1",
+  answerLength: "short",
+  answerMode: "analysis",
+  answerFrame: "one_step",
+  centerKey: __fallbackCenterKeyEA,
+  centerLabel: __fallbackCenterLabelEA,
+  lawsUsed: [],
+  evidenceIds: [],
+  lawTrace: []
+};
+
+return の decisionFrame はそのまま。
+
+R22_COMPARE_ASK_V1 も同様に追加:
+const __fallbackCenterKeyCA =
+  __threadCore.centerKey ??
+  (__threadCore.centerLabel === "人生" ? "life" : null);
+const __fallbackCenterLabelCA =
+  __threadCore.centerLabel ??
+  (__fallbackCenterKeyCA === "life" ? "人生" : null);
+
+__kuCompareAsk を以下に変更:
+const __kuCompareAsk: any = {
+  routeReason: "R22_COMPARE_ASK_V1",
+  answerLength: "short",
+  answerMode: "analysis",
+  answerFrame: "one_step",
+  centerKey: __fallbackCenterKeyCA,
+  centerLabel: __fallbackCenterLabelCA,
+  lawsUsed: [],
+  evidenceIds: [],
+  lawTrace: []
+};
+
+禁止:
+- 新 routeReason 追加禁止
+- 文面変更禁止
+- one-sound / support / explicit / katakamuna / self-aware は触らない
