@@ -1,0 +1,133 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tenmon-ark.local/automation/card_schema_v1.json",
+  "title": "TENMON-ARK Automation Card V1",
+  "description": "Machine-readable definition for PDCA Dev Core cards (AUTO_BUILD_CONDUCTOR_V1).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "cardName",
+    "class",
+    "objective",
+    "allowedPaths",
+    "forbiddenPaths",
+    "requiresHumanJudgement",
+    "prechecks",
+    "patchStrategy",
+    "postchecks",
+    "acceptanceProfile",
+    "nextOnPass",
+    "nextOnFail",
+    "rollbackStrategy",
+    "sealPolicy"
+  ],
+  "properties": {
+    "cardName": {
+      "type": "string",
+      "pattern": "^[A-Z][A-Z0-9_]+_V[0-9]+$",
+      "description": "Unique card identifier (SCREAMING_SNAKE + _Vn)"
+    },
+    "class": {
+      "type": "string",
+      "enum": [
+        "audit",
+        "docs",
+        "runtime_refactor",
+        "runtime_safe_patch",
+        "client",
+        "quarantine",
+        "archive",
+        "schema",
+        "human_gate"
+      ]
+    },
+    "objective": { "type": "string" },
+    "allowedPaths": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "description": "Glob or prefix paths that may change; empty audit/human_gate read-only"
+    },
+    "forbiddenPaths": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "description": "Must never be modified by this card"
+    },
+    "requiresHumanJudgement": {
+      "type": "boolean",
+      "description": "If true, runner stops before PATCH; scripture/thought/persona canon requires human"
+    },
+    "prechecks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "kind"],
+        "properties": {
+          "id": { "type": "string" },
+          "kind": {
+            "type": "string",
+            "enum": ["git_clean_optional", "command", "file_exists", "no_mixed_commit_hint"]
+          },
+          "command": { "type": "string" },
+          "path": { "type": "string" }
+        }
+      }
+    },
+    "patchStrategy": {
+      "type": "object",
+      "required": ["mode"],
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": ["none", "min_diff", "move_only", "external_cursor", "human_prompt_only"]
+        },
+        "notes": { "type": "string" }
+      }
+    },
+    "postchecks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "kind"],
+        "properties": {
+          "id": { "type": "string" },
+          "kind": { "type": "string", "enum": ["command", "assert_json", "diff_scope"] },
+          "command": { "type": "string" }
+        }
+      }
+    },
+    "acceptanceProfile": {
+      "type": "string",
+      "enum": [
+        "build_only",
+        "api_health",
+        "smoke_min",
+        "route_regression",
+        "client_build",
+        "full_acceptance"
+      ]
+    },
+    "nextOnPass": { "type": "string", "description": "Next card name or STOP" },
+    "nextOnFail": { "type": "string", "description": "Retry card, QUARANTINE, or STOP" },
+    "rollbackStrategy": {
+      "type": "object",
+      "required": ["autoRollbackAllowed"],
+      "properties": {
+        "autoRollbackAllowed": { "type": "boolean" },
+        "scope": {
+          "type": "string",
+          "enum": ["none", "runtime_refactor", "client", "docs_only"]
+        },
+        "notes": { "type": "string" }
+      }
+    },
+    "sealPolicy": {
+      "type": "object",
+      "required": ["requiresAcceptancePass"],
+      "properties": {
+        "requiresAcceptancePass": { "type": "boolean" },
+        "mixedCommitForbidden": { "type": "boolean", "default": true },
+        "notes": { "type": "string" }
+      }
+    }
+  }
+}
