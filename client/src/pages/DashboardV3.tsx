@@ -35,6 +35,7 @@ import { SemanticSearchBar } from "@/components/dashboard-v12/SemanticSearchBar"
 import { FeedbackModal } from "@/components/feedback/FeedbackModal";
 import { MessageSquarePlus } from "lucide-react";
 import DeviceClusterDashboard from "@/deviceCluster-v3/ui/DeviceClusterDashboard";
+import { CustomGptMemoryImportBox } from "@/components/dashboard/CustomGptMemoryImportBox";
 import { StatusPanel } from "@/components/dashboard-v13/StatusPanel";
 import { TaskProgressPanel } from "@/components/scheduler/TaskProgressPanel";
 
@@ -141,6 +142,11 @@ export default function DashboardV3() {
           {/* Status Panel (Dashboard v13) */}
           <div className="max-w-2xl">
             <StatusPanel />
+          </div>
+
+          {/* CUSTOM_GPT_MEMORY_IMPORT_BOX_V1: 記憶継承の保存入口（会話へ未注入） */}
+          <div className="max-w-3xl mt-8">
+            <CustomGptMemoryImportBox />
           </div>
 
           {/* Task Progress Panel (Founder専用) */}
