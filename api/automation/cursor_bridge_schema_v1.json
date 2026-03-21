@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tenmon-ark.local/automation/cursor_bridge_schema_v1.json",
+  "title": "AUTO_BUILD_CURSOR_BRIDGE_V1 — Cursor task manifest + task",
+  "$defs": {
+    "task": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "taskId",
+        "bundleId",
+        "targetCard",
+        "targetPaths",
+        "allowedPaths",
+        "forbiddenPaths",
+        "instruction",
+        "prechecks",
+        "postchecks",
+        "humanGateRequired",
+        "unsafeMixedZonesHit",
+        "splitPriorityScore",
+        "nextCardOnPass"
+      ],
+      "properties": {
+        "taskId": { "type": "string" },
+        "bundleId": { "type": "string" },
+        "targetCard": { "type": "string" },
+        "targetPaths": { "type": "array", "items": { "type": "string" } },
+        "allowedPaths": { "type": "array", "items": { "type": "string" } },
+        "forbiddenPaths": { "type": "array", "items": { "type": "string" } },
+        "instruction": { "type": "string" },
+        "prechecks": { "type": "array" },
+        "postchecks": { "type": "array" },
+        "humanGateRequired": { "type": "boolean" },
+        "unsafeMixedZonesHit": { "type": "integer", "minimum": 0 },
+        "splitPriorityScore": { "type": "number" },
+        "nextCardOnPass": { "type": "string" },
+        "parallelPolicy": { "type": "string" },
+        "bundleName": { "type": "string" },
+        "sourceRecipePath": { "type": "string" }
+      }
+    }
+  },
+  "oneOf": [
+    {
+      "type": "object",
+      "title": "manifest",
+      "additionalProperties": true,
+      "required": [
+        "version",
+        "generatedAt",
+        "parallelPolicy",
+        "sourceRecipeManifestPath",
+        "tasks"
+      ],
+      "properties": {
+        "version": { "type": "integer", "const": 1 },
+        "generatedAt": { "type": "string" },
+        "parallelPolicy": { "type": "string", "const": "single_flight" },
+        "sourceRecipeManifestPath": { "type": "string" },
+        "tasks": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/task" }
+        },
+        "meta": { "type": "object" }
+      }
+    },
+    { "$ref": "#/$defs/task" }
+  ]
+}

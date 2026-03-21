@@ -205,6 +205,40 @@
         }
       ],
       "acceptanceProfile": "build_only",
+      "nextOnPass": "AUTO_BUILD_CURSOR_BRIDGE_V1",
+      "nextOnFail": "STOP",
+      "rollbackStrategy": { "autoRollbackAllowed": false, "scope": "none" },
+      "sealPolicy": { "requiresAcceptancePass": true, "mixedCommitForbidden": true }
+    },
+    {
+      "cardName": "AUTO_BUILD_CURSOR_BRIDGE_V1",
+      "class": "audit",
+      "objective": "Convert patch recipes to Cursor task JSON bundles; single_flight; preserve human gate and nextCard.",
+      "allowedPaths": [
+        "api/automation/cursor_bridge_v1.py",
+        "api/automation/cursor_bridge_schema_v1.json",
+        "api/docs/constitution/AUTO_BUILD_CURSOR_BRIDGE_V1.md",
+        "api/automation/generated_cursor_tasks/**"
+      ],
+      "forbiddenPaths": ["api/src/routes/chat.ts", "client/**", "dist/**", "api/src/db/kokuzo_schema.sql"],
+      "requiresHumanJudgement": false,
+      "prechecks": [
+        { "id": "patch_generator", "kind": "file_exists", "path": "api/automation/patch_generator_v1.py" }
+      ],
+      "patchStrategy": { "mode": "none", "notes": "task JSON + manifest only" },
+      "postchecks": [
+        {
+          "id": "cursor_bridge_emit",
+          "kind": "command",
+          "command": "python3 api/automation/cursor_bridge_v1.py --repo-root . --emit-report --check-json"
+        },
+        {
+          "id": "cursor_bridge_schema",
+          "kind": "command",
+          "command": "python3 -m json.tool api/automation/cursor_bridge_schema_v1.json >/dev/null"
+        }
+      ],
+      "acceptanceProfile": "build_only",
       "nextOnPass": "CHAT_TRUNK_EXIT_CONTRACT_LOCK_V1",
       "nextOnFail": "STOP",
       "rollbackStrategy": { "autoRollbackAllowed": false, "scope": "none" },
