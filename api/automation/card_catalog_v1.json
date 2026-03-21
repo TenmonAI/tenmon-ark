@@ -170,6 +170,41 @@
         }
       ],
       "acceptanceProfile": "build_only",
+      "nextOnPass": "AUTO_BUILD_PATCH_GENERATOR_V1",
+      "nextOnFail": "STOP",
+      "rollbackStrategy": { "autoRollbackAllowed": false, "scope": "none" },
+      "sealPolicy": { "requiresAcceptancePass": true, "mixedCommitForbidden": true }
+    },
+    {
+      "cardName": "AUTO_BUILD_PATCH_GENERATOR_V1",
+      "class": "audit",
+      "objective": "Emit Cursor patch recipes from patch plan; single_flight; no forbidden path edits.",
+      "allowedPaths": [
+        "api/automation/patch_generator_v1.py",
+        "api/automation/patch_generator_schema_v1.json",
+        "api/docs/constitution/AUTO_BUILD_PATCH_GENERATOR_V1.md",
+        "api/automation/generated_patch_recipes/**"
+      ],
+      "forbiddenPaths": ["api/src/routes/chat.ts", "client/**", "dist/**", "api/src/db/kokuzo_schema.sql"],
+      "requiresHumanJudgement": false,
+      "prechecks": [
+        { "id": "planner_script", "kind": "file_exists", "path": "api/automation/patch_planner_v1.py" },
+        { "id": "plan_schema", "kind": "file_exists", "path": "api/automation/patch_plan_schema_v1.json" }
+      ],
+      "patchStrategy": { "mode": "none", "notes": "generated JSON/MD only" },
+      "postchecks": [
+        {
+          "id": "patch_generator_emit",
+          "kind": "command",
+          "command": "python3 api/automation/patch_generator_v1.py --repo-root . --emit-report --check-json"
+        },
+        {
+          "id": "patch_generator_schema",
+          "kind": "command",
+          "command": "python3 -m json.tool api/automation/patch_generator_schema_v1.json >/dev/null"
+        }
+      ],
+      "acceptanceProfile": "build_only",
       "nextOnPass": "CHAT_TRUNK_EXIT_CONTRACT_LOCK_V1",
       "nextOnFail": "STOP",
       "rollbackStrategy": { "autoRollbackAllowed": false, "scope": "none" },

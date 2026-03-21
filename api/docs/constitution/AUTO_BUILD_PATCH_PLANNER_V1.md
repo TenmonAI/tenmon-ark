@@ -63,7 +63,7 @@ python3 api/automation/patch_planner_v1.py --repo-root . --emit-report --check-j
 
 ## 次カード（固定）
 
-**`AUTO_BUILD_PATCH_GENERATOR_V1`** — 本 plan を実行単位のパッチ指示に落とす（未実装カード名・憲章のみ先に固定）。
+**`AUTO_BUILD_PATCH_GENERATOR_V1`** — 本 plan を Cursor 向け patch recipe JSON に変換する。
 
 ## 受け入れ
 

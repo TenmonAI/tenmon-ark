@@ -1,5 +1,5 @@
 {
-  "$comment": "DAG: edge { before, after } means after depends on before (before must complete first). AUTO_BUILD_PATCH_PLANNER_V1 sits between CHAT_TRUNK_DOMAIN_MAP_V1 and CHAT_TRUNK_EXIT_CONTRACT_LOCK_V1.",
+  "$comment": "DAG: edge { before, after } means after depends on before (before must complete first). PATCH_PLANNER -> PATCH_GENERATOR -> CHAT_TRUNK_EXIT_CONTRACT_LOCK_V1.",
   "version": 1,
   "nodes": [
     "AUTO_BUILD_CONDUCTOR_V1",
@@ -9,6 +9,7 @@
     "AUTO_BUILD_CHATTS_AUDIT_SUITE_V1",
     "CHAT_TRUNK_DOMAIN_MAP_V1",
     "AUTO_BUILD_PATCH_PLANNER_V1",
+    "AUTO_BUILD_PATCH_GENERATOR_V1",
     "CHAT_TRUNK_EXIT_CONTRACT_LOCK_V1",
     "ROUTE_DUPLICATION_SCAN_V1",
     "RESPONSE_FINALIZER_EXTRACT_V1",
@@ -36,7 +37,8 @@
     { "before": "CHAT_TS_COMPLEXITY_AUDIT_V1", "after": "AUTO_BUILD_CHATTS_AUDIT_SUITE_V1" },
     { "before": "AUTO_BUILD_CHATTS_AUDIT_SUITE_V1", "after": "CHAT_TRUNK_DOMAIN_MAP_V1" },
     { "before": "CHAT_TRUNK_DOMAIN_MAP_V1", "after": "AUTO_BUILD_PATCH_PLANNER_V1" },
-    { "before": "AUTO_BUILD_PATCH_PLANNER_V1", "after": "CHAT_TRUNK_EXIT_CONTRACT_LOCK_V1" },
+    { "before": "AUTO_BUILD_PATCH_PLANNER_V1", "after": "AUTO_BUILD_PATCH_GENERATOR_V1" },
+    { "before": "AUTO_BUILD_PATCH_GENERATOR_V1", "after": "CHAT_TRUNK_EXIT_CONTRACT_LOCK_V1" },
     { "before": "CHAT_TRUNK_EXIT_CONTRACT_LOCK_V1", "after": "RESPONSE_FINALIZER_EXTRACT_V1" },
     { "before": "RESPONSE_FINALIZER_EXTRACT_V1", "after": "REPLY_PATH_UNIFY_V1" },
     { "before": "REPLY_PATH_UNIFY_V1", "after": "DECISION_FRAME_KU_CONTRACT_GUARD_V1" },

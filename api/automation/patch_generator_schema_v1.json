@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tenmon-ark.local/automation/patch_generator_schema_v1.json",
+  "title": "AUTO_BUILD_PATCH_GENERATOR_V1 manifest + recipe",
+  "oneOf": [
+    {
+      "type": "object",
+      "title": "manifest_v1",
+      "additionalProperties": true,
+      "required": [
+        "version",
+        "generatedAt",
+        "parallelPolicy",
+        "sourcePlanPath",
+        "recipes"
+      ],
+      "properties": {
+        "version": { "type": "integer", "const": 1 },
+        "generatedAt": { "type": "string" },
+        "parallelPolicy": { "type": "string", "const": "single_flight" },
+        "sourcePlanPath": { "type": "string" },
+        "recipes": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/recipe" }
+        },
+        "meta": { "type": "object" }
+      }
+    },
+    { "$ref": "#/$defs/recipe" }
+  ],
+  "$defs": {
+    "recipe": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "bundleName",
+        "targetCard",
+        "targetFiles",
+        "forbiddenFiles",
+        "patchIntent",
+        "patchStrategy",
+        "acceptanceChecklist",
+        "humanGateRequired",
+        "cursorInstruction",
+        "nextCardOnPass"
+      ],
+      "properties": {
+        "bundleName": { "type": "string" },
+        "bundleId": { "type": "string" },
+        "targetTrunk": { "type": "string" },
+        "targetCard": { "type": "string" },
+        "targetFiles": { "type": "array", "items": { "type": "string" } },
+        "forbiddenFiles": { "type": "array", "items": { "type": "string" } },
+        "patchIntent": { "type": "string" },
+        "patchStrategy": { "type": "string" },
+        "acceptanceChecklist": { "type": "array", "items": { "type": "string" } },
+        "humanGateRequired": { "type": "boolean" },
+        "cursorInstruction": { "type": "string" },
+        "nextCardOnPass": { "type": "string" },
+        "unsafeMixedZonesHit": { "type": "integer", "minimum": 0 },
+        "splitPriorityScore": { "type": "number" },
+        "parallelPolicy": { "type": "string" },
+        "bundleCardsInOrder": { "type": "array", "items": { "type": "string" } }
+      }
+    }
+  }
+}
