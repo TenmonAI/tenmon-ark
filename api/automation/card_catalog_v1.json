@@ -61,6 +61,42 @@
       "patchStrategy": { "mode": "none" },
       "postchecks": [],
       "acceptanceProfile": "build_only",
+      "nextOnPass": "AUTO_BUILD_CHATTS_AUDIT_SUITE_V1",
+      "nextOnFail": "STOP",
+      "rollbackStrategy": { "autoRollbackAllowed": false, "scope": "none" },
+      "sealPolicy": { "requiresAcceptancePass": true, "mixedCommitForbidden": true }
+    },
+    {
+      "cardName": "AUTO_BUILD_CHATTS_AUDIT_SUITE_V1",
+      "class": "audit",
+      "objective": "Deterministic static audit of api/src/routes/chat.ts (regex + brace windows); JSON + markdown reports; runtime unchanged.",
+      "allowedPaths": [
+        "api/automation/chatts_audit_suite_v1.py",
+        "api/automation/chatts_audit_schema_v1.json",
+        "api/automation/chatts_metrics_v1.py",
+        "api/docs/constitution/AUTO_BUILD_CHATTS_AUDIT_SUITE_V1.md",
+        "api/automation/reports/**"
+      ],
+      "forbiddenPaths": ["api/src/routes/chat.ts", "client/**", "dist/**", "api/src/db/kokuzo_schema.sql"],
+      "requiresHumanJudgement": false,
+      "prechecks": [
+        { "id": "chat_ts_exists", "kind": "file_exists", "path": "api/src/routes/chat.ts" },
+        { "id": "suite_exists", "kind": "file_exists", "path": "api/automation/chatts_audit_suite_v1.py" }
+      ],
+      "patchStrategy": { "mode": "none", "notes": "read-only on chat.ts; reports via suite CLI" },
+      "postchecks": [
+        {
+          "id": "chatts_audit_emit",
+          "kind": "command",
+          "command": "python3 api/automation/chatts_audit_suite_v1.py --repo-root . --emit-reports --check-json"
+        },
+        {
+          "id": "audit_schema_json",
+          "kind": "command",
+          "command": "python3 -m json.tool api/automation/chatts_audit_schema_v1.json >/dev/null"
+        }
+      ],
+      "acceptanceProfile": "build_only",
       "nextOnPass": "CHAT_TRUNK_DOMAIN_MAP_V1",
       "nextOnFail": "STOP",
       "rollbackStrategy": { "autoRollbackAllowed": false, "scope": "none" },

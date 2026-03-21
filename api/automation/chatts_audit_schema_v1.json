@@ -1,0 +1,116 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tenmon-ark.local/automation/chatts_audit_schema_v1.json",
+  "title": "chat.ts static audit report V1",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "version",
+    "targetPath",
+    "auditedAt",
+    "lineCount",
+    "importCount",
+    "routeReasons",
+    "duplicateRouteReasons",
+    "returnSites",
+    "missingResponsePlanCandidates",
+    "missingKuCandidates",
+    "missingThreadCoreCandidates",
+    "missingSynapseTopCandidates",
+    "splitPriority"
+  ],
+  "properties": {
+    "version": { "type": "integer", "const": 1 },
+    "targetPath": { "type": "string" },
+    "auditedAt": { "type": "string" },
+    "lineCount": { "type": "integer", "minimum": 0 },
+    "importCount": { "type": "integer", "minimum": 0 },
+    "routeReasons": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "duplicateRouteReasons": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["reason", "count"],
+        "properties": {
+          "reason": { "type": "string" },
+          "count": { "type": "integer", "minimum": 2 }
+        }
+      }
+    },
+    "returnSites": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["line", "preview"],
+        "properties": {
+          "line": { "type": "integer", "minimum": 1 },
+          "preview": { "type": "string" }
+        }
+      }
+    },
+    "missingResponsePlanCandidates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["line", "note"],
+        "properties": {
+          "line": { "type": "integer" },
+          "note": { "type": "string" }
+        }
+      }
+    },
+    "missingKuCandidates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["line", "note"],
+        "properties": {
+          "line": { "type": "integer" },
+          "note": { "type": "string" }
+        }
+      }
+    },
+    "missingThreadCoreCandidates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["line", "note"],
+        "properties": {
+          "line": { "type": "integer" },
+          "note": { "type": "string" }
+        }
+      }
+    },
+    "missingSynapseTopCandidates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["line", "note"],
+        "properties": {
+          "line": { "type": "integer" },
+          "note": { "type": "string" }
+        }
+      }
+    },
+    "splitPriority": {
+      "type": "array",
+      "maxItems": 10,
+      "items": {
+        "type": "object",
+        "required": ["rank", "startLine", "endLine", "lineSpan", "score", "components"],
+        "properties": {
+          "rank": { "type": "integer", "minimum": 1 },
+          "startLine": { "type": "integer", "minimum": 1 },
+          "endLine": { "type": "integer", "minimum": 1 },
+          "lineSpan": { "type": "integer", "minimum": 1 },
+          "score": { "type": "number" },
+          "components": { "type": "object" }
+        }
+      }
+    },
+    "meta": { "type": "object" }
+  }
+}
