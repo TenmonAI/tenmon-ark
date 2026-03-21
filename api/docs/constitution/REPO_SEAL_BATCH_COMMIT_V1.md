@@ -11,6 +11,13 @@
 | C | **quarantine** | `quarantine/experimental_cursor_abstracts/` + ルート `ABSTRACT_*.txt` 移動 | 本番 mainline コミットと分離 |
 | D | **scripts** | `api/scripts/**`（`lib/*.py` 含む）+ `api/tools/tenmon_full_internal_circuit_report_v1.py` | 必要なら `chmod +x *.sh` |
 
+### 記録コミット（参照用）
+
+- `docs(constitution): ...` → `7eb0a85`
+- `chore: gitignore api/probe.*.json ...` → `3b1f264`
+- `chore(quarantine): ...` → `733a759`
+- `chore(scripts): ...` → `7740719`
+
 ## 保留バッチ（次 PR / 別コミット列）
 
 | # | ラベル | パス | 注意 |
