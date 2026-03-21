@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tenmon-ark.local/automation/queue_state_schema_v1.json",
+  "title": "TENMON-ARK Auto Queue Snapshot V1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "parallelPolicy", "updatedAt", "cards"],
+  "properties": {
+    "version": { "type": "integer", "const": 1 },
+    "parallelPolicy": { "type": "string", "const": "single_flight" },
+    "runId": { "type": "string" },
+    "updatedAt": { "type": "string" },
+    "cards": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["state", "updatedAt"],
+        "properties": {
+          "state": {
+            "type": "string",
+            "enum": [
+              "queued",
+              "running",
+              "completed",
+              "failed",
+              "blocked",
+              "waiting_human_gate"
+            ]
+          },
+          "updatedAt": { "type": "string" },
+          "gateRequestId": { "type": ["string", "null"] },
+          "note": { "type": "string" }
+        }
+      }
+    }
+  }
+}

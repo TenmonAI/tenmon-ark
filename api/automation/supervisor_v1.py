@@ -20,6 +20,7 @@ if str(_AUTOMATION_DIR) not in sys.path:
 
 from auto_build_runner_v1 import repo_root_from, run_pipeline
 from human_gate_store_v1 import create_pending_gate
+from queue_store_v1 import attach_human_gate_request
 from regression_guard_v1 import run_minimal_guards
 
 
@@ -143,6 +144,11 @@ def main() -> int:
         default=None,
         help="Passed to runner when executing human-gated cards",
     )
+    ap.add_argument(
+        "--queue",
+        action="store_true",
+        help="Integrate with AUTO_BUILD_QUEUE_SCHEDULER_V1 (runner updates queue snapshot)",
+    )
     args = ap.parse_args()
 
     here = Path(__file__).resolve().parent
@@ -168,6 +174,8 @@ def main() -> int:
     log_base = resolve_log_base()
     results: List[Dict[str, Any]] = []
 
+    queue_enabled = bool(args.queue) or os.environ.get("TENMON_QUEUE_ENABLED") == "1"
+
     def run_one(card_name: str) -> Dict[str, Any]:
         rec = run_pipeline(
             card_name=card_name,
@@ -175,6 +183,7 @@ def main() -> int:
             dry_run=args.dry_run,
             execute_checks=args.execute_checks,
             gate_request_id=args.gate_request_id,
+            queue_enabled=queue_enabled,
         )
         if rec.get("fail") == "human_judgement_required" and not rec.get("gateRequestId"):
             rid = create_pending_gate(
@@ -183,6 +192,8 @@ def main() -> int:
             )
             rec["gateRequestId"] = rid
             rec["gateRecordSource"] = "supervisor_fallback"
+            if queue_enabled:
+                attach_human_gate_request(card_name, rid, root)
         reg = run_minimal_guards(root, build_ok=bool(rec.get("ok")), health_ok=True)
         rec["regressionGuard"] = reg
         ds = rec.get("diffScope") or {}

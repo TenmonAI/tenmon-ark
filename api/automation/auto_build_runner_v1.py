@@ -23,6 +23,7 @@ from acceptance_selector_v1 import profile_to_dict_list, select_acceptance_steps
 from human_gate_store_v1 import create_pending_gate, get_gate_record, is_approved
 from patch_executor_v1 import execute_patch
 from path_guard_v1 import allowed_only_violations, classify_mixed_commit_roots, violates_forbidden
+from queue_store_v1 import finish_from_runner_record, try_begin_card
 
 
 def repo_root_from(start: Path) -> Path:
@@ -108,6 +109,7 @@ def run_pipeline(
     dry_run: bool,
     execute_checks: bool,
     gate_request_id: Optional[str] = None,
+    queue_enabled: bool = False,
 ) -> Dict[str, Any]:
     automation_dir = repo_root / "api" / "automation"
     catalog_path = automation_dir / "card_catalog_v1.json"
@@ -130,125 +132,152 @@ def run_pipeline(
         "gateRequestIdInput": gate_request_id,
     }
 
-    # OBSERVE
-    changed = git_changed_files(repo_root)
-    record["changedFiles"] = changed
+    queue_started = False
+    if queue_enabled:
+        ok_q, q_reason = try_begin_card(card_name, repo_root)
+        if not ok_q:
+            return {
+                "ok": False,
+                "fail": "queue_begin",
+                "cardName": card_name,
+                "queueReason": q_reason,
+                "phase": "STOP",
+            }
+        queue_started = True
 
-    # PRECHECK (light)
-    record["phase"] = "PRECHECK"
-    pre_ok = True
-    for pc in card.get("prechecks") or []:
-        kind = pc.get("kind")
-        if kind == "file_exists":
-            rel = pc.get("path", "")
-            exists = (repo_root / rel).exists()
-            pre_ok = pre_ok and exists
-        elif kind == "command" and execute_checks and not dry_run:
-            cmd = pc.get("command", "")
-            code, _, err = run_cmd(cmd, repo_root)
-            pre_ok = pre_ok and code == 0
-            if code != 0:
-                record.setdefault("precheckFailures", []).append({"id": pc.get("id"), "stderr": err})
+    try:
+        # OBSERVE
+        changed = git_changed_files(repo_root)
+        record["changedFiles"] = changed
 
-    if not pre_ok:
-        record.update({"ok": False, "fail": "precheck", "phase": "STOP"})
-        return record
+        # PRECHECK (light)
+        record["phase"] = "PRECHECK"
+        pre_ok = True
+        for pc in card.get("prechecks") or []:
+            kind = pc.get("kind")
+            if kind == "file_exists":
+                rel = pc.get("path", "")
+                exists = (repo_root / rel).exists()
+                pre_ok = pre_ok and exists
+            elif kind == "command" and execute_checks and not dry_run:
+                cmd = pc.get("command", "")
+                code, _, err = run_cmd(cmd, repo_root)
+                pre_ok = pre_ok and code == 0
+                if code != 0:
+                    record.setdefault("precheckFailures", []).append({"id": pc.get("id"), "stderr": err})
 
-    # PATCH (+ human gate store)
-    record["phase"] = "PATCH"
-    human_bypass = False
-    if _card_needs_human_gate(card):
-        if gate_request_id:
-            if is_approved(gate_request_id):
-                human_bypass = True
-                record["gateRequestId"] = gate_request_id
+        if not pre_ok:
+            record.update({"ok": False, "fail": "precheck", "phase": "STOP"})
+            return record
+
+        # PATCH (+ human gate store)
+        record["phase"] = "PATCH"
+        human_bypass = False
+        if _card_needs_human_gate(card):
+            if gate_request_id:
+                if is_approved(gate_request_id):
+                    human_bypass = True
+                    record["gateRequestId"] = gate_request_id
+                else:
+                    gr = get_gate_record(gate_request_id)
+                    record["gateRequestId"] = gate_request_id
+                    record["gateStatus"] = (gr or {}).get("status")
+                    record.update(
+                        {
+                            "ok": False,
+                            "fail": "human_gate_not_approved",
+                            "phase": "STOP",
+                            "hint": "Use human_gate_cli_v1.py approve when status is pending",
+                        }
+                    )
+                    record["patchResult"] = {
+                        "ok": False,
+                        "message": "human_gate_not_approved",
+                        "skipped": "HUMAN_GATE_WAIT",
+                    }
+                    return record
             else:
-                gr = get_gate_record(gate_request_id)
-                record["gateRequestId"] = gate_request_id
-                record["gateStatus"] = (gr or {}).get("status")
+                rid = create_pending_gate(
+                    card_name,
+                    {
+                        "gitShaBefore": (sha_before or "").strip(),
+                        "dryRun": dry_run,
+                        "timestamp": ts,
+                    },
+                )
+                record["gateRequestId"] = rid
+                record["patchResult"] = {
+                    "ok": False,
+                    "message": "human_judgement_required",
+                    "skipped": "HUMAN_GATE",
+                }
                 record.update(
                     {
                         "ok": False,
-                        "fail": "human_gate_not_approved",
+                        "fail": "human_judgement_required",
                         "phase": "STOP",
-                        "hint": "Use human_gate_cli_v1.py approve when status is pending",
+                        "hint": "Approve via: python3 api/automation/human_gate_cli_v1.py approve "
+                        + rid
+                        + " --by <name> [--note ...]; then re-run with --gate-request-id "
+                        + rid,
                     }
                 )
-                record["patchResult"] = {
-                    "ok": False,
-                    "message": "human_gate_not_approved",
-                    "skipped": "HUMAN_GATE_WAIT",
-                }
                 return record
-        else:
-            rid = create_pending_gate(
-                card_name,
-                {
-                    "gitShaBefore": (sha_before or "").strip(),
-                    "dryRun": dry_run,
-                    "timestamp": ts,
-                },
-            )
-            record["gateRequestId"] = rid
-            record["patchResult"] = {
-                "ok": False,
-                "message": "human_judgement_required",
-                "skipped": "HUMAN_GATE",
-            }
-            record.update(
-                {
-                    "ok": False,
-                    "fail": "human_judgement_required",
-                    "phase": "STOP",
-                    "hint": "Approve via: python3 api/automation/human_gate_cli_v1.py approve "
-                    + rid
-                    + " --by <name> [--note ...]; then re-run with --gate-request-id "
-                    + rid,
-                }
-            )
+
+        pr = execute_patch(card, dry_run=dry_run, human_gate_bypass=human_bypass)
+        record["patchResult"] = {
+            "ok": pr.ok,
+            "mode": pr.mode,
+            "message": pr.message,
+            "skipped": pr.skipped_reason,
+        }
+        if pr.skipped_reason == "HUMAN_GATE":
+            record.update({"ok": False, "fail": "human_judgement_required", "phase": "STOP"})
             return record
 
-    pr = execute_patch(card, dry_run=dry_run, human_gate_bypass=human_bypass)
-    record["patchResult"] = {"ok": pr.ok, "mode": pr.mode, "message": pr.message, "skipped": pr.skipped_reason}
-    if pr.skipped_reason == "HUMAN_GATE":
-        record.update({"ok": False, "fail": "human_judgement_required", "phase": "STOP"})
+        # diff scope — enforced only when not dry-run (dry-run is observe-only / simulation)
+        scope_ok, scope_detail = validate_diff_scope(card, changed)
+        record["diffScope"] = scope_detail
+        if not dry_run and not scope_ok:
+            record.update({"ok": False, "fail": "forbidden_or_allowed_or_mixed", "phase": "STOP"})
+            return record
+
+        # BUILD / ACCEPTANCE (optional)
+        record["phase"] = "ACCEPTANCE"
+        acc_profile = card.get("acceptanceProfile", "build_only")
+        steps = select_acceptance_steps(acc_profile)
+        record["acceptancePlan"] = profile_to_dict_list(acc_profile)
+        build_ok = True
+        health_ok = True
+        if execute_checks and not dry_run:
+            for st in steps:
+                if st.kind != "shell" or not st.command:
+                    continue
+                code, out, err = run_cmd(st.command, repo_root)
+                record.setdefault("acceptanceRuns", []).append(
+                    {
+                        "id": st.id,
+                        "exitCode": code,
+                        "stdoutTail": out[-2000:],
+                        "stderrTail": err[-2000:],
+                    }
+                )
+                if code != 0:
+                    build_ok = False
+                if st.id == "curl_health" and code != 0:
+                    health_ok = False
+        else:
+            record["acceptanceSkipped"] = "dry_run_or_no_execute_checks"
+
+        code1, sha_after, _ = run_cmd("git rev-parse HEAD", repo_root)
+        record["gitShaAfter"] = (sha_after or "").strip() if code1 == 0 else ""
+        record["ok"] = True
+        record["phase"] = "NEXT" if card.get("nextOnPass") not in (None, "STOP") else "STOP"
+        record["nextOnPass"] = card.get("nextOnPass")
         return record
-
-    # diff scope — enforced only when not dry-run (dry-run is observe-only / simulation)
-    scope_ok, scope_detail = validate_diff_scope(card, changed)
-    record["diffScope"] = scope_detail
-    if not dry_run and not scope_ok:
-        record.update({"ok": False, "fail": "forbidden_or_allowed_or_mixed", "phase": "STOP"})
-        return record
-
-    # BUILD / ACCEPTANCE (optional)
-    record["phase"] = "ACCEPTANCE"
-    acc_profile = card.get("acceptanceProfile", "build_only")
-    steps = select_acceptance_steps(acc_profile)
-    record["acceptancePlan"] = profile_to_dict_list(acc_profile)
-    build_ok = True
-    health_ok = True
-    if execute_checks and not dry_run:
-        for st in steps:
-            if st.kind != "shell" or not st.command:
-                continue
-            code, out, err = run_cmd(st.command, repo_root)
-            record.setdefault("acceptanceRuns", []).append(
-                {"id": st.id, "exitCode": code, "stdoutTail": out[-2000:], "stderrTail": err[-2000:]}
-            )
-            if code != 0:
-                build_ok = False
-            if st.id == "curl_health" and code != 0:
-                health_ok = False
-    else:
-        record["acceptanceSkipped"] = "dry_run_or_no_execute_checks"
-
-    code1, sha_after, _ = run_cmd("git rev-parse HEAD", repo_root)
-    record["gitShaAfter"] = (sha_after or "").strip() if code1 == 0 else ""
-    record["ok"] = True
-    record["phase"] = "NEXT" if card.get("nextOnPass") not in (None, "STOP") else "STOP"
-    record["nextOnPass"] = card.get("nextOnPass")
-    return record
+    finally:
+        if queue_started:
+            finish_from_runner_record(card_name, record, repo_root)
 
 
 def main() -> int:
@@ -262,15 +291,22 @@ def main() -> int:
         default=None,
         help="If human gate was approved for this id, continue past PATCH",
     )
+    ap.add_argument(
+        "--queue",
+        action="store_true",
+        help="Integrate with AUTO_BUILD_QUEUE_SCHEDULER_V1 (single_flight snapshot updates)",
+    )
     args = ap.parse_args()
 
     root = args.repo_root or repo_root_from(Path.cwd())
+    queue_enabled = bool(args.queue) or os.environ.get("TENMON_QUEUE_ENABLED") == "1"
     out = run_pipeline(
         card_name=args.card,
         repo_root=root,
         dry_run=args.dry_run,
         execute_checks=args.execute_checks,
         gate_request_id=args.gate_request_id,
+        queue_enabled=queue_enabled,
     )
     print(json.dumps(out, ensure_ascii=False, indent=2))
     return 0 if out.get("ok") else 1
