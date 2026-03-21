@@ -1,6 +1,29 @@
 import { Router, type Request, type Response } from "express";
 import { getGitSha } from "../version.js";
 import { getReadiness } from "../health/readiness.js";
+import {
+  handleIntelligenceOsMasterAuditV1,
+  handleMetaOptimizerProbeV1,
+} from "./evolutionAuditProbesV1.js";
+import { handleSelfBuildSupervisorLoopV1 } from "./selfBuildSupervisorLoopV1.js";
+import { handleAutonomousRuntimeConfidenceAuditV1 } from "./autonomousRuntimeConfidenceAuditV1.js";
+import { handleSeedLearningEffectAuditV1 } from "./seedLearningEffectAuditV1.js";
+import { handleMetaOptimizerBundleV1 } from "./metaOptimizerBundleV1.js";
+import {
+  handleCursorActionBrokerV1,
+  handleFullAutonomousBuildLoopV1,
+  handlePromptToCursorCompilerV1,
+} from "./autonomousBuildPhaseV1.js";
+import { handleDesktopUiActionBrokerV1 } from "./desktopUiActionBrokerV1.js";
+import {
+  handleMainlineCompletionFeedbackBindV1,
+  handleMainlineCompletionSummaryExtractV1,
+} from "./mainlineCompletionForensicRepairV1.js";
+import {
+  handleMainlineSupremeCompletionAuditLedgerV1,
+  handleMainlineSupremeCompletionAuditV1,
+  handleMainlineSupremeReauditInfoV1,
+} from "./mainlineSupremeCompletionAuditV1.js";
 
 
 /**
@@ -34,6 +57,48 @@ const BUILD_FEATURES_KOSHIKI = { ...BUILD_FEATURES, koshikiKernel: true } as con
 import { BUILD_MARK, BUILD_FEATURES } from "../build/buildInfo.js";
 import * as fs from "fs"; // B1_CONSTITUTION_HASHES_V2
 const router = Router();
+
+/** SELF_EVOLUTION_RUNTIME_MICROPACK_V1: read-only meta optimizer probe */
+router.get("/audit/evolution/meta-optimizer-v1", handleMetaOptimizerProbeV1);
+/** SELF_EVOLUTION_RUNTIME_MICROPACK_V1: intelligence OS master audit snapshot */
+router.get("/audit/evolution/intelligence-os-master-v1", handleIntelligenceOsMasterAuditV1);
+
+/** SELF_BUILD_SUPERVISOR_LOOP_V1: one supervisor cycle (D·ΔS→Ω), read-only */
+router.get("/audit/supervisor/self-build-loop-v1", handleSelfBuildSupervisorLoopV1);
+router.post("/audit/supervisor/self-build-loop-v1", handleSelfBuildSupervisorLoopV1);
+
+/** AUTONOMOUS_RUNTIME_CONFIDENCE_AUDIT_V1: 3× supervisor + sim paths + confidence (read-only) */
+router.get("/audit/autonomous-runtime-confidence-v1", handleAutonomousRuntimeConfidenceAuditV1);
+
+/** SEED_LEARNING_EFFECT_AUDIT_V1: seed/cluster/apply/synapse/training forensic + effect signals */
+router.get("/audit/seed-learning-effect-v1", handleSeedLearningEffectAuditV1);
+
+/** META_OPTIMIZER_V1 bundle: nextPriority / suggestedCard / confidence / dispatchMode */
+router.get("/audit/meta-optimizer-bundle-v1", handleMetaOptimizerBundleV1);
+
+/** CARD 5 CURSOR_ACTION_BROKER_V1 — schema / states（実行なし） */
+router.get("/audit/cursor-action-broker-v1", handleCursorActionBrokerV1);
+/** CARD 6 PROMPT_TO_CURSOR_COMPILER_V1 */
+router.get("/audit/prompt-to-cursor-compiler-v1", handlePromptToCursorCompilerV1);
+/** CARD 7 FULL_AUTONOMOUS_BUILD_LOOP_V1 */
+router.get("/audit/full-autonomous-build-loop-v1", handleFullAutonomousBuildLoopV1);
+
+/** DESKTOP_UI_ACTION_BROKER_V1 — desktop UI 権限つき実行器スキーマ（実操作なし） */
+router.get("/audit/desktop-ui-action-broker-v1", handleDesktopUiActionBrokerV1);
+
+/** MAINLINE_SUMMARY_EXTRACTOR_AND_SCORER_REPAIR_V1 — POST body = /api/chat 応答 JSON と同等 */
+router.post("/audit/mainline-completion-summary-extract-v1", handleMainlineCompletionSummaryExtractV1);
+
+/** MAINLINE_COMPLETION_AUTO_FEEDBACK_BIND_V1 — GET/POST forensicRoot + x-tenmon-local-test:1 */
+router.get("/audit/mainline-completion-feedback-bind-v1", handleMainlineCompletionFeedbackBindV1);
+router.post("/audit/mainline-completion-feedback-bind-v1", handleMainlineCompletionFeedbackBindV1);
+
+/** MAINLINE_SUPREME_COMPLETION_AUDIT_V1 — manifest / レポート読取（forensicRoot + local-test） */
+router.get("/audit/mainline-supreme-completion-audit-v1", handleMainlineSupremeCompletionAuditV1);
+/** MAINLINE_SUPREME_REAUDIT_V1 — 再監査マニフェスト */
+router.get("/audit/mainline-supreme-reaudit-v1", handleMainlineSupremeReauditInfoV1);
+router.post("/audit/mainline-supreme-completion-audit-ledger-v1", handleMainlineSupremeCompletionAuditLedgerV1);
+
 router.get("/audit", (_req: Request, res: Response) => {
   const handlerTime = Date.now();
   const pid = process.pid;

@@ -91,3 +91,23 @@ CREATE TABLE IF NOT EXISTS scripture_learning_ledger (
 CREATE INDEX IF NOT EXISTS idx_scripture_learning_ledger_thread
   ON scripture_learning_ledger(threadId, createdAt);
 
+-- EVOLUTION_LEDGER_V1: causal append-only evolution log (finalize / bridge から 1 リクエスト 1 行)
+CREATE TABLE IF NOT EXISTS evolution_ledger_v1 (
+  eventId TEXT PRIMARY KEY,
+  sourceCard TEXT NOT NULL,
+  changedLayer TEXT NOT NULL,
+  beforeSummary TEXT NOT NULL DEFAULT '{}',
+  afterSummary TEXT NOT NULL DEFAULT '{}',
+  affectedRoute TEXT NOT NULL DEFAULT '',
+  affectedSourcePack TEXT NOT NULL DEFAULT '',
+  affectedDensity TEXT NOT NULL DEFAULT '',
+  affectedProse TEXT NOT NULL DEFAULT '',
+  regressionRisk TEXT NOT NULL DEFAULT 'unknown',
+  acceptedBy TEXT NOT NULL DEFAULT 'runtime_v1',
+  status TEXT NOT NULL DEFAULT 'accepted',
+  createdAt TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_evolution_ledger_v1_created ON evolution_ledger_v1(createdAt);
+CREATE INDEX IF NOT EXISTS idx_evolution_ledger_v1_source ON evolution_ledger_v1(sourceCard);
+CREATE INDEX IF NOT EXISTS idx_evolution_ledger_v1_status ON evolution_ledger_v1(status);
+
