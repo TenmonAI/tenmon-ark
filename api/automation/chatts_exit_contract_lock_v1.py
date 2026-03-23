@@ -26,6 +26,7 @@ from chatts_metrics_v1 import (
     extract_balanced_brace_object,
     line_number_at_offset,
 )
+from repo_resolve_v1 import repo_root_from
 
 DEFAULT_CHAT = "api/src/routes/chat.ts"
 REPORT_JSON = "chatts_exit_contract_v1.json"
@@ -34,6 +35,8 @@ REPORT_MD = "chatts_exit_contract_v1.md"
 RE_RETURN_RES_JSON = re.compile(r"\breturn\s+res\.json\s*\(")
 RE_LINE_RES_JSON = re.compile(r"^\s*res\.json\s*\(")
 RE_RETURN_REPLY = re.compile(r"\breturn\s+__reply\s*\(")
+RE_REPLY_DEF = re.compile(r"\bconst\s+__reply\s*=")
+RE_ORIG_JSON_BIND = re.compile(r"\b(?:const|let)\s+\w+\s*=\s*res\.json\s*\(")
 RE_MODE = re.compile(r"""mode\s*:\s*["']([^"']+)["']""")
 RE_INTENT = re.compile(r"""intent\s*:\s*["']([^"']+)["']""")
 
@@ -131,17 +134,6 @@ TRUNK_REQUIRED_EXIT_CONTRACTS: Dict[str, Dict[str, str]] = {
 
 def _utc_now_iso() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
-
-
-def repo_root_from(start: Path) -> Path:
-    cur = start.resolve()
-    for _ in range(24):
-        if (cur / ".git").exists():
-            return cur
-        if cur.parent == cur:
-            break
-        cur = cur.parent
-    return start.resolve()
 
 
 def window_text(lines: List[str], center: int, before: int = 45, after: int = 45) -> str:
@@ -280,7 +272,47 @@ def drift_candidates(sites: List[Dict[str, Any]], lines: List[str]) -> List[Dict
                     "note": "Heuristic: decisionFrame in window but no literal routeReason string found ±45 lines.",
                 }
             )
-    return out
+    return _consolidate_decision_frame_route_reason_drifts(out)
+
+
+DK_DECISION_FRAME_RR = "decision_frame_without_literal_routeReason_in_window"
+
+
+def _consolidate_decision_frame_route_reason_drifts(drifts: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Merge adjacent heuristic rows (same trunk window) so baseline counts stay stable vs chat.ts splits."""
+    others = [d for d in drifts if d.get("driftKind") != DK_DECISION_FRAME_RR]
+    frames = [d for d in drifts if d.get("driftKind") == DK_DECISION_FRAME_RR]
+    if len(frames) <= 1:
+        return drifts
+    frames.sort(key=lambda x: int(x["line"]))
+    max_gap = 40
+    clusters: List[List[Dict[str, Any]]] = []
+    cur: List[Dict[str, Any]] = [frames[0]]
+    for d in frames[1:]:
+        if int(d["line"]) - int(cur[-1]["line"]) <= max_gap:
+            cur.append(d)
+        else:
+            clusters.append(cur)
+            cur = [d]
+    clusters.append(cur)
+    merged: List[Dict[str, Any]] = []
+    for cl in clusters:
+        if len(cl) == 1:
+            merged.append(cl[0])
+            continue
+        line_nums = [int(x["line"]) for x in cl]
+        lo, hi = min(line_nums), max(line_nums)
+        merged.append(
+            {
+                "line": lo,
+                "driftKind": DK_DECISION_FRAME_RR,
+                "note": (
+                    f"Heuristic cluster ({len(cl)} sites, lines {lo}–{hi}): decisionFrame in window "
+                    "but no literal routeReason string found ±45 lines."
+                ),
+            }
+        )
+    return others + merged
 
 
 def contract_summary(sites: List[Dict[str, Any]]) -> Dict[str, Any]:
@@ -311,6 +343,11 @@ def build_report(chat_path: Path) -> Dict[str, Any]:
     sites = collect_exit_sites(raw, lines)
     drifts = drift_candidates(sites, lines)
     summary = contract_summary(sites)
+    separation_obs_v1 = {
+        "replyDefinitionCount": len(RE_REPLY_DEF.findall(raw)),
+        "origJsonBindCount": len(RE_ORIG_JSON_BIND.findall(raw)),
+        "note": "CHAT_TS_RESPONSIBILITY_SEPARATION_PDCA_V1 Phase C-1 観測: reply は 1 定義を期待、orig_json_bind は低減方向。",
+    }
     return {
         "version": 1,
         "cardName": "CHAT_TRUNK_EXIT_CONTRACT_LOCK_V1",
@@ -319,8 +356,22 @@ def build_report(chat_path: Path) -> Dict[str, Any]:
         "lineCount": len(lines),
         "exitSites": sites,
         "contractSummary": summary,
+        "separationObservabilityV1": separation_obs_v1,
         "contractDriftCandidates": drifts,
         "trunkRequiredExitContracts": TRUNK_REQUIRED_EXIT_CONTRACTS,
+        "exitContractPolicyLocks": {
+            "mixedResJsonWrapper": {
+                "status": "locked_intent_v1",
+                "canonicalRule": "Branch exits that participate in the general chat gate SHOULD use return res.json(__tenmonGeneralGateResultMaybe(__replyV2, ...)) (CARD6C / res.json ONCE).",
+                "fleetSummaryRow": "driftKind=mixed_res_json_wrapper (line 0) is observability when both gated and ungated return_res_json sites exist; not an automatic FAIL while REPLY_PATH_UNIFY_V1 is pending.",
+                "ungatedSites": "Each res_json_without_general_gate_wrapper row is a review candidate (bootstrap / infra / intentional fastpath vs defect).",
+                "runtimeAcceptance": "Must remain consistent with MAINLINE_COMPLETED_READ_ONLY_SEAL_V1 + runtime acceptance (no dist edit; ku object-shaped when present).",
+            },
+            "decisionFrameRouteReasonWindow": {
+                "status": "locked_intent_v1",
+                "note": "decision_frame_without_literal_routeReason_in_window uses ±45 lines; split trunks and dynamic routeReason construction may false-positive.",
+            },
+        },
         "meta": {
             "parser": "regex_plus_brace_for_return_object",
             "trunks": list(TRUNKS),

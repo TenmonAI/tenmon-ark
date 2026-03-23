@@ -20,6 +20,7 @@ if str(_AUTOMATION_DIR) not in sys.path:
 
 from patch_generator_v1 import MANIFEST_NAME as RECIPE_MANIFEST_NAME
 from patch_generator_v1 import OUT_DIR_NAME as RECIPE_OUT_DIR
+from repo_resolve_v1 import repo_root_from
 
 OUT_DIR = "generated_cursor_tasks"
 TASK_MANIFEST = "cursor_tasks_manifest_v1.json"
@@ -46,17 +47,6 @@ CURSOR_TASK_INSTRUCTION_TEMPLATE = """\
 
 def _utc_now_iso() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
-
-
-def repo_root_from(start: Path) -> Path:
-    cur = start.resolve()
-    for _ in range(24):
-        if (cur / ".git").exists():
-            return cur
-        if cur.parent == cur:
-            break
-        cur = cur.parent
-    return start.resolve()
 
 
 def load_json(path: Path) -> Optional[Dict[str, Any]]:

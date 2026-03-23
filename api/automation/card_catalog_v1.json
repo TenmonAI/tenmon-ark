@@ -6,65 +6,161 @@
       "cardName": "AUTO_BUILD_CONDUCTOR_V1",
       "class": "schema",
       "objective": "Define machine-readable card schema, catalog, and DAG for Build Automation OS.",
-      "allowedPaths": ["api/automation/*.json", "api/docs/constitution/AUTO_BUILD_CONDUCTOR_V1.md"],
-      "forbiddenPaths": ["api/src/routes/chat.ts", "client/**", "api/src/db/kokuzo_schema.sql", "dist/**"],
+      "allowedPaths": [
+        "api/automation/*.json",
+        "api/docs/constitution/AUTO_BUILD_CONDUCTOR_V1.md"
+      ],
+      "forbiddenPaths": [
+        "api/src/routes/chat.ts",
+        "client/**",
+        "api/src/db/kokuzo_schema.sql",
+        "dist/**"
+      ],
       "requiresHumanJudgement": false,
-      "prechecks": [{ "id": "repo_root", "kind": "file_exists", "path": "api/automation" }],
-      "patchStrategy": { "mode": "min_diff", "notes": "JSON + constitution only" },
-      "postchecks": [{ "id": "json_valid", "kind": "command", "command": "python3 -m json.tool api/automation/card_catalog_v1.json >/dev/null" }],
+      "prechecks": [
+        {
+          "id": "repo_root",
+          "kind": "file_exists",
+          "path": "api/automation"
+        }
+      ],
+      "patchStrategy": {
+        "mode": "min_diff",
+        "notes": "JSON + constitution only"
+      },
+      "postchecks": [
+        {
+          "id": "json_valid",
+          "kind": "command",
+          "command": "python3 -m json.tool api/automation/card_catalog_v1.json >/dev/null"
+        }
+      ],
       "acceptanceProfile": "build_only",
       "nextOnPass": "AUTO_BUILD_RUNNER_V1",
       "nextOnFail": "STOP",
-      "rollbackStrategy": { "autoRollbackAllowed": false, "scope": "none" },
-      "sealPolicy": { "requiresAcceptancePass": true, "mixedCommitForbidden": true }
+      "rollbackStrategy": {
+        "autoRollbackAllowed": false,
+        "scope": "none"
+      },
+      "sealPolicy": {
+        "requiresAcceptancePass": true,
+        "mixedCommitForbidden": true
+      }
     },
     {
       "cardName": "AUTO_BUILD_RUNNER_V1",
       "class": "schema",
       "objective": "Execute one card at a time: observe, precheck, patch, acceptance, classify.",
-      "allowedPaths": ["api/automation/*.py", "api/docs/constitution/AUTO_BUILD_RUNNER_V1.md"],
-      "forbiddenPaths": ["api/src/routes/chat.ts", "client/**", "api/src/db/kokuzo_schema.sql", "dist/**"],
+      "allowedPaths": [
+        "api/automation/*.py",
+        "api/docs/constitution/AUTO_BUILD_RUNNER_V1.md"
+      ],
+      "forbiddenPaths": [
+        "api/src/routes/chat.ts",
+        "client/**",
+        "api/src/db/kokuzo_schema.sql",
+        "dist/**"
+      ],
       "requiresHumanJudgement": false,
-      "prechecks": [{ "id": "catalog_exists", "kind": "file_exists", "path": "api/automation/card_catalog_v1.json" }],
-      "patchStrategy": { "mode": "min_diff" },
+      "prechecks": [
+        {
+          "id": "catalog_exists",
+          "kind": "file_exists",
+          "path": "api/automation/card_catalog_v1.json"
+        }
+      ],
+      "patchStrategy": {
+        "mode": "min_diff"
+      },
       "postchecks": [],
       "acceptanceProfile": "build_only",
       "nextOnPass": "AUTO_BUILD_SUPERVISOR_V1",
       "nextOnFail": "STOP",
-      "rollbackStrategy": { "autoRollbackAllowed": false, "scope": "none" },
-      "sealPolicy": { "requiresAcceptancePass": true, "mixedCommitForbidden": true }
+      "rollbackStrategy": {
+        "autoRollbackAllowed": false,
+        "scope": "none"
+      },
+      "sealPolicy": {
+        "requiresAcceptancePass": true,
+        "mixedCommitForbidden": true
+      }
     },
     {
       "cardName": "AUTO_BUILD_SUPERVISOR_V1",
       "class": "schema",
       "objective": "Fail classification, regression guard, human gate orchestration over runner.",
-      "allowedPaths": ["api/automation/fail_classifier_v1.py", "api/automation/regression_guard_v1.py", "api/automation/supervisor_v1.py", "api/docs/constitution/AUTO_BUILD_SUPERVISOR_V1.md"],
-      "forbiddenPaths": ["api/src/routes/chat.ts", "client/**", "api/src/db/kokuzo_schema.sql", "dist/**"],
+      "allowedPaths": [
+        "api/automation/fail_classifier_v1.py",
+        "api/automation/regression_guard_v1.py",
+        "api/automation/supervisor_v1.py",
+        "api/docs/constitution/AUTO_BUILD_SUPERVISOR_V1.md"
+      ],
+      "forbiddenPaths": [
+        "api/src/routes/chat.ts",
+        "client/**",
+        "api/src/db/kokuzo_schema.sql",
+        "dist/**"
+      ],
       "requiresHumanJudgement": false,
-      "prechecks": [{ "id": "runner_exists", "kind": "file_exists", "path": "api/automation/auto_build_runner_v1.py" }],
-      "patchStrategy": { "mode": "min_diff" },
+      "prechecks": [
+        {
+          "id": "runner_exists",
+          "kind": "file_exists",
+          "path": "api/automation/auto_build_runner_v1.py"
+        }
+      ],
+      "patchStrategy": {
+        "mode": "min_diff"
+      },
       "postchecks": [],
       "acceptanceProfile": "build_only",
       "nextOnPass": "STOP",
       "nextOnFail": "STOP",
-      "rollbackStrategy": { "autoRollbackAllowed": false, "scope": "none" },
-      "sealPolicy": { "requiresAcceptancePass": true, "mixedCommitForbidden": true }
+      "rollbackStrategy": {
+        "autoRollbackAllowed": false,
+        "scope": "none"
+      },
+      "sealPolicy": {
+        "requiresAcceptancePass": true,
+        "mixedCommitForbidden": true
+      }
     },
     {
       "cardName": "CHAT_TS_COMPLEXITY_AUDIT_V1",
       "class": "audit",
       "objective": "Measure chat.ts complexity metrics without semantic auto-determination.",
-      "allowedPaths": ["api/docs/**", "api/automation/reports/**"],
-      "forbiddenPaths": ["api/src/routes/chat.ts", "client/**", "dist/**"],
+      "allowedPaths": [
+        "api/docs/**",
+        "api/automation/reports/**"
+      ],
+      "forbiddenPaths": [
+        "api/src/routes/chat.ts",
+        "client/**",
+        "dist/**"
+      ],
       "requiresHumanJudgement": false,
-      "prechecks": [{ "id": "chat_exists", "kind": "file_exists", "path": "api/src/routes/chat.ts" }],
-      "patchStrategy": { "mode": "none" },
+      "prechecks": [
+        {
+          "id": "chat_exists",
+          "kind": "file_exists",
+          "path": "api/src/routes/chat.ts"
+        }
+      ],
+      "patchStrategy": {
+        "mode": "none"
+      },
       "postchecks": [],
       "acceptanceProfile": "build_only",
       "nextOnPass": "AUTO_BUILD_CHATTS_AUDIT_SUITE_V1",
       "nextOnFail": "STOP",
-      "rollbackStrategy": { "autoRollbackAllowed": false, "scope": "none" },
-      "sealPolicy": { "requiresAcceptancePass": true, "mixedCommitForbidden": true }
+      "rollbackStrategy": {
+        "autoRollbackAllowed": false,
+        "scope": "none"
+      },
+      "sealPolicy": {
+        "requiresAcceptancePass": true,
+        "mixedCommitForbidden": true
+      }
     },
     {
       "cardName": "AUTO_BUILD_CHATTS_AUDIT_SUITE_V1",
@@ -77,13 +173,29 @@
         "api/docs/constitution/AUTO_BUILD_CHATTS_AUDIT_SUITE_V1.md",
         "api/automation/reports/**"
       ],
-      "forbiddenPaths": ["api/src/routes/chat.ts", "client/**", "dist/**", "api/src/db/kokuzo_schema.sql"],
+      "forbiddenPaths": [
+        "api/src/routes/chat.ts",
+        "client/**",
+        "dist/**",
+        "api/src/db/kokuzo_schema.sql"
+      ],
       "requiresHumanJudgement": false,
       "prechecks": [
-        { "id": "chat_ts_exists", "kind": "file_exists", "path": "api/src/routes/chat.ts" },
-        { "id": "suite_exists", "kind": "file_exists", "path": "api/automation/chatts_audit_suite_v1.py" }
+        {
+          "id": "chat_ts_exists",
+          "kind": "file_exists",
+          "path": "api/src/routes/chat.ts"
+        },
+        {
+          "id": "suite_exists",
+          "kind": "file_exists",
+          "path": "api/automation/chatts_audit_suite_v1.py"
+        }
       ],
-      "patchStrategy": { "mode": "none", "notes": "read-only on chat.ts; reports via suite CLI" },
+      "patchStrategy": {
+        "mode": "none",
+        "notes": "read-only on chat.ts; reports via suite CLI"
+      },
       "postchecks": [
         {
           "id": "chatts_audit_emit",
@@ -99,8 +211,14 @@
       "acceptanceProfile": "build_only",
       "nextOnPass": "CHAT_TRUNK_DOMAIN_MAP_V1",
       "nextOnFail": "STOP",
-      "rollbackStrategy": { "autoRollbackAllowed": false, "scope": "none" },
-      "sealPolicy": { "requiresAcceptancePass": true, "mixedCommitForbidden": true }
+      "rollbackStrategy": {
+        "autoRollbackAllowed": false,
+        "scope": "none"
+      },
+      "sealPolicy": {
+        "requiresAcceptancePass": true,
+        "mixedCommitForbidden": true
+      }
     },
     {
       "cardName": "CHAT_TRUNK_DOMAIN_MAP_V1",
@@ -112,14 +230,34 @@
         "api/docs/constitution/CHAT_TRUNK_DOMAIN_MAP_V1.md",
         "api/automation/reports/**"
       ],
-      "forbiddenPaths": ["api/src/routes/chat.ts", "client/**", "dist/**", "api/src/db/kokuzo_schema.sql"],
+      "forbiddenPaths": [
+        "api/src/routes/chat.ts",
+        "client/**",
+        "dist/**",
+        "api/src/db/kokuzo_schema.sql"
+      ],
       "requiresHumanJudgement": false,
       "prechecks": [
-        { "id": "chat_ts", "kind": "file_exists", "path": "api/src/routes/chat.ts" },
-        { "id": "suite_metrics", "kind": "file_exists", "path": "api/automation/chatts_metrics_v1.py" },
-        { "id": "trunk_map_script", "kind": "file_exists", "path": "api/automation/chatts_trunk_domain_map_v1.py" }
+        {
+          "id": "chat_ts",
+          "kind": "file_exists",
+          "path": "api/src/routes/chat.ts"
+        },
+        {
+          "id": "suite_metrics",
+          "kind": "file_exists",
+          "path": "api/automation/chatts_metrics_v1.py"
+        },
+        {
+          "id": "trunk_map_script",
+          "kind": "file_exists",
+          "path": "api/automation/chatts_trunk_domain_map_v1.py"
+        }
       ],
-      "patchStrategy": { "mode": "none", "notes": "read-only scan; reports via CLI" },
+      "patchStrategy": {
+        "mode": "none",
+        "notes": "read-only scan; reports via CLI"
+      },
       "postchecks": [
         {
           "id": "trunk_domain_map",
@@ -135,8 +273,14 @@
       "acceptanceProfile": "build_only",
       "nextOnPass": "AUTO_BUILD_PATCH_PLANNER_V1",
       "nextOnFail": "STOP",
-      "rollbackStrategy": { "autoRollbackAllowed": false, "scope": "none" },
-      "sealPolicy": { "requiresAcceptancePass": true, "mixedCommitForbidden": true }
+      "rollbackStrategy": {
+        "autoRollbackAllowed": false,
+        "scope": "none"
+      },
+      "sealPolicy": {
+        "requiresAcceptancePass": true,
+        "mixedCommitForbidden": true
+      }
     },
     {
       "cardName": "AUTO_BUILD_PATCH_PLANNER_V1",
@@ -148,15 +292,39 @@
         "api/docs/constitution/AUTO_BUILD_PATCH_PLANNER_V1.md",
         "api/automation/reports/**"
       ],
-      "forbiddenPaths": ["api/src/routes/chat.ts", "client/**", "dist/**", "api/src/db/kokuzo_schema.sql"],
+      "forbiddenPaths": [
+        "api/src/routes/chat.ts",
+        "client/**",
+        "dist/**",
+        "api/src/db/kokuzo_schema.sql"
+      ],
       "requiresHumanJudgement": false,
       "prechecks": [
-        { "id": "catalog", "kind": "file_exists", "path": "api/automation/card_catalog_v1.json" },
-        { "id": "graph", "kind": "file_exists", "path": "api/automation/card_dependency_graph_v1.json" },
-        { "id": "metrics", "kind": "file_exists", "path": "api/automation/chatts_metrics_v1.py" },
-        { "id": "trunk_map", "kind": "file_exists", "path": "api/automation/chatts_trunk_domain_map_v1.py" }
+        {
+          "id": "catalog",
+          "kind": "file_exists",
+          "path": "api/automation/card_catalog_v1.json"
+        },
+        {
+          "id": "graph",
+          "kind": "file_exists",
+          "path": "api/automation/card_dependency_graph_v1.json"
+        },
+        {
+          "id": "metrics",
+          "kind": "file_exists",
+          "path": "api/automation/chatts_metrics_v1.py"
+        },
+        {
+          "id": "trunk_map",
+          "kind": "file_exists",
+          "path": "api/automation/chatts_trunk_domain_map_v1.py"
+        }
       ],
-      "patchStrategy": { "mode": "none", "notes": "plan JSON/MD only" },
+      "patchStrategy": {
+        "mode": "none",
+        "notes": "plan JSON/MD only"
+      },
       "postchecks": [
         {
           "id": "patch_plan_emit",
@@ -172,8 +340,14 @@
       "acceptanceProfile": "build_only",
       "nextOnPass": "AUTO_BUILD_PATCH_GENERATOR_V1",
       "nextOnFail": "STOP",
-      "rollbackStrategy": { "autoRollbackAllowed": false, "scope": "none" },
-      "sealPolicy": { "requiresAcceptancePass": true, "mixedCommitForbidden": true }
+      "rollbackStrategy": {
+        "autoRollbackAllowed": false,
+        "scope": "none"
+      },
+      "sealPolicy": {
+        "requiresAcceptancePass": true,
+        "mixedCommitForbidden": true
+      }
     },
     {
       "cardName": "AUTO_BUILD_PATCH_GENERATOR_V1",
@@ -185,13 +359,29 @@
         "api/docs/constitution/AUTO_BUILD_PATCH_GENERATOR_V1.md",
         "api/automation/generated_patch_recipes/**"
       ],
-      "forbiddenPaths": ["api/src/routes/chat.ts", "client/**", "dist/**", "api/src/db/kokuzo_schema.sql"],
+      "forbiddenPaths": [
+        "api/src/routes/chat.ts",
+        "client/**",
+        "dist/**",
+        "api/src/db/kokuzo_schema.sql"
+      ],
       "requiresHumanJudgement": false,
       "prechecks": [
-        { "id": "planner_script", "kind": "file_exists", "path": "api/automation/patch_planner_v1.py" },
-        { "id": "plan_schema", "kind": "file_exists", "path": "api/automation/patch_plan_schema_v1.json" }
+        {
+          "id": "planner_script",
+          "kind": "file_exists",
+          "path": "api/automation/patch_planner_v1.py"
+        },
+        {
+          "id": "plan_schema",
+          "kind": "file_exists",
+          "path": "api/automation/patch_plan_schema_v1.json"
+        }
       ],
-      "patchStrategy": { "mode": "none", "notes": "generated JSON/MD only" },
+      "patchStrategy": {
+        "mode": "none",
+        "notes": "generated JSON/MD only"
+      },
       "postchecks": [
         {
           "id": "patch_generator_emit",
@@ -207,8 +397,14 @@
       "acceptanceProfile": "build_only",
       "nextOnPass": "AUTO_BUILD_CURSOR_BRIDGE_V1",
       "nextOnFail": "STOP",
-      "rollbackStrategy": { "autoRollbackAllowed": false, "scope": "none" },
-      "sealPolicy": { "requiresAcceptancePass": true, "mixedCommitForbidden": true }
+      "rollbackStrategy": {
+        "autoRollbackAllowed": false,
+        "scope": "none"
+      },
+      "sealPolicy": {
+        "requiresAcceptancePass": true,
+        "mixedCommitForbidden": true
+      }
     },
     {
       "cardName": "AUTO_BUILD_CURSOR_BRIDGE_V1",
@@ -220,12 +416,24 @@
         "api/docs/constitution/AUTO_BUILD_CURSOR_BRIDGE_V1.md",
         "api/automation/generated_cursor_tasks/**"
       ],
-      "forbiddenPaths": ["api/src/routes/chat.ts", "client/**", "dist/**", "api/src/db/kokuzo_schema.sql"],
+      "forbiddenPaths": [
+        "api/src/routes/chat.ts",
+        "client/**",
+        "dist/**",
+        "api/src/db/kokuzo_schema.sql"
+      ],
       "requiresHumanJudgement": false,
       "prechecks": [
-        { "id": "patch_generator", "kind": "file_exists", "path": "api/automation/patch_generator_v1.py" }
+        {
+          "id": "patch_generator",
+          "kind": "file_exists",
+          "path": "api/automation/patch_generator_v1.py"
+        }
       ],
-      "patchStrategy": { "mode": "none", "notes": "task JSON + manifest only" },
+      "patchStrategy": {
+        "mode": "none",
+        "notes": "task JSON + manifest only"
+      },
       "postchecks": [
         {
           "id": "cursor_bridge_emit",
@@ -239,10 +447,976 @@
         }
       ],
       "acceptanceProfile": "build_only",
-      "nextOnPass": "CHAT_TRUNK_EXIT_CONTRACT_LOCK_V1",
+      "nextOnPass": "AUTO_BUILD_WORKSPACE_OBSERVER_V1",
       "nextOnFail": "STOP",
-      "rollbackStrategy": { "autoRollbackAllowed": false, "scope": "none" },
-      "sealPolicy": { "requiresAcceptancePass": true, "mixedCommitForbidden": true }
+      "rollbackStrategy": {
+        "autoRollbackAllowed": false,
+        "scope": "none"
+      },
+      "sealPolicy": {
+        "requiresAcceptancePass": true,
+        "mixedCommitForbidden": true
+      }
+    },
+    {
+      "cardName": "AUTO_BUILD_WORKSPACE_OBSERVER_V1",
+      "class": "audit",
+      "objective": "Single snapshot of git/queue/human-gate/generated artifacts/catalog-DAG/api build/reports; readyForApply gate before auto-build apply; single_flight violation detection; runtime unchanged.",
+      "allowedPaths": [
+        "api/automation/workspace_observer_v1.py",
+        "api/automation/workspace_observer_schema_v1.json",
+        "api/docs/constitution/AUTO_BUILD_WORKSPACE_OBSERVER_V1.md",
+        "api/automation/reports/workspace_snapshot_v1.json",
+        "api/automation/reports/workspace_snapshot_v1.md"
+      ],
+      "forbiddenPaths": [
+        "api/src/routes/chat.ts",
+        "client/**",
+        "dist/**",
+        "api/src/db/kokuzo_schema.sql"
+      ],
+      "requiresHumanJudgement": false,
+      "prechecks": [
+        {
+          "id": "observer_schema",
+          "kind": "file_exists",
+          "path": "api/automation/workspace_observer_schema_v1.json"
+        },
+        {
+          "id": "observer_script",
+          "kind": "file_exists",
+          "path": "api/automation/workspace_observer_v1.py"
+        }
+      ],
+      "patchStrategy": {
+        "mode": "none",
+        "notes": "read-only observation + optional npm build under api/"
+      },
+      "postchecks": [
+        {
+          "id": "workspace_observer_py_compile",
+          "kind": "command",
+          "command": "python3 -m py_compile api/automation/workspace_observer_v1.py"
+        },
+        {
+          "id": "workspace_observer_schema_json",
+          "kind": "command",
+          "command": "python3 -m json.tool api/automation/workspace_observer_schema_v1.json >/dev/null"
+        },
+        {
+          "id": "workspace_observer_stdout_json",
+          "kind": "command",
+          "command": "python3 api/automation/workspace_observer_v1.py --repo-root . --stdout-json"
+        },
+        {
+          "id": "workspace_observer_emit_check",
+          "kind": "command",
+          "command": "python3 api/automation/workspace_observer_v1.py --repo-root . --emit-report --check-json"
+        }
+      ],
+      "acceptanceProfile": "build_only",
+      "nextOnPass": "AUTO_BUILD_EXECUTION_GATE_V1",
+      "nextOnFail": "STOP",
+      "rollbackStrategy": {
+        "autoRollbackAllowed": false,
+        "scope": "none"
+      },
+      "sealPolicy": {
+        "requiresAcceptancePass": true,
+        "mixedCommitForbidden": true
+      }
+    },
+    {
+      "cardName": "AUTO_BUILD_EXECUTION_GATE_V1",
+      "class": "audit",
+      "objective": "Pre-PATCH execution gate: merge cursor manifest, workspace observer, queue, human gate; classify executable/blocked/waiting_human_gate/invalid_scope; runtime unchanged.",
+      "allowedPaths": [
+        "api/automation/execution_gate_v1.py",
+        "api/automation/execution_gate_schema_v1.json",
+        "api/docs/constitution/AUTO_BUILD_EXECUTION_GATE_V1.md",
+        "api/automation/reports/execution_gate_v1.json",
+        "api/automation/reports/execution_gate_v1.md"
+      ],
+      "forbiddenPaths": [
+        "api/src/routes/chat.ts",
+        "client/**",
+        "dist/**",
+        "api/src/db/kokuzo_schema.sql"
+      ],
+      "requiresHumanJudgement": false,
+      "prechecks": [
+        {
+          "id": "execution_gate_schema",
+          "kind": "file_exists",
+          "path": "api/automation/execution_gate_schema_v1.json"
+        },
+        {
+          "id": "execution_gate_script",
+          "kind": "file_exists",
+          "path": "api/automation/execution_gate_v1.py"
+        }
+      ],
+      "patchStrategy": {
+        "mode": "none",
+        "notes": "read-only gate + JSON/MD reports"
+      },
+      "postchecks": [
+        {
+          "id": "execution_gate_py_compile",
+          "kind": "command",
+          "command": "python3 -m py_compile api/automation/execution_gate_v1.py"
+        },
+        {
+          "id": "execution_gate_schema_json",
+          "kind": "command",
+          "command": "python3 -m json.tool api/automation/execution_gate_schema_v1.json >/dev/null"
+        },
+        {
+          "id": "execution_gate_stdout_json",
+          "kind": "command",
+          "command": "python3 api/automation/execution_gate_v1.py --repo-root . --stdout-json"
+        },
+        {
+          "id": "execution_gate_emit_check",
+          "kind": "command",
+          "command": "python3 api/automation/execution_gate_v1.py --repo-root . --emit-report --check-json"
+        }
+      ],
+      "acceptanceProfile": "build_only",
+      "nextOnPass": "AUTO_BUILD_CURSOR_APPLIER_V1",
+      "nextOnFail": "STOP",
+      "rollbackStrategy": {
+        "autoRollbackAllowed": false,
+        "scope": "none"
+      },
+      "sealPolicy": {
+        "requiresAcceptancePass": true,
+        "mixedCommitForbidden": true
+      }
+    },
+    {
+      "cardName": "AUTO_BUILD_CURSOR_APPLIER_V1",
+      "class": "audit",
+      "objective": "Convert generated_cursor_tasks + execution gate into apply_<taskId>.json, apply manifest, and Cursor-paste command bundle text; no PATCH execution; runtime unchanged.",
+      "allowedPaths": [
+        "api/automation/cursor_applier_v1.py",
+        "api/automation/cursor_applier_schema_v1.json",
+        "api/docs/constitution/AUTO_BUILD_CURSOR_APPLIER_V1.md",
+        "api/automation/generated_cursor_apply/**",
+        "api/automation/reports/cursor_applier_v1.json"
+      ],
+      "forbiddenPaths": [
+        "api/src/routes/chat.ts",
+        "client/**",
+        "dist/**",
+        "api/src/db/kokuzo_schema.sql"
+      ],
+      "requiresHumanJudgement": false,
+      "prechecks": [
+        {
+          "id": "cursor_applier_schema",
+          "kind": "file_exists",
+          "path": "api/automation/cursor_applier_schema_v1.json"
+        },
+        {
+          "id": "cursor_applier_script",
+          "kind": "file_exists",
+          "path": "api/automation/cursor_applier_v1.py"
+        }
+      ],
+      "patchStrategy": {
+        "mode": "none",
+        "notes": "generated apply JSON + txt manifest only"
+      },
+      "postchecks": [
+        {
+          "id": "cursor_applier_py_compile",
+          "kind": "command",
+          "command": "python3 -m py_compile api/automation/cursor_applier_v1.py"
+        },
+        {
+          "id": "cursor_applier_schema_json",
+          "kind": "command",
+          "command": "python3 -m json.tool api/automation/cursor_applier_schema_v1.json >/dev/null"
+        },
+        {
+          "id": "cursor_applier_stdout_json",
+          "kind": "command",
+          "command": "python3 api/automation/cursor_applier_v1.py --repo-root . --stdout-json"
+        },
+        {
+          "id": "cursor_applier_emit_check",
+          "kind": "command",
+          "command": "python3 api/automation/cursor_applier_v1.py --repo-root . --emit-report --check-json"
+        }
+      ],
+      "acceptanceProfile": "build_only",
+      "nextOnPass": "AUTO_BUILD_REPLAY_AUDIT_V1",
+      "nextOnFail": "STOP",
+      "rollbackStrategy": {
+        "autoRollbackAllowed": false,
+        "scope": "none"
+      },
+      "sealPolicy": {
+        "requiresAcceptancePass": true,
+        "mixedCommitForbidden": true
+      }
+    },
+    {
+      "cardName": "AUTO_BUILD_REPLAY_AUDIT_V1",
+      "class": "audit",
+      "objective": "Post-apply replay bundle: git diff, optional build log, supervisor validate, queue, path guard vs catalog card; nextCardEligibility; runtime unchanged.",
+      "allowedPaths": [
+        "api/automation/replay_audit_v1.py",
+        "api/automation/replay_audit_schema_v1.json",
+        "api/docs/constitution/AUTO_BUILD_REPLAY_AUDIT_V1.md",
+        "api/automation/reports/replay_audit_v1.json",
+        "api/automation/reports/replay_audit_v1.md"
+      ],
+      "forbiddenPaths": [
+        "api/src/routes/chat.ts",
+        "client/**",
+        "dist/**",
+        "api/src/db/kokuzo_schema.sql"
+      ],
+      "requiresHumanJudgement": false,
+      "prechecks": [
+        {
+          "id": "replay_audit_schema",
+          "kind": "file_exists",
+          "path": "api/automation/replay_audit_schema_v1.json"
+        },
+        {
+          "id": "replay_audit_script",
+          "kind": "file_exists",
+          "path": "api/automation/replay_audit_v1.py"
+        }
+      ],
+      "patchStrategy": {
+        "mode": "none",
+        "notes": "read-only replay aggregation; optional npm build via --with-build"
+      },
+      "postchecks": [
+        {
+          "id": "replay_audit_py_compile",
+          "kind": "command",
+          "command": "python3 -m py_compile api/automation/replay_audit_v1.py"
+        },
+        {
+          "id": "replay_audit_schema_json",
+          "kind": "command",
+          "command": "python3 -m json.tool api/automation/replay_audit_schema_v1.json >/dev/null"
+        },
+        {
+          "id": "replay_audit_stdout_json",
+          "kind": "command",
+          "command": "python3 api/automation/replay_audit_v1.py --repo-root . --stdout-json"
+        },
+        {
+          "id": "replay_audit_emit_check",
+          "kind": "command",
+          "command": "python3 api/automation/replay_audit_v1.py --repo-root . --emit-report --check-json"
+        }
+      ],
+      "acceptanceProfile": "build_only",
+      "nextOnPass": "AUTO_BUILD_MULTI_CARD_CAMPAIGN_V1",
+      "nextOnFail": "STOP",
+      "rollbackStrategy": {
+        "autoRollbackAllowed": false,
+        "scope": "none"
+      },
+      "sealPolicy": {
+        "requiresAcceptancePass": true,
+        "mixedCommitForbidden": true
+      }
+    },
+    {
+      "cardName": "AUTO_BUILD_MULTI_CARD_CAMPAIGN_V1",
+      "class": "audit",
+      "objective": "Multi-card campaign planner with single_flight, queue/human/execution-gate/replay pointers; JSON+MD reports; no runner execution.",
+      "allowedPaths": [
+        "api/automation/campaign_executor_v1.py",
+        "api/automation/campaign_schema_v1.json",
+        "api/docs/constitution/AUTO_BUILD_MULTI_CARD_CAMPAIGN_V1.md",
+        "api/automation/_campaign/**",
+        "api/automation/reports/campaign_executor_v1.json",
+        "api/automation/reports/campaign_executor_v1.md"
+      ],
+      "forbiddenPaths": [
+        "api/src/routes/chat.ts",
+        "client/**",
+        "dist/**",
+        "api/src/db/kokuzo_schema.sql"
+      ],
+      "requiresHumanJudgement": false,
+      "prechecks": [
+        {
+          "id": "campaign_schema",
+          "kind": "file_exists",
+          "path": "api/automation/campaign_schema_v1.json"
+        },
+        {
+          "id": "campaign_script",
+          "kind": "file_exists",
+          "path": "api/automation/campaign_executor_v1.py"
+        }
+      ],
+      "patchStrategy": {
+        "mode": "none",
+        "notes": "campaign state file + reports only"
+      },
+      "postchecks": [
+        {
+          "id": "campaign_py_compile",
+          "kind": "command",
+          "command": "python3 -m py_compile api/automation/campaign_executor_v1.py"
+        },
+        {
+          "id": "campaign_schema_json",
+          "kind": "command",
+          "command": "python3 -m json.tool api/automation/campaign_schema_v1.json >/dev/null"
+        },
+        {
+          "id": "campaign_start_stdout",
+          "kind": "command",
+          "command": "python3 api/automation/campaign_executor_v1.py --repo-root . --campaign-start --stdout-json"
+        },
+        {
+          "id": "campaign_emit_check",
+          "kind": "command",
+          "command": "python3 api/automation/campaign_executor_v1.py --repo-root . --emit-report --check-json"
+        }
+      ],
+      "acceptanceProfile": "build_only",
+      "nextOnPass": "AUTO_BUILD_FULL_AUTOPILOT_V1",
+      "nextOnFail": "STOP",
+      "rollbackStrategy": {
+        "autoRollbackAllowed": false,
+        "scope": "none"
+      },
+      "sealPolicy": {
+        "requiresAcceptancePass": true,
+        "mixedCommitForbidden": true
+      }
+    },
+    {
+      "cardName": "AUTO_BUILD_FULL_AUTOPILOT_V1",
+      "class": "audit",
+      "objective": "End-to-end summary wiring queue, gates, planner artifacts, applier, replay audit, campaign; --run-next/--run-campaign compat; runtime unchanged.",
+      "allowedPaths": [
+        "api/automation/full_autopilot_v1.py",
+        "api/automation/full_autopilot_schema_v1.json",
+        "api/docs/constitution/AUTO_BUILD_FULL_AUTOPILOT_V1.md",
+        "api/automation/reports/full_autopilot_v1.json",
+        "api/automation/reports/full_autopilot_v1.md"
+      ],
+      "forbiddenPaths": [
+        "api/src/routes/chat.ts",
+        "client/**",
+        "dist/**",
+        "api/src/db/kokuzo_schema.sql"
+      ],
+      "requiresHumanJudgement": false,
+      "prechecks": [
+        {
+          "id": "full_autopilot_schema",
+          "kind": "file_exists",
+          "path": "api/automation/full_autopilot_schema_v1.json"
+        },
+        {
+          "id": "full_autopilot_script",
+          "kind": "file_exists",
+          "path": "api/automation/full_autopilot_v1.py"
+        }
+      ],
+      "patchStrategy": {
+        "mode": "none",
+        "notes": "summary JSON only"
+      },
+      "postchecks": [
+        {
+          "id": "full_autopilot_py_compile",
+          "kind": "command",
+          "command": "python3 -m py_compile api/automation/full_autopilot_v1.py"
+        },
+        {
+          "id": "full_autopilot_schema_json",
+          "kind": "command",
+          "command": "python3 -m json.tool api/automation/full_autopilot_schema_v1.json >/dev/null"
+        },
+        {
+          "id": "full_autopilot_stdout_json",
+          "kind": "command",
+          "command": "python3 api/automation/full_autopilot_v1.py --repo-root . --stdout-json"
+        },
+        {
+          "id": "full_autopilot_emit_check",
+          "kind": "command",
+          "command": "python3 api/automation/full_autopilot_v1.py --repo-root . --emit-report --check-json"
+        }
+      ],
+      "acceptanceProfile": "build_only",
+      "nextOnPass": "CHAT_TRUNK_DEFINE_SPLIT_V1",
+      "nextOnFail": "STOP",
+      "rollbackStrategy": {
+        "autoRollbackAllowed": false,
+        "scope": "none"
+      },
+      "sealPolicy": {
+        "requiresAcceptancePass": true,
+        "mixedCommitForbidden": true
+      }
+    },
+    {
+      "cardName": "CHAT_TRUNK_DEFINE_SPLIT_V1",
+      "class": "runtime_safe_patch",
+      "objective": "Split define trunk from chat.ts into chat_refactor/define_trunk_v1.ts; preserve exit contract, routeReason, reply/res.json; single_flight; 1 change = 1 verify.",
+      "allowedPaths": [
+        "api/src/routes/chat.ts",
+        "api/src/routes/chat_refactor/**",
+        "api/docs/constitution/**",
+        "api/automation/reports/**"
+      ],
+      "forbiddenPaths": [
+        "client/**",
+        "dist/**",
+        "api/src/db/kokuzo_schema.sql",
+        "api/src/routes/chat_parts/**",
+        "api/src/routes/chat_refactor/general.js",
+        "api/src/routes/chat_refactor/finalize.js"
+      ],
+      "requiresHumanJudgement": false,
+      "prechecks": [
+        {
+          "id": "workspace_observer",
+          "kind": "command",
+          "command": "python3 api/automation/workspace_observer_v1.py --repo-root . --stdout-json"
+        },
+        {
+          "id": "execution_gate_define_split",
+          "kind": "command",
+          "command": "python3 api/automation/execution_gate_v1.py --repo-root . --stdout-json --target-card CHAT_TRUNK_DEFINE_SPLIT_V1"
+        },
+        {
+          "id": "trunk_domain_map",
+          "kind": "command",
+          "command": "python3 api/automation/chatts_trunk_domain_map_v1.py --repo-root . --stdout-json"
+        },
+        {
+          "id": "exit_contract_lock",
+          "kind": "command",
+          "command": "python3 api/automation/chatts_exit_contract_lock_v1.py --repo-root . --stdout-json"
+        }
+      ],
+      "patchStrategy": {
+        "mode": "min_diff",
+        "notes": "define trunk extraction only"
+      },
+      "postchecks": [
+        {
+          "id": "chatts_audit_suite",
+          "kind": "command",
+          "command": "python3 api/automation/chatts_audit_suite_v1.py --repo-root . --stdout-json"
+        },
+        {
+          "id": "trunk_domain_map_post",
+          "kind": "command",
+          "command": "python3 api/automation/chatts_trunk_domain_map_v1.py --repo-root . --stdout-json"
+        },
+        {
+          "id": "exit_contract_post",
+          "kind": "command",
+          "command": "python3 api/automation/chatts_exit_contract_lock_v1.py --repo-root . --stdout-json"
+        },
+        {
+          "id": "npm_build",
+          "kind": "command",
+          "command": "cd api && npm run build"
+        }
+      ],
+      "acceptanceProfile": "api_health",
+      "nextOnPass": "CHAT_TRUNK_SCRIPTURE_SPLIT_V1",
+      "nextOnFail": "STOP",
+      "rollbackStrategy": {
+        "autoRollbackAllowed": true,
+        "scope": "runtime_refactor"
+      },
+      "sealPolicy": {
+        "requiresAcceptancePass": true,
+        "mixedCommitForbidden": true
+      }
+    },
+    {
+      "cardName": "CHAT_TRUNK_SCRIPTURE_SPLIT_V1",
+      "class": "runtime_safe_patch",
+      "objective": "Reserved: scripture trunk split (TENMON_SCRIPTURE_CANON_V1 / SCRIPTURE_LOCAL_RESOLVER_V4 / continuity). Implement in dedicated change; placeholder keeps DAG continuity.",
+      "allowedPaths": [
+        "api/src/routes/chat.ts",
+        "api/src/routes/chat_refactor/**",
+        "api/docs/constitution/**",
+        "api/automation/reports/**"
+      ],
+      "forbiddenPaths": [
+        "client/**",
+        "dist/**",
+        "api/src/db/kokuzo_schema.sql",
+        "api/src/routes/chat_parts/**",
+        "api/src/routes/chat_refactor/general.js",
+        "api/src/routes/chat_refactor/finalize.js"
+      ],
+      "requiresHumanJudgement": false,
+      "prechecks": [],
+      "patchStrategy": {
+        "mode": "none",
+        "notes": "placeholder until scripture split lands"
+      },
+      "postchecks": [
+        {
+          "id": "build_placeholder",
+          "kind": "command",
+          "command": "cd api && npm run build"
+        }
+      ],
+      "acceptanceProfile": "build_only",
+      "nextOnPass": "CHAT_TRUNK_CONTINUITY_SPLIT_V1",
+      "nextOnFail": "STOP",
+      "rollbackStrategy": {
+        "autoRollbackAllowed": false,
+        "scope": "none"
+      },
+      "sealPolicy": {
+        "requiresAcceptancePass": true,
+        "mixedCommitForbidden": true
+      }
+    },
+    {
+      "cardName": "CHAT_TRUNK_CONTINUITY_SPLIT_V1",
+      "class": "runtime_safe_patch",
+      "objective": "Continuity trunk split: preempt / follow-up gates in chat_refactor/continuity_trunk_v1.ts; chat.ts wires await + gate only.",
+      "allowedPaths": [
+        "api/src/routes/chat.ts",
+        "api/src/routes/chat_refactor/**",
+        "api/docs/constitution/**",
+        "api/automation/reports/**"
+      ],
+      "forbiddenPaths": [
+        "client/**",
+        "dist/**",
+        "api/src/db/kokuzo_schema.sql",
+        "api/src/routes/chat_parts/**",
+        "api/src/routes/chat_refactor/general.js",
+        "api/src/routes/chat_refactor/finalize.js"
+      ],
+      "requiresHumanJudgement": false,
+      "prechecks": [
+        {
+          "id": "execution_gate_continuity_split",
+          "kind": "command",
+          "command": "python3 api/automation/execution_gate_v1.py --repo-root . --stdout-json --target-card CHAT_TRUNK_CONTINUITY_SPLIT_V1"
+        }
+      ],
+      "patchStrategy": {
+        "mode": "min_diff",
+        "notes": "continuity trunk extraction + chat.ts thin wiring"
+      },
+      "postchecks": [
+        {
+          "id": "npm_build",
+          "kind": "command",
+          "command": "cd api && npm run build"
+        }
+      ],
+      "acceptanceProfile": "api_health",
+      "nextOnPass": "CHAT_TRUNK_SUPPORT_SELFDIAG_SPLIT_V1_FINAL",
+      "nextOnFail": "STOP",
+      "rollbackStrategy": {
+        "autoRollbackAllowed": true,
+        "scope": "runtime_refactor"
+      },
+      "sealPolicy": {
+        "requiresAcceptancePass": true,
+        "mixedCommitForbidden": true
+      }
+    },
+    {
+      "cardName": "CHAT_TRUNK_SUPPORT_SELFDIAG_SPLIT_V1_FINAL",
+      "class": "runtime_safe_patch",
+      "objective": "Finalize support/self-diag trunk: brainstem support + selfaware resolution in support_selfdiag_trunk_v1.ts; single_flight.",
+      "allowedPaths": [
+        "api/src/routes/chat.ts",
+        "api/src/routes/chat_refactor/**",
+        "api/docs/constitution/**",
+        "api/automation/reports/**"
+      ],
+      "forbiddenPaths": [
+        "client/**",
+        "dist/**",
+        "api/src/db/kokuzo_schema.sql",
+        "api/src/routes/chat_parts/**",
+        "api/src/routes/chat_refactor/general.js",
+        "api/src/routes/chat_refactor/finalize.js"
+      ],
+      "requiresHumanJudgement": false,
+      "prechecks": [
+        {
+          "id": "execution_gate_support_selfdiag_final",
+          "kind": "command",
+          "command": "python3 api/automation/execution_gate_v1.py --repo-root . --stdout-json --target-card CHAT_TRUNK_SUPPORT_SELFDIAG_SPLIT_V1_FINAL"
+        }
+      ],
+      "patchStrategy": {
+        "mode": "min_diff",
+        "notes": "support_selfdiag trunk finalize"
+      },
+      "postchecks": [
+        {
+          "id": "npm_build",
+          "kind": "command",
+          "command": "cd api && npm run build"
+        }
+      ],
+      "acceptanceProfile": "api_health",
+      "nextOnPass": "CHAT_TRUNK_GENERAL_SPLIT_V1_FINAL",
+      "nextOnFail": "STOP",
+      "rollbackStrategy": {
+        "autoRollbackAllowed": true,
+        "scope": "runtime_refactor"
+      },
+      "sealPolicy": {
+        "requiresAcceptancePass": true,
+        "mixedCommitForbidden": true
+      }
+    },
+    {
+      "cardName": "CHAT_TRUNK_GENERAL_SPLIT_V1_FINAL",
+      "class": "runtime_safe_patch",
+      "objective": "Finalize general trunk: NATURAL_GENERAL / projector / shrink paths in general_trunk_v1.ts; single_flight.",
+      "allowedPaths": [
+        "api/src/routes/chat.ts",
+        "api/src/routes/chat_refactor/**",
+        "api/docs/constitution/**",
+        "api/automation/reports/**"
+      ],
+      "forbiddenPaths": [
+        "client/**",
+        "dist/**",
+        "api/src/db/kokuzo_schema.sql",
+        "api/src/routes/chat_parts/**",
+        "api/src/routes/chat_refactor/general.js",
+        "api/src/routes/chat_refactor/finalize.js"
+      ],
+      "requiresHumanJudgement": false,
+      "prechecks": [
+        {
+          "id": "execution_gate_general_final",
+          "kind": "command",
+          "command": "python3 api/automation/execution_gate_v1.py --repo-root . --stdout-json --target-card CHAT_TRUNK_GENERAL_SPLIT_V1_FINAL"
+        }
+      ],
+      "patchStrategy": {
+        "mode": "min_diff",
+        "notes": "general trunk finalize"
+      },
+      "postchecks": [
+        {
+          "id": "npm_build",
+          "kind": "command",
+          "command": "cd api && npm run build"
+        }
+      ],
+      "acceptanceProfile": "api_health",
+      "nextOnPass": "CHAT_TRUNK_INFRA_WRAPPER_SPLIT_V1_FINAL",
+      "nextOnFail": "STOP",
+      "rollbackStrategy": {
+        "autoRollbackAllowed": true,
+        "scope": "runtime_refactor"
+      },
+      "sealPolicy": {
+        "requiresAcceptancePass": true,
+        "mixedCommitForbidden": true
+      }
+    },
+    {
+      "cardName": "CHAT_TRUNK_INFRA_WRAPPER_SPLIT_V1_FINAL",
+      "class": "runtime_safe_patch",
+      "objective": "Finalize infra wrapper trunk: return wiring / synapse / router boundaries in infra_wrapper_trunk_v1.ts; single_flight.",
+      "allowedPaths": [
+        "api/src/routes/chat.ts",
+        "api/src/routes/chat_refactor/**",
+        "api/docs/constitution/**",
+        "api/automation/reports/**"
+      ],
+      "forbiddenPaths": [
+        "client/**",
+        "dist/**",
+        "api/src/db/kokuzo_schema.sql",
+        "api/src/routes/chat_parts/**",
+        "api/src/routes/chat_refactor/general.js",
+        "api/src/routes/chat_refactor/finalize.js"
+      ],
+      "requiresHumanJudgement": false,
+      "prechecks": [
+        {
+          "id": "execution_gate_infra_wrapper_final",
+          "kind": "command",
+          "command": "python3 api/automation/execution_gate_v1.py --repo-root . --stdout-json --target-card CHAT_TRUNK_INFRA_WRAPPER_SPLIT_V1_FINAL"
+        }
+      ],
+      "patchStrategy": {
+        "mode": "min_diff",
+        "notes": "infra_wrapper trunk finalize"
+      },
+      "postchecks": [
+        {
+          "id": "npm_build",
+          "kind": "command",
+          "command": "cd api && npm run build"
+        }
+      ],
+      "acceptanceProfile": "api_health",
+      "nextOnPass": "CHAT_TRUNK_RUNTIME_ACCEPTANCE_LOCK_V1_FINAL",
+      "nextOnFail": "STOP",
+      "rollbackStrategy": {
+        "autoRollbackAllowed": true,
+        "scope": "runtime_refactor"
+      },
+      "sealPolicy": {
+        "requiresAcceptancePass": true,
+        "mixedCommitForbidden": true
+      }
+    },
+    {
+      "cardName": "CHAT_TRUNK_RUNTIME_ACCEPTANCE_LOCK_V1_FINAL",
+      "class": "audit",
+      "objective": "Lock runtime acceptance after mainline trunk FINAL cards: build, supervisor, replay audit scoped to this card, trunk map + exit contract drift bounds.",
+      "allowedPaths": [
+        "api/src/routes/chat.ts",
+        "api/src/routes/chat_refactor/**",
+        "api/docs/constitution/**",
+        "api/automation/reports/**"
+      ],
+      "forbiddenPaths": [
+        "client/**",
+        "dist/**",
+        "api/src/db/kokuzo_schema.sql"
+      ],
+      "requiresHumanJudgement": false,
+      "prechecks": [
+        {
+          "id": "execution_gate_runtime_acceptance_final",
+          "kind": "command",
+          "command": "python3 api/automation/execution_gate_v1.py --repo-root . --stdout-json --target-card CHAT_TRUNK_RUNTIME_ACCEPTANCE_LOCK_V1_FINAL"
+        }
+      ],
+      "patchStrategy": {
+        "mode": "none",
+        "notes": "acceptance + reports; minimal code"
+      },
+      "postchecks": [
+        {
+          "id": "npm_build",
+          "kind": "command",
+          "command": "cd api && npm run build"
+        },
+        {
+          "id": "supervisor_validate",
+          "kind": "command",
+          "command": "python3 api/automation/supervisor_v1.py --repo-root . --validate-only"
+        },
+        {
+          "id": "replay_audit_runtime_final",
+          "kind": "command",
+          "command": "python3 api/automation/replay_audit_v1.py --repo-root . --card CHAT_TRUNK_RUNTIME_ACCEPTANCE_LOCK_V1_FINAL --emit-report --check-json"
+        }
+      ],
+      "acceptanceProfile": "api_health",
+      "nextOnPass": "MAINLINE_COMPLETED_READ_ONLY_SEAL_V1",
+      "nextOnFail": "STOP",
+      "rollbackStrategy": {
+        "autoRollbackAllowed": false,
+        "scope": "none"
+      },
+      "sealPolicy": {
+        "requiresAcceptancePass": true,
+        "mixedCommitForbidden": true
+      }
+    },
+    {
+      "cardName": "AUTO_BUILD_MAINLINE_COMPLETION_SYNC_V1",
+      "class": "schema",
+      "objective": "Sync automation registry/manifests/autopilot/campaign/replay with mainline FINAL completion; no chat.ts edits.",
+      "allowedPaths": [
+        "api/automation/card_catalog_v1.json",
+        "api/automation/card_dependency_graph_v1.json",
+        "api/automation/patch_planner_v1.py",
+        "api/automation/patch_generator_v1.py",
+        "api/automation/cursor_bridge_v1.py",
+        "api/automation/cursor_applier_v1.py",
+        "api/automation/full_autopilot_v1.py",
+        "api/automation/execution_gate_v1.py",
+        "api/automation/replay_audit_v1.py",
+        "api/automation/workspace_observer_v1.py",
+        "api/automation/campaign_executor_v1.py",
+        "api/automation/reports/**",
+        "api/automation/generated_patch_recipes/**",
+        "api/automation/generated_cursor_tasks/**",
+        "api/automation/generated_cursor_apply/**",
+        "api/automation/_campaign/**",
+        "api/docs/constitution/**"
+      ],
+      "forbiddenPaths": [
+        "api/src/routes/chat.ts",
+        "api/src/routes/chat_refactor/**",
+        "api/src/routes/chat_parts/**",
+        "client/**",
+        "dist/**",
+        "api/src/db/kokuzo_schema.sql"
+      ],
+      "requiresHumanJudgement": false,
+      "prechecks": [
+        {
+          "id": "catalog",
+          "kind": "file_exists",
+          "path": "api/automation/card_catalog_v1.json"
+        }
+      ],
+      "patchStrategy": {
+        "mode": "min_diff",
+        "notes": "reports sentinel + registry only"
+      },
+      "postchecks": [
+        {
+          "id": "mainline_complete_sentinel",
+          "kind": "file_exists",
+          "path": "api/automation/reports/mainline_runtime_acceptance_complete_v1.json"
+        },
+        {
+          "id": "patch_planner_check",
+          "kind": "command",
+          "command": "python3 api/automation/patch_planner_v1.py --repo-root . --emit-report --check-json"
+        },
+        {
+          "id": "supervisor_validate",
+          "kind": "command",
+          "command": "python3 api/automation/supervisor_v1.py --repo-root . --validate-only"
+        }
+      ],
+      "acceptanceProfile": "build_only",
+      "nextOnPass": "STOP",
+      "nextOnFail": "STOP",
+      "rollbackStrategy": {
+        "autoRollbackAllowed": false,
+        "scope": "none"
+      },
+      "sealPolicy": {
+        "requiresAcceptancePass": true,
+        "mixedCommitForbidden": true
+      }
+    },
+    {
+      "cardName": "AUTO_BUILD_MAINLINE_REGISTRY_REPAIR_V1",
+      "class": "schema",
+      "objective": "Sync automation catalog/DAG/manifests to mainline trunk FINAL cards; no chat.ts edits on this card.",
+      "allowedPaths": [
+        "api/automation/card_catalog_v1.json",
+        "api/automation/card_dependency_graph_v1.json",
+        "api/automation/patch_planner_v1.py",
+        "api/automation/patch_generator_v1.py",
+        "api/automation/cursor_bridge_v1.py",
+        "api/automation/cursor_applier_v1.py",
+        "api/automation/full_autopilot_v1.py",
+        "api/automation/execution_gate_v1.py",
+        "api/automation/workspace_observer_v1.py",
+        "api/automation/replay_audit_v1.py",
+        "api/automation/reports/**",
+        "api/automation/generated_patch_recipes/**",
+        "api/automation/generated_cursor_tasks/**",
+        "api/automation/generated_cursor_apply/**",
+        "api/docs/constitution/**"
+      ],
+      "forbiddenPaths": [
+        "api/src/routes/chat.ts",
+        "api/src/routes/chat_refactor/**",
+        "api/src/routes/chat_parts/**",
+        "client/**",
+        "dist/**",
+        "api/src/db/kokuzo_schema.sql"
+      ],
+      "requiresHumanJudgement": false,
+      "prechecks": [
+        {
+          "id": "catalog",
+          "kind": "file_exists",
+          "path": "api/automation/card_catalog_v1.json"
+        },
+        {
+          "id": "dag",
+          "kind": "file_exists",
+          "path": "api/automation/card_dependency_graph_v1.json"
+        }
+      ],
+      "patchStrategy": {
+        "mode": "min_diff",
+        "notes": "registry alignment only"
+      },
+      "postchecks": [
+        {
+          "id": "patch_planner_check",
+          "kind": "command",
+          "command": "python3 api/automation/patch_planner_v1.py --repo-root . --emit-report --check-json"
+        },
+        {
+          "id": "patch_generator_check",
+          "kind": "command",
+          "command": "python3 api/automation/patch_generator_v1.py --repo-root . --emit-report --check-json"
+        },
+        {
+          "id": "cursor_bridge_check",
+          "kind": "command",
+          "command": "python3 api/automation/cursor_bridge_v1.py --repo-root . --emit-report --check-json"
+        },
+        {
+          "id": "cursor_applier_check",
+          "kind": "command",
+          "command": "python3 api/automation/cursor_applier_v1.py --repo-root . --emit-report --check-json"
+        },
+        {
+          "id": "full_autopilot_stdout",
+          "kind": "command",
+          "command": "python3 api/automation/full_autopilot_v1.py --repo-root . --stdout-json"
+        },
+        {
+          "id": "execution_gate_support_final",
+          "kind": "command",
+          "command": "python3 api/automation/execution_gate_v1.py --repo-root . --stdout-json --target-card CHAT_TRUNK_SUPPORT_SELFDIAG_SPLIT_V1_FINAL"
+        },
+        {
+          "id": "replay_audit_runtime_final",
+          "kind": "command",
+          "command": "python3 api/automation/replay_audit_v1.py --repo-root . --card CHAT_TRUNK_RUNTIME_ACCEPTANCE_LOCK_V1_FINAL --emit-report --check-json"
+        },
+        {
+          "id": "supervisor_validate",
+          "kind": "command",
+          "command": "python3 api/automation/supervisor_v1.py --repo-root . --validate-only"
+        },
+        {
+          "id": "npm_build",
+          "kind": "command",
+          "command": "cd api && npm run build"
+        }
+      ],
+      "acceptanceProfile": "build_only",
+      "nextOnPass": "CHAT_TRUNK_SUPPORT_SELFDIAG_SPLIT_V1_FINAL",
+      "nextOnFail": "STOP",
+      "rollbackStrategy": {
+        "autoRollbackAllowed": false,
+        "scope": "none"
+      },
+      "sealPolicy": {
+        "requiresAcceptancePass": true,
+        "mixedCommitForbidden": true
+      }
     },
     {
       "cardName": "CHAT_TRUNK_EXIT_CONTRACT_LOCK_V1",
@@ -250,18 +1424,35 @@
       "objective": "Static exit contract report for chat.ts (read-only) + lock exit shape via chat_refactor min_diff; not chat.ts body rewrite.",
       "allowedPaths": [
         "api/src/routes/chat_refactor/**",
+        "api/src/routes/chat_parts/**",
+        "api/automation/card_catalog_v1.json",
         "api/automation/chatts_exit_contract_lock_v1.py",
         "api/automation/chatts_exit_contract_schema_v1.json",
         "api/docs/constitution/CHAT_TRUNK_EXIT_CONTRACT_LOCK_V1.md",
         "api/automation/reports/**"
       ],
-      "forbiddenPaths": ["api/src/routes/chat.ts", "client/**", "dist/**", "api/src/db/kokuzo_schema.sql"],
+      "forbiddenPaths": [
+        "api/src/routes/chat.ts",
+        "client/**",
+        "dist/**",
+        "api/src/db/kokuzo_schema.sql"
+      ],
       "requiresHumanJudgement": false,
       "prechecks": [
-        { "id": "build_ok", "kind": "command", "command": "cd api && npm run build" },
-        { "id": "exit_lock_script", "kind": "file_exists", "path": "api/automation/chatts_exit_contract_lock_v1.py" }
+        {
+          "id": "build_ok",
+          "kind": "command",
+          "command": "cd api && npm run build"
+        },
+        {
+          "id": "exit_lock_script",
+          "kind": "file_exists",
+          "path": "api/automation/chatts_exit_contract_lock_v1.py"
+        }
       ],
-      "patchStrategy": { "mode": "min_diff" },
+      "patchStrategy": {
+        "mode": "min_diff"
+      },
       "postchecks": [
         {
           "id": "exit_contract_emit",
@@ -275,314 +1466,1553 @@
         }
       ],
       "acceptanceProfile": "api_health",
-      "nextOnPass": "RESPONSE_FINALIZER_EXTRACT_V1",
+      "nextOnPass": "AUTO_CARD_QUEUE_V1",
       "nextOnFail": "STOP",
-      "rollbackStrategy": { "autoRollbackAllowed": true, "scope": "runtime_refactor" },
-      "sealPolicy": { "requiresAcceptancePass": true, "mixedCommitForbidden": true }
+      "rollbackStrategy": {
+        "autoRollbackAllowed": true,
+        "scope": "runtime_refactor"
+      },
+      "sealPolicy": {
+        "requiresAcceptancePass": true,
+        "mixedCommitForbidden": true
+      }
     },
     {
       "cardName": "ROUTE_DUPLICATION_SCAN_V1",
       "class": "audit",
       "objective": "Scan route handlers for duplication patterns (report only).",
-      "allowedPaths": ["api/docs/**", "api/automation/reports/**"],
-      "forbiddenPaths": ["api/src/routes/chat.ts", "dist/**"],
+      "allowedPaths": [
+        "api/docs/**",
+        "api/automation/reports/**"
+      ],
+      "forbiddenPaths": [
+        "api/src/routes/chat.ts",
+        "dist/**"
+      ],
       "requiresHumanJudgement": false,
       "prechecks": [],
-      "patchStrategy": { "mode": "none" },
+      "patchStrategy": {
+        "mode": "none"
+      },
       "postchecks": [],
       "acceptanceProfile": "build_only",
       "nextOnPass": "WRAPPER_DEDUP_AUDIT_V1",
       "nextOnFail": "STOP",
-      "rollbackStrategy": { "autoRollbackAllowed": false, "scope": "none" },
-      "sealPolicy": { "requiresAcceptancePass": true, "mixedCommitForbidden": true }
+      "rollbackStrategy": {
+        "autoRollbackAllowed": false,
+        "scope": "none"
+      },
+      "sealPolicy": {
+        "requiresAcceptancePass": true,
+        "mixedCommitForbidden": true
+      }
     },
     {
       "cardName": "RESPONSE_FINALIZER_EXTRACT_V1",
       "class": "runtime_refactor",
       "objective": "Extract response finalizer into allowed module; min diff.",
-      "allowedPaths": ["api/src/routes/chat_refactor/**", "api/src/routes/chat_parts/**"],
-      "forbiddenPaths": ["api/src/routes/chat.ts", "client/**", "dist/**", "api/src/db/kokuzo_schema.sql"],
+      "allowedPaths": [
+        "api/src/routes/chat_refactor/**",
+        "api/src/routes/chat_parts/**"
+      ],
+      "forbiddenPaths": [
+        "api/src/routes/chat.ts",
+        "client/**",
+        "dist/**",
+        "api/src/db/kokuzo_schema.sql"
+      ],
       "requiresHumanJudgement": false,
       "prechecks": [],
-      "patchStrategy": { "mode": "min_diff" },
+      "patchStrategy": {
+        "mode": "min_diff"
+      },
       "postchecks": [],
       "acceptanceProfile": "smoke_min",
       "nextOnPass": "REPLY_PATH_UNIFY_V1",
       "nextOnFail": "STOP",
-      "rollbackStrategy": { "autoRollbackAllowed": true, "scope": "runtime_refactor" },
-      "sealPolicy": { "requiresAcceptancePass": true, "mixedCommitForbidden": true }
+      "rollbackStrategy": {
+        "autoRollbackAllowed": true,
+        "scope": "runtime_refactor"
+      },
+      "sealPolicy": {
+        "requiresAcceptancePass": true,
+        "mixedCommitForbidden": true
+      }
     },
     {
       "cardName": "REPLY_PATH_UNIFY_V1",
       "class": "runtime_refactor",
       "objective": "Unify reply path wiring under allowedPaths.",
-      "allowedPaths": ["api/src/routes/chat_refactor/**"],
-      "forbiddenPaths": ["api/src/routes/chat.ts", "client/**", "dist/**"],
+      "allowedPaths": [
+        "api/src/routes/chat_refactor/**"
+      ],
+      "forbiddenPaths": [
+        "api/src/routes/chat.ts",
+        "client/**",
+        "dist/**"
+      ],
       "requiresHumanJudgement": false,
       "prechecks": [],
-      "patchStrategy": { "mode": "min_diff" },
+      "patchStrategy": {
+        "mode": "min_diff"
+      },
       "postchecks": [],
       "acceptanceProfile": "route_regression",
       "nextOnPass": "DECISION_FRAME_KU_CONTRACT_GUARD_V1",
       "nextOnFail": "STOP",
-      "rollbackStrategy": { "autoRollbackAllowed": true, "scope": "runtime_refactor" },
-      "sealPolicy": { "requiresAcceptancePass": true, "mixedCommitForbidden": true }
+      "rollbackStrategy": {
+        "autoRollbackAllowed": true,
+        "scope": "runtime_refactor"
+      },
+      "sealPolicy": {
+        "requiresAcceptancePass": true,
+        "mixedCommitForbidden": true
+      }
     },
     {
       "cardName": "WRAPPER_DEDUP_AUDIT_V1",
       "class": "audit",
       "objective": "Audit wrapper deduplication opportunities.",
-      "allowedPaths": ["api/docs/**"],
-      "forbiddenPaths": ["dist/**"],
+      "allowedPaths": [
+        "api/docs/**"
+      ],
+      "forbiddenPaths": [
+        "dist/**"
+      ],
       "requiresHumanJudgement": false,
       "prechecks": [],
-      "patchStrategy": { "mode": "none" },
+      "patchStrategy": {
+        "mode": "none"
+      },
       "postchecks": [],
       "acceptanceProfile": "build_only",
       "nextOnPass": "LEDGER_AND_SYNAPSE_CALLSITE_AUDIT_V1",
       "nextOnFail": "STOP",
-      "rollbackStrategy": { "autoRollbackAllowed": false, "scope": "none" },
-      "sealPolicy": { "requiresAcceptancePass": true, "mixedCommitForbidden": true }
+      "rollbackStrategy": {
+        "autoRollbackAllowed": false,
+        "scope": "none"
+      },
+      "sealPolicy": {
+        "requiresAcceptancePass": true,
+        "mixedCommitForbidden": true
+      }
     },
     {
       "cardName": "LEDGER_AND_SYNAPSE_CALLSITE_AUDIT_V1",
       "class": "audit",
       "objective": "Audit ledger/synapse callsites (read-only report).",
-      "allowedPaths": ["api/docs/**"],
-      "forbiddenPaths": ["dist/**"],
+      "allowedPaths": [
+        "api/docs/**"
+      ],
+      "forbiddenPaths": [
+        "dist/**"
+      ],
       "requiresHumanJudgement": false,
       "prechecks": [],
-      "patchStrategy": { "mode": "none" },
+      "patchStrategy": {
+        "mode": "none"
+      },
       "postchecks": [],
       "acceptanceProfile": "build_only",
       "nextOnPass": "TRPC_APP_ROUTER_CONTRACT_AUDIT_V1",
       "nextOnFail": "STOP",
-      "rollbackStrategy": { "autoRollbackAllowed": false, "scope": "none" },
-      "sealPolicy": { "requiresAcceptancePass": true, "mixedCommitForbidden": true }
+      "rollbackStrategy": {
+        "autoRollbackAllowed": false,
+        "scope": "none"
+      },
+      "sealPolicy": {
+        "requiresAcceptancePass": true,
+        "mixedCommitForbidden": true
+      }
     },
     {
       "cardName": "CLIENT_BUILD_REGRESSION_GUARD_V1",
       "class": "client",
       "objective": "Guard client vite build; client/ only.",
-      "allowedPaths": ["client/**"],
-      "forbiddenPaths": ["api/src/routes/chat.ts", "api/src/**", "dist/**"],
+      "allowedPaths": [
+        "client/**"
+      ],
+      "forbiddenPaths": [
+        "api/src/routes/chat.ts",
+        "api/src/**",
+        "dist/**"
+      ],
       "requiresHumanJudgement": false,
       "prechecks": [],
-      "patchStrategy": { "mode": "min_diff" },
+      "patchStrategy": {
+        "mode": "min_diff"
+      },
       "postchecks": [],
       "acceptanceProfile": "client_build",
       "nextOnPass": "STOP",
       "nextOnFail": "STOP",
-      "rollbackStrategy": { "autoRollbackAllowed": true, "scope": "client" },
-      "sealPolicy": { "requiresAcceptancePass": true, "mixedCommitForbidden": true }
+      "rollbackStrategy": {
+        "autoRollbackAllowed": true,
+        "scope": "client"
+      },
+      "sealPolicy": {
+        "requiresAcceptancePass": true,
+        "mixedCommitForbidden": true
+      }
     },
     {
       "cardName": "ARCHIVE_QUARANTINE_CLASSIFY_V1",
       "class": "archive",
       "objective": "Classify and rehome archive/quarantine paths (move-only).",
-      "allowedPaths": ["api/docs/_archive/**", "api/src/experimental/**"],
-      "forbiddenPaths": ["api/src/routes/chat.ts", "client/**", "dist/**", "api/src/db/kokuzo_schema.sql"],
+      "allowedPaths": [
+        "api/docs/_archive/**",
+        "api/src/experimental/**"
+      ],
+      "forbiddenPaths": [
+        "api/src/routes/chat.ts",
+        "client/**",
+        "dist/**",
+        "api/src/db/kokuzo_schema.sql"
+      ],
       "requiresHumanJudgement": false,
       "prechecks": [],
-      "patchStrategy": { "mode": "move_only" },
+      "patchStrategy": {
+        "mode": "move_only"
+      },
       "postchecks": [],
       "acceptanceProfile": "build_only",
       "nextOnPass": "STOP",
       "nextOnFail": "STOP",
-      "rollbackStrategy": { "autoRollbackAllowed": false, "scope": "none" },
-      "sealPolicy": { "requiresAcceptancePass": true, "mixedCommitForbidden": true }
+      "rollbackStrategy": {
+        "autoRollbackAllowed": false,
+        "scope": "none"
+      },
+      "sealPolicy": {
+        "requiresAcceptancePass": true,
+        "mixedCommitForbidden": true
+      }
     },
     {
       "cardName": "DECISION_FRAME_KU_CONTRACT_GUARD_V1",
       "class": "audit",
       "objective": "Verify decisionFrame.ku remains object-shaped in outputs (static/heuristic scan).",
-      "allowedPaths": ["api/docs/**", "api/automation/reports/**"],
-      "forbiddenPaths": ["dist/**"],
+      "allowedPaths": [
+        "api/docs/**",
+        "api/automation/reports/**"
+      ],
+      "forbiddenPaths": [
+        "dist/**"
+      ],
       "requiresHumanJudgement": false,
       "prechecks": [],
-      "patchStrategy": { "mode": "none" },
+      "patchStrategy": {
+        "mode": "none"
+      },
       "postchecks": [],
       "acceptanceProfile": "smoke_min",
       "nextOnPass": "SMOKE_HYBRID_ROUTE_REGRESSION_V1",
       "nextOnFail": "STOP",
-      "rollbackStrategy": { "autoRollbackAllowed": false, "scope": "none" },
-      "sealPolicy": { "requiresAcceptancePass": true, "mixedCommitForbidden": true }
+      "rollbackStrategy": {
+        "autoRollbackAllowed": false,
+        "scope": "none"
+      },
+      "sealPolicy": {
+        "requiresAcceptancePass": true,
+        "mixedCommitForbidden": true
+      }
     },
     {
       "cardName": "SMOKE_HYBRID_ROUTE_REGRESSION_V1",
       "class": "audit",
       "objective": "Smoke hybrid routes; never inject smoke threadId into LLM_CHAT payloads.",
-      "allowedPaths": ["api/scripts/**", "api/docs/**"],
-      "forbiddenPaths": ["dist/**"],
+      "allowedPaths": [
+        "api/scripts/**",
+        "api/docs/**"
+      ],
+      "forbiddenPaths": [
+        "dist/**"
+      ],
       "requiresHumanJudgement": false,
       "prechecks": [],
-      "patchStrategy": { "mode": "none" },
+      "patchStrategy": {
+        "mode": "none"
+      },
       "postchecks": [],
       "acceptanceProfile": "smoke_min",
       "nextOnPass": "GROUNDED_SOURCE_INTEGRITY_AUDIT_V1",
       "nextOnFail": "STOP",
-      "rollbackStrategy": { "autoRollbackAllowed": false, "scope": "none" },
-      "sealPolicy": { "requiresAcceptancePass": true, "mixedCommitForbidden": true }
+      "rollbackStrategy": {
+        "autoRollbackAllowed": false,
+        "scope": "none"
+      },
+      "sealPolicy": {
+        "requiresAcceptancePass": true,
+        "mixedCommitForbidden": true
+      }
     },
     {
       "cardName": "GROUNDED_SOURCE_INTEGRITY_AUDIT_V1",
       "class": "audit",
       "objective": "Audit GROUNDED doc/pdfPage references; forbid fabrication (report).",
-      "allowedPaths": ["api/docs/**"],
-      "forbiddenPaths": ["dist/**"],
+      "allowedPaths": [
+        "api/docs/**"
+      ],
+      "forbiddenPaths": [
+        "dist/**"
+      ],
       "requiresHumanJudgement": false,
       "prechecks": [],
-      "patchStrategy": { "mode": "none" },
+      "patchStrategy": {
+        "mode": "none"
+      },
       "postchecks": [],
       "acceptanceProfile": "build_only",
       "nextOnPass": "DIST_ARTIFACT_DRIFT_SCAN_V1",
       "nextOnFail": "STOP",
-      "rollbackStrategy": { "autoRollbackAllowed": false, "scope": "none" },
-      "sealPolicy": { "requiresAcceptancePass": true, "mixedCommitForbidden": true }
+      "rollbackStrategy": {
+        "autoRollbackAllowed": false,
+        "scope": "none"
+      },
+      "sealPolicy": {
+        "requiresAcceptancePass": true,
+        "mixedCommitForbidden": true
+      }
     },
     {
       "cardName": "KOKUZO_SCHEMA_SAFE_MIGRATION_V1",
       "class": "schema",
       "objective": "Plan-only or sidecar migration; kokuzo_schema.sql human-gated.",
-      "allowedPaths": ["api/docs/**", "api/src/db/*.sql"],
-      "forbiddenPaths": ["api/src/routes/chat.ts", "client/**", "dist/**"],
+      "allowedPaths": [
+        "api/docs/**",
+        "api/src/db/*.sql"
+      ],
+      "forbiddenPaths": [
+        "api/src/routes/chat.ts",
+        "client/**",
+        "dist/**"
+      ],
       "requiresHumanJudgement": true,
       "prechecks": [],
-      "patchStrategy": { "mode": "human_prompt_only" },
+      "patchStrategy": {
+        "mode": "human_prompt_only"
+      },
       "postchecks": [],
       "acceptanceProfile": "full_acceptance",
       "nextOnPass": "STOP",
       "nextOnFail": "STOP",
-      "rollbackStrategy": { "autoRollbackAllowed": false, "scope": "none" },
-      "sealPolicy": { "requiresAcceptancePass": true, "mixedCommitForbidden": true }
+      "rollbackStrategy": {
+        "autoRollbackAllowed": false,
+        "scope": "none"
+      },
+      "sealPolicy": {
+        "requiresAcceptancePass": true,
+        "mixedCommitForbidden": true
+      }
     },
     {
       "cardName": "QUARANTINE_FOUNDER_ROUTES_V1",
       "class": "quarantine",
       "objective": "Move founder routes to experimental tree (move-only).",
-      "allowedPaths": ["api/src/experimental/**", "api/src/routes/founderRequest.ts", "api/src/founder/**"],
-      "forbiddenPaths": ["api/src/routes/chat.ts", "client/**", "dist/**", "api/src/db/kokuzo_schema.sql"],
+      "allowedPaths": [
+        "api/src/experimental/**",
+        "api/src/routes/founderRequest.ts",
+        "api/src/founder/**"
+      ],
+      "forbiddenPaths": [
+        "api/src/routes/chat.ts",
+        "client/**",
+        "dist/**",
+        "api/src/db/kokuzo_schema.sql"
+      ],
       "requiresHumanJudgement": false,
       "prechecks": [],
-      "patchStrategy": { "mode": "move_only" },
+      "patchStrategy": {
+        "mode": "move_only"
+      },
       "postchecks": [],
       "acceptanceProfile": "api_health",
       "nextOnPass": "STOP",
       "nextOnFail": "STOP",
-      "rollbackStrategy": { "autoRollbackAllowed": false, "scope": "none" },
-      "sealPolicy": { "requiresAcceptancePass": true, "mixedCommitForbidden": true }
+      "rollbackStrategy": {
+        "autoRollbackAllowed": false,
+        "scope": "none"
+      },
+      "sealPolicy": {
+        "requiresAcceptancePass": true,
+        "mixedCommitForbidden": true
+      }
     },
     {
       "cardName": "MAINLINE_COMPLETED_READ_ONLY_SEAL_V1",
       "class": "human_gate",
       "objective": "Human confirms mainline completed baseline unchanged.",
       "allowedPaths": [],
-      "forbiddenPaths": ["**/*"],
+      "forbiddenPaths": [
+        "**/*"
+      ],
       "requiresHumanJudgement": true,
       "prechecks": [],
-      "patchStrategy": { "mode": "human_prompt_only", "notes": "No automated patch" },
+      "patchStrategy": {
+        "mode": "human_prompt_only",
+        "notes": "No automated patch"
+      },
       "postchecks": [],
       "acceptanceProfile": "full_acceptance",
-      "nextOnPass": "STOP",
+      "nextOnPass": "CHAT_TRUNK_EXIT_CONTRACT_LOCK_V1",
       "nextOnFail": "STOP",
-      "rollbackStrategy": { "autoRollbackAllowed": false, "scope": "none" },
-      "sealPolicy": { "requiresAcceptancePass": true, "mixedCommitForbidden": true }
+      "rollbackStrategy": {
+        "autoRollbackAllowed": false,
+        "scope": "none"
+      },
+      "sealPolicy": {
+        "requiresAcceptancePass": true,
+        "mixedCommitForbidden": true
+      }
     },
     {
       "cardName": "TRPC_APP_ROUTER_CONTRACT_AUDIT_V1",
       "class": "audit",
       "objective": "Audit tRPC router contract vs client (report).",
-      "allowedPaths": ["api/docs/**"],
-      "forbiddenPaths": ["dist/**"],
+      "allowedPaths": [
+        "api/docs/**"
+      ],
+      "forbiddenPaths": [
+        "dist/**"
+      ],
       "requiresHumanJudgement": false,
       "prechecks": [],
-      "patchStrategy": { "mode": "none" },
+      "patchStrategy": {
+        "mode": "none"
+      },
       "postchecks": [],
       "acceptanceProfile": "build_only",
       "nextOnPass": "MEMORY_ROUTER_BOUNDARY_AUDIT_V1",
       "nextOnFail": "STOP",
-      "rollbackStrategy": { "autoRollbackAllowed": false, "scope": "none" },
-      "sealPolicy": { "requiresAcceptancePass": true, "mixedCommitForbidden": true }
+      "rollbackStrategy": {
+        "autoRollbackAllowed": false,
+        "scope": "none"
+      },
+      "sealPolicy": {
+        "requiresAcceptancePass": true,
+        "mixedCommitForbidden": true
+      }
     },
     {
       "cardName": "MEMORY_ROUTER_BOUNDARY_AUDIT_V1",
       "class": "audit",
       "objective": "Audit memory router boundaries (report).",
-      "allowedPaths": ["api/docs/**"],
-      "forbiddenPaths": ["dist/**"],
+      "allowedPaths": [
+        "api/docs/**"
+      ],
+      "forbiddenPaths": [
+        "dist/**"
+      ],
       "requiresHumanJudgement": false,
       "prechecks": [],
-      "patchStrategy": { "mode": "none" },
+      "patchStrategy": {
+        "mode": "none"
+      },
       "postchecks": [],
       "acceptanceProfile": "build_only",
       "nextOnPass": "PDCA_DEV_CORE_ALIGNMENT_V1",
       "nextOnFail": "STOP",
-      "rollbackStrategy": { "autoRollbackAllowed": false, "scope": "none" },
-      "sealPolicy": { "requiresAcceptancePass": true, "mixedCommitForbidden": true }
+      "rollbackStrategy": {
+        "autoRollbackAllowed": false,
+        "scope": "none"
+      },
+      "sealPolicy": {
+        "requiresAcceptancePass": true,
+        "mixedCommitForbidden": true
+      }
     },
     {
       "cardName": "DIST_ARTIFACT_DRIFT_SCAN_V1",
       "class": "audit",
       "objective": "Detect dist direct-edit drift vs build outputs.",
-      "allowedPaths": ["api/docs/**"],
+      "allowedPaths": [
+        "api/docs/**"
+      ],
       "forbiddenPaths": [],
       "requiresHumanJudgement": false,
       "prechecks": [],
-      "patchStrategy": { "mode": "none" },
+      "patchStrategy": {
+        "mode": "none"
+      },
       "postchecks": [],
       "acceptanceProfile": "build_only",
       "nextOnPass": "REPRODUCIBLE_CLONE_GUARD_V1",
       "nextOnFail": "STOP",
-      "rollbackStrategy": { "autoRollbackAllowed": false, "scope": "none" },
-      "sealPolicy": { "requiresAcceptancePass": true, "mixedCommitForbidden": true }
+      "rollbackStrategy": {
+        "autoRollbackAllowed": false,
+        "scope": "none"
+      },
+      "sealPolicy": {
+        "requiresAcceptancePass": true,
+        "mixedCommitForbidden": true
+      }
     },
     {
       "cardName": "REPRODUCIBLE_CLONE_GUARD_V1",
       "class": "docs",
       "objective": "Document clone reproducibility checklist.",
-      "allowedPaths": ["api/docs/**"],
-      "forbiddenPaths": ["api/src/routes/chat.ts", "client/**", "dist/**"],
+      "allowedPaths": [
+        "api/docs/**"
+      ],
+      "forbiddenPaths": [
+        "api/src/routes/chat.ts",
+        "client/**",
+        "dist/**"
+      ],
       "requiresHumanJudgement": false,
       "prechecks": [],
-      "patchStrategy": { "mode": "min_diff" },
+      "patchStrategy": {
+        "mode": "min_diff"
+      },
       "postchecks": [],
       "acceptanceProfile": "build_only",
       "nextOnPass": "STOP",
       "nextOnFail": "STOP",
-      "rollbackStrategy": { "autoRollbackAllowed": true, "scope": "docs_only" },
-      "sealPolicy": { "requiresAcceptancePass": true, "mixedCommitForbidden": true }
+      "rollbackStrategy": {
+        "autoRollbackAllowed": true,
+        "scope": "docs_only"
+      },
+      "sealPolicy": {
+        "requiresAcceptancePass": true,
+        "mixedCommitForbidden": true
+      }
     },
     {
       "cardName": "PDCA_DEV_CORE_ALIGNMENT_V1",
       "class": "docs",
       "objective": "Align constitution docs with PDCA Dev Core (docs only).",
-      "allowedPaths": ["api/docs/constitution/**"],
-      "forbiddenPaths": ["api/src/routes/chat.ts", "client/**", "dist/**", "api/src/db/kokuzo_schema.sql"],
+      "allowedPaths": [
+        "api/docs/constitution/**"
+      ],
+      "forbiddenPaths": [
+        "api/src/routes/chat.ts",
+        "client/**",
+        "dist/**",
+        "api/src/db/kokuzo_schema.sql"
+      ],
       "requiresHumanJudgement": false,
       "prechecks": [],
-      "patchStrategy": { "mode": "min_diff" },
+      "patchStrategy": {
+        "mode": "min_diff"
+      },
       "postchecks": [],
       "acceptanceProfile": "build_only",
       "nextOnPass": "SCRIPTURE_CANON_CONTENT_REVIEW_V1",
       "nextOnFail": "STOP",
-      "rollbackStrategy": { "autoRollbackAllowed": true, "scope": "docs_only" },
-      "sealPolicy": { "requiresAcceptancePass": true, "mixedCommitForbidden": true }
+      "rollbackStrategy": {
+        "autoRollbackAllowed": true,
+        "scope": "docs_only"
+      },
+      "sealPolicy": {
+        "requiresAcceptancePass": true,
+        "mixedCommitForbidden": true
+      }
     },
     {
       "cardName": "SCRIPTURE_CANON_CONTENT_REVIEW_V1",
       "class": "human_gate",
       "objective": "Human judgement on scripture canon meaning; no auto-determination.",
-      "allowedPaths": ["api/docs/**"],
-      "forbiddenPaths": ["dist/**"],
+      "allowedPaths": [
+        "api/docs/**"
+      ],
+      "forbiddenPaths": [
+        "dist/**"
+      ],
       "requiresHumanJudgement": true,
       "prechecks": [],
-      "patchStrategy": { "mode": "human_prompt_only" },
+      "patchStrategy": {
+        "mode": "human_prompt_only"
+      },
       "postchecks": [],
       "acceptanceProfile": "full_acceptance",
       "nextOnPass": "STOP",
       "nextOnFail": "STOP",
-      "rollbackStrategy": { "autoRollbackAllowed": false, "scope": "none" },
-      "sealPolicy": { "requiresAcceptancePass": true, "mixedCommitForbidden": true }
+      "rollbackStrategy": {
+        "autoRollbackAllowed": false,
+        "scope": "none"
+      },
+      "sealPolicy": {
+        "requiresAcceptancePass": true,
+        "mixedCommitForbidden": true
+      }
+    },
+    {
+      "cardName": "AUTO_CARD_QUEUE_V1",
+      "class": "schema",
+      "objective": "Formalize card queue spine (queueSpineV1 in catalog + DAG edges + scheduler ordering); docs and automation metadata only.",
+      "allowedPaths": [
+        "api/automation/card_catalog_v1.json",
+        "api/automation/card_dependency_graph_v1.json",
+        "api/automation/queue_scheduler_v1.py",
+        "api/automation/reports/**",
+        "api/docs/constitution/**",
+        "api/automation/generated_patch_recipes/**",
+        "api/automation/generated_cursor_tasks/**",
+        "api/automation/generated_cursor_apply/**",
+        "api/automation/full_autopilot_v1.py"
+      ],
+      "forbiddenPaths": [
+        "api/src/routes/chat.ts",
+        "api/src/routes/chat_refactor/**",
+        "api/src/routes/chat_parts/**",
+        "client/**",
+        "dist/**",
+        "api/src/db/kokuzo_schema.sql"
+      ],
+      "requiresHumanJudgement": false,
+      "prechecks": [
+        {
+          "id": "catalog_json",
+          "kind": "command",
+          "command": "python3 -m json.tool api/automation/card_catalog_v1.json >/dev/null"
+        },
+        {
+          "id": "dag_json",
+          "kind": "command",
+          "command": "python3 -m json.tool api/automation/card_dependency_graph_v1.json >/dev/null"
+        }
+      ],
+      "patchStrategy": {
+        "mode": "min_diff",
+        "notes": "automation + constitution + reports only"
+      },
+      "postchecks": [
+        {
+          "id": "supervisor_validate",
+          "kind": "command",
+          "command": "python3 api/automation/supervisor_v1.py --repo-root . --validate-only"
+        }
+      ],
+      "acceptanceProfile": "build_only",
+      "nextOnPass": "AUTO_CARD_RUNNER_V1",
+      "nextOnFail": "STOP",
+      "rollbackStrategy": {
+        "autoRollbackAllowed": false,
+        "scope": "none"
+      },
+      "sealPolicy": {
+        "requiresAcceptancePass": true,
+        "mixedCommitForbidden": true
+      }
+    },
+    {
+      "cardName": "AUTO_CARD_RUNNER_V1",
+      "class": "schema",
+      "objective": "Runner consumes queue snapshot + spine order; execute one runnable card per turn (single_flight); automation only.",
+      "allowedPaths": [
+        "api/automation/card_catalog_v1.json",
+        "api/automation/card_dependency_graph_v1.json",
+        "api/automation/queue_scheduler_v1.py",
+        "api/automation/reports/**",
+        "api/docs/constitution/**",
+        "api/automation/generated_patch_recipes/**",
+        "api/automation/generated_cursor_tasks/**",
+        "api/automation/generated_cursor_apply/**"
+      ],
+      "forbiddenPaths": [
+        "api/src/routes/chat.ts",
+        "api/src/routes/chat_refactor/**",
+        "api/src/routes/chat_parts/**",
+        "client/**",
+        "dist/**",
+        "api/src/db/kokuzo_schema.sql"
+      ],
+      "requiresHumanJudgement": false,
+      "prechecks": [
+        {
+          "id": "catalog_json",
+          "kind": "command",
+          "command": "python3 -m json.tool api/automation/card_catalog_v1.json >/dev/null"
+        }
+      ],
+      "patchStrategy": {
+        "mode": "min_diff",
+        "notes": "automation + constitution + reports only"
+      },
+      "postchecks": [],
+      "acceptanceProfile": "build_only",
+      "nextOnPass": "AUTO_FAIL_CLASSIFIER_V1",
+      "nextOnFail": "STOP",
+      "rollbackStrategy": {
+        "autoRollbackAllowed": false,
+        "scope": "none"
+      },
+      "sealPolicy": {
+        "requiresAcceptancePass": true,
+        "mixedCommitForbidden": true
+      }
+    },
+    {
+      "cardName": "AUTO_FAIL_CLASSIFIER_V1",
+      "class": "schema",
+      "objective": "Classify automation failures (route/surface/evidence/contract/ui/storage/learning); reports and schema only.",
+      "allowedPaths": [
+        "api/automation/card_catalog_v1.json",
+        "api/automation/card_dependency_graph_v1.json",
+        "api/automation/queue_scheduler_v1.py",
+        "api/automation/reports/**",
+        "api/docs/constitution/**",
+        "api/automation/generated_patch_recipes/**",
+        "api/automation/generated_cursor_tasks/**",
+        "api/automation/generated_cursor_apply/**"
+      ],
+      "forbiddenPaths": [
+        "api/src/routes/chat.ts",
+        "api/src/routes/chat_refactor/**",
+        "api/src/routes/chat_parts/**",
+        "client/**",
+        "dist/**",
+        "api/src/db/kokuzo_schema.sql"
+      ],
+      "requiresHumanJudgement": false,
+      "prechecks": [
+        {
+          "id": "catalog_json",
+          "kind": "command",
+          "command": "python3 -m json.tool api/automation/card_catalog_v1.json >/dev/null"
+        }
+      ],
+      "patchStrategy": {
+        "mode": "min_diff",
+        "notes": "automation + constitution + reports only"
+      },
+      "postchecks": [],
+      "acceptanceProfile": "build_only",
+      "nextOnPass": "R10_THREAD_CENTER_MEMORY_SCHEMA_V1",
+      "nextOnFail": "STOP",
+      "rollbackStrategy": {
+        "autoRollbackAllowed": false,
+        "scope": "none"
+      },
+      "sealPolicy": {
+        "requiresAcceptancePass": true,
+        "mixedCommitForbidden": true
+      }
+    },
+    {
+      "cardName": "R10_THREAD_CENTER_MEMORY_SCHEMA_V1",
+      "class": "schema",
+      "objective": "Schema thread-center memory model for scripture continuity (docs + automation artifacts).",
+      "allowedPaths": [
+        "api/automation/card_catalog_v1.json",
+        "api/automation/card_dependency_graph_v1.json",
+        "api/automation/queue_scheduler_v1.py",
+        "api/automation/reports/**",
+        "api/docs/constitution/**",
+        "api/automation/generated_patch_recipes/**",
+        "api/automation/generated_cursor_tasks/**",
+        "api/automation/generated_cursor_apply/**"
+      ],
+      "forbiddenPaths": [
+        "api/src/routes/chat.ts",
+        "api/src/routes/chat_refactor/**",
+        "api/src/routes/chat_parts/**",
+        "client/**",
+        "dist/**",
+        "api/src/db/kokuzo_schema.sql"
+      ],
+      "requiresHumanJudgement": false,
+      "prechecks": [
+        {
+          "id": "catalog_json",
+          "kind": "command",
+          "command": "python3 -m json.tool api/automation/card_catalog_v1.json >/dev/null"
+        }
+      ],
+      "patchStrategy": {
+        "mode": "min_diff",
+        "notes": "automation + constitution + reports only"
+      },
+      "postchecks": [],
+      "acceptanceProfile": "build_only",
+      "nextOnPass": "R10_THREAD_CENTER_BIND_V1",
+      "nextOnFail": "STOP",
+      "rollbackStrategy": {
+        "autoRollbackAllowed": false,
+        "scope": "none"
+      },
+      "sealPolicy": {
+        "requiresAcceptancePass": true,
+        "mixedCommitForbidden": true
+      }
+    },
+    {
+      "cardName": "R10_THREAD_CENTER_BIND_V1",
+      "class": "schema",
+      "objective": "Bind thread-center memory into router/composer contracts without runtime rewrite in this card.",
+      "allowedPaths": [
+        "api/automation/card_catalog_v1.json",
+        "api/automation/card_dependency_graph_v1.json",
+        "api/automation/queue_scheduler_v1.py",
+        "api/automation/reports/**",
+        "api/docs/constitution/**",
+        "api/automation/generated_patch_recipes/**",
+        "api/automation/generated_cursor_tasks/**",
+        "api/automation/generated_cursor_apply/**"
+      ],
+      "forbiddenPaths": [
+        "api/src/routes/chat.ts",
+        "api/src/routes/chat_refactor/**",
+        "api/src/routes/chat_parts/**",
+        "client/**",
+        "dist/**",
+        "api/src/db/kokuzo_schema.sql"
+      ],
+      "requiresHumanJudgement": false,
+      "prechecks": [
+        {
+          "id": "catalog_json",
+          "kind": "command",
+          "command": "python3 -m json.tool api/automation/card_catalog_v1.json >/dev/null"
+        }
+      ],
+      "patchStrategy": {
+        "mode": "min_diff",
+        "notes": "automation + constitution + reports only"
+      },
+      "postchecks": [],
+      "acceptanceProfile": "build_only",
+      "nextOnPass": "R10_THREAD_CONTINUITY_SCRIPTURE_CENTER_FIX_V1",
+      "nextOnFail": "STOP",
+      "rollbackStrategy": {
+        "autoRollbackAllowed": false,
+        "scope": "none"
+      },
+      "sealPolicy": {
+        "requiresAcceptancePass": true,
+        "mixedCommitForbidden": true
+      }
+    },
+    {
+      "cardName": "R10_THREAD_CONTINUITY_SCRIPTURE_CENTER_FIX_V1",
+      "class": "schema",
+      "objective": "Close scripture continuity gaps vs thread center (spec + guards).",
+      "allowedPaths": [
+        "api/automation/card_catalog_v1.json",
+        "api/automation/card_dependency_graph_v1.json",
+        "api/automation/queue_scheduler_v1.py",
+        "api/automation/reports/**",
+        "api/docs/constitution/**",
+        "api/automation/generated_patch_recipes/**",
+        "api/automation/generated_cursor_tasks/**",
+        "api/automation/generated_cursor_apply/**"
+      ],
+      "forbiddenPaths": [
+        "api/src/routes/chat.ts",
+        "api/src/routes/chat_refactor/**",
+        "api/src/routes/chat_parts/**",
+        "client/**",
+        "dist/**",
+        "api/src/db/kokuzo_schema.sql"
+      ],
+      "requiresHumanJudgement": false,
+      "prechecks": [
+        {
+          "id": "catalog_json",
+          "kind": "command",
+          "command": "python3 -m json.tool api/automation/card_catalog_v1.json >/dev/null"
+        }
+      ],
+      "patchStrategy": {
+        "mode": "min_diff",
+        "notes": "automation + constitution + reports only"
+      },
+      "postchecks": [],
+      "acceptanceProfile": "build_only",
+      "nextOnPass": "R10_IROHA_ACTION_PATTERN_SCHEMA_V1",
+      "nextOnFail": "STOP",
+      "rollbackStrategy": {
+        "autoRollbackAllowed": false,
+        "scope": "none"
+      },
+      "sealPolicy": {
+        "requiresAcceptancePass": true,
+        "mixedCommitForbidden": true
+      }
+    },
+    {
+      "cardName": "R10_IROHA_ACTION_PATTERN_SCHEMA_V1",
+      "class": "schema",
+      "objective": "Iroha action pattern schema (constitution + automation).",
+      "allowedPaths": [
+        "api/automation/card_catalog_v1.json",
+        "api/automation/card_dependency_graph_v1.json",
+        "api/automation/queue_scheduler_v1.py",
+        "api/automation/reports/**",
+        "api/docs/constitution/**",
+        "api/automation/generated_patch_recipes/**",
+        "api/automation/generated_cursor_tasks/**",
+        "api/automation/generated_cursor_apply/**"
+      ],
+      "forbiddenPaths": [
+        "api/src/routes/chat.ts",
+        "api/src/routes/chat_refactor/**",
+        "api/src/routes/chat_parts/**",
+        "client/**",
+        "dist/**",
+        "api/src/db/kokuzo_schema.sql"
+      ],
+      "requiresHumanJudgement": false,
+      "prechecks": [
+        {
+          "id": "catalog_json",
+          "kind": "command",
+          "command": "python3 -m json.tool api/automation/card_catalog_v1.json >/dev/null"
+        }
+      ],
+      "patchStrategy": {
+        "mode": "min_diff",
+        "notes": "automation + constitution + reports only"
+      },
+      "postchecks": [],
+      "acceptanceProfile": "build_only",
+      "nextOnPass": "R10_IROHA_COUNSEL_CLASSIFIER_V1",
+      "nextOnFail": "STOP",
+      "rollbackStrategy": {
+        "autoRollbackAllowed": false,
+        "scope": "none"
+      },
+      "sealPolicy": {
+        "requiresAcceptancePass": true,
+        "mixedCommitForbidden": true
+      }
+    },
+    {
+      "cardName": "R10_IROHA_COUNSEL_CLASSIFIER_V1",
+      "class": "schema",
+      "objective": "Counsel classifier taxonomy for Iroha routes.",
+      "allowedPaths": [
+        "api/automation/card_catalog_v1.json",
+        "api/automation/card_dependency_graph_v1.json",
+        "api/automation/queue_scheduler_v1.py",
+        "api/automation/reports/**",
+        "api/docs/constitution/**",
+        "api/automation/generated_patch_recipes/**",
+        "api/automation/generated_cursor_tasks/**",
+        "api/automation/generated_cursor_apply/**"
+      ],
+      "forbiddenPaths": [
+        "api/src/routes/chat.ts",
+        "api/src/routes/chat_refactor/**",
+        "api/src/routes/chat_parts/**",
+        "client/**",
+        "dist/**",
+        "api/src/db/kokuzo_schema.sql"
+      ],
+      "requiresHumanJudgement": false,
+      "prechecks": [
+        {
+          "id": "catalog_json",
+          "kind": "command",
+          "command": "python3 -m json.tool api/automation/card_catalog_v1.json >/dev/null"
+        }
+      ],
+      "patchStrategy": {
+        "mode": "min_diff",
+        "notes": "automation + constitution + reports only"
+      },
+      "postchecks": [],
+      "acceptanceProfile": "build_only",
+      "nextOnPass": "R10_IROHA_COUNSEL_ROUTE_V1",
+      "nextOnFail": "STOP",
+      "rollbackStrategy": {
+        "autoRollbackAllowed": false,
+        "scope": "none"
+      },
+      "sealPolicy": {
+        "requiresAcceptancePass": true,
+        "mixedCommitForbidden": true
+      }
+    },
+    {
+      "cardName": "R10_IROHA_COUNSEL_ROUTE_V1",
+      "class": "schema",
+      "objective": "Route map from classifier to counsel handlers (docs/catalog).",
+      "allowedPaths": [
+        "api/automation/card_catalog_v1.json",
+        "api/automation/card_dependency_graph_v1.json",
+        "api/automation/queue_scheduler_v1.py",
+        "api/automation/reports/**",
+        "api/docs/constitution/**",
+        "api/automation/generated_patch_recipes/**",
+        "api/automation/generated_cursor_tasks/**",
+        "api/automation/generated_cursor_apply/**"
+      ],
+      "forbiddenPaths": [
+        "api/src/routes/chat.ts",
+        "api/src/routes/chat_refactor/**",
+        "api/src/routes/chat_parts/**",
+        "client/**",
+        "dist/**",
+        "api/src/db/kokuzo_schema.sql"
+      ],
+      "requiresHumanJudgement": false,
+      "prechecks": [
+        {
+          "id": "catalog_json",
+          "kind": "command",
+          "command": "python3 -m json.tool api/automation/card_catalog_v1.json >/dev/null"
+        }
+      ],
+      "patchStrategy": {
+        "mode": "min_diff",
+        "notes": "automation + constitution + reports only"
+      },
+      "postchecks": [],
+      "acceptanceProfile": "build_only",
+      "nextOnPass": "R10_KHS_TOTAL_LAWGRAPH_V1",
+      "nextOnFail": "STOP",
+      "rollbackStrategy": {
+        "autoRollbackAllowed": false,
+        "scope": "none"
+      },
+      "sealPolicy": {
+        "requiresAcceptancePass": true,
+        "mixedCommitForbidden": true
+      }
+    },
+    {
+      "cardName": "R10_KHS_TOTAL_LAWGRAPH_V1",
+      "class": "schema",
+      "objective": "KHS total lawgraph manifest and validation hooks.",
+      "allowedPaths": [
+        "api/automation/card_catalog_v1.json",
+        "api/automation/card_dependency_graph_v1.json",
+        "api/automation/queue_scheduler_v1.py",
+        "api/automation/reports/**",
+        "api/docs/constitution/**",
+        "api/automation/generated_patch_recipes/**",
+        "api/automation/generated_cursor_tasks/**",
+        "api/automation/generated_cursor_apply/**"
+      ],
+      "forbiddenPaths": [
+        "api/src/routes/chat.ts",
+        "api/src/routes/chat_refactor/**",
+        "api/src/routes/chat_parts/**",
+        "client/**",
+        "dist/**",
+        "api/src/db/kokuzo_schema.sql"
+      ],
+      "requiresHumanJudgement": false,
+      "prechecks": [
+        {
+          "id": "catalog_json",
+          "kind": "command",
+          "command": "python3 -m json.tool api/automation/card_catalog_v1.json >/dev/null"
+        }
+      ],
+      "patchStrategy": {
+        "mode": "min_diff",
+        "notes": "automation + constitution + reports only"
+      },
+      "postchecks": [],
+      "acceptanceProfile": "build_only",
+      "nextOnPass": "R10_KHS_UNIT_RELATION_BIND_V1",
+      "nextOnFail": "STOP",
+      "rollbackStrategy": {
+        "autoRollbackAllowed": false,
+        "scope": "none"
+      },
+      "sealPolicy": {
+        "requiresAcceptancePass": true,
+        "mixedCommitForbidden": true
+      }
+    },
+    {
+      "cardName": "R10_KHS_UNIT_RELATION_BIND_V1",
+      "class": "schema",
+      "objective": "Bind KHS units/relations to route/evidence contracts.",
+      "allowedPaths": [
+        "api/automation/card_catalog_v1.json",
+        "api/automation/card_dependency_graph_v1.json",
+        "api/automation/queue_scheduler_v1.py",
+        "api/automation/reports/**",
+        "api/docs/constitution/**",
+        "api/automation/generated_patch_recipes/**",
+        "api/automation/generated_cursor_tasks/**",
+        "api/automation/generated_cursor_apply/**"
+      ],
+      "forbiddenPaths": [
+        "api/src/routes/chat.ts",
+        "api/src/routes/chat_refactor/**",
+        "api/src/routes/chat_parts/**",
+        "client/**",
+        "dist/**",
+        "api/src/db/kokuzo_schema.sql"
+      ],
+      "requiresHumanJudgement": false,
+      "prechecks": [
+        {
+          "id": "catalog_json",
+          "kind": "command",
+          "command": "python3 -m json.tool api/automation/card_catalog_v1.json >/dev/null"
+        }
+      ],
+      "patchStrategy": {
+        "mode": "min_diff",
+        "notes": "automation + constitution + reports only"
+      },
+      "postchecks": [],
+      "acceptanceProfile": "build_only",
+      "nextOnPass": "R10_KHS_DEEP_REASONING_BRIDGE_V1",
+      "nextOnFail": "STOP",
+      "rollbackStrategy": {
+        "autoRollbackAllowed": false,
+        "scope": "none"
+      },
+      "sealPolicy": {
+        "requiresAcceptancePass": true,
+        "mixedCommitForbidden": true
+      }
+    },
+    {
+      "cardName": "R10_KHS_DEEP_REASONING_BRIDGE_V1",
+      "class": "schema",
+      "objective": "Bridge deep reasoning prompts to KHS lawgraph (spec).",
+      "allowedPaths": [
+        "api/automation/card_catalog_v1.json",
+        "api/automation/card_dependency_graph_v1.json",
+        "api/automation/queue_scheduler_v1.py",
+        "api/automation/reports/**",
+        "api/docs/constitution/**",
+        "api/automation/generated_patch_recipes/**",
+        "api/automation/generated_cursor_tasks/**",
+        "api/automation/generated_cursor_apply/**"
+      ],
+      "forbiddenPaths": [
+        "api/src/routes/chat.ts",
+        "api/src/routes/chat_refactor/**",
+        "api/src/routes/chat_parts/**",
+        "client/**",
+        "dist/**",
+        "api/src/db/kokuzo_schema.sql"
+      ],
+      "requiresHumanJudgement": false,
+      "prechecks": [
+        {
+          "id": "catalog_json",
+          "kind": "command",
+          "command": "python3 -m json.tool api/automation/card_catalog_v1.json >/dev/null"
+        }
+      ],
+      "patchStrategy": {
+        "mode": "min_diff",
+        "notes": "automation + constitution + reports only"
+      },
+      "postchecks": [],
+      "acceptanceProfile": "build_only",
+      "nextOnPass": "R10_KATAKAMUNA_LINEAGE_CRITIQUE_SCHEMA_V1",
+      "nextOnFail": "STOP",
+      "rollbackStrategy": {
+        "autoRollbackAllowed": false,
+        "scope": "none"
+      },
+      "sealPolicy": {
+        "requiresAcceptancePass": true,
+        "mixedCommitForbidden": true
+      }
+    },
+    {
+      "cardName": "R10_KATAKAMUNA_LINEAGE_CRITIQUE_SCHEMA_V1",
+      "class": "schema",
+      "objective": "Katakamuna lineage critique schema.",
+      "allowedPaths": [
+        "api/automation/card_catalog_v1.json",
+        "api/automation/card_dependency_graph_v1.json",
+        "api/automation/queue_scheduler_v1.py",
+        "api/automation/reports/**",
+        "api/docs/constitution/**",
+        "api/automation/generated_patch_recipes/**",
+        "api/automation/generated_cursor_tasks/**",
+        "api/automation/generated_cursor_apply/**"
+      ],
+      "forbiddenPaths": [
+        "api/src/routes/chat.ts",
+        "api/src/routes/chat_refactor/**",
+        "api/src/routes/chat_parts/**",
+        "client/**",
+        "dist/**",
+        "api/src/db/kokuzo_schema.sql"
+      ],
+      "requiresHumanJudgement": false,
+      "prechecks": [
+        {
+          "id": "catalog_json",
+          "kind": "command",
+          "command": "python3 -m json.tool api/automation/card_catalog_v1.json >/dev/null"
+        }
+      ],
+      "patchStrategy": {
+        "mode": "min_diff",
+        "notes": "automation + constitution + reports only"
+      },
+      "postchecks": [],
+      "acceptanceProfile": "build_only",
+      "nextOnPass": "R10_KATAKAMUNA_MODERN_PROBLEM_AXIS_V1",
+      "nextOnFail": "STOP",
+      "rollbackStrategy": {
+        "autoRollbackAllowed": false,
+        "scope": "none"
+      },
+      "sealPolicy": {
+        "requiresAcceptancePass": true,
+        "mixedCommitForbidden": true
+      }
+    },
+    {
+      "cardName": "R10_KATAKAMUNA_MODERN_PROBLEM_AXIS_V1",
+      "class": "schema",
+      "objective": "Modern problem axis mapping for Katakamuna responses.",
+      "allowedPaths": [
+        "api/automation/card_catalog_v1.json",
+        "api/automation/card_dependency_graph_v1.json",
+        "api/automation/queue_scheduler_v1.py",
+        "api/automation/reports/**",
+        "api/docs/constitution/**",
+        "api/automation/generated_patch_recipes/**",
+        "api/automation/generated_cursor_tasks/**",
+        "api/automation/generated_cursor_apply/**"
+      ],
+      "forbiddenPaths": [
+        "api/src/routes/chat.ts",
+        "api/src/routes/chat_refactor/**",
+        "api/src/routes/chat_parts/**",
+        "client/**",
+        "dist/**",
+        "api/src/db/kokuzo_schema.sql"
+      ],
+      "requiresHumanJudgement": false,
+      "prechecks": [
+        {
+          "id": "catalog_json",
+          "kind": "command",
+          "command": "python3 -m json.tool api/automation/card_catalog_v1.json >/dev/null"
+        }
+      ],
+      "patchStrategy": {
+        "mode": "min_diff",
+        "notes": "automation + constitution + reports only"
+      },
+      "postchecks": [],
+      "acceptanceProfile": "build_only",
+      "nextOnPass": "R10_KATAKAMUNA_HISTORY_RESPONSE_BIND_V1",
+      "nextOnFail": "STOP",
+      "rollbackStrategy": {
+        "autoRollbackAllowed": false,
+        "scope": "none"
+      },
+      "sealPolicy": {
+        "requiresAcceptancePass": true,
+        "mixedCommitForbidden": true
+      }
+    },
+    {
+      "cardName": "R10_KATAKAMUNA_HISTORY_RESPONSE_BIND_V1",
+      "class": "schema",
+      "objective": "Bind history-grounded response policy for Katakamuna.",
+      "allowedPaths": [
+        "api/automation/card_catalog_v1.json",
+        "api/automation/card_dependency_graph_v1.json",
+        "api/automation/queue_scheduler_v1.py",
+        "api/automation/reports/**",
+        "api/docs/constitution/**",
+        "api/automation/generated_patch_recipes/**",
+        "api/automation/generated_cursor_tasks/**",
+        "api/automation/generated_cursor_apply/**"
+      ],
+      "forbiddenPaths": [
+        "api/src/routes/chat.ts",
+        "api/src/routes/chat_refactor/**",
+        "api/src/routes/chat_parts/**",
+        "client/**",
+        "dist/**",
+        "api/src/db/kokuzo_schema.sql"
+      ],
+      "requiresHumanJudgement": false,
+      "prechecks": [
+        {
+          "id": "catalog_json",
+          "kind": "command",
+          "command": "python3 -m json.tool api/automation/card_catalog_v1.json >/dev/null"
+        }
+      ],
+      "patchStrategy": {
+        "mode": "min_diff",
+        "notes": "automation + constitution + reports only"
+      },
+      "postchecks": [],
+      "acceptanceProfile": "build_only",
+      "nextOnPass": "R10_GROWTH_CANDIDATE_GENERATOR_V1",
+      "nextOnFail": "STOP",
+      "rollbackStrategy": {
+        "autoRollbackAllowed": false,
+        "scope": "none"
+      },
+      "sealPolicy": {
+        "requiresAcceptancePass": true,
+        "mixedCommitForbidden": true
+      }
+    },
+    {
+      "cardName": "R10_GROWTH_CANDIDATE_GENERATOR_V1",
+      "class": "schema",
+      "objective": "Growth candidate generator spec for canon gaps.",
+      "allowedPaths": [
+        "api/automation/card_catalog_v1.json",
+        "api/automation/card_dependency_graph_v1.json",
+        "api/automation/queue_scheduler_v1.py",
+        "api/automation/reports/**",
+        "api/docs/constitution/**",
+        "api/automation/generated_patch_recipes/**",
+        "api/automation/generated_cursor_tasks/**",
+        "api/automation/generated_cursor_apply/**"
+      ],
+      "forbiddenPaths": [
+        "api/src/routes/chat.ts",
+        "api/src/routes/chat_refactor/**",
+        "api/src/routes/chat_parts/**",
+        "client/**",
+        "dist/**",
+        "api/src/db/kokuzo_schema.sql"
+      ],
+      "requiresHumanJudgement": false,
+      "prechecks": [
+        {
+          "id": "catalog_json",
+          "kind": "command",
+          "command": "python3 -m json.tool api/automation/card_catalog_v1.json >/dev/null"
+        }
+      ],
+      "patchStrategy": {
+        "mode": "min_diff",
+        "notes": "automation + constitution + reports only"
+      },
+      "postchecks": [],
+      "acceptanceProfile": "build_only",
+      "nextOnPass": "R10_SELF_UPDATE_POLICY_V1",
+      "nextOnFail": "STOP",
+      "rollbackStrategy": {
+        "autoRollbackAllowed": false,
+        "scope": "none"
+      },
+      "sealPolicy": {
+        "requiresAcceptancePass": true,
+        "mixedCommitForbidden": true
+      }
+    },
+    {
+      "cardName": "R10_SELF_UPDATE_POLICY_V1",
+      "class": "schema",
+      "objective": "Self-update policy for schema/canon under acceptance gates.",
+      "allowedPaths": [
+        "api/automation/card_catalog_v1.json",
+        "api/automation/card_dependency_graph_v1.json",
+        "api/automation/queue_scheduler_v1.py",
+        "api/automation/reports/**",
+        "api/docs/constitution/**",
+        "api/automation/generated_patch_recipes/**",
+        "api/automation/generated_cursor_tasks/**",
+        "api/automation/generated_cursor_apply/**"
+      ],
+      "forbiddenPaths": [
+        "api/src/routes/chat.ts",
+        "api/src/routes/chat_refactor/**",
+        "api/src/routes/chat_parts/**",
+        "client/**",
+        "dist/**",
+        "api/src/db/kokuzo_schema.sql"
+      ],
+      "requiresHumanJudgement": false,
+      "prechecks": [
+        {
+          "id": "catalog_json",
+          "kind": "command",
+          "command": "python3 -m json.tool api/automation/card_catalog_v1.json >/dev/null"
+        }
+      ],
+      "patchStrategy": {
+        "mode": "min_diff",
+        "notes": "automation + constitution + reports only"
+      },
+      "postchecks": [],
+      "acceptanceProfile": "build_only",
+      "nextOnPass": "R10_CANON_GAP_SELF_LOOP_V1",
+      "nextOnFail": "STOP",
+      "rollbackStrategy": {
+        "autoRollbackAllowed": false,
+        "scope": "none"
+      },
+      "sealPolicy": {
+        "requiresAcceptancePass": true,
+        "mixedCommitForbidden": true
+      }
+    },
+    {
+      "cardName": "R10_CANON_GAP_SELF_LOOP_V1",
+      "class": "schema",
+      "objective": "Close the loop: gap -> candidate -> review -> queue (automation/docs).",
+      "allowedPaths": [
+        "api/automation/card_catalog_v1.json",
+        "api/automation/card_dependency_graph_v1.json",
+        "api/automation/queue_scheduler_v1.py",
+        "api/automation/reports/**",
+        "api/docs/constitution/**",
+        "api/automation/generated_patch_recipes/**",
+        "api/automation/generated_cursor_tasks/**",
+        "api/automation/generated_cursor_apply/**"
+      ],
+      "forbiddenPaths": [
+        "api/src/routes/chat.ts",
+        "api/src/routes/chat_refactor/**",
+        "api/src/routes/chat_parts/**",
+        "client/**",
+        "dist/**",
+        "api/src/db/kokuzo_schema.sql"
+      ],
+      "requiresHumanJudgement": false,
+      "prechecks": [
+        {
+          "id": "catalog_json",
+          "kind": "command",
+          "command": "python3 -m json.tool api/automation/card_catalog_v1.json >/dev/null"
+        }
+      ],
+      "patchStrategy": {
+        "mode": "min_diff",
+        "notes": "automation + constitution + reports only"
+      },
+      "postchecks": [],
+      "acceptanceProfile": "build_only",
+      "nextOnPass": "RESPONSE_FINALIZER_EXTRACT_V1",
+      "nextOnFail": "STOP",
+      "rollbackStrategy": {
+        "autoRollbackAllowed": false,
+        "scope": "none"
+      },
+      "sealPolicy": {
+        "requiresAcceptancePass": true,
+        "mixedCommitForbidden": true
+      }
+    },
+    {
+      "cardName": "TENMON_CONVERSATION_COMPLETION_STAGE3_AUTONOMOUS_SEAL_PDCA_V1",
+      "class": "observation",
+      "objective": "Stage3: workspace dirty 機械分類、replay/apply-ready 正規化、seal 機械判定の一貫化（観測ランナー）。",
+      "allowedPaths": [
+        "api/automation/workspace_observer_v1.py",
+        "api/automation/execution_gate_v1.py",
+        "api/automation/replay_audit_v1.py",
+        "api/automation/seal_contract_normalize_v1.py",
+        "api/automation/conversation_full_completion_pdca_autoloop_v1.py",
+        "api/automation/conversation_completion_stage3_autonomous_seal_pdca_v1.py",
+        "api/automation/final_seal_autopilot_v3.py",
+        "api/automation/full_autopilot_v1.py",
+        "api/automation/worldclass_ascent_autopilot_v2.py",
+        "api/automation/queue_scheduler_v1.py",
+        "api/automation/card_catalog_v1.json",
+        "api/automation/card_dependency_graph_v1.json",
+        "api/automation/reports/TENMON_CONVERSATION_COMPLETION_STAGE3_AUTONOMOUS_SEAL_PDCA_V1/**",
+        "api/docs/constitution/TENMON_CONVERSATION_COMPLETION_STAGE3_AUTONOMOUS_SEAL_PDCA_V1.md"
+      ],
+      "forbiddenPaths": [
+        "api/src/routes/chat.ts",
+        "client/**",
+        "dist/**",
+        "api/src/db/kokuzo_schema.sql"
+      ],
+      "requiresHumanJudgement": false,
+      "prechecks": [
+        {
+          "id": "repo_root",
+          "kind": "file_exists",
+          "path": "api/automation/seal_contract_normalize_v1.py"
+        }
+      ],
+      "patchStrategy": {
+        "mode": "min_diff",
+        "notes": "automation + constitution + stage3 reports only"
+      },
+      "postchecks": [],
+      "acceptanceProfile": "build_only",
+      "nextOnPass": "STOP",
+      "nextOnFail": "STOP",
+      "rollbackStrategy": {
+        "autoRollbackAllowed": false,
+        "scope": "none"
+      },
+      "sealPolicy": {
+        "requiresAcceptancePass": true,
+        "mixedCommitForbidden": true
+      }
+    },
+    {
+      "cardName": "TENMON_CONVERSATION_COMPLETION_3STAGE_ESCORT_AUTOPDCA_V1",
+      "class": "orchestration",
+      "objective": "Stage1→2→3 を順固定で追従し、未達時は同段再試行・悪化時は rollback 記録・Stage3 で再発時は前段へ戻す親オーケストレーター。",
+      "allowedPaths": [
+        "api/automation/conversation_completion_3stage_escort_autopdca_v1.py",
+        "api/automation/conversation_completion_stage1_surface_bleed_pdca_v1.py",
+        "api/automation/conversation_completion_stage2_continuity_unknown_pdca_v1.py",
+        "api/automation/conversation_completion_stage3_autonomous_seal_pdca_v1.py",
+        "api/automation/conversation_full_completion_pdca_autoloop_v1.py",
+        "api/automation/final_seal_autopilot_v3.py",
+        "api/automation/seal_contract_normalize_v1.py",
+        "api/automation/reports/TENMON_CONVERSATION_COMPLETION_3STAGE_ESCORT_AUTOPDCA_V1/**",
+        "api/docs/constitution/TENMON_CONVERSATION_COMPLETION_3STAGE_ESCORT_AUTOPDCA_V1.md"
+      ],
+      "forbiddenPaths": [
+        "api/src/routes/chat.ts",
+        "client/**",
+        "dist/**",
+        "api/src/db/kokuzo_schema.sql"
+      ],
+      "requiresHumanJudgement": true,
+      "prechecks": [
+        {
+          "id": "escort_script",
+          "kind": "file_exists",
+          "path": "api/automation/conversation_completion_3stage_escort_autopdca_v1.py"
+        }
+      ],
+      "patchStrategy": {
+        "mode": "min_diff",
+        "notes": "オーケストレーター本体 + 憲章 + escort reports のみ"
+      },
+      "postchecks": [],
+      "acceptanceProfile": "build_only",
+      "nextOnPass": "STOP",
+      "nextOnFail": "STOP",
+      "rollbackStrategy": {
+        "autoRollbackAllowed": false,
+        "scope": "operator"
+      },
+      "sealPolicy": {
+        "requiresAcceptancePass": true,
+        "mixedCommitForbidden": true
+      }
     }
-  ]
+  ],
+  "queueSpineV1": {
+    "version": 1,
+    "comment": "Post-CHAT_TRUNK_EXIT_CONTRACT_LOCK_V1 spine; queue_scheduler orders eligible cards by this list before lexicographic tie-break.",
+    "cards": [
+      "AUTO_CARD_QUEUE_V1",
+      "AUTO_CARD_RUNNER_V1",
+      "AUTO_FAIL_CLASSIFIER_V1",
+      "R10_THREAD_CENTER_MEMORY_SCHEMA_V1",
+      "R10_THREAD_CENTER_BIND_V1",
+      "R10_THREAD_CONTINUITY_SCRIPTURE_CENTER_FIX_V1",
+      "R10_IROHA_ACTION_PATTERN_SCHEMA_V1",
+      "R10_IROHA_COUNSEL_CLASSIFIER_V1",
+      "R10_IROHA_COUNSEL_ROUTE_V1",
+      "R10_KHS_TOTAL_LAWGRAPH_V1",
+      "R10_KHS_UNIT_RELATION_BIND_V1",
+      "R10_KHS_DEEP_REASONING_BRIDGE_V1",
+      "R10_KATAKAMUNA_LINEAGE_CRITIQUE_SCHEMA_V1",
+      "R10_KATAKAMUNA_MODERN_PROBLEM_AXIS_V1",
+      "R10_KATAKAMUNA_HISTORY_RESPONSE_BIND_V1",
+      "R10_GROWTH_CANDIDATE_GENERATOR_V1",
+      "R10_SELF_UPDATE_POLICY_V1",
+      "R10_CANON_GAP_SELF_LOOP_V1"
+    ]
+  }
 }

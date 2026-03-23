@@ -1,6 +1,21 @@
 import { getTenmonStyle } from "./personaStyleConstitution.js";
 import { shouldUseDanshariCommunication } from "./danshariCommunication.js";
 import { computeKanagiSelfKernel } from "./kanagiSelfKernel.js";
+import {
+  applyRuntimeSurfaceRepairV1,
+  applyTenmonConversationProjectionV1,
+} from "./tenmonConversationSurfaceV1.js";
+import {
+  stripInternalRouteTokensFromSurfaceV1,
+  trimTenmonSurfaceNoiseV3,
+} from "./tenmonConversationSurfaceV2.js";
+import {
+  applyLongformWorldclassThreeArcV1,
+  inferImplicitLongformCharTargetFromUserMessageV1,
+  isLongformTriArcIntentMessageV1,
+  parseExplicitCharTargetFromUserMessageV1,
+  shapeLongformSurfaceForChatV1,
+} from "../planning/responsePlanCore.js";
 
 export type ResponseComposerInput = {
   response: string;
@@ -75,7 +90,7 @@ function buildMeaningFrame(input: ResponseComposerInput): MeaningFrame {
     routeReason === "DEF_PROPOSED_FALLBACK_V1"
   ) {
     topicClass = "kotodama";
-  } else if (routeReason === "SOUL_FASTPATH_VERIFIED_V1") {
+  } else if (routeReason === "SOUL_FASTPATH_VERIFIED_V1" || routeReason === "SOUL_DEF_SURFACE_V1") {
     topicClass = "soul";
   } else if (routeReason === "TENMON_SUBCONCEPT_CANON_V1") {
     topicClass = "subconcept";
@@ -430,7 +445,7 @@ export function responseComposer(input: ResponseComposerInput): ResponseComposer
   }
 
   if (
-    input?.routeReason === "SOUL_FASTPATH_VERIFIED_V1" &&
+    (input?.routeReason === "SOUL_FASTPATH_VERIFIED_V1" || input?.routeReason === "SOUL_DEF_SURFACE_V1") &&
     out.endsWith(SOUL_TAIL)
   ) {
     out = out.slice(0, -SOUL_TAIL.length) + SOUL_TAIL_REPLACEMENT;
@@ -467,8 +482,53 @@ export function responseComposer(input: ResponseComposerInput): ResponseComposer
     }
   }
   out = applyPersonaReduction(out, meaningFrame, input?.rawMessage, (input as any)?.heart, input);
-  if (input?.routeReason === "SOUL_FASTPATH_VERIFIED_V1") {
+  if (input?.routeReason === "SOUL_FASTPATH_VERIFIED_V1" || input?.routeReason === "SOUL_DEF_SURFACE_V1") {
     out = soulSurfaceCleanup(soulSegmentRebuild(out));
   }
+  /** PACK_E / STAGE3: 明示600字帯・implicit 長文・下書き長で整形し、三弧意図なら composer 出口でも揃える（finalize と二重でも【見立て】で冪等） */
+  try {
+    const _rawLf = String(input?.rawMessage ?? "");
+    const _etEx = parseExplicitCharTargetFromUserMessageV1(_rawLf);
+    const _etIm = inferImplicitLongformCharTargetFromUserMessageV1(_rawLf);
+    const _et = _etEx ?? _etIm;
+    const _etMerged = Math.max(_etEx ?? 0, _etIm ?? 0);
+    if ((_et != null && _et >= 600) || out.length >= 1200) {
+      if (out.length >= 280) out = shapeLongformSurfaceForChatV1(out);
+    }
+    if (isLongformTriArcIntentMessageV1(_rawLf) && (_etMerged >= 600 || _etIm != null)) {
+      out = applyLongformWorldclassThreeArcV1({
+        body: out,
+        rawMessage: _rawLf,
+        answerLength: "long",
+        explicitLengthRequested: _etMerged,
+      });
+    }
+  } catch {
+    /* fail-open */
+  }
+  // TENMON_GENERAL_SCRIPTURE_BLEED_GUARD_V1:
+  // general 系で scripture center 継承があっても、表面主権は query/routeReason 側を優先して projector canon 化を抑制。
+  const __scriptureCenterInherited =
+    /scripture/u.test(String((input as any)?.threadCenterType ?? (input as any)?.centerType ?? "")) ||
+    String((input as any)?.scriptureKey ?? "").trim().length > 0;
+  const __generalSovereignRoute =
+    /^(NATURAL_GENERAL_LLM_TOP|WORLDVIEW_ROUTE_V1|KANAGI_CONVERSATION_V1|R22_)/u.test(rr);
+  if (!(__scriptureCenterInherited && __generalSovereignRoute)) {
+    // TENMON_OUTPUT_PROJECTION_V1 / TENMON_ASK_CONTROL_V1: final surface（ルート追加より投影で収束）
+    out = applyTenmonConversationProjectionV1(out, {
+      routeReason: rr,
+      rawMessage: String(input?.rawMessage ?? ""),
+    });
+  }
+  const __expRepair =
+    parseExplicitCharTargetFromUserMessageV1(String(input?.rawMessage ?? "")) || 0;
+  out = applyRuntimeSurfaceRepairV1({
+    text: out,
+    routeReason: rr,
+    explicitLengthRequested: __expRepair,
+  });
+  /** STAGE1: composer 出口でも generic preamble 等を一元除去（finalize と二重でも冪等） */
+  out = trimTenmonSurfaceNoiseV3(out);
+  out = stripInternalRouteTokensFromSurfaceV1(out);
   return { response: out, meaningFrame };
 }

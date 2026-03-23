@@ -156,4 +156,32 @@ router.get("/audit", (_req: Request, res: Response) => {
     });
   }
 });
+
+/**
+ * TENMON_AUDIT_BUILD_ROUTE_RESTORE_V1
+ * /api/audit.build の最小契約を返す（read-only）。
+ */
+router.get("/audit.build", (_req: Request, res: Response) => {
+  const now = new Date().toISOString();
+  const r = getReadiness();
+  let gitSha = "";
+  try {
+    gitSha = getGitSha();
+  } catch {
+    gitSha = "";
+  }
+  return res.json({
+    ok: true,
+    card: "TENMON_AUDIT_BUILD_ROUTE_RESTORE_V1",
+    timestamp: now,
+    gitSha,
+    readiness: r,
+    build: { mark: BUILD_MARK, features: BUILD_FEATURES_KOSHIKI },
+    contract: {
+      endpoint: "/api/audit.build",
+      minimal_fields: ["ok", "timestamp", "gitSha", "readiness", "build"],
+      purpose: "minimum build audit contract for stabilization cards",
+    },
+  });
+});
 export default router;

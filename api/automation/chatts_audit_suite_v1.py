@@ -18,22 +18,12 @@ if str(_AUTOMATION_DIR) not in sys.path:
     sys.path.insert(0, str(_AUTOMATION_DIR))
 
 from chatts_metrics_v1 import analyze_chat_ts
+from repo_resolve_v1 import repo_root_from
 
 DEFAULT_REL_CHAT = "api/src/routes/chat.ts"
 SCHEMA_REL = "api/automation/chatts_audit_schema_v1.json"
 REPORT_JSON = "chatts_audit_v1_report.json"
 REPORT_MD = "chatts_audit_v1_report.md"
-
-
-def repo_root_from(start: Path) -> Path:
-    cur = start.resolve()
-    for _ in range(24):
-        if (cur / ".git").exists():
-            return cur
-        if cur.parent == cur:
-            break
-        cur = cur.parent
-    return start.resolve()
 
 
 def load_schema_required() -> Set[str]:

@@ -12,6 +12,9 @@ export type ChatMessage = {
 
 const USER_KEY_STORAGE = "TENMON_USER_KEY";
 
+/** TENMON_PWA_NEWCHAT_SURFACE_BINDING_V1: Sidebar New Chat / reset と state を同期 */
+export const TENMON_THREAD_SWITCH_EVENT = "tenmon:thread-switch" as const;
+
 export function getStorageKeys(): { THREAD_KEY: string; THREADS_META_KEY: string; MSGS_KEY_PREFIX: string } {
   const userKey = typeof window !== "undefined" ? (localStorage.getItem(USER_KEY_STORAGE) || "").trim() : "";
   return {
@@ -71,17 +74,84 @@ function touchThreadMeta(threadId: string, msgs: ChatMessage[]) {
   }
 }
 
-function getThreadId(): string {
+/** 現在の URL から `threadId` クエリを読む（`?threadId=` および `#...?threadId=`） */
+export function readThreadIdFromUrl(): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const u = new URL(window.location.href);
+    const fromSearch = u.searchParams.get("threadId");
+    if (fromSearch?.trim()) return fromSearch.trim();
+    const hash = window.location.hash || "";
+    const iq = hash.indexOf("?");
+    if (iq >= 0) {
+      const sp = new URLSearchParams(hash.slice(iq + 1));
+      const h = sp.get("threadId");
+      if (h?.trim()) return h.trim();
+    }
+  } catch {
+    /* ignore */
+  }
+  return null;
+}
+
+/** 採用した threadId を URL に同期（reload なし・replaceState） */
+export function writeThreadIdToUrl(threadId: string): void {
+  if (typeof window === "undefined") return;
+  const tid = String(threadId || "").trim();
+  if (!tid) return;
+  try {
+    const u = new URL(window.location.href);
+    u.searchParams.set("threadId", tid);
+    window.history.replaceState(window.history.state, "", u.toString());
+  } catch {
+    /* ignore */
+  }
+}
+
+/**
+ * 正典順: URL > backend response.threadId > localStorage > 新規生成
+ * backendId は未取得時は null でよい。
+ */
+export function resolveCanonicalThreadId(
+  urlId: string | null | undefined,
+  backendId: string | null | undefined,
+  storageId: string | null | undefined
+): string {
+  const u = urlId?.trim();
+  if (u) return u;
+  const b = backendId != null ? String(backendId).trim() : "";
+  if (b) return b;
+  const s = storageId?.trim();
+  if (s) return s;
+  return `pwa-${Date.now().toString(36)}`;
+}
+
+function persistThreadIdToStorageAndUrl(id: string) {
   try {
     const { THREAD_KEY } = getStorageKeys();
-    const v = localStorage.getItem(THREAD_KEY);
-    if (v && v.trim()) return v;
-    const next = `pwa-${Date.now().toString(36)}`;
-    localStorage.setItem(THREAD_KEY, next);
-    return next;
+    localStorage.setItem(THREAD_KEY, id);
   } catch {
-    return `pwa-${Date.now().toString(36)}`;
+    // ignore
   }
+  writeThreadIdToUrl(id);
+}
+
+/**
+ * URL 優先で threadId を解決し、localStorage + URL に同期して返す。
+ * （単一真実源のため、呼び出し側は hydrate または明示同期時に利用）
+ */
+export function getThreadId(): string {
+  const url = readThreadIdFromUrl();
+  const { THREAD_KEY } = getStorageKeys();
+  let storage = "";
+  try {
+    storage = localStorage.getItem(THREAD_KEY) || "";
+  } catch {
+    /* ignore */
+  }
+  const id = resolveCanonicalThreadId(url, null, storage);
+  persistThreadIdToStorageAndUrl(id);
+  return id;
 }
 
 function loadMessages(threadId: string): ChatMessage[] {
@@ -106,12 +176,25 @@ export function useChat() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(false);
   const hydratedRef = useRef(false);
+  const threadIdRef = useRef<string>("");
 
   useEffect(() => {
-    const tid = getThreadId();
+    threadIdRef.current = threadId;
+  }, [threadId]);
+
+  useEffect(() => {
+    const url = readThreadIdFromUrl();
+    const { THREAD_KEY } = getStorageKeys();
+    let storage = "";
+    try {
+      storage = localStorage.getItem(THREAD_KEY) || "";
+    } catch {
+      /* ignore */
+    }
+    const tid = resolveCanonicalThreadId(url, null, storage);
+    persistThreadIdToStorageAndUrl(tid);
     setThreadId(tid);
     setMessages(loadMessages(tid));
-     // ensure thread meta exists
     try {
       const map = loadThreadMetaMap();
       if (!map[tid]) {
@@ -122,6 +205,62 @@ export function useChat() {
       // ignore
     }
     hydratedRef.current = true;
+  }, []);
+
+  useEffect(() => {
+    const onSwitch = (e: Event) => {
+      const ce = e as CustomEvent<{ threadId?: string }>;
+      const tid = String(ce.detail?.threadId ?? "").trim();
+      if (!tid) return;
+      persistThreadIdToStorageAndUrl(tid);
+      setThreadId(tid);
+      setMessages(loadMessages(tid));
+      try {
+        const map = loadThreadMetaMap();
+        if (!map[tid]) {
+          map[tid] = { id: tid, updatedAt: Date.now() };
+          saveThreadMetaMap(map);
+        }
+      } catch {
+        /* ignore */
+      }
+    };
+    window.addEventListener(TENMON_THREAD_SWITCH_EVENT, onSwitch as EventListener);
+    return () => window.removeEventListener(TENMON_THREAD_SWITCH_EVENT, onSwitch as EventListener);
+  }, []);
+
+  /** ブラウザ戻る/進む・hash 変更で URL 優先の thread を再同期（reload 不要） */
+  useEffect(() => {
+    const onUrlThreadChange = () => {
+      const urlTid = readThreadIdFromUrl();
+      const { THREAD_KEY } = getStorageKeys();
+      let storage = "";
+      try {
+        storage = localStorage.getItem(THREAD_KEY) || "";
+      } catch {
+        /* ignore */
+      }
+      const resolved = resolveCanonicalThreadId(urlTid, null, storage);
+      if (resolved === threadIdRef.current) return;
+      persistThreadIdToStorageAndUrl(resolved);
+      setThreadId(resolved);
+      setMessages(loadMessages(resolved));
+      try {
+        const map = loadThreadMetaMap();
+        if (!map[resolved]) {
+          map[resolved] = { id: resolved, updatedAt: Date.now() };
+          saveThreadMetaMap(map);
+        }
+      } catch {
+        /* ignore */
+      }
+    };
+    window.addEventListener("popstate", onUrlThreadChange);
+    window.addEventListener("hashchange", onUrlThreadChange);
+    return () => {
+      window.removeEventListener("popstate", onUrlThreadChange);
+      window.removeEventListener("hashchange", onUrlThreadChange);
+    };
   }, []);
 
   useEffect(() => {
@@ -145,19 +284,30 @@ export function useChat() {
       content: text,
       at: new Date().toISOString(),
     };
-    setMessages(prev => [...prev, userMsg]);
+    setMessages((prev) => [...prev, userMsg]);
 
     try {
       setLoading(true);
-      const out = await postChat({ message: text, sessionId: threadId });
+      const out = await postChat({ message: text, threadId });
+      const backendTid = out?.threadId != null ? String(out.threadId).trim() : "";
+      const resolved = resolveCanonicalThreadId(readThreadIdFromUrl(), backendTid || null, threadId);
+      persistThreadIdToStorageAndUrl(resolved);
+
       const assistantMsg: ChatMessage = {
-        id: `${threadId}:a:${Date.now()}`,
+        id: `${resolved}:a:${Date.now()}`,
         role: "assistant",
         content: String(out?.response || ""),
         at: new Date().toISOString(),
         _payload: out,
       };
-      setMessages(prev => [...prev, assistantMsg]);
+
+      if (resolved !== threadId) {
+        setThreadId(resolved);
+        const base = loadMessages(resolved);
+        setMessages([...base, userMsg, assistantMsg]);
+      } else {
+        setMessages((prev) => [...prev, assistantMsg]);
+      }
     } finally {
       setLoading(false);
     }
@@ -166,14 +316,13 @@ export function useChat() {
   function resetThread() {
     const tid = `pwa-${Date.now().toString(36)}`;
     try {
-      const { THREAD_KEY } = getStorageKeys();
-      localStorage.setItem(THREAD_KEY, tid);
+      window.dispatchEvent(
+        new CustomEvent(TENMON_THREAD_SWITCH_EVENT, { detail: { threadId: tid } })
+      );
       window.dispatchEvent(new Event("tenmon:threads-updated"));
     } catch {
       // ignore
     }
-    setThreadId(tid);
-    setMessages([]);
   }
 
   return {

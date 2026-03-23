@@ -6,7 +6,7 @@ import { DashboardPage } from "../../pages/DashboardPage";
 import { ProfilePage } from "../../pages/ProfilePage";
 import { SettingsModal } from "./SettingsModal";
 import { APP_TITLE } from "../../config/app";
-import { getStorageKeys } from "../../hooks/useChat";
+import { getStorageKeys, TENMON_THREAD_SWITCH_EVENT, writeThreadIdToUrl } from "../../hooks/useChat";
 
 export function GptShell() {
   const [view, setView] = useState<GptView>("chat");
@@ -22,11 +22,14 @@ export function GptShell() {
       const { THREAD_KEY } = getStorageKeys();
       const tid = `pwa-${Date.now().toString(36)}`;
       window.localStorage.setItem(THREAD_KEY, tid);
+      writeThreadIdToUrl(tid);
+      window.dispatchEvent(
+        new CustomEvent(TENMON_THREAD_SWITCH_EVENT, { detail: { threadId: tid } })
+      );
       window.dispatchEvent(new Event("tenmon:threads-updated"));
     } catch {
       // ignore
     }
-    window.location.reload();
   };
 
   const handleChangeView = (next: GptView) => {

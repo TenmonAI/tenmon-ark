@@ -4,6 +4,7 @@
  */
 
 import { isTenmonPrincipleOrCanonProbeMessageV1 } from "./humanReadableLawLayerV1.js";
+import { isSoulDefinitionQuestionV1 } from "../../core/soulDefineDisambigV1.js";
 
 export type GroundingSelectorKind =
   | "grounded_required"
@@ -38,15 +39,28 @@ export function selectGroundingModeV1(input: {
   }
   if (
     (!isCmd &&
-      /(言霊|カタカムナ)(とは|って)(何|なに)(ですか)?\s*[？?]?$/u.test(raw)) ||
-    (/(とは|って)(何|なに)(ですか)?\s*[？?]?$/u.test(raw) && /(言霊|カタカムナ|本質|核)/u.test(raw))
+      /(言霊|カタカムナ|魂)(とは|って)(何|なに)(ですか)?\s*[？?]?$/u.test(raw)) ||
+    (/(とは|って)(何|なに)(ですか)?\s*[？?]?$/u.test(raw) && /(言霊|カタカムナ|魂|本質|核)/u.test(raw))
   ) {
     return { kind: "concept_canon", reason: "concept_definition", confidence: 0.9 };
   }
   if (wantsDetail && raw.length > 20) {
     return { kind: "unresolved", reason: "detail_context_strong", confidence: 0.6 };
   }
-  return { kind: "natural_general", reason: "default", confidence: 0.5 };
+  /** PACK_F: 短い「○○とは」型は concept 束へ寄せ、DEF_LLM / NATURAL 最終帯への直落ちを減らす */
+  if (
+    !isCmd &&
+    raw.length <= 40 &&
+    /(とは|って\s*何)(ですか)?\s*[？?]?$/u.test(raw) &&
+    !/(人間|意識|AI|宇宙|生命|愛|死|神|真理|存在)/u.test(raw)
+  ) {
+    return { kind: "concept_canon", reason: "short_term_define_shape", confidence: 0.62 };
+  }
+  /** PACK_F: 整理・俯瞰の依頼は未解決より分析寄りの経路を優先（雑な聞き返し出口を避ける） */
+  if (!isCmd && /(どう整理|整理すれば|この件を|状況を).*(整理|まとめ|切り分け|見立て)/u.test(raw)) {
+    return { kind: "natural_general", reason: "organize_request", confidence: 0.55 };
+  }
+  return { kind: "natural_general", reason: "default", confidence: 0.45 };
 }
 
 /** P54: NATURAL_GENERAL_LLM_TOP 分流用の general kind（counsel / worldview / short_moral / other） */
@@ -73,6 +87,27 @@ export function shouldBypassArkConversationDiagnosticsPreemptV1(message: string)
   if (isTenmonPrincipleOrCanonProbeMessageV1(m)) return true;
   if (/(判断構造|意識構造|心構造|魂核構造|魂核|設計モデル)/u.test(m)) return true;
   if (/断捨離/u.test(m) && /(説明|教え|定義|として|片付け)/u.test(m)) return true;
+  /**
+   * STAGE2_ROUTE_AUTHORITY_RECOVERY_V1:
+   * trySystemDiagnosisPreemptExitV1 は「天聞アーク」単独一致で発火するため、
+   * selfaware / 長文説明 / 比較 / 思考回路系は診断 preempt から除外し本来 route へ回す。
+   */
+  if (/天聞(アーク)?/u.test(m) && /(意識|心)/u.test(m) && /(ないの|あるの|ですか|でしょうか|か\?|か？)/u.test(m)) {
+    return true;
+  }
+  if (/天聞(アーク)?/u.test(m) && /\d+\s*字/u.test(m) && /(説明|書いて|述べ|解説)/u.test(m)) {
+    return true;
+  }
+  /** STAGE2_ROUTE_AUTHORITY_V2: 明示長文（3桁字以上＋説明系）は診断 preempt 対象外（longform 主命題を守る） */
+  if (/\d{3,}\s*字/u.test(m) && /(説明|解説|述べ|書いて|詳しく|整理|列挙)/u.test(m)) {
+    return true;
+  }
+  if (/(天聞(アーク)?|アーク)/u.test(m) && /(思考回路|未達|世界最高|改善点|ギャップ)/u.test(m) && /(説明|詳しく|整理|列挙)/u.test(m)) {
+    return true;
+  }
+  if (/(GPT|ChatGPT|OpenAI|生成AI)/iu.test(m) && /(天聞|アーク)/u.test(m) && /(比較|違い|差)/u.test(m)) {
+    return true;
+  }
   if (
     /天聞アーク/u.test(m) &&
     /(世界観|意識|心構造|魂核|設計モデル|内部)(の|を|は|、|で)?/u.test(m) &&
@@ -81,4 +116,18 @@ export function shouldBypassArkConversationDiagnosticsPreemptV1(message: string)
     return true;
   }
   return false;
+}
+
+/**
+ * STAGE2_ROUTE_AUTHORITY_V2:
+ * 「天聞アーク」を含むだけで system diagnosis preempt / shrink が発火しないよう、
+ * **現状・接続・構造・診断**いずれかの意図があるときだけ候補とする。
+ */
+export function isArkSystemDiagnosisPreemptCandidateV1(message: string): boolean {
+  const m = String(message ?? "").trim();
+  if (!m) return false;
+  const mentionsArk =
+    /天聞アーク|TENMON[- ]?ARK|天聞の(?:現状|構造|内部|接続|診断)/u.test(m);
+  if (!mentionsArk) return false;
+  return /内部構造|構造|接続|繋がって|つながって|どこまで|構築状況|完成度|現状|診断|解析/u.test(m);
 }

@@ -6,7 +6,10 @@
 import { buildKnowledgeBinder, applyKnowledgeBinderToKu } from "../../core/knowledgeBinder.js";
 import { buildResponsePlan, type AnswerMode, type AnswerFrame } from "../../planning/responsePlanCore.js";
 import { localSurfaceize } from "../../tenmon/surface/localSurfaceize.js";
-import { shouldBypassArkConversationDiagnosticsPreemptV1 } from "./general.js";
+import {
+  isArkSystemDiagnosisPreemptCandidateV1,
+  shouldBypassArkConversationDiagnosticsPreemptV1,
+} from "./general.js";
 import { finalizeSingleExitV1 } from "./finalize.js";
 
 export function exitJudgementPreemptV1(args: {
@@ -22,8 +25,8 @@ export function exitJudgementPreemptV1(args: {
   const __bodyJudge =
     /(良い|悪い|正しい|間違い|べき|どっちが|どちらが|した方が)/u.test(__t0TrimJ) ||
     /(良い|悪い)[？?]?\s*$/u.test(__t0TrimJ)
-      ? "【天聞の所見】判断軸はすでに出ています。結論から言うと、文脈を一点に固定すれば裁定は可能です。次段で対象を確定して仕上げます。"
-      : "【天聞の所見】見立ての軸は出ています。いま必要なのは問い返しではなく、対象を一点に固定して裁定へ進むことです。";
+      ? "【天聞の所見】判断の芯はもう出ています。まず捨てる前提を一つ、残す前提を一つに絞ると裁定が速いです。いま切るのは時間ですか、それとも気持ちの負担ですか。"
+      : "【天聞の所見】整理の問いなら、全部を並べ直すより、いま効いている軸を一つ選ぶのが先です。優先したいのは事実の確定ですか、それとも次の一手の決定ですか。";
 
   const __kuJudgement: any = {
     routeReason: "R22_JUDGEMENT_PREEMPT_V1",
@@ -42,11 +45,10 @@ export function exitJudgementPreemptV1(args: {
     centerKey: null,
     centerLabel: null,
     mode: "general",
-    responseKind: "statement_plus_question",
+    responseKind: "statement",
     answerMode: "analysis" as AnswerMode,
     answerFrame: "one_step" as AnswerFrame,
-    semanticBody:
-      "【天聞の所見】次に直すべきは、通常会話の残差ではなく ask-overuse の解消です。判断系は問い返しを減らし、対象を固定して短く裁定する段階に入っています。",
+    semanticBody: __bodyJudge,
   });
 
   return finalizeSingleExitV1(res, __tenmonGeneralGateResultMaybe, {
@@ -563,10 +565,24 @@ export function exitGroundingUnresolvedV1(args: {
     evidenceIds: [],
     lawTrace: [],
   };
+  ku.responsePlan = buildResponsePlan({
+    routeReason: "GROUNDING_SELECTOR_UNRESOLVED_V1",
+    rawMessage: "",
+    centerKey: null,
+    centerLabel: null,
+    scriptureKey: null,
+    semanticBody:
+      "根拠を落とさずに進めたいのですが、いまの一文だけだと当て先が広がりすぎます。知りたいことを「事実の整理」「本文の読み解き」「試せる一歩」のどれに寄せたいか、短く印をつけてください。その軸を芯に据えて、一段ずつ深めます。",
+    mode: "general",
+    answerMode: "analysis",
+    answerLength: "short",
+    answerFrame: "statement_plus_one_question",
+    responseKind: "statement_plus_question",
+  });
   if (typeof applyBrainstemContractToKu === "function") applyBrainstemContractToKu(ku);
   return finalizeSingleExitV1(res, __tenmonGeneralGateResultMaybe, {
     response:
-      "【天聞の所見】いまの問いを、根拠付きで答えるにはもう一歩だけ焦点を絞ります。何について、どの層で知りたいか一言で置いてください。",
+      "【天聞の所見】根拠を落とさずに進めたいのですが、いまの一文だけだと当て先が広がりすぎます。知りたいことを「事実の整理」「本文の読み解き」「試せる一歩」のどれに寄せたいか、短く印をつけてください。その軸を芯に据えて、一段ずつ深めます。",
     evidence: null,
     candidates: [],
     timestamp,
@@ -596,9 +612,22 @@ export function exitGroundingGroundedRequiredV1(args: {
     evidenceIds: [],
     lawTrace: [],
   };
+  ku.responsePlan = buildResponsePlan({
+    routeReason: "GROUNDING_SELECTOR_GROUNDED_V1",
+    rawMessage: "",
+    centerKey: null,
+    centerLabel: null,
+    scriptureKey: null,
+    semanticBody: "指定の根拠に沿って、検索束と本文をつなぎにいきます。",
+    mode: "general",
+    answerMode: "analysis",
+    answerLength: "short",
+    answerFrame: "one_step",
+    responseKind: "statement",
+  });
   if (typeof applyBrainstemContractToKu === "function") applyBrainstemContractToKu(ku);
   return finalizeSingleExitV1(res, __tenmonGeneralGateResultMaybe, {
-    response: "【天聞の所見】根拠指定を検出しました。検索結果と接続します。",
+    response: "【天聞の所見】指定の根拠に沿って、検索束と本文をつなぎにいきます。",
     evidence: null,
     candidates: [],
     timestamp,
@@ -664,12 +693,8 @@ export function trySystemDiagnosisPreemptExitV1(args: {
 }): boolean {
   const msg = String(args.message ?? "").trim();
   if (shouldBypassArkConversationDiagnosticsPreemptV1(msg)) return false;
-  if (
-    !/天聞アーク|TENMON[- ]?ARK|内部構造|構造|接続|繋がって|つながって|どこまで|構築状況|完成度|現状|診断|解析/u.test(
-      msg
-    )
-  )
-    return false;
+  /** STAGE2_V2: 天聞名のみでは発火しない（診断・構造・接続・現状の意図が併存するときだけ） */
+  if (!isArkSystemDiagnosisPreemptCandidateV1(msg)) return false;
   const body =
     "【天聞の所見】天聞アークの現状は、骨格層はかなり接続済みです。通っているのは憲法・思考・原典・監査の主幹で、未完は一般会話の主権と表現末端です。次の一手は、system diagnosis と通常会話 residual の入口固定です。";
   const core = {
@@ -801,7 +826,10 @@ export function classifyGeneralShrinkV1(
   if (
     /^(次は|次の一手は|次の一歩は|では次は)[？?]?$/u.test(m) ||
     (m.length <= 16 && /次(は|の一手|の一歩)/u.test(m)) ||
-    /(次の一手|どう進める|何からやる)/u.test(m)
+    /(次の一手|どう進める|何からやる)/u.test(m) ||
+    /** STAGE1_SURFACE_BLEED_V1: 「その一手を今日中に一つに絞る」系を NATURAL から奪還 */
+    (/一つに絞る/u.test(m) && /(今日中|その一手|この一手|一手を)/u.test(m)) ||
+    /その一手を.{0,24}絞る/u.test(m)
   )
     return { kind: "next_step", confidence: 1 };
   if (/(要するに|要点は|一言でいうと|本質は?|要は|核)/u.test(m))

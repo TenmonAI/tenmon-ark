@@ -24,17 +24,7 @@ from human_gate_store_v1 import create_pending_gate, get_gate_record, is_approve
 from patch_executor_v1 import execute_patch
 from path_guard_v1 import allowed_only_violations, classify_mixed_commit_roots, violates_forbidden
 from queue_store_v1 import finish_from_runner_record, try_begin_card
-
-
-def repo_root_from(start: Path) -> Path:
-    cur = start.resolve()
-    for _ in range(20):
-        if (cur / ".git").exists():
-            return cur
-        if cur.parent == cur:
-            break
-        cur = cur.parent
-    return start.resolve()
+from repo_resolve_v1 import repo_root_from
 
 
 def run_cmd(cmd: str, cwd: Path, timeout: int = 600) -> Tuple[int, str, str]:

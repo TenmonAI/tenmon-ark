@@ -1,2 +1,4 @@
 __pycache__/
 *.pyc
+# POSTLOCK: ローカル baseline（CI で別パスを CHAT_TS_POSTLOCK_BASELINE にする場合はコミット不要）
+postlock_maintenance_baseline.json

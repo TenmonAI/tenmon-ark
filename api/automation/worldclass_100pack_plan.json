@@ -1,0 +1,306 @@
+{
+  "$schema_comment": "TENMON_WORLDCLASS_ASCENT_3STAGE_100PACK_V1 — 設計カードの機械可読マスター（100枚=10群×10）。実行は single_flight・群単位 acceptance。",
+  "version": 1,
+  "cardName": "TENMON_WORLDCLASS_ASCENT_3STAGE_100PACK_V1",
+  "logPathPattern": "/var/log/tenmon/card_TENMON_WORLDCLASS_ASCENT_3STAGE_100PACK_V1/<TS>/run.log",
+  "stages": [
+    {
+      "id": 1,
+      "name": "CONVERSATION_FINAL_ASCENT",
+      "objective": "会話OSを完成領域に固定。問い型ごとに天聞として崩れず一貫し長短自在。",
+      "successCriteriaSummary": [
+        "surface failure classes zero",
+        "longform_shortfall zero",
+        "route/surface miswire toward zero",
+        "hasResponsePlan all required probes",
+        "thread continuity alive",
+        "routeReason vs surface alignment >= 0.95",
+        "ask-overuse reduced",
+        "3k/8k chapter structure stable"
+      ]
+    },
+    {
+      "id": 2,
+      "name": "TOTAL_CIRCULATION_CLOSURE",
+      "objective": "会話→memory→canon→KHS→growth→automation→次会話の閉ループ。",
+      "successCriteriaSummary": [
+        "thread_center_memory evidence",
+        "carry projection / thread linkage effective",
+        "thoughtGuide/persona/intention natural on surface",
+        "growth candidate + ledger write evidence",
+        "replay PASS",
+        "execution_gate PASS",
+        "manifest_missing_total=0",
+        "workspace_dirty=false"
+      ]
+    },
+    {
+      "id": 3,
+      "name": "WORLDCLASS_ASCENT_LOOP",
+      "objective": "改善ループ自体の高性能化・継続改善帯。",
+      "successCriteriaSummary": [
+        "3 iterations overall score improvement",
+        "all families strong+",
+        "supreme_integration_score >= 95",
+        "seal_allowed",
+        "MAINLINE_COMPLETED_READ_ONLY_SEAL_V1 connected",
+        "post-seal worldclass reveal PASS"
+      ]
+    }
+  ],
+  "executionPolicy": {
+    "runMode": "single_flight",
+    "oneCardOneVerification": true,
+    "groupBoundaryAcceptance": true,
+    "passGroupContinueOnly": true,
+    "failGeneratesMinimalNextCard": true,
+    "nightRunMaxConsecutiveCards": 8,
+    "nightRunSummaryEveryNCards": 8,
+    "stopOn": ["build_fail", "replay_fail", "manifest_regression", "probe_regression"],
+    "maxSafeBatchPerNight": 12,
+    "recommendedBatches": 10,
+    "destructivePatchForbidden": true,
+    "forbiddenPathEscapeStop": true
+  },
+  "scoreModel": {
+    "dimensions": [
+      "conversation_surface_score",
+      "route_integrity_score",
+      "responseplan_score",
+      "continuity_memory_score",
+      "canon_thought_score",
+      "longform_score",
+      "learning_growth_score",
+      "automation_control_score",
+      "supreme_integration_score",
+      "overall_worldclass_score"
+    ],
+    "bands": {
+      "seal_candidate": 95,
+      "worldclass_candidate": 90,
+      "strong_ascent": 85,
+      "viable": 70,
+      "incomplete_max": 69
+    }
+  },
+  "stopConditions": {
+    "passStop": [
+      "overall_worldclass_score >= 95",
+      "seal_allowed = true",
+      "manifest_missing_total = 0",
+      "workspace_dirty = false",
+      "replay PASS",
+      "execution_gate PASS",
+      "required probes PASS",
+      "longform acceptance PASS",
+      "continuity acceptance PASS",
+      "growth acceptance PASS"
+    ],
+    "partialStop": [
+      "overall >= 85 with seal blockers",
+      "emit next minimal card and stop"
+    ],
+    "failStop": [
+      "build fail",
+      "replay regress",
+      "probe regress",
+      "manifest regress",
+      "dirty regression",
+      "3 iterations no score improvement"
+    ]
+  },
+  "finalOutputsExpected": [
+    "run.log",
+    "worldclass_100pack_plan.json",
+    "group_progress_summary.json",
+    "batch_01_summary.json",
+    "batch_02_summary.json",
+    "batch_03_summary.json",
+    "batch_04_summary.json",
+    "batch_05_summary.json",
+    "batch_06_summary.json",
+    "batch_07_summary.json",
+    "batch_08_summary.json",
+    "batch_09_summary.json",
+    "batch_10_summary.json",
+    "conversation_probe_matrix_before.json",
+    "conversation_probe_matrix_after_each_group.json",
+    "supreme_connection_graph.json",
+    "growth_loop_evidence.json",
+    "final_status_summary.json",
+    "final_status_summary.md",
+    "next_card_if_partial_or_fail.md"
+  ],
+  "groups": [
+    {
+      "groupId": "01",
+      "name": "SURFACE_PURIFICATION",
+      "purpose": "表層ノイズ・前置き・補助末尾・重複・ぎこちなさ除去",
+      "cards": [
+        { "n": 1, "cardName": "SURFACE_PREAMBLE_ROUTE_SUPPRESS_V1" },
+        { "n": 2, "cardName": "SURFACE_HELPER_TAIL_ZERO_V1" },
+        { "n": 3, "cardName": "SURFACE_REPETITION_COLLAPSE_V1" },
+        { "n": 4, "cardName": "SURFACE_CLOSESTYLE_ROUTE_LOCK_V1" },
+        { "n": 5, "cardName": "SURFACE_GENERIC_SMELL_ERASE_V1" },
+        { "n": 6, "cardName": "SURFACE_SUPPORT_WARMTH_BALANCE_V1" },
+        { "n": 7, "cardName": "SURFACE_JUDGEMENT_CRISP_V1" },
+        { "n": 8, "cardName": "SURFACE_SELFAWARE_CLARITY_V1" },
+        { "n": 9, "cardName": "SURFACE_WORLDVIEW_DIRECTNESS_V1" },
+        { "n": 10, "cardName": "SURFACE_RUNTIME_ACCEPTANCE_SEAL_V1" }
+      ]
+    },
+    {
+      "groupId": "02",
+      "name": "ROUTE_INTEGRITY",
+      "purpose": "問い型ごとの誤配線除去",
+      "cards": [
+        { "n": 11, "cardName": "ROUTE_DEFINE_ANALYSIS_DISAMBIG_V1" },
+        { "n": 12, "cardName": "ROUTE_SOUL_WORLDVIEW_SPLIT_V1" },
+        { "n": 13, "cardName": "ROUTE_SUBCONCEPT_CANON_GUARD_V1" },
+        { "n": 14, "cardName": "ROUTE_SCRIPTURE_LOCAL_RESOLVER_LOCK_V1" },
+        { "n": 15, "cardName": "ROUTE_JUDGEMENT_PREEMPT_REFINEMENT_V1" },
+        { "n": 16, "cardName": "ROUTE_SUPPORT_PREEMPT_REFINEMENT_V1" },
+        { "n": 17, "cardName": "ROUTE_SELFAWARE_DISAMBIG_V1" },
+        { "n": 18, "cardName": "ROUTE_LONGFORM_PRIORITY_LOCK_V1" },
+        { "n": 19, "cardName": "ROUTE_FALLBACK_SHRINK_V1" },
+        { "n": 20, "cardName": "ROUTE_ACCEPTANCE_MATRIX_V1" }
+      ]
+    },
+    {
+      "groupId": "03",
+      "name": "RESPONSEPLAN_TOTALIZATION",
+      "purpose": "全 route に応答設計を貫通",
+      "cards": [
+        { "n": 21, "cardName": "RESPONSEPLAN_REQUIRED_COVERAGE_V1" },
+        { "n": 22, "cardName": "RESPONSEPLAN_DEFINE_TEMPLATE_V1" },
+        { "n": 23, "cardName": "RESPONSEPLAN_ANALYSIS_TEMPLATE_V1" },
+        { "n": 24, "cardName": "RESPONSEPLAN_JUDGEMENT_TEMPLATE_V1" },
+        { "n": 25, "cardName": "RESPONSEPLAN_SUPPORT_TEMPLATE_V1" },
+        { "n": 26, "cardName": "RESPONSEPLAN_SCRIPTURE_TEMPLATE_V1" },
+        { "n": 27, "cardName": "RESPONSEPLAN_SELFAWARE_TEMPLATE_V1" },
+        { "n": 28, "cardName": "RESPONSEPLAN_LONGFORM_TEMPLATE_V1" },
+        { "n": 29, "cardName": "RESPONSEPLAN_FOLLOWUP_POLICY_V1" },
+        { "n": 30, "cardName": "RESPONSEPLAN_ACCEPTANCE_ZERO_MISSING_V1" }
+      ]
+    },
+    {
+      "groupId": "04",
+      "name": "THREADCORE_CONTINUITY",
+      "purpose": "続き会話の芯を完全接続",
+      "cards": [
+        { "n": 31, "cardName": "THREADCORE_REQUIRED_COVERAGE_V1" },
+        { "n": 32, "cardName": "THREADCORE_CENTER_PERSIST_V1" },
+        { "n": 33, "cardName": "THREADCORE_DIFF_CAPTURE_V1" },
+        { "n": 34, "cardName": "THREADCORE_NEXTSTEP_BIND_V1" },
+        { "n": 35, "cardName": "THREADCORE_CARRY_PROJECTION_LOCK_V1" },
+        { "n": 36, "cardName": "THREADCORE_LINK_SURFACE_LOCK_V1" },
+        { "n": 37, "cardName": "CONTINUITY_ROUTE_UNIFY_V1" },
+        { "n": 38, "cardName": "FOLLOWUP_SURFACE_STABILITY_V1" },
+        { "n": 39, "cardName": "MEMORY_TO_CONTINUITY_EVIDENCE_V1" },
+        { "n": 40, "cardName": "THREADCORE_ACCEPTANCE_ZERO_MISSING_V1" }
+      ]
+    },
+    {
+      "groupId": "05",
+      "name": "CANON_THOUGHT_SYNTHESIS",
+      "purpose": "知識を辞書でなく人格判断として出す",
+      "cards": [
+        { "n": 41, "cardName": "CANON_SYNTH_RESPONSE_BIND_V1" },
+        { "n": 42, "cardName": "THOUGHTGUIDE_SURFACE_BIND_V1" },
+        { "n": 43, "cardName": "PERSONA_CONSTITUTION_SURFACE_BIND_V1" },
+        { "n": 44, "cardName": "INTENTION_CONSTITUTION_SURFACE_BIND_V1" },
+        { "n": 45, "cardName": "KHS_CANON_SYNTHESIS_V1" },
+        { "n": 46, "cardName": "KOKUZO_CONTEXTUAL_PULL_V1" },
+        { "n": 47, "cardName": "SCRIPTURE_TO_LIVING_RESPONSE_V1" },
+        { "n": 48, "cardName": "SUBCONCEPT_TO_SITHESIS_V1" },
+        { "n": 49, "cardName": "ONE_SOUND_AND_LINEAGE_BRIDGE_V1" },
+        { "n": 50, "cardName": "CANON_THOUGHT_ACCEPTANCE_V1" }
+      ]
+    },
+    {
+      "groupId": "06",
+      "name": "LONGFORM_BOOK_INTELLIGENCE",
+      "purpose": "3000/8000/章立て/本級文章",
+      "cards": [
+        { "n": 51, "cardName": "LONGFORM_3K_CORE_V1" },
+        { "n": 52, "cardName": "LONGFORM_8K_CHAPTER_ENGINE_V1" },
+        { "n": 53, "cardName": "LONGFORM_EVIDENCE_DENSITY_V1" },
+        { "n": 54, "cardName": "LONGFORM_KHS_STRUCTURING_V1" },
+        { "n": 55, "cardName": "LONGFORM_BOOKMODE_CONTINUITY_V1" },
+        { "n": 56, "cardName": "LONGFORM_ARGUMENT_BALANCE_V1" },
+        { "n": 57, "cardName": "LONGFORM_SUMMARY_TO_EXPANSION_V1" },
+        { "n": 58, "cardName": "LONGFORM_NO_HELPER_TAIL_V1" },
+        { "n": 59, "cardName": "LONGFORM_ACCEPTANCE_MATRIX_V1" },
+        { "n": 60, "cardName": "BOOK_INTELLIGENCE_SEAL_V1" }
+      ]
+    },
+    {
+      "groupId": "07",
+      "name": "LEARNING_GROWTH_LOOP",
+      "purpose": "会話が学習へ返る",
+      "cards": [
+        { "n": 61, "cardName": "GROWTH_CANDIDATE_GENERATOR_V1" },
+        { "n": 62, "cardName": "UNRESOLVED_TO_LEDGER_V1" },
+        { "n": 63, "cardName": "STRONG_TOPIC_TO_LEDGER_V1" },
+        { "n": 64, "cardName": "FAILURE_PATTERN_TO_LEDGER_V1" },
+        { "n": 65, "cardName": "LEDGER_TO_NEXT_PROBE_V1" },
+        { "n": 66, "cardName": "LEDGER_TO_RESPONSE_HINT_V1" },
+        { "n": 67, "cardName": "GROWTH_SCORE_ENGINE_V1" },
+        { "n": 68, "cardName": "SCRIPTURE_LEARNING_FEEDBACK_V1" },
+        { "n": 69, "cardName": "KANAGI_GROWTH_LOOP_BIND_V1" },
+        { "n": 70, "cardName": "LEARNING_GROWTH_ACCEPTANCE_V1" }
+      ]
+    },
+    {
+      "groupId": "08",
+      "name": "AUTOMATION_CONTROL",
+      "purpose": "夜間自動構築でも壊れない",
+      "cards": [
+        { "n": 71, "cardName": "REPO_RESOLVE_HARDLOCK_V1" },
+        { "n": 72, "cardName": "WORKSPACE_OBSERVER_PATH_FIX_V1" },
+        { "n": 73, "cardName": "EXECUTION_GATE_TOTAL_FIX_V1" },
+        { "n": 74, "cardName": "REPLAY_AUDIT_TOTAL_FIX_V1" },
+        { "n": 75, "cardName": "FULL_AUTOPILOT_ALIGNMENT_V1" },
+        { "n": 76, "cardName": "CAMPAIGN_EXECUTOR_ALIGNMENT_V1" },
+        { "n": 77, "cardName": "MANIFEST_ZERO_MISSING_V1" },
+        { "n": 78, "cardName": "DIRTY_TREE_ZERO_POLICY_V1" },
+        { "n": 79, "cardName": "AUTO_CARD_QUEUE_WORLDCLASS_V1" },
+        { "n": 80, "cardName": "AUTOMATION_CONTROL_ACCEPTANCE_V1" }
+      ]
+    },
+    {
+      "groupId": "09",
+      "name": "SUPREME_INTEGRATION",
+      "purpose": "subsystem 間の循環証明",
+      "cards": [
+        { "n": 81, "cardName": "CONVERSATION_TO_MEMORY_MAP_V1" },
+        { "n": 82, "cardName": "MEMORY_TO_CANON_MAP_V1" },
+        { "n": 83, "cardName": "CANON_TO_JUDGEMENT_MAP_V1" },
+        { "n": 84, "cardName": "JUDGEMENT_TO_LANGUAGE_MAP_V1" },
+        { "n": 85, "cardName": "LANGUAGE_TO_GROWTH_MAP_V1" },
+        { "n": 86, "cardName": "GROWTH_TO_AUTOMATION_MAP_V1" },
+        { "n": 87, "cardName": "AUTOMATION_TO_NEXT_CONVERSATION_MAP_V1" },
+        { "n": 88, "cardName": "SUPREME_CONNECTION_GRAPH_V1" },
+        { "n": 89, "cardName": "SUPREME_GAP_REPAIR_V1" },
+        { "n": 90, "cardName": "SUPREME_INTEGRATION_ACCEPTANCE_V1" }
+      ]
+    },
+    {
+      "groupId": "10",
+      "name": "REVEAL_ACCEPTANCE_SEAL",
+      "purpose": "完成証明と封印",
+      "cards": [
+        { "n": 91, "cardName": "POST_100PACK_TOTAL_REVEAL_V1" },
+        { "n": 92, "cardName": "WORLDCLASS_CONVERSATION_PROBE_SUITE_V1" },
+        { "n": 93, "cardName": "WORLDCLASS_LONGFORM_ACCEPTANCE_V1" },
+        { "n": 94, "cardName": "WORLDCLASS_CONTINUITY_ACCEPTANCE_V1" },
+        { "n": 95, "cardName": "WORLDCLASS_CANON_SYNTH_ACCEPTANCE_V1" },
+        { "n": 96, "cardName": "WORLDCLASS_AUTOMATION_ACCEPTANCE_V1" },
+        { "n": 97, "cardName": "WORLDCLASS_GROWTH_ACCEPTANCE_V1" },
+        { "n": 98, "cardName": "MAINLINE_COMPLETION_SEAL_REPAIR_V1" },
+        { "n": 99, "cardName": "READ_ONLY_SEAL_GATE_V1" },
+        { "n": 100, "cardName": "WORLDCLASS_FINAL_SEAL_V1" }
+      ]
+    }
+  ]
+}

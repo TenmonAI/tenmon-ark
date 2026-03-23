@@ -21,6 +21,7 @@ if str(_AUTOMATION_DIR) not in sys.path:
 
 from chatts_metrics_v1 import analyze_chat_ts
 from chatts_trunk_domain_map_v1 import build_domain_map
+from repo_resolve_v1 import repo_root_from
 
 REPORT_AUDIT = "chatts_audit_v1_report.json"
 REPORT_TRUNK = "chatts_trunk_domain_map_v1.json"
@@ -32,15 +33,10 @@ BUNDLE_SPECS: List[Dict[str, Any]] = [
     {
         "bundleId": "bundle_infra_wrapper_v1",
         "targetTrunk": "infra_wrapper",
-        "title": "Infra: wrapper / synapse / router / ku contract",
-        "goal": "Wrapper, return wiring, synapse, decisionFrame.ku 周辺の危険混在を先に解く。",
+        "title": "Infra: wrapper / synapse / router / ku contract (mainline FINAL)",
+        "goal": "infra_wrapper trunk を CHAT_TRUNK_INFRA_WRAPPER_SPLIT_V1_FINAL で収束（旧 audit 束は DAG 側の別系統）。",
         "cardNames": [
-            "ROUTE_DUPLICATION_SCAN_V1",
-            "WRAPPER_DEDUP_AUDIT_V1",
-            "LEDGER_AND_SYNAPSE_CALLSITE_AUDIT_V1",
-            "TRPC_APP_ROUTER_CONTRACT_AUDIT_V1",
-            "MEMORY_ROUTER_BOUNDARY_AUDIT_V1",
-            "DECISION_FRAME_KU_CONTRACT_GUARD_V1",
+            "CHAT_TRUNK_INFRA_WRAPPER_SPLIT_V1_FINAL",
         ],
     },
     {
@@ -67,28 +63,37 @@ BUNDLE_SPECS: List[Dict[str, Any]] = [
     {
         "bundleId": "bundle_continuity_v1",
         "targetTrunk": "continuity",
-        "title": "Continuity / hybrid route smoke",
-        "goal": "thread / hybrid route / follow-up 系の退行防止。",
+        "title": "Continuity trunk (mainline)",
+        "goal": "CHAT_TRUNK_CONTINUITY_SPLIT_V1 — thread / follow-up preempt の trunk 分割。",
         "cardNames": [
-            "SMOKE_HYBRID_ROUTE_REGRESSION_V1",
+            "CHAT_TRUNK_CONTINUITY_SPLIT_V1",
         ],
     },
     {
         "bundleId": "bundle_support_selfdiag_v1",
         "targetTrunk": "support_selfdiag",
-        "title": "Support / self-diagnosis (reserved)",
-        "goal": "support / self aware / judgement 系の短文化（該当カードは catalog 増設時に追加）。",
-        "cardNames": [],
+        "title": "Support / self-diagnosis (mainline FINAL)",
+        "goal": "CHAT_TRUNK_SUPPORT_SELFDIAG_SPLIT_V1_FINAL — support_selfdiag trunk 収束。",
+        "cardNames": [
+            "CHAT_TRUNK_SUPPORT_SELFDIAG_SPLIT_V1_FINAL",
+        ],
     },
     {
         "bundleId": "bundle_general_v1",
         "targetTrunk": "general",
-        "title": "General fallback / hygiene",
-        "goal": "dist ドリフト・clone 再現性・PDCA 文書など残差の整理。",
+        "title": "General trunk (mainline FINAL)",
+        "goal": "CHAT_TRUNK_GENERAL_SPLIT_V1_FINAL — general trunk 収束。",
         "cardNames": [
-            "DIST_ARTIFACT_DRIFT_SCAN_V1",
-            "REPRODUCIBLE_CLONE_GUARD_V1",
-            "PDCA_DEV_CORE_ALIGNMENT_V1",
+            "CHAT_TRUNK_GENERAL_SPLIT_V1_FINAL",
+        ],
+    },
+    {
+        "bundleId": "bundle_runtime_acceptance_v1",
+        "targetTrunk": "runtime_acceptance",
+        "title": "Runtime acceptance lock (mainline FINAL)",
+        "goal": "CHAT_TRUNK_RUNTIME_ACCEPTANCE_LOCK_V1_FINAL で build/supervisor/replay を主線として固定。",
+        "cardNames": [
+            "CHAT_TRUNK_RUNTIME_ACCEPTANCE_LOCK_V1_FINAL",
         ],
     },
 ]
@@ -96,17 +101,6 @@ BUNDLE_SPECS: List[Dict[str, Any]] = [
 
 def _utc_now_iso() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
-
-
-def repo_root_from(start: Path) -> Path:
-    cur = start.resolve()
-    for _ in range(24):
-        if (cur / ".git").exists():
-            return cur
-        if cur.parent == cur:
-            break
-        cur = cur.parent
-    return start.resolve()
 
 
 def load_json(path: Path) -> Optional[Dict[str, Any]]:
@@ -325,6 +319,7 @@ def sort_bundles_exec_order(
         "continuity": 3,
         "support_selfdiag": 4,
         "general": 5,
+        "runtime_acceptance": 6,
     }
 
     def sort_key(b: Dict[str, Any]) -> Tuple[int, int, str]:
@@ -414,7 +409,7 @@ def build_plan(root: Path) -> Dict[str, Any]:
         "meta": {
             "planner": "patch_planner_v1",
             "nextCardConstitution": "AUTO_BUILD_PATCH_GENERATOR_V1",
-            "bundleSort": "priority_infra_define_scripture_continuity_support_general_with_wrapper_boost",
+            "bundleSort": "priority_infra_define_scripture_continuity_support_general_runtime_acceptance_with_wrapper_boost",
         },
     }
 
@@ -428,7 +423,7 @@ def validate_plan(plan: Dict[str, Any]) -> List[str]:
         return [f"missing:{miss}"]
     if plan.get("parallelPolicy") != "single_flight":
         return ["parallelPolicy"]
-    if len(plan.get("bundles") or []) < 6:
+    if len(plan.get("bundles") or []) < 7:
         return ["bundles_min"]
     return []
 

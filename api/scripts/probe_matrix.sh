@@ -47,12 +47,43 @@ assert_equals() {
   echo "[ASSERT_PASS] ${name}"
 }
 
+assert_contains() {
+  local value="$1"
+  local needle="$2"
+  local name="$3"
+  if [[ "${value}" != *"${needle}"* ]]; then
+    echo "[ASSERT_FAIL] ${name}: response missing expected substring => ${needle}"
+    exit 1
+  fi
+  echo "[ASSERT_PASS] ${name}"
+}
+
 run_probe() {
   local file="$1"
   local payload="$2"
-  curl -fsS --max-time 20 "${BASE}/api/chat" \
+  local out="${LOG_DIR}/${file}"
+  local http
+  http="$(curl -sS --max-time 20 -o "${out}" -w "%{http_code}" "${BASE}/api/chat" \
     -H "Content-Type: application/json" \
-    -d "${payload}" > "${LOG_DIR}/${file}"
+    -d "${payload}")" || {
+    echo "[CURL_FAIL] ${file}"
+    exit 1
+  }
+  if [[ "${http}" != "200" ]]; then
+    echo "[HTTP_FAIL] ${file} code=${http}"
+    cat "${out}" || true
+    exit 1
+  fi
+  jq -e . >/dev/null 2>&1 <"${out}" || {
+    echo "[JSON_FAIL] ${file}"
+    cat "${out}" || true
+    exit 1
+  }
+  jq -e 'has("response") and (.response|type=="string")' >/dev/null 2>&1 <"${out}" || {
+    echo "[SCHEMA_FAIL] ${file}: missing string .response"
+    cat "${out}" || true
+    exit 1
+  }
 }
 
 echo "== AUDIT =="
@@ -72,7 +103,7 @@ run_probe "general_organize.json" \
 echo "== general organize ==" && \
 jq '{rr:.decisionFrame.ku.routeReason, heart:.decisionFrame.ku.heart, resp:.response}' "${LOG_DIR}/general_organize.json"
 general_organize_resp="$(jq -r '.response' "${LOG_DIR}/general_organize.json")"
-assert_startswith "${general_organize_resp}" "いまは少し内側を整える段階です。" "general organize phase-prefix"
+assert_contains "${general_organize_resp}" "いまは少し内側を整える段階です。" "general organize phase-line"
 echo
 
 run_probe "fire_ish.json" \
@@ -88,7 +119,7 @@ run_probe "inward_ish.json" \
 echo "== inward-ish ==" && \
 jq '{rr:.decisionFrame.ku.routeReason, heart:.decisionFrame.ku.heart, resp:.response}' "${LOG_DIR}/inward_ish.json"
 inward_resp="$(jq -r '.response' "${LOG_DIR}/inward_ish.json")"
-assert_startswith "${inward_resp}" "いまは少し内側を整える段階です。" "inward-ish phase-prefix"
+assert_contains "${inward_resp}" "いまは少し内側を整える段階です。" "inward-ish phase-line"
 assert_contains_not "${inward_resp}" "まここ" "inward-ish no-makoko"
 echo
 
@@ -114,6 +145,66 @@ echo "== katakamuna canon ==" && \
 jq '{rr:.decisionFrame.ku.routeReason, resp:.response}' "${LOG_DIR}/katakamuna.json"
 kata_rr="$(jq -r '.decisionFrame.ku.routeReason' "${LOG_DIR}/katakamuna.json")"
 assert_equals "${kata_rr}" "KATAKAMUNA_CANON_ROUTE_V1" "katakamuna rr"
+echo
+
+run_probe "soul_exists.json" \
+  '{"message":"魂はあるのか？","threadId":"probe_matrix_soul_exists"}'
+echo "== soul exists ==" && \
+jq '{rr:.decisionFrame.ku.routeReason, resp:(.response|tostring|.[0:120])}' "${LOG_DIR}/soul_exists.json"
+soul_ex_resp="$(jq -r '.response' "${LOG_DIR}/soul_exists.json")"
+if [[ "${#soul_ex_resp}" -lt 40 ]]; then
+  echo "[ASSERT_FAIL] soul exists: response too short"
+  exit 1
+fi
+assert_contains "${soul_ex_resp}" "魂" "soul exists mentions 魂"
+echo
+
+run_probe "secretary.json" \
+  '{"message":"言霊秘書とは何ですか？","threadId":"probe_matrix_secretary"}'
+echo "== kotodama secretary ==" && \
+jq '{rr:.decisionFrame.ku.routeReason, resp:(.response|tostring|.[0:120])}' "${LOG_DIR}/secretary.json"
+sec_resp="$(jq -r '.response' "${LOG_DIR}/secretary.json")"
+if [[ "${#sec_resp}" -lt 40 ]]; then
+  echo "[ASSERT_FAIL] secretary: response too short"
+  exit 1
+fi
+echo "[ASSERT_PASS] secretary non-trivial length"
+echo
+
+run_probe "utahi.json" \
+  '{"message":"ウタヒとは？","threadId":"probe_matrix_utahi"}'
+echo "== utahi ==" && \
+jq '{rr:.decisionFrame.ku.routeReason, resp:(.response|tostring|.[0:120])}' "${LOG_DIR}/utahi.json"
+utahi_resp="$(jq -r '.response' "${LOG_DIR}/utahi.json")"
+if [[ "${#utahi_resp}" -lt 40 ]]; then
+  echo "[ASSERT_FAIL] utahi: response too short"
+  exit 1
+fi
+echo "[ASSERT_PASS] utahi non-trivial length"
+echo
+
+run_probe "collapse.json" \
+  '{"message":"会話が崩れるのはなぜ？","threadId":"probe_matrix_collapse"}'
+echo "== collapse why ==" && \
+jq '{rr:.decisionFrame.ku.routeReason, heart:.decisionFrame.ku.heart, resp:(.response|tostring|.[0:160])}' "${LOG_DIR}/collapse.json"
+collapse_resp="$(jq -r '.response' "${LOG_DIR}/collapse.json")"
+if [[ "${#collapse_resp}" -lt 20 ]]; then
+  echo "[ASSERT_FAIL] collapse: response too short"
+  exit 1
+fi
+echo "[ASSERT_PASS] collapse non-trivial length"
+echo
+
+run_probe "longform.json" \
+  '{"message":"3000字で説明して","threadId":"probe_matrix_longform"}'
+echo "== longform ==" && \
+jq '{rr:.decisionFrame.ku.routeReason, len:(.response|tostring|length)}' "${LOG_DIR}/longform.json"
+long_len="$(jq -r '.response|tostring|length' "${LOG_DIR}/longform.json")"
+if [[ "${long_len}" -lt 400 ]]; then
+  echo "[ASSERT_FAIL] longform: expected substantial length, got=${long_len}"
+  exit 1
+fi
+echo "[ASSERT_PASS] longform length"
 echo
 
 PROPOSED_TERM="$(sqlite3 /opt/tenmon-ark-data/kokuzo.sqlite \

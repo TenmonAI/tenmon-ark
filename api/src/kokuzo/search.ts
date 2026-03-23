@@ -6,6 +6,7 @@ import type { KokuzoChunk, KokuzoSeed } from "./indexer.js";
 import { extractKotodamaTags, type KotodamaTag } from "../kotodama/tagger.js";
 import { getPageText } from "./pages.js";
 import { getCaps } from "./capsQueue.js";
+import { evaluateKokuzoBadHeuristicV1, mergeSnippetAndPageHeadForBadGuardV1 } from "../core/kokuzoBadGuardV1.js";
 
 /**
  * Phase31: snippet を正規化（\f 除去、空白圧縮、trim）
@@ -71,6 +72,27 @@ export type KokuzoCandidate = {
 };
 
 /**
+ * TENMON_A1: BAD 汚染シグナル付きページを会話候補から参照除外（DB 本文は変更しない）
+ */
+function filterHybridCandidatesBadGuardV1(cands: KokuzoCandidate[]): KokuzoCandidate[] {
+  if (!Array.isArray(cands) || cands.length === 0) return cands;
+  const out: KokuzoCandidate[] = [];
+  for (const c of cands) {
+    try {
+      const pageHead = String(getPageText(c.doc, c.pdfPage) || "")
+        .replace(/\f/g, " ")
+        .slice(0, 800);
+      const merged = mergeSnippetAndPageHeadForBadGuardV1(c.snippet, pageHead);
+      const ev = evaluateKokuzoBadHeuristicV1(merged);
+      if (!ev.isBad) out.push(c);
+    } catch {
+      out.push(c);
+    }
+  }
+  return out;
+}
+
+/**
  * クエリを正規化（#詳細、doc/pdfPage指定、記号を除去、文字揺れ正規化）
  */
 function normalizeHybridQuery(q: string): string {
@@ -118,21 +140,23 @@ export function searchPagesForHybrid(docOrNull: string | null, query: string, li
       const pinRow = pinStmt.get(pinDoc, pinPdfPage) as { doc: string; pdfPage: number; text: string } | undefined;
       
       if (pinRow) {
-        // 見つかったら candidates をその1件で返す（先頭固定）
+        // 見つかったら candidates をその1件で返す（先頭固定）。BAD ページは参照除外し通常検索へ。
         const fullText = String(pinRow.text || "");
         const tags = extractKotodamaTags(fullText);
         // snippet は text 先頭120文字（既存ルールに合わせる）
         const snippet = fullText.replace(/\f/g, '').slice(0, 120);
-        
-        return [{
-          doc: pinDoc,
-          pdfPage: pinPdfPage,
-          snippet: snippet || "(pin) page indexed",
-          score: 1000, // ピン指定は最高スコア
-          tags,
-        }];
+        const pinCands = filterHybridCandidatesBadGuardV1([
+          {
+            doc: pinDoc,
+            pdfPage: pinPdfPage,
+            snippet: snippet || "(pin) page indexed",
+            score: 1000,
+            tags,
+          },
+        ]);
+        if (pinCands.length > 0) return pinCands;
       }
-      // 見つからない場合のみ、従来検索へフォールバック
+      // 見つからない / BAD の場合のみ、従来検索へフォールバック
     }
 
     // クエリを正規化
@@ -203,7 +227,7 @@ export function searchPagesForHybrid(docOrNull: string | null, query: string, li
           cand.push(pageOne.shift()!);
         }
         
-        return cand;
+        return filterHybridCandidatesBadGuardV1(cand);
       }
     }
     return [];
@@ -590,7 +614,7 @@ export function searchPagesForHybrid(docOrNull: string | null, query: string, li
     } catch (e) { console.warn("[S3_12] fallback failed", e); }
   }
   // --- /S3_12_FINAL_NONEMPTY_V1 ---
-    return final;
+    return filterHybridCandidatesBadGuardV1(final);
   }
 
   // 2) フォールバック：FTS検索が0件の場合も fallback を返す（導線成立が目的）
@@ -644,7 +668,7 @@ export function searchPagesForHybrid(docOrNull: string | null, query: string, li
         
         // Phase25: 候補が1件以上あれば返す
         if (cand.length > 0) {
-          return cand;
+          return filterHybridCandidatesBadGuardV1(cand);
         }
       }
     } catch (e) {
@@ -703,23 +727,14 @@ function getSafeFallbackCandidates(docOrNull: string | null, limit: number): Kok
     }
   }
 
-  // C3-1_CANDIDATES_QUALITY_FILTER_V2: filter garbage snippets BEFORE returning candidates (fallback keeps originals)
-  const isGarbageSnippet = (snip: string): boolean => {
-    const t = String(snip ?? "");
-    if (!t) return true;
-    // keep same philosophy as chat.ts: NON_TEXT/OCR fail markers are garbage
-    if (/\[NON_TEXT_PAGE_OR_OCR_FAILED\]/.test(t)) return true;
-    const bad = (t.match(/[�\u0000-\u001F]/g) || []).length;
-    if (bad >= 3) return true;
-    const hasJP = /[ぁ-んァ-ン一-龯]/.test(t);
-    if (!hasJP && t.length < 60) return true;
-    return false;
-  };
-
   const rawCandidates = Array.isArray(candidates) ? candidates : [];
-  const cleaned = rawCandidates.filter((c: any) => !isGarbageSnippet(String((c as any)?.snippet ?? "")));
-  const finalCandidates = cleaned.length ? cleaned : rawCandidates;
-  return finalCandidates;
+  // NON_TEXT は従来どおり除外しつつ、kokuzoBadGuardV1 と同一の hard_bad シグナルで参照除外
+  const nonNonText = rawCandidates.filter(
+    (c: any) => !/\[NON_TEXT_PAGE_OR_OCR_FAILED\]/.test(String((c as any)?.snippet ?? ""))
+  );
+  const base = nonNonText.length ? nonNonText : rawCandidates;
+  const guarded = filterHybridCandidatesBadGuardV1(base as KokuzoCandidate[]);
+  return guarded.length ? guarded : base;
 
 }
 
@@ -779,7 +794,18 @@ export function searchKotodamaFts(query: string, limit = 3): { doc: string; pdfP
     const filtered = rows.filter((r) => r.snippet && !String(r.snippet).includes(NON_TEXT));
     const scored = filtered.map((r) => ({ ...r, _score: kotodamaFtsQualityScore(r.doc, r.snippet) }));
     scored.sort((a, b) => b._score - a._score);
-    return scored.slice(0, limit).map(({ doc, pdfPage, snippet }) => ({ doc, pdfPage, snippet }));
+    const badGuardOk = scored.filter((r) => {
+      try {
+        const pageHead = String(getPageText(r.doc, r.pdfPage) || "")
+          .replace(/\f/g, " ")
+          .slice(0, 800);
+        const merged = mergeSnippetAndPageHeadForBadGuardV1(r.snippet, pageHead);
+        return !evaluateKokuzoBadHeuristicV1(merged).isBad;
+      } catch {
+        return true;
+      }
+    });
+    return badGuardOk.slice(0, limit).map(({ doc, pdfPage, snippet }) => ({ doc, pdfPage, snippet }));
   } catch (e) {
     console.warn("[KOKUZO-SEARCH] searchKotodamaFts failed:", e);
     return [];

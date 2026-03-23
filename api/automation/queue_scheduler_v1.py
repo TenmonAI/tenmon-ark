@@ -20,6 +20,7 @@ if str(_AUTOMATION_DIR) not in sys.path:
     sys.path.insert(0, str(_AUTOMATION_DIR))
 
 from human_gate_store_v1 import is_approved
+from repo_resolve_v1 import repo_root_from
 from queue_store_v1 import (
     PARALLEL_POLICY,
     _load_edges,
@@ -33,7 +34,23 @@ from queue_store_v1 import (
 
 
 def repo_root_from_here() -> Path:
-    return Path(__file__).resolve().parents[2]
+    """cwd がリポ外でも api/automation から .git を辿れるようにする。"""
+    return repo_root_from(Path(__file__).resolve().parent)
+
+
+def load_queue_spine_v1(repo_root: Optional[Path] = None) -> List[str]:
+    """Ordered spine from card_catalog_v1.json queueSpineV1.cards (post-EXIT automation queue)."""
+    rr = repo_root or repo_root_from_here()
+    p = rr / "api" / "automation" / "card_catalog_v1.json"
+    try:
+        data = json.loads(p.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return []
+    block = data.get("queueSpineV1") or {}
+    cards = block.get("cards") if isinstance(block, dict) else None
+    if not isinstance(cards, list):
+        return []
+    return [str(x).strip() for x in cards if isinstance(x, str) and x.strip()]
 
 
 def sync_human_gates(snap: Dict[str, Any]) -> bool:
@@ -103,6 +120,9 @@ def compute_next_runnable(repo_root: Optional[Path] = None) -> Dict[str, Any]:
             "snapshotPath": path,
         }
 
+    spine = load_queue_spine_v1(rr)
+    spine_rank = {n: i for i, n in enumerate(spine)}
+
     eligible: List[str] = []
     for name in sorted(cards.keys()):
         info = cards.get(name)
@@ -121,17 +141,22 @@ def compute_next_runnable(repo_root: Optional[Path] = None) -> Dict[str, Any]:
             "reason": "no_eligible_queued_card",
             "parallelPolicy": PARALLEL_POLICY,
             "snapshotPath": path,
+            "queueSpineV1Head": spine[0] if spine else None,
+            "queueSpineV1Length": len(spine),
         }
 
+    eligible.sort(key=lambda n: (spine_rank.get(n, 10**9), n))
     pick = eligible[0]
     gate_id = (cards.get(pick) or {}).get("gateRequestId")
     suggested = str(gate_id).strip() if gate_id else None
     return {
         "nextCard": pick,
         "suggestedGateRequestId": suggested,
-        "reason": "deterministic_lexicographic",
+        "reason": "queue_spine_v1_order_then_lexicographic",
         "parallelPolicy": PARALLEL_POLICY,
         "snapshotPath": path,
+        "queueSpineV1Head": spine[0] if spine else None,
+        "queueSpineV1Length": len(spine),
     }
 
 

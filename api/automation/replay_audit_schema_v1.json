@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tenmon-ark.local/automation/replay_audit_schema_v1.json",
+  "title": "AUTO_BUILD_REPLAY_AUDIT_V1 report",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "version",
+    "cardName",
+    "generatedAt",
+    "repoRoot",
+    "scopedCard",
+    "changedFiles",
+    "pathGuard",
+    "build",
+    "supervisorLog",
+    "queue",
+    "audit",
+    "acceptance",
+    "finalStatus",
+    "nextCardEligibility"
+  ],
+  "properties": {
+    "version": { "type": "integer", "const": 1 },
+    "cardName": { "type": "string", "const": "AUTO_BUILD_REPLAY_AUDIT_V1" },
+    "generatedAt": { "type": "string" },
+    "repoRoot": { "type": "string" },
+    "scopedCard": { "type": "string" },
+    "changedFiles": { "type": "object" },
+    "pathGuard": { "type": "object" },
+    "build": { "type": "object" },
+    "supervisorLog": { "type": "object" },
+    "queue": { "type": "object" },
+    "audit": { "type": "object" },
+    "acceptance": { "type": "object" },
+    "finalStatus": { "type": "string", "enum": ["pass", "fail", "partial"] },
+    "nextCardEligibility": { "type": "object" },
+    "meta": { "type": "object" }
+  }
+}

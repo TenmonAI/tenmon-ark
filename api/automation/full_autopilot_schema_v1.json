@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tenmon-ark.local/automation/full_autopilot_schema_v1.json",
+  "title": "AUTO_BUILD_FULL_AUTOPILOT_V1 summary",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "version",
+    "cardName",
+    "generatedAt",
+    "repoRoot",
+    "subsystems",
+    "singleFlight",
+    "stopReasons",
+    "runNext",
+    "campaignSnapshot",
+    "wouldAutopilotProceed"
+  ],
+  "properties": {
+    "version": { "type": "integer", "const": 1 },
+    "cardName": { "type": "string", "const": "AUTO_BUILD_FULL_AUTOPILOT_V1" },
+    "generatedAt": { "type": "string" },
+    "repoRoot": { "type": "string" },
+    "subsystems": { "type": "object" },
+    "singleFlight": { "type": "object" },
+    "stopReasons": { "type": "array", "items": { "type": "string" } },
+    "runNext": { "type": "object" },
+    "campaignSnapshot": { "type": "object" },
+    "wouldAutopilotProceed": { "type": "boolean" },
+    "meta": { "type": "object" }
+  }
+}

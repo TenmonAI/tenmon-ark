@@ -6,14 +6,31 @@
 import {
   type DensityContractV1,
   applyLongformDensityProfileV1,
+  applyLongformWorldclassThreeArcV1,
+  applyPackFFallbackRoutePolishV1,
   applySurfaceMeaningDensityRepairV1,
   buildMeaningCompilerProseV1,
   buildOmegaContractV1,
   clampQuestionMarksInProseV1,
+  clampQuestionMarksKeepLastNV1,
   extractNextStepLineFromSurfaceV1,
+  inferImplicitLongformCharTargetFromUserMessageV1,
+  isLongformTriArcIntentMessageV1,
+  parseExplicitCharTargetFromUserMessageV1,
   resealFinalMainlineSurfaceV1,
   suppressInterrogativeTemplateSpamV1,
 } from "../../planning/responsePlanCore.js";
+import {
+  applyRuntimeSurfaceRepairV1,
+  applyTenmonLongformSectionLabelsOnlyV1,
+} from "../../core/tenmonConversationSurfaceV1.js";
+import {
+  applyExitContractLockV1,
+  applySurfaceLastMileClosingDedupeV1,
+  stripInternalRouteTokensFromSurfaceV1,
+  trimTenmonSurfaceNoiseV3,
+  weaveKhsEvidenceIntoHybridSurfaceV1,
+} from "../../core/tenmonConversationSurfaceV2.js";
 import {
   buildHumanReadableEvidenceFootingLineV1,
   buildMainlineTenmonHeadV1,
@@ -77,6 +94,8 @@ function hasNonEmptySourcePack(ku: any): boolean {
 function isDensityEligibleKu(ku: any): boolean {
   const rr = String(ku?.routeReason ?? "").trim();
   const am = String(ku?.answerMode ?? "").trim();
+  /** PACK_D_V1: grounding セレクタ短文出口は密度契約・意味compilerで本文を上書きしない */
+  if (/^GROUNDING_SELECTOR_/u.test(rr)) return false;
   if (DENSITY_CONTRACT_ROUTE_REASONS.has(rr)) return true;
   if (am === "define" || am === "analysis") return true;
   return false;
@@ -306,19 +325,45 @@ export function applyFinalAnswerConstitutionAndWisdomReducerV1(payload: any): an
   );
   const spRawForEvidence = String(ku.sourcePack ?? "").trim();
   /** MAINLINE_WILL_LAW_SOURCE_VISIBLE_REPAIR_V1: 根拠行を短文・人間可読に（sourcePack 英語直出しを避ける） */
-  const evidencePack = buildHumanReadableEvidenceFootingLineV1({
+  let __khsFractalWeaveApplied = false;
+  let evidencePack = buildHumanReadableEvidenceFootingLineV1({
     centerContract: centerContract,
     lawsN,
     eviN,
     sourceHint,
     sourcePackRaw: spRawForEvidence,
   });
+  const __rrEarly = String(ku.routeReason ?? "").trim();
+  const __explicitReqSurfaceEarly = Number((ku as any)?.explicitLengthRequested || 0);
+  const __lawsArr = Array.isArray(ku.lawsUsed) ? (ku.lawsUsed as unknown[]) : [];
+  const __onlyDensityLaws =
+    __lawsArr.length > 0 &&
+    __lawsArr.every((x) => /^TENMON_DENSITY_/u.test(String(x || "").trim()));
+  /** TENMON_CONVERSATION_COMPLETION_CAMPAIGN_V1: 直接回答ルートで「根は、参照は…」束を薄くする（実根拠なし時） */
+  if (
+    /^(WORLDVIEW_ROUTE_V1|DEF_LLM_TOP|NATURAL_GENERAL_LLM_TOP|TENMON_SUBCONCEPT_CANON_V1|KANAGI_CONVERSATION_V1|R22_JUDGEMENT_PREEMPT_V1|ABSTRACT_FRAME_VARIATION_V1|TENMON_SCRIPTURE_CANON_V1|KATAKAMUNA_CANON_ROUTE_V1)$/u.test(
+      __rrEarly
+    ) &&
+    eviN === 0 &&
+    (__lawsArr.length === 0 || __onlyDensityLaws)
+  ) {
+    evidencePack = "";
+  }
+  if (/^GROUNDING_SELECTOR_/u.test(__rrEarly)) {
+    evidencePack = "";
+  }
+  /** TENMON_CONVERSATION_100_SEAL: 明示長文は根拠一行（参照束）を表に出さない */
+  if (__rrEarly === "EXPLICIT_CHAR_PREEMPT_V1" && __explicitReqSurfaceEarly >= 2400) {
+    evidencePack = "";
+  }
   const userMessageForSurface = String(
     (out as { rawMessage?: string }).rawMessage ?? ku.inputText ?? ""
   ).trim();
   const sourceFootingClause = buildSourcePackFootingClauseV1(ku as Record<string, unknown>);
 
   let body = String(out.response || "").trim();
+
+  const __dfModeFractal = String(df?.mode ?? "").trim();
 
   // HUMAN_READABLE_LAW_LAYER_V1: responsePlan 表示面の raw law key を抑える（契約フィールド routeReason は不変）
   try {
@@ -390,9 +435,52 @@ export function applyFinalAnswerConstitutionAndWisdomReducerV1(payload: any): an
     body = applySurfaceMeaningDensityRepairV1(body, String(responsePlan?.semanticBody ?? ""));
   }
 
+  /** TENMON_KG2B_FRACTAL_LANGUAGE_RENDERER_V1: HYBRID 短文で KHS evidence を自然文へ（長文・三弧・ beauty は不介入） */
+  try {
+    const __dpF: any =
+      df && (df as any).detailPlan && typeof (df as any).detailPlan === "object" && !Array.isArray((df as any).detailPlan)
+        ? (df as any).detailPlan
+        : null;
+    if (
+      !__beautyThin &&
+      __dfModeFractal === "HYBRID" &&
+      __dpF &&
+      !/^GROUNDING_SELECTOR_/u.test(String(ku.routeReason ?? "").trim())
+    ) {
+      const __explicitReqF = Number((ku as any)?.explicitLengthRequested || 0);
+      const __parsedF = parseExplicitCharTargetFromUserMessageV1(userMessageForSurface) || 0;
+      const __implicitF = inferImplicitLongformCharTargetFromUserMessageV1(userMessageForSurface) ?? 0;
+      const __exMaxF = Math.max(__explicitReqF, __parsedF, __implicitF);
+      const __longformEarlyF = ku.answerLength === "long" || __exMaxF >= 600 || body.length >= 520;
+      const __triArcF =
+        isLongformTriArcIntentMessageV1(userMessageForSurface) &&
+        (String(ku.answerLength || "") === "long" ||
+          __exMaxF >= 600 ||
+          inferImplicitLongformCharTargetFromUserMessageV1(userMessageForSurface) != null);
+      if (!__longformEarlyF && !__triArcF && Array.isArray(__dpF.evidence) && __dpF.evidence.length > 0) {
+        const woven = weaveKhsEvidenceIntoHybridSurfaceV1({
+          surfaceBody: body,
+          evidence: __dpF.evidence,
+        });
+        if (woven !== body) {
+          body = woven;
+          __khsFractalWeaveApplied = true;
+          evidencePack = "";
+        }
+      }
+    }
+  } catch {
+    /* KG2B: ゲートは落とさない */
+  }
+
   /** LONGFORM_DENSITY_PROFILE_V1: lengthMode 実質化＋長文帯の段落整理・末尾 N 問まで */
   const __explicitReq = Number((ku as any)?.explicitLengthRequested || 0);
-  /** LONGFORM ascent: 中帯（〜1600字）を早めに長文化パイプへ載せる */
+  const __explicitParsedFromMessage =
+    parseExplicitCharTargetFromUserMessageV1(userMessageForSurface) || 0;
+  const __implicitLfTarget =
+    inferImplicitLongformCharTargetFromUserMessageV1(userMessageForSurface) ?? 0;
+  const __explicitForRepair = Math.max(__explicitReq, __explicitParsedFromMessage, __implicitLfTarget);
+  /** LONGFORM ascent / PACK_E: 明示 2400 字以上・中帯 600 字・本文 520 字で長文化パイプへ */
   const __longformSurface =
     ku.answerLength === "long" || __explicitReq >= 600 || body.length >= 520;
   if (__longformSurface) {
@@ -400,13 +488,49 @@ export function applyFinalAnswerConstitutionAndWisdomReducerV1(payload: any): an
       body,
       semanticBody: String(responsePlan?.semanticBody ?? ""),
       beautyMode: __beautyThin,
+      relaxLooseDedupeForExplicitPad:
+        rr === "EXPLICIT_CHAR_PREEMPT_V1" && __explicitForRepair >= 2400,
     });
+    /** STAGE3: longform 意図は 見立て→展開→着地 の三弧（600字帯・implicit・answerLength long を含む） */
+    const __wcLfArc =
+      isLongformTriArcIntentMessageV1(userMessageForSurface) &&
+      (String(ku.answerLength || "") === "long" ||
+        __explicitForRepair >= 600 ||
+        inferImplicitLongformCharTargetFromUserMessageV1(userMessageForSurface) != null);
+    if (__wcLfArc) {
+      body = applyLongformWorldclassThreeArcV1({
+        body,
+        rawMessage: userMessageForSurface,
+        answerLength: ku.answerLength as string | null | undefined,
+        explicitLengthRequested: __explicitForRepair,
+      });
+    } else {
+      /** PACK_E: composer 非経由の明示長文にも五段骨格ラベルを付与 */
+      body = applyTenmonLongformSectionLabelsOnlyV1(body, userMessageForSurface);
+    }
+  }
+
+  /** CHAT_TS_EXIT_CONTRACT_LOCK_V1: longform で semanticBody が空なら user 主題句を残す（上書きしない） */
+  try {
+    if (__longformSurface && responsePlan && typeof responsePlan === "object") {
+      const sem = String((responsePlan as { semanticBody?: unknown }).semanticBody ?? "").trim();
+      if (!sem && userMessageForSurface.trim()) {
+        (responsePlan as { semanticBody?: string }).semanticBody = userMessageForSurface.trim().slice(0, 480);
+      }
+    }
+  } catch {
+    /* semantic 束は補助のみ */
   }
 
   /** MAINLINE_ASK_OVERUSE_KILL_V1（表面束）: 同型問い連打抑止＋本文疑問符（beauty 以外は1） */
   if (!__beautyThin) {
     body = suppressInterrogativeTemplateSpamV1(body);
     body = clampQuestionMarksInProseV1(body, 1);
+    /** PACK_F: DEF / NATURAL は末尾以外の問いを句点化し、薄い前置き・重複段落を削る */
+    if (/^(DEF_LLM_TOP|NATURAL_GENERAL_LLM_TOP)$/u.test(rr)) {
+      body = clampQuestionMarksKeepLastNV1(body, 1);
+      body = applyPackFFallbackRoutePolishV1(body, rr);
+    }
   }
 
   /** 哲学・原理プローブが会話系診断テンプレへ誤って載った場合の本文救済（routeReason は不変） */
@@ -415,10 +539,67 @@ export function applyFinalAnswerConstitutionAndWisdomReducerV1(payload: any): an
   body = humanizeProseKhslLawKeys(body);
   body = stripInternalApiKeysFromSurfaceProseV1(body);
 
+  /** TENMON_CHAT_RUNTIME_SURFACE_REPAIR_PDCA_V1: 前置き抑止・補助末尾・重複圧縮（明示字数は ku と本文の両方から） */
+  body = applyRuntimeSurfaceRepairV1({
+    text: body,
+    routeReason: rr,
+    explicitLengthRequested: __explicitForRepair,
+    /** STAGE1: 明示長文でも同一段落の完全重複は落とす（acceptance repetition / merged_tail） */
+    relaxRepeatParagraphDedupe: false,
+  });
+  body = applyExitContractLockV1({
+    surface: trimTenmonSurfaceNoiseV3(body),
+    routeReason: rr,
+    userMessage: userMessageForSurface,
+    answerLength: ku.answerLength as string | null | undefined,
+    preCompose: true,
+  });
+
+  /** TENMON_CONVERSATION_100_SEAL_PDCA_V1: 明示長文は「立脚の中心」「補助）次の一手」等を付けず semantic 本文を主に出す */
+  if (rr === "EXPLICIT_CHAR_PREEMPT_V1" && __explicitReq >= 2400 && !__beautyThin) {
+    let b = trimTenmonSurfaceNoiseV3(body.trim());
+    if (!/^【天聞の所見】/u.test(b)) {
+      b = `【天聞の所見】\n\n${b}`;
+    }
+    out.response = b;
+    attachOmegaContractToOutKuV1(
+      out as Record<string, unknown>,
+      ku,
+      responsePlan,
+      String(out.response),
+      "",
+      "shaped"
+    );
+    appendConversationDensityLedgerRuntimeV1(out as Record<string, unknown>);
+    try {
+      tryAppendEvolutionLedgerSnapshotOnceV1(out as Record<string, unknown>);
+    } catch {}
+    return out;
+  }
+
+  /** PACK_D_V1: 短文・一文完結の grounding 出口は見出し二重と補助「次の一手」を付けない */
+  if (/^GROUNDING_SELECTOR_/u.test(rr)) {
+    out.response = trimTenmonSurfaceNoiseV3(body.trim());
+    attachOmegaContractToOutKuV1(
+      out as Record<string, unknown>,
+      ku,
+      responsePlan,
+      String(out.response),
+      "",
+      "shaped"
+    );
+    appendConversationDensityLedgerRuntimeV1(out as Record<string, unknown>);
+    try {
+      tryAppendEvolutionLedgerSnapshotOnceV1(out as Record<string, unknown>);
+    } catch {}
+    return out;
+  }
+
   if (__beautyThin) {
-    const __auxBeauty =
-      "（補助）余韻で足りるなら、次に残すのは一行の芯だけでよい。";
-    out.response = `【天聞の所見】\n\n${body}\n\n${__auxBeauty}`.trim();
+    const __auxBeauty = "余韻で足りるなら、次に残すのは一行の芯だけでよい。";
+    out.response = trimTenmonSurfaceNoiseV3(
+      `【天聞の所見】\n\n${body}\n\n${__auxBeauty}`.trim(),
+    );
     attachOmegaContractToOutKuV1(
       out as Record<string, unknown>,
       ku,
@@ -441,18 +622,42 @@ export function applyFinalAnswerConstitutionAndWisdomReducerV1(payload: any): an
     userMessage: userMessageForSurface,
     sourceFootingClause,
   });
-  const step =
+  let step =
     oneStepType === "statement_plus_one_question"
-      ? "（補助）次の一手: 判断軸を一つ選び、そこから深める。"
-      : "（補助）次の一手: 中心を一つ保ち、次に見る点を一つ決める。";
-  const composed = [head, body, evidencePack, step].filter(Boolean).join("\n\n").trim();
+      ? "次の一手として、判断軸を一つ選び、その軸から深めてください。"
+      : "次の一手として、中心を一つ保ち、次に見る点を一つ決めてください。";
+  /** TENMON_FINAL_PWA_SURFACE_LAST_MILE_V1: 本文に既に「次の一手」が含まれる R22/continuity/compare は定型追補を禁止 */
+  if (
+    /^(R22_NEXTSTEP_FOLLOWUP_V1|CONTINUITY_ANCHOR_V1|R22_ESSENCE_FOLLOWUP_V1|R22_COMPARE_ASK_V1|R22_COMPARE_FOLLOWUP_V1|RELEASE_PREEMPT_STRICT_COMPARE_BEFORE_TRUTH_V1)$/u.test(
+      rr
+    ) &&
+    /次の一手として/u.test(body)
+  ) {
+    step = "";
+  }
+  let composed = [head, body, evidencePack, step].filter(Boolean).join("\n\n").trim();
+  composed = applyRuntimeSurfaceRepairV1({
+    text: composed,
+    routeReason: rr,
+    explicitLengthRequested: __explicitForRepair,
+  });
+  composed = applyExitContractLockV1({
+    surface: trimTenmonSurfaceNoiseV3(composed),
+    routeReason: rr,
+    userMessage: userMessageForSurface,
+    answerLength: ku.answerLength as string | null | undefined,
+    preCompose: false,
+  });
+  composed = applySurfaceLastMileClosingDedupeV1(trimTenmonSurfaceNoiseV3(composed), rr);
+  composed = stripInternalRouteTokensFromSurfaceV1(composed);
   out.response = composed;
+  const stepForOmega = String(step || "").trim() || extractNextStepLineFromSurfaceV1(composed);
   attachOmegaContractToOutKuV1(
     out as Record<string, unknown>,
     ku,
     responsePlan,
     String(out.response),
-    step,
+    stepForOmega,
     "shaped"
   );
   appendConversationDensityLedgerRuntimeV1(out as Record<string, unknown>);

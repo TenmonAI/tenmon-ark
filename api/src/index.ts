@@ -28,6 +28,10 @@ import { markListenReady } from "./health/readiness.js";
 import { getDb } from "./db/index.js";
 import koshikiConsoleRouter from "./routes/koshikiConsole.js";
 import { debugKanagiRouter } from "./routes/debugKanagi.js";
+import { adminCursorCommandRouter } from "./routes/adminCursorCommand.js";
+import { adminCursorResultRouter } from "./routes/adminCursorResult.js";
+import { adminRemoteIntakeRouter } from "./routes/adminRemoteIntake.js";
+import { adminRemoteBuildRouter } from "./routes/adminRemoteBuild.js";
 
 // Debug: 未処理例外のハンドリング
 const pid = process.pid;
@@ -100,6 +104,10 @@ app.use(cookieParser());
 app.use("/api", kamuRouter);
 // Founder auth endpoints (additive)
 registerFounderAuth(app);
+app.use("/api", adminCursorCommandRouter);
+app.use("/api", adminCursorResultRouter);
+app.use("/api", adminRemoteIntakeRouter);
+app.use("/api", adminRemoteBuildRouter);
 app.use("/api", meRouter);
 app.use("/api", authLocalRouter);
 

@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tenmon-ark.local/automation/execution_gate_schema_v1.json",
+  "title": "AUTO_BUILD_EXECUTION_GATE_V1 report",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "version",
+    "cardName",
+    "generatedAt",
+    "repoRoot",
+    "decision",
+    "reasonCategories",
+    "blockedReasons",
+    "inputs",
+    "checks",
+    "blockedDetail"
+  ],
+  "properties": {
+    "version": { "type": "integer", "const": 1 },
+    "cardName": { "type": "string", "const": "AUTO_BUILD_EXECUTION_GATE_V1" },
+    "generatedAt": { "type": "string" },
+    "repoRoot": { "type": "string" },
+    "decision": {
+      "type": "string",
+      "enum": ["executable", "blocked", "waiting_human_gate", "invalid_scope"]
+    },
+    "reasonCategories": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "forbidden_path_in_plan",
+          "queue_running_conflict",
+          "gate_approval_required",
+          "workspace_not_ready",
+          "missing_recipe_task",
+          "catalog_scope_mismatch"
+        ]
+      }
+    },
+    "blockedReasons": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Same tags as reasonCategories when decision != executable; else empty."
+    },
+    "inputs": { "type": "object" },
+    "checks": { "type": "object" },
+    "blockedDetail": { "type": "object" },
+    "meta": { "type": "object" }
+  }
+}

@@ -20,13 +20,13 @@ export function ChatPage() {
   const [__debugOpen, __setDebugOpen] = useState(false);
   const debugBridgeOn = isDebugBridgeOn();
 
-  const { messages, sendMessage, loading, sessionId, resetThread } = useChat();
+  const { messages, sendMessage, loading, threadId, resetThread } = useChat();
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   useEffect(() => {
     // 初期ログ（UI停止禁止）
-    console.log("TENMON-ARK ChatPage mounted", { sessionId });
-  }, [sessionId]);
+    console.log("TENMON-ARK ChatPage mounted", { threadId });
+  }, [threadId]);
 
   const handleImported = () => {
     alert("復元しました。再読み込みします。");
@@ -63,9 +63,11 @@ export function ChatPage() {
           <div style={{ fontSize: 18, fontWeight: 700 }}>TENMON-ARK Chat</div>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <div style={{ fontSize: 12, opacity: 0.75 }}>
-              Thread: {sessionId || "(loading...)"}
+              Thread: {threadId || "(loading...)"}
             </div>
+            {/* TENMON_PWA_NEWCHAT_SURFACE_BINDING_V1: resetThread は reload せず thread-switch 経路 */}
             <button
+              type="button"
               onClick={resetThread}
               style={{
                 fontSize: 12,

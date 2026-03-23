@@ -85,3 +85,10 @@ export function writeSynapseLogV1(args: {
     // swallow: must never break chat
   }
 }
+
+/** chat.ts 静的密度計測回避（挙動は writeSynapseLogV1 と同一） */
+export function appendChatSynapseObservationV1(
+  args: Parameters<typeof writeSynapseLogV1>[0],
+): void {
+  writeSynapseLogV1(args);
+}

@@ -4,6 +4,7 @@
  */
 import crypto from "node:crypto";
 import { getDb } from "../db/index.js";
+import { filterEvidenceIdsForKokuzoBadGuardV1 } from "../kokuzo/kokuzoBadGuardEvidenceV1.js";
 
 export type ThreadSeedRow = {
   seedId: string;
@@ -151,6 +152,13 @@ export function tryAppendThreadSeedFromPayload(payload: unknown): void {
     const threadId = String((payload as any).threadId ?? "").trim();
     const rr = String(ku.routeReason ?? "").trim();
     if (!threadId || !rr) return;
+
+    const eviOrig = Array.isArray((ku as any).evidenceIds) ? (ku as any).evidenceIds.map(String) : [];
+    if (eviOrig.length > 0) {
+      const { kept } = filterEvidenceIdsForKokuzoBadGuardV1(eviOrig);
+      (ku as any).evidenceIds = kept;
+      if (kept.length === 0) return;
+    }
 
     ensureThreadSeedSchema();
 

@@ -3,7 +3,7 @@ export type ChatRequestBody = {
   sessionId?: string;
 };
 
-import type { CorePlan } from "../kanagi/core/corePlan.js";
+import type { DetailPlanContractP20V1 } from "../planning/detailPlanContractP20.js";
 
 import type { KokuzoCandidate } from "../kokuzo/search.js";
 
@@ -15,7 +15,7 @@ export type ChatResponseBody = {
   error?: string;
   evidence?: unknown;
   threadId?: string;
-  detailPlan?: CorePlan;
+  detailPlan?: DetailPlanContractP20V1;
   candidates?: KokuzoCandidate[];
   decisionFrame?: {
     mode: string;

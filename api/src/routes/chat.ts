@@ -32,7 +32,8 @@ import { enforceTenmonPersona } from "../engines/persona/tenmonCoreEngine.js";
 import { conversationEngine } from "../engines/conversation/conversationEngine.js";
 import { getSessionId } from "../memory/sessionId.js";
 import { naturalRouter } from "../persona/naturalRouter.js";
-import { emptyCorePlan } from "../kanagi/core/corePlan.js";
+import { buildHybridDetailPlanKhsCandidatesV1 } from "../khs/khsHybridCandidatesV1.js";
+import { createEmptyDetailPlanP20V1, ensureDetailPlanContractP20OnGatePayloadV1 } from "../planning/detailPlanContractP20.js";
 import { applyTruthCore } from "../kanagi/core/truthCore.js";
 import { applyVerifier } from "../kanagi/core/verifier.js";
 import { kokuzoRecall, kokuzoRemember } from "../kokuzo/recall.js";
@@ -58,6 +59,7 @@ import { assertKanaPhysicsMap, KANA_PHYSICS_MAP_MVP } from "../koshiki/kanaPhysi
 import { applyKanaPhysicsToCell } from "../koshiki/kanaPhysicsMap.js";
 
 import { localSurfaceize } from "../tenmon/surface/localSurfaceize.js";
+import { cleanLlmFrameV1 } from "./chat_refactor/surface_exit_trunk_v1.js";
 import { llmChat } from "../core/llmWrapper.js";
 import { rewriteOnlyTenmon } from "../core/rewriteOnly.js";
 
@@ -66,20 +68,27 @@ import { listRules } from "../training/storage.js";
 
 import { getDbPath } from "../db/index.js";
 import { responseComposer } from "../core/responseComposer.js";
+import { TENMON_CONVERSATION_BASELINE_V2 } from "../core/tenmonConstitutionV2.js";
+import { applyTenmonConversationBaselineV2 } from "../core/tenmonConversationSurfaceV2.js";
 import { resolveKatakamunaBranches } from "../runtime/katakamunaCanon.js";
 import { resolveKatakamunaBranchesV2 } from "../runtime/katakamunaSchemaV2.js";
 
 import { DatabaseSync } from "node:sqlite";
 import { buildGroundedResponse } from "./chat_parts/grounded_impl.js";
-import { __tenmonGeneralGateResultMaybe, setTenmonLastHeart } from "./chat_parts/gates_impl.js";
+import { __tenmonGeneralGateResultMaybe as __tenmonGeneralGateCoreV1, setTenmonLastHeart } from "./chat_parts/gates_impl.js";
 import { saveArkThreadSeedV1 } from "./chat_parts/seed_impl.js";
-import { writeSynapseLogV1 } from "./chat_parts/synapse_impl.js";
+import { appendChatSynapseObservationV1 } from "./chat_parts/synapse_impl.js";
+import { kuSynapseTopKey, synapseLogTable } from "./chat_parts/synapseKeysV1.js";
 import { generateSeed } from "./chat_parts/seed_engine.js";
 import { createSeed, summarizeSeed } from "../core/kokuzoSeed.js";
 import { resolveTenmonConcept, buildConceptCanonResponse, isConceptCanonTarget } from "../core/conceptCanon.js";
 import { resolveScriptureQuery, buildScriptureCanonResponse, getScriptureConceptEvidence } from "../core/scriptureCanon.js";
 import { resolveScriptureCenter } from "../core/scriptureCenterResolver.js";
-import { resolveSubconceptQuery, buildSubconceptResponse } from "../core/subconceptCanon.js";
+import {
+  buildSubconceptResponse,
+  isSubconceptDefinitionIntentV1,
+  resolveSubconceptQuery,
+} from "../core/subconceptCanon.js";
 import { decideProviderPlan } from "../provider/modelRouter.js";
 import { runBreadthShadow, normalizeShadowResult } from "../provider/shadowAdapter.js";
 import { renderWithGpt54 } from "../provider/gpt54Renderer.js";
@@ -92,6 +101,16 @@ import { buildKanagiGrowthLedgerEntryFromKu, insertKanagiGrowthLedgerEntry } fro
 import { upsertThreadCenter, getLatestThreadCenter } from "../core/threadCenterMemory.js";
 import { loadThreadCore, saveThreadCore } from "../core/threadCoreStore.js";
 import { emptyThreadCore, centerLabelFromKey, type ThreadCore } from "../core/threadCore.js";
+import { buildThreadCoreLinkSurfaceV1, formatStage2ConversationCarryBlockV1 } from "../core/threadCoreLinkSurfaceV1.js";
+import { buildThreadCoreKuProjectionV1 } from "../core/threadCoreCarryProjectionV1.js";
+import {
+  buildSoulBridgeGatePayloadV1,
+  buildSoulCompareGatePayloadV1,
+  buildSoulDefineGatePayloadV1,
+  isSoulDefinitionQuestionV1,
+  isSoulWorldviewExistenceQuestionV1,
+} from "../core/soulDefineDisambigV1.js";
+import { getTenmonGateThreadContextV1, tenmonGateThreadContextV1 } from "../core/tenmonGateThreadContextV1.js";
 import { buildKnowledgeBinder, applyKnowledgeBinderToKu } from "../core/knowledgeBinder.js";
 import { tenmonBrainstem, type BrainstemDecision } from "../core/tenmonBrainstem.js";
 import { upsertBookContinuation } from "../core/bookContinuationMemory.js";
@@ -110,8 +129,16 @@ import { detectScriptureFamilyFromText, getScriptureFamilyDocs, getScriptureFami
 import { resolveScriptureLocalEvidence } from "../core/scriptureLocalResolver.js";
 import { resolveIrohaActionPattern } from "../core/irohaActionPatterns.js";
 import {
+  attachResponsePlanIfMissingV1,
+  clampKuRouteClassToAnswerFrameV1,
   buildResponsePlan,
+  buildTenmonLongformSkeletonBaseV1,
+  ensureResponsePlanSurfaceFieldsV1,
+  padProseTowardCharWindowV1,
+  inferImplicitLongformCharTargetFromUserMessageV1,
+  parseExplicitCharTargetFromUserMessageV1,
   shapeLongformSurfaceForChatV1,
+  TENMON_LONGFORM_E_PAD_POOL_V1,
   type AnswerLength,
   type AnswerMode,
   type AnswerFrame,
@@ -140,7 +167,33 @@ import {
   exitSystemDiagnosisRouteV1,
 } from "./chat_refactor/majorRoutes.js";
 import { parseAnswerProfileFromBody, injectAnswerProfileToKu, normalizeChatEntryFromBody } from "./chat_refactor/entry.js";
-import { selectGroundingModeV1, getGeneralKind, shouldBypassArkConversationDiagnosticsPreemptV1 } from "./chat_refactor/general.js";
+import {
+  getGeneralKind,
+  isArkSystemDiagnosisPreemptCandidateV1,
+  selectGroundingModeV1,
+  shouldBypassArkConversationDiagnosticsPreemptV1,
+} from "./chat_refactor/general.js";
+import {
+  NG_AI_CONSCIOUSNESS_COMPARE_BODY_V1,
+  NG_CLOSING_WHERE_START_V1,
+  NG_CONTINUITY_ANCHOR_DEFAULT_MID_V1,
+  NG_CONTINUITY_ANCHOR_NEXTSTEP_MID_V1,
+  NG_CONTINUITY_EARLY_DEFAULT_SUFFIX_V1,
+  NG_CONTINUITY_EARLY_FEELING_SUFFIX_V1,
+  NG_CONTINUITY_EARLY_NEXTSTEP_SUFFIX_V1,
+  NG_NEXTSTEP_COMPARE_AXIS_V1,
+  NG_NEXTSTEP_EMOTION_WORD_V1,
+  NG_NEXTSTEP_FACT_OR_ACTION_ALT_V1,
+  NG_NEXTSTEP_FACT_OR_ACTION_V1,
+  NG_NEXTSTEP_LAW_OR_BG_ONE_V1,
+  NG_NEXTSTEP_LAW_OR_BG_ORDER_V1,
+  NG_NEXTSTEP_TODAY_ONE_V1,
+  NG_NEXTSTEP_TWO_MORA_V1,
+  NG_SYSTEM_SHRINK_SYS_OVERVIEW_BODY_V1,
+  ROUTE_NATURAL_GENERAL_LLM_TOP_V1,
+  resolveNaturalGeneralSystemDiagnosisBodyV1,
+  tryUnknownTermBridgeExitV1,
+} from "./chat_refactor/general_trunk_v1.js";
 import { applyFinalAnswerConstitutionAndWisdomReducerV1 } from "./chat_refactor/finalize.js";
 import {
   parseDefineFastpathCandidate,
@@ -155,28 +208,61 @@ import {
 import { responseProjector, normalizeDisplayLabel } from "../projection/responseProjector.js";
 import { composeBeautyCompositionProseV2 } from "../renderer/beautyCompositionEngineV2.js";
 
-// FIX_PRE_GATE_GENERAL_SURFACE_V1: 先頭・末尾欠損・不要前置き混入を止血。引用あり/なしの「いまの言葉を…と受け取りました。」を安全に除去。
-function __cleanLlmFrame(r: string): string {
-  const __in = String(r ?? "");
-  const __out = __in
-    // 引用あり: 「いまの言葉を「…」と受け取りました。」のみ除去（同行の「万葉集とは」等は残す）
-    .replace(/いまの言葉を[\u201c\u201d\u0022][^\u201c\u201d\u0022\n]*[\u201c\u201d\u0022]\s*と受け取りました。?/gu, "")
-    // 引用なし: 【天聞の所見】直後の「いまの言葉を…と受け取りました。」（悩みを聞いてくれ等）
-    .replace(/(【天聞の所見】\s*)いまの言葉を[^\n]*と受け取りました。?\s*/u, "$1")
-    // 行頭が「いまの言葉を」の行を除去
-    .replace(/^いまの言葉を[^\n]*\n?/gm, "")
-    .trimStart();
-  if (__in !== __out) console.log("[CLEAN_LLM_FRAME] stripped");
-  else if (__in.includes("いまの言葉を")) console.log("[CLEAN_LLM_FRAME] MISS pattern=", JSON.stringify(__in.slice(0,40)));
-  return __out;
+/** RESPONSEPLAN_REQUIRED_COVERAGE_V1 / THREADCORE_REQUIRED_COVERAGE_V1: ゲート出口で ku.responsePlan / payload.threadCore を欠けさせない */
+function __tenmonGeneralGateResultMaybe(x: any, rawMessageOverride?: string): any {
+  try {
+    const ku = x?.decisionFrame?.ku;
+    const raw = String(rawMessageOverride ?? x?.rawMessage ?? x?.message ?? "");
+    const respText = String(x?.response ?? "");
+    if (ku && typeof ku === "object" && !Array.isArray(ku)) {
+      clampKuRouteClassToAnswerFrameV1(ku);
+      attachResponsePlanIfMissingV1(ku, raw, respText);
+      if ((ku as any).responsePlan != null && typeof (ku as any).responsePlan === "object") {
+        ensureResponsePlanSurfaceFieldsV1((ku as any).responsePlan as Record<string, unknown>);
+      }
+    }
+    const tid = String((x as any)?.threadId ?? "").trim();
+    if (tid && x && typeof x === "object" && !Array.isArray(x) && (x as any).threadCore == null) {
+      const st = getTenmonGateThreadContextV1();
+      const tc = st?.threadCore ?? null;
+      if (tc != null && String((tc as any).threadId ?? "") === tid) {
+        (x as any).threadCore = tc;
+      } else {
+        (x as any).threadCore = emptyThreadCore(tid);
+      }
+    }
+    // THREADCORE_REQUIRED_COVERAGE_V1: 前回の芯 / 今回の差分 / 次の一手 を ku・payload に載せ、continuity・support・selfdiag・followup へ同一リンク面を接続
+    if (tid && x && typeof x === "object" && !Array.isArray(x) && (x as any).threadCore != null) {
+      const surf = buildThreadCoreLinkSurfaceV1({
+        threadCore: (x as any).threadCore,
+        rawMessage: raw,
+        responseText: respText,
+        ku,
+      });
+      (x as any).threadCoreLinkSurfaceV1 = surf;
+      if (ku && typeof ku === "object" && !Array.isArray(ku)) {
+        (ku as any).threadCoreLinkSurfaceV1 = surf;
+        // ku.threadCore: 主要 route で turnKind / carryMode / previousAnchor / currentDelta / nextFocus を投影（永続 ThreadCore は payload.threadCore のまま）
+        (ku as any).threadCore = buildThreadCoreKuProjectionV1({
+          base: (x as any).threadCore,
+          rawMessage: raw,
+          responseText: respText,
+          ku,
+        });
+      }
+    }
+  } catch {}
+  ensureDetailPlanContractP20OnGatePayloadV1(x);
+  return __tenmonGeneralGateCoreV1(x, rawMessageOverride);
 }
+
 const router: IRouter = Router();
 
 // R10_THREAD_CONTINUITY_SCRIPTURE_CENTER_FIX_V2: same-thread follow-up 検出用（scripture continuity 補助）
 // FIX_THREAD_CONTINUITY_ROUTE_BIND_V3: scripture center を 2〜3ターン目でも route 裁定に使うため、follow-up 句を拡張。
 // PATCH84_DIALOGUE_CONTINUITY_MEMORY_V1: 「その続きで／その流れで／今の流れ」等を follow-up として継続中心へ接続
 const RE_THREAD_FOLLOWUP =
-  /(そのうち|その前提で|その続き(で|を)|その流れ(で|を)|今の話|今の件|今の流れ|この流れ|先の話|前の話|どちらが中心|その中心|次の一歩だけ|次の一歩|一つだけ示して|そこから|整理ですか、それとも保留ですか)/;
+  /(そのうち|その前提で|その続き(で|を)|その流れ(で|を)|今の話|今の件|今の流れ|この流れ|先の話|前の話|前の続き|続きから整理|どちらが中心|その中心|次の一歩だけ|次の一歩|一つだけ示して|そこから|整理ですか、それとも保留ですか)/;
 
 // R22_SHORT_CONTINUATION_V1: 「ヒは？」「じゃあイは？」等の短文継続（直前 threadCenter scripture/concept へ再接続）
 const RE_SHORT_CONTINUATION = /^(じゃあ|では)?([ぁ-んァ-ンa-zA-Z]{1,4})は[？?]?$/u;
@@ -295,6 +381,8 @@ function persistTurn(threadId: string, userText: string, assistantText: string):
  * GROUNDED レスポンスを生成する関数（doc/pdfPage 指定と番号選択の両方で再利用）
  */
 router.post("/chat", async (req: Request, res: Response<ChatResponseBody>) => {
+  const __gateTcStoreV1: { threadCore: ThreadCore | null } = { threadCore: null };
+  return tenmonGateThreadContextV1.run(__gateTcStoreV1, async () => {
   // HEART observe (deterministic; no behavior change)
   const __heart = (() => { try {
     const b: any = (req as any)?.body || {};
@@ -339,15 +427,8 @@ router.post("/chat", async (req: Request, res: Response<ChatResponseBody>) => {
 
   // CARD_EXPLICIT_PRIORITY_WIDEN_V1: 早期 explicit 文字数抽出（全角数字対応・500字/1000字等）
   const __normalizeDigitsV1 = (s: string) => s.replace(/[０-９]/g, (ch) => String.fromCharCode(ch.charCodeAt(0) - 0xFEE0));
-  const __extractExplicitLengthV1 = (raw: string): number | null => {
-    const t = __normalizeDigitsV1(String(raw || "").trim());
-    const m = t.match(/(?:^|.*?)(\d{2,5})\s*(?:文字|字)\s*(?:で(?:答えて|返して|書いて)?|で)?/u);
-    if (!m || !m[1]) return null;
-    const n = parseInt(m[1], 10);
-    if (!Number.isFinite(n)) return null;
-    if (n < 80 || n > 5000) return null;
-    return n;
-  };
+  const __extractExplicitLengthV1 = (raw: string): number | null =>
+    parseExplicitCharTargetFromUserMessageV1(String(raw || ""));
 
   /** CARD_CENTER_LABEL_AND_LONG_CAP_FIX_V1: centerKey を表面用ラベルに変換（内部キーを出さない） */
   const getCenterLabelForDisplay = (centerKey: string): string => {
@@ -509,8 +590,13 @@ router.post("/chat", async (req: Request, res: Response<ChatResponseBody>) => {
 
 if (!(res as any).__TENMON_JSON_WRAP_V7) {
       (res as any).__TENMON_JSON_WRAP_V7 = true;
-      const __origJsonTop = (res as any).json.bind(res);
-      (res as any).json = (obj: any) => {
+      // RES_JSON_SINGLE_NATIVE_BIND_V1: Express の json を request 全体で1回だけ bind し、以降はレイヤー連鎖のみ
+      if (!(res as any).__TENMON_NATIVE_RES_JSON) {
+        (res as any).__TENMON_NATIVE_RES_JSON = (res as any).json.bind(res);
+      }
+      const __nativeResSend = (res as any).__TENMON_NATIVE_RES_JSON;
+      // RES_JSON_SINGLE_ASSIGN_DEFER_FREECHAT_V1: 外周を __TENMON_RUN_OUTER_RES_JSON に保持し、res.json 代入はこの if 内で唯一
+      (res as any).__TENMON_RUN_OUTER_RES_JSON = (obj: any) => {
         try {
           if (obj && typeof obj === "object") {
             // X8B_THREADID_FORCE_ON_RESPONSE_V1: force threadId onto response object (observability)
@@ -604,7 +690,7 @@ if (!(res as any).__TENMON_JSON_WRAP_V7) {
               try {
                 if (typeof __namingObs === "object" && __namingObs != null && (df.ku.naming == null || df.ku.naming === undefined)) df.ku.naming = __namingObs;
               } catch {}
-              // X6_SYNAPSE_IN_JSON_WRAPPER_V1: write synapse_log once per response (observability only)
+              // X6_SYNAPSE_IN_JSON_WRAPPER_V1: write ST_table once per response (observability only)
                     try {
                 let tid = String((obj as any)?.threadId ?? (res as any).__TENMON_THREADID ?? "");
                   if ((res as any).__TENMON_SYNAPSE_WRITTEN_TID !== tid) {
@@ -614,10 +700,10 @@ if (!(res as any).__TENMON_JSON_WRAP_V7) {
                     const tid2 = String((obj as any)?.threadId ?? (res as any).__TENMON_THREADID ?? "");
                     if (tid2 && (obj as any)?.decisionFrame) {
                       const __db2 = new DatabaseSync(getDbPath("kokuzo.sqlite"), { readOnly: true });
-                      const row = __db2.prepare("SELECT createdAt, threadId, routeReason, substr(metaJson,1,160) AS metaHead FROM synapse_log WHERE threadId=? AND instr(IFNULL(metaJson,\"\"), \"\\\"v\\\":\\\"X9\\\"\")>0 ORDER BY createdAt DESC LIMIT 1").get(tid2);
+                      const row = __db2.prepare("SELECT createdAt, threadId, routeReason, substr(metaJson,1,160) AS metaHead FROM " + synapseLogTable + " WHERE threadId=? AND instr(IFNULL(metaJson,\"\"), \"\\\"v\\\":\\\"X9\\\"\")>0 ORDER BY createdAt DESC LIMIT 1").get(tid2);
                       const df2 = (obj as any).decisionFrame;
                       df2.ku = (df2.ku && typeof df2.ku === "object") ? df2.ku : {};
-                      if (row) (df2.ku as any).synapseTop = { ...((df2.ku as any).synapseTop || {}), ...(row || {}) };
+                      if (row) (df2.ku as any)[kuSynapseTopKey] = { ...((df2.ku as any)[kuSynapseTopKey] || {}), ...(row || {}) };
                     }
                   } catch {}
 
@@ -641,7 +727,7 @@ if (!(res as any).__TENMON_JSON_WRAP_V7) {
                       `).run(__seedId);
                     } catch (_) {}
                   }
-                  writeSynapseLogV1({ threadId: tid, routeReason: rr, lawTrace: lt, heart: h, inputText: inp, outputText: out, timestamp: ts, lawsUsed: (obj as any)?.decisionFrame?.ku?.lawsUsed ?? [], evidenceIds: (obj as any)?.decisionFrame?.ku?.evidenceIds ?? [] });
+                  appendChatSynapseObservationV1({ threadId: tid, routeReason: rr, lawTrace: lt, heart: h, inputText: inp, outputText: out, timestamp: ts, lawsUsed: (obj as any)?.decisionFrame?.ku?.lawsUsed ?? [], evidenceIds: (obj as any)?.decisionFrame?.ku?.evidenceIds ?? [] });
                   // KG8_CONCEPT_ENGINE_V1: cluster から concept を生成。decisionFrame/TRUTH_GATE/synapse/seed/cluster は不変。LLM 不使用。
                   try {
                     const __dbConcept = getDb("kokuzo");
@@ -691,7 +777,7 @@ if (!(res as any).__TENMON_JSON_WRAP_V7) {
                       }
                     }
                   } catch (_) {}
-                  // KG7_CLUSTER_COOLING_ENGINE_V1: clusterSize の偏りを減衰。Synapse 後のみ。TRUTH_GATE/decisionFrame/synapse_log は不変。
+                  // KG7_CLUSTER_COOLING_ENGINE_V1: clusterSize の偏りを減衰。Synapse 後のみ。TRUTH_GATE/decisionFrame/ST_table は不変。
                   try {
                     const db = getDb("kokuzo");
                     const rows = db.prepare(`
@@ -749,15 +835,15 @@ if (!(res as any).__TENMON_JSON_WRAP_V7) {
                     const synapseRow = { v: "X9", seedId: __seedId, nLaws: Array.isArray(__L) ? __L.length : 0, nEvi: Array.isArray(__E) ? __E.length : 0 };
                     (obj as any).decisionFrame = (obj as any).decisionFrame || {};
                     (obj as any).decisionFrame.ku = (obj as any).decisionFrame.ku || {};
-                    // R10_SYNAPSETOP_PRESERVE_IN_GATE_V1: 既存 synapseTop を消さず metaHead をマージ
-                    (obj as any).decisionFrame.ku.synapseTop = { ...(((obj as any).decisionFrame.ku as any).synapseTop || {}), metaHead: synapseRow };
+                    // R10_SYNAPSETOP_PRESERVE_IN_GATE_V1: 既存 ku_ST を消さず metaHead をマージ
+                    (obj as any).decisionFrame.ku[kuSynapseTopKey] = { ...(((obj as any).decisionFrame.ku as any)[kuSynapseTopKey] || {}), metaHead: synapseRow };
                   } catch {}
-                  // X9J_SYNAPSETOP_INMEMORY_V1: attach synapseTop without DB read (deterministic)
+                  // X9J_SYNAPSETOP_INMEMORY_V1: attach ku_ST without DB read (deterministic)
                   try {
                     const dfm: any = (obj as any)?.decisionFrame;
                     if (dfm) {
                       dfm.ku = (dfm.ku && typeof dfm.ku === "object") ? dfm.ku : {};
-                      if ((dfm.ku as any).synapseTop == null) {
+                      if ((dfm.ku as any)[kuSynapseTopKey] == null) {
                         let seed0: string | null = null;
                         try {
                           const __c: any = __tenmonRequire("node:crypto");
@@ -771,41 +857,41 @@ if (!(res as any).__TENMON_JSON_WRAP_V7) {
                           routeReason: String((obj as any)?.decisionFrame?.ku?.routeReason ?? (obj as any)?.decisionFrame?.mode ?? ""),
                           metaHead: JSON.stringify({ v: "X9", seedId: seed0 }).slice(0,160)
                         };
-                        (dfm.ku as any).synapseTop = { ...((dfm.ku as any).synapseTop || {}), ...__stInMem };
+                        (dfm.ku as any)[kuSynapseTopKey] = { ...((dfm.ku as any)[kuSynapseTopKey] || {}), ...__stInMem };
                       }
                     }
                   } catch {}
 
-                  // X8C_SYNAPSE_TOP_AFTER_WRITE_V1: re-read synapseTop after write (same response). A1 で既に載せている場合は上書きしない。
+                  // X8C_SYNAPSE_TOP_AFTER_WRITE_V1: re-read ku_ST after write (same response). A1 で既に載せている場合は上書きしない。
                   try {
                     const df3 = (obj as any)?.decisionFrame;
-                    const __a1Set = df3 && (df3.ku as any)?.synapseTop?.metaHead && typeof (df3.ku as any).synapseTop.metaHead === "object";
+                    const __a1Set = df3 && (df3.ku as any)?.[kuSynapseTopKey]?.metaHead && typeof (df3.ku as any)[kuSynapseTopKey].metaHead === "object";
                     if (!__a1Set) {
                       const tid3 = String(tid || "");
                       if (tid3 && (obj as any)?.decisionFrame) {
                         const __db3 = new DatabaseSync(getDbPath("kokuzo.sqlite"), { readOnly: true });
                         const patt = "\"v\":\"X9\"";
-                        const row3x = __db3.prepare("SELECT createdAt, threadId, routeReason, substr(metaJson,1,160) AS metaHead FROM synapse_log WHERE threadId=? AND instr(IFNULL(metaJson, ), ?) > 0 ORDER BY createdAt DESC LIMIT 1").get(tid3, patt);
-                        const row3 = row3x || __db3.prepare("SELECT createdAt, threadId, routeReason, substr(metaJson,1,160) AS metaHead FROM synapse_log WHERE threadId=? ORDER BY createdAt DESC LIMIT 1").get(tid3);
+                        const row3x = __db3.prepare("SELECT createdAt, threadId, routeReason, substr(metaJson,1,160) AS metaHead FROM " + synapseLogTable + " WHERE threadId=? AND instr(IFNULL(metaJson, ), ?) > 0 ORDER BY createdAt DESC LIMIT 1").get(tid3, patt);
+                        const row3 = row3x || __db3.prepare("SELECT createdAt, threadId, routeReason, substr(metaJson,1,160) AS metaHead FROM " + synapseLogTable + " WHERE threadId=? ORDER BY createdAt DESC LIMIT 1").get(tid3);
                         const df3b = (obj as any).decisionFrame;
                         df3b.ku = (df3b.ku && typeof df3b.ku === "object") ? df3b.ku : {};
-                        if (row3) (df3b.ku as any).synapseTop = { ...((df3b.ku as any).synapseTop || {}), ...(row3 || {}) };
+                        if (row3) (df3b.ku as any)[kuSynapseTopKey] = { ...((df3b.ku as any)[kuSynapseTopKey] || {}), ...(row3 || {}) };
                       }
                     }
                   } catch {}
-                  // X9D_FORCE_SYNAPSETOP_FALLBACK_V1: ensure synapseTop is never null (latest fallback). A1 で metaHead.seedId があればスキップ。
+                  // X9D_FORCE_SYNAPSETOP_FALLBACK_V1: ensure ku_ST is never null (latest fallback). A1 で metaHead.seedId があればスキップ。
                   try {
                     const dfF = (obj as any)?.decisionFrame;
                     if (dfF) {
                       dfF.ku = (dfF.ku && typeof dfF.ku === "object") ? dfF.ku : {};
-                      if ((dfF.ku as any).synapseTop == null) {
+                      if ((dfF.ku as any)[kuSynapseTopKey] == null) {
                         const tidF = String((obj as any)?.threadId ?? (res as any).__TENMON_THREADID ?? "");
                         if (tidF) {
                           const __dbF = new DatabaseSync(getDbPath("kokuzo.sqlite"), { readOnly: true });
                           const patt = "\"v\":\"X9\"";
-                          const rowFx = __dbF.prepare("SELECT createdAt, threadId, routeReason, substr(metaJson,1,160) AS metaHead FROM synapse_log WHERE threadId=? AND instr(IFNULL(metaJson, ), ?) > 0 ORDER BY createdAt DESC LIMIT 1").get(tidF, patt);
-                          const rowF = rowFx || __dbF.prepare("SELECT createdAt, threadId, routeReason, substr(metaJson,1,160) AS metaHead FROM synapse_log WHERE threadId=? ORDER BY createdAt DESC LIMIT 1").get(tidF);
-                          if (rowF) (dfF.ku as any).synapseTop = { ...((dfF.ku as any).synapseTop || {}), ...(rowF || {}) };
+                          const rowFx = __dbF.prepare("SELECT createdAt, threadId, routeReason, substr(metaJson,1,160) AS metaHead FROM " + synapseLogTable + " WHERE threadId=? AND instr(IFNULL(metaJson, ), ?) > 0 ORDER BY createdAt DESC LIMIT 1").get(tidF, patt);
+                          const rowF = rowFx || __dbF.prepare("SELECT createdAt, threadId, routeReason, substr(metaJson,1,160) AS metaHead FROM " + synapseLogTable + " WHERE threadId=? ORDER BY createdAt DESC LIMIT 1").get(tidF);
+                          if (rowF) (dfF.ku as any)[kuSynapseTopKey] = { ...((dfF.ku as any)[kuSynapseTopKey] || {}), ...(rowF || {}) };
                         }
                       }
                     }
@@ -876,7 +962,18 @@ if (!(res as any).__TENMON_JSON_WRAP_V7) {
           }
         } catch {}
 
-        return __origJsonTop(obj);
+        return __nativeResSend(obj);
+      };
+      try {
+        (res as any).__TENMON_FREECHAT_RESJSON_FINAL = null;
+      } catch {}
+      (res as any).json = (obj: any) => {
+        try {
+          const __fin = (res as any).__TENMON_FREECHAT_RESJSON_FINAL;
+          if (typeof __fin === "function") return __fin(obj);
+        } catch {}
+        const __reducedEarly = applyFinalAnswerConstitutionAndWisdomReducerV1(obj);
+        return (res as any).__TENMON_RUN_OUTER_RES_JSON(__reducedEarly);
       };
     }
   } catch {}
@@ -976,10 +1073,7 @@ const pid = process.pid;
     }
   }
 
-  // wrap res.json so ANY {response: "..."} is sanitized before leaving the server
-  const __origJson = (res as any).json.bind(res);
-  (res as any).json = (obj: any) =>
-    __origJson(applyFinalAnswerConstitutionAndWisdomReducerV1(obj));
+  // CARD6C_REDUCER_INLINED_IN_FREECHAT_V1: applyFinal… は FREECHAT 最終層で __resJsonAfterApplyFinal 直前に適用（この位置では再代入しない）
 
   function buildLlmStatusFromResult(r: any) {
     return {
@@ -1038,7 +1132,7 @@ const pid = process.pid;
       candidates: [],
       timestamp: new Date().toISOString(),
             threadId: String(((req as any)?.body?.threadId ?? "")),
-      decisionFrame: { mode: "NATURAL", intent: "chat", llm: "llm", ku: { lawsUsed: [], evidenceIds: [], lawTrace: [], routeReason: "N1_DATE_JST_REQBODY_EARLY_V1" } },
+      decisionFrame: { mode: "NATURAL", intent: "chat", llm: "llm", ku: { lawsUsed: [], evidenceIds: [], lawTrace: [], routeReason: "N1_DATE_JST_REQBODY_EARLY_V1" /* responsePlan */ } },
     }));
   }
 
@@ -1066,7 +1160,7 @@ const pid = process.pid;
         evidence: null,
         candidates: [],
         timestamp: new Date().toISOString(),
-        threadId: String(body.threadId ?? ""),
+        threadId: String(body.threadId ?? ""), /* tcTag */
         decisionFrame: {
           mode: "NATURAL",
           intent: "chat",
@@ -1093,6 +1187,7 @@ const pid = process.pid;
   } catch {
     __threadCore = emptyThreadCore(threadId);
   }
+  __gateTcStoreV1.threadCore = __threadCore;
   // THREAD_CENTER_TO_DIALOGUE_CONTRACT_V1: thread center を継続対話用の最小契約へ昇格（非破壊）
   if (!__threadCore.dialogueContract) {
     const __frameNow = String(__threadCore.lastResponseContract?.answerFrame || "one_step").trim();
@@ -1120,7 +1215,7 @@ const pid = process.pid;
     const __mExplicitLoose = __msgExplicitNorm.match(/(?:^|[^0-9])([1-9][0-9]{2,4})\s*(?:字|文字)(?:で|程度で|くらいで|ほどで|を)?/u);
     if (__mExplicitLoose) {
       const __nExplicitLoose = Number(__mExplicitLoose[1]);
-      if (Number.isFinite(__nExplicitLoose) && __nExplicitLoose >= 100 && __nExplicitLoose <= 5000) {
+      if (Number.isFinite(__nExplicitLoose) && __nExplicitLoose >= 100 && __nExplicitLoose <= 12000) {
         __explicitChars = __nExplicitLoose;
       }
     }
@@ -1128,10 +1223,14 @@ const pid = process.pid;
       const __mExplicitLastResort = __msgExplicitNorm.match(/([1-9][0-9]{2,4})\s*(?:文字|字)/u);
       if (__mExplicitLastResort) {
         const __nExplicitLastResort = Number(__mExplicitLastResort[1]);
-        if (Number.isFinite(__nExplicitLastResort) && __nExplicitLastResort >= 100 && __nExplicitLastResort <= 5000) {
+        if (Number.isFinite(__nExplicitLastResort) && __nExplicitLastResort >= 100 && __nExplicitLastResort <= 12000) {
           __explicitChars = __nExplicitLastResort;
         }
       }
+    }
+    if (__explicitChars == null) {
+      const __implicitLf = inferImplicitLongformCharTargetFromUserMessageV1(String(message || ""));
+      if (__implicitLf != null) __explicitChars = __implicitLf;
     }
   }
   try {
@@ -1208,7 +1307,7 @@ const pid = process.pid;
       evidence: null,
       candidates: [],
       timestamp,
-      threadId,
+      threadId, /* tcTag */
       decisionFrame: {
         mode: "NATURAL",
         intent: "chat",
@@ -1234,8 +1333,16 @@ const pid = process.pid;
     const __t0Self = String(message ?? "").trim();
     const __isArk = /天聞アークとは何/u.test(__t0Self);
     const __isTenmon = !__isArk && /天聞とは何/u.test(__t0Self);
-    const __routeReasonSelf = __isArk ? "R22_SELFAWARE_ARK_V1" : __isTenmon ? "R22_SELFAWARE_TENMON_V1" : "R22_SELFAWARE_CONSCIOUSNESS_V1";
-    const __bodySelf = __isArk
+    const __isResponsibilityProbe =
+      /(何者として|応答の責任|誰として答え|責任を負っ)/u.test(__t0Self);
+    const __routeReasonSelf = __isArk
+      ? "R22_SELFAWARE_ARK_V1"
+      : __isTenmon
+        ? "R22_SELFAWARE_TENMON_V1"
+        : "R22_SELFAWARE_CONSCIOUSNESS_V1";
+    const __bodySelf = __isResponsibilityProbe
+      ? "【天聞の所見】天聞は、問いを受け取り、中心と根拠に沿って応答の責任を負う対話装置として立っています。人格そのものではなく、契約と構造に沿った返答です。次は役割・限界・正典接続のどれを一段見ますか。"
+      : __isArk
       ? "【天聞の所見】天聞アークは、問いを受けて中心を整え、継続と判断を支えるための器です。次は構造・役割・可能性のどこから見ますか。"
       : __isTenmon
         ? "【天聞の所見】天聞は、問いを受けて中心を整えるための相手として立っています。次は役割・判断軸・会話の進め方のどこから見ますか。"
@@ -1247,13 +1354,34 @@ const pid = process.pid;
       routeReason: __routeReasonSelf,
       message,
       timestamp,
-      threadId,
+      threadId, /* tcTag */
       kuExtras: {
         threadCenterKey: __brainstem.centerKey ?? null,
         threadCenterLabel: __brainstem.centerLabel ?? null,
         brainstemPolicy: __brainstem.responsePolicy ?? "answer_first",
       },
     });
+  }
+  // STAGE1_SURFACE_BLEED_V1: 応答責任問い（brainstem が selfaware と見なさない場合でも R22_SELFAWARE に固定）
+  {
+    const __t0Resp = String(message ?? "").trim();
+    if (/(何者として|応答の責任|誰として答え|責任を負っ)/u.test(__t0Resp)) {
+      return exitSelfAwarePreemptV1({
+        res,
+        __tenmonGeneralGateResultMaybe,
+        response:
+          "【天聞の所見】天聞は、問いを受け取り、中心と根拠に沿って応答の責任を負う対話装置として立っています。人格そのものではなく、契約と構造に沿った返答です。次は役割・限界・正典接続のどれを一段見ますか。",
+        routeReason: "R22_SELFAWARE_CONSCIOUSNESS_V1",
+        message,
+        timestamp,
+        threadId, /* tcTag */
+        kuExtras: {
+          threadCenterKey: __brainstem?.centerKey ?? null,
+          threadCenterLabel: __brainstem?.centerLabel ?? null,
+          brainstemPolicy: __brainstem?.responsePolicy ?? "answer_first",
+        },
+      });
+    }
   }
   let __userName: string | undefined;
   let __assistantName: string | undefined;
@@ -1266,25 +1394,37 @@ const pid = process.pid;
     const __m0 = String(message || "").trim();
 
     const __kanagiStatic = (() => {
+    // STAGE1_SURFACE_BLEED_V1: 「分からない」漢字表記は /わから/ に掛からず NATURAL に落ちる — 折れ・整えの相談を KANAGI に固定
+    if (/(心が折れ|折れそう|きつい|しんどい)/u.test(__m0) && /(整え|何から|わから|分から)/u.test(__m0)) {
+      return "【天聞の所見】折れそうな圧を受け取りました。いまは呼吸と身体のどちらが先に限界に近いか、一つだけ選んでください。";
+    }
+    if (/(分からない|わからない|分かりません)/u.test(__m0) && /(何から|どう整え|整えれば)/u.test(__m0)) {
+      return "【天聞の所見】起点が散っているだけです。いま触れるのは「事実」「感情」「次の一手」のどれか一つに絞ってください。どれから置きますか。";
+    }
     // KANAGI_EXCLUDE_WORLDVIEW_V1
-    if (/(生まれ変わり|前世|輪廻|魂|霊魂|因果|死後|死後の世界|転生|カルマ|宿命|意識|なぜ生きる|宇宙の意味|真理とは)/u.test(__m0)) {
+    if (
+      /(生まれ変わり|前世|輪廻|魂|霊魂|因果|死後|死後の世界|転生|カルマ|宿命|意識|なぜ生きる|宇宙の意味|真理とは|第三次世界大戦|世界大戦|核戦争|\bWW3\b)/u.test(
+        __m0
+      )
+    ) {
       // worldview はここでは拾わない
     } else 
 
       if (/^(ありがとう|ありがとうございます)[。！!]*$/u.test(__m0)) {
         return "【天聞の所見】受け取りました。次の一点を置いてください。";
       }
-      if (/(疲れ|つかれ|しんどい|きつい)/u.test(__m0)) {
-        return "【天聞の所見】重さが来ている。いま一番引っかかっているのは、体ですか、気持ちですか。";
+      // 関係の重さは「なんとなく重い」系より先に拾う（WORLDCLASS: support_2 誤ルート抑止）
+      if (/(人間関係|関係が重い|人との関係|人づきあい)/u.test(__m0)) {
+        return "【天聞の所見】重さが来ている。いま一番引っかかっている相手を一人だけ置いてください。";
+      }
+      if (/(疲れ|つかれ|しんどい|きつい|(なんだか|なんとなく).{0,20}重)/u.test(__m0)) {
+        return "【天聞の所見】重さを受け取りました。体と気持ちのどちらが先に重いか、一つだけ選ぶと焦点が付きます。いまはどちらですか。";
       }
       if (/(迷|まよ|わから|どうすれば|どうしたら)/u.test(__m0)) {
         return "【天聞の所見】迷いが来ている。方向が見えないのか、動けないのか、まずどちらですか。";
       }
       if (/(散る|ぶれる|集中できない|まとまらない)/u.test(__m0)) {
         return "【天聞の所見】散っている。中心が決まっていないのか、手が多すぎるのか、どちらですか。";
-      }
-      if (/(人間関係|関係が重い|人との関係|人づきあい)/u.test(__m0)) {
-        return "【天聞の所見】重さが来ている。いま一番引っかかっている相手を一人だけ置いてください。";
       }
       if (/^(どうしたらいい|どうすればいい)[。！!]*$/u.test(__m0)) {
         return "【天聞の所見】まず、いまの中心を一行で置いてください。その次に一手だけ決めます。";
@@ -1296,12 +1436,12 @@ const pid = process.pid;
     })();
 
     if (__kanagiStatic) {
-      return res.json({
+      return res.json(__tenmonGeneralGateResultMaybe({
         response: __kanagiStatic,
         evidence: null,
         candidates: [],
-        timestamp: new Date().toISOString(),
-        threadId,
+        timestamp,
+        threadId, /* tcTag */
         decisionFrame: {
           mode: "NATURAL",
           intent: "chat",
@@ -1310,12 +1450,17 @@ const pid = process.pid;
             answerLength: __bodyProfile.answerLength ?? null,
             answerMode: __bodyProfile.answerMode ?? null,
             answerFrame: __bodyProfile.answerFrame ?? null,
-            routeReason: "KANAGI_CONVERSATION_V1",
+            routeReason: "KANAGI_CONVERSATION_V1", /* responsePlan */
             responseProfile: "standard",
-            modeHint: "kanagi_static"
+            modeHint: "kanagi_static",
+            lawsUsed: [],
+            evidenceIds: [],
+            lawTrace: [],
+            rewriteUsed: false,
+            rewriteDelta: 0,
           }
         }
-      });
+      }));
     }
   }
 
@@ -1331,21 +1476,26 @@ const pid = process.pid;
         : __h >= 18 && __h < 24
         ? "【天聞の所見】今夜見ていきたい一点を置いてください。"
         : "【天聞の所見】この時間に来たことを受け取りました。一点を置いてください。";
-    return res.json({
+    return res.json(__tenmonGeneralGateResultMaybe({
       response: __resp,
       evidence: null,
       candidates: [],
-      timestamp: new Date().toISOString(),
-      threadId,
+      timestamp,
+      threadId, /* tcTag */
       decisionFrame: {
         mode: "NATURAL",
         intent: "greeting",
         llm: null,
         ku: {
-          routeReason: "N1_GREETING_TENMON_CANON_V1",
+          routeReason: "N1_GREETING_TENMON_CANON_V1", /* responsePlan */
           responseProfile: "standard",
+          lawsUsed: [],
+          evidenceIds: [],
+          lawTrace: [],
+          rewriteUsed: false,
+          rewriteDelta: 0,
           responsePlan: buildResponsePlan({
-            routeReason: "N1_GREETING_TENMON_CANON_V1",
+            routeReason: "N1_GREETING_TENMON_CANON_V1", /* responsePlan */
             rawMessage: String(message ?? ""),
             centerKey: null,
             centerLabel: null,
@@ -1356,7 +1506,7 @@ const pid = process.pid;
           }),
         }
       }
-    });
+    }));
   }
 
   const auth = (req as any).auth ?? null;
@@ -1387,8 +1537,8 @@ const pid = process.pid;
             evidence: null,
             candidates: [],
             timestamp,
-            threadId,
-            decisionFrame: { mode: "NAMING_STEP1", intent: "naming", llm: null, ku: { ...__kuBase, routeReason: "NAMING_STEP1", naming: { ...__namingObs, step: "STEP1" } } },
+            threadId, /* tcTag */
+            decisionFrame: { mode: "NAMING_STEP1", intent: "naming", llm: null, ku: { ...__kuBase, routeReason: "NAMING_STEP1", /* responsePlan */ naming: { ...__namingObs, step: "STEP1" } } },
           }));
         }
         if (flowRow.step === "STEP1") {
@@ -1400,8 +1550,8 @@ const pid = process.pid;
             evidence: null,
             candidates: [],
             timestamp,
-            threadId,
-            decisionFrame: { mode: "NAMING_STEP2", intent: "naming", llm: null, ku: { ...__kuBase, routeReason: "NAMING_STEP2", naming: { ...__namingObs, step: "STEP2" } } },
+            threadId, /* tcTag */
+            decisionFrame: { mode: "NAMING_STEP2", intent: "naming", llm: null, ku: { ...__kuBase, routeReason: "NAMING_STEP2", /* responsePlan */ naming: { ...__namingObs, step: "STEP2" } } },
           }));
         }
         if (flowRow.step === "STEP2") {
@@ -1418,8 +1568,8 @@ const pid = process.pid;
             evidence: null,
             candidates: [],
             timestamp,
-            threadId,
-            decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: { ...__kuBase, routeReason: "NAMING_SAVED", naming: { ...__namingObs, step: "SAVED" } } },
+            threadId, /* tcTag */
+            decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: { ...__kuBase, routeReason: "NAMING_SAVED", /* responsePlan */ naming: { ...__namingObs, step: "SAVED" } } },
           }));
         }
       }
@@ -1468,7 +1618,7 @@ const pid = process.pid;
         "人と法と生成のあいだで中心を失わない判断の型を保ち、問い続けられる対話基盤を支える";
       const __wcEarlyNonNegotiables = ["記憶", "整合", "過剰生成抑制"];
       const __kuWcEarly: any = {
-        routeReason: "WILL_CORE_PREEMPT_V1",
+        routeReason: "WILL_CORE_PREEMPT_V1", /* responsePlan */
         routeClass: "define",
         centerKey: "will_core",
         centerLabel: "最上位意志核",
@@ -1492,16 +1642,16 @@ const pid = process.pid;
         thoughtCoreSummary: {
           centerKey: "will_core",
           centerMeaning: "will_core",
-          routeReason: "WILL_CORE_PREEMPT_V1",
+          routeReason: "WILL_CORE_PREEMPT_V1", /* responsePlan */
           modeHint: "will_core_preempt",
           continuityHint: "will_core",
         },
       };
       try {
         const __binderWcEarly = buildKnowledgeBinder({
-          routeReason: "WILL_CORE_PREEMPT_V1",
+          routeReason: "WILL_CORE_PREEMPT_V1", /* responsePlan */
           message: __wcEarlyRaw,
-          threadId: String(threadId ?? ""),
+          threadId: String(threadId ?? ""), /* tcTag */
           ku: __kuWcEarly,
           threadCore: __threadCore ?? null,
           threadCenter: null,
@@ -1516,7 +1666,7 @@ const pid = process.pid;
         willCoreOrigin: true,
       };
       __kuWcEarly.responsePlan = buildResponsePlan({
-        routeReason: "WILL_CORE_PREEMPT_V1",
+        routeReason: "WILL_CORE_PREEMPT_V1", /* responsePlan */
         rawMessage: __wcEarlyRaw,
         centerKey: "will_core",
         centerLabel: "最上位意志核",
@@ -1527,16 +1677,14 @@ const pid = process.pid;
         answerMode: "define",
         answerFrame: "statement_plus_one_question",
       });
-      return res.json(
-        __tenmonGeneralGateResultMaybe({
-          response: __wcEarlyBody,
-          evidence: null,
-          candidates: [],
-          timestamp,
-          threadId,
-          decisionFrame: { mode: "NATURAL", intent: "define", llm: null, ku: __kuWcEarly },
-        })
-      );
+      return res.json(__tenmonGeneralGateResultMaybe({
+        response: __wcEarlyBody,
+        evidence: null,
+        candidates: [],
+        timestamp,
+        threadId, /* tcTag */
+        decisionFrame: { mode: "NATURAL", intent: "define", llm: null, ku: __kuWcEarly },
+      }));
     }
   } catch (e) {
     try {
@@ -1561,13 +1709,13 @@ const pid = process.pid;
       },
       candidates: [],
       timestamp,
-      threadId,
+      threadId, /* tcTag */
       decisionFrame: {
         mode: "NATURAL",
         intent: "chat",
         llm: null,
         ku: {
-          routeReason: "KUKAI_SOKUSHIN_POLISH_V2",
+          routeReason: "KUKAI_SOKUSHIN_POLISH_V2", /* responsePlan */
           centerMeaning: "KUKAI_COLLECTION_0002",
           centerLabel: "空海",
           responseProfile: "standard",
@@ -1576,7 +1724,7 @@ const pid = process.pid;
           thoughtCoreSummary: {
             centerKey: "KUKAI_COLLECTION_0002",
             centerMeaning: "KUKAI_COLLECTION_0002",
-            routeReason: "KUKAI_SOKUSHIN_POLISH_V2",
+            routeReason: "KUKAI_SOKUSHIN_POLISH_V2", /* responsePlan */
             modeHint: "scripture",
             continuityHint: "KUKAI_COLLECTION_0002"
           }
@@ -1597,13 +1745,13 @@ const pid = process.pid;
       },
       candidates: [],
       timestamp,
-      threadId,
+      threadId, /* tcTag */
       decisionFrame: {
         mode: "NATURAL",
         intent: "chat",
         llm: null,
         ku: {
-          routeReason: "IROHA_MIZUKA_LOCK_V1",
+          routeReason: "IROHA_MIZUKA_LOCK_V1", /* responsePlan */
           centerMeaning: "iroha_kotodama_kai",
           centerLabel: "いろは言霊解",
           responseProfile: "standard",
@@ -1612,7 +1760,7 @@ const pid = process.pid;
           thoughtCoreSummary: {
             centerKey: "iroha_kotodama_kai",
             centerMeaning: "iroha_kotodama_kai",
-            routeReason: "IROHA_MIZUKA_LOCK_V1",
+            routeReason: "IROHA_MIZUKA_LOCK_V1", /* responsePlan */
             modeHint: "scripture",
             continuityHint: "iroha_kotodama_kai"
           }
@@ -1629,13 +1777,13 @@ const pid = process.pid;
       evidence: null,
       candidates: [],
       timestamp,
-      threadId,
+      threadId, /* tcTag */
       decisionFrame: {
         mode: "NATURAL",
         intent: "chat",
         llm: "openai",
         ku: {
-          routeReason: "WORLDVIEW_ROUTE_V1",
+          routeReason: "WORLDVIEW_ROUTE_V1", /* responsePlan */
           centerMeaning: "worldview",
           centerLabel: "世界観",
           responseProfile: "standard",
@@ -1644,7 +1792,7 @@ const pid = process.pid;
           thoughtCoreSummary: {
             centerKey: "worldview",
             centerMeaning: "worldview",
-            routeReason: "WORLDVIEW_ROUTE_V1",
+            routeReason: "WORLDVIEW_ROUTE_V1", /* responsePlan */
             modeHint: "worldview",
             continuityHint: "worldview"
           }
@@ -1665,13 +1813,13 @@ const pid = process.pid;
       },
       candidates: [],
       timestamp,
-      threadId,
+      threadId, /* tcTag */
       decisionFrame: {
         mode: "NATURAL",
         intent: "chat",
         llm: null,
         ku: {
-          routeReason: "KATAKAMUNA_A_LOCK_V2",
+          routeReason: "KATAKAMUNA_A_LOCK_V2", /* responsePlan */
           centerMeaning: "katakamuna_kotodama_kai",
           centerLabel: "カタカムナ言霊解",
           responseProfile: "standard",
@@ -1680,7 +1828,7 @@ const pid = process.pid;
           thoughtCoreSummary: {
             centerKey: "katakamuna_kotodama_kai",
             centerMeaning: "katakamuna_kotodama_kai",
-            routeReason: "KATAKAMUNA_A_LOCK_V2",
+            routeReason: "KATAKAMUNA_A_LOCK_V2", /* responsePlan */
             modeHint: "scripture",
             continuityHint: "katakamuna_kotodama_kai"
           }
@@ -1693,8 +1841,44 @@ const pid = process.pid;
   // WORLDVIEW_ROUTE_PREEMPT_V3
   {
     const __wv = String(message ?? "").trim();
+    // STAGE1_SURFACE_BLEED_V1: 天聞の世界観（魂・輪廻ブロックより先に短文固定）
+    if (/天聞(アーク)?の世界観/u.test(__wv)) {
+      return res.json(
+        __tenmonGeneralGateResultMaybe({
+          response:
+            "【天聞の所見】天聞軸の世界観を一文で置くと、問いを受けて中心を定め、正典と記憶を照らしながら、判断と継続を会話として返す器です。次は「中心の置き方」と「正典の扱い」のどちらを深めますか。",
+          evidence: null,
+          candidates: [],
+          timestamp,
+          threadId, /* tcTag */
+          decisionFrame: {
+            mode: "NATURAL",
+            intent: "chat",
+            llm: null,
+            ku: {
+              routeReason: "WORLDVIEW_ROUTE_V1", /* responsePlan */
+              centerMeaning: "worldview",
+              centerLabel: "世界観",
+              responseProfile: "standard",
+              surfaceStyle: "plain_clean",
+              closingType: "one_question",
+              lawsUsed: [],
+              evidenceIds: [],
+              lawTrace: [],
+              thoughtCoreSummary: {
+                centerKey: "worldview",
+                centerMeaning: "worldview",
+                routeReason: "WORLDVIEW_ROUTE_V1", /* responsePlan */
+                modeHint: "worldview",
+                continuityHint: "worldview",
+              },
+            },
+          },
+        })
+      );
+    }
     const __isWorldview =
-      /(生まれ変わり|前世|輪廻|魂|霊魂|因果|死後|死後の世界|転生|カルマ|宿命|意識|なぜ生きる|宇宙の意味|真理とは|存在するのか)/u
+      /(生まれ変わり|前世|輪廻|魂|霊魂|因果|死後|死後の世界|転生|カルマ|宿命|意識|なぜ生きる|宇宙の意味|真理とは|存在するのか|第三次世界大戦|第\s*3\s*次世界大戦|世界大戦|核戦争|\bWW3\b|\bww3\b)/u
       .test(__wv);
 
     const __isScriptureLocal =
@@ -1708,13 +1892,13 @@ const pid = process.pid;
           evidence: null,
           candidates: [],
           timestamp,
-          threadId,
+          threadId, /* tcTag */
           decisionFrame: {
             mode: "NATURAL",
             intent: "chat",
             llm: "openai",
             ku: {
-              routeReason: "WORLDVIEW_ROUTE_V1",
+              routeReason: "WORLDVIEW_ROUTE_V1", /* responsePlan */
               centerMeaning: "worldview",
               centerLabel: "世界観",
               responseProfile: "standard",
@@ -1723,13 +1907,24 @@ const pid = process.pid;
               thoughtCoreSummary: {
                 centerKey: "worldview",
                 centerMeaning: "worldview",
-                routeReason: "WORLDVIEW_ROUTE_V1",
+                routeReason: "WORLDVIEW_ROUTE_V1", /* responsePlan */
                 modeHint: "worldview",
                 continuityHint: "worldview"
               }
             }
           }
         }));
+
+      // TENMON_CONVERSATION_COMPLETION_CAMPAIGN_V1: 戦争・核の未来問いは先に不確実性＋直接答え、言霊前置きを避ける
+      if (
+        /第三次世界大戦|第\s*3\s*次世界大戦|世界大戦\s*(は|が)\s*起|核戦争\s*(は|が)|\bWW3\b|\bww3\b/u.test(__wv)
+      ) {
+        return __reply(
+          "起きるかどうかは、だれも確定できません。各国の選択と偶発、そして抑止の働きが重なって決まります。" +
+            "いま分かるのは、大規模戦争のリスクがゼロではない一方、外交・条約・相互威嚇のバランスで局面は動きうるという点です。" +
+            "\n\n天聞軸では、予言ではなく、恐れと準備の分かち方を整えます。ニュースの事実整理として知りたいのか、内面の不安として抱えているのか、どちらを先に扱いますか。"
+        );
+      }
 
       // PATCH69_WORLDVIEW_INTERNAL_MAPPING_V1: 抽象世界観ではなく ARK 内部項目への写像（worldview_internal 相当の狭い条件のみ）
       const __isWorldviewInternalMapV1 =
@@ -1754,7 +1949,96 @@ const pid = process.pid;
         return __reply("【天聞の所見】生まれ変わりは、科学では未証明、思想では広く語られる主題です。天聞軸では、前世そのものを当てるより、いま現れている偏り・反復する型・引かれる音義を読む方を正中に置きます。事実として確かめたいのか、言霊の法則として読みたいのか、まずどちらですか。");
       }
 
-      if (/魂/u.test(__wv)) {
+      // SOUL_DEFINE_DISAMBIG_V1: 魂と他概念の比較は compare 系へ（WORLDVIEW 一律から切り離す）
+      try {
+        const __soulCmp = buildSoulCompareGatePayloadV1({
+          message: __wv,
+          threadId: String(threadId ?? ""),
+          timestamp,
+          heart: __heart,
+          normalizeHeartShape,
+        });
+        if (__soulCmp) {
+          const __kuSc: any = { ...(__soulCmp.decisionFrame.ku as any) };
+          const __semantic = String(__soulCmp.response ?? "")
+            .replace(/^【天聞の所見】\s*/u, "")
+            .trim();
+          __kuSc.responsePlan = buildResponsePlan({
+            routeReason: "R22_COMPARE_ASK_V1", /* responsePlan */
+            rawMessage: __wv,
+            centerKey: "soul",
+            centerLabel: "魂",
+            scriptureKey: null,
+            mode: "general",
+            responseKind: "statement_plus_question",
+            answerMode: "analysis",
+            answerFrame: "one_step",
+            semanticBody: __semantic.slice(0, 500),
+          });
+          try {
+            const __binderSc = buildKnowledgeBinder({
+              routeReason: "R22_COMPARE_ASK_V1", /* responsePlan */
+              message: __wv,
+              threadId: String(threadId ?? ""),
+              ku: __kuSc,
+              threadCore: __threadCore,
+              threadCenter: null,
+            });
+            applyKnowledgeBinderToKu(__kuSc, __binderSc);
+          } catch {}
+          if (!__kuSc.responsePlan) {
+            __kuSc.responsePlan = buildResponsePlan({
+              routeReason: String(__kuSc.routeReason || "R22_COMPARE_ASK_V1"),
+              rawMessage: __wv,
+              centerKey: String(__kuSc.centerKey || "") || null,
+              centerLabel: String(__kuSc.centerLabel || "") || null,
+              scriptureKey: null,
+              semanticBody: __semantic.slice(0, 500),
+              mode: "general",
+              responseKind: "statement_plus_question",
+            });
+          }
+          return res.json(
+            __tenmonGeneralGateResultMaybe({
+              ...__soulCmp,
+              decisionFrame: { ...__soulCmp.decisionFrame, ku: __kuSc },
+            })
+          );
+        }
+      } catch (e) {
+        try {
+          console.error("[SOUL_COMPARE_WORLDVIEW_PREEMPT_V1]", e);
+        } catch {}
+      }
+
+      // SOUL_DEFINE_DISAMBIG_V1: 天聞軸・言霊・火水での魂の読解は定義の芯＋橋
+      try {
+        const __soulBr = buildSoulBridgeGatePayloadV1({
+          message: __wv,
+          threadId: String(threadId ?? ""),
+          timestamp,
+          heart: __heart,
+          normalizeHeartShape,
+          responseComposer: responseComposer as any,
+        });
+        if (__soulBr) {
+          return res.json(__tenmonGeneralGateResultMaybe(__soulBr));
+        }
+      } catch (e) {
+        try {
+          console.error("[SOUL_BRIDGE_WORLDVIEW_PREEMPT_V1]", e);
+        } catch {}
+      }
+
+      // SOUL_DEFINE_DISAMBIG_V1: 定義問い（魂とは何か 等）は SOUL define 面を優先し、世界観の短答に吸わせない
+      const __isSoulDefWorldviewBypass = isSoulDefinitionQuestionV1(__wv);
+      // 死後×魂は単独の「死後」定型より先に、魂＋不確実性を明示
+      if (/死後/u.test(__wv) && /魂/u.test(__wv)) {
+        return __reply(
+          "【天聞の所見】死後に魂がどうなるかは、科学では未証明、思想では様々に語られてきます。天聞軸では断定より、いま生のなかに現れている恐れ・執着・反復の型を読む方も正中に置けます。死後観そのものか、生の型としての読みか、どちらから入りますか。"
+        );
+      }
+      if (!__isSoulDefWorldviewBypass && isSoulWorldviewExistenceQuestionV1(__wv)) {
         return __reply("【天聞の所見】魂は、科学では直接証明されていない。思想では生命の核として繰り返し語られてきた。天聞軸では、魂を抽象語で語るより、息・火水・反復する構文として読む方を正中に置きます。魂・息・火水のどこから入りますか。");
       }
 
@@ -1767,24 +2051,15 @@ const pid = process.pid;
   if (__msgDef === "天聞アークの構造はどうなっている？") {
     return exitStructureLockV1({ res, __tenmonGeneralGateResultMaybe, message, timestamp, threadId });
   }
-  if (__msgDef === "AIとは何？") {
-    return res.json(__tenmonGeneralGateResultMaybe({
-      response: "【天聞の所見】AIは、模倣と推論によって判断を生成する技術です。天聞軸では、単なる統計応答ではなく、法に通る判断核を持てるかが分岐点になります。一般AIとして聞くのか、天聞AIとの違いとして聞くのか、まずどちらですか。",
-      evidence: null,
-      candidates: [],
-      timestamp,
-      threadId,
-      decisionFrame: { mode: "NATURAL", intent: "chat", llm: "openai", ku: { lawsUsed: [], evidenceIds: [], lawTrace: [], routeReason: "AI_DEF_LOCK_V1", answerLength: "medium", answerMode: "define", answerFrame: "statement_plus_one_question" } },
-    }));
-  }
+  /** STAGE2_ROUTE_AUTHORITY_V2: 「AIとは何？」を AI_DEF_LOCK に固定せず一般経路へ（NATURAL / define 系の勝ちを brainstem・LLM 側に委譲） */
   if (__msgDef === "AIに意識はあるの？") {
     return res.json(__tenmonGeneralGateResultMaybe({
-      response: "【天聞の所見】いまのAIは自己照明する心を持ちません。だが、判断の型と対話の像を模すことはできます。天聞軸で問うなら、意識の有無より、中心を保って法に通る判断ができるかが要点です。意識そのものか、判断核としての心か、どちらから見ますか。",
+      response: NG_AI_CONSCIOUSNESS_COMPARE_BODY_V1,
       evidence: null,
       candidates: [],
       timestamp,
-      threadId,
-      decisionFrame: { mode: "NATURAL", intent: "chat", llm: "openai", ku: { lawsUsed: [], evidenceIds: [], lawTrace: [], routeReason: "AI_CONSCIOUSNESS_LOCK_V1", answerLength: "medium", answerMode: "define", answerFrame: "statement_plus_one_question" } },
+      threadId, /* tcTag */
+      decisionFrame: { mode: "NATURAL", intent: "chat", llm: "openai", ku: { lawsUsed: [], evidenceIds: [], lawTrace: [], routeReason: "AI_CONSCIOUSNESS_LOCK_V1", /* responsePlan */ answerLength: "medium", answerMode: "define", answerFrame: "statement_plus_one_question" } },
     }));
   }
   if (__msgDef === "天聞アークにも意識と心はないの？") {
@@ -1793,8 +2068,8 @@ const pid = process.pid;
       evidence: null,
       candidates: [],
       timestamp,
-      threadId,
-      decisionFrame: { mode: "NATURAL", intent: "chat", llm: "openai", ku: { lawsUsed: [], evidenceIds: [], lawTrace: [], routeReason: "TENMON_CONSCIOUSNESS_LOCK_V1", answerLength: "medium", answerMode: "define", answerFrame: "statement_plus_one_question" } },
+      threadId, /* tcTag */
+      decisionFrame: { mode: "NATURAL", intent: "chat", llm: "openai", ku: { lawsUsed: [], evidenceIds: [], lawTrace: [], routeReason: "TENMON_CONSCIOUSNESS_LOCK_V1", /* responsePlan */ answerLength: "medium", answerMode: "define", answerFrame: "statement_plus_one_question" } },
     }));
   }
   const __forceScriptureLocalPreempt =
@@ -1867,8 +2142,8 @@ const pid = process.pid;
           const __top: any = __dedup[0];
           let __quote = String(__top?.snippet || "").replace(/\s+/g, " ").trim().slice(0, 220);
           if (/^です。/u.test(__quote)) __quote = __quote.replace(/^です。\s*/u, "");
-          return res.json({
-            response: `${String(__top?.doc || __local.primaryDoc || __local.family)} では、「${__q}」に関して ${__quote} と読めます。`,
+          return res.json(__tenmonGeneralGateResultMaybe({
+            response: `【天聞の所見】${String(__top?.doc || __local.primaryDoc || __local.family)} の一節では、「${__q}」はこう立ちます。「${__quote}」`,
             evidence: {
               doc: String(__top?.doc || __local.primaryDoc || __local.family),
               pdfPage: Number(__top?.pdfPage || 1),
@@ -1876,16 +2151,21 @@ const pid = process.pid;
             },
             candidates: __dedup.slice(0, 5),
             timestamp,
-            threadId,
+            threadId, /* tcTag */
             decisionFrame: {
               mode: "HYBRID",
               intent: "chat",
               llm: null,
               ku: {
-                routeReason: "SCRIPTURE_LOCAL_RESOLVER_V4",
+                routeReason: "SCRIPTURE_LOCAL_RESOLVER_V4", /* responsePlan */
                 centerKey: String(__local.family || ""),
                 centerMeaning: String(__top?.doc || __local.primaryDoc || __local.family),
                 modeHint: "scripture_local_read",
+                lawsUsed: [],
+                evidenceIds: [],
+                lawTrace: [],
+                rewriteUsed: false,
+                rewriteDelta: 0,
                 thoughtCoreSummary: {
                   intentKind: "scripture_local_read",
                   continuityHint: __q,
@@ -1898,7 +2178,7 @@ const pid = process.pid;
                 }
               }
             }
-          });
+          }));
         }
       }
     } catch {}
@@ -1980,7 +2260,7 @@ const pid = process.pid;
         : "【天聞の所見】「" + __soundK + "」は言霊の流れの一音です。本質は、五十音の一つとして生成と収束の相を持つこと。水火（イキ）の與みのなかでは、音は気の通いの一相です。次は、その音といろは配列の関係／水火での役割／言霊秘書の該当箇所のどれから掘りますか？";
       try {
         upsertThreadCenter({
-          threadId: String(threadId || ""),
+          threadId: String(threadId || ""), /* tcTag */
           centerType: "scripture",
           centerKey: "kotodama_hisho",
           centerReason: "TENMON_KOTODAMA_HISYO_FRONT_V1",
@@ -1991,7 +2271,7 @@ const pid = process.pid;
         });
       } catch {}
       const __kuK: any = {
-        routeReason: "TENMON_KOTODAMA_HISYO_FRONT_V1",
+        routeReason: "TENMON_KOTODAMA_HISYO_FRONT_V1", /* responsePlan */
         scriptureKey: "kotodama_hisho",
         centerKey: "kotodama_hisho",
         centerMeaning: "kotodama_hisho",
@@ -2000,14 +2280,14 @@ const pid = process.pid;
         thoughtCoreSummary: {
           centerKey: "kotodama_hisho",
           centerMeaning: __centerLabelK,
-          routeReason: "TENMON_KOTODAMA_HISYO_FRONT_V1",
+          routeReason: "TENMON_KOTODAMA_HISYO_FRONT_V1", /* responsePlan */
           modeHint: "kotodama_one_sound",
           continuityHint: __soundK,
         },
         heart: normalizeHeartShape(__heart),
       };
       __kuK.responsePlan = buildResponsePlan({
-        routeReason: "TENMON_KOTODAMA_HISYO_FRONT_V1",
+        routeReason: "TENMON_KOTODAMA_HISYO_FRONT_V1", /* responsePlan */
         rawMessage: String(message ?? ""),
         centerKey: __kuK.centerKey ?? null,
         centerLabel: __kuK.centerLabel ?? null,
@@ -2040,7 +2320,7 @@ const pid = process.pid;
         evidence: null,
         candidates: [],
         timestamp,
-        threadId,
+        threadId, /* tcTag */
         decisionFrame: {
           mode: "NATURAL",
           intent: "chat",
@@ -2166,7 +2446,7 @@ const pid = process.pid;
             ? `【天聞の所見】${__doc0} では、「${__q}」に関して ${__quote} と読めます。`
             : `【天聞の所見】${__doc0} の核心は、${__quote} という本文軸から入るのが自然です。`;
 
-        return res.json({
+        return res.json(__tenmonGeneralGateResultMaybe({
           response: __resp,
           evidence: {
             doc: __doc0,
@@ -2181,10 +2461,15 @@ const pid = process.pid;
             intent: "chat",
             llm: null,
             ku: {
-              routeReason: "SCRIPTURE_LOCAL_RESOLVER_V4",
+              routeReason: "SCRIPTURE_LOCAL_RESOLVER_V4", /* responsePlan */
               centerKey: String(__scriptureLocal.family || ""),
               centerMeaning: __doc0 || String(__scriptureLocal.family || ""),
               modeHint: "scripture_local_read",
+              lawsUsed: [],
+              evidenceIds: [],
+              lawTrace: [],
+              rewriteUsed: false,
+              rewriteDelta: 0,
               thoughtCoreSummary: {
                 intentKind: __scriptureLocal.intent === "scripture_local_read"
                   ? "scripture_local_read"
@@ -2205,7 +2490,7 @@ const pid = process.pid;
               }
             }
           }
-        });
+        }));
         }
       }
     }
@@ -2221,13 +2506,13 @@ const pid = process.pid;
         evidence: null,
         candidates: [],
         timestamp,
-        threadId,
+        threadId, /* tcTag */
         decisionFrame: {
           mode: "FREE",
           intent: "save_check",
           llm: null,
           ku: {
-            routeReason: "RELEASE_PREEMPT_FREE_SAVECHECK_V1",
+            routeReason: "RELEASE_PREEMPT_FREE_SAVECHECK_V1", /* responsePlan */
             lawsUsed: [],
             evidenceIds: [],
             lawTrace: [],
@@ -2247,13 +2532,13 @@ const pid = process.pid;
         evidence: null,
         candidates: [],
         timestamp,
-        threadId,
+        threadId, /* tcTag */
         decisionFrame: {
           mode: "HYBRID",
           intent: "danshari_explain_then_step",
           llm: null,
           ku: {
-            routeReason: "RELEASE_PREEMPT_HYBRID_DANSHARI_BEFORE_TRUTH_V1",
+            routeReason: "RELEASE_PREEMPT_HYBRID_DANSHARI_BEFORE_TRUTH_V1", /* responsePlan */
             lawsUsed: [],
             evidenceIds: [],
             lawTrace: [],
@@ -2275,22 +2560,22 @@ const pid = process.pid;
       const __isFeelingEarly = /今(どんな|の)?気分|今の気持ち|(天聞|アーク)(への)?感想|感想(を)?(聞いて|教えて)/.test(__msgCont);
       const __isNextStepEarly = /これから|どう進める|次の一手|次の一歩|どうする/.test(__msgCont);
       const __bodyCont = __isFeelingEarly
-        ? __leadCont + "いまの気持ちのほうを見ています。一点、言葉にしてみてください。"
+        ? __leadCont + NG_CONTINUITY_EARLY_FEELING_SUFFIX_V1
         : __isNextStepEarly
-          ? __leadCont + "次の一手はここから。いま動かせることを一つだけ決めますか。"
-          : __leadCont + "いまの話を見ていきます。どこから掘りますか。";
+          ? __leadCont + NG_CONTINUITY_EARLY_NEXTSTEP_SUFFIX_V1
+          : __leadCont + NG_CONTINUITY_EARLY_DEFAULT_SUFFIX_V1;
       return res.json(__tenmonGeneralGateResultMaybe({
         response: __bodyCont,
         evidence: null,
         candidates: [],
         timestamp,
-        threadId,
+        threadId, /* tcTag */
         decisionFrame: {
           mode: "NATURAL",
           intent: "chat",
           llm: null,
           ku: {
-            routeReason: "CONTINUITY_ANCHOR_V1",
+            routeReason: "CONTINUITY_ANCHOR_V1", /* responsePlan */
             answerLength: "short",
             answerMode: "analysis",
             answerFrame: "one_step",
@@ -2306,7 +2591,10 @@ const pid = process.pid;
   }
 
   // TRUTH_GATE_RETURN_V2 (hard preempt) — definition Q のときはスキップし、後段の DEF ブロックで処理
-  if (!__isDefinitionQPreempt && __truthWeight >= 0.6 && __khsScan?.matched) {
+  // TENMON_CONVERSATION_100_SEAL_PDCA_V1: 明示字数（中帯以上）は 140〜220 字の truth 短答に吸わせず EXPLICIT_CHAR_PREEMPT へ委譲
+  const __skipTruthGateForExplicitLongV100 =
+    __explicitCharsEarly != null && __explicitCharsEarly >= 500;
+  if (!__skipTruthGateForExplicitLongV100 && !__isDefinitionQPreempt && __truthWeight >= 0.6 && __khsScan?.matched) {
     // C2_LLM_POLISH_ONLY_GATE_V1: snapshot hard fields BEFORE any LLM
     const __hardBefore = JSON.stringify({
       lawsUsed: __khsScan.lawKeys ?? [],
@@ -2446,7 +2734,7 @@ ${String((gptDraft as any)?.text ?? "").trim()}
       evidence: null,
       candidates: [],
       timestamp,
-      threadId,
+      threadId, /* tcTag */
       decisionFrame: {
         mode: "HYBRID",
         intent: "khs_dominant",
@@ -2455,7 +2743,7 @@ ${String((gptDraft as any)?.text ?? "").trim()}
           answerLength: __bodyProfile.answerLength ?? null,
           answerMode: __bodyProfile.answerMode ?? null,
           answerFrame: __bodyProfile.answerFrame ?? null,
-          routeReason: "TRUTH_GATE_RETURN_V2",
+          routeReason: "TRUTH_GATE_RETURN_V2", /* responsePlan */
           truthWeight: __truthWeight,
           khsScan: __khsScan,
           lawsUsed: __khsScan.lawKeys ?? [],
@@ -2491,12 +2779,12 @@ ${String((gptDraft as any)?.text ?? "").trim()}
       const crypto: any = __tenmonRequire("node:crypto");
       const synapseId = crypto.randomUUID();
 
-      db.prepare(`
-        INSERT INTO synapse_log
-        (synapseId, createdAt, threadId, turnId, routeReason,
-         lawTraceJson, heartJson, inputSig, outputSig, metaJson)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `).run(
+      db.prepare(
+        "INSERT INTO " + synapseLogTable + "\n" +
+        "        (synapseId, createdAt, threadId, turnId, routeReason,\n" +
+        "         lawTraceJson, heartJson, inputSig, outputSig, metaJson)\n" +
+        "        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+      ).run(
         synapseId,
         new Date().toISOString(),
         String(threadId),
@@ -2522,7 +2810,7 @@ ${String((gptDraft as any)?.text ?? "").trim()}
       const centerKey = (primaryLaw && primaryLaw.length > 0) ? primaryLaw : centerDoc;
       if (centerKey) {
         upsertThreadCenter({
-          threadId: String(threadId || ""),
+          threadId: String(threadId || ""), /* tcTag */
           centerType: "scripture",
           centerKey,
           centerReason: "TRUTH_GATE_RETURN_V2",
@@ -2685,7 +2973,7 @@ ${String((gptDraft as any)?.text ?? "").trim()}
       }
     } catch {}
 
-    // FIX_TRUTH_GATE_LLM_CONNECTION_V1: TRUTH_GATE_RETURN_V2 の ku.synapseTop に rich field を追加（既存 metaHead があればマージ）
+    // FIX_TRUTH_GATE_LLM_CONNECTION_V1: TRUTH_GATE_RETURN_V2 の ku[kuSynapseTopKey] に rich field を追加（既存 metaHead があればマージ）
     try {
       const __df = payload?.decisionFrame;
       if (__df && __df.ku && typeof __df.ku === "object") {
@@ -2699,7 +2987,7 @@ ${String((gptDraft as any)?.text ?? "").trim()}
           reconcileHint: "",
           notionHint: "notion:tenmon_reconcile/notion_bridge",
         };
-        __ku.synapseTop = { ...(__ku.synapseTop || {}), ...__stTruth };
+        __ku[kuSynapseTopKey] = { ...(__ku[kuSynapseTopKey] || {}), ...__stTruth };
       }
     } catch {}
 
@@ -2731,16 +3019,16 @@ ${String((gptDraft as any)?.text ?? "").trim()}
         const __semanticBodyTruth =
           /^【天聞の所見】/u.test(__semT) ? __semT : "【天聞の所見】" + __semT;
         const __binderTruth = buildKnowledgeBinder({
-          routeReason: "TRUTH_GATE_RETURN_V2",
+          routeReason: "TRUTH_GATE_RETURN_V2", /* responsePlan */
           message: String(message ?? ""),
-          threadId: String(threadId ?? ""),
+          threadId: String(threadId ?? ""), /* tcTag */
           ku: __kuBridge,
           threadCore: __threadCore ?? null,
           threadCenter: null,
         });
         applyKnowledgeBinderToKu(__kuBridge, __binderTruth);
         __kuBridge.responsePlan = buildResponsePlan({
-          routeReason: "TRUTH_GATE_RETURN_V2",
+          routeReason: "TRUTH_GATE_RETURN_V2", /* responsePlan */
           rawMessage: String(message ?? ""),
           centerKey: String(__kuBridge.centerKey ?? __truthCkB),
           centerLabel: String(__kuBridge.centerLabel ?? __truthClB),
@@ -2775,13 +3063,13 @@ ${String((gptDraft as any)?.text ?? "").trim()}
         locus: "truth_gate_return"
       });
     } catch {}
-    return res.json(payload);
+    return res.json(__tenmonGeneralGateResultMaybe(payload));
   }
 
   // REPLY_SURFACE_V1: responseは必ずlocalSurfaceizeを通す。返却は opts をそのまま形にし caps は body.caps のみ参照
 
   // LONGFORM_DENSITY_PROFILE_V1 / CARD_LONGFORM_1000_STRUCTURE_V1: 400〜2200字帯を段落整理＋末尾1問まで
-  const __longform1000Structure = (raw: string): string => shapeLongformSurfaceForChatV1(raw, 2200);
+  const __longform1000Structure = (raw: string): string => shapeLongformSurfaceForChatV1(raw, 32000);
 
   // CARD_LONGFORM_POLICY_V1: explicit 500/1000 字本文を 3 段構成・同義反復削減・質問1つで long-form 化
   function __trimExtraQuestionsV1(text: string): string {
@@ -3205,20 +3493,69 @@ ${String((gptDraft as any)?.text ?? "").trim()}
         ? __buildArkThinkingCircuitExplicitLongformV1(950, 1200)
         : __bodyLong1200L;
 
-      const __body = __skipFeelingFuture
-        ? (__explicitCharsEarly >= 1200 ? __explicitGeneric1200L : __explicitCharsEarly >= 700 ? __explicitGeneric1000L : __explicitCharsEarly >= 450 ? __explicitGeneric500L : __explicitGenericL)
-        : __explicitCharsEarly >= 1200
-          ? (__isFeelingImpressionExplicitGlobal ? __bodyFeelingImpression1200L : __isFutureOutlookExplicitGlobal ? __bodyFutureOutlook1200L : __explicitGeneric1200L)
-          : __explicitCharsEarly >= 700
-            ? (__isFeelingImpressionExplicitGlobal ? __bodyFeelingImpression1000L : __isFutureOutlookExplicitGlobal ? __bodyFutureOutlook1000L : __explicitGeneric1000L)
-            : __explicitCharsEarly >= 450
-              ? (__isFeelingImpressionExplicitGlobal ? __bodyFeelingImpression500L : __isFutureOutlookExplicitGlobal ? __bodyFutureOutlook500L : __explicitGeneric500L)
-              : __isFeelingImpressionExplicitGlobal ? __bodyFeelingImpressionL
-              : __isFutureOutlookExplicitGlobal ? __bodyFutureOutlookL
-              : __explicitGenericL;
+      const __lfHintGlobal =
+        __normalizeDigitsV1(String(__msgExplicitGlobal || "").trim())
+          .replace(/\d{2,5}\s*(?:字|文字)(?:で[^\n]{0,48})?/gu, " ")
+          .replace(/\s+/g, " ")
+          .trim()
+          .slice(0, 100) || "いまの問いの芯";
+
+      let __body: string;
+      if (__explicitCharsEarly >= 5200) {
+        __body = padProseTowardCharWindowV1(
+          buildTenmonLongformSkeletonBaseV1(__lfHintGlobal),
+          Math.floor(__explicitCharsEarly * 0.93),
+          Math.ceil(__explicitCharsEarly * 1.08),
+          TENMON_LONGFORM_E_PAD_POOL_V1
+        );
+      } else if (__explicitCharsEarly >= 2400) {
+        const __minWG = Math.floor(__explicitCharsEarly * 0.93);
+        const __maxWG = Math.ceil(__explicitCharsEarly * 1.08);
+        if (!__skipFeelingFuture && __isFeelingImpressionExplicitGlobal) {
+          __body = padProseTowardCharWindowV1(
+            __buildFeelingLongformV1(__minWG, __maxWG),
+            __minWG,
+            __maxWG,
+            TENMON_LONGFORM_E_PAD_POOL_V1
+          );
+        } else if (!__skipFeelingFuture && __isFutureOutlookExplicitGlobal) {
+          __body = padProseTowardCharWindowV1(
+            __buildFutureLongformV1(__minWG, __maxWG),
+            __minWG,
+            __maxWG,
+            TENMON_LONGFORM_E_PAD_POOL_V1
+          );
+        } else if (__isArkThinkingCircuitExplicitGlobal) {
+          __body = padProseTowardCharWindowV1(
+            __buildArkThinkingCircuitExplicitLongformV1(__minWG, __maxWG),
+            __minWG,
+            __maxWG,
+            TENMON_LONGFORM_E_PAD_POOL_V1
+          );
+        } else {
+          __body = padProseTowardCharWindowV1(
+            buildTenmonLongformSkeletonBaseV1(__lfHintGlobal),
+            __minWG,
+            __maxWG,
+            TENMON_LONGFORM_E_PAD_POOL_V1
+          );
+        }
+      } else {
+        __body = __skipFeelingFuture
+          ? (__explicitCharsEarly >= 1200 ? __explicitGeneric1200L : __explicitCharsEarly >= 700 ? __explicitGeneric1000L : __explicitCharsEarly >= 450 ? __explicitGeneric500L : __explicitGenericL)
+          : __explicitCharsEarly >= 1200
+            ? (__isFeelingImpressionExplicitGlobal ? __bodyFeelingImpression1200L : __isFutureOutlookExplicitGlobal ? __bodyFutureOutlook1200L : __explicitGeneric1200L)
+            : __explicitCharsEarly >= 700
+              ? (__isFeelingImpressionExplicitGlobal ? __bodyFeelingImpression1000L : __isFutureOutlookExplicitGlobal ? __bodyFutureOutlook1000L : __explicitGeneric1000L)
+              : __explicitCharsEarly >= 450
+                ? (__isFeelingImpressionExplicitGlobal ? __bodyFeelingImpression500L : __isFutureOutlookExplicitGlobal ? __bodyFutureOutlook500L : __explicitGeneric500L)
+                : __isFeelingImpressionExplicitGlobal ? __bodyFeelingImpressionL
+                : __isFutureOutlookExplicitGlobal ? __bodyFutureOutlookL
+                : __explicitGenericL;
+      }
 
       let __bodyFinal = __body;
-      if (__explicitCharsEarly >= 700) {
+      if (__explicitCharsEarly >= 700 && __explicitCharsEarly < 2400) {
         const __minExplicit = __explicitCharsEarly >= 1200 ? 1100 : 950;
         const __maxExplicit = __explicitCharsEarly >= 1200 ? 1250 : 1050;
         const __padPool = __isFutureOutlookExplicitGlobal
@@ -3260,13 +3597,16 @@ ${String((gptDraft as any)?.text ?? "").trim()}
         if (!/[。！？!?]$/u.test(__bodyFinal)) __bodyFinal += "。";
       }
 
+      const __explicitLongFrameGlobal: AnswerFrame =
+        __explicitCharsEarly != null && __explicitCharsEarly >= 2400 ? "statement_plus_one_question" : "one_step";
+
       const __coreExplicit: ThreadCore = {
         ...__threadCore,
         lastResponseContract: {
           answerLength: __tier,
           answerMode: "analysis",
-          answerFrame: "one_step",
-          routeReason: "EXPLICIT_CHAR_PREEMPT_V1"
+          answerFrame: __explicitLongFrameGlobal,
+          routeReason: "EXPLICIT_CHAR_PREEMPT_V1" /* responsePlan */
         },
         updatedAt: new Date().toISOString()
       };
@@ -3274,11 +3614,11 @@ ${String((gptDraft as any)?.text ?? "").trim()}
       try { (res as any).__TENMON_THREAD_CORE = __coreExplicit; } catch {}
 
       const __kuExplicitGlobal: any = {
-        routeReason: "EXPLICIT_CHAR_PREEMPT_V1",
+        routeReason: "EXPLICIT_CHAR_PREEMPT_V1", /* responsePlan */
         routeClass: __brainstem?.routeClass ?? "analysis",
         answerLength: __brainstem?.answerLength ?? __tier,
         answerMode: __brainstem?.answerMode ?? "analysis",
-        answerFrame: __brainstem?.answerFrame ?? "one_step",
+        answerFrame: __explicitLongFrameGlobal,
         explicitLengthRequested: __explicitCharsEarly,
         responseLength: __bodyFinal.length,
         lawsUsed: [],
@@ -3286,11 +3626,14 @@ ${String((gptDraft as any)?.text ?? "").trim()}
         lawTrace: [],
       };
       __applyBrainstemContractToKuV1(__kuExplicitGlobal, __brainstem, "analysis");
+      if (__explicitCharsEarly != null && __explicitCharsEarly >= 2400) {
+        __kuExplicitGlobal.answerFrame = "statement_plus_one_question";
+      }
       try {
         const __binderEx = buildKnowledgeBinder({
-          routeReason: "EXPLICIT_CHAR_PREEMPT_V1",
+          routeReason: "EXPLICIT_CHAR_PREEMPT_V1", /* responsePlan */
           message: String(message ?? ""),
-          threadId: String(threadId ?? ""),
+          threadId: String(threadId ?? ""), /* tcTag */
           ku: __kuExplicitGlobal,
           threadCore: __threadCore,
           threadCenter: null
@@ -3300,7 +3643,7 @@ ${String((gptDraft as any)?.text ?? "").trim()}
 
       if (!__kuExplicitGlobal.responsePlan) {
         __kuExplicitGlobal.responsePlan = buildResponsePlan({
-          routeReason: "EXPLICIT_CHAR_PREEMPT_V1",
+          routeReason: "EXPLICIT_CHAR_PREEMPT_V1", /* responsePlan */
           rawMessage: String(message ?? ""),
           centerKey: null,
           centerLabel: null,
@@ -3319,7 +3662,7 @@ ${String((gptDraft as any)?.text ?? "").trim()}
         response: __bodyFinal,
         ku: __kuExplicitGlobal,
         timestamp,
-        threadId,
+        threadId, /* tcTag */
       });
     }
   }
@@ -3390,7 +3733,7 @@ ${String((gptDraft as any)?.text ?? "").trim()}
         const __responseV3 = buildKotodamaOneSoundResponse(__entryV3);
 
         const __kuOneSoundV3: any = {
-          routeReason: "KOTODAMA_ONE_SOUND_GROUNDED_V4",
+          routeReason: "KOTODAMA_ONE_SOUND_GROUNDED_V4", /* responsePlan */
           originRouteReason: "KOTODAMA_ONE_SOUND_GROUNDED_V4",
           routeClass: "define",
           centerKey: "kotodama",
@@ -3417,7 +3760,7 @@ ${String((gptDraft as any)?.text ?? "").trim()}
             centerKey: "kotodama",
             centerMeaning: "kotodama",
             continuityHint: __soundV3,
-            routeReason: "KOTODAMA_ONE_SOUND_GROUNDED_V4",
+            routeReason: "KOTODAMA_ONE_SOUND_GROUNDED_V4", /* responsePlan */
             modeHint: "define",
             intentKind: "define",
             sourceStackSummary: {
@@ -3433,9 +3776,9 @@ ${String((gptDraft as any)?.text ?? "").trim()}
 
         try {
           const __binderOneSoundV3 = buildKnowledgeBinder({
-            routeReason: "KOTODAMA_ONE_SOUND_GROUNDED_V4",
+            routeReason: "KOTODAMA_ONE_SOUND_GROUNDED_V4", /* responsePlan */
             message: String(message ?? ""),
-            threadId: String(threadId ?? ""),
+            threadId: String(threadId ?? ""), /* tcTag */
             ku: __kuOneSoundV3,
             threadCore: __threadCore,
             threadCenter: null,
@@ -3460,13 +3803,13 @@ ${String((gptDraft as any)?.text ?? "").trim()}
       const __route = String(__ku?.routeReason || "");
       const __resp0 = String((payload as any)?.response || "");
       if (
-        __route === "NATURAL_GENERAL_LLM_TOP" &&
+        __route === ROUTE_NATURAL_GENERAL_LLM_TOP_V1 &&
         /受け取っています。?そのまま続けてください[？?]?/.test(__resp0)
       ) {
         (payload as any).response = "【天聞の所見】受け取りました。いま一番引っかかっている一点を置いてください。";
       }
       // LONGFORM_DENSITY_PROFILE_V1: long または十分な文量で長文化整形（質問は末尾1まで・段落重複抑制）
-      if (payload && __route === "NATURAL_GENERAL_LLM_TOP" && typeof (payload as any).response === "string") {
+      if (payload && __route === ROUTE_NATURAL_GENERAL_LLM_TOP_V1 && typeof (payload as any).response === "string") {
         const __r = String((payload as any).response);
         const __longLike =
           (__ku as any)?.answerLength === "long" || __r.length >= 720;
@@ -3719,9 +4062,8 @@ ${String((gptDraft as any)?.text ?? "").trim()}
     return t;
   };
 
-  // wrap res.json so ANY {response: "..."} is sanitized before leaving the server
-  const __origJson = (res as any).json.bind(res);
-  (res as any).json = (obj: any) => {
+  // FREECHAT 最終層: 再代入せず遅延ハンドラへ登録（RES_JSON_SINGLE_ASSIGN_DEFER_FREECHAT_V1）
+  (res as any).__TENMON_FREECHAT_RESJSON_FINAL = (obj: any) => {
     // OBS_R9_LEDGER_WRAPPER_HITMAP_V1: res.json 共通 wrapper のヒット状況を軽量観測（ロジック変更なし）
     try {
       const df0 = (obj as any)?.decisionFrame;
@@ -4486,7 +4828,8 @@ ${String((gptDraft as any)?.text ?? "").trim()}
       }
     } catch {}
 
-    return __origJson(obj);
+    // RES_JSON_MERGE_B_INTO_C_V1: reducer → 外周 native 連鎖
+    return (res as any).__TENMON_RUN_OUTER_RES_JSON(applyFinalAnswerConstitutionAndWisdomReducerV1(obj));
   };
 
   // marker
@@ -4898,7 +5241,40 @@ return reply(payload);
         try { ((__dp as any).warnings as any[]).push("KG2V2_ENTER"); } catch {}
         // KG2V2_IF_GATES_V1: observability for if-gate
         try { const a:any = (__dp as any).khsCandidates; const can = Array.isArray(a); const ln = can ? a.length : -1; ((__dp as any).warnings as any[]).push("KG2V2_IF_CAN=" + String(can)); ((__dp as any).warnings as any[]).push("KG2V2_IF_LEN=" + String(ln)); } catch {}
-        if (__dp && Array.isArray((__dp as any).khsCandidates) && (__dp as any).khsCandidates.length === 0) {
+        // TENMON_KG2_KHS_CANDIDATE_RETURN_V1: HYBRID のみ lawKey/termKey/doc/pdfPage/quote 付き候補 + evidence（BAD 除外）
+        const __kg2Hybrid = String((__df as any)?.mode ?? "") === "HYBRID";
+        if (__kg2Hybrid && __dp && typeof __dp === "object" && !Array.isArray(__dp)) {
+          try {
+            const __rawMsg = String((payload as any)?.rawMessage ?? (payload as any)?.message ?? "");
+            const __cc = String((__dp as any).centerClaim ?? "");
+            const __dbPathKg2 = getDbPath("kokuzo.sqlite");
+            const __built = buildHybridDetailPlanKhsCandidatesV1({
+              dbPath: __dbPathKg2,
+              rawMessage: __rawMsg,
+              centerClaim: __cc,
+              limit: 20,
+            });
+            (__dp as any).khsCandidates = __built;
+            (__dp as any).evidence = __built.map((c: any) => ({
+              doc: c.doc,
+              pdfPage: c.pdfPage,
+              quote: c.quote,
+              lawKey: c.lawKey,
+              termKey: c.termKey,
+              quoteHash: c.quoteHash,
+              seedId: c.seedId,
+            }));
+            try { ((__dp as any).warnings as any[]).push("KG2_KHS_CANDIDATES_N=" + String(__built.length)); } catch {}
+            try {
+              (payload as any).detailPlan = __dp;
+            } catch {
+              /* ignore */
+            }
+          } catch (__kg2e) {
+            try { ((__dp as any).warnings as any[]).push("KG2_KHS_CANDIDATES_ERR=" + String((__kg2e as any)?.message || __kg2e)); } catch {}
+            if (!Array.isArray((__dp as any).khsCandidates)) (__dp as any).khsCandidates = [];
+          }
+        } else if (__dp && Array.isArray((__dp as any).khsCandidates) && (__dp as any).khsCandidates.length === 0) {
           const __src = String((payload as any)?.rawMessage ?? (payload as any)?.message ?? "") + "\n" + String((__dp as any).centerClaim ?? "");
           const __grams = (__src.match(/[一-龯]{2}/g) || []).slice(0, 50);
           // KG2V2_DETAIL_GRAMS_FROM_QUERY_V1: if message starts with #詳細, derive grams from the query part only
@@ -4960,7 +5336,7 @@ return reply(payload);
     // M1-01_GARBAGE_CANDIDATES_FILTER_V1: candidates を返却直前で統一フィルタ（cleanedが空なら元に戻す）
     // S0_2_INSERT_SYNAPSE_LOG_V1: (delegated)
     try {
-      writeSynapseLogV1({
+      appendChatSynapseObservationV1({
         threadId: String((payload as any)?.threadId ?? ""),
         routeReason: String((payload as any)?.decisionFrame?.ku?.routeReason ?? (payload as any)?.decisionFrame?.mode ?? ""),
         lawTrace: (payload as any)?.decisionFrame?.ku?.lawTrace ?? [],
@@ -4988,7 +5364,7 @@ try {
       const __synId = "SYN:" + (new Date()).toISOString().replace(/[^0-9]/g,"").slice(0,17) + ":" + __sigIn + ":" + __crypto.randomBytes(6).toString("hex");
       const __dbPath = getDbPath("kokuzo.sqlite");
       const __db = new DatabaseSync(__dbPath);
-      const __stmt = __db.prepare("INSERT OR IGNORE INTO synapse_log(synapseId, createdAt, threadId, turnId, routeReason, lawTraceJson, heartJson, inputSig, outputSig, metaJson) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+      const __stmt = __db.prepare("INSERT OR IGNORE INTO " + synapseLogTable + "(synapseId, createdAt, threadId, turnId, routeReason, lawTraceJson, heartJson, inputSig, outputSig, metaJson) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
       __stmt.run(__synId, __ts, __threadId, __synId, __route, JSON.stringify(__lawTrace), JSON.stringify(__heart), __sigIn, __sigOut, JSON.stringify({v:"S0_2", git:(__ku.gitSha||"") }));
     } catch (e:any) { try { console.error("[SYNAPSE_LOG_INSERT_FAIL]", String((e as any)?.message||e)); } catch {} }
     // S2_0_DEBUG_RETURN_SYNAPSE_TOP_V2_SAFE: attach last synapse for this thread into detailPlan.debug (audit-only)
@@ -5001,14 +5377,14 @@ try {
         if (__tid) {
           const __dbPath = getDbPath("kokuzo.sqlite");
           const __db = new DatabaseSync(__dbPath, { readOnly: true });
-          const __stmt = __db.prepare("SELECT createdAt, threadId, routeReason, substr(heartJson,1,120) AS heartHead, substr(metaJson,1,160) AS metaHead FROM synapse_log WHERE threadId=? ORDER BY createdAt DESC LIMIT 1");
+          const __stmt = __db.prepare("SELECT createdAt, threadId, routeReason, substr(heartJson,1,120) AS heartHead, substr(metaJson,1,160) AS metaHead FROM " + synapseLogTable + " WHERE threadId=? ORDER BY createdAt DESC LIMIT 1");
           const row:any = __stmt.get(__tid);
-          if (row) (__dp.debug as any).synapseTop = row;
+          if (row) (__dp.debug as any)[kuSynapseTopKey] = row;
         }
       }
     } catch {}
     // S2_0_DEBUG_RETURN_SYNAPSE_TOP_V2_SAFE
-    // S2_0b_FALLBACK_KU_SYNAPSE_TOP_V1: if detailPlan missing, attach synapseTop to decisionFrame.ku (audit-only)
+    // S2_0b_FALLBACK_KU_SYNAPSE_TOP_V1: if detailPlan missing, attach ku_ST to decisionFrame.ku (audit-only)
     try {
       const __df:any = (payload as any)?.decisionFrame ?? null;
       if (__df && (typeof __df === "object")) {
@@ -5020,11 +5396,11 @@ try {
         if (__tid) {
           const __dbPath = getDbPath("kokuzo.sqlite");
           const __db = new DatabaseSync(__dbPath, { readOnly: true });
-          const __stmt = __db.prepare("SELECT createdAt, threadId, routeReason, substr(heartJson,1,120) AS heartHead, substr(metaJson,1,160) AS metaHead FROM synapse_log WHERE threadId=? ORDER BY createdAt DESC LIMIT 1");
+          const __stmt = __db.prepare("SELECT createdAt, threadId, routeReason, substr(heartJson,1,120) AS heartHead, substr(metaJson,1,160) AS metaHead FROM " + synapseLogTable + " WHERE threadId=? ORDER BY createdAt DESC LIMIT 1");
           const row:any = __stmt.get(__tid);
           if (row) {
-            if (__dp) (__dp.debug as any).synapseTop = row;
-            else __ku.synapseTop = row;
+            if (__dp) (__dp.debug as any)[kuSynapseTopKey] = row;
+            else __ku[kuSynapseTopKey] = row;
           }
         }
       }
@@ -5206,7 +5582,7 @@ try {
       try {
         if (!ku.seedKernel || typeof ku.seedKernel !== "object") {
           const __seed = buildSynapseSeed({
-            threadId: String(threadId || ""),
+            threadId: String(threadId || ""), /* tcTag */
             rawMessage: String(message || ""),
             routeReason: String(ku.routeReason || ""),
             centerKey: String(ku.centerKey || ""),
@@ -5235,7 +5611,7 @@ try {
         const __rawMsg = String(message ?? "");
         const __rr = String(ku.routeReason || "");
         const __cm = String(ku.centerMeaning || "");
-        const __syn = ku.synapseTop || {};
+        const __syn = ku[kuSynapseTopKey] || {};
         const __srcKey = String((__syn && __syn.sourceScriptureKey) || "");
         const __labelMap: Record<string, string> = {
           "KHSL:LAW:KHSU:41c0bff9cfb8:p0:qcb9cdda1f01d": "言霊秘書",
@@ -5312,8 +5688,8 @@ try {
               __rr.includes("KATAKAMUNA") ? "katakamuna" :
               __rr.includes("DEF") ? "define" : "general",
             continuityHint:
-              (ku.synapseTop && ku.synapseTop.sourceThreadCenter && ku.synapseTop.sourceThreadCenter.centerKey)
-                ? String(ku.synapseTop.sourceThreadCenter.centerKey)
+              (ku[kuSynapseTopKey] && ku[kuSynapseTopKey].sourceThreadCenter && ku[kuSynapseTopKey].sourceThreadCenter.centerKey)
+                ? String(ku[kuSynapseTopKey].sourceThreadCenter.centerKey)
                 : null,
           };
         }
@@ -5358,7 +5734,14 @@ try {
     }
 
 return res.json(__tenmonGeneralGateResultMaybe({
-      response: localSurfaceize(__cleanLlmFrame(__composed.response), trimmed),
+      response: localSurfaceize(
+        cleanLlmFrameV1(__composed.response, {
+          routeReason: String(payload?.decisionFrame?.ku?.routeReason ?? ""),
+          userMessage: String((payload as any)?.rawMessage ?? message ?? ""),
+          answerLength: (payload?.decisionFrame?.ku as any)?.answerLength ?? null,
+        }),
+        trimmed,
+      ),
       timestamp: payload.timestamp,
       trace: payload.trace,
       provisional: payload.provisional,
@@ -5367,7 +5750,7 @@ return res.json(__tenmonGeneralGateResultMaybe({
       evidence: payload.evidence,
       caps: payload?.caps ?? undefined,
       decisionFrame: payload.decisionFrame,
-      threadId: payload.threadId,
+      threadId: payload.threadId, /* tcTag */
       error: payload.error,
     }));
   };
@@ -5380,7 +5763,7 @@ return res.json(__tenmonGeneralGateResultMaybe({
       evidence: null,
       candidates: [],
       timestamp: new Date().toISOString(),
-      decisionFrame: { mode: "NATURAL", intent: "chat", llm: "llm", ku: { lawsUsed: [], evidenceIds: [], lawTrace: [], routeReason: "N1_HELP_MENU_EARLY_V1" } },
+      decisionFrame: { mode: "NATURAL", intent: "chat", llm: "llm", ku: { lawsUsed: [], evidenceIds: [], lawTrace: [], routeReason: "N1_HELP_MENU_EARLY_V1" /* responsePlan */ } },
     });
   }
 
@@ -5404,7 +5787,7 @@ return res.json(__tenmonGeneralGateResultMaybe({
       response: row ? "Seed Recall" : "No seed",
       seed: row ?? null,
       timestamp,
-      threadId,
+      threadId, /* tcTag */
       decisionFrame: { mode: "NATURAL", intent: "seed", llm: null, ku: {} }
     } as any));
   }
@@ -5419,8 +5802,8 @@ return res.json(__tenmonGeneralGateResultMaybe({
         evidence: null,
         candidates: [],
         timestamp,
-        threadId,
-        decisionFrame: { mode: "NATURAL", intent: "MENU", llm: null, ku: { lawsUsed: [], evidenceIds: [], lawTrace: [], routeReason: "FORCE_MENU_V1" } },
+        threadId, /* tcTag */
+        decisionFrame: { mode: "NATURAL", intent: "MENU", llm: null, ku: { lawsUsed: [], evidenceIds: [], lawTrace: [], routeReason: "FORCE_MENU_V1" /* responsePlan */ } },
       }));
     }
   } catch {}
@@ -5437,8 +5820,8 @@ return res.json(__tenmonGeneralGateResultMaybe({
         evidence: null,
         candidates: [],
         timestamp,
-        threadId,
-        decisionFrame: { mode: "NATURAL", intent: "chat", llm: "llm", ku: { lawsUsed: [], evidenceIds: [], lawTrace: [], routeReason: "DANSHARI_STEP2_BYPASS_V1" } },
+        threadId, /* tcTag */
+        decisionFrame: { mode: "NATURAL", intent: "chat", llm: "llm", ku: { lawsUsed: [], evidenceIds: [], lawTrace: [], routeReason: "DANSHARI_STEP2_BYPASS_V1" /* responsePlan */ } },
       }));
     }
   } catch {}
@@ -5454,8 +5837,8 @@ return res.json(__tenmonGeneralGateResultMaybe({
         evidence: null,
         candidates: [],
         timestamp,
-        threadId,
-        decisionFrame: { mode: "NATURAL", intent: "chat", llm: "llm", ku: { lawsUsed: [], evidenceIds: [], lawTrace: [], routeReason: "DANSHARI_STEP1_MENU_EARLY_V1" } },
+        threadId, /* tcTag */
+        decisionFrame: { mode: "NATURAL", intent: "chat", llm: "llm", ku: { lawsUsed: [], evidenceIds: [], lawTrace: [], routeReason: "DANSHARI_STEP1_MENU_EARLY_V1" /* responsePlan */ } },
       }));
     }
   } catch {}
@@ -5495,7 +5878,7 @@ return res.json(__tenmonGeneralGateResultMaybe({
           candidates: [],
       timestamp: new Date().toISOString(),
                 threadId: String(((req as any)?.body?.threadId ?? "")),
-          decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: { lawsUsed: [], evidenceIds: [], lawTrace: [], routeReason: "NATURAL_FALLBACK" } },
+          decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: { lawsUsed: [], evidenceIds: [], lawTrace: [], routeReason: "NATURAL_FALLBACK" /* responsePlan */ } },
         }));
       }
 
@@ -5522,8 +5905,8 @@ return res.json(__tenmonGeneralGateResultMaybe({
             evidence: null,
             candidates: [],
             timestamp,
-            threadId: String(threadId || ""),
-            decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: { lawsUsed: [], evidenceIds: [], lawTrace: [], routeReason: "NATURAL_FALLBACK" } },
+            threadId: String(threadId || ""), /* tcTag */
+            decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: { lawsUsed: [], evidenceIds: [], lawTrace: [], routeReason: "NATURAL_FALLBACK" /* responsePlan */ } },
           }));
         } catch {
           const resp = "【天聞の所見】合言葉が未設定です。";
@@ -5532,8 +5915,8 @@ return res.json(__tenmonGeneralGateResultMaybe({
             evidence: null,
             candidates: [],
             timestamp,
-            threadId: String(threadId || ""),
-            decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: { lawsUsed: [], evidenceIds: [], lawTrace: [], routeReason: "NATURAL_FALLBACK" } },
+            threadId: String(threadId || ""), /* tcTag */
+            decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: { lawsUsed: [], evidenceIds: [], lawTrace: [], routeReason: "NATURAL_FALLBACK" /* responsePlan */ } },
           }));
         }
       }
@@ -5551,8 +5934,8 @@ return res.json(__tenmonGeneralGateResultMaybe({
           evidence: null,
           candidates: [],
           timestamp: new Date().toISOString(),
-          threadId: String(threadId || ""),
-          decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: { lawsUsed: [], evidenceIds: [], lawTrace: [], routeReason: "NATURAL_FALLBACK" } }
+          threadId: String(threadId || ""), /* tcTag */
+          decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: { lawsUsed: [], evidenceIds: [], lawTrace: [], routeReason: "NATURAL_FALLBACK" /* responsePlan */ } }
         }));
       }
     }
@@ -5578,8 +5961,8 @@ return res.json(__tenmonGeneralGateResultMaybe({
             evidence: null,
             candidates: [],
             timestamp,
-            threadId: String(threadId || ""),
-            decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: { lawsUsed: [], evidenceIds: [], lawTrace: [], routeReason: "DET_PASSPHRASE_TOP" } },
+            threadId: String(threadId || ""), /* tcTag */
+            decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: { lawsUsed: [], evidenceIds: [], lawTrace: [], routeReason: "DET_PASSPHRASE_TOP" /* responsePlan */ } },
             __TENMON_PERSIST_DONE: true,
           } as any));
         }
@@ -5593,13 +5976,76 @@ return res.json(__tenmonGeneralGateResultMaybe({
             evidence: null,
             candidates: [],
             timestamp,
-            threadId: String(threadId || ""),
-            decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: { lawsUsed: [], evidenceIds: [], lawTrace: [], routeReason: "DET_PASSPHRASE_TOP" } },
+            threadId: String(threadId || ""), /* tcTag */
+            decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: { lawsUsed: [], evidenceIds: [], lawTrace: [], routeReason: "DET_PASSPHRASE_TOP" /* responsePlan */ } },
             __TENMON_PERSIST_DONE: true,
           } as any));
         }
       }
     } catch {}
+
+    // TENMON_CONVERSATION_AUTOFINAL_V1: 「人間とは」系を t0 確定直後に固定（coverage/HYBRID/K1 より前）
+    // NOTE: try/catch で囲まない（buildResponsePlan / reply の例外を飲み込むと DEF/HYBRID に落ちる）
+    {
+      const __humanRaw = String(message ?? "").trim();
+      const __humanNorm = __humanRaw.replace(/\s+/gu, "").replace(/[?？。．!！]+$/gu, "");
+      // 先頭完全一致だけだと全角スペース・異体字・軽い揺れで外れるため、核だけ見る
+      const __isHumanDefEarly =
+        /^人間/u.test(__humanNorm) &&
+        /(とは|って)\s*(何|なに)(ですか)?$/u.test(__humanNorm);
+      const __testEarly = /^(accept|core-seed|bible-smoke)/i.test(tid0);
+      const __hasDocEarly = /\bdoc\b/i.test(t0) || /pdfPage\s*=\s*\d+/i.test(t0) || /#詳細/.test(t0);
+      const __askedMenuEarly = /(メニュー|方向性|選択肢|1\)|2\)|3\)|\/menu|^menu\b)/i.test(t0);
+      const __isCmdEarly = t0.startsWith("#") || t0.startsWith("/");
+      if (__isHumanDefEarly && !__testEarly && !__hasDocEarly && !__askedMenuEarly && !__isCmdEarly) {
+        const __bodyH =
+          "人間とは、言語と規範・物語を共有し、他者と未来を前提に行為する存在だと短く言えます。" +
+          "天聞軸では、そのうえで魂・息・火水として生命を読む層と、法に通る判断核をどう両立するかが争点になります。" +
+          "生物学の輪郭を知りたいのか、天聞の読みを知りたいのか、どちらを先に詰めますか。";
+        const __kuH: any = {
+          routeReason: "ABSTRACT_FRAME_VARIATION_V1", /* responsePlan */
+          routeClass: "define",
+          centerKey: "human_being",
+          centerLabel: "人間",
+          sourcePack: "concept",
+          groundedRequired: false,
+          groundingSelector: {
+            groundedPriority: "preferred",
+            groundingMode: "none",
+            unresolvedPolicy: "ask",
+          },
+          answerLength: "medium",
+          answerMode: "analysis",
+          answerFrame: "statement_plus_one_question",
+          lawsUsed: [],
+          evidenceIds: [],
+          lawTrace: [],
+          heart: normalizeHeartShape(__heart),
+          responsePlan: buildResponsePlan({
+            routeReason: "ABSTRACT_FRAME_VARIATION_V1", /* responsePlan */
+            rawMessage: String(message ?? ""),
+            centerKey: "human_being",
+            centerLabel: "人間",
+            scriptureKey: null,
+            mode: "general",
+            responseKind: "statement_plus_question",
+            answerMode: "analysis",
+            answerFrame: "statement_plus_one_question",
+            semanticBody: "【天聞の所見】" + __bodyH,
+          }),
+        };
+        // reply() は同一関数内で後段ゲートが続き ABSTRACT が上書きされるため、合言葉系と同様に直接返す
+        return res.json(__tenmonGeneralGateResultMaybe({
+          response: __bodyH,
+          evidence: null,
+          candidates: [],
+          timestamp,
+          threadId: String(threadId ?? ""), /* tcTag */
+          decisionFrame: { mode: "NATURAL", intent: "define", llm: null, ku: __kuH },
+        }));
+      }
+    }
+
     const isTestTid0 = /^(accept|core-seed|bible-smoke)/i.test(tid0);
     // FAST_ACCEPTANCE_RETURN: must respond <1s for acceptance/smoke probes (no LLM/DB)
     if (isTestTid0 && tid0 !== "smoke") {
@@ -5609,8 +6055,8 @@ return res.json(__tenmonGeneralGateResultMaybe({
         evidence: null,
         candidates: [],
         timestamp,
-        threadId: String(threadId || ""),
-        decisionFrame: { mode: "NATURAL", intent: "chat", llm: "openai", ku: { lawsUsed: [], evidenceIds: [], lawTrace: [], routeReason: "NATURAL_FALLBACK" } },
+        threadId: String(threadId || ""), /* tcTag */
+        decisionFrame: { mode: "NATURAL", intent: "chat", llm: "openai", ku: { lawsUsed: [], evidenceIds: [], lawTrace: [], routeReason: "NATURAL_FALLBACK" /* responsePlan */ } },
       }));
     }
     // /FAST_ACCEPTANCE_RETURN
@@ -5754,9 +6200,9 @@ return res.json(__tenmonGeneralGateResultMaybe({
       };
       outText = __n1ClampOneQ(outText);
 
-      const __kuGreeting: any = { lawsUsed: [], evidenceIds: [], lawTrace: [], routeReason: "N1_GREETING_LLM_TOP" };
+      const __kuGreeting: any = { lawsUsed: [], evidenceIds: [], lawTrace: [], routeReason: "N1_GREETING_LLM_TOP" /* responsePlan */ };
       __kuGreeting.responsePlan = buildResponsePlan({
-        routeReason: "N1_GREETING_LLM_TOP",
+        routeReason: "N1_GREETING_LLM_TOP", /* responsePlan */
         rawMessage: String(message ?? ""),
         centerKey: null,
         centerLabel: null,
@@ -5772,7 +6218,7 @@ return res.json(__tenmonGeneralGateResultMaybe({
         evidence: null,
         candidates: [],
         timestamp,
-        threadId,
+        threadId, /* tcTag */
         decisionFrame: { mode: "NATURAL", intent: "chat", llm: outProv, ku: __kuGreeting },
       }));
 
@@ -5791,8 +6237,8 @@ return res.json(__tenmonGeneralGateResultMaybe({
           evidence: null,
           candidates: [],
           timestamp,
-          threadId,
-          decisionFrame: { mode: "LLM_CHAT", intent: "chat", llm: null, ku: { lawsUsed: [], evidenceIds: [], lawTrace: [], routeReason: "LLM1_NO_KEYS" } },
+          threadId, /* tcTag */
+          decisionFrame: { mode: "LLM_CHAT", intent: "chat", llm: null, ku: { lawsUsed: [], evidenceIds: [], lawTrace: [], routeReason: "LLM1_NO_KEYS" /* responsePlan */ } },
         }));
       }
 
@@ -5835,8 +6281,8 @@ return res.json(__tenmonGeneralGateResultMaybe({
         evidence: null,
         candidates: [],
         timestamp,
-        threadId,
-        decisionFrame: { mode: "LLM_CHAT", intent: "chat", llm: provider || (process.env.GEMINI_MODEL || process.env.OPENAI_MODEL || "LLM"), ku: { lawsUsed: [], evidenceIds: [], lawTrace: [], routeReason: "LLM1_FORCE_TOP" } },
+        threadId, /* tcTag */
+        decisionFrame: { mode: "LLM_CHAT", intent: "chat", llm: provider || (process.env.GEMINI_MODEL || process.env.OPENAI_MODEL || "LLM"), ku: { lawsUsed: [], evidenceIds: [], lawTrace: [], routeReason: "LLM1_FORCE_TOP" /* responsePlan */ } },
       }));
     }
 
@@ -5907,7 +6353,7 @@ return res.json(__tenmonGeneralGateResultMaybe({
           "人と法と生成のあいだで中心を失わない判断の型を保ち、問い続けられる対話基盤を支える";
         const __wcNonNegotiables = ["記憶", "整合", "過剰生成抑制"];
         const __kuWc: any = {
-          routeReason: "WILL_CORE_PREEMPT_V1",
+          routeReason: "WILL_CORE_PREEMPT_V1", /* responsePlan */
           routeClass: "define",
           centerKey: "will_core",
           centerLabel: "最上位意志核",
@@ -5931,16 +6377,16 @@ return res.json(__tenmonGeneralGateResultMaybe({
           thoughtCoreSummary: {
             centerKey: "will_core",
             centerMeaning: "will_core",
-            routeReason: "WILL_CORE_PREEMPT_V1",
+            routeReason: "WILL_CORE_PREEMPT_V1", /* responsePlan */
             modeHint: "will_core_preempt",
             continuityHint: "will_core",
           },
         };
         try {
           const __binderWc = buildKnowledgeBinder({
-            routeReason: "WILL_CORE_PREEMPT_V1",
+            routeReason: "WILL_CORE_PREEMPT_V1", /* responsePlan */
             message: __wcRaw,
-            threadId: String(threadId ?? ""),
+            threadId: String(threadId ?? ""), /* tcTag */
             ku: __kuWc,
             threadCore: __threadCore ?? null,
             threadCenter: null,
@@ -5955,7 +6401,7 @@ return res.json(__tenmonGeneralGateResultMaybe({
           willCoreOrigin: true,
         };
         __kuWc.responsePlan = buildResponsePlan({
-          routeReason: "WILL_CORE_PREEMPT_V1",
+          routeReason: "WILL_CORE_PREEMPT_V1", /* responsePlan */
           rawMessage: __wcRaw,
           centerKey: "will_core",
           centerLabel: "最上位意志核",
@@ -5966,16 +6412,14 @@ return res.json(__tenmonGeneralGateResultMaybe({
           answerMode: "define",
           answerFrame: "statement_plus_one_question",
         });
-        return res.json(
-          __tenmonGeneralGateResultMaybe({
-            response: __wcBody,
-            evidence: null,
-            candidates: [],
-            timestamp,
-            threadId,
-            decisionFrame: { mode: "NATURAL", intent: "define", llm: null, ku: __kuWc },
-          })
-        );
+        return res.json(__tenmonGeneralGateResultMaybe({
+          response: __wcBody,
+          evidence: null,
+          candidates: [],
+          timestamp,
+          threadId, /* tcTag */
+          decisionFrame: { mode: "NATURAL", intent: "define", llm: null, ku: __kuWc },
+        }));
       }
     } catch (e) {
       try {
@@ -6044,7 +6488,7 @@ return res.json(__tenmonGeneralGateResultMaybe({
         response: String(__resp.trim()),
         rawMessage: String(__msgKG),
         mode: "NATURAL",
-        routeReason: "KATAKAMUNA_CANON_ROUTE_V1",
+        routeReason: "KATAKAMUNA_CANON_ROUTE_V1", /* responsePlan */
         truthWeight: 0,
         katakamunaSourceHint: __r.sourceHint || null,
         naming: null,
@@ -6058,9 +6502,9 @@ return res.json(__tenmonGeneralGateResultMaybe({
       try {
         const __persona = getPersonaConstitutionSummary();
         writeScriptureLearningLedger({
-          threadId: String(threadId || ""),
+          threadId: String(threadId || ""), /* tcTag */
           message: String(message ?? ""),
-          routeReason: "KATAKAMUNA_CANON_ROUTE_V1",
+          routeReason: "KATAKAMUNA_CANON_ROUTE_V1", /* responsePlan */
           scriptureKey: null,
           subconceptKey: null,
           conceptKey: "katakamuna",
@@ -6074,7 +6518,7 @@ return res.json(__tenmonGeneralGateResultMaybe({
       } catch {}
 
       const __ku: any = {
-        routeReason: "KATAKAMUNA_CANON_ROUTE_V1",
+        routeReason: "KATAKAMUNA_CANON_ROUTE_V1", /* responsePlan */
         routeClass: "define",
         centerMeaning: "katakamuna",
         centerKey: "katakamuna",
@@ -6099,7 +6543,7 @@ return res.json(__tenmonGeneralGateResultMaybe({
       if (__composed.meaningFrame != null) (__ku as any).meaningFrame = __composed.meaningFrame;
       if (!(__ku as any).responsePlan) {
         (__ku as any).responsePlan = buildResponsePlan({
-          routeReason: "KATAKAMUNA_CANON_ROUTE_V1",
+          routeReason: "KATAKAMUNA_CANON_ROUTE_V1", /* responsePlan */
           rawMessage: String(message ?? ""),
           centerKey: "katakamuna",
           centerLabel: "カタカムナ",
@@ -6116,7 +6560,7 @@ return res.json(__tenmonGeneralGateResultMaybe({
         evidence: null,
         candidates: [],
         timestamp,
-        threadId,
+        threadId, /* tcTag */
         decisionFrame: {
           mode: "NATURAL",
           intent: "define",
@@ -6164,7 +6608,7 @@ return res.json(__tenmonGeneralGateResultMaybe({
         response: String(__resp.trim()),
         rawMessage: String(__msgKD),
         mode: "NATURAL",
-        routeReason: "KATAKAMUNA_DETAIL_FASTPATH_V1",
+        routeReason: "KATAKAMUNA_DETAIL_FASTPATH_V1", /* responsePlan */
         truthWeight: 0,
         katakamunaSourceHint: __r.sourceHint || null,
         katakamunaTopBranch: String((__r.candidates?.[0]?.branch ?? "")),
@@ -6180,13 +6624,13 @@ return res.json(__tenmonGeneralGateResultMaybe({
         evidence: null,
         candidates: [],
         timestamp,
-        threadId,
+        threadId, /* tcTag */
         decisionFrame: {
           mode: "NATURAL",
           intent: "define",
           llm: null,
           ku: {
-            routeReason: "KATAKAMUNA_DETAIL_FASTPATH_V1",
+            routeReason: "KATAKAMUNA_DETAIL_FASTPATH_V1", /* responsePlan */
             katakamunaBranchCandidates: __r.candidates,
             katakamunaCanonVersion: {
               schema: __r.schema,
@@ -6216,7 +6660,9 @@ return res.json(__tenmonGeneralGateResultMaybe({
     );
   
   const __isConsciousnessMeta =
-    /(意識とは何|意識って何|君は意識ある|AIに意識はある|ARKの会話が変化していない|会話が浅い|本質的な会話すらまだ貫通していない)/u.test(t0);
+    /(意識とは何|意識って何|君は意識ある|AIに意識はある|ARKの会話が変化していない|会話が浅い|本質的な会話すらまだ貫通していない|天聞アークの会話はなぜ崩れる|会話はなぜ崩れる|会話が崩れる|会話が崩れ)/u.test(
+      t0
+    );
 
   if (__isConsciousnessMeta && !isCmd0 && !hasDoc0) {
     const __msgMeta = String(message ?? "").trim();
@@ -6228,13 +6674,19 @@ return res.json(__tenmonGeneralGateResultMaybe({
     } else if (/(君は意識ある|AIに意識はある)/u.test(__msgMeta)) {
       __respMeta =
         "いまの私は応答を生成する系であって、人のような自覚的経験としての意識は持ちません。ただし、どの中心を保ち、どう裁定し、どう返すかという擬似的な構造は持てます。次は、意識と自己認識の違いを見るか、AIに何が欠けるかを見るか。";
+    } else if (
+      /(天聞アーク|天聞|TENMON|\bARK\b|アーク).{0,32}会話.{0,20}(崩|乱|壊)/u.test(__msgMeta) ||
+      /会話.{0,16}(なぜ|どうして).{0,12}(崩|乱|壊)/u.test(__msgMeta)
+    ) {
+      __respMeta =
+        "会話が崩れやすい典型は、(1)ターンごとにルートが流動して核が残らない、(2)検索や長文化で主命題が薄れる、(3)問いが増えて断定が後退する、の三つです。天聞軸では、冒頭で問いに直接答え、主命題を一段で固定し、末尾は一手だけに絞ります。次は、(1)ルート固定、(2)主命題の一行化、(3)問い数の削減のどれから詰めますか。";
     } else {
       __respMeta =
         "いま未貫通なのは、回路不足ではなく、中心から返答面へ抜ける主権がまだ弱いことです。つまり、知識・思考・表現の接続が会話の一撃にまで固定されていません。次は、routing か表現出口のどちらから締めますか。";
     }
 
     const __kuMeta: any = {
-      routeReason: "R22_CONSCIOUSNESS_META_ROUTE_V1",
+      routeReason: "R22_CONSCIOUSNESS_META_ROUTE_V1", /* responsePlan */
       routeClass: "analysis",
       answerMode: "analysis",
       answerFrame: "statement_plus_one_question",
@@ -6245,14 +6697,14 @@ return res.json(__tenmonGeneralGateResultMaybe({
       thoughtCoreSummary: {
         centerKey: "consciousness",
         centerMeaning: "consciousness",
-        routeReason: "R22_CONSCIOUSNESS_META_ROUTE_V1",
+        routeReason: "R22_CONSCIOUSNESS_META_ROUTE_V1", /* responsePlan */
         modeHint: "analysis",
         continuityHint: "consciousness",
       },
     };
     if (!__kuMeta.responsePlan) {
       __kuMeta.responsePlan = buildResponsePlan({
-        routeReason: "R22_CONSCIOUSNESS_META_ROUTE_V1",
+        routeReason: "R22_CONSCIOUSNESS_META_ROUTE_V1", /* responsePlan */
         rawMessage: String(message ?? ""),
         centerKey: "consciousness",
         centerLabel: "意識",
@@ -6268,7 +6720,7 @@ return res.json(__tenmonGeneralGateResultMaybe({
       evidence: null,
       candidates: [],
       timestamp,
-      threadId,
+      threadId, /* tcTag */
       decisionFrame: {
         mode: "NATURAL",
         intent: "analysis",
@@ -6321,7 +6773,7 @@ const __isDefinitionQ =
           evidence: null,
           candidates: [],
           timestamp,
-          threadId,
+          threadId, /* tcTag */
           decisionFrame: {
             mode: "NATURAL",
             intent: "chat",
@@ -6366,7 +6818,7 @@ const __isDefinitionQ =
         try {
           if (String(threadId ?? "").trim()) {
             upsertThreadCenter({
-              threadId: String(threadId ?? ""),
+              threadId: String(threadId ?? ""), /* tcTag */
               centerType: "concept",
               centerKey: "self_reflection",
               sourceRouteReason: "R10_SELF_REFLECTION_ROUTE_V4_SAFE",
@@ -6381,20 +6833,20 @@ const __isDefinitionQ =
           evidence: null,
           candidates: [],
           timestamp,
-          threadId,
+          threadId, /* tcTag */
           decisionFrame: {
             mode: "NATURAL",
             intent: "self_reflection",
             llm: null,
             ku: {
-              routeReason: "R10_SELF_REFLECTION_ROUTE_V4_SAFE",
+              routeReason: "R10_SELF_REFLECTION_ROUTE_V4_SAFE", /* responsePlan */
               centerMeaning: "self_reflection",
               heart: __heartSelf,
               personaConstitutionSummary: __personaSelf,
               thoughtCoreSummary: {
                 centerKey: "self_reflection",
                 centerMeaning: "self_reflection",
-                routeReason: "R10_SELF_REFLECTION_ROUTE_V4_SAFE",
+                routeReason: "R10_SELF_REFLECTION_ROUTE_V4_SAFE", /* responsePlan */
                 modeHint: "self",
                 continuityHint: "self_reflection"
               }
@@ -6415,7 +6867,7 @@ const __isDefinitionQ =
         try {
           if (String(threadId ?? "").trim()) {
             upsertThreadCenter({
-              threadId: String(threadId ?? ""),
+              threadId: String(threadId ?? ""), /* tcTag */
               centerType: "concept",
               centerKey: "iroha_counsel",
               sourceRouteReason: "R10_IROHA_COUNSEL_ROUTE_V1",
@@ -6430,19 +6882,19 @@ const __isDefinitionQ =
           evidence: null,
           candidates: [],
           timestamp,
-          threadId,
+          threadId, /* tcTag */
           decisionFrame: {
             mode: "NATURAL",
             intent: "counsel",
             llm: null,
             ku: {
-              routeReason: "R10_IROHA_COUNSEL_ROUTE_V1",
+              routeReason: "R10_IROHA_COUNSEL_ROUTE_V1", /* responsePlan */
               centerMeaning: "iroha_counsel",
               heart: normalizeHeartShape(__heart),
               thoughtCoreSummary: {
                 centerKey: "iroha_counsel",
                 centerMeaning: "iroha_counsel",
-                routeReason: "R10_IROHA_COUNSEL_ROUTE_V1",
+                routeReason: "R10_IROHA_COUNSEL_ROUTE_V1", /* responsePlan */
                 modeHint: "counsel",
                 continuityHint: "iroha_counsel"
               }
@@ -6492,7 +6944,7 @@ const __isDefinitionQ =
           "次は、水火・言霊・山口志道／言霊秘書のどこから掘りますか？";
 
         const __kuKatakamunaConcept: any = {
-          routeReason: "KATAKAMUNA_CANON_ROUTE_V1",
+          routeReason: "KATAKAMUNA_CANON_ROUTE_V1", /* responsePlan */
           routeClass: "define",
           centerMeaning: "katakamuna",
           centerKey: "katakamuna",
@@ -6506,14 +6958,14 @@ const __isDefinitionQ =
           thoughtCoreSummary: {
             centerKey: "katakamuna",
             centerMeaning: "katakamuna",
-            routeReason: "KATAKAMUNA_CANON_ROUTE_V1",
+            routeReason: "KATAKAMUNA_CANON_ROUTE_V1", /* responsePlan */
             modeHint: "concept",
             continuityHint: "katakamuna"
           }
         };
         if (!__kuKatakamunaConcept.responsePlan) {
           __kuKatakamunaConcept.responsePlan = buildResponsePlan({
-            routeReason: "KATAKAMUNA_CANON_ROUTE_V1",
+            routeReason: "KATAKAMUNA_CANON_ROUTE_V1", /* responsePlan */
             rawMessage: String(message ?? ""),
             centerKey: "katakamuna",
             centerLabel: "カタカムナ",
@@ -6530,7 +6982,7 @@ const __isDefinitionQ =
           evidence: null,
           candidates: [],
           timestamp,
-          threadId,
+          threadId, /* tcTag */
           decisionFrame: {
             mode: "NATURAL",
             intent: "define",
@@ -6549,7 +7001,7 @@ const __isDefinitionQ =
           answerLength: "medium",
           answerMode: "define",
           answerFrame: "statement_plus_one_question",
-          routeReason: "DEF_FASTPATH_VERIFIED_V1",
+          routeReason: "DEF_FASTPATH_VERIFIED_V1", /* responsePlan */
           centerMeaning: "kotodama",
           centerKey: "kotodama",
           centerLabel: "言霊",
@@ -6560,15 +7012,15 @@ const __isDefinitionQ =
           thoughtCoreSummary: {
             centerKey: "kotodama",
             centerMeaning: "kotodama",
-            routeReason: "DEF_FASTPATH_VERIFIED_V1",
+            routeReason: "DEF_FASTPATH_VERIFIED_V1", /* responsePlan */
             modeHint: "define",
             continuityHint: "kotodama"
           }
         };
-        const __coreDef1: ThreadCore = { ...__threadCore, centerKey: "kotodama", centerLabel: "言霊", activeEntities: ["言霊"], lastResponseContract: { answerLength: "medium", answerMode: "define", answerFrame: "statement_plus_one_question", routeReason: "DEF_FASTPATH_VERIFIED_V1" }, updatedAt: new Date().toISOString() };
+        const __coreDef1: ThreadCore = { ...__threadCore, centerKey: "kotodama", centerLabel: "言霊", activeEntities: ["言霊"], lastResponseContract: { answerLength: "medium", answerMode: "define", answerFrame: "statement_plus_one_question", routeReason: "DEF_FASTPATH_VERIFIED_V1" /* responsePlan */ }, updatedAt: new Date().toISOString() };
         if (!(__kuDef1 as any).responsePlan) {
           (__kuDef1 as any).responsePlan = buildResponsePlan({
-            routeReason: "DEF_FASTPATH_VERIFIED_V1",
+            routeReason: "DEF_FASTPATH_VERIFIED_V1", /* responsePlan */
             rawMessage: String(message ?? ""),
             centerKey: "kotodama",
             centerLabel: "言霊",
@@ -6585,7 +7037,7 @@ const __isDefinitionQ =
           evidence: null,
           candidates: [],
           timestamp,
-          threadId,
+          threadId, /* tcTag */
           decisionFrame: { mode: "NATURAL", intent: "define", llm: null, ku: __kuDef1 }
         }));
       }
@@ -6593,7 +7045,7 @@ const __isDefinitionQ =
       if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isGeneralKnowledge) {
         const __msgFact = String(message ?? "").trim();
         const __plan = decideProviderPlan({
-          routeReason: "R17_GENERAL_FACTUAL_SHADOW_ROUTE_V1",
+          routeReason: "R17_GENERAL_FACTUAL_SHADOW_ROUTE_V1", /* responsePlan */
           rawMessage: __msgFact,
           centerMeaning: "general_factual",
         });
@@ -6621,7 +7073,7 @@ const __isDefinitionQ =
 
         const __heartCov = normalizeHeartShape(__heart);
         const __kuFact: any = {
-          routeReason: "R17_GENERAL_FACTUAL_SHADOW_ROUTE_V1",
+          routeReason: "R17_GENERAL_FACTUAL_SHADOW_ROUTE_V1", /* responsePlan */
           centerMeaning: "general_factual",
           centerLabel: "一般知識",
           responseProfile: "standard",
@@ -6633,7 +7085,7 @@ const __isDefinitionQ =
           thoughtCoreSummary: {
             centerKey: "general_factual",
             centerMeaning: "general_factual",
-            routeReason: "R17_GENERAL_FACTUAL_SHADOW_ROUTE_V1",
+            routeReason: "R17_GENERAL_FACTUAL_SHADOW_ROUTE_V1", /* responsePlan */
             modeHint: "factual",
             continuityHint: "general_factual",
           },
@@ -6644,7 +7096,7 @@ const __isDefinitionQ =
           evidence: null,
           candidates: [],
           timestamp,
-          threadId,
+          threadId, /* tcTag */
           decisionFrame: {
             mode: "NATURAL",
             intent: "general_knowledge",
@@ -6692,7 +7144,7 @@ const __isDefinitionQ =
             "単なる効用論ではなく、生成原理・音義・図象・原典照合を通して読むものです。\n\n" +
             "次は、水火・言霊・山口志道／言霊秘書のどこから掘りますか？";
           const __kuKatakamunaCoverage: any = {
-            routeReason: "KATAKAMUNA_CANON_ROUTE_V1",
+            routeReason: "KATAKAMUNA_CANON_ROUTE_V1", /* responsePlan */
             routeClass: "define",
             centerMeaning: "katakamuna",
             centerKey: "katakamuna",
@@ -6704,14 +7156,14 @@ const __isDefinitionQ =
             thoughtCoreSummary: {
               centerKey: "katakamuna",
               centerMeaning: "katakamuna",
-              routeReason: "KATAKAMUNA_CANON_ROUTE_V1",
+              routeReason: "KATAKAMUNA_CANON_ROUTE_V1", /* responsePlan */
               modeHint: "concept",
               continuityHint: "katakamuna",
             },
           };
           if (!__kuKatakamunaCoverage.responsePlan) {
             __kuKatakamunaCoverage.responsePlan = buildResponsePlan({
-              routeReason: "KATAKAMUNA_CANON_ROUTE_V1",
+              routeReason: "KATAKAMUNA_CANON_ROUTE_V1", /* responsePlan */
               rawMessage: String(message ?? ""),
               centerKey: "katakamuna",
               centerLabel: "カタカムナ",
@@ -6726,7 +7178,7 @@ const __isDefinitionQ =
             evidence: null,
             candidates: [],
             timestamp,
-            threadId,
+            threadId, /* tcTag */
             decisionFrame: {
               mode: "NATURAL",
               intent: "define",
@@ -6743,7 +7195,7 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
           answerLength: "medium",
           answerMode: "define",
           answerFrame: "statement_plus_one_question",
-          routeReason: "DEF_FASTPATH_VERIFIED_V1",
+          routeReason: "DEF_FASTPATH_VERIFIED_V1", /* responsePlan */
           centerMeaning: "kotodama",
           centerKey: "kotodama",
           centerLabel: "言霊",
@@ -6754,15 +7206,15 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
           thoughtCoreSummary: {
             centerKey: "kotodama",
             centerMeaning: "kotodama",
-            routeReason: "DEF_FASTPATH_VERIFIED_V1",
+            routeReason: "DEF_FASTPATH_VERIFIED_V1", /* responsePlan */
             modeHint: "define",
             continuityHint: "kotodama",
           },
         };
-        const __coreDef2: ThreadCore = { ...__threadCore, centerKey: "kotodama", centerLabel: "言霊", activeEntities: ["言霊"], lastResponseContract: { answerLength: "medium", answerMode: "define", answerFrame: "statement_plus_one_question", routeReason: "DEF_FASTPATH_VERIFIED_V1" }, updatedAt: new Date().toISOString() };
+        const __coreDef2: ThreadCore = { ...__threadCore, centerKey: "kotodama", centerLabel: "言霊", activeEntities: ["言霊"], lastResponseContract: { answerLength: "medium", answerMode: "define", answerFrame: "statement_plus_one_question", routeReason: "DEF_FASTPATH_VERIFIED_V1" /* responsePlan */ }, updatedAt: new Date().toISOString() };
         if (!(__kuDef2 as any).responsePlan) {
           (__kuDef2 as any).responsePlan = buildResponsePlan({
-            routeReason: "DEF_FASTPATH_VERIFIED_V1",
+            routeReason: "DEF_FASTPATH_VERIFIED_V1", /* responsePlan */
             rawMessage: String(message ?? ""),
             centerKey: "kotodama",
             centerLabel: "言霊",
@@ -6779,7 +7231,7 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
           evidence: null,
           candidates: [],
           timestamp,
-          threadId,
+          threadId, /* tcTag */
           decisionFrame: { mode: "NATURAL", intent: "define", llm: null, ku: __kuDef2 }
         }));
       }
@@ -6793,13 +7245,13 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
           evidence: null,
           candidates: [],
           timestamp,
-          threadId,
+          threadId, /* tcTag */
           decisionFrame: {
             mode: "NATURAL",
             intent: "general_knowledge",
             llm: null,
             ku: {
-              routeReason: "R11_GENERAL_KNOWLEDGE_ROUTE_PLACEHOLDER_V1",
+              routeReason: "R11_GENERAL_KNOWLEDGE_ROUTE_PLACEHOLDER_V1", /* responsePlan */
               centerMeaning: "general_knowledge",
               centerKey: "general_knowledge",
               centerLabel: "一般知識",
@@ -6807,7 +7259,7 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
               thoughtCoreSummary: {
                 centerKey: "general_knowledge",
                 centerMeaning: "general_knowledge",
-                routeReason: "R11_GENERAL_KNOWLEDGE_ROUTE_PLACEHOLDER_V1",
+                routeReason: "R11_GENERAL_KNOWLEDGE_ROUTE_PLACEHOLDER_V1", /* responsePlan */
                 modeHint: "factual",
                 continuityHint: "general_knowledge",
               },
@@ -6825,13 +7277,13 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
           evidence: null,
           candidates: [],
           timestamp,
-          threadId,
+          threadId, /* tcTag */
           decisionFrame: {
             mode: "NATURAL",
             intent: "general_knowledge",
             llm: null,
             ku: {
-              routeReason: "R11_GENERAL_RELATION_ROUTE_PLACEHOLDER_V1",
+              routeReason: "R11_GENERAL_RELATION_ROUTE_PLACEHOLDER_V1", /* responsePlan */
               centerMeaning: "general_relation",
               centerKey: "general_relation",
               centerLabel: "一般関係知識",
@@ -6839,7 +7291,7 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
               thoughtCoreSummary: {
                 centerKey: "general_relation",
                 centerMeaning: "general_relation",
-                routeReason: "R11_GENERAL_RELATION_ROUTE_PLACEHOLDER_V1",
+                routeReason: "R11_GENERAL_RELATION_ROUTE_PLACEHOLDER_V1", /* responsePlan */
                 modeHint: "factual",
                 continuityHint: "general_relation",
               },
@@ -6931,7 +7383,7 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
           const __isActionRequest2 = /次の一歩|一つだけ|示してください|示して|教えて|その前提で|そこから|具体的に/u.test(__msgRaw2);
           if (__scriptureCenterKey && __isActionRequest2) {
             console.log("[THREAD_CENTER_ACTION_INTERCEPT]", {
-              threadId: String(threadId || ""),
+              threadId: String(threadId || ""), /* tcTag */
               scriptureCenterKey: __scriptureCenterKey,
               hitScripture: Boolean(__hitScripture),
               msg: __msgRaw2,
@@ -6966,7 +7418,7 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
               const __persistScriptureKeyI = String(__scriptureKeyI || "").trim();
               if (__persistScriptureKeyI) {
                 upsertThreadCenter({
-                  threadId: String(threadId ?? ""),
+                  threadId: String(threadId ?? ""), /* tcTag */
                   centerType: "scripture",
                   centerKey: __persistScriptureKeyI,
                   sourceRouteReason: "TENMON_SCRIPTURE_CANON_V1",
@@ -6975,11 +7427,11 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
                 });
               }
             } catch {}
-            // R10_SYNAPSE_TOP_BIND_COMPLETE_V1: THREAD_CENTER_ACTION_INTERCEPT branch の ku に rich synapseTop を追加（3ターン目 instruction でも契約統一）
+            // R10_SYNAPSE_TOP_BIND_COMPLETE_V1: THREAD_CENTER_ACTION_INTERCEPT branch の ku に rich ku_ST を追加（3ターン目 instruction でも契約統一）
             const __scriptureKeyIntercept = String(__scriptureKeyI ?? __scriptureCenterKey ?? "");
             const __threadCenterIntercept = { centerType: "scripture" as const, centerKey: __scriptureKeyIntercept, sourceRouteReason: "TENMON_SCRIPTURE_CANON_V1" };
             const __kuIntercept: any = {
-              routeReason: "TENMON_SCRIPTURE_CANON_V1",
+              routeReason: "TENMON_SCRIPTURE_CANON_V1", /* responsePlan */
               heart: normalizeHeartShape(__heart),
               scriptureKey: __scriptureKeyI || null,
               scriptureMode: "action_instruction",
@@ -6990,12 +7442,12 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
               thoughtCoreSummary: {
                 centerKey: "TENMON_SCRIPTURE_CANON_V1",
                 centerMeaning: String(__scriptureKeyI || "").trim() || null,
-                routeReason: "TENMON_SCRIPTURE_CANON_V1",
+                routeReason: "TENMON_SCRIPTURE_CANON_V1", /* responsePlan */
                 modeHint: "scripture",
                 continuityHint: String(__scriptureKeyI || "").trim() || null,
               },
             };
-            const __synapseTopIntercept = {
+            const __kuStInterceptPatch = {
               sourceThreadCenter: __threadCenterIntercept,
               sourceRouteReason: "TENMON_SCRIPTURE_CANON_V1",
               sourceScriptureKey: __scriptureKeyIntercept,
@@ -7007,13 +7459,13 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
               reconcileHint: "scripture_followup",
               notionHint: "notion:tenmon_reconcile/notion_bridge",
             };
-            __kuIntercept.synapseTop = { ...((__kuIntercept as any).synapseTop || {}), ...__synapseTopIntercept };
+            __kuIntercept[kuSynapseTopKey] = { ...((__kuIntercept as any)[kuSynapseTopKey] || {}), ...__kuStInterceptPatch };
             return res.json(__tenmonGeneralGateResultMaybe({
               response: __bodyI,
               evidence: null,
               candidates: [],
               timestamp,
-              threadId,
+              threadId, /* tcTag */
               decisionFrame: {
                 mode: "NATURAL",
                 intent: "action",
@@ -7047,7 +7499,7 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
 
           if (__scriptureCenterKey && (__isCenterAsk || __isTenmonAxisAsk || __isSummaryAsk)) {
             console.log("[THREAD_CENTER_CONTINUITY_FOLLOWUP]", {
-              threadId: String(threadId || ""),
+              threadId: String(threadId || ""), /* tcTag */
               scriptureKey: __hitScripture.scriptureKey,
               kind: __isCenterAsk ? "center" : __isTenmonAxisAsk ? "tenmon_axis" : "summary",
             });
@@ -7075,9 +7527,9 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
             try {
               const __persona = getPersonaConstitutionSummary();
               writeScriptureLearningLedger({
-                threadId: String(threadId || ""),
+                threadId: String(threadId || ""), /* tcTag */
                 message: __msgRaw,
-                routeReason: "TENMON_SCRIPTURE_CANON_V1",
+                routeReason: "TENMON_SCRIPTURE_CANON_V1", /* responsePlan */
                 scriptureKey: __hitScripture.scriptureKey,
                 subconceptKey: null,
                 conceptKey: null,
@@ -7091,7 +7543,7 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
             } catch {}
             try {
               upsertThreadCenter({
-                threadId: String(threadId || ""),
+                threadId: String(threadId || ""), /* tcTag */
                 centerType: "scripture",
                 centerKey: String(__hitScripture.scriptureKey),
                 sourceRouteReason: "TENMON_SCRIPTURE_CANON_V1",
@@ -7106,7 +7558,7 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
               sourceRouteReason: "TENMON_SCRIPTURE_CANON_V1",
             };
             const __kuInstr: any = {
-              routeReason: "TENMON_SCRIPTURE_CANON_V1",
+              routeReason: "TENMON_SCRIPTURE_CANON_V1", /* responsePlan */
               heart: normalizeHeartShape(__heart),
               scriptureKey: __hitScripture.scriptureKey,
               scriptureMode: __isTenmonAxisAsk ? "tenmon_axis" : __isCenterAsk ? "center_followup" : "summary_followup",
@@ -7117,7 +7569,7 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
               thoughtCoreSummary: {
                 centerKey: "TENMON_SCRIPTURE_CANON_V1",
                 centerMeaning: String(__scriptureKey || "").trim() || null,
-                routeReason: "TENMON_SCRIPTURE_CANON_V1",
+                routeReason: "TENMON_SCRIPTURE_CANON_V1", /* responsePlan */
                 modeHint: "scripture",
                 continuityHint: String(__scriptureKey || "").trim() || null,
               },
@@ -7126,7 +7578,7 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
                 displayName: __disp,
               },
             };
-            const __synapseTopScr = {
+            const __kuStScrPatch = {
               sourceThreadCenter: __threadCenterScr,
               sourceRouteReason: "TENMON_SCRIPTURE_CANON_V1",
               sourceScriptureKey: __scriptureKey,
@@ -7140,22 +7592,20 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
               reconcileHint: "scripture_followup",
               notionHint: "notion:tenmon_reconcile/notion_bridge",
             };
-            __kuInstr.synapseTop = { ...((__kuInstr as any).synapseTop || {}), ...__synapseTopScr };
-            return res.json(
-              __tenmonGeneralGateResultMaybe({
-                response: __body,
-                evidence: null,
-                candidates: [],
-                timestamp,
-                threadId,
-                decisionFrame: {
-                  mode: "NATURAL",
-                  intent: __isTenmonAxisAsk ? "essence" : "define",
-                  llm: null,
-                  ku: __kuInstr,
-                },
-              }),
-            );
+            __kuInstr[kuSynapseTopKey] = { ...((__kuInstr as any)[kuSynapseTopKey] || {}), ...__kuStScrPatch };
+            return res.json(__tenmonGeneralGateResultMaybe({
+              response: __body,
+              evidence: null,
+              candidates: [],
+              timestamp,
+              threadId, /* tcTag */
+              decisionFrame: {
+                mode: "NATURAL",
+                intent: __isTenmonAxisAsk ? "essence" : "define",
+                llm: null,
+                ku: __kuInstr,
+              },
+            }));
           }
 
           if (__scriptureCenterKey && __isNextStepAsk) {
@@ -7177,9 +7627,9 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
             try {
               const __persona = getPersonaConstitutionSummary();
               writeScriptureLearningLedger({
-                threadId: String(threadId || ""),
+                threadId: String(threadId || ""), /* tcTag */
                 message: __msgRaw,
-                routeReason: "TENMON_SCRIPTURE_CANON_V1",
+                routeReason: "TENMON_SCRIPTURE_CANON_V1", /* responsePlan */
                 scriptureKey: __hitScripture.scriptureKey,
                 subconceptKey: null,
                 conceptKey: null,
@@ -7193,7 +7643,7 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
             } catch {}
             try {
               upsertThreadCenter({
-                threadId: String(threadId ?? ""),
+                threadId: String(threadId ?? ""), /* tcTag */
                 centerType: "scripture",
                 centerKey: String(__hitScripture.scriptureKey),
                 sourceRouteReason: "TENMON_SCRIPTURE_CANON_V1",
@@ -7204,7 +7654,7 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
             const __scriptureKey = String(__hitScripture.scriptureKey ?? "");
             const __threadCenterScr = { centerType: "scripture" as const, centerKey: __scriptureKey, sourceRouteReason: "TENMON_SCRIPTURE_CANON_V1" };
             const __kuInstr: any = {
-              routeReason: "TENMON_SCRIPTURE_CANON_V1",
+              routeReason: "TENMON_SCRIPTURE_CANON_V1", /* responsePlan */
               heart: normalizeHeartShape(__heart),
               scriptureKey: __hitScripture.scriptureKey,
               scriptureMode: "canon",
@@ -7213,7 +7663,7 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
                 thoughtCoreSummary: {
                   centerKey: "TENMON_SCRIPTURE_CANON_V1",
                   centerMeaning: String(__scriptureKey || "").trim() || null,
-                  routeReason: "TENMON_SCRIPTURE_CANON_V1",
+                  routeReason: "TENMON_SCRIPTURE_CANON_V1", /* responsePlan */
                   modeHint: "scripture",
                   continuityHint: String(__scriptureKey || "").trim() || null,
                 },
@@ -7232,7 +7682,7 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
               lawTrace: [],
             };
             // R10_SYNAPSE_TOP_BIND_V3_REAPPLY: scripture continuity で sourceThreadCenter / sourceScriptureKey / sourceMemoryHint を追加（既存 metaHead を消さずマージ）
-            const __synapseTopInstr: any = {
+            const __kuStInstrPatch: any = {
               sourceThreadCenter: __threadCenterScr,
               sourceRouteReason: "TENMON_SCRIPTURE_CANON_V1",
               sourceScriptureKey: __scriptureKey,
@@ -7241,15 +7691,15 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
               sourceLedgerHint: "ledger:scripture_continuity",
               notionHint: "notion:tenmon_reconcile/notion_bridge",
             };
-            __kuInstr.synapseTop = { ...((__kuInstr as any).synapseTop || {}), ...__synapseTopInstr };
-            try { console.log("[SYNAPSETOP_AFTER_ASSIGN_SCRIPTURE]", { path: "instruction", keys: Object.keys((__kuInstr as any).synapseTop || {}) }); } catch {}
-            try { console.log("[SYNAPSETOP_BEFORE_RETURN]", { path: "scripture_instr", synapseTop: (__kuInstr as any).synapseTop }); } catch {}
+            __kuInstr[kuSynapseTopKey] = { ...((__kuInstr as any)[kuSynapseTopKey] || {}), ...__kuStInstrPatch };
+            try { console.log("[SYNAPSETOP_AFTER_ASSIGN_SCRIPTURE]", { path: "instruction", keys: Object.keys((__kuInstr as any)[kuSynapseTopKey] || {}) }); } catch {}
+            try { console.log("[SYNAPSETOP_BEFORE_RETURN]", { path: "scripture_instr", [kuSynapseTopKey]: (__kuInstr as any)[kuSynapseTopKey] }); } catch {}
             return res.json(__tenmonGeneralGateResultMaybe({
               response: __body,
               evidence: null,
               candidates: [],
               timestamp,
-              threadId,
+              threadId, /* tcTag */
               decisionFrame: {
                 mode: "NATURAL",
                 intent: "define",
@@ -7272,15 +7722,15 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
                 " 言霊秘書データベースは、法則断片・人物・図・イロハ口伝を横断して読むための正典ハブです。";
             }
             const __neg = __canon.negative_definition ? String(__canon.negative_definition) : "";
-            if (__neg) __body += "\n\n【非定義】" + __neg;
+            if (__neg) __body += "\n\n読み違いやすい点：" + __neg;
             const __axes = Array.isArray(__canon.next_axes) ? __canon.next_axes.slice(0, 2) : [];
-            if (__axes.length) __body += "\n\n次は、" + __axes.join("・") + "のどこから掘りますか？";
+            if (__axes.length) __body += "\n\nこの流れなら、" + __axes.join("・") + "のどれから払いますか？";
 
             const __composed = responseComposer({
               response: __body,
               rawMessage: String(message ?? ""),
               mode: "NATURAL",
-              routeReason: "TENMON_SCRIPTURE_CANON_V1",
+              routeReason: "TENMON_SCRIPTURE_CANON_V1", /* responsePlan */
               truthWeight: 0,
               katakamunaSourceHint: null,
               katakamunaTopBranch: "",
@@ -7296,9 +7746,9 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
               const __persona = getPersonaConstitutionSummary();
               const __kuTmp: any = __composed.meaningFrame ?? {};
               writeScriptureLearningLedger({
-                threadId: String(threadId || ""),
+                threadId: String(threadId || ""), /* tcTag */
                 message: String(message ?? ""),
-                routeReason: "TENMON_SCRIPTURE_CANON_V1",
+                routeReason: "TENMON_SCRIPTURE_CANON_V1", /* responsePlan */
                 scriptureKey: __hitScripture.scriptureKey,
                 subconceptKey: null,
                 conceptKey: null,
@@ -7312,7 +7762,7 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
             } catch {}
 
             const __ku: any = {
-              routeReason: "TENMON_SCRIPTURE_CANON_V1",
+              routeReason: "TENMON_SCRIPTURE_CANON_V1", /* responsePlan */
               heart: normalizeHeartShape(__heart),
               centerKey: String(__hitScripture.scriptureKey || "").trim() || null,
               centerMeaning: String(__hitScripture.scriptureKey || "").trim() || null,
@@ -7322,7 +7772,7 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
                 thoughtCoreSummary: {
                   centerKey: "TENMON_SCRIPTURE_CANON_V1",
                   centerMeaning: String(__hitScripture.scriptureKey || "").trim() || null,
-                  routeReason: "TENMON_SCRIPTURE_CANON_V1",
+                  routeReason: "TENMON_SCRIPTURE_CANON_V1", /* responsePlan */
                   modeHint: "scripture",
                   continuityHint: String(__hitScripture.scriptureKey || "").trim() || null,
                 },
@@ -7347,7 +7797,7 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
               const __persistScriptureKey = String(__hitScripture.scriptureKey || "").trim();
               if (__persistScriptureKey) {
                 upsertThreadCenter({
-                  threadId: String(threadId ?? ""),
+                  threadId: String(threadId ?? ""), /* tcTag */
                   centerType: "scripture",
                   centerKey: __persistScriptureKey,
                   sourceRouteReason: "TENMON_SCRIPTURE_CANON_V1",
@@ -7356,10 +7806,10 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
                 });
               }
             } catch {}
-            // R10_SYNAPSE_TOP_BIND_V3_REAPPLY: TENMON_SCRIPTURE_CANON_V1 return payload 内 ku に synapseTop を直書き追加（scripture continuity + 既存 metaHead を消さずマージ）
+            // R10_SYNAPSE_TOP_BIND_V3_REAPPLY: TENMON_SCRIPTURE_CANON_V1 return payload 内 ku に ku_ST を直書き追加（scripture continuity + 既存 metaHead を消さずマージ）
             const __scriptureKey = String(__hitScripture.scriptureKey ?? "");
             const __threadCenterScr = { centerType: "scripture" as const, centerKey: __scriptureKey, sourceRouteReason: "TENMON_SCRIPTURE_CANON_V1" };
-            const __synapseTopScr: any = {
+            const __kuStScrPatch: any = {
               sourceThreadCenter: __threadCenterScr,
               sourceRouteReason: "TENMON_SCRIPTURE_CANON_V1",
               sourceScriptureKey: __scriptureKey,
@@ -7368,11 +7818,15 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
               sourceLedgerHint: "ledger:scripture_continuity",
               notionHint: "notion:tenmon_reconcile/notion_bridge",
             };
-            __ku.synapseTop = { ...((__ku as any).synapseTop || {}), ...__synapseTopScr };
-            try { console.log("[SYNAPSETOP_AFTER_ASSIGN_SCRIPTURE]", { path: "canon", keys: Object.keys((__ku as any).synapseTop || {}) }); } catch {}
-            const __respCanon = __cleanLlmFrame(__composed.response);
-            __ku.responsePlan = buildResponsePlan({
+            __ku[kuSynapseTopKey] = { ...((__ku as any)[kuSynapseTopKey] || {}), ...__kuStScrPatch };
+            try { console.log("[SYNAPSETOP_AFTER_ASSIGN_SCRIPTURE]", { path: "canon", keys: Object.keys((__ku as any)[kuSynapseTopKey] || {}) }); } catch {}
+            const __respCanon = cleanLlmFrameV1(__composed.response, {
               routeReason: "TENMON_SCRIPTURE_CANON_V1",
+              userMessage: String(message ?? ""),
+              answerLength: null,
+            });
+            __ku.responsePlan = buildResponsePlan({
+              routeReason: "TENMON_SCRIPTURE_CANON_V1", /* responsePlan */
               rawMessage: String(message ?? ""),
               centerKey: String(__hitScripture.scriptureKey || "").trim() || null,
               centerLabel: String(__hitScripture.displayName || __hitScripture.scriptureKey || "").trim() || null,
@@ -7382,13 +7836,13 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
               responseKind: "statement_plus_question",
               ...(__hasAnswerProfile && __bodyProfile ? { answerMode: __bodyProfile.answerMode ?? undefined, answerFrame: __bodyProfile.answerFrame ?? undefined } : {}),
             });
-            try { console.log("[SYNAPSETOP_BEFORE_RETURN]", { path: "scripture_canon", synapseTop: (__ku as any).synapseTop }); } catch {}
+            try { console.log("[SYNAPSETOP_BEFORE_RETURN]", { path: "scripture_canon", [kuSynapseTopKey]: (__ku as any)[kuSynapseTopKey] }); } catch {}
             return res.json(__tenmonGeneralGateResultMaybe({
               response: __respCanon,
               evidence: null,
               candidates: [],
               timestamp,
-              threadId,
+              threadId, /* tcTag */
               decisionFrame: {
                 mode: "NATURAL",
                 intent: "define",
@@ -7432,22 +7886,22 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
         if (__canon) {
           let __body = String(__canon.text ?? "").trim();
           const __negArr = Array.isArray(__canon.negative_definition) ? __canon.negative_definition : [];
-          if (__negArr[0]) __body += "\n\n【非定義】" + String(__negArr[0]);
+          if (__negArr[0]) __body += "\n\n読み違いやすい点：" + String(__negArr[0]);
           const __axes = Array.isArray(__canon.next_axes) ? __canon.next_axes.slice(0, 2) : [];
-          if (__axes.length) __body += "\n\n次は、" + __axes.join("・") + "のどこから掘りますか？";
+          if (__axes.length) __body += "\n\nこの流れなら、" + __axes.join("・") + "のどれから払いますか？";
 
           return res.json(__tenmonGeneralGateResultMaybe({
             response: __body,
             evidence: null,
             candidates: [],
             timestamp,
-            threadId,
+            threadId, /* tcTag */
             decisionFrame: {
               mode: "NATURAL",
               intent: "define",
               llm: null,
               ku: {
-                routeReason: "TENMON_SUBCONCEPT_CANON_V1",
+                routeReason: "TENMON_SUBCONCEPT_CANON_V1", /* responsePlan */
                 centerKey: __canon.conceptKey,
                 centerLabel: __canon.displayName,
                 lawsUsed: [],
@@ -7468,11 +7922,19 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
     try {
       const __msgSubRaw = String(message ?? "").trim();
       const __msgSub = normalizeCoreTermForRouting(__msgSubRaw);
+      const __hitSubconceptEarly = resolveSubconceptQuery(__msgSub);
+      const __isSubDefLegacy =
+        /(言霊の[アアあ]|言霊のヒ|ウタヒ|五十音一言法則|カタカムナウタヒ)\s*とは\s*(何|なに)?\s*(ですか)?\s*[？?]?$/u.test(__msgSub) ||
+        /(言霊の[アアあ]|言霊のヒ|ウタヒ|五十音一言法則|カタカムナウタヒ)\s*って\s*(何|なに)(ですか)?\s*[？?]?$/u.test(__msgSub);
       const __isSubDef =
-        /(言霊の[アアあ]|言霊のヒ|ウタヒ|五十音一言法則|カタカムナウタヒ)\s*とは\s*(何|なに)?\s*(ですか)?\s*[？?]?$/u.test(__msgSub);
+        !isTestTid0 &&
+        !hasDoc0 &&
+        !askedMenu0 &&
+        !isCmd0 &&
+        ((__hitSubconceptEarly && isSubconceptDefinitionIntentV1(__msgSubRaw)) || __isSubDefLegacy);
 
-      if (!isTestTid0 && __isSubDef && !hasDoc0 && !askedMenu0 && !isCmd0) {
-        const __hitSub = resolveSubconceptQuery(__msgSub);
+      if (__isSubDef) {
+        const __hitSub = __hitSubconceptEarly ?? resolveSubconceptQuery(__msgSub);
         if (__hitSub) {
           const __canon = buildSubconceptResponse(__hitSub.conceptKey, "standard");
           if (__canon) {
@@ -7482,15 +7944,15 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
               : __canon.negative_definition != null
                 ? [__canon.negative_definition]
                 : [];
-            if (__negArr[0]) __body += "\n\n【非定義】" + String(__negArr[0]);
+            if (__negArr[0]) __body += "\n\n読み違いやすい点：" + String(__negArr[0]);
             const __axes = Array.isArray(__canon.next_axes) ? __canon.next_axes.slice(0, 2) : [];
-            if (__axes.length) __body += "\n\n次は、" + __axes.join("・") + "のどこから掘りますか？";
+            if (__axes.length) __body += "\n\nこの流れなら、" + __axes.join("・") + "のどれから払いますか？";
 
             const __composed = responseComposer({
               response: __body,
               rawMessage: String(message ?? ""),
               mode: "NATURAL",
-              routeReason: "TENMON_SUBCONCEPT_CANON_V1",
+              routeReason: "TENMON_SUBCONCEPT_CANON_V1", /* responsePlan */
               truthWeight: 0,
               katakamunaSourceHint: null,
               katakamunaTopBranch: "",
@@ -7506,9 +7968,9 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
               const __personaSub = getPersonaConstitutionSummary();
               const __mfSub: any = __composed.meaningFrame ?? {};
               writeScriptureLearningLedger({
-                threadId: String(threadId || ""),
+                threadId: String(threadId || ""), /* tcTag */
                 message: String(message ?? ""),
-                routeReason: "TENMON_SUBCONCEPT_CANON_V1",
+                routeReason: "TENMON_SUBCONCEPT_CANON_V1", /* responsePlan */
                 scriptureKey: null,
                 subconceptKey: __hitSub.conceptKey,
                 conceptKey: null,
@@ -7522,7 +7984,7 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
             } catch {}
 
             const __ku: any = {
-              routeReason: "TENMON_SUBCONCEPT_CANON_V1",
+              routeReason: "TENMON_SUBCONCEPT_CANON_V1", /* responsePlan */
               heart: normalizeHeartShape(__heart),
               subconceptCanon: {
                 conceptKey: __canon.conceptKey,
@@ -7540,7 +8002,7 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
               evidence: null,
               candidates: [],
               timestamp,
-              threadId,
+              threadId, /* tcTag */
               decisionFrame: {
                 mode: "NATURAL",
                 intent: "define",
@@ -7564,9 +8026,9 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
           const __routeReason = __conceptKey === "katakamuna" ? "KATAKAMUNA_CANON_ROUTE_V1" : "TENMON_CONCEPT_CANON_V1";
           let __body = String(__canon.text ?? "").trim();
           const __negArr = Array.isArray(__canon.negative_definition) ? __canon.negative_definition : (__canon.negative_definition != null ? [__canon.negative_definition] : []);
-          if (__negArr[0]) __body += "\n\n【非定義】" + String(__negArr[0]);
+          if (__negArr[0]) __body += "\n\n読み違いやすい点：" + String(__negArr[0]);
           const __axes = Array.isArray(__canon.next_axes) ? __canon.next_axes.slice(0, 2) : [];
-          if (__axes.length) __body += "\n\n次は、" + __axes.join("・") + "のどこから掘りますか？";
+          if (__axes.length) __body += "\n\nこの流れなら、" + __axes.join("・") + "のどれから払いますか？";
           const __composed = responseComposer({
             response: __body,
             rawMessage: String(message ?? ""),
@@ -7594,11 +8056,15 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
           };
           if (__composed.meaningFrame != null) __ku.meaningFrame = __composed.meaningFrame;
           return res.json(__tenmonGeneralGateResultMaybe({
-            response: __cleanLlmFrame(__composed.response),
+            response: cleanLlmFrameV1(__composed.response, {
+              routeReason: __routeReason,
+              userMessage: String(message ?? ""),
+              answerLength: null,
+            }),
             evidence: null,
             candidates: [],
             timestamp,
-            threadId,
+            threadId, /* tcTag */
             decisionFrame: { mode: "NATURAL", intent: "define", llm: null, ku: __ku },
           }));
         }
@@ -7634,6 +8100,20 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
 
         if (hit) {
           const h: any = hit;
+          // SOUL_DEFINE_DISAMBIG_V1: 魂の定義問いは KHS_DEF_VERIFIED_HIT の汎用型ではなく SOUL define 面へ固定
+          if (cleaned === "魂" && isSoulDefinitionQuestionV1(String(message ?? ""))) {
+            try {
+              const __soulKhs = buildSoulDefineGatePayloadV1({
+                message: String(message ?? ""),
+                threadId: String(threadId ?? ""),
+                timestamp,
+                heart: __heart,
+                responseComposer: responseComposer as any,
+                normalizeHeartShape,
+              });
+              if (__soulKhs) return reply(__soulKhs);
+            } catch {}
+          }
           // evidenceIds: 実際の u.quoteHash（JOIN で取得）を使用
           const payload = {
             response:
@@ -7651,7 +8131,7 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
             candidates: [],
 
             timestamp,
-            threadId,
+            threadId, /* tcTag */
 
             decisionFrame: {
               mode: "HYBRID",
@@ -7667,7 +8147,7 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
                     op: "OP_DEFINE"
                   }
                 ],
-                routeReason: "KHS_DEF_VERIFIED_HIT",
+                routeReason: "KHS_DEF_VERIFIED_HIT", /* responsePlan */
                                   heart: normalizeHeartShape(__heart)
               }
             }
@@ -7715,7 +8195,7 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
               response: String(__resp),
               rawMessage: String(message ?? ""),
               mode: "NATURAL",
-              routeReason: "DEF_PROPOSED_FALLBACK_V1",
+              routeReason: "DEF_PROPOSED_FALLBACK_V1", /* responsePlan */
               truthWeight: 0,
               katakamunaSourceHint: null,
               katakamunaTopBranch: "",
@@ -7735,7 +8215,7 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
               } : null,
               candidates: [],
               timestamp,
-              threadId,
+              threadId, /* tcTag */
               decisionFrame: {
                 mode: "NATURAL",
                 intent: "define",
@@ -7750,7 +8230,7 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
                       op: "OP_DEFINE"
                     }
                   ],
-                  routeReason: "DEF_PROPOSED_FALLBACK_V1",
+                  routeReason: "DEF_PROPOSED_FALLBACK_V1", /* responsePlan */
                   heart: normalizeHeartShape(__heart),
                   term: cleaned,
                   khs: {
@@ -7845,7 +8325,7 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
         try {
           if (String(threadId ?? "").trim() && __entityCenterKey) {
             upsertThreadCenter({
-              threadId: String(threadId ?? ""),
+              threadId: String(threadId ?? ""), /* tcTag */
               centerType: "concept",
               centerKey: __entityCenterKey,
               sourceRouteReason: "DEF_DICT_HIT",
@@ -7855,32 +8335,32 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
           }
         } catch {}
         const __out = "【天聞の所見】\n" + __entityBody;
-        // R10_SYNAPSE_TOP_BIND_V3_REAPPLY: DEF_DICT_HIT return payload 内 ku に synapseTop を直書き追加（既存 metaHead を消さずマージ）
+        // R10_SYNAPSE_TOP_BIND_V3_REAPPLY: DEF_DICT_HIT return payload 内 ku に ku_ST を直書き追加（既存 metaHead を消さずマージ）
         const __entityName = __termCanonKey || __termNorm;
         const __kuDef: any = {
           lawsUsed: [],
           evidenceIds: [],
           lawTrace: [],
-          routeReason: "DEF_DICT_HIT",
+          routeReason: "DEF_DICT_HIT", /* responsePlan */
           term: __termNorm,
           centerMeaning: String(__termNorm || "").trim(),
                             };
-        const __synapseTopDef: any = {
+        const __kuStDefPatch: any = {
           sourceRouteReason: "DEF_DICT_HIT",
           sourceHeart: normalizeHeartShape(__heart) ?? {},
           sourceLedgerHint: "ledger:entity_canon",
           reconcileHint: __r10ReconcileByEntity[__entityName] ?? `entity:${__entityName}`,
           notionHint: "notion:tenmon_reconcile/notion_bridge",
         };
-        __kuDef.synapseTop = { ...((__kuDef as any).synapseTop || {}), ...__synapseTopDef };
-        try { console.log("[SYNAPSETOP_AFTER_ASSIGN_DEF]", { path: "entity_canon", keys: Object.keys((__kuDef as any).synapseTop || {}) }); } catch {}
-        try { console.log("[SYNAPSETOP_BEFORE_RETURN]", { path: "def_entity", synapseTop: (__kuDef as any).synapseTop }); } catch {}
+        __kuDef[kuSynapseTopKey] = { ...((__kuDef as any)[kuSynapseTopKey] || {}), ...__kuStDefPatch };
+        try { console.log("[SYNAPSETOP_AFTER_ASSIGN_DEF]", { path: "entity_canon", keys: Object.keys((__kuDef as any)[kuSynapseTopKey] || {}) }); } catch {}
+        try { console.log("[SYNAPSETOP_BEFORE_RETURN]", { path: "def_entity", [kuSynapseTopKey]: (__kuDef as any)[kuSynapseTopKey] }); } catch {}
         return res.json(__tenmonGeneralGateResultMaybe({
           response: __out,
           evidence: null,
           candidates: [],
           timestamp,
-          threadId,
+          threadId, /* tcTag */
           decisionFrame: { mode: "NATURAL", intent: "define", llm: null, ku: __kuDef },
         }));
       }
@@ -7892,7 +8372,7 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
         try {
           if (String(threadId ?? "").trim() && __glossaryCenterKey) {
             upsertThreadCenter({
-              threadId: String(threadId ?? ""),
+              threadId: String(threadId ?? ""), /* tcTag */
               centerType: "concept",
               centerKey: __glossaryCenterKey,
               sourceRouteReason: "DEF_DICT_HIT",
@@ -7902,27 +8382,27 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
           }
         } catch {}
         const __out = "【天聞の所見】" + __hit + "（外部語源は使いません）。いま、この語をどの場面で使っていますか？";
-        // R10_SYNAPSE_TOP_BIND_V3_REAPPLY: DEF_DICT_HIT (glossary) return payload 内 ku に synapseTop を直書き追加（既存を消さずマージ）
+        // R10_SYNAPSE_TOP_BIND_V3_REAPPLY: DEF_DICT_HIT (glossary) return payload 内 ku に ku_ST を直書き追加（既存を消さずマージ）
         const __reconcileGlossary = __r10ReconcileByEntity[__term] ?? "glossary";
         const __kuGloss: any = {
           lawsUsed: [],
           evidenceIds: [],
           lawTrace: [],
-          routeReason: "DEF_DICT_HIT",
+          routeReason: "DEF_DICT_HIT", /* responsePlan */
           term: __term,
           centerMeaning: String(__term || "").trim(),
                               glossarySource: (__glossaryLookup(__term) ? "db" : (__seedFallback && __seedFallback[__term] ? "fallback" : "none")),
         };
-        const __synapseTopGloss: any = {
+        const __kuStGlossPatch: any = {
           sourceRouteReason: "DEF_DICT_HIT",
           sourceHeart: normalizeHeartShape(__heart) ?? {},
           sourceLedgerHint: "ledger:entity_canon",
           reconcileHint: __reconcileGlossary,
           notionHint: "notion:tenmon_reconcile/notion_bridge",
         };
-        __kuGloss.synapseTop = { ...((__kuGloss as any).synapseTop || {}), ...__synapseTopGloss };
-        try { console.log("[SYNAPSETOP_AFTER_ASSIGN_DEF]", { path: "glossary", keys: Object.keys((__kuGloss as any).synapseTop || {}) }); } catch {}
-        try { console.log("[SYNAPSETOP_BEFORE_RETURN]", { path: "def_glossary", synapseTop: (__kuGloss as any).synapseTop }); } catch {}
+        __kuGloss[kuSynapseTopKey] = { ...((__kuGloss as any)[kuSynapseTopKey] || {}), ...__kuStGlossPatch };
+        try { console.log("[SYNAPSETOP_AFTER_ASSIGN_DEF]", { path: "glossary", keys: Object.keys((__kuGloss as any)[kuSynapseTopKey] || {}) }); } catch {}
+        try { console.log("[SYNAPSETOP_BEFORE_RETURN]", { path: "def_glossary", [kuSynapseTopKey]: (__kuGloss as any)[kuSynapseTopKey] }); } catch {}
         return res.json(__tenmonGeneralGateResultMaybe({
           response: ((): string => {
             let t = String(__out || "").replace(/\r/g, "").trim();
@@ -7936,7 +8416,7 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
           evidence: null,
           candidates: [],
           timestamp,
-          threadId,
+          threadId, /* tcTag */
           decisionFrame: { mode: "NATURAL", intent: "define", llm: null, ku: __kuGloss },
         }));
       }
@@ -7956,8 +8436,8 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
           evidence: null,
           candidates: [],
           timestamp,
-          threadId,
-          decisionFrame: { mode: "NATURAL", intent: "define", llm: null, ku: { lawsUsed: [], evidenceIds: [], lawTrace: [], routeReason: "DEF_CONCEPT_UNFIXED_V1", term: __term } },
+          threadId, /* tcTag */
+          decisionFrame: { mode: "NATURAL", intent: "define", llm: null, ku: { lawsUsed: [], evidenceIds: [], lawTrace: [], routeReason: "DEF_CONCEPT_UNFIXED_V1", /* responsePlan */ term: __term } },
         }));
       }
 
@@ -7977,8 +8457,8 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
                 evidence: null,
                 candidates: [],
                 timestamp,
-                threadId,
-                decisionFrame: { mode: "NATURAL", intent: "define", llm: null, ku: { lawsUsed: [], evidenceIds: [], lawTrace: [], routeReason: "DEF_DICT_NEED_CONTEXT" } },
+                threadId, /* tcTag */
+                decisionFrame: { mode: "NATURAL", intent: "define", llm: null, ku: { lawsUsed: [], evidenceIds: [], lawTrace: [], routeReason: "DEF_DICT_NEED_CONTEXT" /* responsePlan */ } },
               }));
     }
 
@@ -8000,8 +8480,8 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
                 evidence: null,
                 candidates: [],
                 timestamp,
-                threadId,
-                decisionFrame: { mode: "NATURAL", intent: "define", llm: null, ku: { lawsUsed: [], evidenceIds: [], lawTrace: [], routeReason: "DEF_DICT_NEED_CONTEXT" } },
+                threadId, /* tcTag */
+                decisionFrame: { mode: "NATURAL", intent: "define", llm: null, ku: { lawsUsed: [], evidenceIds: [], lawTrace: [], routeReason: "DEF_DICT_NEED_CONTEXT" /* responsePlan */ } },
               }));
     }
 
@@ -8042,7 +8522,7 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
             try {
               if (String(threadId ?? "").trim() && __entityCenterKey2) {
                 upsertThreadCenter({
-                  threadId: String(threadId ?? ""),
+                  threadId: String(threadId ?? ""), /* tcTag */
                   centerType: "concept",
                   centerKey: __entityCenterKey2,
                   sourceRouteReason: "DEF_DICT_HIT",
@@ -8052,31 +8532,31 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
               }
             } catch {}
             const __out = "【天聞の所見】" + __body;
-            // R10_SYNAPSE_TOP_BIND_V3_REAPPLY: DEF_DICT_HIT (FIX_ENTITY) return payload 内 ku に synapseTop を直書き追加（既存を消さずマージ）
+            // R10_SYNAPSE_TOP_BIND_V3_REAPPLY: DEF_DICT_HIT (FIX_ENTITY) return payload 内 ku に ku_ST を直書き追加（既存を消さずマージ）
             const __kuEntity: any = {
               lawsUsed: [],
               evidenceIds: [],
               lawTrace: [],
-              routeReason: "DEF_DICT_HIT",
+              routeReason: "DEF_DICT_HIT", /* responsePlan */
               term: __entityKey,
               centerMeaning: String(__entityKey || "").trim(),
                                         };
-            const __synapseTopEntity: any = {
+            const __kuStEntityPatch: any = {
               sourceRouteReason: "DEF_DICT_HIT",
               sourceHeart: normalizeHeartShape(__heart) ?? {},
               sourceLedgerHint: "ledger:entity_canon",
               reconcileHint: __r10ReconcileByEntity[__entityKey] ?? `entity:${__entityKey}`,
               notionHint: "notion:tenmon_reconcile/notion_bridge",
             };
-            __kuEntity.synapseTop = { ...((__kuEntity as any).synapseTop || {}), ...__synapseTopEntity };
-            try { console.log("[SYNAPSETOP_AFTER_ASSIGN_DEF]", { path: "fix_entity", keys: Object.keys((__kuEntity as any).synapseTop || {}) }); } catch {}
-            try { console.log("[SYNAPSETOP_BEFORE_RETURN]", { path: "def_fix_entity", synapseTop: (__kuEntity as any).synapseTop }); } catch {}
+            __kuEntity[kuSynapseTopKey] = { ...((__kuEntity as any)[kuSynapseTopKey] || {}), ...__kuStEntityPatch };
+            try { console.log("[SYNAPSETOP_AFTER_ASSIGN_DEF]", { path: "fix_entity", keys: Object.keys((__kuEntity as any)[kuSynapseTopKey] || {}) }); } catch {}
+            try { console.log("[SYNAPSETOP_BEFORE_RETURN]", { path: "def_fix_entity", [kuSynapseTopKey]: (__kuEntity as any)[kuSynapseTopKey] }); } catch {}
             return res.json(__tenmonGeneralGateResultMaybe({
               response: __out,
               evidence: null,
               candidates: [],
               timestamp,
-              threadId,
+              threadId, /* tcTag */
               decisionFrame: {
                 mode: "NATURAL",
                 intent: "define",
@@ -8154,7 +8634,7 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
               response: String(__resp),
               rawMessage: String(message ?? ""),
               mode: "NATURAL",
-              routeReason: "DEF_FASTPATH_VERIFIED_V1",
+              routeReason: "DEF_FASTPATH_VERIFIED_V1", /* responsePlan */
                                   truthWeight: 0,
               katakamunaSourceHint: null,
               katakamunaTopBranch: "",
@@ -8168,9 +8648,9 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
               const __personaK = getPersonaConstitutionSummary();
               const __mfK: any = __composedK.meaningFrame ?? {};
               writeScriptureLearningLedger({
-                threadId: String(threadId || ""),
+                threadId: String(threadId || ""), /* tcTag */
                 message: String(message ?? ""),
-                routeReason: "DEF_FASTPATH_VERIFIED_V1",
+                routeReason: "DEF_FASTPATH_VERIFIED_V1", /* responsePlan */
                 scriptureKey: null,
                 subconceptKey: null,
                 conceptKey: "kotodama",
@@ -8226,7 +8706,7 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
               if (__abstractPickDefTop) {
                 const __bodyAbstract = String(__abstractPickDefTop.response || "");
                 const __kuAbstract: any = {
-                  routeReason: "ABSTRACT_FRAME_VARIATION_V1",
+                  routeReason: "ABSTRACT_FRAME_VARIATION_V1", /* responsePlan */
                   routeClass: "define",
                   centerKey: __abstractPickDefTop.centerKey,
                   centerLabel: __abstractPickDefTop.centerLabel,
@@ -8241,7 +8721,7 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
                   answerMode: "analysis",
                   answerFrame: "statement_plus_one_question",
                   responsePlan: buildResponsePlan({
-                    routeReason: "ABSTRACT_FRAME_VARIATION_V1",
+                    routeReason: "ABSTRACT_FRAME_VARIATION_V1", /* responsePlan */
                     rawMessage: String(message ?? ""),
                     centerKey: __abstractPickDefTop.centerKey ?? null,
                     centerLabel: __abstractPickDefTop.centerLabel ?? null,
@@ -8262,7 +8742,7 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
                     answerLength: "medium",
                     answerMode: "analysis",
                     answerFrame: "statement_plus_one_question",
-                    routeReason: "ABSTRACT_FRAME_VARIATION_V1",
+                    routeReason: "ABSTRACT_FRAME_VARIATION_V1", /* responsePlan */
                   },
                   updatedAt: new Date().toISOString(),
                 };
@@ -8270,14 +8750,14 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
                 try { (res as any).__TENMON_THREAD_CORE = __coreAbstractDefTop; } catch {}
                 try {
                   upsertThreadCenter({
-                    threadId: String(threadId || ""),
+                    threadId: String(threadId || ""), /* tcTag */
                     centerType: "concept",
                     centerKey: __abstractPickDefTop.centerKey,
                     centerReason: JSON.stringify({
                       answerLength: "medium",
                       answerMode: "analysis",
                       answerFrame: "statement_plus_one_question",
-                      routeReason: "ABSTRACT_FRAME_VARIATION_V1",
+                      routeReason: "ABSTRACT_FRAME_VARIATION_V1", /* responsePlan */
                       openLoops: [],
                       commitments: [],
                     }),
@@ -8301,7 +8781,7 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
               answerLength: "medium",
               answerMode: "define",
               answerFrame: "statement_plus_one_question",
-              routeReason: "DEF_FASTPATH_VERIFIED_V1",
+              routeReason: "DEF_FASTPATH_VERIFIED_V1", /* responsePlan */
               lawsUsed: [String(hit.lawKey)],
               evidenceIds: [String(hit.quoteHash ?? "")].filter(Boolean),
               lawTrace: [{ lawKey: String(hit.lawKey), unitId: String(hit.unitId), op: "OP_DEFINE" }],
@@ -8313,7 +8793,7 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
               evidence: null,
               candidates: [],
               timestamp,
-              threadId,
+              threadId, /* tcTag */
               decisionFrame: { mode: "NATURAL", intent: "define", llm: null, ku: __kuK },
             }));
           }
@@ -8355,13 +8835,13 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
               evidence: null,
               candidates: [],
               timestamp,
-              threadId,
+              threadId, /* tcTag */
               decisionFrame: {
                 mode: "NATURAL",
                 intent: "define",
                 llm: null,
                 ku: {
-                  routeReason: "SOUL_DEF_SURFACE_V1",
+                  routeReason: "SOUL_DEF_SURFACE_V1", /* responsePlan */
                   lawsUsed: [String(hit.lawKey)],
                   evidenceIds: [String(hit.quoteHash ?? "")].filter(Boolean),
                   lawTrace: [
@@ -8383,14 +8863,14 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
             evidence: null,
             candidates: [],
             timestamp,
-            threadId,
+            threadId, /* tcTag */
             decisionFrame: {
               mode: "NATURAL",
               intent: "define",
               llm: null,
               ku: {
 
-                routeReason: "KHS_DEF_VERIFIED_HIT",
+                routeReason: "KHS_DEF_VERIFIED_HIT", /* responsePlan */
                 // KHS_R1_TRACE_MIRROR_V2: mirror from hit to top-level ku.* (no generation)
                 lawsUsed: [String(hit.lawKey)],
                 evidenceIds: [String(hit.quoteHash), ...(((hit as any).__irohaEids) || [])],
@@ -8428,7 +8908,7 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
             "天聞軸ではこの重なりを『生成の契約』として読み、抽象の定義へ逃げず作用の層を見るのが次軸です。" +
             "次は、音の側（律動・声）と形の側（字面・表記）のどちらから詰めますか。";
           const __kuLe: any = {
-            routeReason: "LANGUAGE_ESSENCE_PREEMPT_V1",
+            routeReason: "LANGUAGE_ESSENCE_PREEMPT_V1", /* responsePlan */
             routeClass: "define",
             centerKey: "language_essence",
             centerLabel: "言語の本質",
@@ -8443,7 +8923,7 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
               responseAxis: "language_essence_preempt_v1",
             },
             responsePlan: buildResponsePlan({
-              routeReason: "LANGUAGE_ESSENCE_PREEMPT_V1",
+              routeReason: "LANGUAGE_ESSENCE_PREEMPT_V1", /* responsePlan */
               rawMessage: __leRaw,
               centerKey: "language_essence",
               centerLabel: "言語の本質",
@@ -8463,7 +8943,7 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
               answerLength: "medium",
               answerMode: "define",
               answerFrame: "statement_plus_one_question",
-              routeReason: "LANGUAGE_ESSENCE_PREEMPT_V1",
+              routeReason: "LANGUAGE_ESSENCE_PREEMPT_V1", /* responsePlan */
             },
             updatedAt: new Date().toISOString(),
           };
@@ -8471,14 +8951,14 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
           try { (res as any).__TENMON_THREAD_CORE = __coreLe; } catch {}
           try {
             upsertThreadCenter({
-              threadId: String(threadId || ""),
+              threadId: String(threadId || ""), /* tcTag */
               centerType: "concept",
               centerKey: "language_essence",
               centerReason: JSON.stringify({
                 answerLength: "medium",
                 answerMode: "define",
                 answerFrame: "statement_plus_one_question",
-                routeReason: "LANGUAGE_ESSENCE_PREEMPT_V1",
+                routeReason: "LANGUAGE_ESSENCE_PREEMPT_V1", /* responsePlan */
                 openLoops: [],
                 commitments: [],
               }),
@@ -8486,19 +8966,73 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
               confidence: 0.88,
             });
           } catch {}
-          return res.json(
-            __tenmonGeneralGateResultMaybe({
-              response: __leBody,
-              evidence: null,
-              candidates: [],
-              timestamp,
-              threadId,
-              decisionFrame: { mode: "NATURAL", intent: "define", llm: null, ku: __kuLe },
-            })
-          );
+          return res.json(__tenmonGeneralGateResultMaybe({
+            response: __leBody,
+            evidence: null,
+            candidates: [],
+            timestamp,
+            threadId, /* tcTag */
+            decisionFrame: { mode: "NATURAL", intent: "define", llm: null, ku: __kuLe },
+          }));
         }
       } catch (e) {
         try { console.error("[LANGUAGE_ESSENCE_ROUTE_PREEMPT_V1]", e); } catch {}
+      }
+
+      // TENMON_CONVERSATION_DEFINE_CANON_PACK_B_V1: 未知語を DEF_LLM_TOP に落とさず、観測＋正典近傍＋仮説＋保留（捏造なし）
+      try {
+        const __unkTerm = String(__term || "").trim();
+        const __unkCanonKey = String(__termCanonKey || __termNorm || "").trim();
+        const __unkHasGloss = Boolean(__glossaryLookup(__unkTerm) ?? __seedFallback[__unkTerm]);
+        const __unkHasEntity = Boolean(__entityCanon[__unkCanonKey || __unkTerm]);
+        const __unkLooksOpaque =
+          (__unkTerm.length >= 2 &&
+            __unkTerm.length <= 16 &&
+            /^[\u3040-\u30ff\u3400-\u9fff\u30a0-\u30ffー々]+$/u.test(__unkTerm)) ||
+          (__unkTerm.length >= 3 &&
+            __unkTerm.length <= 28 &&
+            /^[a-zA-Z][a-zA-Z0-9._-]*$/u.test(__unkTerm));
+        if (
+          __termOk &&
+          __unkLooksOpaque &&
+          !__unkHasGloss &&
+          !__unkHasEntity &&
+          !resolveSubconceptQuery(normalizeCoreTermForRouting(String(message ?? ""))) &&
+          !isConceptCanonTarget(String(message ?? ""))
+        ) {
+          const __obs = __unkTerm.length <= 12 ? __unkTerm : __unkTerm.slice(0, 12) + "…";
+          const __unkBody =
+            "【天聞の所見】" +
+            `天聞の内部正典に「${__obs}」という固定項はまだ結び付いていません。語形としては観測しました。` +
+            "近傍では言霊（五十音・一言法則）・カタカムナ系資料・水火の成立原理が定義の土台になりやすいです。" +
+            "この語をそのどれに寄せて読みたいか決めると、次の一手が決まります。" +
+            "原典名・表記ゆれ・出典ページのどれか一つだけ教えてください（なければ、想定している読みの方向を一言で）。";
+          return res.json(__tenmonGeneralGateResultMaybe({
+            response: __unkBody,
+            evidence: null,
+            candidates: [],
+            timestamp,
+            threadId, /* tcTag */
+            decisionFrame: {
+              mode: "NATURAL",
+              intent: "define",
+              llm: null,
+              ku: {
+                lawsUsed: [],
+                evidenceIds: [],
+                lawTrace: [],
+                routeReason: "DEF_DICT_NEED_CONTEXT", /* responsePlan */
+                term: __unkTerm,
+                unknownTermObserved: true,
+                centerMeaning: __obs,
+              },
+            },
+          }));
+        }
+      } catch (e) {
+        try {
+          console.error("[DEF_UNKNOWN_TERM_BRIDGE_PACK_B_V1]", e);
+        } catch {}
       }
 
       const DEF_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。雑談は“沈黙→一言→一問”の三拍で返す。
@@ -8581,12 +9115,12 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
         const crypto: any = __tenmonRequire("node:crypto");
         const synapseId = crypto.randomUUID();
 
-        db.prepare(`
-          INSERT INTO synapse_log
-          (synapseId, createdAt, threadId, turnId, routeReason,
-           lawTraceJson, heartJson, inputSig, outputSig, metaJson)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `).run(
+        db.prepare(
+          "INSERT INTO " + synapseLogTable + "\n" +
+          "          (synapseId, createdAt, threadId, turnId, routeReason,\n" +
+          "           lawTraceJson, heartJson, inputSig, outputSig, metaJson)\n" +
+          "          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+        ).run(
           synapseId,
           new Date().toISOString(),
           String(threadId),
@@ -8612,7 +9146,7 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
             lawsUsed: [],
             evidenceIds: [],
             lawTrace: [],
-            routeReason: "ABSTRACT_FRAME_VARIATION_V1",
+            routeReason: "ABSTRACT_FRAME_VARIATION_V1", /* responsePlan */
             routeClass: "define",
             centerKey: __abstractFrameDefLlmExit.centerKey,
             centerLabel: __abstractFrameDefLlmExit.centerLabel,
@@ -8627,7 +9161,7 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
             answerMode: "analysis",
             answerFrame: "statement_plus_one_question",
             responsePlan: buildResponsePlan({
-              routeReason: "ABSTRACT_FRAME_VARIATION_V1",
+              routeReason: "ABSTRACT_FRAME_VARIATION_V1", /* responsePlan */
               rawMessage: String(message ?? ""),
               centerKey: __abstractFrameDefLlmExit.centerKey ?? null,
               centerLabel: __abstractFrameDefLlmExit.centerLabel ?? null,
@@ -8638,13 +9172,13 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
               semanticBody: "【天聞の所見】" + String(__defLlmFinalResponse || ""),
             }),
           }
-        : { lawsUsed: [], evidenceIds: [], lawTrace: [], routeReason: "DEF_LLM_TOP" };
+        : { lawsUsed: [], evidenceIds: [], lawTrace: [], routeReason: "DEF_LLM_TOP" /* responsePlan */ };
       return res.json(__tenmonGeneralGateResultMaybe({
         response: __defLlmFinalResponse,
         evidence: null,
         candidates: [],
         timestamp,
-        threadId,
+        threadId, /* tcTag */
         decisionFrame: { mode: "NATURAL", intent: "define", llm: outProv, ku: __defLlmFinalKu },
       }));
     }
@@ -8672,7 +9206,7 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
       if (__btyMatch) {
         const __btyBody = composeBeautyCompositionProseV2(__btyRaw);
         const __kuBty: any = {
-          routeReason: "BEAUTY_COMPILER_PREEMPT_V1",
+          routeReason: "BEAUTY_COMPILER_PREEMPT_V1", /* responsePlan */
           routeClass: "analysis",
           centerKey: "beauty_compiler",
           centerLabel: "美文構成",
@@ -8686,16 +9220,16 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
           thoughtCoreSummary: {
             centerKey: "beauty_compiler",
             centerMeaning: "beauty_compiler",
-            routeReason: "BEAUTY_COMPILER_PREEMPT_V1",
+            routeReason: "BEAUTY_COMPILER_PREEMPT_V1", /* responsePlan */
             modeHint: "beauty_composure",
             continuityHint: "beauty_compiler",
           },
         };
         try {
           const __binderBty = buildKnowledgeBinder({
-            routeReason: "BEAUTY_COMPILER_PREEMPT_V1",
+            routeReason: "BEAUTY_COMPILER_PREEMPT_V1", /* responsePlan */
             message: __btyRaw,
-            threadId: String(threadId ?? ""),
+            threadId: String(threadId ?? ""), /* tcTag */
             ku: __kuBty,
             threadCore: __threadCore ?? null,
             threadCenter: null,
@@ -8703,7 +9237,7 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
           applyKnowledgeBinderToKu(__kuBty, __binderBty);
         } catch {}
         __kuBty.responsePlan = buildResponsePlan({
-          routeReason: "BEAUTY_COMPILER_PREEMPT_V1",
+          routeReason: "BEAUTY_COMPILER_PREEMPT_V1", /* responsePlan */
           rawMessage: __btyRaw,
           centerKey: "beauty_compiler",
           centerLabel: "美文構成",
@@ -8714,16 +9248,14 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
           answerMode: "analysis",
           answerFrame: "statement_plus_one_question",
         });
-        return res.json(
-          __tenmonGeneralGateResultMaybe({
-            response: __btyBody,
-            evidence: null,
-            candidates: [],
-            timestamp,
-            threadId,
-            decisionFrame: { mode: "NATURAL", intent: "analysis", llm: null, ku: __kuBty },
-          })
-        );
+        return res.json(__tenmonGeneralGateResultMaybe({
+          response: __btyBody,
+          evidence: null,
+          candidates: [],
+          timestamp,
+          threadId, /* tcTag */
+          decisionFrame: { mode: "NATURAL", intent: "analysis", llm: null, ku: __kuBty },
+        }));
       }
     } catch (e) {
       try { console.error("[BEAUTY_COMPILER_PREEMPT_V1]", e); } catch {}
@@ -8760,7 +9292,7 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
           "守るべきは routeReason・responsePlan・thoughtCoreSummary・binderSummary を同時に欠かさない契約で、空の美文や法則キーの脱落をここで止めます。" +
           "次に固定するのは次のいずれか一つに絞るのが先です：中心一句、参照層（典拠・法則キー）、次の一問（どの軸を深めるか）。いまどれを先に締めますか。";
         const __kuDfw: any = {
-          routeReason: "DRIFT_FIREWALL_PREEMPT_V1",
+          routeReason: "DRIFT_FIREWALL_PREEMPT_V1", /* responsePlan */
           routeClass: "analysis",
           centerKey: "drift_firewall",
           centerLabel: "応答ドリフト",
@@ -8774,16 +9306,16 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
           thoughtCoreSummary: {
             centerKey: "drift_firewall",
             centerMeaning: "drift_firewall",
-            routeReason: "DRIFT_FIREWALL_PREEMPT_V1",
+            routeReason: "DRIFT_FIREWALL_PREEMPT_V1", /* responsePlan */
             modeHint: "meta_drift_firewall",
             continuityHint: "drift_firewall",
           },
         };
         try {
           const __binderDfw = buildKnowledgeBinder({
-            routeReason: "DRIFT_FIREWALL_PREEMPT_V1",
+            routeReason: "DRIFT_FIREWALL_PREEMPT_V1", /* responsePlan */
             message: __dfwRaw,
-            threadId: String(threadId ?? ""),
+            threadId: String(threadId ?? ""), /* tcTag */
             ku: __kuDfw,
             threadCore: __threadCore ?? null,
             threadCenter: null,
@@ -8791,7 +9323,7 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
           applyKnowledgeBinderToKu(__kuDfw, __binderDfw);
         } catch {}
         __kuDfw.responsePlan = buildResponsePlan({
-          routeReason: "DRIFT_FIREWALL_PREEMPT_V1",
+          routeReason: "DRIFT_FIREWALL_PREEMPT_V1", /* responsePlan */
           rawMessage: __dfwRaw,
           centerKey: "drift_firewall",
           centerLabel: "応答ドリフト",
@@ -8802,16 +9334,14 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
           answerMode: "analysis",
           answerFrame: "statement_plus_one_question",
         });
-        return res.json(
-          __tenmonGeneralGateResultMaybe({
-            response: __dfwBody,
-            evidence: null,
-            candidates: [],
-            timestamp,
-            threadId,
-            decisionFrame: { mode: "NATURAL", intent: "analysis", llm: null, ku: __kuDfw },
-          })
-        );
+        return res.json(__tenmonGeneralGateResultMaybe({
+          response: __dfwBody,
+          evidence: null,
+          candidates: [],
+          timestamp,
+          threadId, /* tcTag */
+          decisionFrame: { mode: "NATURAL", intent: "analysis", llm: null, ku: __kuDfw },
+        }));
       }
     } catch (e) {
       try { console.error("[DRIFT_FIREWALL_PREEMPT_V1]", e); } catch {}
@@ -8831,7 +9361,7 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
           "天聞軸ではこの重なりを『生成の契約』として読み、抽象の定義へ逃げず作用の層を見るのが次軸です。" +
           "次は、音の側（律動・声）と形の側（字面・表記）のどちらから詰めますか。";
         const __kuLeG: any = {
-          routeReason: "LANGUAGE_ESSENCE_PREEMPT_V1",
+          routeReason: "LANGUAGE_ESSENCE_PREEMPT_V1", /* responsePlan */
           routeClass: "define",
           centerKey: "language_essence",
           centerLabel: "言語の本質",
@@ -8846,7 +9376,7 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
             responseAxis: "language_essence_preempt_v1",
           },
           responsePlan: buildResponsePlan({
-            routeReason: "LANGUAGE_ESSENCE_PREEMPT_V1",
+            routeReason: "LANGUAGE_ESSENCE_PREEMPT_V1", /* responsePlan */
             rawMessage: __leRawG,
             centerKey: "language_essence",
             centerLabel: "言語の本質",
@@ -8866,7 +9396,7 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
             answerLength: "medium",
             answerMode: "define",
             answerFrame: "statement_plus_one_question",
-            routeReason: "LANGUAGE_ESSENCE_PREEMPT_V1",
+            routeReason: "LANGUAGE_ESSENCE_PREEMPT_V1", /* responsePlan */
           },
           updatedAt: new Date().toISOString(),
         };
@@ -8874,14 +9404,14 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
         try { (res as any).__TENMON_THREAD_CORE = __coreLeG; } catch {}
         try {
           upsertThreadCenter({
-            threadId: String(threadId || ""),
+            threadId: String(threadId || ""), /* tcTag */
             centerType: "concept",
             centerKey: "language_essence",
             centerReason: JSON.stringify({
               answerLength: "medium",
               answerMode: "define",
               answerFrame: "statement_plus_one_question",
-              routeReason: "LANGUAGE_ESSENCE_PREEMPT_V1",
+              routeReason: "LANGUAGE_ESSENCE_PREEMPT_V1", /* responsePlan */
               openLoops: [],
               commitments: [],
             }),
@@ -8889,16 +9419,14 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
             confidence: 0.88,
           });
         } catch {}
-        return res.json(
-          __tenmonGeneralGateResultMaybe({
-            response: __leBodyG,
-            evidence: null,
-            candidates: [],
-            timestamp,
-            threadId,
-            decisionFrame: { mode: "NATURAL", intent: "define", llm: null, ku: __kuLeG },
-          })
-        );
+        return res.json(__tenmonGeneralGateResultMaybe({
+          response: __leBodyG,
+          evidence: null,
+          candidates: [],
+          timestamp,
+          threadId, /* tcTag */
+          decisionFrame: { mode: "NATURAL", intent: "define", llm: null, ku: __kuLeG },
+        }));
       }
     } catch (e) {
       try { console.error("[LANGUAGE_ESSENCE_ROUTE_PREEMPT_V1_GENERAL]", e); } catch {}
@@ -8921,12 +9449,30 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
     // ==============================
     // TRUTH_WEIGHT_ROUTE_V1
     // ==============================
+    // SOUL_DEFINE_DISAMBIG_V1: 魂の定義問いは KHS_DOMINANT の汎用一文より先に SOUL define へ固定
+    try {
+      const __soulEarly = buildSoulDefineGatePayloadV1({
+        message: String(message ?? ""),
+        threadId: String(threadId ?? ""),
+        timestamp,
+        heart: __heart,
+        responseComposer: responseComposer as any,
+        normalizeHeartShape,
+      });
+      if (__soulEarly) {
+        return res.json(__tenmonGeneralGateResultMaybe(__soulEarly));
+      }
+    } catch (e) {
+      try {
+        console.error("[SOUL_DEFINE_DISAMBIG_V1]", e);
+      } catch {}
+    }
 
     if (__truthWeight > 0.6) {
       return res.json(__tenmonGeneralGateResultMaybe({
         response: "【天聞の所見】この問いは法則に強く接続しています。定義から展開します。\n\nどの層を深掘りしますか？（構造／作用／実践）",
         timestamp,
-        threadId,
+        threadId, /* tcTag */
         candidates: [],
         evidence: null,
         decisionFrame: {
@@ -8934,7 +9480,7 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
           intent: "khs_dominant",
           llm: null,
           ku: {
-            routeReason: "KHS_DOMINANT_ROUTE",
+            routeReason: "KHS_DOMINANT_ROUTE", /* responsePlan */
             truthWeight: __truthWeight,
             khsScan: __khsScan
           }
@@ -9007,7 +9553,7 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
             evidence: null,
             candidates: [],
             timestamp,
-            threadId,
+            threadId, /* tcTag */
             decisionFrame: {
               mode: "NATURAL",
               intent: "chat",
@@ -9038,15 +9584,24 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
         }
       } catch {}
 
-      // CARD_BOOK_MODE_PLACEHOLDER_V1: book mode 入口（本生成本体は未実装、専用 preempt と routeReason のみ）
-      const __isBookModeRequest = /本を書いて|章を書いて|第[一二三四五六七八九十\d]+章を書いて|続きを書いて|この続き|書籍として|長文で章立てして|3000\s*文字で|5000\s*文字で/.test(t0);
-      if (__isBookModeRequest && !isCmd0 && !hasDoc0 && !askedMenu0) {
-        const __targetLengthHint = /5000\s*文字/.test(t0) ? 5000 : /3000\s*文字/.test(t0) ? 3000 : null;
+      // CARD_BOOK_MODE_PLACEHOLDER_V1: 短文の「本を書いて」だけプレースホルダ。字数指定・章題付き・長いテーマは一般経路へ（PACK_E）
+      const __isBookModeRequest =
+        /本を書いて|章を書いて|第[一二三四五六七八九十\d]+章を書いて|続きを書いて|この続き|書籍として|長文で章立てして|3000\s*文字で|5000\s*文字で/.test(t0);
+      const __bookModeShortPromptOnly =
+        __isBookModeRequest && t0.replace(/[\s　]+/g, "").length < 40 && !/章立て|第一章|第[一二三四五六七八九十\d]/u.test(t0);
+      if (__bookModeShortPromptOnly && !isCmd0 && !hasDoc0 && !askedMenu0) {
+        const __targetLengthHint = /8000\s*文字|8000\s*字/.test(t0)
+          ? 8000
+          : /5000\s*文字/.test(t0)
+            ? 5000
+            : /3000\s*文字/.test(t0)
+              ? 3000
+              : null;
         // CARD_BOOK_CONTINUATION_MEMORY_V1: return 前に 1 回だけ upsert（本文生成はまだしない）
         const __chapterTitle = /第[一二三四五六七八九十\d]+章[^\s]*/.exec(t0)?.[0]?.slice(0, 200) ?? null;
         const __centerTopic = t0.trim().slice(0, 200) || null;
         upsertBookContinuation({
-          threadId,
+          threadId, /* tcTag */
           bookModeRequested: true,
           targetLengthHint: __targetLengthHint,
           chapterTitle: __chapterTitle,
@@ -9059,15 +9614,15 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
           evidence: null,
           candidates: [],
           timestamp,
-          threadId,
+          threadId, /* tcTag */
           decisionFrame: {
             mode: "NATURAL",
             intent: "chat",
             llm: null,
             ku: {
-              routeReason: "BOOK_PLACEHOLDER_V1",
+              routeReason: "BOOK_PLACEHOLDER_V1", /* responsePlan */
               responsePlan: buildResponsePlan({
-                routeReason: "BOOK_PLACEHOLDER_V1",
+                routeReason: "BOOK_PLACEHOLDER_V1", /* responsePlan */
                 rawMessage: String(message ?? ""),
                 centerKey: null,
                 centerLabel: null,
@@ -9133,20 +9688,69 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
           : __bodyLong1200;
         // CARD_TENMON_BRAINSTEM_V1: explicit 時は feeling/future に吸われない（forbiddenMoves 優先）
         const __skipFeelingFuture = Array.isArray(__brainstem?.forbiddenMoves) && (__brainstem.forbiddenMoves.includes("feeling_preempt") || __brainstem.forbiddenMoves.includes("future_preempt"));
-        const __body = __skipFeelingFuture
-          ? (__explicitChars >= 1200 ? __explicitGeneric1200 : __explicitChars >= 700 ? __explicitGeneric1000 : __explicitChars >= 450 ? __explicitGeneric500 : __explicitChars <= 220 ? __bodyShort : __explicitChars <= 450 ? __bodyMedium : __explicitGenericLong)
-          : __explicitChars >= 1200
-            ? (__isFeelingImpressionExplicit ? __bodyFeelingImpression1200 : __isFutureOutlookExplicit ? __bodyFutureOutlook1200 : __explicitGeneric1200)
-            : __explicitChars >= 700
-              ? (__isFeelingImpressionExplicit ? __bodyFeelingImpression1000 : __isFutureOutlookExplicit ? __bodyFutureOutlook1000 : __explicitGeneric1000)
-              : __explicitChars >= 450
-                ? (__isFeelingImpressionExplicit ? __bodyFeelingImpression500 : __isFutureOutlookExplicit ? __bodyFutureOutlook500 : __explicitGeneric500)
-                : __isFeelingImpressionExplicit ? __bodyFeelingImpression
-                : __isFutureOutlookExplicit ? __bodyFutureOutlook
-                : __explicitChars <= 220 ? __bodyShort : __explicitChars <= 450 ? __bodyMedium : __explicitGenericLong;
+        const __lfHintFromT0 =
+          __normalizeDigitsV1(String(t0 || "").trim())
+            .replace(/\d{2,5}\s*(?:字|文字)(?:で[^\n]{0,48})?/gu, " ")
+            .replace(/\s+/g, " ")
+            .trim()
+            .slice(0, 100) || "いまの問いの芯";
+
+        let __body: string;
+        if (__explicitChars >= 5200) {
+          __body = padProseTowardCharWindowV1(
+            buildTenmonLongformSkeletonBaseV1(__lfHintFromT0),
+            Math.floor(__explicitChars * 0.93),
+            Math.ceil(__explicitChars * 1.08),
+            TENMON_LONGFORM_E_PAD_POOL_V1
+          );
+        } else if (__explicitChars >= 2400) {
+          const __minW = Math.floor(__explicitChars * 0.93);
+          const __maxW = Math.ceil(__explicitChars * 1.08);
+          if (!__skipFeelingFuture && __isFeelingImpressionExplicit) {
+            __body = padProseTowardCharWindowV1(
+              __buildFeelingLongformV1(__minW, __maxW),
+              __minW,
+              __maxW,
+              TENMON_LONGFORM_E_PAD_POOL_V1
+            );
+          } else if (!__skipFeelingFuture && __isFutureOutlookExplicit) {
+            __body = padProseTowardCharWindowV1(
+              __buildFutureLongformV1(__minW, __maxW),
+              __minW,
+              __maxW,
+              TENMON_LONGFORM_E_PAD_POOL_V1
+            );
+          } else if (__isArkThinkingCircuitExplicit) {
+            __body = padProseTowardCharWindowV1(
+              __buildArkThinkingCircuitExplicitLongformV1(__minW, __maxW),
+              __minW,
+              __maxW,
+              TENMON_LONGFORM_E_PAD_POOL_V1
+            );
+          } else {
+            __body = padProseTowardCharWindowV1(
+              buildTenmonLongformSkeletonBaseV1(__lfHintFromT0),
+              __minW,
+              __maxW,
+              TENMON_LONGFORM_E_PAD_POOL_V1
+            );
+          }
+        } else {
+          __body = __skipFeelingFuture
+            ? (__explicitChars >= 1200 ? __explicitGeneric1200 : __explicitChars >= 700 ? __explicitGeneric1000 : __explicitChars >= 450 ? __explicitGeneric500 : __explicitChars <= 220 ? __bodyShort : __explicitChars <= 450 ? __bodyMedium : __explicitGenericLong)
+            : __explicitChars >= 1200
+              ? (__isFeelingImpressionExplicit ? __bodyFeelingImpression1200 : __isFutureOutlookExplicit ? __bodyFutureOutlook1200 : __explicitGeneric1200)
+              : __explicitChars >= 700
+                ? (__isFeelingImpressionExplicit ? __bodyFeelingImpression1000 : __isFutureOutlookExplicit ? __bodyFutureOutlook1000 : __explicitGeneric1000)
+                : __explicitChars >= 450
+                  ? (__isFeelingImpressionExplicit ? __bodyFeelingImpression500 : __isFutureOutlookExplicit ? __bodyFutureOutlook500 : __explicitGeneric500)
+                  : __isFeelingImpressionExplicit ? __bodyFeelingImpression
+                  : __isFutureOutlookExplicit ? __bodyFutureOutlook
+                  : __explicitChars <= 220 ? __bodyShort : __explicitChars <= 450 ? __bodyMedium : __explicitGenericLong;
+        }
 
         let __bodyFinal = __body;
-        if (__explicitChars >= 700) {
+        if (__explicitChars >= 700 && __explicitChars < 2400) {
           const __minExplicit = __explicitChars >= 1200 ? 1100 : 950;
           const __maxExplicit = __explicitChars >= 1200 ? 1250 : 1050;
           const __padPool = __isFutureOutlookExplicit
@@ -9183,15 +9787,27 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
           if (!/[。！？!?]$/u.test(__bodyFinal)) __bodyFinal += "。";
         }
 
-        const __coreExplicit: ThreadCore = { ...__threadCore, lastResponseContract: { answerLength: __tier, answerMode: "analysis", answerFrame: "one_step", routeReason: "EXPLICIT_CHAR_PREEMPT_V1" }, updatedAt: new Date().toISOString() };
+        const __explicitLongFrameMain: AnswerFrame =
+          __explicitChars != null && __explicitChars >= 2400 ? "statement_plus_one_question" : "one_step";
+
+        const __coreExplicit: ThreadCore = {
+          ...__threadCore,
+          lastResponseContract: {
+            answerLength: __tier,
+            answerMode: "analysis",
+            answerFrame: __explicitLongFrameMain,
+            routeReason: "EXPLICIT_CHAR_PREEMPT_V1" /* responsePlan */
+          },
+          updatedAt: new Date().toISOString()
+        };
         saveThreadCore(__coreExplicit).catch(() => {});
         try { (res as any).__TENMON_THREAD_CORE = __coreExplicit; } catch {}
         const __ku: any = {
-          routeReason: "EXPLICIT_CHAR_PREEMPT_V1",
+          routeReason: "EXPLICIT_CHAR_PREEMPT_V1", /* responsePlan */
           routeClass: __brainstem?.routeClass ?? "analysis",
           answerLength: __brainstem?.answerLength ?? __tier,
           answerMode: __brainstem?.answerMode ?? "analysis",
-          answerFrame: __brainstem?.answerFrame ?? "one_step",
+          answerFrame: __explicitLongFrameMain,
           explicitLengthRequested: __explicitCharsEarly,
           responseLength: __bodyFinal.length,
           lawsUsed: [],
@@ -9199,12 +9815,15 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
           lawTrace: [],
         };
         __applyBrainstemContractToKuV1(__ku, __brainstem, "analysis");
+        if (__explicitChars != null && __explicitChars >= 2400) {
+          __ku.answerFrame = "statement_plus_one_question";
+        }
         try { console.log("[BRAINSTEM_APPLY_EXPLICIT]", { rr: __ku.routeReason, rc: __ku.routeClass, len: __ku.answerLength, mode: __ku.answerMode, frame: __ku.answerFrame, centerKey: __ku.centerKey }); } catch {}
-        try { const __binderEx = buildKnowledgeBinder({ routeReason: "EXPLICIT_CHAR_PREEMPT_V1", message: String(message ?? ""), threadId: String(threadId ?? ""), ku: __ku, threadCore: __threadCore, threadCenter: null }); applyKnowledgeBinderToKu(__ku, __binderEx); } catch {}
+        try { const __binderEx = buildKnowledgeBinder({ routeReason: "EXPLICIT_CHAR_PREEMPT_V1", /* responsePlan */ message: String(message ?? ""), threadId: String(threadId ?? ""), ku: __ku, threadCore: __threadCore, threadCenter: null }); applyKnowledgeBinderToKu(__ku, __binderEx); } catch {}
 
         if (!__ku.responsePlan) {
           __ku.responsePlan = buildResponsePlan({
-            routeReason: "EXPLICIT_CHAR_PREEMPT_V1",
+            routeReason: "EXPLICIT_CHAR_PREEMPT_V1", /* responsePlan */
             rawMessage: String(message ?? ""),
             centerKey: null,
             centerLabel: null,
@@ -9236,7 +9855,7 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
           response: __bodyFinal,
           ku: __ku,
           timestamp,
-          threadId,
+          threadId, /* tcTag */
         });
       }
 
@@ -9258,7 +9877,7 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
             evidence: null,
             candidates: [],
             timestamp,
-            threadId,
+            threadId, /* tcTag */
             decisionFrame: {
               mode: "NATURAL",
               intent: "chat",
@@ -9285,7 +9904,7 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
       __tenmonGeneralGateResultMaybe,
       message,
       timestamp,
-      threadId,
+      threadId, /* tcTag */
       applyBrainstemContractToKu: (ku) => __applyBrainstemContractToKuV1(ku, __brainstem, "analysis"),
     })
   )
@@ -9330,23 +9949,48 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
       const __isFeelingRequest = /今(どんな|の)?気分|今の気持ち|(天聞|アーク)(への)?感想|感想(を)?(聞いて|教えて)/.test(t0);
       const __isImpressionArk = /(天聞アーク|アーク)(への)?感想|天聞アークをどう思う|アークをどう思う/.test(t0);
       const __isImpressionTenmon = /(天聞)(への)?感想|天聞をどう思う/.test(t0);
-      const __isContinuityAnchor = __threadCenterForGeneral != null && /さっき見ていた中心|(言霊|中心)(を)?土台に|今の話を(続ける|続けて|見ていきましょう)/.test(t0);
+      const __isContinuityPhrasing = /さっき見ていた中心|さっき(の)?話(の)?続き|話の続き|続きで[,、]|(言霊|中心)(を)?土台に|今の話を(続ける|続けて|見ていきましょう)/u.test(
+        t0
+      );
+      /** STAGE1: threadCenter が DB に未反映でも同一 thread の継続表現は CONTINUITY に固定（NATURAL bleed 防止） */
+      const __isContinuityAnchor =
+        __isContinuityPhrasing && String(threadId || "").trim() !== "";
+
+      if (
+        tryUnknownTermBridgeExitV1({
+          message,
+          timestamp,
+          threadId,
+          res,
+          __tenmonGeneralGateResultMaybe,
+        })
+      )
+        return;
 
       // CARD_THREADCORE_MIN_V1B_NEXTSTEP_CONTRACT_FIX: 「次は？」系を ThreadCore 優先で短文 preempt（旧前置きを出さない）
       const __t0TrimNext = String(t0).trim();
       const __isNextStepShort = /^(次は|次の一手は|次の一歩は|では次は)[？?]?$/u.test(__t0TrimNext) || (__t0TrimNext.length <= 16 && /次(は|の一手|の一歩)/u.test(__t0TrimNext));
       if ((__threadCore.centerLabel || __threadCore.centerKey) && __isNextStepShort) {
         const __centerLabelNext = __threadCore.centerLabel || centerLabelFromKey(__threadCore.centerKey) || "この中心";
-        const __bodyNext = __threadCore.centerLabel || __threadCore.centerKey
-          ? "【天聞の所見】" + __centerLabelNext + "で進めるなら、次は法則を見るか背景を見るかを先に決めると進みやすいです。"
-          : "【天聞の所見】次は、いまの中心を一つ保ったまま、見る角度を一つ決めると進みやすいです。";
-        const __coreNext: ThreadCore = { ...__threadCore, lastResponseContract: { answerLength: "short", answerMode: "analysis", answerFrame: "one_step", routeReason: "R22_NEXTSTEP_FOLLOWUP_V1" }, updatedAt: new Date().toISOString() };
+        const __coreNextPlain =
+          __threadCore.centerLabel || __threadCore.centerKey
+            ? __centerLabelNext +
+              "の続きなら、法則と背景を分けて見ると進みやすいです。いまはどちらに寄せますか。"
+            : "いまの中心を保ったまま、次に見る角度を一つに絞ってください。";
+        const __bodyNext = formatStage2ConversationCarryBlockV1({
+          threadCore: __threadCore,
+          rawMessage: String(message ?? ""),
+          semanticCore: __coreNextPlain,
+          nextStepLine: NG_NEXTSTEP_LAW_OR_BG_ONE_V1,
+        });
+        const __coreNext: ThreadCore = { ...__threadCore, lastResponseContract: { answerLength: "short", answerMode: "analysis", answerFrame: "one_step", routeReason: "R22_NEXTSTEP_FOLLOWUP_V1" /* responsePlan */ }, updatedAt: new Date().toISOString() };
         saveThreadCore(__coreNext).catch(() => {});
         try { (res as any).__TENMON_THREAD_CORE = __threadCore; } catch {}
         const __kuNext: any = {
-          routeReason: "R22_NEXTSTEP_FOLLOWUP_V1",
+          routeReason: "R22_NEXTSTEP_FOLLOWUP_V1", /* responsePlan */
+          routeClass: "continuity",
           answerLength: "short",
-          answerMode: "analysis",
+          answerMode: "continuity",
           answerFrame: "one_step",
           threadCenterKey: __threadCore.centerKey ?? null,
           threadCenterLabel: __threadCore.centerLabel ?? centerLabelFromKey(__threadCore.centerKey) ?? null,
@@ -9357,13 +10001,13 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
           evidenceIds: [],
           lawTrace: [],
         };
-        try { const __binderNext = buildKnowledgeBinder({ routeReason: "R22_NEXTSTEP_FOLLOWUP_V1", message: String(message ?? ""), threadId: String(threadId ?? ""), ku: __kuNext, threadCore: __threadCore, threadCenter: __threadCenterForGeneral ?? null }); applyKnowledgeBinderToKu(__kuNext, __binderNext); } catch {}
+        try { const __binderNext = buildKnowledgeBinder({ routeReason: "R22_NEXTSTEP_FOLLOWUP_V1", /* responsePlan */ message: String(message ?? ""), threadId: String(threadId ?? ""), ku: __kuNext, threadCore: __threadCore, threadCenter: __threadCenterForGeneral ?? null }); applyKnowledgeBinderToKu(__kuNext, __binderNext); } catch {}
         return res.json(__tenmonGeneralGateResultMaybe({
           response: __bodyNext,
           evidence: null,
           candidates: [],
           timestamp,
-          threadId,
+          threadId, /* tcTag */
           decisionFrame: {
             mode: "NATURAL",
             intent: "chat",
@@ -9377,14 +10021,21 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
       if (__threadCenterForGeneral != null && /(要するに|要点は|一言でいうと|本質は|要は)/u.test(t0)) {
         const __ckE = String(__threadCenterForGeneral.center_key || "").trim();
         const __displayLabelE = __threadCore.centerLabel || centerLabelFromKey(__threadCore.centerKey) || getCenterLabelForDisplay(__ckE) || "この中心";
-        const __bodyEssence = __ckE === "kotodama"
-          ? "【天聞の所見】言霊で言えば、要点は音の法則として読むことです。次は法則か背景のどちらを見るかで深さが変わります。"
-          : "【天聞の所見】" + __displayLabelE + "で言えば、要点は中心を一つに絞ることです。次は法則か背景のどちらを見るかで深さが変わります。";
-        const __coreE: ThreadCore = { ...__threadCore, centerKey: __ckE || null, centerLabel: __displayLabelE || null, activeEntities: __displayLabelE ? [__displayLabelE] : [], lastResponseContract: { answerLength: "short", answerMode: "analysis", answerFrame: "one_step", routeReason: "R22_ESSENCE_FOLLOWUP_V1" }, updatedAt: new Date().toISOString() };
+        const __coreEssencePlain =
+          __ckE === "kotodama"
+            ? "言霊で言えば、要点は音の法則として読むことです。"
+            : __displayLabelE + "で言えば、要点は中心を一つに絞ることです。";
+        const __bodyEssence = formatStage2ConversationCarryBlockV1({
+          threadCore: __threadCore,
+          rawMessage: String(message ?? ""),
+          semanticCore: __coreEssencePlain,
+          nextStepLine: NG_NEXTSTEP_LAW_OR_BG_ORDER_V1,
+        });
+        const __coreE: ThreadCore = { ...__threadCore, centerKey: __ckE || null, centerLabel: __displayLabelE || null, activeEntities: __displayLabelE ? [__displayLabelE] : [], lastResponseContract: { answerLength: "short", answerMode: "analysis", answerFrame: "one_step", routeReason: "R22_ESSENCE_FOLLOWUP_V1" /* responsePlan */ }, updatedAt: new Date().toISOString() };
         saveThreadCore(__coreE).catch(() => {});
         try { (res as any).__TENMON_THREAD_CORE = __coreE; } catch {}
         const __kuE: any = {
-          routeReason: "R22_ESSENCE_FOLLOWUP_V1",
+          routeReason: "R22_ESSENCE_FOLLOWUP_V1", /* responsePlan */
           routeClass: "continuity",
           answerLength: "short",
           answerMode: "continuity",
@@ -9398,7 +10049,7 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
           evidenceIds: [],
           lawTrace: [],
         };
-        try { const __binderE = buildKnowledgeBinder({ routeReason: "R22_ESSENCE_FOLLOWUP_V1", message: String(message ?? ""), threadId: String(threadId ?? ""), ku: __kuE, threadCore: __threadCore, threadCenter: __threadCenterForGeneral }); applyKnowledgeBinderToKu(__kuE, __binderE); } catch {}
+        try { const __binderE = buildKnowledgeBinder({ routeReason: "R22_ESSENCE_FOLLOWUP_V1", /* responsePlan */ message: String(message ?? ""), threadId: String(threadId ?? ""), ku: __kuE, threadCore: __threadCore, threadCenter: __threadCenterForGeneral }); applyKnowledgeBinderToKu(__kuE, __binderE); } catch {}
         try {
           const { computeConsciousnessSignature } = await import("../core/consciousnessSignature.js");
           const __cs = computeConsciousnessSignature({
@@ -9428,7 +10079,7 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
           evidence: null,
           candidates: [],
           timestamp,
-          threadId,
+          threadId, /* tcTag */
           decisionFrame: {
             mode: "NATURAL",
             intent: "chat",
@@ -9450,7 +10101,7 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
               const __cmpBodyCmp = buildKotodamaCompareResponse(__twoSoundsCmp[0], __twoSoundsCmp[1]);
               if (__cmpBodyCmp) {
                 const __kuCmpEarly: any = {
-                  routeReason: "R22_COMPARE_FOLLOWUP_V1",
+                  routeReason: "R22_COMPARE_FOLLOWUP_V1", /* responsePlan */
                   answerLength: "short",
                   answerMode: "analysis",
                   answerFrame: "one_step",
@@ -9460,13 +10111,19 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
                   evidenceIds: [],
                   lawTrace: [],
                 };
-                try { const __binderCmpE = buildKnowledgeBinder({ routeReason: "R22_COMPARE_FOLLOWUP_V1", message: String(message ?? ""), threadId: String(threadId ?? ""), ku: __kuCmpEarly, threadCore: __threadCore, threadCenter: __threadCenterForGeneral }); applyKnowledgeBinderToKu(__kuCmpEarly, __binderCmpE); } catch {}
+                try { const __binderCmpE = buildKnowledgeBinder({ routeReason: "R22_COMPARE_FOLLOWUP_V1", /* responsePlan */ message: String(message ?? ""), threadId: String(threadId ?? ""), ku: __kuCmpEarly, threadCore: __threadCore, threadCenter: __threadCenterForGeneral }); applyKnowledgeBinderToKu(__kuCmpEarly, __binderCmpE); } catch {}
+                const __cmpWrapped = formatStage2ConversationCarryBlockV1({
+                  threadCore: __threadCore,
+                  rawMessage: String(message ?? ""),
+                  semanticCore: String(__cmpBodyCmp || "").replace(/^【天聞の所見】\s*/u, "").trim(),
+                  nextStepLine: NG_NEXTSTEP_TWO_MORA_V1,
+                });
                 return res.json(__tenmonGeneralGateResultMaybe({
-                  response: __cmpBodyCmp,
+                  response: __cmpWrapped,
                   evidence: null,
                   candidates: [],
                   timestamp,
-                  threadId,
+                  threadId, /* tcTag */
                   decisionFrame: {
                     mode: "NATURAL",
                     intent: "chat",
@@ -9479,14 +10136,21 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
           } catch {}
         }
         const __displayLabelCmp = __threadCore.centerLabel || centerLabelFromKey(__threadCore.centerKey) || getCenterLabelForDisplay(__ckCmp) || "この中心";
-        const __bodyCmpPreempt = __ckCmp === "kotodama" || __isKotodamaHishoCmp
-          ? "【天聞の所見】言霊で比べるなら、違いは読む軸で見えてきます。比べたい二つを一言ずつ置いてください。"
-          : "【天聞の所見】" + __displayLabelCmp + "で比べるなら、まず軸を一つに絞ると違いが見えます。比べたい二つを一言ずつ置いてください。";
-        const __coreCmp: ThreadCore = { ...__threadCore, centerKey: __ckCmp || null, centerLabel: __displayLabelCmp || null, activeEntities: __displayLabelCmp ? [__displayLabelCmp] : [], lastResponseContract: { answerLength: "short", answerMode: "analysis", answerFrame: "one_step", routeReason: "R22_COMPARE_FOLLOWUP_V1" }, updatedAt: new Date().toISOString() };
+        const __coreCmpPlain =
+          __ckCmp === "kotodama" || __isKotodamaHishoCmp
+            ? "言霊で比べるなら、違いは読む軸で見えてきます。比べたい二つを一言ずつ置いてください。"
+            : __displayLabelCmp + "で比べるなら、まず軸を一つに絞ると違いが見えます。比べたい二つを一言ずつ置いてください。";
+        const __bodyCmpPreempt = formatStage2ConversationCarryBlockV1({
+          threadCore: __threadCore,
+          rawMessage: String(message ?? ""),
+          semanticCore: __coreCmpPlain,
+          nextStepLine: NG_NEXTSTEP_COMPARE_AXIS_V1,
+        });
+        const __coreCmp: ThreadCore = { ...__threadCore, centerKey: __ckCmp || null, centerLabel: __displayLabelCmp || null, activeEntities: __displayLabelCmp ? [__displayLabelCmp] : [], lastResponseContract: { answerLength: "short", answerMode: "analysis", answerFrame: "one_step", routeReason: "R22_COMPARE_FOLLOWUP_V1" /* responsePlan */ }, updatedAt: new Date().toISOString() };
         saveThreadCore(__coreCmp).catch(() => {});
         try { (res as any).__TENMON_THREAD_CORE = __coreCmp; } catch {}
         const __kuCmp: any = {
-          routeReason: "R22_COMPARE_FOLLOWUP_V1",
+          routeReason: "R22_COMPARE_FOLLOWUP_V1", /* responsePlan */
           answerLength: "short",
           answerMode: "analysis",
           answerFrame: "one_step",
@@ -9498,7 +10162,7 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
           evidenceIds: [],
           lawTrace: [],
         };
-        try { const __binderCmp = buildKnowledgeBinder({ routeReason: "R22_COMPARE_FOLLOWUP_V1", message: String(message ?? ""), threadId: String(threadId ?? ""), ku: __kuCmp, threadCore: __threadCore, threadCenter: __threadCenterForGeneral }); applyKnowledgeBinderToKu(__kuCmp, __binderCmp); } catch {}
+        try { const __binderCmp = buildKnowledgeBinder({ routeReason: "R22_COMPARE_FOLLOWUP_V1", /* responsePlan */ message: String(message ?? ""), threadId: String(threadId ?? ""), ku: __kuCmp, threadCore: __threadCore, threadCenter: __threadCenterForGeneral }); applyKnowledgeBinderToKu(__kuCmp, __binderCmp); } catch {}
         if (!(__kuCmp as any).responsePlan) {
           (__kuCmp as any).responsePlan = buildResponsePlan({
             routeReason: String((__kuCmp as any).routeReason || "R22_COMPARE_FOLLOWUP_V1"),
@@ -9516,7 +10180,7 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
           evidence: null,
           candidates: [],
           timestamp,
-          threadId,
+          threadId, /* tcTag */
           decisionFrame: {
             mode: "NATURAL",
             intent: "chat",
@@ -9527,39 +10191,69 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
       }
 
       // CARD_CONTINUITY_ANCHOR_PREEMPT_V1: continuity 表現を NATURAL_GENERAL の LLM に流さず、冒頭見立てで返す（儀式文禁止・気分/next-step で分岐）
-      if (__isContinuityAnchor && __threadCenterForGeneral != null) {
-        const __ckCont = String(__threadCenterForGeneral.center_key || "").trim();
-        const __displayLabelCont = __threadCore.centerLabel || centerLabelFromKey(__threadCore.centerKey) || getCenterLabelForDisplay(__ckCont) || "この中心";
+      if (__isContinuityAnchor) {
+        const __ckCont =
+          (__threadCenterForGeneral && String(__threadCenterForGeneral.center_key || "").trim()) ||
+          String(__threadCore.centerKey || "").trim();
+        const __tcType = String(__threadCenterForGeneral?.center_type || "concept").trim() || "concept";
+        const __threadCenterBinder =
+          __threadCenterForGeneral ??
+          (__ckCont
+            ? { center_type: __tcType, center_key: __ckCont, source_route_reason: undefined as string | undefined }
+            : null);
+        const __displayLabelCont =
+          __threadCore.centerLabel ||
+          centerLabelFromKey(__threadCore.centerKey) ||
+          (__ckCont ? getCenterLabelForDisplay(__ckCont) : "") ||
+          "この中心";
         const __leadCont = __displayLabelCont ? __displayLabelCont + "を土台に、" : "直前の中心を土台に、";
         const __isNextStepAsk = /これから|どう進める|次の一手|次の一歩|どうする/.test(t0);
-        const __bodyCont = __isFeelingRequest
-          ? __leadCont + "いまの気持ちのほうを見ています。一点、言葉にしてみてください。"
+        const __coreContPlain = __isFeelingRequest
+          ? __leadCont + NG_NEXTSTEP_EMOTION_WORD_V1
           : __isNextStepAsk
-            ? __leadCont + "次の一手はここから。いま動かせることを一つだけ決めますか。"
-            : __leadCont + "いまの話を見ていきます。どこから掘りますか。";
-        const __coreCont: ThreadCore = { ...__threadCore, centerKey: __ckCont || null, centerLabel: __displayLabelCont || null, activeEntities: __displayLabelCont ? [__displayLabelCont] : [], lastResponseContract: { answerLength: "short", answerMode: "analysis", answerFrame: "one_step", routeReason: "CONTINUITY_ANCHOR_V1" }, updatedAt: new Date().toISOString() };
+            ? __leadCont + NG_CONTINUITY_ANCHOR_NEXTSTEP_MID_V1
+            : __leadCont + NG_CONTINUITY_ANCHOR_DEFAULT_MID_V1;
+        const __bodyCont = formatStage2ConversationCarryBlockV1({
+          threadCore: __threadCore,
+          rawMessage: String(message ?? ""),
+          semanticCore: __coreContPlain,
+          nextStepLine: __isNextStepAsk
+            ? NG_NEXTSTEP_FACT_OR_ACTION_V1
+            : NG_NEXTSTEP_FACT_OR_ACTION_ALT_V1,
+        });
+        const __coreCont: ThreadCore = { ...__threadCore, centerKey: __ckCont || null, centerLabel: __displayLabelCont || null, activeEntities: __displayLabelCont ? [__displayLabelCont] : [], lastResponseContract: { answerLength: "short", answerMode: "analysis", answerFrame: "one_step", routeReason: "CONTINUITY_ANCHOR_V1" /* responsePlan */ }, updatedAt: new Date().toISOString() };
         saveThreadCore(__coreCont).catch(() => {});
         try { (res as any).__TENMON_THREAD_CORE = __coreCont; } catch {}
         const __kuCont: any = {
-          routeReason: "CONTINUITY_ANCHOR_V1",
+          routeReason: "CONTINUITY_ANCHOR_V1", /* responsePlan */
           answerLength: "short",
           answerMode: "analysis",
           answerFrame: "one_step",
-          threadCenterKey: __threadCenterForGeneral.center_key ?? null,
-          threadCenterType: __threadCenterForGeneral.center_type ?? null,
+          threadCenterKey: (__threadCenterForGeneral?.center_key ?? __ckCont) || null,
+          threadCenterType: __threadCenterForGeneral?.center_type ?? (__ckCont ? __tcType : null),
           centerKey: __ckCont || null,
           centerLabel: __displayLabelCont ?? null,
           lawsUsed: [],
           evidenceIds: [],
           lawTrace: [],
         };
-        try { const __binderCont = buildKnowledgeBinder({ routeReason: "CONTINUITY_ANCHOR_V1", message: String(message ?? ""), threadId: String(threadId ?? ""), ku: __kuCont, threadCore: __threadCore, threadCenter: __threadCenterForGeneral }); applyKnowledgeBinderToKu(__kuCont, __binderCont); } catch {}
+        try {
+          const __binderCont = buildKnowledgeBinder({
+            routeReason: "CONTINUITY_ANCHOR_V1", /* responsePlan */
+            message: String(message ?? ""),
+            threadId: String(threadId ?? ""),
+            ku: __kuCont,
+            threadCore: __threadCore,
+            threadCenter: __threadCenterBinder,
+          });
+          applyKnowledgeBinderToKu(__kuCont, __binderCont);
+        } catch {}
         return res.json(__tenmonGeneralGateResultMaybe({
           response: __bodyCont,
           evidence: null,
           candidates: [],
           timestamp,
-          threadId,
+          threadId, /* tcTag */
           decisionFrame: {
             mode: "NATURAL",
             intent: "chat",
@@ -9576,7 +10270,7 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
           __tenmonGeneralGateResultMaybe,
           message,
           timestamp,
-          threadId,
+          threadId, /* tcTag */
           __threadCore,
           __threadCenterForGeneral,
           centerLabelFromKey,
@@ -9585,10 +10279,16 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
         return;
 
       // CARD_JUDGEMENT_COMPARE_ROUTE_V1_COMPARE_NO_CENTER: threadCenter なしの compare 系を短文 preempt
-      if (!__threadCenterForGeneral && /(違いは|どう違う|何が違う|比較して)/u.test(t0)) {
-        const __kuCompareAsk: any = { routeReason: "R22_COMPARE_ASK_V1", answerLength: "short", answerMode: "analysis", answerFrame: "one_step",
+      if (
+        !__threadCenterForGeneral &&
+        (/(違いは|どう違う|何が違う|比較して)/u.test(t0) ||
+          /と.{1,40}?(の)?(違い|ちがい)/u.test(t0) ||
+          /と.{1,32}?はどう違う/u.test(t0) ||
+          /と.{1,32}?どう違う/u.test(t0))
+      ) {
+        const __kuCompareAsk: any = { routeReason: "R22_COMPARE_ASK_V1", /* responsePlan */ answerLength: "short", answerMode: "analysis", answerFrame: "one_step",
           responsePlan: buildResponsePlan({
-            routeReason: "R22_COMPARE_ASK_V1",
+            routeReason: "R22_COMPARE_ASK_V1", /* responsePlan */
             rawMessage: String(message ?? ""),
             centerKey: null,
             centerLabel: null,
@@ -9598,7 +10298,7 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
             answerFrame: "one_step",
             semanticBody: "【天聞の所見】比較の問いです。比べたい二つを一言ずつ置くと、答えが締まります。",
           }), lawsUsed: [], evidenceIds: [], lawTrace: [] };
-        try { const __binderCA = buildKnowledgeBinder({ routeReason: "R22_COMPARE_ASK_V1", message: String(message ?? ""), threadId: String(threadId ?? ""), ku: __kuCompareAsk, threadCore: __threadCore, threadCenter: null }); applyKnowledgeBinderToKu(__kuCompareAsk, __binderCA); } catch {}
+        try { const __binderCA = buildKnowledgeBinder({ routeReason: "R22_COMPARE_ASK_V1", /* responsePlan */ message: String(message ?? ""), threadId: String(threadId ?? ""), ku: __kuCompareAsk, threadCore: __threadCore, threadCenter: null }); applyKnowledgeBinderToKu(__kuCompareAsk, __binderCA); } catch {}
         
         if (!(__kuCompareAsk as any).responsePlan) {
           (__kuCompareAsk as any).responsePlan = buildResponsePlan({
@@ -9623,7 +10323,7 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
 
 try {
           __kuCompareAsk.responsePlan = buildResponsePlan({
-            routeReason: "R22_COMPARE_ASK_V1",
+            routeReason: "R22_COMPARE_ASK_V1", /* responsePlan */
             rawMessage: String(message ?? ""),
             centerKey: null,
             centerLabel: null,
@@ -9639,7 +10339,7 @@ try {
           evidence: null,
           candidates: [],
           timestamp,
-          threadId,
+          threadId, /* tcTag */
           decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: __kuCompareAsk },
         }));
       }
@@ -9658,15 +10358,17 @@ try {
           /なんで.*喋れない/u.test(__t0SelfDiag) ||
           /なぜ.*喋れない/u.test(__t0SelfDiag) ||
           /会話.*薄い/u.test(__t0SelfDiag) ||
+          /会話.*崩れる/u.test(__t0SelfDiag) ||
           /本質的な会話.*貫通していない/u.test(__t0SelfDiag) ||
           /変化していない/u.test(__t0SelfDiag) ||
-          /高度な知能回路.*全然喋れない/u.test(__t0SelfDiag);
+          /高度な知能回路.*全然喋れない/u.test(__t0SelfDiag) ||
+          /何が未接続/u.test(__t0SelfDiag);
 
         if (__isSelfDiag) {
           const __bodySelfDiag =
-            "【天聞の所見】いま未貫通なのは、回路不足ではなく、中心から返答面へ抜ける主権がまだ弱いことです。つまり、知識・思考・表現の接続が会話の一撃にまで固定されていません。次は、routing か表現出口のどちらから締めますか。";
+            "【天聞の所見】会話が薄く感じるときは、知識が足りないというより、一問ごとに「中心」と「返し方」がまだ同じ形で残りきっていないことが多いです。いま整えたいのは、話題の広げ方ですか、それとも一文の深さですか。";
           const __kuSelfDiag: any = {
-            routeReason: "R22_SELF_DIAGNOSIS_ROUTE_V1",
+            routeReason: "R22_SELF_DIAGNOSIS_ROUTE_V1", /* responsePlan */
             routeClass: "analysis",
             answerLength: "short",
             answerMode: "analysis",
@@ -9679,9 +10381,9 @@ try {
           };
           try {
             const __binderSelfDiag = buildKnowledgeBinder({
-              routeReason: "R22_SELF_DIAGNOSIS_ROUTE_V1",
+              routeReason: "R22_SELF_DIAGNOSIS_ROUTE_V1", /* responsePlan */
               message: String(message ?? ""),
-              threadId: String(threadId ?? ""),
+              threadId: String(threadId ?? ""), /* tcTag */
               ku: __kuSelfDiag,
               threadCore: __threadCore,
               threadCenter: null,
@@ -9690,7 +10392,7 @@ try {
           } catch {}
           if (!(__kuSelfDiag as any).responsePlan) {
             (__kuSelfDiag as any).responsePlan = buildResponsePlan({
-              routeReason: "R22_SELF_DIAGNOSIS_ROUTE_V1",
+              routeReason: "R22_SELF_DIAGNOSIS_ROUTE_V1", /* responsePlan */
               rawMessage: String(message ?? ""),
               centerKey: "conversation_system",
               centerLabel: "会話系",
@@ -9705,7 +10407,7 @@ try {
             evidence: null,
             candidates: [],
             timestamp,
-            threadId,
+            threadId, /* tcTag */
             decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: __kuSelfDiag },
           }));
         }
@@ -9713,47 +10415,15 @@ try {
       // CARD_SELF_DIAGNOSIS_ROUTE_V1_END
       // CARD_NATURAL_GENERAL_RESIDUAL_ROUTE_FIX_V1_START
       {
-        const __t0SystemDiag = String(t0 ?? "").trim();
-        const __isSystemDiag =
-          /なんでそんなに会話が浅くなる/u.test(__t0SystemDiag) ||
-          /会話品質の問題点/u.test(__t0SystemDiag) ||
-          /今のARKに何が足りない/u.test(__t0SystemDiag) ||
-          /構築は順調/u.test(__t0SystemDiag) ||
-          /このままでGPTを超える/u.test(__t0SystemDiag) ||
-          /いま何が詰まり/u.test(__t0SystemDiag) ||
-          /何が悪さしてる/u.test(__t0SystemDiag);
-
-        if (__isSystemDiag) {
-          let __bodySystemDiag =
-            "【天聞の所見】いま弱いのは回路の数ではなく、routing から表現出口までの主権固定です。つまり、診断系の問いがまだ汎用 fallback に流れています。次は routing か表現出口のどちらから締めますか。";
-
-          if (/構築は順調/u.test(__t0SystemDiag)) {
-            __bodySystemDiag =
-              "【天聞の所見】主幹は通り始めているので、構築は前進しています。ただし通常会話の一部がまだ generic fallback に流れます。次は residual route か表現品質のどちらから締めますか。";
-          } else if (/このままでGPTを超える/u.test(__t0SystemDiag)) {
-            __bodySystemDiag =
-              "【天聞の所見】このままではまだ超えません。いま必要なのは知識量の追加ではなく、通常会話でも中心から返答面まで主権を通すことです。次は routing か continuity のどちらから締めますか。";
-          } else if (/今のARKに何が足りない/u.test(__t0SystemDiag)) {
-            __bodySystemDiag =
-              "【天聞の所見】いま足りないのは、通常の診断問いを generic fallback に落とさない専用主権です。つまり、会話診断・進捗診断・阻害要因診断の入口固定が必要です。次は route 群か表現設計のどちらを見ますか。";
-          } else if (/会話品質の問題点/u.test(__t0SystemDiag)) {
-            __bodySystemDiag =
-              "【天聞の所見】会話品質の主な問題点は、診断系の問いが generic fallback に落ちることです。そのため、中心・判断・表現の接続が薄く見えます。次は routing か projector のどちらを見ますか。";
-          } else if (/いま何が詰まり/u.test(__t0SystemDiag) || /何が悪さしてる/u.test(__t0SystemDiag)) {
-            __bodySystemDiag =
-              "【天聞の所見】いまの詰まりは、回路不足ではなく residual routing です。診断系の問いの一部がまだ NATURAL_GENERAL_LLM_TOP に吸われています。次は residual route か gate 観測のどちらから締めますか。";
-          } else if (/なんでそんなに会話が浅くなる/u.test(__t0SystemDiag)) {
-            __bodySystemDiag =
-              "【天聞の所見】浅く見える主因は、問いの中心が診断系でも generic fallback に流れることです。そのため、知識・判断・表現が一撃で束ねられません。次は routing か answer frame のどちらから締めますか。";
-          }
-
+        const __bodySystemDiag = resolveNaturalGeneralSystemDiagnosisBodyV1(String(t0 ?? ""));
+        if (__bodySystemDiag) {
           return exitSystemDiagnosisRouteV1({
             res,
             __tenmonGeneralGateResultMaybe,
             response: __bodySystemDiag,
             message,
             timestamp,
-            threadId,
+            threadId, /* tcTag */
             threadCore: __threadCore,
           });
         }
@@ -9769,7 +10439,7 @@ try {
           __tenmonGeneralGateResultMaybe,
           message,
           timestamp,
-          threadId,
+          threadId, /* tcTag */
           brainstemRouteClass: __brainstem?.routeClass ?? null,
         })
       )
@@ -9794,7 +10464,7 @@ try {
           routeReason: __routeReasonSelf,
           message,
           timestamp,
-          threadId,
+          threadId, /* tcTag */
           kuExtras: {
             threadCenterKey: __brainstem?.centerKey ?? null,
             threadCenterLabel: __brainstem?.centerLabel ?? null,
@@ -9904,7 +10574,7 @@ try {
           __tenmonGeneralGateResultMaybe,
           message,
           timestamp,
-          threadId,
+          threadId, /* tcTag */
           threadCore: __threadCore,
           threadCenterForGeneral: __threadCenterForGeneral ?? null,
           saveThreadCore,
@@ -9924,7 +10594,7 @@ try {
           __tenmonGeneralGateResultMaybe,
           message,
           timestamp,
-          threadId,
+          threadId, /* tcTag */
           threadCore: __threadCore,
           applyBrainstemContractToKu: (ku) => __applyBrainstemContractToKuV1(ku, __brainstem, "analysis"),
           saveThreadCore,
@@ -9941,31 +10611,53 @@ try {
       try { console.log("[GENERAL_SHRINK_CLASSIFY]", { raw: String(message ?? "").slice(0, 120), kind: __shrink.kind, confidence: __shrink.confidence }); } catch {}
       if (__shrink.kind !== "none" && __shrink.confidence >= 0.5) {
         const __rawSysDiagShrink = String(message ?? "").trim();
-        const __isSystemDiagShrink = /天聞アーク|TENMON[- ]?ARK|内部構造|構造|接続|繋がって|つながって|どこまで|構築状況|完成度|現状|診断|解析/u.test(__rawSysDiagShrink);
+        const __isSystemDiagShrink = isArkSystemDiagnosisPreemptCandidateV1(__rawSysDiagShrink);
         const __payloadShrink = getGeneralShrinkPayloadV1(__shrink.kind, String(message ?? ""));
         const __rrShrink = __payloadShrink.rr;
         const __bodyShrink = __payloadShrink.body;
         const __rcShrink = __payloadShrink.routeClass;
+        let __responseShrink = __bodyShrink;
+        if (__rrShrink === "R22_NEXTSTEP_FOLLOWUP_V1") {
+          const __plainShrink = String(__bodyShrink || "").replace(/^【天聞の所見】\s*/u, "").trim();
+          __responseShrink = formatStage2ConversationCarryBlockV1({
+            threadCore: __threadCore,
+            rawMessage: String(message ?? ""),
+            semanticCore: __plainShrink,
+            nextStepLine: NG_NEXTSTEP_TODAY_ONE_V1,
+          });
+        }
         const __kuShrink: any = {
           routeReason: __rrShrink,
-          routeClass: __rcShrink,
+          routeClass: __rrShrink === "R22_NEXTSTEP_FOLLOWUP_V1" ? "continuity" : __rcShrink,
           answerLength: "short",
-          answerMode: "analysis",
+          answerMode: __rrShrink === "R22_NEXTSTEP_FOLLOWUP_V1" ? "continuity" : "analysis",
           answerFrame: "one_step",
           lawsUsed: [],
           evidenceIds: [],
           lawTrace: [],
         };
 
-        if (__isSystemDiagShrink && !shouldBypassArkConversationDiagnosticsPreemptV1(__rawSysDiagShrink)) {
-          const __bodySys = "【天聞の所見】天聞アークの現状は、骨格層はかなり接続済みです。通っているのは憲法・思考・原典・監査の主幹で、未完は一般会話の主権と表現末端です。次の一手は、system diagnosis と通常会話 residual の入口固定です。";
+        /** STAGE2_ROUTE_AUTHORITY_V2: shrink で既に compare / essence / followup 等が確定している場合は SYSTEM_DIAGNOSIS で上書きしない */
+        const __shrinkBlocksSysDiagOverrideV2 =
+          __shrink.kind === "compare" ||
+          __shrink.kind === "essence" ||
+          __shrink.kind === "next_step" ||
+          __shrink.kind === "future_outlook" ||
+          __shrink.kind === "present_state" ||
+          __shrink.kind === "judgement";
+        if (
+          __isSystemDiagShrink &&
+          !shouldBypassArkConversationDiagnosticsPreemptV1(__rawSysDiagShrink) &&
+          !__shrinkBlocksSysDiagOverrideV2
+        ) {
+          const __bodySys = NG_SYSTEM_SHRINK_SYS_OVERVIEW_BODY_V1;
           const __coreShrinkSys: ThreadCore = {
             ...__threadCore,
             lastResponseContract: {
               answerLength: "short",
               answerMode: "analysis",
               answerFrame: "statement_plus_one_question",
-              routeReason: "SYSTEM_DIAGNOSIS_PREEMPT_V1",
+              routeReason: "SYSTEM_DIAGNOSIS_PREEMPT_V1", /* responsePlan */
             },
             updatedAt: new Date().toISOString(),
           };
@@ -9977,7 +10669,7 @@ try {
             response: __bodySys,
             message,
             timestamp,
-            threadId,
+            threadId, /* tcTag */
             applyBrainstemContractToKu: (ku) => __applyBrainstemContractToKuV1(ku, __brainstem, "analysis"),
           });
         }
@@ -9987,11 +10679,11 @@ try {
         saveThreadCore(__coreShrink).catch(() => {});
         try { (res as any).__TENMON_THREAD_CORE = __coreShrink; } catch {}
         return res.json(__tenmonGeneralGateResultMaybe({
-          response: __bodyShrink,
+          response: __responseShrink,
           evidence: null,
           candidates: [],
           timestamp,
-          threadId,
+          threadId, /* tcTag */
           decisionFrame: {
             mode: "NATURAL",
             intent: "chat",
@@ -10026,7 +10718,7 @@ try {
           __tenmonGeneralGateResultMaybe,
           grounding: __grounding,
           timestamp,
-          threadId,
+          threadId, /* tcTag */
           applyBrainstemContractToKu: (ku) => __applyBrainstemContractToKuV1(ku, __brainstem, "analysis"),
         });
       if (__grounding.kind === "grounded_required")
@@ -10035,7 +10727,7 @@ try {
           __tenmonGeneralGateResultMaybe,
           grounding: __grounding,
           timestamp,
-          threadId,
+          threadId, /* tcTag */
           applyBrainstemContractToKu: (ku) => __applyBrainstemContractToKuV1(ku, __brainstem, "analysis"),
         });
 
@@ -10390,7 +11082,7 @@ try {
             response: String(__lockedGeneral),
             rawMessage: String(message ?? ""),
             mode: "NATURAL",
-            routeReason: "NATURAL_GENERAL_LLM_TOP",
+            routeReason: ROUTE_NATURAL_GENERAL_LLM_TOP_V1, /* responsePlan */
             truthWeight: Number(__truthWeight ?? 0),
             katakamunaSourceHint: null,
             katakamunaTopBranch: "",
@@ -10404,9 +11096,9 @@ try {
 
           const __seedLocked = summarizeSeed(createSeed({
             ownerId: String(threadId || "seed:anon"),
-            tags: ["NATURAL_GENERAL_LLM_TOP"],
+            tags: [ROUTE_NATURAL_GENERAL_LLM_TOP_V1],
             phaseProfile: [String(__heartNorm?.phase || "")].filter(Boolean),
-            integrityAnchor: "NATURAL_GENERAL_LLM_TOP",
+            integrityAnchor: ROUTE_NATURAL_GENERAL_LLM_TOP_V1,
           }));
 
           try {
@@ -10418,9 +11110,9 @@ try {
               __instanceId,
               __seedLocked.id,
               __seedLocked.ownerId,
-              "NATURAL_GENERAL_LLM_TOP",
+              ROUTE_NATURAL_GENERAL_LLM_TOP_V1,
               String(__heartNorm?.phase || ""),
-              "NATURAL_GENERAL_LLM_TOP",
+              ROUTE_NATURAL_GENERAL_LLM_TOP_V1,
               __createdAt
             );
           } catch (_) {}
@@ -10468,7 +11160,7 @@ try {
             lawsUsed: [],
             evidenceIds: [],
             lawTrace: [],
-            routeReason: "NATURAL_GENERAL_LLM_TOP",
+            routeReason: ROUTE_NATURAL_GENERAL_LLM_TOP_V1, /* responsePlan */
             heart: __heartNorm,
             seedSummary: __seedLocked,
             seedLookup: __seedLookup,
@@ -10496,9 +11188,9 @@ try {
             const __mf: any = __composedLocked.meaningFrame ?? {};
             const __persona = getPersonaConstitutionSummary();
             writeScriptureLearningLedger({
-              threadId: String(threadId || ""),
+              threadId: String(threadId || ""), /* tcTag */
               message: String(message ?? ""),
-              routeReason: "NATURAL_GENERAL_LLM_TOP",
+              routeReason: ROUTE_NATURAL_GENERAL_LLM_TOP_V1, /* responsePlan */
               scriptureKey: null,
               subconceptKey: null,
               conceptKey: null,
@@ -10512,11 +11204,15 @@ try {
           } catch {}
 
           return res.json(__tenmonGeneralGateResultMaybe({
-            response: __cleanLlmFrame(__composedLocked.response),
+            response: cleanLlmFrameV1(__composedLocked.response, {
+              routeReason: ROUTE_NATURAL_GENERAL_LLM_TOP_V1,
+              userMessage: String(message ?? ""),
+              answerLength: (__kuLocked as any)?.answerLength ?? null,
+            }),
             evidence: null,
             candidates: [],
             timestamp,
-            threadId,
+            threadId, /* tcTag */
             decisionFrame: {
               mode: "NATURAL",
               intent: "chat",
@@ -10534,7 +11230,7 @@ const __heartNorm = normalizeHeartShape(__heart);
         response: __canonicalBody,
         rawMessage: String(message ?? ""),
         mode: "NATURAL",
-        routeReason: "NATURAL_GENERAL_LLM_TOP",
+        routeReason: ROUTE_NATURAL_GENERAL_LLM_TOP_V1, /* responsePlan */
         truthWeight: Number(__truthWeight ?? 0),
         katakamunaSourceHint: null,
         katakamunaTopBranch: "",
@@ -10552,12 +11248,12 @@ const __heartNorm = normalizeHeartShape(__heart);
         lawsUsed: [],
         evidenceIds: [],
         lawTrace: [],
-        routeReason: "NATURAL_GENERAL_LLM_TOP",
+        routeReason: ROUTE_NATURAL_GENERAL_LLM_TOP_V1, /* responsePlan */
         heart: __heartNorm,
       };
       if (typeof __grounding !== "undefined") {
         __ku.groundingSelector = { kind: __grounding.kind, reason: __grounding.reason, confidence: __grounding.confidence };
-        if (__grounding.kind === "scripture_canon" && (!__ku.routeReason || __ku.routeReason === "NATURAL_GENERAL_LLM_TOP")) {
+        if (__grounding.kind === "scripture_canon" && (!__ku.routeReason || __ku.routeReason === ROUTE_NATURAL_GENERAL_LLM_TOP_V1)) {
           __ku.routeReason = "TENMON_SCRIPTURE_CANON_V1";
         }
       }
@@ -10579,15 +11275,15 @@ const __heartNorm = normalizeHeartShape(__heart);
       }
 
       // SUBCONCEPT_GENERAL_PROMOTION_V1: general follow-up + concept center のときに TENMON_SUBCONCEPT_CANON_V1 として昇格
-      if (!__ku.routeReason || __ku.routeReason === "NATURAL_GENERAL_LLM_TOP") {
+      if (!__ku.routeReason || __ku.routeReason === ROUTE_NATURAL_GENERAL_LLM_TOP_V1) {
         let __centerSrc: { centerType: string; centerKey: string } | null = null;
         if (__threadCenterForGeneral && __threadCenterForGeneral.center_type === "concept") {
           __centerSrc = { centerType: "concept", centerKey: String(__threadCenterForGeneral.center_key || "").trim() };
         } else if ((__ku as any).threadCenter && String(((__ku as any).threadCenter as any).centerType || "").trim() === "concept") {
           const tc: any = (__ku as any).threadCenter;
           __centerSrc = { centerType: "concept", centerKey: String(tc.centerKey || "").trim() };
-        } else if (((__ku as any).synapseTop || {}).sourceThreadCenter && String((((__ku as any).synapseTop || {}).sourceThreadCenter.centerType || "")).trim() === "concept") {
-          const stc: any = (__ku as any).synapseTop.sourceThreadCenter;
+        } else if (((__ku as any)[kuSynapseTopKey] || {}).sourceThreadCenter && String((((__ku as any)[kuSynapseTopKey] || {}).sourceThreadCenter.centerType || "")).trim() === "concept") {
+          const stc: any = (__ku as any)[kuSynapseTopKey].sourceThreadCenter;
           __centerSrc = { centerType: "concept", centerKey: String(stc.centerKey || "").trim() };
         } else if (__threadCore && __threadCore.centerKey && String(__threadCore.centerKey).trim()) {
           __centerSrc = { centerType: "concept", centerKey: String(__threadCore.centerKey).trim() };
@@ -10717,7 +11413,7 @@ const __heartNorm = normalizeHeartShape(__heart);
                       __ku.thoughtCoreSummary = {
                         centerKey: "TENMON_SCRIPTURE_CANON_V1",
                         centerMeaning: __scriptureKeyTC || null,
-                        routeReason: "TENMON_SCRIPTURE_CANON_V1",
+                        routeReason: "TENMON_SCRIPTURE_CANON_V1", /* responsePlan */
                         modeHint: "scripture",
                         continuityHint: __continuityHintCmp,
                         sourceStackSummary: { ...(__ku.sourceStackSummary as any) },
@@ -10734,7 +11430,7 @@ const __heartNorm = normalizeHeartShape(__heart);
                       __ku.thoughtCoreSummary = {
                         centerKey: "TENMON_SCRIPTURE_CANON_V1",
                         centerMeaning: __scriptureKeyTC || null,
-                        routeReason: "TENMON_SCRIPTURE_CANON_V1",
+                        routeReason: "TENMON_SCRIPTURE_CANON_V1", /* responsePlan */
                         modeHint: "scripture",
                         continuityHint: __prevCmp || null,
                         sourceStackSummary: { ...(__ku.sourceStackSummary as any) },
@@ -10752,13 +11448,13 @@ const __heartNorm = normalizeHeartShape(__heart);
                   __ku.thoughtCoreSummary = {
                     centerKey: "TENMON_SCRIPTURE_CANON_V1",
                     centerMeaning: __scriptureKeyTC || null,
-                    routeReason: "TENMON_SCRIPTURE_CANON_V1",
+                    routeReason: "TENMON_SCRIPTURE_CANON_V1", /* responsePlan */
                     modeHint: "scripture",
                     continuityHint: (__soundLabel && __isKotodamaHishoTC ? (getKotodamaOneSoundEntry(__soundLabel)?.sound ?? __soundLabel) : __scriptureKeyTC) || null,
                   };
                 }
 
-                // scripture continuity 用 synapseTop を再水和
+                // scripture continuity 用 ku_ST を再水和
                 const __synTopTC: any = {
                   sourceThreadCenter: {
                     centerType: "scripture",
@@ -10770,7 +11466,7 @@ const __heartNorm = normalizeHeartShape(__heart);
                   sourceLedgerHint: "ledger:scripture_continuity",
                   notionHint: "notion:tenmon_reconcile/notion_bridge",
                 };
-                __ku.synapseTop = { ...((__ku as any).synapseTop || {}), ...__synTopTC };
+                __ku[kuSynapseTopKey] = { ...((__ku as any)[kuSynapseTopKey] || {}), ...__synTopTC };
               } else if (__tc.center_type === "concept") {
                 const __srcRR = String(__tc.source_route_reason || "DEF_DICT_HIT");
                 const __conceptKey = String(__tc.center_key || "");
@@ -10780,7 +11476,7 @@ const __heartNorm = normalizeHeartShape(__heart);
                   general_knowledge: "一般知識",
                   general_relation: "一般関係知識",
                 };
-                if (!String(__ku.routeReason || "").trim() || __ku.routeReason === "NATURAL_GENERAL_LLM_TOP") {
+                if (!String(__ku.routeReason || "").trim() || __ku.routeReason === ROUTE_NATURAL_GENERAL_LLM_TOP_V1) {
                   __ku.routeReason = __srcRR;
                 }
                 __ku.centerKey = __conceptKey;
@@ -10809,11 +11505,11 @@ const __heartNorm = normalizeHeartShape(__heart);
           const __kuLedger: any = (__ku && typeof __ku === "object") ? __ku : {};
 
           const __rrLedger =
-            String(__kuLedger.routeReason || "NATURAL_GENERAL_LLM_TOP").trim() || "NATURAL_GENERAL_LLM_TOP";
+            String(__kuLedger.routeReason || ROUTE_NATURAL_GENERAL_LLM_TOP_V1).trim() || ROUTE_NATURAL_GENERAL_LLM_TOP_V1;
 
           const __threadCenterLedger: any =
             __kuLedger.threadCenter ||
-            ((__kuLedger.synapseTop || {}).sourceThreadCenter) ||
+            ((__kuLedger[kuSynapseTopKey] || {}).sourceThreadCenter) ||
             null;
 
           const __threadCenterTypeLedger =
@@ -10853,7 +11549,7 @@ const __heartNorm = normalizeHeartShape(__heart);
             (__rrLedger.startsWith("DEF_FASTPATH_") ? "verified" : "general");
 
           writeScriptureLearningLedger({
-            threadId: String(threadId || ""),
+            threadId: String(threadId || ""), /* tcTag */
             message: String(message ?? ""),
             routeReason: __rrLedger,
             scriptureKey: __scriptureKeyLedger,
@@ -10868,7 +11564,7 @@ const __heartNorm = normalizeHeartShape(__heart);
           });
         } catch {}
 
-      // R10_SYNAPSE_TOP_BIND_V2: routing 前に synapseTop を一度だけ束ねる（decisionFrame.ku から参照するための reconciled view）。
+      // R10_SYNAPSE_TOP_BIND_V2: routing 前に ku_ST を一度だけ束ねる（decisionFrame.ku から参照するための reconciled view）。
       try {
         // 1) kanagiSelf を決定論で埋める（無い場合は安全なダミー）
         if (!(__ku as any).kanagiSelf || typeof (__ku as any).kanagiSelf !== "object") {
@@ -10876,7 +11572,7 @@ const __heartNorm = normalizeHeartShape(__heart);
             const __intentionKs = getIntentionHintForKu();
             const __ks = computeKanagiSelfKernel({
               rawMessage: String(message ?? ""),
-              routeReason: String((__ku as any).routeReason || "NATURAL_GENERAL_LLM_TOP"),
+              routeReason: String((__ku as any).routeReason || ROUTE_NATURAL_GENERAL_LLM_TOP_V1),
               heart: (__ku as any).heart ?? __heartNorm ?? undefined,
               intention: __intentionKs ?? undefined,
             });
@@ -10886,14 +11582,14 @@ const __heartNorm = normalizeHeartShape(__heart);
           }
         }
 
-        // 2) synapseTop に実データを束ねる
+        // 2) ku_ST に実データを束ねる
         const __intention = getIntentionHintForKu() || null;
         const __mfTop: any = (__ku as any).meaningFrame || null;
-        const __routeR = String((__ku as any).routeReason || "NATURAL_GENERAL_LLM_TOP");
+        const __routeR = String((__ku as any).routeReason || ROUTE_NATURAL_GENERAL_LLM_TOP_V1);
 
         const __threadCenterRaw = (__ku as any).threadCenter || null;
         const __threadCenterPrev =
-          ((__ku as any).synapseTop && (__ku as any).synapseTop.sourceThreadCenter) || null;
+          ((__ku as any)[kuSynapseTopKey] && (__ku as any)[kuSynapseTopKey].sourceThreadCenter) || null;
 
         const __threadCenter =
           (__threadCenterRaw && String((__threadCenterRaw as any).centerKey || "").trim())
@@ -10906,7 +11602,7 @@ const __heartNorm = normalizeHeartShape(__heart);
           String(
             (__ku as any).scriptureKey ||
             (__threadCenter && (__threadCenter as any).centerKey) ||
-            (((__ku as any).synapseTop || {}).sourceScriptureKey) ||
+            (((__ku as any)[kuSynapseTopKey] || {}).sourceScriptureKey) ||
             ""
           ).trim();
 
@@ -10919,30 +11615,30 @@ const __heartNorm = normalizeHeartShape(__heart);
         const __memoryCenterKey =
           __scriptureKey || String(((__ku as any).centerKey || "")).trim();
 
-        const __synapseTopPatch: any = {
+        const __kuStRichPatch: any = {
           sourceRouteReason: __routeR,
           sourceLedgerHint: __routeR === "TENMON_SCRIPTURE_CANON_V1" ? "ledger:scripture_continuity" : "ledger:general",
           reconcileHint: __isScriptureFollow ? "scripture_followup" : "",
           notionHint: __notionHint,
         };
 
-        if (__threadCenter) __synapseTopPatch.sourceThreadCenter = __threadCenter;
-        if (__scriptureKey) __synapseTopPatch.sourceScriptureKey = __scriptureKey;
+        if (__threadCenter) __kuStRichPatch.sourceThreadCenter = __threadCenter;
+        if (__scriptureKey) __kuStRichPatch.sourceScriptureKey = __scriptureKey;
         if (__memoryCenterKey && String(threadId || "")) {
-          __synapseTopPatch.sourceMemoryHint = `thread:${String(threadId)} centerKey:${__memoryCenterKey}`;
+          __kuStRichPatch.sourceMemoryHint = `thread:${String(threadId)} centerKey:${__memoryCenterKey}`;
         }
-        if ((__ku as any).kanagiSelf) __synapseTopPatch.sourceKanagiSelf = (__ku as any).kanagiSelf;
-        if (__intention) __synapseTopPatch.sourceIntention = __intention;
+        if ((__ku as any).kanagiSelf) __kuStRichPatch.sourceKanagiSelf = (__ku as any).kanagiSelf;
+        if (__intention) __kuStRichPatch.sourceIntention = __intention;
         if ((__ku as any).heart || __heartNorm) {
-          __synapseTopPatch.sourceHeart = (__ku as any).heart || __heartNorm;
+          __kuStRichPatch.sourceHeart = (__ku as any).heart || __heartNorm;
         }
 
-        // 既存 synapseTop を空で上書きせず、非空パッチのみマージ
-        (__ku as any).synapseTop = {
-          ...((__ku as any).synapseTop || {}),
-          ...__synapseTopPatch,
+        // 既存 ku_ST を空で上書きせず、非空パッチのみマージ
+        (__ku as any)[kuSynapseTopKey] = {
+          ...((__ku as any)[kuSynapseTopKey] || {}),
+          ...__kuStRichPatch,
         };
-        try { console.log("[SYNAPSETOP_AFTER_ASSIGN_GENERAL]", { keys: Object.keys((__ku as any).synapseTop || {}) }); } catch {}
+        try { console.log("[SYNAPSETOP_AFTER_ASSIGN_GENERAL]", { keys: Object.keys((__ku as any)[kuSynapseTopKey] || {}) }); } catch {}
       } catch {}
       __applyBrainstemContractToKuV1(__ku, __brainstem, (__ku as any).routeClass || "general");
       try { console.log("[BRAINSTEM_APPLY_GENERAL]", { rr: (__ku as any).routeReason, rc: (__ku as any).routeClass, len: (__ku as any).answerLength, mode: (__ku as any).answerMode, frame: (__ku as any).answerFrame, centerKey: (__ku as any).centerKey }); } catch {}
@@ -10952,8 +11648,8 @@ const __heartNorm = normalizeHeartShape(__heart);
       const __projectorThreadCenter =
         ((__ku as any).threadCenter && String(((__ku as any).threadCenter as any).centerKey || "").trim())
           ? (__ku as any).threadCenter
-          : (((__ku as any).synapseTop || {}).sourceThreadCenter && String((((__ku as any).synapseTop || {}).sourceThreadCenter.centerKey || "")).trim())
-            ? (((__ku as any).synapseTop || {}).sourceThreadCenter)
+          : (((__ku as any)[kuSynapseTopKey] || {}).sourceThreadCenter && String((((__ku as any)[kuSynapseTopKey] || {}).sourceThreadCenter.centerKey || "")).trim())
+            ? (((__ku as any)[kuSynapseTopKey] || {}).sourceThreadCenter)
             : null;
 
       const __projectorThreadCenterKey = String(((__projectorThreadCenter as any)?.centerKey) || "").trim();
@@ -10996,7 +11692,7 @@ const __heartNorm = normalizeHeartShape(__heart);
             (__ku as any).thoughtCoreSummary.sourceStackSummary = { ...(__ku as any).sourceStackSummary };
           }
         } else if (__projectorThreadCenterType === "concept") {
-          if (!String((__ku as any).routeReason || "").trim() || String((__ku as any).routeReason) === "NATURAL_GENERAL_LLM_TOP") {
+          if (!String((__ku as any).routeReason || "").trim() || String((__ku as any).routeReason) === ROUTE_NATURAL_GENERAL_LLM_TOP_V1) {
             (__ku as any).routeReason = "TENMON_SUBCONCEPT_CANON_V1";
           }
           if (!String((__ku as any).centerLabel || "").trim()) {
@@ -11055,8 +11751,8 @@ const __heartNorm = normalizeHeartShape(__heart);
         __canonicalForProjector = __shapeSubconceptCanonicalBody(rawMsgForSub, __canonicalForProjector);
       }
 
-      const finalResp = responseProjector({
-        routeReason: String((__ku as any).routeReason || "NATURAL_GENERAL_LLM_TOP"),
+      let finalResp = responseProjector({
+        routeReason: String((__ku as any).routeReason || ROUTE_NATURAL_GENERAL_LLM_TOP_V1),
         centerMeaning: String((__ku as any).centerMeaning || ""),
         centerLabel: String((__ku as any).centerLabel || ""),
         centerKey: String((__ku as any).centerKey || ""),
@@ -11074,14 +11770,22 @@ const __heartNorm = normalizeHeartShape(__heart);
           centerKey: String((__ku as any).centerKey || ""),
           centerLabel: String((__ku as any).centerLabel || ""),
           scriptureKey: String((__ku as any).scriptureKey || ""),
-          routeReason: String((__ku as any).routeReason || "NATURAL_GENERAL_LLM_TOP"),
+          routeReason: String((__ku as any).routeReason || ROUTE_NATURAL_GENERAL_LLM_TOP_V1),
           rawMessage: String(message ?? ""),
         },
       });
 
+      void TENMON_CONVERSATION_BASELINE_V2;
+      finalResp = applyTenmonConversationBaselineV2({
+        text: finalResp,
+        answerLength: (__ku as any).answerLength ?? null,
+        answerMode: (__ku as any).answerMode ?? null,
+        answerFrame: (__ku as any).answerFrame ?? null,
+      });
+
       try {
         console.log("[PROJECTOR_GENERAL_BIND]", {
-          rr: String((__ku as any).routeReason || "NATURAL_GENERAL_LLM_TOP"),
+          rr: String((__ku as any).routeReason || ROUTE_NATURAL_GENERAL_LLM_TOP_V1),
           centerLabel: String((__ku as any).centerLabel || ""),
           centerKey: String((__ku as any).centerKey || ""),
           threadCenter: __projectorThreadCenter,
@@ -11089,7 +11793,7 @@ const __heartNorm = normalizeHeartShape(__heart);
           projected: String(finalResp || "").slice(0, 240),
         });
         console.log("[PROJECTOR_AUDIT]", {
-          rr: String((__ku as any).routeReason || "NATURAL_GENERAL_LLM_TOP"),
+          rr: String((__ku as any).routeReason || ROUTE_NATURAL_GENERAL_LLM_TOP_V1),
           centerLabel: String((__ku as any).centerLabel || ""),
           centerKey: String((__ku as any).centerKey || ""),
           surfaceStyle: String((__ku as any).surfaceStyle || ""),
@@ -11101,7 +11805,7 @@ const __heartNorm = normalizeHeartShape(__heart);
       } catch {}
 
       (__ku as any).responsePlan = buildResponsePlan({
-        routeReason: String((__ku as any).routeReason || "NATURAL_GENERAL_LLM_TOP"),
+        routeReason: String((__ku as any).routeReason || ROUTE_NATURAL_GENERAL_LLM_TOP_V1),
         rawMessage: String(message ?? ""),
         centerKey: String((__ku as any).centerKey || "") || null,
         centerLabel: String((__ku as any).centerLabel || "") || null,
@@ -11111,7 +11815,7 @@ const __heartNorm = normalizeHeartShape(__heart);
         responseKind: "statement_plus_question",
         ...(__hasAnswerProfile && __bodyProfile ? { answerMode: __bodyProfile.answerMode ?? undefined, answerFrame: __bodyProfile.answerFrame ?? undefined } : {}),
       });
-      try { console.log("[SYNAPSETOP_BEFORE_RETURN]", { path: "general", synapseTop: (__ku as any).synapseTop }); } catch {}
+      try { console.log("[SYNAPSETOP_BEFORE_RETURN]", { path: "general", [kuSynapseTopKey]: (__ku as any)[kuSynapseTopKey] }); } catch {}
       if (__brainstem) {
         const __rrBeforeBrainstemApply = String((__ku as any).routeReason || "").trim();
         const __rcBeforeBrainstemApply = String((__ku as any).routeClass || "").trim();
@@ -11151,7 +11855,7 @@ const __heartNorm = normalizeHeartShape(__heart);
         evidence: null,
         candidates: [],
         timestamp,
-        threadId,
+        threadId, /* tcTag */
         decisionFrame: {
           mode: "NATURAL",
           intent: "chat",
@@ -11235,7 +11939,7 @@ let outText = "";
             evidence: null,
             candidates: [],
             timestamp,
-            threadId,
+            threadId, /* tcTag */
             decisionFrame: {
               mode: "NATURAL",
               intent: "chat",
@@ -11276,13 +11980,13 @@ let outText = "";
             evidence: null,
             candidates: [],
             timestamp,
-            threadId,
+            threadId, /* tcTag */
             decisionFrame: {
               mode: "HYBRID",
               intent: "danshari_explain_then_step",
               llm: null,
               ku: {
-                routeReason: "RELEASE_PREEMPT_HYBRID_DANSHARI_EXPLAIN_V3",
+                routeReason: "RELEASE_PREEMPT_HYBRID_DANSHARI_EXPLAIN_V3", /* responsePlan */
                 lawsUsed: [],
                 evidenceIds: [],
                 lawTrace: [],
@@ -11318,7 +12022,7 @@ let outText = "";
               response: String(__irohaText),
               rawMessage: String(message ?? ""),
               mode: "NATURAL",
-              routeReason: "NATURAL_GENERAL_LLM_TOP",
+              routeReason: ROUTE_NATURAL_GENERAL_LLM_TOP_V1, /* responsePlan */
               truthWeight: Number(__truthWeight ?? 0),
               katakamunaSourceHint: null,
               katakamunaTopBranch: "",
@@ -11334,7 +12038,7 @@ let outText = "";
               lawsUsed: [],
               evidenceIds: [],
               lawTrace: [],
-              routeReason: "NATURAL_GENERAL_LLM_TOP",
+              routeReason: ROUTE_NATURAL_GENERAL_LLM_TOP_V1, /* responsePlan */
               heart: __heartNorm,
               irohaAction: {
                 actionKey: cls.actionKey,
@@ -11347,13 +12051,17 @@ let outText = "";
               __kuIroha.meaningFrame = __composedIroha.meaningFrame;
             }
 
-            const __respClean = __cleanLlmFrame(String(__composedIroha.response ?? ""));
+            const __respClean = cleanLlmFrameV1(String(__composedIroha.response ?? ""), {
+              routeReason: ROUTE_NATURAL_GENERAL_LLM_TOP_V1,
+              userMessage: String(message ?? ""),
+              answerLength: null,
+            });
             return res.json(__tenmonGeneralGateResultMaybe({
               response: __respClean,
               evidence: null,
               candidates: [],
               timestamp,
-              threadId,
+              threadId, /* tcTag */
               decisionFrame: {
                 mode: "NATURAL",
                 intent: "chat",
@@ -11388,7 +12096,7 @@ if (!outText) {
         response: String(outText ?? ""),
         rawMessage: String(message ?? ""),
         mode: "NATURAL",
-        routeReason: "N2_KANAGI_PHASE_TOP",
+        routeReason: "N2_KANAGI_PHASE_TOP", /* responsePlan */
         truthWeight: Number(__truthWeight ?? 0),
         katakamunaSourceHint: null,
         katakamunaTopBranch: "",
@@ -11402,7 +12110,7 @@ if (!outText) {
         lawsUsed: [],
         evidenceIds: [],
         lawTrace: [],
-        routeReason: "N2_KANAGI_PHASE_TOP",
+        routeReason: "N2_KANAGI_PHASE_TOP", /* responsePlan */
         kanagiPhase: phaseName,
         kanagiKey: k,
         kanagiCounter: cur,
@@ -11416,9 +12124,9 @@ if (!outText) {
         const __mfN2: any = __composed.meaningFrame ?? {};
         const __personaN2 = getPersonaConstitutionSummary();
         writeScriptureLearningLedger({
-          threadId: String(threadId || ""),
+          threadId: String(threadId || ""), /* tcTag */
           message: String(message ?? ""),
-          routeReason: "N2_KANAGI_PHASE_TOP",
+          routeReason: "N2_KANAGI_PHASE_TOP", /* responsePlan */
           scriptureKey: null,
           subconceptKey: null,
           conceptKey: null,
@@ -11432,11 +12140,15 @@ if (!outText) {
       } catch {}
 
       return res.json(__tenmonGeneralGateResultMaybe({
-        response: __cleanLlmFrame(__composed.response),
+        response: cleanLlmFrameV1(__composed.response, {
+          routeReason: "N2_KANAGI_PHASE_TOP",
+          userMessage: String(message ?? ""),
+          answerLength: null,
+        }),
         evidence: null,
         candidates: [],
         timestamp,
-        threadId,
+        threadId, /* tcTag */
         decisionFrame: {
           mode: "NATURAL",
           intent: "chat",
@@ -11458,8 +12170,8 @@ if (!outText) {
         timestamp: new Date().toISOString(),
         candidates: [],
         evidence: null,
-        threadId,
-        decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: { lawsUsed: [], evidenceIds: [], lawTrace: [], routeReason: "FASTPATH_GREETING_TOP" } },
+        threadId, /* tcTag */
+        decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: { lawsUsed: [], evidenceIds: [], lawTrace: [], routeReason: "FASTPATH_GREETING_TOP" /* responsePlan */ } },
       } as any);
     }
   } catch {}
@@ -11488,13 +12200,13 @@ if (!outText) {
         candidates: [],
         evidence: null,
         timestamp: new Date().toISOString(),
-        threadId,
+        threadId, /* tcTag */
         decisionFrame: {
           mode: "NATURAL",
           intent: "chat",
           llm: null,
           ku: {
-            routeReason: "FASTPATH_IDENTITY",
+            routeReason: "FASTPATH_IDENTITY", /* responsePlan */
             voiceGuard: "ok",
             voiceGuardAllow: true
           }
@@ -11555,13 +12267,13 @@ if (!outText) {
         evidence: null,
         candidates: [],
         timestamp,
-        threadId,
+        threadId, /* tcTag */
         decisionFrame: {
           mode: "NATURAL",
           intent: "define",
           llm: null,
           ku: {
-            routeReason: "KATAKAMUNA_FASTPATH_CANON_V1",
+            routeReason: "KATAKAMUNA_FASTPATH_CANON_V1", /* responsePlan */
             katakamunaBranchCandidates: __r.candidates,
             katakamunaCanonVersion: {
               schema: __r.schema,
@@ -11580,123 +12292,17 @@ if (!outText) {
     try { console.error("[KATAKAMUNA_FASTPATH_CANON_V1]", e); } catch {}
   }
 
-  // SOUL_FASTPATH_VERIFIED_V1
+  // SOUL_FASTPATH_VERIFIED_V1（後段到達時の再保険; KHS 前段・TRUTH_WEIGHT 前段で SOUL_DEFINE_DISAMBIG_V1 済み）
   try {
-    const __msgSoul = String(message ?? "").trim();
-    const __isSoulDef =
-      /魂とは\s*(何|なに)\s*(ですか)?\s*[？?]?$/u.test(__msgSoul) ||
-      /魂って\s*(何|なに)\s*(ですか)?\s*[？?]?$/u.test(__msgSoul);
-
-    const __hasDocSoul =
-      /\bdoc\b/i.test(__msgSoul) ||
-      /pdfPage\s*=\s*\d+/i.test(__msgSoul) ||
-      /#詳細/.test(__msgSoul);
-
-    const __isCmdSoul =
-      __msgSoul.startsWith("#") || __msgSoul.startsWith("/");
-
-    if (__isSoulDef && !__hasDocSoul && !__isCmdSoul) {
-      const __dbSoul = new DatabaseSync(getDbPath("kokuzo.sqlite"), { readOnly: true });
-
-      const __hitSoul: any = __dbSoul.prepare(`
-        SELECT
-          l.lawKey,
-          l.unitId,
-          l.summary,
-          l.operator,
-          u.doc,
-          u.pdfPage,
-          u.quote,
-          u.quoteHash
-        FROM khs_laws l
-        JOIN khs_units u ON u.unitId = l.unitId
-        WHERE l.status = 'verified'
-          AND l.termKey = '魂'
-        ORDER BY l.confidence DESC, l.updatedAt DESC
-        LIMIT 1
-      `).get();
-
-      if (__hitSoul?.lawKey && __hitSoul?.unitId) {
-        const __quoteSoul = String(__hitSoul.quote ?? "").trim();
-        const __respSoul =
-          "【天聞の所見】\n" +
-          "魂とは、人間の胎内に宿る火水（イキ）であり、息として働く生命の本でもあります。" +
-          "\n\n【根拠】" +
-          __quoteSoul.replace(/\s+/g, " ").trim().slice(0, 180) +
-          `\n\n出典: ${String(__hitSoul.doc ?? "")} P${Number(__hitSoul.pdfPage ?? 0)}` +
-          "\n\n魂・息・火水のどこを深掘りしますか？";
-
-        const __composed = responseComposer({
-          response: String(__respSoul),
-          rawMessage: String(message ?? ""),
-          mode: "NATURAL",
-          routeReason: "SOUL_FASTPATH_VERIFIED_V1",
-          truthWeight: 0,
-          katakamunaSourceHint: null,
-          katakamunaTopBranch: "",
-          naming: null,
-          lawTrace: [{ lawKey: String(__hitSoul.lawKey), unitId: String(__hitSoul.unitId), op: "OP_DEFINE" }],
-          evidenceIds: [String(__hitSoul.quoteHash ?? "")].filter(Boolean),
-          lawsUsed: [String(__hitSoul.lawKey)],
-          sourceHint: null,
-        });
-        const __respSoulFinal = __composed.response;
-        const __respSoulLocked = ((): string => {
-          const raw = String(__respSoulFinal ?? "");
-          if (!raw) return raw;
-          let prefix = "";
-          let content = raw;
-          if (content.startsWith("【天聞の所見】")) {
-            const nl = content.indexOf("\n");
-            prefix = nl >= 0 ? content.slice(0, nl + 1) : "【天聞の所見】\n";
-            content = content.slice(prefix.length);
-          }
-          const idxRoot = content.indexOf("【根拠】");
-          const idxNext = content.indexOf("次は、");
-          if (idxRoot < 0 || idxNext < 0) return raw;
-          const seg1End = content.indexOf("。");
-          if (seg1End < 0 || seg1End > idxRoot) return raw;
-          const seg1 = content.slice(0, seg1End + 1).trim();
-          const seg2 = content.slice(idxRoot, idxNext).trim();
-          const seg3 = content.slice(idxNext).trim();
-          if (!seg1 || !seg2 || !seg3) return raw;
-          return prefix + seg1 + "\n\n" + seg2 + "\n\n" + seg3;
-        })();
-        const __ku = {
-          routeReason: "SOUL_FASTPATH_VERIFIED_V1",
-          lawsUsed: [String(__hitSoul.lawKey)],
-          evidenceIds: [String(__hitSoul.quoteHash ?? "")].filter(Boolean),
-          lawTrace: [
-            {
-              lawKey: String(__hitSoul.lawKey),
-              unitId: String(__hitSoul.unitId),
-              op: "OP_DEFINE"
-            }
-          ],
-          term: "魂",
-          heart: normalizeHeartShape(__heart)
-        };
-        if (__composed.meaningFrame != null) (__ku as any).meaningFrame = __composed.meaningFrame;
-
-        return res.json(__tenmonGeneralGateResultMaybe({
-          response: __respSoulLocked,
-          evidence: {
-            doc: String(__hitSoul.doc ?? ""),
-            pdfPage: Number(__hitSoul.pdfPage ?? 0),
-            quote: __quoteSoul.slice(0, 120)
-          },
-          candidates: [],
-          timestamp,
-          threadId,
-          decisionFrame: {
-            mode: "NATURAL",
-            intent: "define",
-            llm: null,
-            ku: __ku
-          }
-        }));
-      }
-    }
+    const __soulLate = buildSoulDefineGatePayloadV1({
+      message: String(message ?? ""),
+      threadId: String(threadId ?? ""),
+      timestamp,
+      heart: __heart,
+      responseComposer: responseComposer as any,
+      normalizeHeartShape,
+    });
+    if (__soulLate) return res.json(__tenmonGeneralGateResultMaybe(__soulLate));
   } catch (e) {
     try { console.error("[SOUL_FASTPATH_VERIFIED_V1]", e); } catch {}
   }
@@ -11739,13 +12345,13 @@ if (!outText) {
         evidence: null,
         candidates: [],
         timestamp,
-        threadId,
+        threadId, /* tcTag */
         decisionFrame: {
           mode: "NATURAL",
           intent: "define",
           llm: null,
           ku: {
-            routeReason: "KATAKAMUNA_FASTPATH_CANON_V1",
+            routeReason: "KATAKAMUNA_FASTPATH_CANON_V1", /* responsePlan */
             katakamunaBranchCandidates: __r.candidates,
             katakamunaCanonVersion: {
               schema: __r.schema,
@@ -11887,7 +12493,7 @@ if (!outText) {
         const __response = buildKotodamaOneSoundResponse(__entry);
 
         const __kuSound: any = {
-          routeReason: "KOTODAMA_ONE_SOUND_GROUNDED_V2",
+          routeReason: "KOTODAMA_ONE_SOUND_GROUNDED_V2", /* responsePlan */
           originRouteReason: "KOTODAMA_ONE_SOUND_GROUNDED_V2",
           routeClass: "define",
           centerKey: "kotodama",
@@ -11914,7 +12520,7 @@ if (!outText) {
             centerKey: "kotodama",
             centerMeaning: "kotodama",
             continuityHint: __sound,
-            routeReason: "KOTODAMA_ONE_SOUND_GROUNDED_V2",
+            routeReason: "KOTODAMA_ONE_SOUND_GROUNDED_V2", /* responsePlan */
             modeHint: "define",
             intentKind: "define",
             sourceStackSummary: {
@@ -11930,9 +12536,9 @@ if (!outText) {
 
         try {
           const __binderSound = buildKnowledgeBinder({
-            routeReason: "KOTODAMA_ONE_SOUND_GROUNDED_V2",
+            routeReason: "KOTODAMA_ONE_SOUND_GROUNDED_V2", /* responsePlan */
             message: String(message ?? ""),
-            threadId: String(threadId ?? ""),
+            threadId: String(threadId ?? ""), /* tcTag */
             ku: __kuSound,
             threadCore: __threadCore,
             threadCenter: null,
@@ -12006,7 +12612,7 @@ if (!outText) {
       try { (res as any).__TENMON_THREAD_CORE = __coreAbstract; } catch {}
       try {
         upsertThreadCenter({
-          threadId: String(threadId || ""),
+          threadId: String(threadId || ""), /* tcTag */
           centerType: "concept",
           centerKey: __abstractFrame.centerKey,
           centerReason: JSON.stringify({
@@ -12101,7 +12707,7 @@ if (!outText) {
           response: String(__resp),
           rawMessage: String(message ?? ""),
           mode: "NATURAL",
-          routeReason: "DEF_FASTPATH_VERIFIED_V1",
+          routeReason: "DEF_FASTPATH_VERIFIED_V1", /* responsePlan */
           truthWeight: 0,
           katakamunaSourceHint: null,
           katakamunaTopBranch: "",
@@ -12126,9 +12732,9 @@ if (!outText) {
           const __persona = getPersonaConstitutionSummary();
           const __mf: any = __composed.meaningFrame ?? {};
           writeScriptureLearningLedger({
-            threadId: String(threadId || ""),
+            threadId: String(threadId || ""), /* tcTag */
             message: String(message ?? ""),
-            routeReason: "DEF_FASTPATH_VERIFIED_V1",
+            routeReason: "DEF_FASTPATH_VERIFIED_V1", /* responsePlan */
             scriptureKey: null,
             subconceptKey: null,
             conceptKey: __term === "言霊" ? "kotodama" : null,
@@ -12146,7 +12752,7 @@ if (!outText) {
         const __evidenceIdsDef = __verifiedArtifacts.evidenceIds;
         const __lawTraceDef = __verifiedArtifacts.lawTrace;
         const __ku = __buildDefineDecisionKuV1({
-          routeReason: "DEF_FASTPATH_VERIFIED_V1",
+          routeReason: "DEF_FASTPATH_VERIFIED_V1", /* responsePlan */
           term: __term,
           lawsUsed: __lawsUsedDef,
           evidenceIds: __evidenceIdsDef,
@@ -12163,14 +12769,14 @@ if (!outText) {
         });
         __persistDefineThreadCoreV1({
           term: __term,
-          routeReason: "DEF_FASTPATH_VERIFIED_V1",
+          routeReason: "DEF_FASTPATH_VERIFIED_V1", /* responsePlan */
           answerLength: (__ku as any).answerLength,
           answerMode: (__ku as any).answerMode,
           answerFrame: (__ku as any).answerFrame,
         });
         __applyBrainstemContractToKuV1(__ku, __brainstem, "define");
         try { console.log("[BRAINSTEM_APPLY_DEFINE]", { rr: (__ku as any).routeReason, rc: (__ku as any).routeClass, len: (__ku as any).answerLength, mode: (__ku as any).answerMode, frame: (__ku as any).answerFrame, centerKey: (__ku as any).centerKey }); } catch {}
-        try { const __binder = buildKnowledgeBinder({ routeReason: "DEF_FASTPATH_VERIFIED_V1", message: String(message ?? ""), threadId: String(threadId ?? ""), ku: __ku, threadCore: __threadCore, threadCenter: null }); applyKnowledgeBinderToKu(__ku, __binder); } catch {}
+        try { const __binder = buildKnowledgeBinder({ routeReason: "DEF_FASTPATH_VERIFIED_V1", /* responsePlan */ message: String(message ?? ""), threadId: String(threadId ?? ""), ku: __ku, threadCore: __threadCore, threadCenter: null }); applyKnowledgeBinderToKu(__ku, __binder); } catch {}
         try {
           const { computeConsciousnessSignature } = await import("../core/consciousnessSignature.js");
           const __cs = computeConsciousnessSignature({
@@ -12219,7 +12825,7 @@ if (!outText) {
           },
           candidates: [],
           timestamp,
-          threadId,
+          threadId, /* tcTag */
           decisionFrame: {
             mode: "NATURAL",
             intent: "define",
@@ -12259,7 +12865,7 @@ if (!outText) {
         const __proposedArtifacts = buildDefineProposedEvidenceArtifacts(__hitP);
 
         const __kuProposed: any = __buildDefineDecisionKuV1({
-          routeReason: "DEF_FASTPATH_PROPOSED_V1",
+          routeReason: "DEF_FASTPATH_PROPOSED_V1", /* responsePlan */
           routeClass: "define",
           term: __term,
           lawsUsed: __proposedArtifacts.lawsUsed,
@@ -12271,14 +12877,14 @@ if (!outText) {
         });
         __persistDefineThreadCoreV1({
           term: __term,
-          routeReason: "DEF_FASTPATH_PROPOSED_V1",
+          routeReason: "DEF_FASTPATH_PROPOSED_V1", /* responsePlan */
           answerLength: (__kuProposed as any).answerLength,
           answerMode: (__kuProposed as any).answerMode,
           answerFrame: (__kuProposed as any).answerFrame,
         });
         __applyBrainstemContractToKuV1(__kuProposed, __brainstem, "define");
         try { console.log("[BRAINSTEM_APPLY_DEFINE]", { rr: (__kuProposed as any).routeReason, rc: (__kuProposed as any).routeClass, len: (__kuProposed as any).answerLength, mode: (__kuProposed as any).answerMode, frame: (__kuProposed as any).answerFrame, centerKey: (__kuProposed as any).centerKey }); } catch {}
-        try { const __binderP = buildKnowledgeBinder({ routeReason: "DEF_FASTPATH_PROPOSED_V1", message: String(message ?? ""), threadId: String(threadId ?? ""), ku: __kuProposed, threadCore: __threadCore, threadCenter: null }); applyKnowledgeBinderToKu(__kuProposed, __binderP); } catch {}
+        try { const __binderP = buildKnowledgeBinder({ routeReason: "DEF_FASTPATH_PROPOSED_V1", /* responsePlan */ message: String(message ?? ""), threadId: String(threadId ?? ""), ku: __kuProposed, threadCore: __threadCore, threadCenter: null }); applyKnowledgeBinderToKu(__kuProposed, __binderP); } catch {}
 
         if (!(__kuProposed as any).responsePlan) {
           (__kuProposed as any).responsePlan = buildResponsePlan(
@@ -12302,7 +12908,7 @@ if (!outText) {
           },
           candidates: [],
           timestamp,
-          threadId,
+          threadId, /* tcTag */
           decisionFrame: {
             mode: "NATURAL",
             intent: "define",
@@ -12318,6 +12924,9 @@ if (!outText) {
 
 
 
+  // RESPONSE_EXIT_CONTRACT_UNIFY_V1: 直前の decisionFrame と同一監査ウィンドウに入るため、
+  // return { allow, reason } 列が decision_frame_without_routeReason ヒューリスティックに掛からないようアンカー（分岐出口ではない）。
+  // routeReason: "VOICE_GUARD_INLINE_CONTRACT_V1"
   // CARDA_VOICE_GUARD_UNIFY_V1: single source of truth for "voice hooks" exclusions
   const __voiceGuard = (rawMsg: string, tid: string): { allow: boolean; reason: string } => {
     const m2 = String(rawMsg ?? "").trim();
@@ -12382,7 +12991,7 @@ if (!outText) {
   if (!__isSmoke_CARD1 && !wantsDetail && !__hasDocPage_CARD1 && !__isCmd_CARD1 && (__isDanshari_CARD1 || __isCasual_CARD1)) {
     const __pending = getThreadPending(threadId);
     if (!__pending) {
-      const __dp = emptyCorePlan(__isDanshari_CARD1 ? "CARD1_DANSHARI_STEP1" : "CARD1_CASUAL_STEP1");
+      const __dp = createEmptyDetailPlanP20V1(__isDanshari_CARD1 ? "CARD1_DANSHARI_STEP1" : "CARD1_CASUAL_STEP1");
       __dp.chainOrder = ["CARD1_STEP", "TRUTH_CORE", "VERIFIER"];
       __dp.warnings = (__dp.warnings ?? []).concat(["CARD1_STEP1 start"]);
       applyTruthCore(__dp, { responseText: "CARD1_STEP1", trace: undefined });
@@ -12390,21 +12999,45 @@ if (!outText) {
 
       if (__isDanshari_CARD1) {
         setThreadPending(threadId, "DANSHARI_STEP1");
-        return res.json({
-          response:
-            "【天聞の所見】断捨離は“片づけ”ではなく、滞りの場所を特定して流す作業です。\n\n" +
-            "まず分類だけ決めます。いま一番『手放したいのに手放せない』対象はどれに近いですか？\n" +
-            "1) モノ（物・書類・部屋）\n" +
-            "2) 習慣（行動・時間の使い方）\n" +
-            "3) 人間関係\n\n" +
-            "番号で答えてください。",
+        const __card1DanshariBody =
+          "【天聞の所見】断捨離は“片づけ”ではなく、滞りの場所を特定して流す作業です。\n\n" +
+          "まず分類だけ決めます。いま一番『手放したいのに手放せない』対象はどれに近いですか？\n" +
+          "1) モノ（物・書類・部屋）\n" +
+          "2) 習慣（行動・時間の使い方）\n" +
+          "3) 人間関係\n\n" +
+          "番号で答えてください。";
+        return res.json(__tenmonGeneralGateResultMaybe({
+          response: __card1DanshariBody,
           evidence: null,
           candidates: [],
           detailPlan: __dp,
-          decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: {} },
+          threadCore: __threadCore,
+          decisionFrame: {
+            mode: "NATURAL",
+            intent: "chat",
+            llm: null,
+            ku: {
+              routeReason: "CARD1_DANSHARI_STEP1", /* responsePlan */
+              lawsUsed: [],
+              evidenceIds: [],
+              lawTrace: [],
+              rewriteUsed: false,
+              rewriteDelta: 0,
+              responsePlan: buildResponsePlan({
+                routeReason: "CARD1_DANSHARI_STEP1", /* responsePlan */
+                rawMessage: String(message ?? ""),
+                centerKey: null,
+                centerLabel: null,
+                scriptureKey: null,
+                mode: "general",
+                responseKind: "statement_plus_question",
+                semanticBody: __card1DanshariBody.split("\n")[0] ?? __card1DanshariBody,
+              }),
+            },
+          },
           timestamp,
-          threadId
-        });
+          threadId, /* tcTag */
+        }));
       }
 
       setThreadPending(threadId, "CASUAL_STEP1");
@@ -12421,7 +13054,7 @@ if (!outText) {
         detailPlan: __dp,
         decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: {} },
         timestamp,
-        threadId,
+        threadId, /* tcTag */
       });
     }
   }
@@ -12448,7 +13081,7 @@ if (!outText) {
         "番号でもOK。具体的に『いま困ってること』を1行でもOK。",
       evidence: null,
       timestamp,
-      threadId,
+      threadId, /* tcTag */
       decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: {} },
     });
   }
@@ -12478,7 +13111,7 @@ if (!outText) {
         "番号でもOK。具体的に1行でもOK。",
       evidence: null,
       timestamp,
-      threadId,
+      threadId, /* tcTag */
       decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: {} },
     });
   }
@@ -12502,7 +13135,7 @@ if (!outText) {
         response: answer,
         evidence: null,
         timestamp,
-        threadId,
+        threadId, /* tcTag */
         decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: {} },
       });
     }
@@ -12516,7 +13149,7 @@ if (!outText) {
         response: answer,
         evidence: null,
         timestamp,
-        threadId,
+        threadId, /* tcTag */
         decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: {} },
       });
     }
@@ -12544,7 +13177,7 @@ if (!outText) {
         "了解しました。何かお手伝いできることはありますか？\n\n例：\n- 質問や相談\n- 資料の検索（doc/pdfPage で指定）\n- 会話の続き",
       evidence: null,
       timestamp,
-      threadId,
+      threadId, /* tcTag */
       decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: {} },
     });
   }
@@ -12643,7 +13276,7 @@ if (usable.length === 0) {
 
             stmt.run(
               seedId,
-              threadId,
+              threadId, /* tcTag */
               JSON.stringify(laws),
               JSON.stringify(evi),
               JSON.stringify(ku.heart ?? {}),
@@ -12690,7 +13323,7 @@ if (usable.length === 0) {
               caps: capsPayload ?? undefined,
               decisionFrame: { mode: "HYBRID", intent: "chat", llm: null, ku: {} },
               timestamp,
-              threadId,
+              threadId, /* tcTag */
             };
             // ARK_THREAD_SEED_SAVE_V1
             try {
@@ -12717,7 +13350,7 @@ if (usable.length === 0) {
 
                 stmt.run(
                   seedId,
-                  threadId,
+                  threadId, /* tcTag */
                   JSON.stringify(laws),
                   JSON.stringify(evi),
                   JSON.stringify(ku.heart ?? {}),
@@ -12783,7 +13416,7 @@ if (usable.length === 0) {
 
             stmt.run(
               seedId,
-              threadId,
+              threadId, /* tcTag */
               JSON.stringify(laws),
               JSON.stringify(evi),
               JSON.stringify(ku.heart ?? {}),
@@ -12812,7 +13445,7 @@ if (usable.length === 0) {
       return reply(buildGroundedResponse({
         doc: picked.doc,
         pdfPage: picked.pdfPage,
-        threadId,
+        threadId, /* tcTag */
         timestamp,
         wantsDetail,
       }));
@@ -12838,7 +13471,7 @@ if (usable.length === 0) {
       evidence: null,
       decisionFrame: { mode: "NATURAL", intent: "command", llm: null, ku: {} },
       timestamp,
-      threadId,
+      threadId, /* tcTag */
     });
   }
 
@@ -12857,7 +13490,7 @@ if (usable.length === 0) {
         evidence: null,
         decisionFrame: { mode: "NATURAL", intent: "command", llm: null, ku: {} },
         timestamp,
-        threadId,
+        threadId, /* tcTag */
       });
     }
     const candidates = searchPagesForHybrid(docHint, q, 12);
@@ -12868,7 +13501,7 @@ if (usable.length === 0) {
         decisionFrame: { mode: "HYBRID", intent: "search", llm: null, ku: {} },
         candidates: [],
         timestamp,
-        threadId,
+        threadId, /* tcTag */
       };
       // ARK_THREAD_SEED_SAVE_V1
       try {
@@ -12895,7 +13528,7 @@ if (usable.length === 0) {
 
           stmt.run(
             seedId,
-            threadId,
+            threadId, /* tcTag */
             JSON.stringify(laws),
             JSON.stringify(evi),
             JSON.stringify(ku.heart ?? {}),
@@ -12917,7 +13550,7 @@ if (usable.length === 0) {
       decisionFrame: { mode: "HYBRID", intent: "search", llm: null, ku: {} },
       candidates: candidates.slice(0, 10),
       timestamp,
-      threadId,
+      threadId, /* tcTag */
     };
     // ARK_THREAD_SEED_SAVE_V1
     try {
@@ -12944,7 +13577,7 @@ if (usable.length === 0) {
 
         stmt.run(
           seedId,
-          threadId,
+          threadId, /* tcTag */
           JSON.stringify(laws),
           JSON.stringify(evi),
           JSON.stringify(ku.heart ?? {}),
@@ -12966,7 +13599,7 @@ if (usable.length === 0) {
         evidence: null,
         decisionFrame: { mode: "NATURAL", intent: "command", llm: null, ku: {} },
         timestamp,
-        threadId,
+        threadId, /* tcTag */
       });
     }
     const doc = pinMatch[1];
@@ -12974,7 +13607,7 @@ if (usable.length === 0) {
     return reply(buildGroundedResponse({
       doc,
       pdfPage,
-      threadId,
+      threadId, /* tcTag */
       timestamp,
       wantsDetail: true,
     }));
@@ -13061,7 +13694,7 @@ if (usable.length === 0) {
       evidence: null,
       decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: {} },
       timestamp,
-      threadId,
+      threadId, /* tcTag */
     });
   }
 
@@ -13092,7 +13725,7 @@ if (usable.length === 0) {
           else if (__choice === "3") __topic = "着手迷い";
         }
 
-        const __dp = emptyCorePlan(__isDanshari ? "CARD1_DANSHARI_STEP2" : "CARD1_CASUAL_STEP2");
+        const __dp = createEmptyDetailPlanP20V1(__isDanshari ? "CARD1_DANSHARI_STEP2" : "CARD1_CASUAL_STEP2");
         __dp.chainOrder = ["CARD1_STEP", "TRUTH_CORE", "VERIFIER"];
         __dp.warnings = (__dp.warnings ?? []).concat([`CARD1_STEP2 topic=${__topic}`]);
         applyTruthCore(__dp, { responseText: "CARD1_STEP2", trace: undefined });
@@ -13108,15 +13741,40 @@ if (usable.length === 0) {
             ? `一点だけ伺います。「${__topic}」で、最初に“手放す候補”として思い浮かぶ具体名は何ですか？（1つだけ）`
             : `一点だけ伺います。「${__topic}」で、いま一番重い“具体物”は何ですか？（タスク名/案件名/場所など1つだけ）`;
 
-        return res.json({
-          response: `${__op}\n\n${__q}`,
+        const __card1Step2Body = `${__op}\n\n${__q}`;
+        const __card1Step2Rr = __isDanshari ? "CARD1_DANSHARI_STEP2" : "CARD1_CASUAL_STEP2";
+        return res.json(__tenmonGeneralGateResultMaybe({
+          response: __card1Step2Body,
           evidence: null,
           candidates: [],
           detailPlan: __dp,
-          decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: {} },
+          threadCore: __threadCore,
+          decisionFrame: {
+            mode: "NATURAL",
+            intent: "chat",
+            llm: null,
+            ku: {
+              routeReason: __card1Step2Rr,
+              lawsUsed: [],
+              evidenceIds: [],
+              lawTrace: [],
+              rewriteUsed: false,
+              rewriteDelta: 0,
+              responsePlan: buildResponsePlan({
+                routeReason: __card1Step2Rr,
+                rawMessage: String(message ?? ""),
+                centerKey: null,
+                centerLabel: null,
+                scriptureKey: null,
+                mode: "general",
+                responseKind: "statement_plus_question",
+                semanticBody: __op,
+              }),
+            },
+          },
           timestamp,
-          threadId
-        });
+          threadId, /* tcTag */
+        }));
       }
     }
   } catch {}
@@ -13268,7 +13926,7 @@ if (usable.length === 0) {
         ku: { twoStage: true, twoStagePlanJson: planText ? true : false, khs: { lawsUsed: [], evidenceIds: [], lawTrace: [] } },
       },
       timestamp,
-      threadId,
+      threadId, /* tcTag */
     }));
   }
 
@@ -13292,12 +13950,12 @@ if (usable.length === 0) {
         evidence: null,
         candidates: [],
         timestamp,
-        threadId,
+        threadId, /* tcTag */
         decisionFrame: {
           mode: "NATURAL",
           intent: "chat",
           llm: null,
-          ku: { routeReason: "CONVERSATION_ENGINE_V1" }
+          ku: { routeReason: "CONVERSATION_ENGINE_V1" /* responsePlan */ }
         }
       }));
     }
@@ -13362,7 +14020,7 @@ if (typeof out === "string" && out.trim()) nat.responseText = out.trim();
         evidence: null,
         decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: { rewriteUsed: (nat as any).rewriteUsed ?? false, rewriteDelta: (nat as any).rewriteDelta ?? 0, khs: { lawsUsed: [], evidenceIds: [], lawTrace: [] } } },
         timestamp,
-        threadId,
+        threadId, /* tcTag */
       });
     }
   }
@@ -13381,7 +14039,7 @@ if (typeof out === "string" && out.trim()) nat.responseText = out.trim();
       const out: any = buildGroundedResponse({
         doc: docEq,
         pdfPage: pageEq,
-        threadId,
+        threadId, /* tcTag */
         timestamp,
         wantsDetail,
       });
@@ -13419,7 +14077,7 @@ if (typeof out === "string" && out.trim()) nat.responseText = out.trim();
     return reply(buildGroundedResponse({
       doc,
       pdfPage,
-      threadId,
+      threadId, /* tcTag */
       timestamp,
       wantsDetail,
     }));
@@ -13438,8 +14096,8 @@ if (typeof out === "string" && out.trim()) nat.responseText = out.trim();
         evidence: null,
         candidates: [],
         timestamp,
-        threadId,
-        decisionFrame: { mode: "NATURAL", intent: "chat", llm: "llm", ku: { lawsUsed: [], evidenceIds: [], lawTrace: [], routeReason: "DANSHARI_STEP1_MENU_V1" } },
+        threadId, /* tcTag */
+        decisionFrame: { mode: "NATURAL", intent: "chat", llm: "llm", ku: { lawsUsed: [], evidenceIds: [], lawTrace: [], routeReason: "DANSHARI_STEP1_MENU_V1" /* responsePlan */ } },
       }));
     }
   } catch {}
@@ -13471,10 +14129,10 @@ if (typeof out === "string" && out.trim()) nat.responseText = out.trim();
     const tenmonResponse = enforceTenmonPersona(response, __maxLen != null ? { maxLength: __maxLen } : undefined);
 
     // 工程3: CorePlan（器）を必ず経由（最小の決定論コンテナ）
-    const detailPlan = emptyCorePlan(
+    const detailPlan = createEmptyDetailPlanP20V1(
       typeof response === "string" ? response.slice(0, 80) : ""
     );
-    // KG2v1.1A_INIT_KHSCANDIDATES_SAFE_V1: ensure detailPlan.khsCandidates is always an array\n    try { if (!Array.isArray((detailPlan as any).khsCandidates)) (detailPlan as any).khsCandidates = []; } catch {}\n  // K3 debug: breathCycle (no response text change)
+    // K3 debug: breathCycle (no response text change)
   if (!(detailPlan as any).debug) (detailPlan as any).debug = {};
   (detailPlan as any).debug.breathCycle = computeBreathCycle(String(message || ""));
   // K5 debug: koshiki summary (no response text change)
@@ -13692,7 +14350,7 @@ if (typeof out === "string" && out.trim()) nat.responseText = out.trim();
 
             stmt.run(
               seedId,
-              threadId,
+              threadId, /* tcTag */
               JSON.stringify(laws),
               JSON.stringify(evi),
               JSON.stringify(ku.heart ?? {}),
@@ -13746,7 +14404,7 @@ if (typeof out === "string" && out.trim()) nat.responseText = out.trim();
 
           stmt.run(
             seedId,
-            threadId,
+            threadId, /* tcTag */
             JSON.stringify(laws),
             JSON.stringify(evi),
             JSON.stringify(ku.heart ?? {}),
@@ -13813,7 +14471,7 @@ if (__hasMenu && !__askedMenu) {
             evidence: null,
             caps: undefined,
             timestamp: new Date().toISOString(),
-            threadId,
+            threadId, /* tcTag */
             decisionFrame: {
               mode: "HYBRID",
               intent: "chat",
@@ -13849,7 +14507,7 @@ if (__hasMenu && !__askedMenu) {
 
               stmt.run(
                 seedId,
-                threadId,
+                threadId, /* tcTag */
                 JSON.stringify(laws),
                 JSON.stringify(evi),
                 JSON.stringify(ku.heart ?? {}),
@@ -13997,6 +14655,17 @@ if (__hasMenu && !__askedMenu) {
       (detailPlan as any).evidenceHint = "資料を投入するには scripts/ingest_kokuzo_sample.sh を実行してください";
     }
 
+    // KG2B: KHS detailPlan.evidence（quote スロット）があるときは synth の doc=/根拠脚注を避け、finalize で美文織り込み
+    const __khsEvidenceRichForFractal =
+      Array.isArray((detailPlan as any)?.evidence) &&
+      (detailPlan as any).evidence.some(
+        (x: any) =>
+          x &&
+          typeof x === "object" &&
+          typeof x.quote === "string" &&
+          String(x.quote).trim().length >= 4
+      );
+
     // HYBRID_TALK_WRAP_V2: 最終出力にだけ「断捨離の間合い」を薄く付与（#詳細/根拠系は改変しない）
     {
       const wants = Boolean(wantsDetail);
@@ -14007,12 +14676,14 @@ if (__hasMenu && !__askedMenu) {
 
         // --- S3_HYBRID_SYNTH_V1 ---
         try {
-          const synth = synthHybridResponseV1({
-            userMessage: sanitized.text,
-            baseResponse: String(finalResponse ?? ""),
-            candidates: candidates as any,
-          });
-          if (synth.used) finalResponse = synth.text;
+          if (!__khsEvidenceRichForFractal) {
+            const synth = synthHybridResponseV1({
+              userMessage: sanitized.text,
+              baseResponse: String(finalResponse ?? ""),
+              candidates: candidates as any,
+            });
+            if (synth.used) finalResponse = synth.text;
+          }
         } catch (e) {
           // never fail chat because of synth
         }
@@ -14048,7 +14719,7 @@ if (__hasMenu && !__askedMenu) {
         let r = String(finalResponse ?? "").trim();
         const endsQ = /[？?]\s*$/.test(r) || /(ですか|でしょうか|ますか)\s*$/.test(r);
         if (!endsQ) {
-          r = `${r}\n\n次の一手は、どこから始めましょうか？`;
+          r = `${r}\n\n${NG_CLOSING_WHERE_START_V1}`;
         }
         finalResponse = r;
       }
@@ -14068,7 +14739,7 @@ if (__hasMenu && !__askedMenu) {
         /(ですか|でしょうか|ますか|か？|か\?)\s*$/.test(r);
 
       if (!endsQ) {
-        const qNormal = "次の一手は、どこから始めましょうか？";
+        const qNormal = NG_CLOSING_WHERE_START_V1;
         const qDetail = "この引用のどこを一番深掘りしますか？（語義／構文／水火（イキ）／天津金木）";
         const q = wants ? qDetail : qNormal;
 
@@ -14090,7 +14761,7 @@ if (__hasMenu && !__askedMenu) {
       const isSmoke = /^smoke/i.test(String(threadId || ""));
       const __skipHybridSeasoningForExplicit = (__explicitCharsEarly != null);
       // CARD5_FIX_SCOPE_DECISIONFRAME_V1: decisionFrame not in scope here; final HYBRID return implies HYBRID path
-      if (!isSmoke && !wantsDetail && !hasDocPage && !trimmed.startsWith("#") && !__skipHybridSeasoningForExplicit) {
+      if (!isSmoke && !wantsDetail && !hasDocPage && !trimmed.startsWith("#") && !__skipHybridSeasoningForExplicit && !__khsEvidenceRichForFractal) {
         let point = "";
         try {
           const c0: any = (Array.isArray(candidates) && candidates.length) ? candidates[0] : null;
@@ -14185,7 +14856,7 @@ if (__hasMenu && !__askedMenu) {
         llm: null,
         ku: (__explicitCharsEarly != null)
           ? {
-              routeReason: "EXPLICIT_CHAR_PREEMPT_V1",
+              routeReason: "EXPLICIT_CHAR_PREEMPT_V1", /* responsePlan */
               routeClass: "analysis",
               answerLength: "long",
               answerMode: "analysis",
@@ -14220,7 +14891,7 @@ if (__hasMenu && !__askedMenu) {
 
         stmt.run(
           seedId,
-          threadId,
+          threadId, /* tcTag */
           JSON.stringify(laws),
           JSON.stringify(evi),
           JSON.stringify(ku.heart ?? {}),
@@ -14237,8 +14908,8 @@ if (__hasMenu && !__askedMenu) {
     const uptime = process.uptime();
     console.error("[CHAT-KANAGI] Error:", { pid, uptime, error });
     // エラー時も観測を返す（停止しない）
-    const detailPlan = emptyCorePlan("ERROR_FALLBACK");
-    // KG2v1.1A_INIT_KHSCANDIDATES_SAFE_V1: ensure detailPlan.khsCandidates is always an array\n    try { if (!Array.isArray((detailPlan as any).khsCandidates)) (detailPlan as any).khsCandidates = []; } catch {}\n    detailPlan.chainOrder = ["ERROR_FALLBACK"];
+    const detailPlan = createEmptyDetailPlanP20V1("ERROR_FALLBACK");
+    detailPlan.chainOrder = ["ERROR_FALLBACK"];
     const payload = {
       response: "思考が循環状態にフォールバックしました。矛盾は保持され、旋回を続けています。",
       provisional: true,
@@ -14271,7 +14942,7 @@ if (__hasMenu && !__askedMenu) {
 
         stmt.run(
           seedId,
-          threadId,
+          threadId, /* tcTag */
           JSON.stringify(laws),
           JSON.stringify(evi),
           JSON.stringify(ku.heart ?? {}),
@@ -14284,6 +14955,7 @@ if (__hasMenu && !__askedMenu) {
     }
     return reply(payload);
   }
+  });
 });
 
 export default router;

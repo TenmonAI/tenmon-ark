@@ -154,7 +154,7 @@ export function humanizeSourcePackForSurfaceV1(pack: string): string {
   if (!p) return "";
   const low = p.toLowerCase();
   if (low === "general") return "正典と会話の往還（一般束）";
-  if (low === "canon" || low === "scripture") return "原典参照束";
+  if (low === "canon" || low === "scripture") return "原典の一節たち";
   if (low === "subconcept") return "下位概念の参照束";
   if (low === "concept") return "概念参照束";
   if (/^[a-z0-9_-]{1,40}$/i.test(p) && !/[ぁ-んァ-ヶ一-龥]/.test(p)) return "参照束（内部名は省略）";
@@ -264,8 +264,8 @@ export function buildSourcePackFootingClauseV1(ku: Record<string, unknown> | nul
   const laws = Array.isArray(ku.lawsUsed) ? (ku.lawsUsed as unknown[]) : [];
   const humanLaw =
     laws.map((x) => humanizeLawUsedForSurfaceV1(String(x))).find((x) => x && x.length > 0) || "";
-  if (humanLaw && sp) return `参照は${sp}を土台に、${humanLaw}を一つ当てはめています。`;
-  if (sp) return `参照の束は${sp}に置いています。`;
+  if (humanLaw && sp) return `読みは${sp}を手元に、${humanLaw}の一節で支えています。`;
+  if (sp) return `いまの読み方は${sp}に沿っています。`;
   if (humanLaw) return `手元の法則として${humanLaw}を用いています。`;
   return "";
 }
@@ -284,12 +284,12 @@ export function buildHumanReadableEvidenceFootingLineV1(args: {
   if (hint && hint !== args.centerContract) {
     parts.push(`意味の芯は「${hint.slice(0, 88)}」に置いています`);
   }
-  if (pack) parts.push(`参照は${pack}から取っています`);
+  if (pack) parts.push(`典拠は${pack}から拾っています`);
   if (args.lawsN > 0 || args.eviN > 0) {
     parts.push("法則と断片を手元で照合しています");
   }
   if (parts.length === 0) return "";
-  return `根は、${parts.join("。")}。`;
+  return `いまの答えは、${parts.join("。")}。`;
 }
 
 /** LLM が本文中に埋め込んだ旧式「根拠束／次の一手」行を落とす（finalize 末尾と重複させない） */
@@ -330,6 +330,23 @@ export function buildMainlineTenmonHeadV1(args: {
   sourceFootingClause: string;
 }): string {
   const rr = String(args.ku.routeReason ?? "");
+  /** TENMON_CONVERSATION_COMPLETION_CAMPAIGN_V1: 先頭に「立脚の中心は…」固定を置かず、本文の直接回答を優先 */
+  if (
+    /^(WORLDVIEW_ROUTE_V1|DEF_LLM_TOP|NATURAL_GENERAL_LLM_TOP|TENMON_SUBCONCEPT_CANON_V1|KANAGI_CONVERSATION_V1|R22_JUDGEMENT_PREEMPT_V1|ABSTRACT_FRAME_VARIATION_V1|TENMON_SCRIPTURE_CANON_V1|KATAKAMUNA_CANON_ROUTE_V1|SOUL_FASTPATH_VERIFIED_V1|SOUL_DEF_SURFACE_V1)$/u.test(
+      rr
+    ) ||
+    /^SOUL_/u.test(rr)
+  ) {
+    return "【天聞の所見】";
+  }
+  /** TENMON_FINAL_PWA_SURFACE_LAST_MILE_V1: R22/continuity/compare の表面を「一見出し」に収束（routeReason 的立脚前置きを抑止） */
+  if (
+    /^(R22_NEXTSTEP_FOLLOWUP_V1|CONTINUITY_ANCHOR_V1|R22_ESSENCE_FOLLOWUP_V1|R22_COMPARE_ASK_V1|R22_COMPARE_FOLLOWUP_V1|RELEASE_PREEMPT_STRICT_COMPARE_BEFORE_TRUTH_V1)$/u.test(
+      rr
+    )
+  ) {
+    return "【天聞の所見】";
+  }
   const ck = String(args.ku.centerKey ?? "");
   const probeMsg = isTenmonPrincipleOrCanonProbeMessageV1(args.userMessage);
   const plFromUser = principleFootingLabelFromUserMessageV1(args.userMessage);

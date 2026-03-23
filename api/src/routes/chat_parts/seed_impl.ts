@@ -3,13 +3,15 @@
 import { DatabaseSync } from "node:sqlite";
 import crypto from "node:crypto";
 import { getDbPath } from "../../db/index.js";
+import { filterEvidenceIdsForKokuzoBadGuardV1 } from "../../kokuzo/kokuzoBadGuardEvidenceV1.js";
 
 export function saveArkThreadSeedV1(payload: any): void {
   try {
     const df = payload?.decisionFrame;
     const ku = (df?.ku ?? {}) as any;
     const laws = Array.isArray(ku.lawsUsed) ? ku.lawsUsed : [];
-    const evi  = Array.isArray(ku.evidenceIds) ? ku.evidenceIds : [];
+    const eviRaw = Array.isArray(ku.evidenceIds) ? ku.evidenceIds : [];
+    const { kept: evi } = filterEvidenceIdsForKokuzoBadGuardV1(eviRaw.map(String));
     if (laws.length === 0 || evi.length === 0) return;
 
     const seedId = crypto.createHash("sha256")

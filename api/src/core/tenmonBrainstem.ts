@@ -3,6 +3,13 @@
  * answerLength / answerMode / answerFrame / routeClass / responsePolicy を1箇所で出す
  */
 
+import { isTenmonBinaryCompareQuestionV1 } from "./compareAskDisambigV1.js";
+import {
+  isSoulCompareQuestionV1,
+  isSoulDefinitionQuestionV1,
+  isSoulTenmonBridgeQuestionV1,
+} from "./soulDefineDisambigV1.js";
+
 export type BrainstemRouteClass =
   | "support"
   | "define"
@@ -61,10 +68,16 @@ export type BrainstemInput = {
 const RE_SUPPORT_UI = /(改行|enter|shift\+enter|shift enter|送信)/iu;
 const RE_SUPPORT_AUTH = /(ログイン|登録|合言葉|メール登録|入れない|認証)/iu;
 const RE_SUPPORT_PRODUCT = /(使い方|利用方法|利用手順|使う流れ|どう使う|どう利用|使えば|始め方|どう始め|最初に何|まず何|何を入力|何ができる|操作方法|質問方法|どうやって質問|この欄|この画面の使い方|ここでの質問|手順を|使う方法|使い始め)/iu;
-const RE_JUDGEMENT = /(良い|悪い|正しい|間違い|べき|どっちが|どちらが|した方が)/u;
+const RE_JUDGEMENT =
+  /(良い|悪い|正しい|間違い|べき|どっちが|どちらが|した方が|整理すれば|どう整理|優先すべき|何を優先|何から手をつけ|次に何を直|未接続)/u;
 const RE_FEELING = /(気分|どんな気分|どう感じる|感情)/u;
 const RE_IMPRESSION = /(感想|印象)/u;
-const RE_SELFAWARE = /(天聞アークとは何|天聞とは何|意識はある|心はある)/u;
+const RE_SELFAWARE =
+  /(天聞アークとは何|天聞とは何|天聞アークに意識|天聞に意識|意識はある|心はある|意識はないの|心はないの|意識と心)/u;
+/** STAGE2_ROUTE_AUTHORITY_V2: 経題＋言霊秘書・カタカムナ解系を原典／source pack 主命題として define / diagnosis より先に拾う */
+const RE_SCRIPTURE_CORE_PROBE =
+  /(法華経|涅槃経|般若心経|華厳経|金剛経|阿弥陀経|無量義経|言[霊灵靈]秘書|いろは言[霊灵靈]解|イロハ言[霊灵靈]解|カタカムナ言[霊灵靈]解|水穂伝)/u;
+
 const RE_WORLDVIEW = /(魂|死後|輪廻|霊|灵)/u;
 const RE_CONTINUITY_NEXT = /^(次は\?|次は？|次の一手は\?|次の一手は？)$/u;
 const RE_CONTINUITY_ESSENCE = /(要するに|要点は|本質は)/u;
@@ -116,6 +129,23 @@ export function tenmonBrainstem(input: BrainstemInput): BrainstemDecision {
       answerLength: "short",
       answerMode: "support",
       answerFrame: "one_step",
+      responsePolicy: "answer_first",
+      explicitLengthRequested: null,
+      forbiddenMoves: [],
+      nextTurnSeed: null,
+      fallthroughAllowed: false,
+    };
+  }
+
+  // STAGE2_ROUTE_AUTHORITY_V2: 二項比較は judgement（比較して等）より先に analysis へ（GPT×天聞 等）
+  if (isTenmonBinaryCompareQuestionV1(msg) && !isSoulCompareQuestionV1(msg)) {
+    return {
+      routeClass: "analysis",
+      centerKey,
+      centerLabel,
+      answerLength: /(詳しく|くわしく|十分に|丁寧に).{0,12}(比較|対比|違い)/u.test(msg) ? "long" : "medium",
+      answerMode: "analysis",
+      answerFrame: "statement_plus_one_question",
       responsePolicy: "answer_first",
       explicitLengthRequested: null,
       forbiddenMoves: [],
@@ -192,20 +222,40 @@ export function tenmonBrainstem(input: BrainstemInput): BrainstemDecision {
     };
   }
 
-  // 7. selfaware（既存互換: answerMode=analysis）
+  // 6b. selfaware（scripture / define より先：構造・役割・意識の区別を主命題に）
   if (RE_SELFAWARE.test(msg)) {
     return {
       routeClass: "selfaware",
       centerKey,
       centerLabel,
-      answerLength: "short",
+      answerLength: "medium",
       answerMode: "analysis",
-      answerFrame: "one_step",
+      answerFrame: "statement_plus_one_question",
       responsePolicy: "answer_first",
       explicitLengthRequested: null,
       forbiddenMoves: [],
       nextTurnSeed: null,
       fallthroughAllowed: false,
+    };
+  }
+
+  // 6c. scripture 主命題（define の「とは」より先に拾い、原典系へ主権を寄せる）
+  if (
+    RE_SCRIPTURE_CORE_PROBE.test(msg) &&
+    /(説く|説いて|何を|宗旨|思想|教え|核心|意味|内容|読み解き)/u.test(msg)
+  ) {
+    return {
+      routeClass: "worldview",
+      centerKey: centerKey ?? "scripture",
+      centerLabel: centerLabel ?? "聖典",
+      answerLength: "medium",
+      answerMode: "worldview",
+      answerFrame: "statement_plus_one_question",
+      responsePolicy: "clarify_first",
+      explicitLengthRequested: null,
+      forbiddenMoves: [],
+      nextTurnSeed: null,
+      fallthroughAllowed: true,
     };
   }
 
@@ -226,7 +276,58 @@ export function tenmonBrainstem(input: BrainstemInput): BrainstemDecision {
     };
   }
 
-  // 9. worldview
+  // SOUL_DEFINE_DISAMBIG_V1: RE_DEFINE に掛からない魂の定義形（魂の定義を教えて 等）も define に固定
+  if (isSoulDefinitionQuestionV1(msg)) {
+    return {
+      routeClass: "define",
+      centerKey,
+      centerLabel,
+      answerLength: "medium",
+      answerMode: "define",
+      answerFrame: "statement_plus_one_question",
+      responsePolicy: "answer_first",
+      explicitLengthRequested: null,
+      forbiddenMoves: [],
+      nextTurnSeed: null,
+      fallthroughAllowed: false,
+    };
+  }
+
+  // SOUL_DEFINE_DISAMBIG_V1: 魂の二項比較は worldview より analysis へ
+  if (isSoulCompareQuestionV1(msg)) {
+    return {
+      routeClass: "analysis",
+      centerKey: centerKey ?? "soul",
+      centerLabel: centerLabel ?? "魂",
+      answerLength: "short",
+      answerMode: "analysis",
+      answerFrame: "one_step",
+      responsePolicy: "answer_first",
+      explicitLengthRequested: null,
+      forbiddenMoves: [],
+      nextTurnSeed: null,
+      fallthroughAllowed: false,
+    };
+  }
+
+  // SOUL_DEFINE_DISAMBIG_V1: 天聞軸での魂の読解は define 主線（worldview に吸わせない）
+  if (isSoulTenmonBridgeQuestionV1(msg)) {
+    return {
+      routeClass: "define",
+      centerKey: centerKey ?? "soul",
+      centerLabel: centerLabel ?? "魂",
+      answerLength: "medium",
+      answerMode: "define",
+      answerFrame: "statement_plus_one_question",
+      responsePolicy: "answer_first",
+      explicitLengthRequested: null,
+      forbiddenMoves: [],
+      nextTurnSeed: null,
+      fallthroughAllowed: false,
+    };
+  }
+
+  // 9. worldview（魂の定義問いは上で define 済み）
   if (RE_WORLDVIEW.test(msg)) {
     return {
       routeClass: "worldview",

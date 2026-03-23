@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tenmon-ark.local/automation/cursor_applier_schema_v1.json",
+  "title": "AUTO_BUILD_CURSOR_APPLIER_V1 run report",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "version",
+    "cardName",
+    "generatedAt",
+    "repoRoot",
+    "executionGateDecision",
+    "gateAllowsApply",
+    "applyManifestRelative",
+    "commandBundleRelative",
+    "applyBundleCount",
+    "applyBundles"
+  ],
+  "properties": {
+    "version": { "type": "integer", "const": 1 },
+    "cardName": { "type": "string", "const": "AUTO_BUILD_CURSOR_APPLIER_V1" },
+    "generatedAt": { "type": "string" },
+    "repoRoot": { "type": "string" },
+    "executionGateDecision": {
+      "type": "string",
+      "enum": ["executable", "blocked", "waiting_human_gate", "invalid_scope"]
+    },
+    "gateAllowsApply": { "type": "boolean" },
+    "executionGateReportRelative": { "type": "string" },
+    "cursorTaskManifestRelative": { "type": "string" },
+    "applyManifestRelative": { "type": "string" },
+    "commandBundleRelative": { "type": "string" },
+    "applyBundleCount": { "type": "integer", "minimum": 0 },
+    "applyBundles": {
+      "type": "array",
+      "items": { "type": "object" }
+    },
+    "meta": { "type": "object" }
+  },
+  "$defs": {
+    "applyBundleFile": {
+      "type": "object",
+      "required": [
+        "version",
+        "cardName",
+        "taskId",
+        "bundleId",
+        "targetCard",
+        "executionGateDecision",
+        "gateAllowsApply",
+        "targetPaths",
+        "allowedPaths",
+        "forbiddenPaths",
+        "instruction",
+        "prechecks",
+        "postchecks",
+        "passCondition",
+        "nextCard"
+      ],
+      "properties": {
+        "version": { "type": "integer" },
+        "cardName": { "type": "string" },
+        "taskId": { "type": "string" },
+        "bundleId": { "type": "string" },
+        "targetCard": { "type": "string" },
+        "executionGateDecision": { "type": "string" },
+        "gateAllowsApply": { "type": "boolean" },
+        "targetPaths": { "type": "array", "items": { "type": "string" } },
+        "allowedPaths": { "type": "array", "items": { "type": "string" } },
+        "forbiddenPaths": { "type": "array", "items": { "type": "string" } },
+        "instruction": { "type": "string" },
+        "prechecks": { "type": "array" },
+        "postchecks": { "type": "array" },
+        "passCondition": { "type": "string" },
+        "nextCard": { "type": "string" },
+        "humanGateRequired": { "type": "boolean" },
+        "parallelPolicy": { "type": "string" }
+      }
+    }
+  }
+}

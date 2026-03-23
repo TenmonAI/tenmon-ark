@@ -25,6 +25,7 @@ from chatts_metrics_v1 import (
     collect_route_reason_hits,
     return_sites,
 )
+from repo_resolve_v1 import repo_root_from
 
 DEFAULT_REL_CHAT = "api/src/routes/chat.ts"
 REPORT_JSON = "chatts_trunk_domain_map_v1.json"
@@ -377,17 +378,6 @@ def validate_map(m: Dict[str, Any]) -> List[str]:
     if set(TRUNKS) != names:
         return ["trunk_set_mismatch"]
     return []
-
-
-def repo_root_from(start: Path) -> Path:
-    cur = start.resolve()
-    for _ in range(24):
-        if (cur / ".git").exists():
-            return cur
-        if cur.parent == cur:
-            break
-        cur = cur.parent
-    return start.resolve()
 
 
 def main() -> int:
