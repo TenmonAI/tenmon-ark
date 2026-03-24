@@ -916,7 +916,7 @@ export function applyFinalAnswerConstitutionAndWisdomReducerV1(payload: any): an
     const stripped = stripScripturePlaceholderAndTraceV1(body).replace(/\s+/g, " ").trim();
     if (
       stripped.length > 0 &&
-      stripped.length < 100 &&
+      stripped.length < 50 &&
       !/定義は補完待ち|PLACEHOLDER|TODO|【根拠の短要約】\s*$/iu.test(stripped)
     ) {
       const q = String(userMessageForSurface || "").trim();

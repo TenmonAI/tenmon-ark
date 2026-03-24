@@ -1,0 +1,41 @@
+{
+  "card": "TENMON_K1_AND_GENERAL_ROUTE_LLM_COMPLETION_FIX_CURSOR_AUTO_V1",
+  "generated_at": "2026-03-24T23:01:19Z",
+  "probes": [
+    {
+      "id": 1,
+      "message": "空海の即身成仏とは",
+      "routeReason": "K1_TRACE_EMPTY_GATED_V1",
+      "len_stripped": 160,
+      "pass": true,
+      "head": "空海の即身成仏は、修行を通じてこの世で仏の悟りを得ることを示す教えです。これは身体と精神の調和を重視し、現実の中で仏性を体現することを目指します。即身成仏は、仏教の中でも特に密教において重要な概念であり、日常生活の中での実践を通じて悟りを追"
+    },
+    {
+      "id": 2,
+      "message": "法華経とは",
+      "routeReason": "K1_TRACE_EMPTY_GATED_V1",
+      "len_stripped": 143,
+      "pass": true
+    },
+    {
+      "id": 3,
+      "message": "現代人のよくない点を教えて",
+      "routeReason": "GENERAL_KNOWLEDGE_EXPLAIN_ROUTE_V1",
+      "len_stripped": 224,
+      "pass": true,
+      "preamble_only": false
+    },
+    {
+      "id": 4,
+      "message": "SQLite FTS5 SQL",
+      "routeReason": "TECHNICAL_IMPLEMENTATION_V1",
+      "pass": true
+    },
+    {
+      "id": 5,
+      "message": "今日の日付を教えてください",
+      "routeReason": "FACTUAL_CURRENT_DATE_V1",
+      "pass": true
+    }
+  ]
+}

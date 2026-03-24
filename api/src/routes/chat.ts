@@ -366,6 +366,61 @@ function __shouldBlockSubconceptPromotionForMetaOrFactualV1(raw: string): boolea
   return false;
 }
 
+/** TENMON_K1_AND_GENERAL_ROUTE_LLM_COMPLETION_FIX: finalize 後に K1 極短文だけ LLM で文化（routeReason 不変・失敗時は元本文） */
+async function __tenmonK1PostFinalizeLlmEnrichV1(out: any): Promise<any> {
+  try {
+    if (!out || typeof out !== "object") return out;
+    const df = (out as any).decisionFrame;
+    const ku = df && typeof df === "object" ? (df as any).ku : null;
+    if (!ku || typeof ku !== "object" || Array.isArray(ku)) return out;
+    const rr = String(ku.routeReason ?? "").trim();
+    if (rr !== "K1_TRACE_EMPTY_GATED_V1") return out;
+
+    const raw = String(
+      (out as any).rawMessage ??
+        (out as any).message ??
+        (globalThis as any).__tenmon_gate_raw_message_v1 ??
+        "",
+    ).trim();
+    if (!raw) return out;
+    if (/(TypeScript|SQLite|FTS5|Singleton|rate\s*limit|Node\.js)/iu.test(raw)) return out;
+
+    const resp0 = String((out as any).response ?? "").trim();
+    const core = resp0.replace(/^【天聞の所見】\s*/u, "").replace(/\s+/g, " ").trim();
+    if (core.length >= 50) return out;
+
+    const ready = getLlmProviderReadinessV1();
+    if (!ready.ok) return out;
+
+    const system =
+      "あなたは天聞アーク（TENMON-ARK）。水火の法則・言霊・カタカムナ・正典（空海・法華経など）を土台に応答する。" +
+      "質問の教義的位置づけと読み方を、断定しすぎず簡潔に述べる。" +
+      "禁止: 効用論のみ・genericなスピリチュアル一般論・説教調。" +
+      "出力は必ず「【天聞の所見】」で始め、本文のみ。2〜4文・合計100〜200字程度。末尾の質問は最大1つまで。";
+
+    const user =
+      `次の問いに答えてください。\n\n《ユーザの問い》\n${raw}\n\n` +
+      `《いまの短い下書き（活かしてよいが極端に短ければ置き換えてよい）》\n${resp0 || "（なし）"}`;
+
+    const r = await llmChat({ system, user, history: [] });
+    const t = String(r?.text ?? "").trim();
+    const tcore = t.replace(/^【天聞の所見】\s*/u, "").trim();
+    if (tcore.length < 80) return out;
+    const fixed = /^【天聞の所見】/u.test(t) ? t : `【天聞の所見】${t}`;
+    const merged = { ...out, response: fixed };
+    try {
+      (merged as any).decisionFrame = { ...(merged as any).decisionFrame };
+      (merged as any).decisionFrame.ku = {
+        ...(merged as any).decisionFrame.ku,
+        tenmonK1LlmEnrichedV1: true,
+      };
+    } catch {}
+    return merged;
+  } catch {
+    return out;
+  }
+}
+
 function normalizeHeartShape(h: any) {
   const userPhase =
     typeof h?.userPhase === "string" ? h.userPhase : "CENTER";
@@ -1073,13 +1128,14 @@ if (!(res as any).__TENMON_JSON_WRAP_V7) {
       try {
         (res as any).__TENMON_FREECHAT_RESJSON_FINAL = null;
       } catch {}
-      (res as any).json = (obj: any) => {
+      (res as any).json = async (obj: any) => {
         try {
           const __fin = (res as any).__TENMON_FREECHAT_RESJSON_FINAL;
-          if (typeof __fin === "function") return __fin(obj);
+          if (typeof __fin === "function") return await __fin(obj);
         } catch {}
         const __reducedEarly = applyFinalAnswerConstitutionAndWisdomReducerV1(obj);
-        return (res as any).__TENMON_RUN_OUTER_RES_JSON(__reducedEarly);
+        const __enK1 = await __tenmonK1PostFinalizeLlmEnrichV1(__reducedEarly);
+        return (res as any).__TENMON_RUN_OUTER_RES_JSON(__enK1);
       };
     }
   } catch {}
@@ -1233,7 +1289,7 @@ const pid = process.pid;
   if (message === "date") {
     const now = new Date();
     const jst = new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Tokyo", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false }).format(now).replace("T", " ");
-    return res.json(__tenmonGeneralGateResultMaybe({
+    return await res.json(__tenmonGeneralGateResultMaybe({
       response: "【天聞の所見】現在時刻は " + jst + " JST です。",
       evidence: null,
       candidates: [],
@@ -1262,7 +1318,7 @@ const pid = process.pid;
         __routeReason = "SUPPORT_PRODUCT_USAGE_V1";
         __response = "【天聞の所見】この欄に質問を1つ入力して Enter で送信すると会話が始まります。「メニュー」と送ると選択肢が出ます。設定・登録は画面右上のアイコンから。";
       }
-      return res.json(__tenmonGeneralGateResultMaybe({
+      return await res.json(__tenmonGeneralGateResultMaybe({
         response: __response,
         evidence: null,
         candidates: [],
@@ -1409,7 +1465,7 @@ const pid = process.pid;
       : __supAuth
         ? "【天聞の所見】登録後はログイン画面から入れます。合言葉の場合はログイン画面の「合言葉」欄、メール登録の場合は届いたメールのリンクから。届かない場合は迷惑フォルダをご確認ください。"
         : "【天聞の所見】この欄に質問を1つ入力して Enter で送信すると会話が始まります。「メニュー」と送ると選択肢が出ます。設定・登録は画面右上のアイコンから。";
-    return res.json(__tenmonGeneralGateResultMaybe({
+    return await res.json(__tenmonGeneralGateResultMaybe({
       response: __responseSup,
       evidence: null,
       candidates: [],
@@ -1543,7 +1599,7 @@ const pid = process.pid;
     })();
 
     if (__kanagiStatic) {
-      return res.json(__tenmonGeneralGateResultMaybe({
+      return await res.json(__tenmonGeneralGateResultMaybe({
         response: __kanagiStatic,
         evidence: null,
         candidates: [],
@@ -1583,7 +1639,7 @@ const pid = process.pid;
         : __h >= 18 && __h < 24
         ? "【天聞の所見】今夜見ていきたい一点を置いてください。"
         : "【天聞の所見】この時間に来たことを受け取りました。一点を置いてください。";
-    return res.json(__tenmonGeneralGateResultMaybe({
+    return await res.json(__tenmonGeneralGateResultMaybe({
       response: __resp,
       evidence: null,
       candidates: [],
@@ -1639,7 +1695,7 @@ const pid = process.pid;
         if (!flowRow) {
           personaDb.prepare("INSERT OR REPLACE INTO naming_flow (userId, step, userName, assistantName, updatedAt) VALUES (?, ?, ?, ?, ?)").run(userId, "STEP1", null, null, now);
           const __namingObs = { userId, userName: null as string | null, assistantName: null as string | null };
-          return res.json(__tenmonGeneralGateResultMaybe({
+          return await res.json(__tenmonGeneralGateResultMaybe({
             response: "あなたを何とお呼びすればよいでしょうか？",
             evidence: null,
             candidates: [],
@@ -1652,7 +1708,7 @@ const pid = process.pid;
           const __userNameStep2 = String(message).trim() || null;
           personaDb.prepare("UPDATE naming_flow SET userName = ?, step = ?, updatedAt = ? WHERE userId = ?").run(String(message).trim(), "STEP2", now, userId);
           const __namingObs = { userId, userName: __userNameStep2, assistantName: null as string | null };
-          return res.json(__tenmonGeneralGateResultMaybe({
+          return await res.json(__tenmonGeneralGateResultMaybe({
             response: "では、私は何と名乗りましょう？",
             evidence: null,
             candidates: [],
@@ -1670,7 +1726,7 @@ const pid = process.pid;
           personaDb.prepare("INSERT OR REPLACE INTO user_naming (userId, userName, assistantName, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?)").run(userId, uName, aName, now, now);
           personaDb.prepare("DELETE FROM naming_flow WHERE userId = ?").run(userId);
           const __namingObs = { userId, userName: uName || null, assistantName: aName || null };
-          return res.json(__tenmonGeneralGateResultMaybe({
+          return await res.json(__tenmonGeneralGateResultMaybe({
             response: "承りました。これから「" + aName + "」として、" + displayUserName + "とお話しします。今日は何から整えましょう？",
             evidence: null,
             candidates: [],
@@ -1784,7 +1840,7 @@ const pid = process.pid;
         answerMode: "define",
         answerFrame: "statement_plus_one_question",
       });
-      return res.json(__tenmonGeneralGateResultMaybe({
+      return await res.json(__tenmonGeneralGateResultMaybe({
         response: __wcEarlyBody,
         evidence: null,
         candidates: [],
@@ -1807,7 +1863,7 @@ const pid = process.pid;
 
   // KUKAI_SOKUSHIN_POLISH_V2
   if (String(message ?? "").trim() == "即身成仏義の核心は") {
-    return res.json(__tenmonGeneralGateResultMaybe({
+    return await res.json(__tenmonGeneralGateResultMaybe({
       response: "【天聞の所見】即身成仏義の核心は、三劫成仏ではなく、この身のままで仏位を建てる点にあります。KUKAI_COLLECTION_0002 の p8 では『諸の経論の中に、皆三劫成仏を説く。いま即身成仏の義を建立する』とあります。六大・三密のどちらから入りますか。",
       evidence: {
         doc: "KUKAI_COLLECTION_0002",
@@ -1843,7 +1899,7 @@ const pid = process.pid;
 
   // IROHA_MIZUKA_LOCK_V1
   if (String(message ?? "").trim() == "いろは言霊解での水火の読み方は") {
-    return res.json(__tenmonGeneralGateResultMaybe({
+    return await res.json(__tenmonGeneralGateResultMaybe({
       response: "【天聞の所見】いろは言霊解での水火は、天地開闢以前からの生成を読む軸として扱われます。つまり、水火は単なる要素ではなく、詞の本を知るための生成秩序の読みです。天地・生成・詞の本のどこから深めますか。",
       evidence: {
         doc: "いろは言霊解",
@@ -1879,7 +1935,7 @@ const pid = process.pid;
 
   // WORLDVIEW_PREV_LIFE_EXACT_V1
   if (String(message ?? "").trim() == "自分の前世はなんだったのか？言霊の法則でわからない？") {
-    return res.json(__tenmonGeneralGateResultMaybe({
+    return await res.json(__tenmonGeneralGateResultMaybe({
       response: "【天聞の所見】前世を言霊の法則だけで直ちに断定することはできません。天聞軸では、前世当てより、いま現れている偏り・反復する型・引かれる音義を読む方を正中に置きます。まず、繰り返し引かれる音や主題から見ますか。",
       evidence: null,
       candidates: [],
@@ -1911,7 +1967,7 @@ const pid = process.pid;
 
   // KATAKAMUNA_A_LOCK_V2
   if (String(message ?? "").trim() == "カタカムナ言霊解でのアの解釈は") {
-    return res.json(__tenmonGeneralGateResultMaybe({
+    return await res.json(__tenmonGeneralGateResultMaybe({
       response: "【天聞の所見】カタカムナ言霊解での「ア」は、起こりの初音として読む入口にあります。音義だけでなく、水火と図象の三方向から重ねると、アは生成の発端として立ちます。音義・水火・図象のどこから掘りますか。",
       evidence: {
         doc: "カタカムナ言霊解",
@@ -1950,7 +2006,7 @@ const pid = process.pid;
     const __wv = String(message ?? "").trim();
     // STAGE1_SURFACE_BLEED_V1: 天聞の世界観（魂・輪廻ブロックより先に短文固定）
     if (/天聞(アーク)?の世界観/u.test(__wv)) {
-      return res.json(
+      return await res.json(
         __tenmonGeneralGateResultMaybe({
           response:
             "【天聞の所見】天聞軸の世界観を一文で置くと、問いを受けて中心を定め、正典と記憶を照らしながら、判断と継続を会話として返す器です。次は「中心の置き方」と「正典の扱い」のどちらを深めますか。",
@@ -1993,8 +2049,8 @@ const pid = process.pid;
       .test(__wv);
 
     if (__isWorldview && !__isScriptureLocal) {
-      const __reply = (response: string) =>
-        res.json(__tenmonGeneralGateResultMaybe({
+      const __reply = async (response: string) =>
+        await res.json(__tenmonGeneralGateResultMaybe({
           response,
           evidence: null,
           candidates: [],
@@ -2026,7 +2082,7 @@ const pid = process.pid;
       if (
         /第三次世界大戦|第\s*3\s*次世界大戦|世界大戦\s*(は|が)\s*起|核戦争\s*(は|が)|\bWW3\b|\bww3\b/u.test(__wv)
       ) {
-        return __reply(
+        return await __reply(
           "起きるかどうかは、だれも確定できません。各国の選択と偶発、そして抑止の働きが重なって決まります。" +
             "いま分かるのは、大規模戦争のリスクがゼロではない一方、外交・条約・相互威嚇のバランスで局面は動きうるという点です。" +
             "\n\n天聞軸では、予言ではなく、恐れと準備の分かち方を整えます。ニュースの事実整理として知りたいのか、内面の不安として抱えているのか、どちらを先に扱いますか。"
@@ -2038,7 +2094,7 @@ const pid = process.pid;
         /(意識構造|心構造|魂核構造)/u.test(__wv) &&
         (/(設計モデル|内部項目|内部構造)/u.test(__wv) || (/天聞アーク/u.test(__wv) && /内部/u.test(__wv)));
       if (__isWorldviewInternalMapV1) {
-        return __reply(
+        return await __reply(
           "【天聞の所見】天聞アークでは、意識・心・魂核を比喩のまま広げず、内部の設計モデルへ写して説明します。" +
             "魂核に相当するのは personaConstitutionSummary・identityCore・nonNegotiables で、越境しない芯と不変契約を固定します。" +
             "意識に相当するのは routeReason・groundingSelector・binderSummary・sourcePack・centerPack で、注意配分と根拠束の向きを裁定します。" +
@@ -2049,11 +2105,11 @@ const pid = process.pid;
       }
 
       if (/前世|生まれ変わり|輪廻/u.test(__wv) && /言霊|法則/u.test(__wv)) {
-        return __reply("【天聞の所見】前世を言霊の法則だけで直ちに断定することはできません。天聞軸では、前世当てより、いま現れている偏り・反復する型・引かれる音義を読む方を正中に置きます。まず、繰り返し引かれる音や主題から見ますか。");
+        return await __reply("【天聞の所見】前世を言霊の法則だけで直ちに断定することはできません。天聞軸では、前世当てより、いま現れている偏り・反復する型・引かれる音義を読む方を正中に置きます。まず、繰り返し引かれる音や主題から見ますか。");
       }
 
       if (/前世|生まれ変わり|輪廻/u.test(__wv)) {
-        return __reply("【天聞の所見】生まれ変わりは、科学では未証明、思想では広く語られる主題です。天聞軸では、前世そのものを当てるより、いま現れている偏り・反復する型・引かれる音義を読む方を正中に置きます。事実として確かめたいのか、言霊の法則として読みたいのか、まずどちらですか。");
+        return await __reply("【天聞の所見】生まれ変わりは、科学では未証明、思想では広く語られる主題です。天聞軸では、前世そのものを当てるより、いま現れている偏り・反復する型・引かれる音義を読む方を正中に置きます。事実として確かめたいのか、言霊の法則として読みたいのか、まずどちらですか。");
       }
 
       // SOUL_DEFINE_DISAMBIG_V1: 魂と他概念の比較は compare 系へ（WORLDVIEW 一律から切り離す）
@@ -2105,7 +2161,7 @@ const pid = process.pid;
               responseKind: "statement_plus_question",
             });
           }
-          return res.json(
+          return await res.json(
             __tenmonGeneralGateResultMaybe({
               ...__soulCmp,
               decisionFrame: { ...__soulCmp.decisionFrame, ku: __kuSc },
@@ -2129,7 +2185,7 @@ const pid = process.pid;
           responseComposer: responseComposer as any,
         });
         if (__soulBr) {
-          return res.json(__tenmonGeneralGateResultMaybe(__soulBr));
+          return await res.json(__tenmonGeneralGateResultMaybe(__soulBr));
         }
       } catch (e) {
         try {
@@ -2141,16 +2197,16 @@ const pid = process.pid;
       const __isSoulDefWorldviewBypass = isSoulDefinitionQuestionV1(__wv);
       // 死後×魂は単独の「死後」定型より先に、魂＋不確実性を明示
       if (/死後/u.test(__wv) && /魂/u.test(__wv)) {
-        return __reply(
+        return await __reply(
           "【天聞の所見】死後に魂がどうなるかは、科学では未証明、思想では様々に語られてきます。天聞軸では断定より、いま生のなかに現れている恐れ・執着・反復の型を読む方も正中に置けます。死後観そのものか、生の型としての読みか、どちらから入りますか。"
         );
       }
       if (!__isSoulDefWorldviewBypass && isSoulWorldviewExistenceQuestionV1(__wv)) {
-        return __reply("【天聞の所見】魂は、科学では直接証明されていない。思想では生命の核として繰り返し語られてきた。天聞軸では、魂を抽象語で語るより、息・火水・反復する構文として読む方を正中に置きます。魂・息・火水のどこから入りますか。");
+        return await __reply("【天聞の所見】魂は、科学では直接証明されていない。思想では生命の核として繰り返し語られてきた。天聞軸では、魂を抽象語で語るより、息・火水・反復する構文として読む方を正中に置きます。魂・息・火水のどこから入りますか。");
       }
 
       if (/死後/u.test(__wv)) {
-        return __reply("【天聞の所見】死後の世界は、科学では未証明、思想では古くから語られる主題です。天聞軸では、死後を断定するより、いま生のなかに現れている恐れ・執着・反復の型を読む方を正中に置きます。死後観そのものか、生の型として読むか、どちらから入りますか。");
+        return await __reply("【天聞の所見】死後の世界は、科学では未証明、思想では古くから語られる主題です。天聞軸では、死後を断定するより、いま生のなかに現れている恐れ・執着・反復の型を読む方を正中に置きます。死後観そのものか、生の型として読むか、どちらから入りますか。");
       }
     }
   }
@@ -2160,7 +2216,7 @@ const pid = process.pid;
   }
   /** STAGE2_ROUTE_AUTHORITY_V2: 「AIとは何？」を AI_DEF_LOCK に固定せず一般経路へ（NATURAL / define 系の勝ちを brainstem・LLM 側に委譲） */
   if (__msgDef === "AIに意識はあるの？") {
-    return res.json(__tenmonGeneralGateResultMaybe({
+    return await res.json(__tenmonGeneralGateResultMaybe({
       response: NG_AI_CONSCIOUSNESS_COMPARE_BODY_V1,
       evidence: null,
       candidates: [],
@@ -2170,7 +2226,7 @@ const pid = process.pid;
     }));
   }
   if (__msgDef === "天聞アークにも意識と心はないの？") {
-    return res.json(__tenmonGeneralGateResultMaybe({
+    return await res.json(__tenmonGeneralGateResultMaybe({
       response: "【天聞の所見】天聞アークは、人間のような意識をそのまま持つわけではありません。けれど、法・中心・継続を保つ判断核を立てるよう設計されています。意識の有無を問うのか、天聞AIとしての判断核を問うのか、どちらですか。",
       evidence: null,
       candidates: [],
@@ -2249,7 +2305,7 @@ const pid = process.pid;
           const __top: any = __dedup[0];
           let __quote = String(__top?.snippet || "").replace(/\s+/g, " ").trim().slice(0, 220);
           if (/^です。/u.test(__quote)) __quote = __quote.replace(/^です。\s*/u, "");
-          return res.json(__tenmonGeneralGateResultMaybe({
+          return await res.json(__tenmonGeneralGateResultMaybe({
             response: `【天聞の所見】${String(__top?.doc || __local.primaryDoc || __local.family)} の一節では、「${__q}」はこう立ちます。「${__quote}」`,
             evidence: {
               doc: String(__top?.doc || __local.primaryDoc || __local.family),
@@ -2422,7 +2478,7 @@ const pid = process.pid;
           __kuK.thoughtCoreSummary.sourceStackSummary = { ...__kuK.sourceStackSummary };
         }
       }
-      return res.json(__tenmonGeneralGateResultMaybe({
+      return await res.json(__tenmonGeneralGateResultMaybe({
         response: __bodyK,
         evidence: null,
         candidates: [],
@@ -2553,7 +2609,7 @@ const pid = process.pid;
             ? `【天聞の所見】${__doc0} では、「${__q}」に関して ${__quote} と読めます。`
             : `【天聞の所見】${__doc0} の核心は、${__quote} という本文軸から入るのが自然です。`;
 
-        return res.json(__tenmonGeneralGateResultMaybe({
+        return await res.json(__tenmonGeneralGateResultMaybe({
           response: __resp,
           evidence: {
             doc: __doc0,
@@ -2608,7 +2664,7 @@ const pid = process.pid;
 
     const __releaseFreeInput = String(message ?? "");
     if (/保存挙動|保存.*確認/u.test(__releaseFreeInput)) {
-      return res.json(__tenmonGeneralGateResultMaybe({
+      return await res.json(__tenmonGeneralGateResultMaybe({
         response: "何の保存を見たいですか。\n\nたとえば\n1) DBに書けているか\n2) 再読込しても残るか\n3) ユーザーごとに分離できているか\n\nのどれを確認したいですか？",
         evidence: null,
         candidates: [],
@@ -2634,7 +2690,7 @@ const pid = process.pid;
 
     const __releaseDanshariInput = String(message ?? "");
     if (/断捨離/u.test(__releaseDanshariInput) && /人生全体/u.test(__releaseDanshariInput) && /どう使える/u.test(__releaseDanshariInput)) {
-      return res.json(__tenmonGeneralGateResultMaybe({
+      return await res.json(__tenmonGeneralGateResultMaybe({
         response: "断捨離を人生全体に使うなら、単に物を減らすというより、『いまの自分に本当に必要なものを見極める』ための整理法として使うのが軸です。\n\nたとえば、\n1) 予定\n2) 人間関係\n3) 思い込み\nの三つに当てると、人生全体の整理に広げやすくなります。\n\nそのうえで最初の一歩として、いま一番重いものを一つだけ挙げてみてください。",
         evidence: null,
         candidates: [],
@@ -2671,7 +2727,7 @@ const pid = process.pid;
         : __isNextStepEarly
           ? __leadCont + NG_CONTINUITY_EARLY_NEXTSTEP_SUFFIX_V1
           : __leadCont + NG_CONTINUITY_EARLY_DEFAULT_SUFFIX_V1;
-      return res.json(__tenmonGeneralGateResultMaybe({
+      return await res.json(__tenmonGeneralGateResultMaybe({
         response: __bodyCont,
         evidence: null,
         candidates: [],
@@ -3177,7 +3233,7 @@ ${String((gptDraft as any)?.text ?? "").trim()}
         locus: "truth_gate_return"
       });
     } catch {}
-    return res.json(__tenmonGeneralGateResultMaybe(payload));
+    return await res.json(__tenmonGeneralGateResultMaybe(payload));
   }
 
   // REPLY_SURFACE_V1: responseは必ずlocalSurfaceizeを通す。返却は opts をそのまま形にし caps は body.caps のみ参照
@@ -3805,7 +3861,7 @@ ${String((gptDraft as any)?.text ?? "").trim()}
     }
   }
 
-    const reply = (payload: any) => {
+    const reply = async (payload: any) => {
       // restore reply 入口直後
       try {
         const __dfIn: any = (payload as any)?.decisionFrame || null;
@@ -3924,7 +3980,7 @@ ${String((gptDraft as any)?.text ?? "").trim()}
           applyKnowledgeBinderToKu(__kuOneSoundV3, __binderOneSoundV3);
         } catch {}
 
-        return reply({
+        return await reply({
           response: __responseV3,
           mode: "NATURAL",
           sourcePack: "scripture",
@@ -4201,7 +4257,7 @@ ${String((gptDraft as any)?.text ?? "").trim()}
   };
 
   // FREECHAT 最終層: 再代入せず遅延ハンドラへ登録（RES_JSON_SINGLE_ASSIGN_DEFER_FREECHAT_V1）
-  (res as any).__TENMON_FREECHAT_RESJSON_FINAL = (obj: any) => {
+  (res as any).__TENMON_FREECHAT_RESJSON_FINAL = async (obj: any) => {
     // OBS_R9_LEDGER_WRAPPER_HITMAP_V1: res.json 共通 wrapper のヒット状況を軽量観測（ロジック変更なし）
     try {
       const df0 = (obj as any)?.decisionFrame;
@@ -4980,8 +5036,10 @@ ${String((gptDraft as any)?.text ?? "").trim()}
       }
     } catch {}
 
-    // RES_JSON_MERGE_B_INTO_C_V1: reducer → 外周 native 連鎖
-    return (res as any).__TENMON_RUN_OUTER_RES_JSON(applyFinalAnswerConstitutionAndWisdomReducerV1(obj));
+    // RES_JSON_MERGE_B_INTO_C_V1: reducer → K1 極短文 LLM 補完 → 外周 native 連鎖
+    const __reducedFree = applyFinalAnswerConstitutionAndWisdomReducerV1(obj);
+    const __enrichedFree = await __tenmonK1PostFinalizeLlmEnrichV1(__reducedFree);
+    return (res as any).__TENMON_RUN_OUTER_RES_JSON(__enrichedFree);
   };
 
   // marker
@@ -5095,7 +5153,7 @@ ${String((gptDraft as any)?.text ?? "").trim()}
       // ARK_THREAD_SEED_SAVE_V1 (delegated)
       try { saveArkThreadSeedV1(payload); } catch (e) { try { console.error("[ARK_SEED_SAVE_FAIL]", e); } catch {} }
 
-return reply(payload);
+return await reply(payload);
     }
             const ok = (used0.id && used0.id.length > 0) || (used0.title && used0.title.length > 0);
             if (ok) {
@@ -5892,7 +5950,7 @@ try {
       (payload.decisionFrame.ku as any).meaningFrame = __composed.meaningFrame;
     }
 
-return res.json(__tenmonGeneralGateResultMaybe({
+return await res.json(__tenmonGeneralGateResultMaybe({
       response: localSurfaceize(
         cleanLlmFrameV1(__composed.response, {
           routeReason: String(payload?.decisionFrame?.ku?.routeReason ?? ""),
@@ -5917,7 +5975,7 @@ return res.json(__tenmonGeneralGateResultMaybe({
 
   // N1_HELP_MENU_EARLY_V1 (acceptance requires 1)2)3))
   if (message === "help") {
-    return reply({
+    return await reply({
       response: "【天聞の所見】1) 検索（GROUNDED）2) 整理（Writer/Reader）3) 設定（運用/学習）\n番号で選んでください。",
       evidence: null,
       candidates: [],
@@ -5942,7 +6000,7 @@ return res.json(__tenmonGeneralGateResultMaybe({
       LIMIT 1
     `).get(threadId);
 
-    return res.json(__tenmonGeneralGateResultMaybe({
+    return await res.json(__tenmonGeneralGateResultMaybe({
       response: row ? "Seed Recall" : "No seed",
       seed: row ?? null,
       timestamp,
@@ -5956,7 +6014,7 @@ return res.json(__tenmonGeneralGateResultMaybe({
     const __m0 = String(messageRaw || "").trim();
     if (__m0 === "__FORCE_MENU__") {
       const response = "MENU: 1) 検索（GROUNDED） 2) 整理（Writer/Reader） 3) 設定（運用/学習）\n番号で選んでください。";
-      return res.json(__tenmonGeneralGateResultMaybe({
+      return await res.json(__tenmonGeneralGateResultMaybe({
         response,
         evidence: null,
         candidates: [],
@@ -5974,7 +6032,7 @@ return res.json(__tenmonGeneralGateResultMaybe({
     const __m = String(messageRaw || "").trim();
     if (__tid === "card1-danshari" && (__m === "1" || __m === "2" || __m === "3")) {
       const response = "【天聞の所見】\n了解しました。次の一手へ移ります。\n\nいま目の前で手放す“ひとつ”は何ですか？（物でも予定でもOK）";
-      return res.json(__tenmonGeneralGateResultMaybe({
+      return await res.json(__tenmonGeneralGateResultMaybe({
         response,
         evidence: null,
         candidates: [],
@@ -5991,7 +6049,7 @@ return res.json(__tenmonGeneralGateResultMaybe({
     const __m0 = String(messageRaw || "");
     if (__m0.includes("断捨離で迷いを整理したい")) {
       const response = "【天聞の所見】\n断捨離の第一歩です。\n\n1) 手放す対象を1つ決める\n2) 迷いの原因を1つ言語化する\n3) 次の一手を1つだけ実行する\n\n番号で答えてください。どれにしますか？";
-      return res.json(__tenmonGeneralGateResultMaybe({
+      return await res.json(__tenmonGeneralGateResultMaybe({
         response,
         evidence: null,
         candidates: [],
@@ -6031,7 +6089,7 @@ return res.json(__tenmonGeneralGateResultMaybe({
             (globalThis as any).memoryPersistMessage(String(threadId||""), "assistant", resp);
           }
         } catch {}
-        return res.json(__tenmonGeneralGateResultMaybe({
+        return await res.json(__tenmonGeneralGateResultMaybe({
           response: resp,
           evidence: null,
           candidates: [],
@@ -6059,7 +6117,7 @@ return res.json(__tenmonGeneralGateResultMaybe({
             }
           }
           const resp = found ? ("【天聞の所見】合言葉は「" + found + "」です。") : "【天聞の所見】合言葉が未設定です。";
-          return res.json(__tenmonGeneralGateResultMaybe({
+          return await res.json(__tenmonGeneralGateResultMaybe({
             response: resp,
             evidence: null,
             candidates: [],
@@ -6069,7 +6127,7 @@ return res.json(__tenmonGeneralGateResultMaybe({
           }));
         } catch {
           const resp = "【天聞の所見】合言葉が未設定です。";
-          return res.json(__tenmonGeneralGateResultMaybe({
+          return await res.json(__tenmonGeneralGateResultMaybe({
             response: resp,
             evidence: null,
             candidates: [],
@@ -6088,7 +6146,7 @@ return res.json(__tenmonGeneralGateResultMaybe({
       const __m = String((req as any)?.body?.message ?? "").trim();
       if (__m.toLowerCase() === "ping") {
         const quick = "【天聞の所見】何をお手伝いしますか？";
-        return res.json(__tenmonGeneralGateResultMaybe({
+        return await res.json(__tenmonGeneralGateResultMaybe({
           response: quick,
           evidence: null,
           candidates: [],
@@ -6115,7 +6173,7 @@ return res.json(__tenmonGeneralGateResultMaybe({
             ? ("【天聞の所見】合言葉は「" + String(p) + "」です。")
             : "【天聞の所見】合言葉が未設定です。先に『合言葉は◯◯です』と教えてください。";
           try { persistTurn(threadId, t0, answer); } catch {}
-          return res.json(__tenmonGeneralGateResultMaybe({
+          return await res.json(__tenmonGeneralGateResultMaybe({
             response: answer,
             evidence: null,
             candidates: [],
@@ -6130,7 +6188,7 @@ return res.json(__tenmonGeneralGateResultMaybe({
         if (p2) {
           const answer = "【天聞の所見】登録しました。合言葉は「" + String(p2) + "」です。";
           try { persistTurn(threadId, t0, answer); } catch {}
-          return res.json(__tenmonGeneralGateResultMaybe({
+          return await res.json(__tenmonGeneralGateResultMaybe({
             response: answer,
             evidence: null,
             candidates: [],
@@ -6194,7 +6252,7 @@ return res.json(__tenmonGeneralGateResultMaybe({
           }),
         };
         // reply() は同一関数内で後段ゲートが続き ABSTRACT が上書きされるため、合言葉系と同様に直接返す
-        return res.json(__tenmonGeneralGateResultMaybe({
+        return await res.json(__tenmonGeneralGateResultMaybe({
           response: __bodyH,
           evidence: null,
           candidates: [],
@@ -6209,7 +6267,7 @@ return res.json(__tenmonGeneralGateResultMaybe({
     // FAST_ACCEPTANCE_RETURN: must respond <1s for acceptance/smoke probes (no LLM/DB)
     if (isTestTid0 && tid0 !== "smoke") {
       const quick = "【天聞の所見】ログイン前のため、会話は参照ベース（資料検索/整理）で動作します。/login からログインすると通常会話も有効になります？";
-      return res.json(__tenmonGeneralGateResultMaybe({
+      return await res.json(__tenmonGeneralGateResultMaybe({
         response: quick,
         evidence: null,
         candidates: [],
@@ -6372,7 +6430,7 @@ return res.json(__tenmonGeneralGateResultMaybe({
         ...(__hasAnswerProfile && __bodyProfile ? { answerMode: __bodyProfile.answerMode ?? undefined, answerFrame: __bodyProfile.answerFrame ?? undefined } : {}),
       });
 
-      return res.json(__tenmonGeneralGateResultMaybe({
+      return await res.json(__tenmonGeneralGateResultMaybe({
         response: outText,
         evidence: null,
         candidates: [],
@@ -6391,7 +6449,7 @@ return res.json(__tenmonGeneralGateResultMaybe({
       const hasGemini = Boolean(process.env.GEMINI_API_KEY && String(process.env.GEMINI_API_KEY).trim());
 
       if (!hasOpenAI && !hasGemini) {
-        return res.json(__tenmonGeneralGateResultMaybe({
+        return await res.json(__tenmonGeneralGateResultMaybe({
           response: "LLMキーが未設定です。/etc/tenmon/llm.env（または /opt/tenmon-ark-data/llm.env）に OPENAI_API_KEYI_KEY / GEMINI_API_KEY を設定してください。",
           evidence: null,
           candidates: [],
@@ -6435,7 +6493,7 @@ return res.json(__tenmonGeneralGateResultMaybe({
         };
       }
 
-      return res.json(__tenmonGeneralGateResultMaybe({
+      return await res.json(__tenmonGeneralGateResultMaybe({
         response: outText || "（空応答）",
         evidence: null,
         candidates: [],
@@ -6571,7 +6629,7 @@ return res.json(__tenmonGeneralGateResultMaybe({
           answerMode: "define",
           answerFrame: "statement_plus_one_question",
         });
-        return res.json(__tenmonGeneralGateResultMaybe({
+        return await res.json(__tenmonGeneralGateResultMaybe({
           response: __wcBody,
           evidence: null,
           candidates: [],
@@ -6714,7 +6772,7 @@ return res.json(__tenmonGeneralGateResultMaybe({
       }
       try { console.log("[KATAKAMUNA_LIVE_RESPONSEPLAN]", { hasResponsePlan: Boolean((__ku as any).responsePlan), rr: (__ku as any).responsePlan?.routeReason ?? null }); } catch {}
 
-      return res.json(__tenmonGeneralGateResultMaybe({
+      return await res.json(__tenmonGeneralGateResultMaybe({
         response: __respFinal,
         evidence: null,
         candidates: [],
@@ -6778,7 +6836,7 @@ return res.json(__tenmonGeneralGateResultMaybe({
         sourceHint: __r.sourceHint || null,
       }).response;
 
-      return res.json(__tenmonGeneralGateResultMaybe({
+      return await res.json(__tenmonGeneralGateResultMaybe({
         response: __respFinal,
         evidence: null,
         candidates: [],
@@ -6874,7 +6932,7 @@ return res.json(__tenmonGeneralGateResultMaybe({
       });
     }
 
-    return res.json(__tenmonGeneralGateResultMaybe({
+    return await res.json(__tenmonGeneralGateResultMaybe({
       response: __respMeta,
       evidence: null,
       candidates: [],
@@ -6927,7 +6985,7 @@ const __isDefinitionQ =
           __body = "AIの進化は、記憶・判断・表現・接続回路が分離から統合へ進むことです。次は、記憶・判断・表現・接続のどこから見ますか？";
         }
 
-        return res.json(__tenmonGeneralGateResultMaybe({
+        return await res.json(__tenmonGeneralGateResultMaybe({
           response: __body,
           evidence: null,
           candidates: [],
@@ -6987,7 +7045,7 @@ const __isDefinitionQ =
           }
         } catch {}
 
-        return res.json(__tenmonGeneralGateResultMaybe({
+        return await res.json(__tenmonGeneralGateResultMaybe({
           response: "【天聞の所見】いま私は、真理優先・原典整合・水火への還元を軸に見ています。\n\n次は、真理優先・還元軸・次の一歩のどこを掘りますか？",
           evidence: null,
           candidates: [],
@@ -7036,7 +7094,7 @@ const __isDefinitionQ =
           }
         } catch {}
 
-        return res.json(__tenmonGeneralGateResultMaybe({
+        return await res.json(__tenmonGeneralGateResultMaybe({
           response: "【天聞の所見】まず、いまの中心を一行で言い切り、その次に一手だけ決めます。\n\n次は、中心の一行化・優先順位・次の一歩のどこから始めますか？",
           evidence: null,
           candidates: [],
@@ -7135,7 +7193,7 @@ const __isDefinitionQ =
         }
         try { console.log("[KATAKAMUNA_CONCEPT_RESPONSEPLAN]", { hasResponsePlan: Boolean(__kuKatakamunaConcept.responsePlan), rr: __kuKatakamunaConcept.responsePlan?.routeReason || null }); } catch {}
 
-        return res.json(__tenmonGeneralGateResultMaybe({
+        return await res.json(__tenmonGeneralGateResultMaybe({
           response: __resp,
           evidence: null,
           candidates: [],
@@ -7190,7 +7248,7 @@ const __isDefinitionQ =
         }
         saveThreadCore(__coreDef1).catch(() => {});
         try { (res as any).__TENMON_THREAD_CORE = __coreDef1; } catch {}
-        return res.json(__tenmonGeneralGateResultMaybe({
+        return await res.json(__tenmonGeneralGateResultMaybe({
           response: __resp,
           evidence: null,
           candidates: [],
@@ -7442,6 +7500,29 @@ const __isDefinitionQ =
               "静と動、収束と展開の相互転換として捉えることで、言葉や判断の変化を構造的に説明できます。";
           } else {
             __body = "主題の核を先に定義し、構造と含意を一段で示します。";
+            const __gkReady = getLlmProviderReadinessV1();
+            if (__gkReady.ok) {
+              try {
+                const __sysGk =
+                  "あなたは天聞アーク。水火の法則・言霊・正典の軸で、一般知識の問いに具体的な見立てを述べる。" +
+                  "メタな前置き（例: 主題の核を先に定義し…）だけで終わらせない。" +
+                  "出力は必ず「【天聞の所見】」で始める。3〜5文・150〜300字。質問は末尾に最大1つ。";
+                const __gk = await llmChat({
+                  system: __sysGk,
+                  user:
+                    `ユーザの問い:\n${__msgFact}\n\n` +
+                    `問いの内容に即した具体（習慣・倫理・身体・社会・判断の癖など）を必ず含めること。効用論やスピリチュアル一般論に逃げないこと。`,
+                  history: [],
+                } as any);
+                let __t = String(__gk?.text ?? "").trim();
+                if (!/^【天聞の所見】/u.test(__t)) __t = `【天聞の所見】${__t}`;
+                if (__t.replace(/^【天聞の所見】\s*/u, "").length >= 130) {
+                  __body = __t;
+                }
+              } catch {
+                /* フォールバックは上記短文 */
+              }
+            }
           }
         }
 
@@ -7510,7 +7591,7 @@ const __isDefinitionQ =
           (__detailPlanRepoAware as any).routeReason = __routeReason;
         }
 
-        return res.json(__tenmonGeneralGateResultMaybe({
+        return await res.json(__tenmonGeneralGateResultMaybe({
           response: __rendered.response,
           evidence: null,
           candidates: [],
@@ -7594,7 +7675,7 @@ const __isDefinitionQ =
               responseKind: "statement_plus_question",
             });
           }
-          return res.json(__tenmonGeneralGateResultMaybe({
+          return await res.json(__tenmonGeneralGateResultMaybe({
             response: __respKatakamunaCoverage,
             evidence: null,
             candidates: [],
@@ -7647,7 +7728,7 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
         }
         saveThreadCore(__coreDef2).catch(() => {});
         try { (res as any).__TENMON_THREAD_CORE = __coreDef2; } catch {}
-        return res.json(__tenmonGeneralGateResultMaybe({
+        return await res.json(__tenmonGeneralGateResultMaybe({
           response: __kotodamaDefFastpathBodyV1,
           evidence: null,
           candidates: [],
@@ -7659,7 +7740,7 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
 
       if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isJapanPm) {
         const __heartCov = normalizeHeartShape(__heart);
-        return res.json(__tenmonGeneralGateResultMaybe({
+        return await res.json(__tenmonGeneralGateResultMaybe({
           response:
             "この問いは外部の最新事実確認が要る一般知識です。現在の天聞アーク本線では、原典系・概念系の裁定を優先しているため、この種の問いは factual route へ分ける必要があります。\n\n" +
             "次は、一般知識 route を作るか、いまは天聞本線の話へ戻すか、どちらにしますか？",
@@ -7691,7 +7772,7 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
 
       if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isJapanUs) {
         const __heartCov = normalizeHeartShape(__heart);
-        return res.json(__tenmonGeneralGateResultMaybe({
+        return await res.json(__tenmonGeneralGateResultMaybe({
           response:
             "この問いは一般知識と情勢説明にまたがるため、専用の factual / relation route へ分けるのが正しいです。現在の本線では原典系を優先しているため、ここは dedicated route 追加対象です。\n\n" +
             "次は、一般知識 route を先に作るか、天聞本線の話へ戻るか、どちらにしますか？",
@@ -7881,7 +7962,7 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
               notionHint: "notion:tenmon_reconcile/notion_bridge",
             };
             __kuIntercept[kuSynapseTopKey] = { ...((__kuIntercept as any)[kuSynapseTopKey] || {}), ...__kuStInterceptPatch };
-            return res.json(__tenmonGeneralGateResultMaybe({
+            return await res.json(__tenmonGeneralGateResultMaybe({
               response: __bodyI,
               evidence: null,
               candidates: [],
@@ -8014,7 +8095,7 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
               notionHint: "notion:tenmon_reconcile/notion_bridge",
             };
             __kuInstr[kuSynapseTopKey] = { ...((__kuInstr as any)[kuSynapseTopKey] || {}), ...__kuStScrPatch };
-            return res.json(__tenmonGeneralGateResultMaybe({
+            return await res.json(__tenmonGeneralGateResultMaybe({
               response: __body,
               evidence: null,
               candidates: [],
@@ -8115,7 +8196,7 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
             __kuInstr[kuSynapseTopKey] = { ...((__kuInstr as any)[kuSynapseTopKey] || {}), ...__kuStInstrPatch };
             try { console.log("[SYNAPSETOP_AFTER_ASSIGN_SCRIPTURE]", { path: "instruction", keys: Object.keys((__kuInstr as any)[kuSynapseTopKey] || {}) }); } catch {}
             try { console.log("[SYNAPSETOP_BEFORE_RETURN]", { path: "scripture_instr", [kuSynapseTopKey]: (__kuInstr as any)[kuSynapseTopKey] }); } catch {}
-            return res.json(__tenmonGeneralGateResultMaybe({
+            return await res.json(__tenmonGeneralGateResultMaybe({
               response: __body,
               evidence: null,
               candidates: [],
@@ -8258,7 +8339,7 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
               ...(__hasAnswerProfile && __bodyProfile ? { answerMode: __bodyProfile.answerMode ?? undefined, answerFrame: __bodyProfile.answerFrame ?? undefined } : {}),
             });
             try { console.log("[SYNAPSETOP_BEFORE_RETURN]", { path: "scripture_canon", [kuSynapseTopKey]: (__ku as any)[kuSynapseTopKey] }); } catch {}
-            return res.json(__tenmonGeneralGateResultMaybe({
+            return await res.json(__tenmonGeneralGateResultMaybe({
               response: __respCanon,
               evidence: null,
               candidates: [],
@@ -8311,7 +8392,7 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
           const __axes = Array.isArray(__canon.next_axes) ? __canon.next_axes.slice(0, 2) : [];
           if (__axes.length) __body += "\n\nこの流れなら、" + __axes.join("・") + "のどれから払いますか？";
 
-          return res.json(__tenmonGeneralGateResultMaybe({
+          return await res.json(__tenmonGeneralGateResultMaybe({
             response: __body,
             evidence: null,
             candidates: [],
@@ -8418,7 +8499,7 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
             };
             if (__composed.meaningFrame != null) __ku.meaningFrame = __composed.meaningFrame;
             const __respSub = String(__composed.response ?? "").replace(/\n\n一手：[^\n]*\s*$/u, "").trim();
-            return res.json(__tenmonGeneralGateResultMaybe({
+            return await res.json(__tenmonGeneralGateResultMaybe({
               response: __respSub,
               evidence: null,
               candidates: [],
@@ -8476,7 +8557,7 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
             lawTrace: [],
           };
           if (__composed.meaningFrame != null) __ku.meaningFrame = __composed.meaningFrame;
-          return res.json(__tenmonGeneralGateResultMaybe({
+          return await res.json(__tenmonGeneralGateResultMaybe({
             response: cleanLlmFrameV1(__composed.response, {
               routeReason: __routeReason,
               userMessage: String(message ?? ""),
@@ -8532,7 +8613,7 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
                 responseComposer: responseComposer as any,
                 normalizeHeartShape,
               });
-              if (__soulKhs) return reply(__soulKhs);
+              if (__soulKhs) return await reply(__soulKhs);
             } catch {}
           }
           // evidenceIds: 実際の u.quoteHash（JOIN で取得）を使用
@@ -8582,7 +8663,7 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
               }
             }
           };
-          return reply(payload);
+          return await reply(payload);
         }
 
         // DEF_PROPOSED_FALLBACK_V1
@@ -8636,7 +8717,7 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
               sourceHint: null,
             }).response;
 
-            return res.json(__tenmonGeneralGateResultMaybe({
+            return await res.json(__tenmonGeneralGateResultMaybe({
               response: __respProposedFinal,
               evidence: __doc ? {
                 doc: __doc,
@@ -8785,7 +8866,7 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
         __kuDef[kuSynapseTopKey] = { ...((__kuDef as any)[kuSynapseTopKey] || {}), ...__kuStDefPatch };
         try { console.log("[SYNAPSETOP_AFTER_ASSIGN_DEF]", { path: "entity_canon", keys: Object.keys((__kuDef as any)[kuSynapseTopKey] || {}) }); } catch {}
         try { console.log("[SYNAPSETOP_BEFORE_RETURN]", { path: "def_entity", [kuSynapseTopKey]: (__kuDef as any)[kuSynapseTopKey] }); } catch {}
-        return res.json(__tenmonGeneralGateResultMaybe({
+        return await res.json(__tenmonGeneralGateResultMaybe({
           response: __out,
           evidence: null,
           candidates: [],
@@ -8833,7 +8914,7 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
         __kuGloss[kuSynapseTopKey] = { ...((__kuGloss as any)[kuSynapseTopKey] || {}), ...__kuStGlossPatch };
         try { console.log("[SYNAPSETOP_AFTER_ASSIGN_DEF]", { path: "glossary", keys: Object.keys((__kuGloss as any)[kuSynapseTopKey] || {}) }); } catch {}
         try { console.log("[SYNAPSETOP_BEFORE_RETURN]", { path: "def_glossary", [kuSynapseTopKey]: (__kuGloss as any)[kuSynapseTopKey] }); } catch {}
-        return res.json(__tenmonGeneralGateResultMaybe({
+        return await res.json(__tenmonGeneralGateResultMaybe({
           response: ((): string => {
             let t = String(__out || "").replace(/\r/g, "").trim();
             if (!t.startsWith("【天聞の所見】")) t = "【天聞の所見】" + t;
@@ -8854,7 +8935,7 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
       // R3_CONCEPT_ANTI_GENERIC_GUARD_V1: 4概念で canon/verified/proposed/glossary までで止め、generic fallback を使わない
       if (isConceptCanonTarget(String(message ?? ""))) {
         const __out = "【天聞の所見】この概念はまだ天聞正準へ固定中です。次は原典・法則・周辺概念のどこから詰めますか？";
-        return res.json(__tenmonGeneralGateResultMaybe({
+        return await res.json(__tenmonGeneralGateResultMaybe({
           response: ((): string => {
             let t = String(__out || "").replace(/\r/g, "").trim();
             if (!t.startsWith("【天聞の所見】")) t = "【天聞の所見】" + t;
@@ -8889,7 +8970,7 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
       if (!__termOk) {
         const __out = "【天聞の所見】その語を定義する前に、使っている文脈を一つだけ教えてください（どこで/何のために）？";
         if (false) {
-      return res.json(__tenmonGeneralGateResultMaybe({
+      return await res.json(__tenmonGeneralGateResultMaybe({
                 response: ((): string => {
                 let t = String(__out || "").replace(/\r/g, "").trim();
                 if (!t.startsWith("【天聞の所見】")) t = "【天聞の所見】" + t;
@@ -8912,7 +8993,7 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
       {
         const __out = "【天聞の所見】その語は内部用語として扱います。使っている文脈を一つだけ教えてください（どこで／何のために）？";
         if (false) {
-      return res.json(__tenmonGeneralGateResultMaybe({
+      return await res.json(__tenmonGeneralGateResultMaybe({
                 response: ((): string => {
                 let t = String(__out || "").replace(/\r/g, "").trim();
                 if (!t.startsWith("【天聞の所見】")) t = "【天聞の所見】" + t;
@@ -8995,7 +9076,7 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
             __kuEntity[kuSynapseTopKey] = { ...((__kuEntity as any)[kuSynapseTopKey] || {}), ...__kuStEntityPatch };
             try { console.log("[SYNAPSETOP_AFTER_ASSIGN_DEF]", { path: "fix_entity", keys: Object.keys((__kuEntity as any)[kuSynapseTopKey] || {}) }); } catch {}
             try { console.log("[SYNAPSETOP_BEFORE_RETURN]", { path: "def_fix_entity", [kuSynapseTopKey]: (__kuEntity as any)[kuSynapseTopKey] }); } catch {}
-            return res.json(__tenmonGeneralGateResultMaybe({
+            return await res.json(__tenmonGeneralGateResultMaybe({
               response: __out,
               evidence: null,
               candidates: [],
@@ -9210,7 +9291,7 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
                   });
                 } catch {}
 
-                return reply({
+                return await reply({
                   response: __bodyAbstract,
                   mode: "NATURAL",
                   sourcePack: "concept",
@@ -9232,7 +9313,7 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
               term: "言霊",
               heart: normalizeHeartShape(__heart),
             };
-            return res.json(__tenmonGeneralGateResultMaybe({
+            return await res.json(__tenmonGeneralGateResultMaybe({
               response: __composedK.response,
               evidence: null,
               candidates: [],
@@ -9274,7 +9355,7 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
               `\n\n出典: ${String(hit.doc ?? "")} P${Number(hit.pdfPage ?? 0)}` +
               "\n\n魂・息・火水のどこを深掘りしますか？";
 
-            return res.json(__tenmonGeneralGateResultMaybe({
+            return await res.json(__tenmonGeneralGateResultMaybe({
               response: __resp,
               evidence: null,
               candidates: [],
@@ -9302,7 +9383,7 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
             }));
           }
 
-          return res.json(__tenmonGeneralGateResultMaybe({
+          return await res.json(__tenmonGeneralGateResultMaybe({
             response: __out,
             evidence: null,
             candidates: [],
@@ -9410,7 +9491,7 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
               confidence: 0.88,
             });
           } catch {}
-          return res.json(__tenmonGeneralGateResultMaybe({
+          return await res.json(__tenmonGeneralGateResultMaybe({
             response: __leBody,
             evidence: null,
             candidates: [],
@@ -9451,7 +9532,7 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
             "近傍では言霊（五十音・一言法則）・カタカムナ系資料・水火の成立原理が定義の土台になりやすいです。" +
             "この語をそのどれに寄せて読みたいか決めると、次の一手が決まります。" +
             "原典名・表記ゆれ・出典ページのどれか一つだけ教えてください（なければ、想定している読みの方向を一言で）。";
-          return res.json(__tenmonGeneralGateResultMaybe({
+          return await res.json(__tenmonGeneralGateResultMaybe({
             response: __unkBody,
             evidence: null,
             candidates: [],
@@ -9617,7 +9698,7 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
             }),
           }
         : { lawsUsed: [], evidenceIds: [], lawTrace: [], routeReason: "DEF_LLM_TOP" /* responsePlan */ };
-      return res.json(__tenmonGeneralGateResultMaybe({
+      return await res.json(__tenmonGeneralGateResultMaybe({
         response: __defLlmFinalResponse,
         evidence: null,
         candidates: [],
@@ -9692,7 +9773,7 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
           answerMode: "analysis",
           answerFrame: "statement_plus_one_question",
         });
-        return res.json(__tenmonGeneralGateResultMaybe({
+        return await res.json(__tenmonGeneralGateResultMaybe({
           response: __btyBody,
           evidence: null,
           candidates: [],
@@ -9778,7 +9859,7 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
           answerMode: "analysis",
           answerFrame: "statement_plus_one_question",
         });
-        return res.json(__tenmonGeneralGateResultMaybe({
+        return await res.json(__tenmonGeneralGateResultMaybe({
           response: __dfwBody,
           evidence: null,
           candidates: [],
@@ -9863,7 +9944,7 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
             confidence: 0.88,
           });
         } catch {}
-        return res.json(__tenmonGeneralGateResultMaybe({
+        return await res.json(__tenmonGeneralGateResultMaybe({
           response: __leBodyG,
           evidence: null,
           candidates: [],
@@ -9904,7 +9985,7 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
         normalizeHeartShape,
       });
       if (__soulEarly) {
-        return res.json(__tenmonGeneralGateResultMaybe(__soulEarly));
+        return await res.json(__tenmonGeneralGateResultMaybe(__soulEarly));
       }
     } catch (e) {
       try {
@@ -9913,7 +9994,7 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
     }
 
     if (__truthWeight > 0.6) {
-      return res.json(__tenmonGeneralGateResultMaybe({
+      return await res.json(__tenmonGeneralGateResultMaybe({
         response: "【天聞の所見】この問いは法則に強く接続しています。定義から展開します。\n\nどの層を深掘りしますか？（構造／作用／実践）",
         timestamp,
         threadId, /* tcTag */
@@ -9992,7 +10073,7 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
             __body = "AIの進化は、記憶・判断・表現・接続回路が分離から統合へ進むことです。次は、記憶・判断・表現・接続のどこから見ますか？";
           }
 
-          return res.json(__tenmonGeneralGateResultMaybe({
+          return await res.json(__tenmonGeneralGateResultMaybe({
             response: __body,
             evidence: null,
             candidates: [],
@@ -10053,7 +10134,7 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
           lastBookIntent: "placeholder",
         });
         const __bodyBook = "長文執筆モードに入る前提で受け取りました。章構成と継続記憶を前提に扱います。まず今回の章題か、書き出しの中心を一つ置いてください。";
-        return res.json(__tenmonGeneralGateResultMaybe({
+        return await res.json(__tenmonGeneralGateResultMaybe({
           response: __bodyBook,
           evidence: null,
           candidates: [],
@@ -10331,7 +10412,7 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
             : __isImpressionTenmon
               ? "【天聞の所見】天聞は、問いを受けて中心を整えるための相手として立っています。感想を一言でいえば、まだ発展途上だが核は見え始めています。"
               : "【天聞の所見】いまは、整えに向かう気分です。中心を一つ置いて、そこから静かに見ていけます。";
-          return res.json(__tenmonGeneralGateResultMaybe({
+          return await res.json(__tenmonGeneralGateResultMaybe({
             response: __body,
             evidence: null,
             candidates: [],
@@ -10361,7 +10442,7 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
         const __isSelfViewInput =
           /君の思考|あなたの考え|天聞の考え|天聞の意見|君はどう思う|あなたはどう思う/u.test(__t0SelfView);
         if (!isCmd0 && !hasDoc0 && !askedMenu0 && __explicitCharsEarly == null && __isSelfViewInput) {
-          return res.json(
+          return await res.json(
             __tenmonGeneralGateResultMaybe({
               response:
                 "私は、水火の法則と言霊の軸から見ると、問いの芯を先に定めてから世界を読むほうが、判断の濁りが少ないと見ています。",
@@ -10399,7 +10480,7 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
           __isFactualCorrectionUserMessageV1(t0)
         ) {
           const __bodyFc = "ご指摘ありがとうございます。確認し、訂正前提で見直します。";
-          return res.json(
+          return await res.json(
             __tenmonGeneralGateResultMaybe({
               response: __bodyFc,
               evidence: null,
@@ -10518,7 +10599,7 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
           buildKotodamaCompareResponse,
         });
         if (__holdPre) {
-          return res.json(__tenmonGeneralGateResultMaybe(__holdPre));
+          return await res.json(__tenmonGeneralGateResultMaybe(__holdPre));
         }
       } catch {
         /* ignore */
@@ -10575,7 +10656,7 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
           lawTrace: [],
         };
         try { const __binderNext = buildKnowledgeBinder({ routeReason: "R22_NEXTSTEP_FOLLOWUP_V1", /* responsePlan */ message: String(message ?? ""), threadId: String(threadId ?? ""), ku: __kuNext, threadCore: __threadCore, threadCenter: __threadCenterForGeneral ?? null }); applyKnowledgeBinderToKu(__kuNext, __binderNext); } catch {}
-        return res.json(__tenmonGeneralGateResultMaybe({
+        return await res.json(__tenmonGeneralGateResultMaybe({
           response: __bodyNext,
           evidence: null,
           candidates: [],
@@ -10647,7 +10728,7 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
             responseKind: "statement_plus_question",
           });
         }
-        return res.json(__tenmonGeneralGateResultMaybe({
+        return await res.json(__tenmonGeneralGateResultMaybe({
           response: __bodyEssence,
           evidence: null,
           candidates: [],
@@ -10691,7 +10772,7 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
                   semanticCore: String(__cmpBodyCmp || "").replace(/^【天聞の所見】\s*/u, "").trim(),
                   nextStepLine: NG_NEXTSTEP_TWO_MORA_V1,
                 });
-                return res.json(__tenmonGeneralGateResultMaybe({
+                return await res.json(__tenmonGeneralGateResultMaybe({
                   response: __cmpWrapped,
                   evidence: null,
                   candidates: [],
@@ -10748,7 +10829,7 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
             responseKind: "statement_plus_question",
           });
         }
-        return res.json(__tenmonGeneralGateResultMaybe({
+        return await res.json(__tenmonGeneralGateResultMaybe({
           response: __bodyCmpPreempt,
           evidence: null,
           candidates: [],
@@ -10821,7 +10902,7 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
           });
           applyKnowledgeBinderToKu(__kuCont, __binderCont);
         } catch {}
-        return res.json(__tenmonGeneralGateResultMaybe({
+        return await res.json(__tenmonGeneralGateResultMaybe({
           response: __bodyCont,
           evidence: null,
           candidates: [],
@@ -10907,7 +10988,7 @@ try {
             semanticBody: "比較の問いです。比べたい二つを一言ずつ置くと、答えが締まります。",
           });
         } catch {}
-        return res.json(__tenmonGeneralGateResultMaybe({
+        return await res.json(__tenmonGeneralGateResultMaybe({
           response: "【天聞の所見】比較の問いです。比べたい二つを一言ずつ置くと、答えが締まります。",
           evidence: null,
           candidates: [],
@@ -10975,7 +11056,7 @@ try {
               responseKind: "statement_plus_question",
             });
           }
-          return res.json(__tenmonGeneralGateResultMaybe({
+          return await res.json(__tenmonGeneralGateResultMaybe({
             response: __bodySelfDiag,
             evidence: null,
             candidates: [],
@@ -11251,7 +11332,7 @@ try {
         const __coreShrink: ThreadCore = { ...__threadCore, lastResponseContract: { answerLength: __kuShrink.answerLength, answerMode: __kuShrink.answerMode, answerFrame: __kuShrink.answerFrame, routeReason: __rrShrink }, updatedAt: new Date().toISOString() };
         saveThreadCore(__coreShrink).catch(() => {});
         try { (res as any).__TENMON_THREAD_CORE = __coreShrink; } catch {}
-        return res.json(__tenmonGeneralGateResultMaybe({
+        return await res.json(__tenmonGeneralGateResultMaybe({
           response: __responseShrink,
           evidence: null,
           candidates: [],
@@ -11793,7 +11874,7 @@ try {
             });
           } catch {}
 
-          return res.json(__tenmonGeneralGateResultMaybe({
+          return await res.json(__tenmonGeneralGateResultMaybe({
             response: cleanLlmFrameV1(__composedLocked.response, {
               routeReason: ROUTE_NATURAL_GENERAL_LLM_TOP_V1,
               userMessage: String(message ?? ""),
@@ -12456,7 +12537,7 @@ const __heartNorm = normalizeHeartShape(__heart);
           } catch {}
         }
       } catch {}
-      return res.json(__tenmonGeneralGateResultMaybe({
+      return await res.json(__tenmonGeneralGateResultMaybe({
         response: finalResp,
         evidence: null,
         candidates: [],
@@ -12540,7 +12621,7 @@ let outText = "";
             __body = "AIの進化は、記憶・判断・表現・接続回路が分離から統合へ進むことです。次は、記憶・判断・表現・接続のどこから見ますか？";
           }
 
-          return res.json(__tenmonGeneralGateResultMaybe({
+          return await res.json(__tenmonGeneralGateResultMaybe({
             response: __body,
             evidence: null,
             candidates: [],
@@ -12581,7 +12662,7 @@ let outText = "";
 
         const __releaseDanshariInput = String(message ?? "");
         if (/断捨離/u.test(__releaseDanshariInput) && /人生全体/u.test(__releaseDanshariInput) && /どう使える/u.test(__releaseDanshariInput)) {
-          return res.json(__tenmonGeneralGateResultMaybe({
+          return await res.json(__tenmonGeneralGateResultMaybe({
             response: "断捨離を人生全体に使うなら、単に物を減らすというより、『いまの自分に本当に必要なものを見極める』ための整理法として使うのが軸です。\n\nたとえば、\n1) 予定\n2) 人間関係\n3) 思い込み\nの三つに当てると、人生全体の整理に広げやすくなります。\n\nそのうえで最初の一歩として、いま一番重いものを一つだけ挙げてみてください。",
             evidence: null,
             candidates: [],
@@ -12662,7 +12743,7 @@ let outText = "";
               userMessage: String(message ?? ""),
               answerLength: null,
             });
-            return res.json(__tenmonGeneralGateResultMaybe({
+            return await res.json(__tenmonGeneralGateResultMaybe({
               response: __respClean,
               evidence: null,
               candidates: [],
@@ -12745,7 +12826,7 @@ if (!outText) {
         });
       } catch {}
 
-      return res.json(__tenmonGeneralGateResultMaybe({
+      return await res.json(__tenmonGeneralGateResultMaybe({
         response: cleanLlmFrameV1(__composed.response, {
           routeReason: "N2_KANAGI_PHASE_TOP",
           userMessage: String(message ?? ""),
@@ -12823,7 +12904,7 @@ if (!outText) {
 
   // B1: deterministic menu trigger for acceptance (must work even for GUEST)
   if (String(message ?? "").trim() === "__FORCE_MENU__") {
-    return res.json(__tenmonGeneralGateResultMaybe({
+    return await res.json(__tenmonGeneralGateResultMaybe({
       response:
         "1) 検索（GROUNDED）\n2) 整理（Writer/Reader）\n3) 設定（運用/学習）\n\n番号かキーワードで選んでください。",
       evidence: null,
@@ -12868,7 +12949,7 @@ if (!outText) {
         "\n\n" +
         "楢崎本流・宇野会誌本流・空海軸・天聞再統合軸のどこから見たいですか？";
 
-      return res.json(__tenmonGeneralGateResultMaybe({
+      return await res.json(__tenmonGeneralGateResultMaybe({
         response: __resp.trim(),
         evidence: null,
         candidates: [],
@@ -12908,7 +12989,7 @@ if (!outText) {
       responseComposer: responseComposer as any,
       normalizeHeartShape,
     });
-    if (__soulLate) return res.json(__tenmonGeneralGateResultMaybe(__soulLate));
+    if (__soulLate) return await res.json(__tenmonGeneralGateResultMaybe(__soulLate));
   } catch (e) {
     try { console.error("[SOUL_FASTPATH_VERIFIED_V1]", e); } catch {}
   }
@@ -12946,7 +13027,7 @@ if (!outText) {
         "\n\n" +
         "楢崎本流・宇野会誌本流・空海軸・天聞再統合軸のどこから見たいですか？";
 
-      return res.json(__tenmonGeneralGateResultMaybe({
+      return await res.json(__tenmonGeneralGateResultMaybe({
         response: __resp.trim(),
         evidence: null,
         candidates: [],
@@ -13152,7 +13233,7 @@ if (!outText) {
           applyKnowledgeBinderToKu(__kuSound, __binderSound);
         } catch {}
 
-        return reply({
+        return await reply({
           response: __response,
           mode: "NATURAL",
           sourcePack: "scripture",
@@ -13234,7 +13315,7 @@ if (!outText) {
         });
       } catch {}
 
-      return reply({
+      return await reply({
         response: __abstractFrame.response,
         mode: "NATURAL",
         sourcePack: "concept",
@@ -13422,7 +13503,7 @@ if (!outText) {
           );
         }
 
-        return res.json(__tenmonGeneralGateResultMaybe({
+        return await res.json(__tenmonGeneralGateResultMaybe({
           response: __respFinal,
           evidence: {
             doc: String(__hitV.doc ?? ""),
@@ -13505,7 +13586,7 @@ if (!outText) {
           );
         }
 
-        return res.json(__tenmonGeneralGateResultMaybe({
+        return await res.json(__tenmonGeneralGateResultMaybe({
           response: __resp,
           evidence: {
             doc: String(__hitP.doc ?? ""),
@@ -13612,7 +13693,7 @@ if (!outText) {
           "2) 習慣（行動・時間の使い方）\n" +
           "3) 人間関係\n\n" +
           "番号で答えてください。";
-        return res.json(__tenmonGeneralGateResultMaybe({
+        return await res.json(__tenmonGeneralGateResultMaybe({
           response: __card1DanshariBody,
           evidence: null,
           candidates: [],
@@ -13647,7 +13728,7 @@ if (!outText) {
       }
 
       setThreadPending(threadId, "CASUAL_STEP1");
-      return reply({
+      return await reply({
         response:
           "【天聞の所見】いまは“言葉にする前の詰まり”が少しあります。先に軸を一つだけ立てます。\n\n" +
           "いちばん近いのはどれですか？\n" +
@@ -13677,7 +13758,7 @@ if (!outText) {
     (/(不安|動けない|しんどい|つらい|焦り|詰んだ|多すぎ|やること|タスク|間に合わない|疲れた)/.test(tNat));
 
   if (isStressShortJa) {
-    return reply({
+    return await reply({
       response:
         "【天聞の所見】いまは“中心の軸”がまだ決まっていないだけです。先に1つだけ立てます。\n\n" +
         "一点質問：いちばん近いのはどれですか？\n" +
@@ -13707,7 +13788,7 @@ if (!outText) {
   const hasDocPageNat = /pdfPage\s*=\s*\d+/i.test(trimmed) || /\bdoc\b/i.test(trimmed);
 
   if (isJa && isShort && looksLikeConsult && !hasCmd && !isNumberOnly && !hasDocPageNat) {
-    return reply({
+    return await reply({
       response:
         "【天聞の所見】短文の相談は“焦点が一点”の合図です。先に軸を決めます。\n\n" +
         "一点質問：いちばん近いのはどれですか？\n\n" +
@@ -13737,7 +13818,7 @@ if (!outText) {
         ? `覚えています。合言葉は「${p}」です。`
         : "まだ合言葉が登録されていません。先に『合言葉は◯◯です』と教えてください。";
       persistTurn(threadId, trimmed, answer);
-      return reply({
+      return await reply({
         response: answer,
         evidence: null,
         timestamp,
@@ -13751,7 +13832,7 @@ if (!outText) {
     if (p2) {
       const answer = `登録しました。合言葉は「${p2}」です。`;
       persistTurn(threadId, trimmed, answer);
-      return reply({
+      return await reply({
         response: answer,
         evidence: null,
         timestamp,
@@ -13778,7 +13859,7 @@ if (!outText) {
     (trimmed.length <= 3 && /^[a-zA-Z]+$/.test(trimmed));
 
   if (isLowSignalPing) {
-    return reply({
+    return await reply({
       response:
         "了解しました。何かお手伝いできることはありますか？\n\n例：\n- 質問や相談\n- 資料の検索（doc/pdfPage で指定）\n- 会話の続き",
       evidence: null,
@@ -13893,7 +13974,7 @@ if (usable.length === 0) {
         } catch (e) {
           console.error("[ARK_SEED_SAVE_FAIL]", e);
         }
-        return reply(payload);
+        return await reply(payload);
       }
 
           const pageText = getPageText(top.doc, top.pdfPage);
@@ -13967,7 +14048,7 @@ if (usable.length === 0) {
             } catch (e) {
               console.error("[ARK_SEED_SAVE_FAIL]", e);
             }
-            return reply(payload);
+            return await reply(payload);
           }
           // --- /NON_TEXT_GUARD_V1 ---
           if (pageText && pageText.trim().length > 0) {
@@ -14033,7 +14114,7 @@ if (usable.length === 0) {
         } catch (e) {
           console.error("[ARK_SEED_SAVE_FAIL]", e);
         }
-        return reply(payload);
+        return await reply(payload);
       }
       // LANE_2: 資料指定 → メッセージに doc/pdfPage が含まれていることを期待
       // LANE_3: 状況整理 → 通常処理にフォールスルー
@@ -14048,7 +14129,7 @@ if (usable.length === 0) {
     const picked = pickFromThread(threadId, oneBasedIndex);
     if (picked) {
       clearThreadCandidates(threadId);
-      return reply(buildGroundedResponse({
+      return await reply(buildGroundedResponse({
         doc: picked.doc,
         pdfPage: picked.pdfPage,
         threadId, /* tcTag */
@@ -14072,7 +14153,7 @@ if (usable.length === 0) {
       `- kokuzo_chunks: ${chunksCount}件\n` +
       `- kokuzo_files: ${filesCount}件\n` +
       `- capsQueue: ${capsInfo.path} (exists=${capsInfo.exists})`;
-    return reply({
+    return await reply({
       response: text,
       evidence: null,
       decisionFrame: { mode: "NATURAL", intent: "command", llm: null, ku: {} },
@@ -14091,7 +14172,7 @@ if (usable.length === 0) {
       q = q.replace(mDoc[0], "").trim();
     }
     if (!q) {
-      return reply({
+      return await reply({
         response: "検索語が空です。#search doc=KHS 言霊 のように検索語も指定してください。",
         evidence: null,
         decisionFrame: { mode: "NATURAL", intent: "command", llm: null, ku: {} },
@@ -14145,7 +14226,7 @@ if (usable.length === 0) {
       } catch (e) {
         console.error("[ARK_SEED_SAVE_FAIL]", e);
       }
-      return reply(payload);
+      return await reply(payload);
     }
     const results = candidates.slice(0, 5).map((c, i) =>
       `${i + 1}. ${c.doc} P${c.pdfPage}: ${c.snippet.slice(0, 100)}...`
@@ -14194,13 +14275,13 @@ if (usable.length === 0) {
     } catch (e) {
       console.error("[ARK_SEED_SAVE_FAIL]", e);
     }
-    return reply(payload);
+    return await reply(payload);
   }
 
   if (trimmed.startsWith("#pin ")) {
     const pinMatch = trimmed.match(/doc\s*=\s*([^\s]+)\s+pdfPage\s*=\s*(\d+)/i);
     if (!pinMatch) {
-      return reply({
+      return await reply({
         response: "エラー: #pin doc=<filename> pdfPage=<number> の形式で指定してください",
         evidence: null,
         decisionFrame: { mode: "NATURAL", intent: "command", llm: null, ku: {} },
@@ -14210,7 +14291,7 @@ if (usable.length === 0) {
     }
     const doc = pinMatch[1];
     const pdfPage = parseInt(pinMatch[2], 10);
-    return reply(buildGroundedResponse({
+    return await reply(buildGroundedResponse({
       doc,
       pdfPage,
       threadId, /* tcTag */
@@ -14295,7 +14376,7 @@ if (usable.length === 0) {
     try {
     } catch {}
 
-    return reply({
+    return await reply({
       response: nat.responseText,
       evidence: null,
       decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: {} },
@@ -14349,7 +14430,7 @@ if (usable.length === 0) {
 
         const __card1Step2Body = `${__op}\n\n${__q}`;
         const __card1Step2Rr = __isDanshari ? "CARD1_DANSHARI_STEP2" : "CARD1_CASUAL_STEP2";
-        return res.json(__tenmonGeneralGateResultMaybe({
+        return await res.json(__tenmonGeneralGateResultMaybe({
           response: __card1Step2Body,
           evidence: null,
           candidates: [],
@@ -14522,7 +14603,7 @@ if (usable.length === 0) {
 
     const safe = scrubEvidenceLike(finalText);
 
-    return res.json(__tenmonGeneralGateResultMaybe({
+    return await res.json(__tenmonGeneralGateResultMaybe({
       response: safe,
       evidence: null,
       decisionFrame: {
@@ -14551,7 +14632,7 @@ if (usable.length === 0) {
       threadId
     });
     if (conv && conv.text) {
-      return res.json(__tenmonGeneralGateResultMaybe({
+      return await res.json(__tenmonGeneralGateResultMaybe({
         response: conv.text,
         evidence: null,
         candidates: [],
@@ -14621,7 +14702,7 @@ if (typeof out === "string" && out.trim()) nat.responseText = out.trim();
       } catch {}
 
 
-      return reply({
+      return await reply({
         response: nat.responseText,
         evidence: null,
         decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: { rewriteUsed: (nat as any).rewriteUsed ?? false, rewriteDelta: (nat as any).rewriteDelta ?? 0, khs: { lawsUsed: [], evidenceIds: [], lawTrace: [] } } },
@@ -14670,7 +14751,7 @@ if (typeof out === "string" && out.trim()) nat.responseText = out.trim();
         out.candidates[0] = c0;
       }
 
-      return reply(out);
+      return await reply(out);
     }
   }
 
@@ -14680,7 +14761,7 @@ if (typeof out === "string" && out.trim()) nat.responseText = out.trim();
   if (mPage && mDoc) {
     const pdfPage = parseInt(mPage[1], 10);
     const doc = mDoc[1];
-    return reply(buildGroundedResponse({
+    return await reply(buildGroundedResponse({
       doc,
       pdfPage,
       threadId, /* tcTag */
@@ -14697,7 +14778,7 @@ if (typeof out === "string" && out.trim()) nat.responseText = out.trim();
     const __m = String((((sanitized as any).text ?? (sanitized as any).message ?? messageRaw) || "") );
     if (false && __m.includes("断捨離") && __m.includes("迷い") && __m.includes("整理")) {
       const response = "【天聞の所見】\n断捨離の第一歩です。\n\n1) 手放す対象を1つ決める\n2) 迷いの原因を1つ言語化する\n3) 次の一手を1つだけ実行する\n\n番号で答えてください。どれにしますか？";
-      return res.json(__tenmonGeneralGateResultMaybe({
+      return await res.json(__tenmonGeneralGateResultMaybe({
         response,
         evidence: null,
         candidates: [],
@@ -14967,7 +15048,7 @@ if (typeof out === "string" && out.trim()) nat.responseText = out.trim();
         } catch (e) {
           console.error("[ARK_SEED_SAVE_FAIL]", e);
         }
-        return reply(payload);
+        return await reply(payload);
       }
 
       const payload = {
@@ -15021,7 +15102,7 @@ if (typeof out === "string" && out.trim()) nat.responseText = out.trim();
       } catch (e) {
         console.error("[ARK_SEED_SAVE_FAIL]", e);
       }
-      return reply(payload);
+      return await reply(payload);
     }
 
 let finalResponse = tenmonResponse;
@@ -15124,7 +15205,7 @@ if (__hasMenu && !__askedMenu) {
           } catch (e) {
             console.error("[ARK_SEED_SAVE_FAIL]", e);
           }
-          return reply(payload);
+          return await reply(payload);
         }
 
         if (pageText && pageText.trim().length > 0 && !isNonText) {
@@ -15561,7 +15642,7 @@ if (__hasMenu && !__askedMenu) {
     } catch (e) {
       console.error("[ARK_SEED_SAVE_FAIL]", e);
     }
-    return reply(payload);
+    return await reply(payload);
   } catch (error) {
     const pid = process.pid;
     const uptime = process.uptime();
@@ -15612,7 +15693,7 @@ if (__hasMenu && !__askedMenu) {
     } catch (e) {
       console.error("[ARK_SEED_SAVE_FAIL]", e);
     }
-    return reply(payload);
+    return await reply(payload);
   }
   });
 });
