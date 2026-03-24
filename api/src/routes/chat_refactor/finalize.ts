@@ -96,6 +96,14 @@ function isDensityEligibleKu(ku: any): boolean {
   const am = String(ku?.answerMode ?? "").trim();
   /** PACK_D_V1: grounding セレクタ短文出口は密度契約・意味compilerで本文を上書きしない */
   if (/^GROUNDING_SELECTOR_/u.test(rr)) return false;
+  /** TENMON_CHAT_SUBCONCEPT_MISFIRE_AND_TEMPLATE_LEAK_FIX: ゲート短文は density / meaningCompiler で本文を膨らませない */
+  if (
+    /^(AI_CONSCIOUSNESS_LOCK_V1|FACTUAL_CORRECTION_V1|FACTUAL_WEATHER_V1|FACTUAL_CURRENT_DATE_V1|FACTUAL_CURRENT_PERSON_V1|FACTUAL_RECENT_TREND_V1|R22_LIGHT_FACT_DATE_V1|R22_LIGHT_FACT_TIME_V1|R22_LIGHT_FACT_WEEKDAY_V1)$/u.test(
+      rr,
+    )
+  ) {
+    return false;
+  }
   if (DENSITY_CONTRACT_ROUTE_REASONS.has(rr)) return true;
   if (am === "define" || am === "analysis") return true;
   return false;
@@ -132,6 +140,31 @@ function stripScripturePlaceholderAndTraceV1(text: string): string {
     out.push(line);
   }
   return out.join("\n").replace(/\n{3,}/g, "\n\n").trim();
+}
+
+/**
+ * TENMON_SURFACE_TEMPLATE_CLEAN_FINALIZE_CURSOR_AUTO_V1
+ * 会話表面に漏れる定型テンプレを最終段で除去（routeReason / 意味生成は不変）。
+ */
+function stripSurfaceTemplateLeakFinalizeV1(text: string): string {
+  let t = String(text || "");
+  const removals: RegExp[] = [
+    /さっき見ていた中心（[^）\n]{0,120}）を土台に、いまの話を見ていきましょう。\s*/gu,
+    /^（[^）\n]{0,120}）を土台に、いまの話を見ていきましょう。\s*\n?/gmu,
+    /【天聞の所見】いまは中心を保持したまま考えられています。[^\n]*\n?/gu,
+    /語義・作用・読解の軸を分けて読むと、要点が崩れにくいです。\s*/gu,
+    /語義・作用・読解の軸を分けると、主張の射程が崩れにくくなります。\s*/gu,
+    /現代では、概念を押さえたうえで判断や実装に一段だけ落とすと使えます。\s*/gu,
+    /について、今回は[^。\n]{0,40}の立場で答えます。?\n?/gu,
+    /判断軸（内部参照は要約表示）について[^。\n]{0,50}。?\n?/gu,
+  ];
+  for (const re of removals) {
+    t = t.replace(re, "");
+  }
+  return t
+    .replace(/\n{3,}/g, "\n\n")
+    .replace(/[ 　]{2,}/gu, " ")
+    .trim();
 }
 
 function advanceScriptureFollowupIfLoopV1(args: {
@@ -183,16 +216,13 @@ function shapeScriptureEssenceSurfaceV1(args: {
     .filter(Boolean);
   if (paras.length === 0) return { body: cleaned2, evidencePack: args.evidencePack };
   const core = paras[0];
-  let structure = paras[1] || "語義・作用・読解の軸を分けて読むと、要点が崩れにくいです。";
-  const modern =
-    paras.length >= 3
-      ? paras.slice(2).join(" ")
-      : "現代では、概念を押さえたうえで判断や実装に一段だけ落とすと使えます。";
+  let structure = paras[1] || "";
+  const modern = paras.length >= 3 ? paras.slice(2).join(" ") : "";
   if (structure.replace(/\s+/g, " ").trim() === core.replace(/\s+/g, " ").trim()) {
-    structure = "語義・作用・読解の軸を分けると、主張の射程が崩れにくくなります。";
+    structure = "";
   }
   /** 見出しラベルなしの自然連結（表面メタ削減） */
-  const body = [core, structure, modern].join(" ").replace(/\s+/g, " ").trim();
+  const body = [core, structure, modern].filter(Boolean).join(" ").replace(/\s+/g, " ").trim();
   return {
     body,
     // evidence は payload 側に保持し、表面には露出しない
@@ -881,13 +911,29 @@ export function applyFinalAnswerConstitutionAndWisdomReducerV1(payload: any): an
     ku,
   });
 
+  /** K1_TRACE_EMPTY_MIN_SURFACE_V1: 極短文のみ自然文補完（routeReason 不変・placeholder 禁止） */
+  if (rr === "K1_TRACE_EMPTY_GATED_V1") {
+    const stripped = stripScripturePlaceholderAndTraceV1(body).replace(/\s+/g, " ").trim();
+    if (
+      stripped.length > 0 &&
+      stripped.length < 100 &&
+      !/定義は補完待ち|PLACEHOLDER|TODO|【根拠の短要約】\s*$/iu.test(stripped)
+    ) {
+      const q = String(userMessageForSurface || "").trim();
+      const techQ = /(typescript|sqlite|fts|rate\s*limit|node\.js|singleton)/iu.test(q);
+      /** TENMON_CHAT_SUBCONCEPT_MISFIRE_AND_TEMPLATE_LEAK_FIX: 非技術系は定型追記を空（テンプレ漏れ止血） */
+      const tail = techQ ? "手順は前提・制約・実装の順に分けると、説明が短くても追いやすくなります。" : "";
+      body = tail ? `${stripped}\n\n${tail}`.trim() : stripped;
+    }
+  }
+
   /** TENMON_CONVERSATION_100_SEAL_PDCA_V1: 明示長文は「立脚の中心」「補助）次の一手」等を付けず semantic 本文を主に出す */
   if (rr === "EXPLICIT_CHAR_PREEMPT_V1" && __explicitReq >= 2400 && !__beautyThin) {
     let b = trimTenmonSurfaceNoiseV3(body.trim());
     if (!/^【天聞の所見】/u.test(b)) {
       b = `【天聞の所見】\n\n${b}`;
     }
-    out.response = b;
+    out.response = stripSurfaceTemplateLeakFinalizeV1(b);
     attachOmegaContractToOutKuV1(
       out as Record<string, unknown>,
       ku,
@@ -905,7 +951,7 @@ export function applyFinalAnswerConstitutionAndWisdomReducerV1(payload: any): an
 
   /** PACK_D_V1: 短文・一文完結の grounding 出口は見出し二重と補助「次の一手」を付けない */
   if (/^GROUNDING_SELECTOR_/u.test(rr)) {
-    out.response = trimTenmonSurfaceNoiseV3(body.trim());
+    out.response = stripSurfaceTemplateLeakFinalizeV1(trimTenmonSurfaceNoiseV3(body.trim()));
     attachOmegaContractToOutKuV1(
       out as Record<string, unknown>,
       ku,
@@ -923,8 +969,8 @@ export function applyFinalAnswerConstitutionAndWisdomReducerV1(payload: any): an
 
   if (__beautyThin) {
     const __auxBeauty = "余韻で足りるなら、次に残すのは一行の芯だけでよい。";
-    out.response = trimTenmonSurfaceNoiseV3(
-      `【天聞の所見】\n\n${body}\n\n${__auxBeauty}`.trim(),
+    out.response = stripSurfaceTemplateLeakFinalizeV1(
+      trimTenmonSurfaceNoiseV3(`【天聞の所見】\n\n${body}\n\n${__auxBeauty}`.trim()),
     );
     attachOmegaContractToOutKuV1(
       out as Record<string, unknown>,
@@ -1012,12 +1058,24 @@ export function applyFinalAnswerConstitutionAndWisdomReducerV1(payload: any): an
   }
   if (isScriptureEssenceRouteV1(rr)) {
     composed = stripScripturePlaceholderAndTraceV1(composed);
+    /** TENMON_CHAT_SUBCONCEPT_MISFIRE_AND_TEMPLATE_LEAK_FIX: composed 直後の定型漏れ最終掃除 */
+    composed = composed
+      .replace(/さっき見ていた中心（[^）\n]{0,120}）を土台に、いまの話を見ていきましょう。\s*/gu, "")
+      .replace(/^（[^）\n]{0,120}）を土台に、いまの話を見ていきましょう。\s*\n?/gmu, "")
+      .replace(/【天聞の所見】いまは中心を保持したまま考えられています。[^\n]*\n?/gu, "")
+      .replace(/語義・作用・読解の軸を分けて読むと、要点が崩れにくいです。\s*/gu, "")
+      .replace(/語義・作用・読解の軸を分けると、主張の射程が崩れにくくなります。\s*/gu, "")
+      .replace(/現代では、概念を押さえたうえで判断や実装に一段だけ落とすと使えます。\s*/gu, "")
+      .replace(/について、今回は[^。\n]{0,40}の立場で答えます。?\n?/gu, "")
+      .replace(/判断軸（内部参照は要約表示）について[^。\n]{0,50}。?\n?/gu, "")
+      .trim();
   }
   if (rr === "CONTINUITY_ROUTE_HOLD_V1") {
     composed = surfaceContinuityHoldOneLineV1(composed);
   }
-  out.response = composed;
-  const stepForOmega = String(step || "").trim() || extractNextStepLineFromSurfaceV1(composed);
+  out.response = stripSurfaceTemplateLeakFinalizeV1(composed);
+  const stepForOmega =
+    String(step || "").trim() || extractNextStepLineFromSurfaceV1(String(out.response));
   attachOmegaContractToOutKuV1(
     out as Record<string, unknown>,
     ku,

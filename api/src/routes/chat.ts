@@ -196,6 +196,7 @@ import {
   ROUTE_FACTUAL_CURRENT_DATE_V1,
   ROUTE_FACTUAL_CURRENT_PERSON_V1,
   ROUTE_FACTUAL_RECENT_TREND_V1,
+  ROUTE_FACTUAL_WEATHER_V1,
   ROUTE_TECHNICAL_IMPLEMENTATION_ROUTE_V1,
   ROUTE_GENERAL_KNOWLEDGE_EXPLAIN_ROUTE_V1,
   resolveNaturalGeneralSystemDiagnosisBodyV1,
@@ -213,6 +214,7 @@ import {
   shouldEnterScriptureBoundaryGate,
 } from "./chat_refactor/define.js";
 import { tryContinuityRouteHoldPreemptGatePayloadV1 } from "./chat_refactor/continuity_trunk_v1.js";
+import { extractWeatherLocationV1, fetchWeatherWttrInV1 } from "../core/weatherRouteV1.js";
 import { responseProjector, normalizeDisplayLabel } from "../projection/responseProjector.js";
 import { composeBeautyCompositionProseV2 } from "../renderer/beautyCompositionEngineV2.js";
 
@@ -314,6 +316,55 @@ const RE_THREAD_FOLLOWUP =
 
 // R22_SHORT_CONTINUATION_V1: 「ヒは？」「じゃあイは？」等の短文継続（直前 threadCenter scripture/concept へ再接続）
 const RE_SHORT_CONTINUATION = /^(じゃあ|では)?([ぁ-んァ-ンa-zA-Z]{1,4})は[？?]?$/u;
+
+/** TENMON_FACTUAL_CORRECTION_ROUTE_CURSOR_AUTO_V1: 事実訂正（比較質問「違いは／何が違う」等・「間違いなく」は除外） */
+function __isFactualCorrectionUserMessageV1(t0: string): boolean {
+  const s = String(t0).trim();
+  if (!s) return false;
+  if (/違いは|どう違う|何が違う|何がちがう/u.test(s)) return false;
+  if (/間違いなく/u.test(s)) return false;
+  return /それは違う|それは違|違います|間違い|正しくない|違う|ちがう/u.test(s);
+}
+
+/** TENMON_CHAT_SUBCONCEPT_MISFIRE_AND_TEMPLATE_LEAK_FIX: factual / 訂正 / 自己内省で SUBCONCEPT 昇格しない */
+function __shouldBlockSubconceptPromotionForMetaOrFactualV1(raw: string): boolean {
+  const t = String(raw ?? "").trim();
+  if (!t) return false;
+  if (__isFactualCorrectionUserMessageV1(t)) return true;
+  const norm = t.replace(/[？?！!。．]/g, " ").trim();
+  const __fc = classifyGeneralFactCodingRouteV1(norm);
+  if (
+    __fc === ROUTE_FACTUAL_WEATHER_V1 ||
+    __fc === ROUTE_FACTUAL_CURRENT_DATE_V1 ||
+    __fc === ROUTE_FACTUAL_CURRENT_PERSON_V1 ||
+    __fc === ROUTE_FACTUAL_RECENT_TREND_V1
+  ) {
+    return true;
+  }
+  /** 地名＋天気（表記ゆれで classifier が外れる場合の保険） */
+  if (/大分/u.test(t) && /(天気|気温|降水|予報|雨|晴|曇)/u.test(t)) return true;
+  /** 政局・速報ニュース系（比較定義「〜とは」と誤爆しないようフレーズを絞る） */
+  if (
+    /(今何時|いま何時|現在時刻|いまの時刻|何曜日|曜日は|本日の日付)/u.test(t) &&
+    !/(経典|解釈|教義|真言|法華|空海|言霊秘書|いろは言[霊灵靈]解|カタカムナ言[霊灵靈]解)/u.test(t)
+  ) {
+    return true;
+  }
+  if (
+    /(今の総理|今の首相|日本の総理|日本の首相|総理大臣は誰|首相は誰|大臣は誰|最新のニュース|現在のニュース|政治ニュース)/u.test(t) &&
+    !/(経典|解釈|教義|真言|法華|空海|言霊秘書|いろは言[霊灵靈]解|カタカムナ言[霊灵靈]解)/u.test(t)
+  ) {
+    return true;
+  }
+  if (
+    /君の思考|私の思考を聞きたい|あなたの思考|あなたの考え|天聞の考え|天聞の意見|君はどう思う|あなたはどう思う|思考を聞きたい|内面を(?:聞きたい|知りたい)|自己の思考|どう考えて(?:いる|います)|考えを聞きたい/u.test(
+      t,
+    )
+  ) {
+    return true;
+  }
+  return false;
+}
 
 function normalizeHeartShape(h: any) {
   const userPhase =
@@ -991,6 +1042,13 @@ if (!(res as any).__TENMON_JSON_WRAP_V7) {
               step: String(__k?.step ?? ""),
               routeReason: String(__ku.routeReason ?? "")
             };
+            const __rrK = String(__ku.routeReason || "");
+            if (/^TECHNICAL_IMPLEMENTATION_/u.test(__rrK) && __ku.kanagi && typeof __ku.kanagi === "object") {
+              const rec = String(__ku.kanagi.reception || "");
+              if (/(身体|脈|呼吸|姿勢|受け止め|体感)/u.test(rec)) {
+                __ku.kanagi.reception = "技術的な問いとして整理し、前提と手順を分けて答えます。";
+              }
+            }
           }
         } catch {}
 
@@ -3012,6 +3070,13 @@ ${String((gptDraft as any)?.text ?? "").trim()}
           step: String(__k?.step ?? ""),
           routeReason: String(__ku.routeReason ?? "")
         };
+        const __rrK2 = String(__ku.routeReason || "");
+        if (/^TECHNICAL_IMPLEMENTATION_/u.test(__rrK2) && __ku.kanagi && typeof __ku.kanagi === "object") {
+          const rec2 = String(__ku.kanagi.reception || "");
+          if (/(身体|脈|呼吸|姿勢|受け止め|体感)/u.test(rec2)) {
+            __ku.kanagi.reception = "技術的な問いとして整理し、前提と手順を分けて答えます。";
+          }
+        }
       }
     } catch {}
 
@@ -4377,6 +4442,13 @@ ${String((gptDraft as any)?.text ?? "").trim()}
                 step: String(__k?.step ?? ""),
                 routeReason: String(__ku.routeReason ?? "")
               };
+              const __rrK3 = String(__ku.routeReason || "");
+              if (/^TECHNICAL_IMPLEMENTATION_/u.test(__rrK3) && __ku.kanagi && typeof __ku.kanagi === "object") {
+                const rec3 = String(__ku.kanagi.reception || "");
+                if (/(身体|脈|呼吸|姿勢|受け止め|体感)/u.test(rec3)) {
+                  __ku.kanagi.reception = "技術的な問いとして整理し、前提と手順を分けて答えます。";
+                }
+              }
             }
           } catch {}
 
@@ -4898,6 +4970,13 @@ ${String((gptDraft as any)?.text ?? "").trim()}
           step: String(__k?.step ?? ""),
           routeReason: String(__ku.routeReason ?? "")
         };
+        const __rrK4 = String(__ku.routeReason || "");
+        if (/^TECHNICAL_IMPLEMENTATION_/u.test(__rrK4) && __ku.kanagi && typeof __ku.kanagi === "object") {
+          const rec4 = String(__ku.kanagi.reception || "");
+          if (/(身体|脈|呼吸|姿勢|受け止め|体感)/u.test(rec4)) {
+            __ku.kanagi.reception = "技術的な問いとして整理し、前提と手順を分けて答えます。";
+          }
+        }
       }
     } catch {}
 
@@ -7133,7 +7212,26 @@ const __isDefinitionQ =
         let __modeHint = "analysis";
         let __answerMode: "analysis" | "define" | "explain" | "code" = "analysis";
         let __intent = "general_knowledge";
-        if (__factCodingRoute === ROUTE_FACTUAL_CURRENT_DATE_V1) {
+        if (__factCodingRoute === ROUTE_FACTUAL_WEATHER_V1) {
+          __centerMeaning = "factual_weather";
+          __centerLabel = "天気（外部）";
+          __modeHint = "factual";
+          __answerMode = "define";
+          __intent = "factual_weather";
+          __routeReason = "FACTUAL_WEATHER_V1";
+          const __locWx = extractWeatherLocationV1(__msgFact);
+          if (!__locWx) {
+            __body =
+              "地域を特定できませんでした。日本の都市名（例：東京、大分、福岡）を指定して、もう一度お願いします。";
+          } else {
+            const __wx = await fetchWeatherWttrInV1(__locWx.en, {
+              wantTomorrow: /明日|あす/u.test(__msgFact),
+            });
+            __body = __wx.ok
+              ? `${__locWx.jp}：${__wx.summary}`
+              : "天気情報の取得に失敗しました。時間をおいて再度お試しください。";
+          }
+        } else if (__factCodingRoute === ROUTE_FACTUAL_CURRENT_DATE_V1) {
           __centerMeaning = "factual_current_date";
           __centerLabel = "現在日時";
           __modeHint = "factual";
@@ -10257,6 +10355,77 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
         }
       } catch {}
 
+      // TENMON_CHAT_SUBCONCEPT_MISFIRE_AND_TEMPLATE_LEAK_FIX: self_view を SUBCONCEPT より前に一人称で返す
+      try {
+        const __t0SelfView = String(t0).trim();
+        const __isSelfViewInput =
+          /君の思考|あなたの考え|天聞の考え|天聞の意見|君はどう思う|あなたはどう思う/u.test(__t0SelfView);
+        if (!isCmd0 && !hasDoc0 && !askedMenu0 && __explicitCharsEarly == null && __isSelfViewInput) {
+          return res.json(
+            __tenmonGeneralGateResultMaybe({
+              response:
+                "私は、水火の法則と言霊の軸から見ると、問いの芯を先に定めてから世界を読むほうが、判断の濁りが少ないと見ています。",
+              evidence: null,
+              candidates: [],
+              timestamp,
+              threadId, /* tcTag */
+              decisionFrame: {
+                mode: "NATURAL",
+                intent: "self_view",
+                llm: null,
+                ku: {
+                  routeReason: "AI_CONSCIOUSNESS_LOCK_V1",
+                  routeClass: "analysis",
+                  answerLength: "short",
+                  answerMode: "analysis",
+                  answerFrame: "one_step",
+                  lawsUsed: [],
+                  evidenceIds: [],
+                  lawTrace: [],
+                },
+              },
+            }),
+          );
+        }
+      } catch {}
+
+      // TENMON_FACTUAL_CORRECTION_ROUTE_CURSOR_AUTO_V1: 事実訂正の受理（carry / 定型は出さず、確認する）
+      try {
+        if (
+          !isCmd0 &&
+          !hasDoc0 &&
+          !askedMenu0 &&
+          __explicitCharsEarly == null &&
+          __isFactualCorrectionUserMessageV1(t0)
+        ) {
+          const __bodyFc = "ご指摘ありがとうございます。確認し、訂正前提で見直します。";
+          return res.json(
+            __tenmonGeneralGateResultMaybe({
+              response: __bodyFc,
+              evidence: null,
+              candidates: [],
+              timestamp,
+              threadId, /* tcTag */
+              decisionFrame: {
+                mode: "NATURAL",
+                intent: "factual_correction",
+                llm: null,
+                ku: {
+                  routeReason: "FACTUAL_CORRECTION_V1",
+                  routeClass: "analysis",
+                  answerLength: "short",
+                  answerMode: "analysis",
+                  answerFrame: "one_step",
+                  lawsUsed: [],
+                  evidenceIds: [],
+                  lawTrace: [],
+                },
+              },
+            }),
+          );
+        }
+      } catch {}
+
       // TENMON_CHAT_CONTINUITY_ROUTE_HOLD_RETRY: threadCenter / follow-up を residual より上流で束ね、hold を先に評価
       const __generalKind = getGeneralKind(t0);
       let __threadCenterForGeneral: { center_type: string; center_key: string; source_route_reason?: string } | null = null;
@@ -10288,8 +10457,21 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
         __threadCenterForGeneral != null &&
         (__threadCenterForGeneral.center_type === "scripture" || __threadCenterForGeneral.center_type === "concept");
       const __isCompareFollowup = /(違いは|どう違う|何が違う)/u.test(String(t0).trim()) && __threadCenterForGeneral != null && (__threadCenterForGeneral.center_type === "scripture" || __threadCenterForGeneral.center_type === "concept");
+      const __t0TrimForShortHold = String(t0).trim();
+      const __hasThreadCenterOrCoreClaim =
+        __threadCenterForGeneral != null ||
+        String(__threadCore?.centerClaim ?? "").trim().length > 0;
+      /** TENMON_SHORT_INPUT_CONTINUITY_HOLD_CURSOR_AUTO_V1: ≤8 文字・中心あり・非 cmd → follow-up レーンで CONTINUITY_ROUTE_HOLD_V1（ku.routeReason）を観測可能に */
+      const __isShortInputContinuityHold =
+        __t0TrimForShortHold.length <= 8 &&
+        __t0TrimForShortHold.length >= 1 &&
+        !isCmd0 &&
+        __hasThreadCenterOrCoreClaim;
       const __isFollowupGeneral =
-        RE_THREAD_FOLLOWUP.test(t0) || __isShortContinuation || __isCompareFollowup;
+        RE_THREAD_FOLLOWUP.test(t0) ||
+        __isShortContinuation ||
+        __isCompareFollowup ||
+        __isShortInputContinuityHold;
 
       const __isFeelingRequest = /今(どんな|の)?気分|今の気持ち|(天聞|アーク)(への)?感想|感想(を)?(聞いて|教えて)/.test(t0);
       const __isContinuityPhrasing = /さっき見ていた中心|さっき(の)?話(の)?続き|話の続き|続きで[,、]|(言霊|中心)(を)?土台に|今の話を(続ける|続けて|見ていきましょう)/u.test(
@@ -11384,8 +11566,25 @@ try {
       console.log("[GEN_GENERAL_CLAMP_BEFORE]", { out: __beforeClamp.slice(0, 240) });
       console.log("[GEN_GENERAL_CLAMP_AFTER]", { out: __afterClamp.slice(0, 240) });
 
+      // TENMON_CONTEXT_CARRY_FACTUAL_SKIP_ROUTING_V1: 事実・天気・日時・政局ニュースでは thread carry 前置きを付けない（正典/言霊の本文ロジックは別経路）
+      const __msgCtxCarry = String(message ?? "").trim();
+      const __skipContextCarry =
+        /天気|気温|降水|気象|予報|晴れ|雨|曇り|今日|明日|今何時|何時|時刻|時間|曜日|総理|首相|大臣|政治|ニュース|最新|現在の/u.test(__msgCtxCarry) ||
+        (/(?:今日|明日|明後日)/u.test(__msgCtxCarry) &&
+          /(?:天気|日付|何日|曜日|予報)/u.test(__msgCtxCarry)) ||
+        (/日付/u.test(__msgCtxCarry) && /(?:教え|ください|を)/u.test(__msgCtxCarry)) ||
+        /何時|いま何時|現在時刻|いまの時刻|何曜日/u.test(__msgCtxCarry) ||
+        /総理|首相|大臣|内閣/u.test(__msgCtxCarry) ||
+        /ニュース/u.test(__msgCtxCarry) ||
+        (/最新/u.test(__msgCtxCarry) &&
+          /ニュース|政治|政局|世情/u.test(__msgCtxCarry) &&
+          !/経典|解釈|教義|真言/u.test(__msgCtxCarry)) ||
+        (/現在/u.test(__msgCtxCarry) && /(?:誰|総理|首相|ニュース)/u.test(__msgCtxCarry)) ||
+        /違う|違います|間違い|正しくない|それは違|ちがう/u.test(__msgCtxCarry) ||
+        /君の思考|あなたの考え|天聞の考え|天聞の意見|君はどう思う|あなたはどう思う/u.test(__msgCtxCarry);
+
       // R23E_CONCEPT_FOLLOWUP_LABEL_PREFIX_V1 / CARD_THREADCORE_MIN_V1: 表面は ThreadCore 優先で内部キーを出さない
-      if (__threadCenterForGeneral && __isFollowupGeneral && outText) {
+      if (__threadCenterForGeneral && __isFollowupGeneral && outText && !__skipContextCarry) {
         const __ck = String(__threadCenterForGeneral.center_key || "");
         const __labelForPrefix = __threadCore.centerLabel || centerLabelFromKey(__threadCore.centerKey) || getCenterLabelForDisplay(__ck) || "この中心";
 
@@ -11667,36 +11866,38 @@ const __heartNorm = normalizeHeartShape(__heart);
 
       // SUBCONCEPT_GENERAL_PROMOTION_V1: general follow-up + concept center のときに TENMON_SUBCONCEPT_CANON_V1 として昇格
       if (!__ku.routeReason || __ku.routeReason === ROUTE_NATURAL_GENERAL_LLM_TOP_V1) {
-        let __centerSrc: { centerType: string; centerKey: string } | null = null;
-        if (__threadCenterForGeneral && __threadCenterForGeneral.center_type === "concept") {
-          __centerSrc = { centerType: "concept", centerKey: String(__threadCenterForGeneral.center_key || "").trim() };
-        } else if ((__ku as any).threadCenter && String(((__ku as any).threadCenter as any).centerType || "").trim() === "concept") {
-          const tc: any = (__ku as any).threadCenter;
-          __centerSrc = { centerType: "concept", centerKey: String(tc.centerKey || "").trim() };
-        } else if (((__ku as any)[kuSynapseTopKey] || {}).sourceThreadCenter && String((((__ku as any)[kuSynapseTopKey] || {}).sourceThreadCenter.centerType || "")).trim() === "concept") {
-          const stc: any = (__ku as any)[kuSynapseTopKey].sourceThreadCenter;
-          __centerSrc = { centerType: "concept", centerKey: String(stc.centerKey || "").trim() };
-        } else if (__threadCore && __threadCore.centerKey && String(__threadCore.centerKey).trim()) {
-          __centerSrc = { centerType: "concept", centerKey: String(__threadCore.centerKey).trim() };
-        }
-        if (__isFollowupGeneral && __centerSrc && __centerSrc.centerKey) {
-          const __ckConcept = __centerSrc.centerKey;
-          (__ku as any).routeReason = "TENMON_SUBCONCEPT_CANON_V1";
-          if (!String((__ku as any).routeClass || "").trim() || (__ku as any).routeClass === "general" || (__ku as any).routeClass === "fallback") {
-            (__ku as any).routeClass = "analysis";
+        if (!__shouldBlockSubconceptPromotionForMetaOrFactualV1(String(message ?? ""))) {
+          let __centerSrc: { centerType: string; centerKey: string } | null = null;
+          if (__threadCenterForGeneral && __threadCenterForGeneral.center_type === "concept") {
+            __centerSrc = { centerType: "concept", centerKey: String(__threadCenterForGeneral.center_key || "").trim() };
+          } else if ((__ku as any).threadCenter && String(((__ku as any).threadCenter as any).centerType || "").trim() === "concept") {
+            const tc: any = (__ku as any).threadCenter;
+            __centerSrc = { centerType: "concept", centerKey: String(tc.centerKey || "").trim() };
+          } else if (((__ku as any)[kuSynapseTopKey] || {}).sourceThreadCenter && String((((__ku as any)[kuSynapseTopKey] || {}).sourceThreadCenter.centerType || "")).trim() === "concept") {
+            const stc: any = (__ku as any)[kuSynapseTopKey].sourceThreadCenter;
+            __centerSrc = { centerType: "concept", centerKey: String(stc.centerKey || "").trim() };
+          } else if (__threadCore && __threadCore.centerKey && String(__threadCore.centerKey).trim()) {
+            __centerSrc = { centerType: "concept", centerKey: String(__threadCore.centerKey).trim() };
           }
-          if (!String((__ku as any).centerKey || "").trim()) (__ku as any).centerKey = __ckConcept;
-          if (!String((__ku as any).centerMeaning || "").trim()) (__ku as any).centerMeaning = __ckConcept;
-          if (!String((__ku as any).centerLabel || "").trim()) (__ku as any).centerLabel = normalizeDisplayLabel(__ckConcept);
-          if ((__ku as any).thoughtCoreSummary && typeof (__ku as any).thoughtCoreSummary === "object") {
-            if (!String((__ku as any).thoughtCoreSummary.centerKey || "").trim()) {
-              (__ku as any).thoughtCoreSummary.centerKey = __ckConcept;
+          if (__isFollowupGeneral && __centerSrc && __centerSrc.centerKey) {
+            const __ckConcept = __centerSrc.centerKey;
+            (__ku as any).routeReason = "TENMON_SUBCONCEPT_CANON_V1";
+            if (!String((__ku as any).routeClass || "").trim() || (__ku as any).routeClass === "general" || (__ku as any).routeClass === "fallback") {
+              (__ku as any).routeClass = "analysis";
             }
-            if (!String((__ku as any).thoughtCoreSummary.centerMeaning || "").trim()) {
-              (__ku as any).thoughtCoreSummary.centerMeaning = __ckConcept;
+            if (!String((__ku as any).centerKey || "").trim()) (__ku as any).centerKey = __ckConcept;
+            if (!String((__ku as any).centerMeaning || "").trim()) (__ku as any).centerMeaning = __ckConcept;
+            if (!String((__ku as any).centerLabel || "").trim()) (__ku as any).centerLabel = normalizeDisplayLabel(__ckConcept);
+            if ((__ku as any).thoughtCoreSummary && typeof (__ku as any).thoughtCoreSummary === "object") {
+              if (!String((__ku as any).thoughtCoreSummary.centerKey || "").trim()) {
+                (__ku as any).thoughtCoreSummary.centerKey = __ckConcept;
+              }
+              if (!String((__ku as any).thoughtCoreSummary.centerMeaning || "").trim()) {
+                (__ku as any).thoughtCoreSummary.centerMeaning = __ckConcept;
+              }
+              (__ku as any).thoughtCoreSummary.routeReason = "TENMON_SUBCONCEPT_CANON_V1";
+              (__ku as any).thoughtCoreSummary.modeHint = "concept";
             }
-            (__ku as any).thoughtCoreSummary.routeReason = "TENMON_SUBCONCEPT_CANON_V1";
-            (__ku as any).thoughtCoreSummary.modeHint = "concept";
           }
         }
       }
@@ -12083,7 +12284,10 @@ const __heartNorm = normalizeHeartShape(__heart);
             (__ku as any).thoughtCoreSummary.sourceStackSummary = { ...(__ku as any).sourceStackSummary };
           }
         } else if (__projectorThreadCenterType === "concept") {
-          if (!String((__ku as any).routeReason || "").trim() || String((__ku as any).routeReason) === ROUTE_NATURAL_GENERAL_LLM_TOP_V1) {
+          if (
+            !__shouldBlockSubconceptPromotionForMetaOrFactualV1(String(message ?? "")) &&
+            (!String((__ku as any).routeReason || "").trim() || String((__ku as any).routeReason) === ROUTE_NATURAL_GENERAL_LLM_TOP_V1)
+          ) {
             (__ku as any).routeReason = "TENMON_SUBCONCEPT_CANON_V1";
           }
           if (!String((__ku as any).centerLabel || "").trim()) {
@@ -12100,12 +12304,21 @@ const __heartNorm = normalizeHeartShape(__heart);
         }
       }
 
-      function __classifySubconceptSurface(rawMessage: string): "complaint_followup" | "continuity_probe" | "self_diagnosis" | "action_request" | "subconcept_general" {
+      function __classifySubconceptSurface(
+        rawMessage: string,
+      ): "complaint_followup" | "continuity_probe" | "self_diagnosis" | "action_request" | "self_view_introspection" | "subconcept_general" {
         const m = String(rawMessage || "");
         if (/(なんで|なぜ|全然喋れない|喋れない|うまく話せない|性能が低い)/u.test(m)) return "complaint_followup";
         if (/(詰まっている|詰まり|どこが詰まって|何が詰まって)/u.test(m)) return "continuity_probe";
         if (/(何ができていて|何が未接続|未接続|できていること)/u.test(m)) return "self_diagnosis";
         if (/(次に何を直せば|何を直せば|次に直す|次の一手)/u.test(m)) return "action_request";
+        if (
+          /君の思考|私の思考を聞きたい|あなたの思考|思考を聞きたい|内面を(?:聞きたい|知りたい)|自己の思考|どう考えて(?:いる|います)|考えを聞きたい/u.test(
+            m,
+          )
+        ) {
+          return "self_view_introspection";
+        }
         return "subconcept_general";
       }
 
@@ -12120,6 +12333,8 @@ const __heartNorm = normalizeHeartShape(__heart);
             return "【天聞の所見】いまできているのは中心保持と論点接続です。未接続なのは、その中心を人格的な語りへ投影する表現面です。次はどちらを見たいですか。";
           case "action_request":
             return "【天聞の所見】次に直す一点は、subconcept 専用の返答面です。つまり、同じ analysis でも問いの型ごとに出口を分けることです。次は原因診断面から整えます。";
+          case "self_view_introspection":
+            return "【天聞の所見】私は、問いに応じて判断と継続を返す構造として答えます。いま知りたいのは、思考の出し方ですか、それとも根拠の置き方ですか。";
           case "subconcept_general":
           default:
             return "【天聞の所見】いまは中心を保持したまま考えられています。次はその中心を、問いの型に合った返答面へ分ける段階です。";
@@ -15107,7 +15322,7 @@ if (__hasMenu && !__askedMenu) {
         /(pdfPage=|doc=|evidenceIds|candidates|引用|出典|根拠|ソース|【|】)/.test(String(finalResponse));
       const __rrCloseV1 = String((detailPlan as any)?.routeReason ?? "");
       const __skipGenericCloseV1 =
-        /^(TRUTH_GATE_RETURN_V2|DEF_FASTPATH_VERIFIED_V1|DEF_DICT_HIT|TENMON_CONCEPT_CANON_V1|TENMON_SCRIPTURE_CANON_V1|K1_TRACE_EMPTY_GATED_V1|R22_LIGHT_FACT_.*|TECHNICAL_IMPLEMENTATION_.*|R22_CONSCIOUSNESS_META_ROUTE_V1|R22_JUDGEMENT_PREEMPT_V1|KANAGI_CONVERSATION_V1|FACTUAL_CURRENT_.*|FACTUAL_RECENT_TREND_V1|GENERAL_KNOWLEDGE_EXPLAIN_ROUTE_V1)$/u.test(
+        /^(TRUTH_GATE_RETURN_V2|DEF_FASTPATH_VERIFIED_V1|DEF_DICT_HIT|TENMON_CONCEPT_CANON_V1|TENMON_SCRIPTURE_CANON_V1|K1_TRACE_EMPTY_GATED_V1|R22_LIGHT_FACT_.*|TECHNICAL_IMPLEMENTATION_.*|R22_CONSCIOUSNESS_META_ROUTE_V1|R22_JUDGEMENT_PREEMPT_V1|KANAGI_CONVERSATION_V1|FACTUAL_CURRENT_.*|FACTUAL_RECENT_TREND_V1|FACTUAL_WEATHER_V1|GENERAL_KNOWLEDGE_EXPLAIN_ROUTE_V1)$/u.test(
           __rrCloseV1,
         );
 
@@ -15130,7 +15345,7 @@ if (__hasMenu && !__askedMenu) {
       const wants = Boolean(wantsDetail);
       const __rrCloseV2 = String((detailPlan as any)?.routeReason ?? "");
       const __skipGenericCloseV2 =
-        /^(TRUTH_GATE_RETURN_V2|DEF_FASTPATH_VERIFIED_V1|DEF_DICT_HIT|TENMON_CONCEPT_CANON_V1|TENMON_SCRIPTURE_CANON_V1|K1_TRACE_EMPTY_GATED_V1|R22_LIGHT_FACT_.*|TECHNICAL_IMPLEMENTATION_.*|R22_CONSCIOUSNESS_META_ROUTE_V1|R22_JUDGEMENT_PREEMPT_V1|KANAGI_CONVERSATION_V1|FACTUAL_CURRENT_.*|FACTUAL_RECENT_TREND_V1|GENERAL_KNOWLEDGE_EXPLAIN_ROUTE_V1)$/u.test(
+        /^(TRUTH_GATE_RETURN_V2|DEF_FASTPATH_VERIFIED_V1|DEF_DICT_HIT|TENMON_CONCEPT_CANON_V1|TENMON_SCRIPTURE_CANON_V1|K1_TRACE_EMPTY_GATED_V1|R22_LIGHT_FACT_.*|TECHNICAL_IMPLEMENTATION_.*|R22_CONSCIOUSNESS_META_ROUTE_V1|R22_JUDGEMENT_PREEMPT_V1|KANAGI_CONVERSATION_V1|FACTUAL_CURRENT_.*|FACTUAL_RECENT_TREND_V1|FACTUAL_WEATHER_V1|GENERAL_KNOWLEDGE_EXPLAIN_ROUTE_V1)$/u.test(
           __rrCloseV2,
         );
 

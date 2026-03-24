@@ -1,0 +1,42 @@
+{
+  "generated_at": "2026-03-24T22:44:55Z",
+  "overall": "PASS",
+  "npm_run_build": "PASS (pre-run)",
+  "probes": [
+    {
+      "id": 1,
+      "name": "言霊とは",
+      "pass": true,
+      "routeReason": "DEF_FASTPATH_VERIFIED_V1",
+      "expect": "DEF_FASTPATH_VERIFIED_V1"
+    },
+    {
+      "id": 2,
+      "name": "君の思考を聞きたい",
+      "pass": true,
+      "checks": {
+        "not_subconcept": true,
+        "template_leak": false,
+        "context_carry": false,
+        "first_person": true
+      }
+    },
+    {
+      "id": 3,
+      "name": "今日の大分の天気は？",
+      "pass": true
+    },
+    {
+      "id": 4,
+      "name": "それは違うよ",
+      "pass": true
+    },
+    {
+      "id": 5,
+      "name": "言霊とは→教えて",
+      "pass": true,
+      "routeReason": "CONTINUITY_ROUTE_HOLD_V1"
+    }
+  ],
+  "all_pass": true
+}

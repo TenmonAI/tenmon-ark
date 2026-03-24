@@ -926,6 +926,15 @@ export type ResealFinalMainlineSurfaceInputV1 = {
  * 問い返し偏重を抑え、一度は中心命題を断定で置く。
  */
 export function resealFinalMainlineSurfaceV1(input: ResealFinalMainlineSurfaceInputV1): string {
+  const rrReseal = String(input.routeReason || "").trim();
+  /** ゲート短文: semantic 主命題マージで二重化しやすいため surface をそのまま返す */
+  if (
+    /^(AI_CONSCIOUSNESS_LOCK_V1|FACTUAL_CORRECTION_V1|FACTUAL_WEATHER_V1|FACTUAL_CURRENT_DATE_V1|FACTUAL_CURRENT_PERSON_V1|FACTUAL_RECENT_TREND_V1|R22_LIGHT_FACT_DATE_V1|R22_LIGHT_FACT_TIME_V1|R22_LIGHT_FACT_WEEKDAY_V1)$/u.test(
+      rrReseal,
+    )
+  ) {
+    return String(input.surfaceBody || "").trim();
+  }
   const sem0 = __stripTenmonSemanticForResealV1(input.semanticBody);
   let body = String(input.surfaceBody || "").trim();
 

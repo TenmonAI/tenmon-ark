@@ -1,0 +1,55 @@
+{
+  "card": "TENMON_CHAT_SUBCONCEPT_MISFIRE_AND_TEMPLATE_LEAK_FIX_CURSOR_AUTO_V1",
+  "generated_at": "2026-03-24T22:44:55Z",
+  "probes": [
+    {
+      "id": 1,
+      "message": "言霊とは",
+      "threadId": "v2-acc-1-kotodama-def",
+      "routeReason": "DEF_FASTPATH_VERIFIED_V1",
+      "pass": true,
+      "response_head": "言霊とは、天地に鳴り響く五十連の音として立ち、水火を與み解いて詞の本を知る法則として作用する本質を持つものです。生成原理として、いろは配列では時間・秩序・成立の筋を読み、水火伝では生成と與合の相互作用を読み、五十連の音律へ戻して束ねます。次軸としては、法則の核・秩序の読み・水火の生成理解のどれを深めるかで答えの粒が変わ"
+    },
+    {
+      "id": 2,
+      "message": "君の思考を聞きたい",
+      "threadId": "v2-acc-2-selfview",
+      "routeReason": "AI_CONSCIOUSNESS_LOCK_V1",
+      "template_leak": false,
+      "context_carry": false,
+      "first_person_ok": true,
+      "pass": true,
+      "response_head": "私は、水火の法則と言霊の軸から見ると、問いの芯を先に定めてから世界を読むほうが、判断の濁りが少ないと見ています。"
+    },
+    {
+      "id": 3,
+      "message": "今日の大分の天気は？",
+      "threadId": "v2-acc-3-weather",
+      "routeReason": "FACTUAL_WEATHER_V1",
+      "template_leak": false,
+      "context_carry": false,
+      "pass": true,
+      "response_head": "大分：現在 12°C、小雨。"
+    },
+    {
+      "id": 4,
+      "message": "それは違うよ",
+      "threadId": "v2-acc-4-correct",
+      "routeReason": "FACTUAL_CORRECTION_V1",
+      "template_leak": false,
+      "context_carry": false,
+      "pass": true,
+      "response_head": "ご指摘ありがとうございます。確認し、訂正前提で見直します。"
+    },
+    {
+      "id": 5,
+      "message": "教えて (after 言霊とは)",
+      "threadId": "v2-acc-5-cont",
+      "routeReason": "CONTINUITY_ROUTE_HOLD_V1",
+      "template_leak": false,
+      "context_carry": false,
+      "pass": true,
+      "response_head": "さきほどの核を崩さず、次の一段へつなげます。"
+    }
+  ]
+}
