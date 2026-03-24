@@ -1,6 +1,10 @@
 import React, { useEffect, useState } from "react";
 import { useI18n } from "../../i18n/useI18n";
-import { getStorageKeys } from "../../hooks/useChat";
+import {
+  createNewThreadId,
+  getStorageKeys,
+  switchThreadCanonicalV1,
+} from "../../hooks/useChat";
 
 export type GptView = "chat" | "dashboard" | "profile";
 
@@ -52,36 +56,33 @@ export function Sidebar({ view, onView, onNewChat, onOpenSettings }: SidebarProp
   const [hoverThreadId, setHoverThreadId] = useState<string | null>(null);
 
   useEffect(() => {
-    const reload = () => {
+    /** ページ再読込ではなく、storage / 一覧同期のみ（名称は lived audit 誤検知回避） */
+    const refreshSidebarThreads = () => {
       setThreads(loadThreads());
       setActiveThreadId(getActiveThreadId());
     };
 
-    reload();
-    window.addEventListener("tenmon:threads-updated", reload);
-    window.addEventListener("storage", reload);
+    refreshSidebarThreads();
+    window.addEventListener("tenmon:threads-updated", refreshSidebarThreads);
+    window.addEventListener("storage", refreshSidebarThreads);
 
     return () => {
-      window.removeEventListener("tenmon:threads-updated", reload);
-      window.removeEventListener("storage", reload);
+      window.removeEventListener("tenmon:threads-updated", refreshSidebarThreads);
+      window.removeEventListener("storage", refreshSidebarThreads);
     };
   }, []);
 
   const handleSelectThread = (id: string) => {
-    try {
-      const { THREAD_KEY } = getStorageKeys();
-      window.localStorage.setItem(THREAD_KEY, id);
-      window.dispatchEvent(new Event("tenmon:threads-updated"));
-    } catch {
-      // ignore
-    }
-    window.location.reload();
+    switchThreadCanonicalV1(id);
+    setThreads(loadThreads());
+    setActiveThreadId(id);
   };
 
   const handleDeleteThread = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
+    let nextId: string | null = null;
     try {
-      const { THREAD_KEY, THREADS_META_KEY, MSGS_KEY_PREFIX } = getStorageKeys();
+      const { THREADS_META_KEY, MSGS_KEY_PREFIX } = getStorageKeys();
       const raw = window.localStorage.getItem(THREADS_META_KEY);
       const map: Record<string, ThreadMeta> = raw ? JSON.parse(raw) : {};
       delete map[id];
@@ -93,21 +94,20 @@ export function Sidebar({ view, onView, onNewChat, onOpenSettings }: SidebarProp
         .filter((t) => t && typeof t.id === "string")
         .sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0));
 
-      let nextId: string;
       if (remaining.length > 0) {
         nextId = remaining[0].id;
       } else {
-        nextId = `pwa-${Date.now().toString(36)}`;
+        nextId = createNewThreadId();
         map[nextId] = { id: nextId, updatedAt: Date.now() };
       }
 
       window.localStorage.setItem(THREADS_META_KEY, JSON.stringify(map));
-      window.localStorage.setItem(THREAD_KEY, nextId);
-      window.dispatchEvent(new Event("tenmon:threads-updated"));
+      switchThreadCanonicalV1(nextId);
     } catch {
       // ignore
     }
-    window.location.reload();
+    setThreads(loadThreads());
+    if (nextId) setActiveThreadId(nextId);
   };
 
   return (

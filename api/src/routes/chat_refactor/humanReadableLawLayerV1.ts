@@ -330,6 +330,8 @@ export function buildMainlineTenmonHeadV1(args: {
   sourceFootingClause: string;
 }): string {
   const rr = String(args.ku.routeReason ?? "");
+  /** CONTINUITY_ROUTE_HOLD_V1: 内部 carry は ku に残し、表面は本文一段のみ（立脚ラベル禁止） */
+  if (rr === "CONTINUITY_ROUTE_HOLD_V1") return "";
   /** TENMON_CONVERSATION_COMPLETION_CAMPAIGN_V1: 先頭に「立脚の中心は…」固定を置かず、本文の直接回答を優先 */
   if (
     /^(WORLDVIEW_ROUTE_V1|DEF_LLM_TOP|NATURAL_GENERAL_LLM_TOP|TENMON_SUBCONCEPT_CANON_V1|KANAGI_CONVERSATION_V1|R22_JUDGEMENT_PREEMPT_V1|ABSTRACT_FRAME_VARIATION_V1|TENMON_SCRIPTURE_CANON_V1|KATAKAMUNA_CANON_ROUTE_V1|SOUL_FASTPATH_VERIFIED_V1|SOUL_DEF_SURFACE_V1)$/u.test(

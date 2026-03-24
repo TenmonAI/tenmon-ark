@@ -21,11 +21,27 @@ function keyFor(req: Request): string {
   return `ip:${req.ip || "unknown"}`;
 }
 
+/** Express: app.use("/api", mw) のとき req.path は /health のみ。bypass は /api/health と整合させる。 */
+function pathForRateLimitBypass(req: Request): string {
+  const base = (req.baseUrl || "").replace(/\/$/, "");
+  const p = req.path || "";
+  if (base && p) {
+    const joined = `${base}${p === "/" ? "" : p}`;
+    return joined;
+  }
+  if (p) return p;
+  try {
+    return (req.originalUrl || "").split("?")[0] || "";
+  } catch {
+    return "";
+  }
+}
+
 export function rateLimit(opts: RateLimitOptions) {
   const bypass = new Set(opts.bypassPaths ?? ["/api/health", "/api/readiness", "/api/version"]);
 
   return (req: Request, res: Response, next: NextFunction) => {
-    if (bypass.has(req.path)) return next();
+    if (bypass.has(pathForRateLimitBypass(req))) return next();
 
     const now = Date.now();
     const k = keyFor(req);

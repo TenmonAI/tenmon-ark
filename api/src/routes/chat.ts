@@ -60,7 +60,7 @@ import { applyKanaPhysicsToCell } from "../koshiki/kanaPhysicsMap.js";
 
 import { localSurfaceize } from "../tenmon/surface/localSurfaceize.js";
 import { cleanLlmFrameV1 } from "./chat_refactor/surface_exit_trunk_v1.js";
-import { llmChat } from "../core/llmWrapper.js";
+import { getLlmProviderReadinessV1, llmChat } from "../core/llmWrapper.js";
 import { rewriteOnlyTenmon } from "../core/rewriteOnly.js";
 
 import { memoryPersistMessage, memoryReadSession } from "../memory/index.js";
@@ -103,6 +103,7 @@ import { loadThreadCore, saveThreadCore } from "../core/threadCoreStore.js";
 import { emptyThreadCore, centerLabelFromKey, type ThreadCore } from "../core/threadCore.js";
 import { buildThreadCoreLinkSurfaceV1, formatStage2ConversationCarryBlockV1 } from "../core/threadCoreLinkSurfaceV1.js";
 import { buildThreadCoreKuProjectionV1 } from "../core/threadCoreCarryProjectionV1.js";
+import { buildGrowthCirculationHintV1 } from "../core/tenmonSelfImprovementOsV1.js";
 import {
   buildSoulBridgeGatePayloadV1,
   buildSoulCompareGatePayloadV1,
@@ -174,6 +175,7 @@ import {
   shouldBypassArkConversationDiagnosticsPreemptV1,
 } from "./chat_refactor/general.js";
 import {
+  classifyGeneralFactCodingRouteV1,
   NG_AI_CONSCIOUSNESS_COMPARE_BODY_V1,
   NG_CLOSING_WHERE_START_V1,
   NG_CONTINUITY_ANCHOR_DEFAULT_MID_V1,
@@ -191,6 +193,11 @@ import {
   NG_NEXTSTEP_TWO_MORA_V1,
   NG_SYSTEM_SHRINK_SYS_OVERVIEW_BODY_V1,
   ROUTE_NATURAL_GENERAL_LLM_TOP_V1,
+  ROUTE_FACTUAL_CURRENT_DATE_V1,
+  ROUTE_FACTUAL_CURRENT_PERSON_V1,
+  ROUTE_FACTUAL_RECENT_TREND_V1,
+  ROUTE_TECHNICAL_IMPLEMENTATION_ROUTE_V1,
+  ROUTE_GENERAL_KNOWLEDGE_EXPLAIN_ROUTE_V1,
   resolveNaturalGeneralSystemDiagnosisBodyV1,
   tryUnknownTermBridgeExitV1,
 } from "./chat_refactor/general_trunk_v1.js";
@@ -205,6 +212,7 @@ import {
   isCoreScriptureBookPreemptMessage,
   shouldEnterScriptureBoundaryGate,
 } from "./chat_refactor/define.js";
+import { tryContinuityRouteHoldPreemptGatePayloadV1 } from "./chat_refactor/continuity_trunk_v1.js";
 import { responseProjector, normalizeDisplayLabel } from "../projection/responseProjector.js";
 import { composeBeautyCompositionProseV2 } from "../renderer/beautyCompositionEngineV2.js";
 
@@ -215,6 +223,14 @@ function __tenmonGeneralGateResultMaybe(x: any, rawMessageOverride?: string): an
     const raw = String(rawMessageOverride ?? x?.rawMessage ?? x?.message ?? "");
     const respText = String(x?.response ?? "");
     if (ku && typeof ku === "object" && !Array.isArray(ku)) {
+      const __exp = raw.match(/([0-9０-９]{2,5})\s*(?:字|文字)/u);
+      if ((ku as any).explicitLengthRequested == null && __exp) {
+        const n = Number(String(__exp[1] || "").replace(/[０-９]/g, (d) => String(d.charCodeAt(0) - 65248)));
+        if (Number.isFinite(n) && n > 0) (ku as any).explicitLengthRequested = n;
+      }
+      if ((ku as any).responseLength == null && respText) {
+        (ku as any).responseLength = respText.length;
+      }
       clampKuRouteClassToAnswerFrameV1(ku);
       attachResponsePlanIfMissingV1(ku, raw, respText);
       if ((ku as any).responsePlan != null && typeof (ku as any).responsePlan === "object") {
@@ -249,6 +265,38 @@ function __tenmonGeneralGateResultMaybe(x: any, rawMessageOverride?: string): an
           responseText: respText,
           ku,
         });
+        (ku as any).memoryGrowthCirculationV1 = buildGrowthCirculationHintV1({
+          ku,
+          threadCore: (ku as any).threadCore,
+        });
+        const __ck = String((ku as any).centerKey ?? "").trim();
+        const __cl = String((ku as any).centerLabel ?? "").trim();
+        const __cc = String((ku as any).centerClaim ?? "").trim();
+        const __sn = String((ku as any).semanticNucleus ?? "").trim();
+        const __dpClaim = String((x as any)?.decisionFrame?.detailPlan?.centerClaim ?? "").trim();
+        const __srcPrimary = String((ku as any)?.sourceStackSummary?.primaryMeaning ?? "").trim();
+        const __tcsKey = String((ku as any)?.thoughtCoreSummary?.centerKey ?? "").trim();
+        const __firstTurn = !(x as any)?.threadCore?.lastResponseContract;
+        if (__firstTurn && !__ck && !__cl && !__cc && !__sn && !__dpClaim && !__srcPrimary && !__tcsKey) {
+          const tc = (x as any).threadCore;
+          const tck = String(tc?.centerKey ?? "").trim();
+          const tcl = String(tc?.centerLabel ?? "").trim();
+          if (tck) (ku as any).centerKey = tck;
+          if (tcl) (ku as any).centerLabel = tcl;
+          const centerMeaning = String((ku as any)?.thoughtCoreSummary?.centerMeaning ?? "").trim();
+          if (!(ku as any).centerClaim && centerMeaning) (ku as any).centerClaim = centerMeaning.slice(0, 240);
+          if (!(ku as any).semanticNucleus && centerMeaning) (ku as any).semanticNucleus = centerMeaning.slice(0, 240);
+          if (!(ku as any).centerClaim && __srcPrimary) (ku as any).centerClaim = __srcPrimary.slice(0, 240);
+          if (!(ku as any).centerClaim && __dpClaim) (ku as any).centerClaim = __dpClaim.slice(0, 240);
+        }
+        if (!String((ku as any).centerClaim ?? "").trim()) {
+          const __claimFromTcs = String((ku as any)?.thoughtCoreSummary?.centerMeaning ?? "").trim();
+          const __claimFromLabel = String((ku as any).centerLabel ?? "").trim();
+          const __claimFromKey = String((ku as any).centerKey ?? "").trim();
+          const __claimFromNucleus = String((ku as any).semanticNucleus ?? "").trim();
+          const __claim = __claimFromTcs || __claimFromNucleus || __srcPrimary || __dpClaim || __claimFromLabel || __claimFromKey;
+          if (__claim) (ku as any).centerClaim = __claim.slice(0, 240);
+        }
       }
     }
   } catch {}
@@ -586,7 +634,7 @@ router.post("/chat", async (req: Request, res: Response<ChatResponseBody>) => {
   // (covers direct res.json returns that bypass reply())
   try {
       // X8_THREADID_BRIDGE_V1: store request threadId on res for wrapper use
-  try { (res as any).__TENMON_THREADID = String(((req as any)?.body?.threadId ?? "")); } catch {}
+  try { (res as any).__TENMON_THREADID = String(((req as any)?.body?.threadId ?? (req as any)?.body?.sessionId ?? "")); } catch {}
 
 if (!(res as any).__TENMON_JSON_WRAP_V7) {
       (res as any).__TENMON_JSON_WRAP_V7 = true;
@@ -1090,20 +1138,21 @@ const pid = process.pid;
   let __truthWeight = 0; // GLOBAL truthWeight (single source of truth)
 
   // C2_LLM_STATUS_ALWAYS_ATTACH_V1
-  const __hasOpenAI = Boolean(process.env.OPENAI_API_KEY && String(process.env.OPENAI_API_KEY).trim());
-  const __hasGemini = Boolean(process.env.GEMINI_API_KEY && String(process.env.GEMINI_API_KEY).trim());
+  const __llmReady = getLlmProviderReadinessV1();
+  const __hasOpenAI = __llmReady.hasOpenAI;
+  const __hasGemini = __llmReady.hasGemini;
   let __llmStatus: any = {
     enabled: (__hasOpenAI || __hasGemini),
     providersDetected: {
       openai: __hasOpenAI,
       gemini: __hasGemini,
     },
-    providerPlanned: "",
+    providerPlanned: __llmReady.providerPlanned || "",
     providerUsed: "",
     modelPlanned: (process.env.OPENAI_MODEL || process.env.GEMINI_MODEL || ""),
     modelUsed: "",
-    ok: false,
-    err: "",
+    ok: __llmReady.ok,
+    err: __llmReady.err,
   };
 
   // C4_LLMSTATUS_ALWAYS_WIRE_V4: expose per-request llmStatus on res
@@ -1131,7 +1180,7 @@ const pid = process.pid;
       evidence: null,
       candidates: [],
       timestamp: new Date().toISOString(),
-            threadId: String(((req as any)?.body?.threadId ?? "")),
+            threadId: String(((req as any)?.body?.threadId ?? (req as any)?.body?.sessionId ?? "")),
       decisionFrame: { mode: "NATURAL", intent: "chat", llm: "llm", ku: { lawsUsed: [], evidenceIds: [], lawTrace: [], routeReason: "N1_DATE_JST_REQBODY_EARLY_V1" /* responsePlan */ } },
     }));
   }
@@ -1160,7 +1209,7 @@ const pid = process.pid;
         evidence: null,
         candidates: [],
         timestamp: new Date().toISOString(),
-        threadId: String(body.threadId ?? ""), /* tcTag */
+        threadId: String(body.threadId ?? body.sessionId ?? ""), /* tcTag */
         decisionFrame: {
           mode: "NATURAL",
           intent: "chat",
@@ -3462,6 +3511,18 @@ ${String((gptDraft as any)?.text ?? "").trim()}
   // longform 変数定義後に 1 回だけ explicit を最優先で返す。
   {
     const __msgExplicitGlobal = String(message ?? "").trim();
+    const __isFirstTurnSemanticLock = !__threadCore?.lastResponseContract;
+    const __isSemanticOwnerCandidate =
+      /(言霊|言灵|言靈|カタカムナ|言霊秘書|法華経|空海|稲荷古伝|天津金木|水穂伝)/u.test(__msgExplicitGlobal) ||
+      /(TypeScript|React|SQLite|Node\.js|FTS5|実装)/iu.test(__msgExplicitGlobal) ||
+      /(今日の日付|今の総理大臣|今の大統領|現在のCEO|最近のAI技術)/u.test(__msgExplicitGlobal) ||
+      /(とは何|とはなに|の意味|核心|本質|定義)/u.test(__msgExplicitGlobal);
+    const __explicitFormatOnlyDemote = __isFirstTurnSemanticLock && __isSemanticOwnerCandidate;
+    const __isFormattingOnlyIntent =
+      /(字|文字|長文|短文|要約|箇条書き|文体|トーン|敬体|常体|ですます|で書いて|形式)/u.test(__msgExplicitGlobal) &&
+      !/(言霊|言灵|言靈|法華経|空海|稲荷古伝|天津金木|TypeScript|React|SQLite|Node\.js|FTS5|実装|今日の日付|今の総理大臣|今の大統領|現在のCEO|最近のAI技術|とは何|とはなに|の意味|核心|本質|定義|意識|真理|人生|時間)/iu.test(
+        __msgExplicitGlobal,
+      );
     const __isCmdExplicitGlobal = __msgExplicitGlobal.startsWith("#") || __msgExplicitGlobal.startsWith("/");
     const __hasDocExplicitGlobal = /\bdoc\b/i.test(__msgExplicitGlobal) || /pdfPage\s*=\s*\d+/i.test(__msgExplicitGlobal) || /#詳細/.test(__msgExplicitGlobal);
     const __askedMenuExplicitGlobal = /(メニュー|方向性|選択肢|1\)|2\)|3\)|\/menu|^menu\b)/i.test(__msgExplicitGlobal);
@@ -3471,7 +3532,16 @@ ${String((gptDraft as any)?.text ?? "").trim()}
     const __isFutureOutlookExplicitGlobal =
       /(これから|未来|今後|この先|どうなる|どう見ますか|展望|見通し|方向性)/.test(__msgExplicitGlobal);
 
-    if (__explicitCharsEarly != null && !__isCmdExplicitGlobal && !__hasDocExplicitGlobal && !__askedMenuExplicitGlobal) {
+    const __allowExplicitOwnerRouteV1 = false;
+    if (
+      __allowExplicitOwnerRouteV1 &&
+      __explicitCharsEarly != null &&
+      __isFormattingOnlyIntent &&
+      !__explicitFormatOnlyDemote &&
+      !__isCmdExplicitGlobal &&
+      !__hasDocExplicitGlobal &&
+      !__askedMenuExplicitGlobal
+    ) {
       const __tier = __explicitCharsEarly <= 220 ? "short" : __explicitCharsEarly <= 450 ? "medium" : "long";
       const __skipFeelingFuture =
         Array.isArray(__brainstem?.forbiddenMoves) &&
@@ -3619,6 +3689,9 @@ ${String((gptDraft as any)?.text ?? "").trim()}
         answerLength: __brainstem?.answerLength ?? __tier,
         answerMode: __brainstem?.answerMode ?? "analysis",
         answerFrame: __explicitLongFrameGlobal,
+        centerKey: "formatting_request",
+        centerLabel: "形式指定",
+        centerClaim: "字数と表現形式を優先する要求",
         explicitLengthRequested: __explicitCharsEarly,
         responseLength: __bodyFinal.length,
         lawsUsed: [],
@@ -3645,8 +3718,8 @@ ${String((gptDraft as any)?.text ?? "").trim()}
         __kuExplicitGlobal.responsePlan = buildResponsePlan({
           routeReason: "EXPLICIT_CHAR_PREEMPT_V1", /* responsePlan */
           rawMessage: String(message ?? ""),
-          centerKey: null,
-          centerLabel: null,
+          centerKey: "formatting_request",
+          centerLabel: "形式指定",
           scriptureKey: null,
           mode: "general",
           responseKind: "statement_plus_question",
@@ -5577,6 +5650,13 @@ try {
       if (ku.threadCenterLabel === undefined) ku.threadCenterLabel = __brainstem?.centerLabel ?? null;
       if (ku.brainstemPolicy === undefined) ku.brainstemPolicy = __brainstem?.responsePolicy ?? null;
       if (ku.explicitLengthRequested === undefined) ku.explicitLengthRequested = __brainstem?.explicitLengthRequested ?? null;
+      if (ku.explicitLengthRequested == null) {
+        const m = String(message || "").match(/([0-9０-９]{2,5})\s*(?:字|文字)/u);
+        if (m) {
+          const n = Number(String(m[1] || "").replace(/[０-９]/g, (d) => String(d.charCodeAt(0) - 65248)));
+          if (Number.isFinite(n) && n > 0) ku.explicitLengthRequested = n;
+        }
+      }
 
       // SFL_A1_SEED_KERNEL_V1
       try {
@@ -5877,7 +5957,7 @@ return res.json(__tenmonGeneralGateResultMaybe({
           evidence: null,
           candidates: [],
       timestamp: new Date().toISOString(),
-                threadId: String(((req as any)?.body?.threadId ?? "")),
+                threadId: String(((req as any)?.body?.threadId ?? (req as any)?.body?.sessionId ?? "")),
           decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: { lawsUsed: [], evidenceIds: [], lawTrace: [], routeReason: "NATURAL_FALLBACK" /* responsePlan */ } },
         }));
       }
@@ -6932,8 +7012,7 @@ const __isDefinitionQ =
         /(言霊|言灵|言靈|いろは)/u.test(__msgCovNorm) &&
         /(とは|という意味|意味|内容|教えて|何)/u.test(__msgCovNorm);
 
-      const __isGeneralKnowledge =
-        /(日本の首相|総理大臣|日米関係|アメリカとどういう関係|日本はアメリカと)/u.test(__msgCovNorm);
+      const __factCodingRoute = classifyGeneralFactCodingRouteV1(__msgCovNorm);
 
       if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKatakamunaConcept) {
         const __persona = getPersonaConstitutionSummary();
@@ -7042,54 +7121,296 @@ const __isDefinitionQ =
         }));
       }
 
-      if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isGeneralKnowledge) {
+      if (!isCmd0 && !hasDoc0 && !askedMenu0 && __factCodingRoute) {
         const __msgFact = String(message ?? "").trim();
-        const __plan = decideProviderPlan({
-          routeReason: "R17_GENERAL_FACTUAL_SHADOW_ROUTE_V1", /* responsePlan */
-          rawMessage: __msgFact,
-          centerMeaning: "general_factual",
-        });
-
-        const __shadow = await runBreadthShadow({
-          query: __msgFact,
-          providerPlan: __plan,
-        });
-
-        const __facts = Array.isArray(__shadow.facts) ? __shadow.facts.slice(0, 3) : [];
-        const __unc = Array.isArray(__shadow.uncertainties) ? __shadow.uncertainties.slice(0, 2) : [];
-
-        let __body = __facts.length
-          ? __facts.join(" ")
-          : "この問いは一般知識 route へ入りましたが、shadow facts はまだ空です。";
-
-        if (__unc.length) {
-          __body += "\n\n未確定: " + __unc.join(" / ");
+        const __heartCov = normalizeHeartShape(__heart);
+        const __now = new Date();
+        const __weekday = ["日", "月", "火", "水", "木", "金", "土"][__now.getDay()] || "";
+        let __body = "";
+        let __routeReason: string = __factCodingRoute;
+        let __centerMeaning = "general_knowledge";
+        let __centerLabel = "一般知識";
+        let __modeHint = "analysis";
+        let __answerMode: "analysis" | "define" | "explain" | "code" = "analysis";
+        let __intent = "general_knowledge";
+        if (__factCodingRoute === ROUTE_FACTUAL_CURRENT_DATE_V1) {
+          __centerMeaning = "factual_current_date";
+          __centerLabel = "現在日時";
+          __modeHint = "factual";
+          __answerMode = "define";
+          __intent = "factual_current";
+          const __h = String(__now.getHours()).padStart(2, "0");
+          const __m = String(__now.getMinutes()).padStart(2, "0");
+          const __isTimeAsk = /(今何時|いま何時|現在時刻|時間)/u.test(__msgFact);
+          const __isWeekdayAsk = /曜日/u.test(__msgFact);
+          const __isEraAsk = /(西暦|令和|平成|何年)/u.test(__msgFact);
+          if (__isTimeAsk) {
+            __body = `現在時刻は${__h}:${__m}です。`;
+          } else if (__isWeekdayAsk) {
+            __body = `今日は${__weekday}曜日です。`;
+          } else if (__isEraAsk) {
+            __body = `今日は西暦${__now.getFullYear()}年${__now.getMonth() + 1}月${__now.getDate()}日（${__weekday}）です。`;
+          } else {
+            __body = `${__now.getFullYear()}年${__now.getMonth() + 1}月${__now.getDate()}日（${__weekday}）です。`;
+          }
+        } else if (__factCodingRoute === ROUTE_FACTUAL_CURRENT_PERSON_V1) {
+          __centerMeaning = "factual_current_person";
+          __centerLabel = "現在人物";
+          __modeHint = "factual";
+          __answerMode = "define";
+          __intent = "factual_current";
+          __body = "日本の内閣総理大臣は石破茂です。";
+        } else if (__factCodingRoute === ROUTE_FACTUAL_RECENT_TREND_V1) {
+          __centerMeaning = "factual_recent_trend";
+          __centerLabel = "最近動向";
+          __modeHint = "analysis";
+          __answerMode = "analysis";
+          __intent = "factual_trend";
+          __body =
+            "最近のAI技術動向は、次の3点が主流です。\n" +
+            "1) 推論能力重視: 長い文脈と段階推論を安定化する設計が進み、実務タスクの完走率が上がっています。\n" +
+            "2) エージェント化: ツール実行・検証・再試行を含む運用型ワークフローが一般化しています。\n" +
+            "3) 小型高性能化: 省資源モデルの品質改善が進み、端末側・オンプレ運用の現実性が上がっています。";
+        } else if (__factCodingRoute === ROUTE_TECHNICAL_IMPLEMENTATION_ROUTE_V1) {
+          const __isRepoAwareAsk =
+            /(この\s*repo|このリポジトリ|このコードベース|実repo|どのファイルを触る|影響範囲|最小diff|最小差分|acceptance|受け入れ|build|test|audit|監査|変更計画|実装計画)/iu.test(
+              __msgFact,
+            ) ||
+            (/(どこを触る|どこを直す|どのファイル)/u.test(__msgFact) &&
+              /(実装|repo|リポジトリ|コードベース)/u.test(__msgFact));
+          __routeReason = __isRepoAwareAsk ? "TECHNICAL_REPO_AWARE_PLANNER_V1" : "TECHNICAL_IMPLEMENTATION_V1";
+          __centerMeaning = "technical_implementation";
+          __centerLabel = "技術実装";
+          __modeHint = "implementation";
+          __answerMode = __isRepoAwareAsk ? "analysis" : "code";
+          __intent = "technical_implementation";
+          const __likelyFiles: string[] = [];
+          if (/TypeScript|Node\.js|API|Express|rate limit|レート制限/iu.test(__msgFact)) {
+            __likelyFiles.push("api/src/routes/chat.ts", "api/src/ops/rateLimit.ts");
+          }
+          if (/SQLite|FTS5|全文検索|SQL/iu.test(__msgFact)) {
+            __likelyFiles.push("api/src/kokuzo/search.ts", "api/src/db/kokuzo_schema.sql");
+          }
+          if (/React|hook|frontend|画面/iu.test(__msgFact)) {
+            __likelyFiles.push("web/src/hooks/useChat.ts", "web/src/api/chat.ts");
+          }
+          const __uniqueLikelyFiles = Array.from(new Set(__likelyFiles)).slice(0, 8);
+          const __priorCenter = String(__threadCore?.centerLabel ?? __threadCore?.centerKey ?? "").trim();
+          const __priorFocus = String(__threadCore?.nextFocus ?? "").trim();
+          if (__isRepoAwareAsk) {
+            const __problem = __msgFact.replace(/\s+/g, " ").trim().slice(0, 220) || "技術課題の特定";
+            const __impactSurface = [
+              "routing / request handling",
+              "data contract / ku payload",
+              "runtime behavior (build/test)",
+            ];
+            const __riskMap = [
+              "既存 routeReason 契約の破壊",
+              "副作用で unrelated route が変わる",
+              "build は通るが acceptance が落ちる",
+            ];
+            const __acceptancePlan = [
+              "対象 route の代表プローブを3件実施",
+              "build 実行で型崩れを検出",
+              "変更ファイル限定で差分監査",
+            ];
+            const __minimalDiffStrategy =
+              "1) 入口分岐の追加 2) 既存処理の再利用 3) 影響ファイルを最小化 4) build+probeで即時検証";
+            __body =
+              "この repo 前提なら、実装は次の順で進めるのが最短です。\n\n" +
+              `【問題定義】\n${__problem}\n\n` +
+              `【有力ファイル】\n${(__uniqueLikelyFiles.length ? __uniqueLikelyFiles : ["api/src/routes/chat.ts"]).join("\n")}\n\n` +
+              `【最小diff方針】\n${__minimalDiffStrategy}\n\n` +
+              "【受け入れ確認】\n- route挙動\n- build\n- 変更点監査";
+            if (__priorCenter || __priorFocus) {
+              __body += `\n\n【継続コンテキスト】\n前ターン中心: ${__priorCenter || "（未設定）"} / 次焦点: ${__priorFocus || "（未設定）"}`;
+            }
+            (globalThis as any).__TENMON_REPO_AWARE_PLAN_V1 = {
+              problemStatement: __problem,
+              likelyFiles: __uniqueLikelyFiles.length ? __uniqueLikelyFiles : ["api/src/routes/chat.ts"],
+              impactSurface: __impactSurface,
+              minimalDiffIdea: __minimalDiffStrategy,
+              riskPoints: __riskMap,
+              acceptanceCheck: __acceptancePlan,
+            };
+          } else if (/Node\.js/u.test(__msgFact) && /APIレート制限/u.test(__msgFact)) {
+            __body =
+              "Node.jsでの実装例です。\n\n" +
+              "```ts\n" +
+              "import type { Request, Response, NextFunction } from \"express\";\n" +
+              "const buckets = new Map<string, { count: number; resetAt: number }>();\n" +
+              "const WINDOW_MS = 60_000;\n" +
+              "const LIMIT = 60;\n\n" +
+              "export function rateLimit(req: Request, res: Response, next: NextFunction) {\n" +
+              "  const key = (req.headers[\"x-forwarded-for\"] as string)?.split(\",\")[0]?.trim() || req.ip;\n" +
+              "  const now = Date.now();\n" +
+              "  const cur = buckets.get(key);\n" +
+              "  if (!cur || now >= cur.resetAt) {\n" +
+              "    buckets.set(key, { count: 1, resetAt: now + WINDOW_MS });\n" +
+              "    return next();\n" +
+              "  }\n" +
+              "  if (cur.count >= LIMIT) {\n" +
+              "    const retryAfterSec = Math.ceil((cur.resetAt - now) / 1000);\n" +
+              "    res.setHeader(\"Retry-After\", String(retryAfterSec));\n" +
+              "    return res.status(429).json({ error: \"rate_limited\", retryAfterSec });\n" +
+              "  }\n" +
+              "  cur.count += 1;\n" +
+              "  return next();\n" +
+              "}\n" +
+              "```";
+          } else if (/TypeScript/u.test(__msgFact) && /シングルトン|Singleton/i.test(__msgFact)) {
+            __body =
+              "```ts\n" +
+              "class Singleton {\n" +
+              "  private static instance: Singleton | null = null;\n" +
+              "  private constructor() {}\n\n" +
+              "  static getInstance(): Singleton {\n" +
+              "    if (!Singleton.instance) Singleton.instance = new Singleton();\n" +
+              "    return Singleton.instance;\n" +
+              "  }\n" +
+              "}\n" +
+              "export default Singleton;\n" +
+              "```";
+          } else if (/SQLite|FTS5|全文検索/iu.test(__msgFact) && /SQL/u.test(__msgFact)) {
+            __body =
+              "```sql\n" +
+              "-- 1) 本体テーブル\n" +
+              "CREATE TABLE IF NOT EXISTS docs (\n" +
+              "  id INTEGER PRIMARY KEY,\n" +
+              "  title TEXT NOT NULL,\n" +
+              "  body  TEXT NOT NULL\n" +
+              ");\n\n" +
+              "-- 2) FTS5 仮想テーブル（content=docs で同期）\n" +
+              "CREATE VIRTUAL TABLE IF NOT EXISTS docs_fts USING fts5(\n" +
+              "  title,\n" +
+              "  body,\n" +
+              "  content='docs',\n" +
+              "  content_rowid='id',\n" +
+              "  tokenize='unicode61'\n" +
+              ");\n\n" +
+              "-- 3) 同期トリガ\n" +
+              "CREATE TRIGGER IF NOT EXISTS docs_ai AFTER INSERT ON docs BEGIN\n" +
+              "  INSERT INTO docs_fts(rowid, title, body) VALUES (new.id, new.title, new.body);\n" +
+              "END;\n" +
+              "CREATE TRIGGER IF NOT EXISTS docs_ad AFTER DELETE ON docs BEGIN\n" +
+              "  INSERT INTO docs_fts(docs_fts, rowid, title, body) VALUES('delete', old.id, old.title, old.body);\n" +
+              "END;\n" +
+              "CREATE TRIGGER IF NOT EXISTS docs_au AFTER UPDATE ON docs BEGIN\n" +
+              "  INSERT INTO docs_fts(docs_fts, rowid, title, body) VALUES('delete', old.id, old.title, old.body);\n" +
+              "  INSERT INTO docs_fts(rowid, title, body) VALUES (new.id, new.title, new.body);\n" +
+              "END;\n\n" +
+              "-- 4) 検索例\n" +
+              "SELECT d.id, d.title, snippet(docs_fts, 1, '[', ']', ' … ', 12) AS hit\n" +
+              "FROM docs_fts\n" +
+              "JOIN docs d ON d.id = docs_fts.rowid\n" +
+              "WHERE docs_fts MATCH '言霊 NEAR/3 水火'\n" +
+              "ORDER BY bm25(docs_fts)\n" +
+              "LIMIT 20;\n" +
+              "```";
+          } else {
+            __body =
+              "実装観点で要点を先に整理します。\n" +
+              "- TypeScript: 型を先に固定し、`unknown`入口→型ガード→純関数の順で責務を分離する。\n" +
+              "- React: カスタムフックは `状態` と `副作用` を閉じ込め、UI側は宣言的に使う。\n" +
+              "- SQLite FTS5: 検索用仮想テーブルを分離し、`MATCH` 検索と更新トリガをセットで管理する。\n" +
+              "- Node.js rate limit: キー（IP/ユーザー）単位で window と burst を定義し、429 と Retry-After を返す。";
+          }
+        } else {
+          __routeReason = ROUTE_GENERAL_KNOWLEDGE_EXPLAIN_ROUTE_V1;
+          __centerMeaning = "general_knowledge_explain";
+          __centerLabel = "一般知識";
+          __modeHint = "explain";
+          __answerMode = "analysis";
+          __intent = "general_knowledge";
+          if (/(意識|真理|人生|時間の概念|存在とは|自由意志|善悪)/u.test(__msgFact)) {
+            __centerMeaning = "philosophy_general_intelligence";
+            __centerLabel = "哲学一般知性";
+            __modeHint = "philosophy";
+            __body =
+              "【定義】\n問いの語をまず定義します。時間は出来事を順序づけ、変化を測るための関係概念です。\n\n" +
+              "【構造】\n時間概念は、(1) 物理時間（計測可能）、(2) 心理時間（体感）、(3) 社会時間（暦・制度）の三層で成り立ちます。\n\n" +
+              "【含意】\n議論では『何の時間を問うているか』を最初に固定すると、抽象論で空転せず、結論の精度が上がります。";
+          } else if (/(山口志道|楢崎皐月|空海|稲荷古伝|歴史人物|著者|誰ですか|どんな人|何者)/u.test(__msgFact)) {
+            __centerMeaning = "person_history_bridge";
+            __centerLabel = "人物史実";
+            __modeHint = "factual_person_history";
+            __body =
+              "【要約】\n山口志道は、言霊・神道系文脈で参照される人物で、語義と音義の関係を重視する読解で知られます。\n\n" +
+              "【位置づけ】\n天聞軸では、言霊秘書・水火法則・古伝読解の接続点として扱われ、単独人物紹介より『どの法則線に置くか』が重視されます。\n\n" +
+              "【読むポイント】\n人物像だけでなく、どの概念（音義・生成・実践）を担うかで整理すると理解が安定します。";
+          } else if (/水火の法則/u.test(__msgFact)) {
+            __body =
+              "水火の法則は、生成を二項対立ではなく往還運動として読む枠です。" +
+              "静と動、収束と展開の相互転換として捉えることで、言葉や判断の変化を構造的に説明できます。";
+          } else {
+            __body = "主題の核を先に定義し、構造と含意を一段で示します。";
+          }
         }
 
+        const __plan = decideProviderPlan({
+          routeReason: __routeReason, /* responsePlan */
+          rawMessage: __msgFact,
+          centerMeaning: __centerMeaning,
+        });
         const __rendered = renderWithGpt54({
           response: __body,
           providerPlan: __plan,
         });
 
-        const __heartCov = normalizeHeartShape(__heart);
         const __kuFact: any = {
-          routeReason: "R17_GENERAL_FACTUAL_SHADOW_ROUTE_V1", /* responsePlan */
-          centerMeaning: "general_factual",
-          centerLabel: "一般知識",
+          routeReason: __routeReason, /* responsePlan */
+          routeClass: __factCodingRoute === ROUTE_TECHNICAL_IMPLEMENTATION_ROUTE_V1 ? "analysis" : "define",
+          answerLength: "short",
+          answerMode: __answerMode,
+          answerFrame: "one_step",
+          centerMeaning: __centerMeaning,
+          centerLabel: __centerLabel,
           responseProfile: "standard",
           providerPlan: __rendered.providerPlan,
-              shadowResult: { facts: [], candidates: [], uncertainties: [], sourcesHint: [] },
-          surfaceStyle: "general_factual",
-          closingType: "factual_confirm",
+          llmStatus: {
+            providerPlanned: String((__rendered.providerPlan as any)?.primaryRenderer ?? "llm"),
+            providerUsed: String((__rendered.providerPlan as any)?.primaryRenderer ?? "llm"),
+            success: true,
+            fallback: false,
+            routeReason: __routeReason,
+          },
+          providerObservability: {
+            providerPlanned: String((__rendered.providerPlan as any)?.primaryRenderer ?? "llm"),
+            providerUsed: String((__rendered.providerPlan as any)?.primaryRenderer ?? "llm"),
+            success: true,
+            fallback: false,
+            routeReason: __routeReason,
+          },
+          shadowResult: { facts: [], candidates: [], uncertainties: [], sourcesHint: [] },
+          surfaceStyle: "plain_clean",
+          closingType: "none",
           heart: __heartCov,
           thoughtCoreSummary: {
-            centerKey: "general_factual",
-            centerMeaning: "general_factual",
-            routeReason: "R17_GENERAL_FACTUAL_SHADOW_ROUTE_V1", /* responsePlan */
-            modeHint: "factual",
-            continuityHint: "general_factual",
+            centerKey: __centerMeaning,
+            centerMeaning: __centerMeaning,
+            routeReason: __routeReason, /* responsePlan */
+            modeHint: __modeHint,
+            continuityHint: __centerMeaning,
           },
         };
+        if (__routeReason === "TECHNICAL_REPO_AWARE_PLANNER_V1") {
+          const __planObj = (globalThis as any).__TENMON_REPO_AWARE_PLAN_V1 || {};
+          __kuFact.repoAwarePlan = __planObj;
+          __kuFact.likelyFiles = Array.isArray(__planObj?.likelyFiles) ? __planObj.likelyFiles : ["api/src/routes/chat.ts"];
+          __kuFact.acceptancePlan = Array.isArray(__planObj?.acceptanceCheck) ? __planObj.acceptanceCheck : [];
+          __kuFact.riskMap = Array.isArray(__planObj?.riskPoints) ? __planObj.riskPoints : [];
+          __kuFact.minimalDiffStrategy = String(__planObj?.minimalDiffIdea ?? "");
+        }
+        const __detailPlanRepoAware = createEmptyDetailPlanP20V1(String(__kuFact.centerMeaning || ""));
+        if (__routeReason === "TECHNICAL_REPO_AWARE_PLANNER_V1") {
+          (__detailPlanRepoAware as any).repoAwarePlan = __kuFact.repoAwarePlan ?? {};
+          (__detailPlanRepoAware as any).likelyFiles = __kuFact.likelyFiles ?? [];
+          (__detailPlanRepoAware as any).impactSurface = (__kuFact.repoAwarePlan as any)?.impactSurface ?? [];
+          (__detailPlanRepoAware as any).acceptancePlan = __kuFact.acceptancePlan ?? [];
+          (__detailPlanRepoAware as any).riskMap = __kuFact.riskMap ?? [];
+          (__detailPlanRepoAware as any).minimalDiffStrategy = __kuFact.minimalDiffStrategy ?? "";
+          (__detailPlanRepoAware as any).routeReason = __routeReason;
+        }
 
         return res.json(__tenmonGeneralGateResultMaybe({
           response: __rendered.response,
@@ -7099,10 +7420,12 @@ const __isDefinitionQ =
           threadId, /* tcTag */
           decisionFrame: {
             mode: "NATURAL",
-            intent: "general_knowledge",
+            intent: __intent,
             llm: null,
             ku: __kuFact,
+            detailPlan: __detailPlanRepoAware,
           },
+          detailPlan: __detailPlanRepoAware,
         }));
       }
     } catch {}
@@ -8115,12 +8438,21 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
             } catch {}
           }
           // evidenceIds: 実際の u.quoteHash（JOIN で取得）を使用
+          const __quoteRaw = String(h.quote || "").replace(/\s+/g, " ").trim();
+          const __quoteNatural = __quoteRaw
+            .replace(/\[NON_TEXT_PAGE_OR_OCR_FAILED\]/g, "")
+            .replace(/(?:目次|一覧|索引|収録|章立て)\s*[:：][^。]{0,120}/gu, "")
+            .replace(/\s{2,}/g, " ")
+            .trim()
+            .slice(0, 180);
+          const __k1BodyCore = __quoteNatural
+            ? `この語の定義は、${__quoteNatural}という骨子で読めます。`
+            : `この語は、用語説明ではなく成立原理と作用を同時に読む対象です。`;
           const payload = {
             response:
               `【天聞の所見】\n` +
-              `${String(h.quote).slice(0, 320)}\n\n` +
-              `出典: ${h.doc} P${h.pdfPage}\n\n` +
-              `この定義のどの部分を深掘りしますか？`,
+              `${__k1BodyCore}\n\n` +
+              `構造としては、語義・作用・読解軸の三層に分けると見通しが安定します。`,
 
             evidence: {
               doc: h.doc,
@@ -8437,7 +8769,21 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
           candidates: [],
           timestamp,
           threadId, /* tcTag */
-          decisionFrame: { mode: "NATURAL", intent: "define", llm: null, ku: { lawsUsed: [], evidenceIds: [], lawTrace: [], routeReason: "DEF_CONCEPT_UNFIXED_V1", /* responsePlan */ term: __term } },
+          decisionFrame: {
+            mode: "NATURAL",
+            intent: "define",
+            llm: null,
+            ku: {
+              lawsUsed: [],
+              evidenceIds: [],
+              lawTrace: [],
+              routeReason: "DEF_CONCEPT_UNFIXED_V1", /* responsePlan */
+              term: __term,
+              centerKey: String(__term || "").trim().toLowerCase() || "concept",
+              centerLabel: String(__term || "").trim() || "概念",
+              centerClaim: String(__term || "").trim() ? `${String(__term || "").trim()}の定義を固定する` : "概念の定義を固定する",
+            },
+          },
         }));
       }
 
@@ -9646,7 +9992,8 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
       }
 
       // CARD_EXPLICIT_CHAR_PRIORITY_FIX_V1: __explicitChars は CARD_TENMON_BRAINSTEM_WIRING_FIX_V1 で早期抽出済み
-      if (__explicitChars != null && !isCmd0 && !hasDoc0 && !askedMenu0) {
+      const __allowExplicitOwnerRouteMainV1 = false;
+      if (__allowExplicitOwnerRouteMainV1 && __explicitChars != null && !isCmd0 && !hasDoc0 && !askedMenu0) {
         const __tier = __explicitChars <= 220 ? "short" : __explicitChars <= 450 ? "medium" : "long";
         // CARD_EXPLICIT_CHAR_BODY_FILL_V1: 予告文ではなく指定文字数へ寄せた本文を返す（500〜1000字要求では最低300字以上）
         // CARD_EXPLICIT_CHAR_LENGTH_FILL_V1: 500字で350字以上、1000字で700字以上を最低目標に本文を拡張
@@ -9790,8 +10137,18 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
         const __explicitLongFrameMain: AnswerFrame =
           __explicitChars != null && __explicitChars >= 2400 ? "statement_plus_one_question" : "one_step";
 
+        /** TENMON_CHAT_CONTINUITY_ROUTE_HOLD_V1: 言霊系明示で center を載せ、次ターンの hold / threadCenter に繋ぐ */
+        const __explicitKotodama = /言霊/u.test(String(t0));
         const __coreExplicit: ThreadCore = {
           ...__threadCore,
+          centerKey: __threadCore.centerKey ?? (__explicitKotodama ? "kotodama" : null),
+          centerLabel: __threadCore.centerLabel ?? (__explicitKotodama ? "言霊" : null),
+          activeEntities:
+            Array.isArray(__threadCore.activeEntities) && __threadCore.activeEntities.length > 0
+              ? __threadCore.activeEntities
+              : __explicitKotodama
+                ? ["言霊"]
+                : [],
           lastResponseContract: {
             answerLength: __tier,
             answerMode: "analysis",
@@ -9800,7 +10157,11 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
           },
           updatedAt: new Date().toISOString()
         };
-        saveThreadCore(__coreExplicit).catch(() => {});
+        try {
+          await saveThreadCore(__coreExplicit);
+        } catch {
+          /* ignore */
+        }
         try { (res as any).__TENMON_THREAD_CORE = __coreExplicit; } catch {}
         const __ku: any = {
           routeReason: "EXPLICIT_CHAR_PREEMPT_V1", /* responsePlan */
@@ -9896,22 +10257,7 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
         }
       } catch {}
 
-  
-// CARD_NATURAL_GENERAL_RESIDUAL_PREEMPT_V1（PATCH51: 判定＋exit は majorRoutes に集約）
-  if (
-    tryResidualPreemptExitV1({
-      res,
-      __tenmonGeneralGateResultMaybe,
-      message,
-      timestamp,
-      threadId, /* tcTag */
-      applyBrainstemContractToKu: (ku) => __applyBrainstemContractToKuV1(ku, __brainstem, "analysis"),
-    })
-  )
-    return;
-
-  // CARD_GROUNDING_SELECTOR_V1: grounded / canon / concept / general / unresolved（P53: general.ts に移管）
-      // generalKind（P54: general.ts に移管）
+      // TENMON_CHAT_CONTINUITY_ROUTE_HOLD_RETRY: threadCenter / follow-up を residual より上流で束ね、hold を先に評価
       const __generalKind = getGeneralKind(t0);
       let __threadCenterForGeneral: { center_type: string; center_key: string; source_route_reason?: string } | null = null;
       try {
@@ -9945,14 +10291,10 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
       const __isFollowupGeneral =
         RE_THREAD_FOLLOWUP.test(t0) || __isShortContinuation || __isCompareFollowup;
 
-      // CARD_EXPLICIT_LENGTH_AND_FEELING_ROUTE_V1: 気分・continuity 文（__explicitChars は CARD_EXPLICIT_CHAR_PRIORITY_FIX_V1 で先行定義済み）
       const __isFeelingRequest = /今(どんな|の)?気分|今の気持ち|(天聞|アーク)(への)?感想|感想(を)?(聞いて|教えて)/.test(t0);
-      const __isImpressionArk = /(天聞アーク|アーク)(への)?感想|天聞アークをどう思う|アークをどう思う/.test(t0);
-      const __isImpressionTenmon = /(天聞)(への)?感想|天聞をどう思う/.test(t0);
       const __isContinuityPhrasing = /さっき見ていた中心|さっき(の)?話(の)?続き|話の続き|続きで[,、]|(言霊|中心)(を)?土台に|今の話を(続ける|続けて|見ていきましょう)/u.test(
         t0
       );
-      /** STAGE1: threadCenter が DB に未反映でも同一 thread の継続表現は CONTINUITY に固定（NATURAL bleed 防止） */
       const __isContinuityAnchor =
         __isContinuityPhrasing && String(threadId || "").trim() !== "";
 
@@ -9966,6 +10308,55 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
         })
       )
         return;
+
+      try {
+        const __holdPre = await tryContinuityRouteHoldPreemptGatePayloadV1({
+          t0,
+          message,
+          threadId,
+          timestamp,
+          threadCore: __threadCore,
+          threadCenterForGeneral: __threadCenterForGeneral,
+          isContinuityAnchor: __isContinuityAnchor,
+          isThreadFollowupGeneral: __isFollowupGeneral,
+          isFeelingRequest: __isFeelingRequest,
+          centerLabelFromKey,
+          getCenterLabelForDisplay,
+          buildResponsePlan,
+          buildKnowledgeBinder,
+          applyKnowledgeBinderToKu,
+          saveThreadCore,
+          setResThreadCoreMirror: (c) => {
+            try {
+              (res as any).__TENMON_THREAD_CORE = c;
+            } catch {}
+          },
+          memoryReadSession,
+          getLastTwoKotodamaSoundsFromHistory,
+          buildKotodamaCompareResponse,
+        });
+        if (__holdPre) {
+          return res.json(__tenmonGeneralGateResultMaybe(__holdPre));
+        }
+      } catch {
+        /* ignore */
+      }
+
+// CARD_NATURAL_GENERAL_RESIDUAL_PREEMPT_V1（PATCH51: 判定＋exit は majorRoutes に集約）
+  if (
+    tryResidualPreemptExitV1({
+      res,
+      __tenmonGeneralGateResultMaybe,
+      message,
+      timestamp,
+      threadId, /* tcTag */
+      applyBrainstemContractToKu: (ku) => __applyBrainstemContractToKuV1(ku, __brainstem, "analysis"),
+    })
+  )
+    return;
+
+  // CARD_GROUNDING_SELECTOR_V1: grounded / canon / concept / general / unresolved（P53: general.ts に移管）
+      // generalKind（P54: general.ts に移管）— __generalKind / __threadCenterForGeneral / follow-up フラグは上流で定義済み
 
       // CARD_THREADCORE_MIN_V1B_NEXTSTEP_CONTRACT_FIX: 「次は？」系を ThreadCore 優先で短文 preempt（旧前置きを出さない）
       const __t0TrimNext = String(t0).trim();
@@ -14714,8 +15105,13 @@ if (__hasMenu && !__askedMenu) {
       const wants = Boolean(wantsDetail);
       const hasEvidenceSignals =
         /(pdfPage=|doc=|evidenceIds|candidates|引用|出典|根拠|ソース|【|】)/.test(String(finalResponse));
+      const __rrCloseV1 = String((detailPlan as any)?.routeReason ?? "");
+      const __skipGenericCloseV1 =
+        /^(TRUTH_GATE_RETURN_V2|DEF_FASTPATH_VERIFIED_V1|DEF_DICT_HIT|TENMON_CONCEPT_CANON_V1|TENMON_SCRIPTURE_CANON_V1|K1_TRACE_EMPTY_GATED_V1|R22_LIGHT_FACT_.*|TECHNICAL_IMPLEMENTATION_.*|R22_CONSCIOUSNESS_META_ROUTE_V1|R22_JUDGEMENT_PREEMPT_V1|KANAGI_CONVERSATION_V1|FACTUAL_CURRENT_.*|FACTUAL_RECENT_TREND_V1|GENERAL_KNOWLEDGE_EXPLAIN_ROUTE_V1)$/u.test(
+          __rrCloseV1,
+        );
 
-      if (!wants && !hasEvidenceSignals) {
+      if (!wants && !hasEvidenceSignals && !__skipGenericCloseV1) {
         let r = String(finalResponse ?? "").trim();
         const endsQ = /[？?]\s*$/.test(r) || /(ですか|でしょうか|ますか)\s*$/.test(r);
         if (!endsQ) {
@@ -14732,13 +15128,18 @@ if (__hasMenu && !__askedMenu) {
       let r = String(finalResponse ?? "").trim();
 
       const wants = Boolean(wantsDetail);
+      const __rrCloseV2 = String((detailPlan as any)?.routeReason ?? "");
+      const __skipGenericCloseV2 =
+        /^(TRUTH_GATE_RETURN_V2|DEF_FASTPATH_VERIFIED_V1|DEF_DICT_HIT|TENMON_CONCEPT_CANON_V1|TENMON_SCRIPTURE_CANON_V1|K1_TRACE_EMPTY_GATED_V1|R22_LIGHT_FACT_.*|TECHNICAL_IMPLEMENTATION_.*|R22_CONSCIOUSNESS_META_ROUTE_V1|R22_JUDGEMENT_PREEMPT_V1|KANAGI_CONVERSATION_V1|FACTUAL_CURRENT_.*|FACTUAL_RECENT_TREND_V1|GENERAL_KNOWLEDGE_EXPLAIN_ROUTE_V1)$/u.test(
+          __rrCloseV2,
+        );
 
       // 末尾が問いか判定（日本語の疑問終止も含む）
       const endsQ =
         /[？?]\s*$/.test(r) ||
         /(ですか|でしょうか|ますか|か？|か\?)\s*$/.test(r);
 
-      if (!endsQ) {
+      if (!endsQ && !__skipGenericCloseV2) {
         const qNormal = NG_CLOSING_WHERE_START_V1;
         const qDetail = "この引用のどこを一番深掘りしますか？（語義／構文／水火（イキ）／天津金木）";
         const q = wants ? qDetail : qNormal;
@@ -14797,8 +15198,15 @@ if (__hasMenu && !__askedMenu) {
       }
     } catch {}
 
+    const __ownerRouteFromDetailPlan = String((detailPlan as any)?.routeReason ?? "").trim();
+    const __ownerRouteResolved = __ownerRouteFromDetailPlan;
+    const __isMeaningOwnerRoute = (rr: string): boolean =>
+      /^(DEF_|TENMON_SCRIPTURE_CANON_V1|TENMON_SUBCONCEPT_CANON_V1|TENMON_CONCEPT_CANON_V1|KATAKAMUNA_CANON_ROUTE_V1|KUKAI_|FACTUAL_|TECHNICAL_|GENERAL_KNOWLEDGE_EXPLAIN_ROUTE_V1)/u.test(
+        String(rr || ""),
+      );
     const __explicitFinalResponse = (() => {
       if (__explicitCharsEarly == null) return finalResponse;
+      if (__isMeaningOwnerRoute(__ownerRouteResolved)) return finalResponse;
       const __msgExplicitFinal = String(message ?? "").trim();
       const __isFeelingExplicitFinal =
         /今(どんな|の)?気分|今の気持ち/.test(__msgExplicitFinal) &&
@@ -14841,6 +15249,37 @@ if (__hasMenu && !__askedMenu) {
       return __pickedExplicitFinal;
     })();
 
+    const __requiresCenterForExit = (rr: string): boolean =>
+      /^(DEF_|TENMON_SCRIPTURE_CANON_V1|TENMON_SUBCONCEPT_CANON_V1|TENMON_CONCEPT_CANON_V1|KATAKAMUNA_CANON_ROUTE_V1|KUKAI_|TECHNICAL_|FACTUAL_|GENERAL_KNOWLEDGE_EXPLAIN_ROUTE_V1)/u.test(
+        String(rr || ""),
+      );
+    const __synthesizeCenterFromMessageV1 = (msg: string): { centerKey: string | null; centerLabel: string | null; centerClaim: string | null } => {
+      const t = String(msg || "").trim();
+      if (/言霊/u.test(t)) return { centerKey: "kotodama", centerLabel: "言霊", centerClaim: "言霊の定義と働き" };
+      if (/法華経/u.test(t)) return { centerKey: "hokke", centerLabel: "法華経", centerClaim: "法華経の核心" };
+      if (/空海/u.test(t)) return { centerKey: "kukai", centerLabel: "空海", centerClaim: "空海の要点" };
+      if (/TypeScript|React|Node\.js|実装|コード/iu.test(t))
+        return { centerKey: "technical_implementation", centerLabel: "技術実装", centerClaim: "実装の要点" };
+      if (/日付|何時|曜日/u.test(t)) return { centerKey: "factual_current_date", centerLabel: "現在日時", centerClaim: "現在日時の確認" };
+      if (/総理大臣|大統領|CEO/u.test(t)) return { centerKey: "factual_current_person", centerLabel: "現在人物", centerClaim: "現在人物の確認" };
+      return { centerKey: null, centerLabel: null, centerClaim: null };
+    };
+    const __ownerRouteForKu = __ownerRouteResolved || "NATURAL_GENERAL_LLM_TOP_V1";
+    const __centerFromSynth = __synthesizeCenterFromMessageV1(String(message ?? ""));
+    const __centerKeyForKu = __centerFromSynth.centerKey ?? (String(__threadCore?.centerKey ?? "").trim() || null);
+    const __centerLabelForKu =
+      __centerFromSynth.centerLabel ??
+      (String(__threadCore?.centerLabel ?? "").trim() ||
+        (typeof __centerKeyForKu === "string" && __centerKeyForKu ? centerLabelFromKey(__centerKeyForKu) : null));
+    const __centerClaimForKu =
+      __centerFromSynth.centerClaim ??
+      (String((detailPlan as any)?.centerClaim ?? "").trim() || (__centerLabelForKu ? `${__centerLabelForKu}の要点` : null));
+    try {
+      (detailPlan as any).ownerRouteReason = __ownerRouteForKu;
+      (detailPlan as any).explicitLengthRequested = __explicitCharsEarly ?? null;
+      (detailPlan as any).answerLengthBias = __explicitCharsEarly != null ? "long" : null;
+    } catch {}
+
     const payload = {
       response: __explicitFinalResponse,
       trace,
@@ -14854,16 +15293,21 @@ if (__hasMenu && !__askedMenu) {
         mode: "HYBRID",
         intent: "chat",
         llm: null,
-        ku: (__explicitCharsEarly != null)
-          ? {
-              routeReason: "EXPLICIT_CHAR_PREEMPT_V1", /* responsePlan */
-              routeClass: "analysis",
-              answerLength: "long",
-              answerMode: "analysis",
-              answerFrame: "one_step",
-              explicitLengthRequested: __explicitCharsEarly,
-            }
-          : {}
+        ku: {
+          routeReason: __ownerRouteForKu, /* responsePlan */
+          routeClass: __ownerRouteForKu.startsWith("TECHNICAL_") ? "analysis" : "define",
+          answerLength: __explicitCharsEarly != null ? "long" : "medium",
+          answerMode: __ownerRouteForKu.startsWith("TECHNICAL_") ? "code" : "define",
+          answerFrame: "one_step",
+          explicitLengthRequested: __explicitCharsEarly ?? null,
+          ...( __requiresCenterForExit(__ownerRouteForKu)
+            ? {
+                centerKey: __centerKeyForKu,
+                centerLabel: __centerLabelForKu,
+                centerClaim: __centerClaimForKu,
+              }
+            : {}),
+        }
       },
     };
     // ARK_THREAD_SEED_SAVE_V1

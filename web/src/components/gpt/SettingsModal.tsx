@@ -44,7 +44,7 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
             </button>
           </div>
           {section === "data" ? (
-            <SettingsPanel open={true} onClose={onClose} onImported={() => window.location.reload()} />
+            <SettingsPanel open={true} onClose={onClose} onImported={onClose} />
           ) : section === "language" ? (
             <div className="gpt-page-card">
               <h3 className="gpt-page-card-title">{t("settings.language.title")}</h3>

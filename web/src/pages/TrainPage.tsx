@@ -1,6 +1,6 @@
 // Training Chat: Minimal UI for Personality Formation
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 
 type TrainingIntent = "teach" | "question" | "verify" | "correct";
 
@@ -11,7 +11,8 @@ export function TrainPage() {
   const [response, setResponse] = useState<string | null>(null);
   const [thinkingAxis, setThinkingAxis] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
-  const [sessionId] = useState(() => `train_${Date.now()}`);
+  /** Train API の session_id（会話 mainline の threadId とは別系統） */
+  const [trainRunId] = useState(() => `train_${Date.now()}`);
 
   const sendMessage = async () => {
     if (!message.trim() || sending) return;
@@ -27,7 +28,7 @@ export function TrainPage() {
           message: message.trim(),
           intent,
           importance,
-          session_id: sessionId,
+          session_id: trainRunId,
         }),
       });
 
@@ -53,7 +54,7 @@ export function TrainPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          session_id: sessionId,
+          session_id: trainRunId,
           commit_policy: policy,
         }),
       });
@@ -78,7 +79,7 @@ export function TrainPage() {
       <div className="max-w-4xl mx-auto">
         <h1 className="text-2xl font-bold text-gray-900 mb-6">Training Chat</h1>
         <p className="text-sm text-gray-600 mb-6">
-          Session ID: {sessionId}
+          Training run: {trainRunId}
         </p>
 
         {/* Input Area */}

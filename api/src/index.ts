@@ -32,6 +32,7 @@ import { adminCursorCommandRouter } from "./routes/adminCursorCommand.js";
 import { adminCursorResultRouter } from "./routes/adminCursorResult.js";
 import { adminRemoteIntakeRouter } from "./routes/adminRemoteIntake.js";
 import { adminRemoteBuildRouter } from "./routes/adminRemoteBuild.js";
+import healthRouter from "./routes/health.js";
 
 // Debug: 未処理例外のハンドリング
 const pid = process.pid;
@@ -43,6 +44,11 @@ process.on("uncaughtException", (error) => {
 
 process.on("unhandledRejection", (reason, promise) => {
   const uptime = process.uptime();
+  const msg = String((reason as any)?.message || reason || "");
+  if (/No LLM provider configured|OPENAI_API_KEY missing|GEMINI_API_KEY missing/u.test(msg)) {
+    console.error(`[WARN] unhandledRejection(non-fatal) pid=${pid} uptime=${uptime}s:`, reason);
+    return;
+  }
   console.error(`[FATAL] unhandledRejection pid=${pid} uptime=${uptime}s:`, reason);
   process.exit(1);
 });
@@ -96,8 +102,9 @@ try {
 
 app.use(cors());
 app.use(express.json());
+// GET /api/health /api/readiness /api/version — 他 /api より先（404 / 先取り回避、rateLimit マウント時は bypass=/api/health と整合）
+app.use("/api", healthRouter);
 app.use("/api/infra", infraAssetsRouter);
-
 
 app.use(cookieParser());
 

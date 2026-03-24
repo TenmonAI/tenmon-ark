@@ -285,6 +285,25 @@ function conceptCanonPwaPolish(response: string): string {
   return out;
 }
 
+function applyScriptureRendererProfileV1(response: string, routeReason: string): string {
+  const rr = String(routeReason || "").trim();
+  if (
+    !/^(TRUTH_GATE_RETURN_V2|TENMON_SCRIPTURE_CANON_V1|K1_TRACE_EMPTY_GATED_V1|TENMON_SUBCONCEPT_CANON_V1|DEF_FASTPATH_VERIFIED_V1|DEF_DICT_HIT)$/u.test(
+      rr,
+    ) &&
+    !/^KOTODAMA_ONE_SOUND_GROUNDED_/u.test(rr)
+  ) {
+    return response;
+  }
+  let out = String(response || "");
+  out = out
+    .replace(/^[^\n]{1,48}について、今回は(?:分析|定義|説明)の立場で答えます。\s*/gmu, "")
+    .replace(/定義は補完待ちです。?/gu, "")
+    .replace(/^(trace|lawTrace|sourceKinds|sourcePack|evidenceIds)\s*[:：].*$/gmiu, "")
+    .replace(/^(OCR|目次|一覧|収録)\s*[:：].*$/gmu, "");
+  return out.replace(/\n{3,}/g, "\n\n").trim();
+}
+
 function applyPersonaReduction(
   response: string,
   meaningFrame: MeaningFrame,
@@ -461,6 +480,7 @@ export function responseComposer(input: ResponseComposerInput): ResponseComposer
   const meaningFrame = buildMeaningFrame(input);
   // R10_DANSHARI_COMMUNICATION_LOOP_V1: general/support 時に driftRisk を先行計算して applyPersonaReduction に渡す（gate より前のためここで計算）
   const rr = String(input?.routeReason ?? "");
+  out = applyScriptureRendererProfileV1(out, rr);
   if (
     (rr === "NATURAL_GENERAL_LLM_TOP" || rr === "N2_KANAGI_PHASE_TOP") &&
     (input as any).driftRisk == null

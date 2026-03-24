@@ -61,9 +61,9 @@ export function TrainingPage() {
     }
   };
 
-  const loadSession = async (sessionId: string) => {
+  const loadSession = async (id: string) => {
     try {
-      const res = await fetch(`/api/training/session/${sessionId}`);
+      const res = await fetch(`/api/training/session/${id}`);
       const data = await res.json();
       if (data.success) {
         setSessionData({ session: data.session, messages: data.messages });
@@ -73,9 +73,9 @@ export function TrainingPage() {
     }
   };
 
-  const loadRules = async (sessionId: string) => {
+  const loadRules = async (id: string) => {
     try {
-      const res = await fetch(`/api/training/rules?session_id=${sessionId}`);
+      const res = await fetch(`/api/training/rules?session_id=${id}`);
       const data = await res.json();
       if (data.success) {
         setRules(data.rules);

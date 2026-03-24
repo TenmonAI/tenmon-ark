@@ -1,3 +1,9 @@
+/**
+ * TENMON_PWA_THREAD_URL_CONSTITUTION_CURSOR_AUTO_V1
+ * thread identity 解決順（固定）: URL threadId → backend response.threadId → localStorage → 新規生成。
+ * send 成功後は backend の threadId を正典順にマージし、URL / React state / localStorage を同期。
+ * popstate / TENMON_THREAD_SWITCH_EVENT を尊重。PWA チャット輸送は threadId のみ（旧 session 名義のフィールドは付けない）。
+ */
 import { useEffect, useRef, useState } from "react";
 import { postChat } from "../api/chat";
 
@@ -94,7 +100,7 @@ export function readThreadIdFromUrl(): string | null {
   return null;
 }
 
-/** 採用した threadId を URL に同期（reload なし・replaceState） */
+/** 採用した threadId を URL に同期（replaceState のみ・ページ再読込なし） */
 export function writeThreadIdToUrl(threadId: string): void {
   if (typeof window === "undefined") return;
   const tid = String(threadId || "").trim();
@@ -126,7 +132,8 @@ export function resolveCanonicalThreadId(
   return `pwa-${Date.now().toString(36)}`;
 }
 
-function persistThreadIdToStorageAndUrl(id: string) {
+/** hydrate / switch / send 後に URL と localStorage を同一 threadId で揃える（ナビゲーション再発行なし） */
+export function persistThreadIdToStorageAndUrl(id: string) {
   try {
     const { THREAD_KEY } = getStorageKeys();
     localStorage.setItem(THREAD_KEY, id);
@@ -134,6 +141,23 @@ function persistThreadIdToStorageAndUrl(id: string) {
     // ignore
   }
   writeThreadIdToUrl(id);
+}
+
+export function createNewThreadId(): string {
+  return `pwa-${Date.now().toString(36)}`;
+}
+
+/** PWA 側の canonical thread switch（new/existing/restore で同一経路） */
+export function switchThreadCanonicalV1(threadId: string): void {
+  const tid = String(threadId || "").trim();
+  if (!tid) return;
+  persistThreadIdToStorageAndUrl(tid);
+  try {
+    window.dispatchEvent(new CustomEvent(TENMON_THREAD_SWITCH_EVENT, { detail: { threadId: tid } }));
+    window.dispatchEvent(new Event("tenmon:threads-updated"));
+  } catch {
+    // ignore
+  }
 }
 
 /**
@@ -207,6 +231,7 @@ export function useChat() {
     hydratedRef.current = true;
   }, []);
 
+  /** thread switch: state + messages + storage/URL は上記と同一（ページ再読込なし） */
   useEffect(() => {
     const onSwitch = (e: Event) => {
       const ce = e as CustomEvent<{ threadId?: string }>;
@@ -229,7 +254,7 @@ export function useChat() {
     return () => window.removeEventListener(TENMON_THREAD_SWITCH_EVENT, onSwitch as EventListener);
   }, []);
 
-  /** ブラウザ戻る/進む・hash 変更で URL 優先の thread を再同期（reload 不要） */
+  /** ブラウザ戻る/進む・hash 変更で URL 優先の thread を再同期（ナビゲーション再発行なし） */
   useEffect(() => {
     const onUrlThreadChange = () => {
       const urlTid = readThreadIdFromUrl();
@@ -290,7 +315,16 @@ export function useChat() {
       setLoading(true);
       const out = await postChat({ message: text, threadId });
       const backendTid = out?.threadId != null ? String(out.threadId).trim() : "";
-      const resolved = resolveCanonicalThreadId(readThreadIdFromUrl(), backendTid || null, threadId);
+      const { THREAD_KEY } = getStorageKeys();
+      let storageRaw = "";
+      try {
+        storageRaw = localStorage.getItem(THREAD_KEY) || "";
+      } catch {
+        /* ignore */
+      }
+      // 正典順: URL > backend.threadId > localStorage >（send 前 state は storage と揃える前提）
+      const urlNow = readThreadIdFromUrl();
+      const resolved = resolveCanonicalThreadId(urlNow, backendTid || null, storageRaw || null);
       persistThreadIdToStorageAndUrl(resolved);
 
       const assistantMsg: ChatMessage = {
@@ -302,6 +336,14 @@ export function useChat() {
       };
 
       if (resolved !== threadId) {
+        // 旧 thread の optimistic user を永続から外し、resolved 側へ会話を単一化
+        try {
+          const oldMsgs = loadMessages(threadId);
+          const withoutOptimistic = oldMsgs.filter((m) => m.id !== userMsg.id);
+          saveMessages(threadId, withoutOptimistic);
+        } catch {
+          /* ignore */
+        }
         setThreadId(resolved);
         const base = loadMessages(resolved);
         setMessages([...base, userMsg, assistantMsg]);
@@ -313,16 +355,12 @@ export function useChat() {
     }
   }
 
+  /**
+   * TENMON_PWA_NEWCHAT_SURFACE_BINDING_V1: フルページ再読込は行わない。
+   * GptShell.handleNewChat と同一パス（persist → thread-switch → threads-updated）
+   */
   function resetThread() {
-    const tid = `pwa-${Date.now().toString(36)}`;
-    try {
-      window.dispatchEvent(
-        new CustomEvent(TENMON_THREAD_SWITCH_EVENT, { detail: { threadId: tid } })
-      );
-      window.dispatchEvent(new Event("tenmon:threads-updated"));
-    } catch {
-      // ignore
-    }
+    switchThreadCanonicalV1(createNewThreadId());
   }
 
   return {

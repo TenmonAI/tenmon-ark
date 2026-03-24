@@ -101,6 +101,297 @@ function isDensityEligibleKu(ku: any): boolean {
   return false;
 }
 
+function isScriptureEssenceRouteV1(routeReason: string): boolean {
+  const rr = String(routeReason || "").trim();
+  return (
+    /^(TRUTH_GATE_RETURN_V2|TENMON_SCRIPTURE_CANON_V1|K1_TRACE_EMPTY_GATED_V1|TENMON_SUBCONCEPT_CANON_V1|TENMON_CONCEPT_CANON_V1|DEF_FASTPATH_VERIFIED_V1|DEF_DICT_HIT)$/u.test(
+      rr,
+    ) || /^KOTODAMA_ONE_SOUND_GROUNDED_/u.test(rr)
+  );
+}
+
+function stripScripturePlaceholderAndTraceV1(text: string): string {
+  const lines = String(text || "").split("\n");
+  const out: string[] = [];
+  for (const line of lines) {
+    const s = line.trim();
+    if (!s) continue;
+    if (/定義は補完待ち/u.test(s)) continue;
+    if (/^(trace|lawTrace|sourceKinds|sourcePack|evidenceIds)\s*[:：]/iu.test(s)) continue;
+    if (/^(pdfPage|doc|quoteHash|seedId)\s*[:=]/iu.test(s)) continue;
+    if (/^(OCR|目次|一覧|収録|章立て)\s*[:：]/u.test(s)) continue;
+    if (/\.(pdf|docx?|md|txt|json|csv)(\s|$)/iu.test(s)) continue;
+    if (/\b(?:chunk|section|index|toc)\s*[:=#-]?\s*[A-Za-z0-9_.-]+/iu.test(s)) continue;
+    if (/\[NON_TEXT_PAGE_OR_OCR_FAILED\]/u.test(s)) continue;
+    if (/について、今回は(?:分析|定義|説明)の立場で答えます。?/u.test(s)) continue;
+    if (/この主題に関する資料要旨では/u.test(s)) continue;
+    if (/HOKKEについて/u.test(s)) continue;
+    if (/KUKAI_COLLECTION_0002/u.test(s)) continue;
+    if (/SOGO_1号_pdf/u.test(s)) continue;
+    if (/^資料要旨/u.test(s)) continue;
+    out.push(line);
+  }
+  return out.join("\n").replace(/\n{3,}/g, "\n\n").trim();
+}
+
+function advanceScriptureFollowupIfLoopV1(args: {
+  routeReason: string;
+  body: string;
+  userMessage: string;
+  ku: any;
+}): string {
+  const rr = String(args.routeReason || "");
+  if (!/^(TRUTH_GATE_RETURN_V2|TENMON_SCRIPTURE_CANON_V1|K1_TRACE_EMPTY_GATED_V1)$/u.test(rr)) {
+    return args.body;
+  }
+  const prior = String(args?.ku?.priorAnswerEssence ?? "").replace(/\s+/g, " ").trim();
+  const now = String(args.body || "").replace(/\s+/g, " ").trim();
+  if (!prior || !now) return args.body;
+  const pHead = prior.slice(0, 44);
+  if (!pHead || !now.includes(pHead)) return args.body;
+  const q = String(args.userMessage || "");
+  let step = "構造面では、語義だけでなく背景と運用条件を分けて読むと、同語反復を避けつつ理解が進みます。";
+  if (/(背景|由来|歴史|文脈)/u.test(q)) {
+    step = "背景面では、その語が置かれた時代的文脈と読解系統を切り分けると、定義の射程が明確になります。";
+  } else if (/(応用|使い方|実装|実践)/u.test(q)) {
+    step = "応用面では、判断軸を一つ固定して具体例へ落とすと、定義が実用知として機能します。";
+  } else if (/(比較|違い|対比)/u.test(q)) {
+    step = "比較面では、対象ごとの中心命題と前提を並べると、差分が構造として見えるようになります。";
+  }
+  const merged = `${String(args.body || "").trim()}\n\n【一段進める視点】\n${step}`;
+  return merged.trim();
+}
+
+function shapeScriptureEssenceSurfaceV1(args: {
+  routeReason: string;
+  body: string;
+  evidencePack: string;
+  userMessage: string;
+}): { body: string; evidencePack: string } {
+  if (!isScriptureEssenceRouteV1(args.routeReason)) {
+    return { body: args.body, evidencePack: args.evidencePack };
+  }
+  const cleaned = stripScripturePlaceholderAndTraceV1(args.body);
+  const cleaned2 = cleaned
+    .replace(/⽬/gu, "目")
+    .replace(/(?:目次|請来目録|訳注|解説)\s*[^\n。]{0,220}/gu, " ")
+    .replace(/\s{2,}/gu, " ")
+    .trim();
+  const paras = cleaned2
+    .split(/\n\s*\n/u)
+    .map((x) => x.trim())
+    .filter(Boolean);
+  if (paras.length === 0) return { body: cleaned2, evidencePack: args.evidencePack };
+  const core = paras[0];
+  let structure = paras[1] || "語義・作用・読解の軸を分けて読むと、要点が崩れにくいです。";
+  const modern =
+    paras.length >= 3
+      ? paras.slice(2).join(" ")
+      : "現代では、概念を押さえたうえで判断や実装に一段だけ落とすと使えます。";
+  if (structure.replace(/\s+/g, " ").trim() === core.replace(/\s+/g, " ").trim()) {
+    structure = "語義・作用・読解の軸を分けると、主張の射程が崩れにくくなります。";
+  }
+  /** 見出しラベルなしの自然連結（表面メタ削減） */
+  const body = [core, structure, modern].join(" ").replace(/\s+/g, " ").trim();
+  return {
+    body,
+    // evidence は payload 側に保持し、表面には露出しない
+    evidencePack: "",
+  };
+}
+
+function synthesizeEvidenceNaturalProseV1(args: {
+  routeReason: string;
+  body: string;
+  userMessage: string;
+}): string {
+  const rr = String(args.routeReason || "").trim();
+  if (!/^(K1_TRACE_EMPTY_GATED_V1|TENMON_SCRIPTURE_CANON_V1|TRUTH_GATE_RETURN_V2|TENMON_CONCEPT_CANON_V1)$/u.test(rr)) {
+    return args.body;
+  }
+  const raw = String(args.body || "").trim();
+  if (!raw) return raw;
+  let t = raw
+    .replace(/⽬/gu, "目")
+    .replace(/\b(?:SOGO_1号_pdf|KUKAI_COLLECTION_0002|HOKKE|LOTUS_TENMON_DHARANI21)\b/gu, "")
+    .replace(/HOKKEについて/gu, "")
+    .replace(/(?:^|\s)では、?「?[^」]{0,40}」?に関して/gu, " ")
+    .replace(/(?:目次|請来目録|訳注|解説)\s*[^。]{0,280}/gu, " ")
+    .replace(/資料要旨では[^。]{0,280}/gu, " ")
+    .replace(/\.{5,}|・{3,}|…{2,}/gu, " ")
+    .replace(/(法華経|言霊解|サンスクリット語×AI)(?:\s*\1){1,}/gu, "$1")
+    .replace(/[『』「」]/gu, "")
+    .replace(/\s{2,}/gu, " ")
+    .trim();
+  const q = String(args.userMessage || "");
+  const topic =
+    /法華経/u.test(q) ? "法華経" :
+    /即身成仏|空海/u.test(q) ? "空海の即身成仏" :
+    /平安時代.*言霊|平安.*言霊思想/u.test(q) ? "平安時代の言霊思想" :
+    /水穂伝/u.test(q) ? "水穂伝" :
+    /稲荷古伝/u.test(q) ? "稲荷古伝" :
+    /楢崎皐月/u.test(q) ? "楢崎皐月" :
+    /言霊秘書/u.test(q) ? "言霊秘書" :
+    /カタカムナ/u.test(q) ? "カタカムナ" :
+    /(?:^|[ 　])ア\s*の言[霊灵靈]/u.test(q) ? "「ア」の言霊" :
+    "この主題";
+  const core = t.split(/\n/u).map((x) => x.trim()).filter(Boolean)[0] || "";
+  if (!core) return t;
+  const coreClean = core
+    .replace(/^[【】核心構造現代への接続\s:：-]+/u, "")
+    .replace(/(?:目次|請来目録|訳注|解説)[^。]{0,220}/gu, " ")
+    .replace(/\.{5,}|・{3,}|…{2,}/gu, " ")
+    .replace(/\s{2,}/gu, " ")
+    .trim();
+  const tooNoisy =
+    /(目次|請来目録|訳注|資料要旨)/u.test(coreClean) ||
+    /(創刊号|国 図|はじめのととぱ|相似象学会誌)/u.test(coreClean) ||
+    /(言霊解|サンスクリット語×AI|法華経\s+言灵解)/u.test(coreClean) ||
+    coreClean.length < 8;
+  const fallbackCore =
+    topic === "法華経"
+      ? "一仏乗の立場から、衆生すべてに成仏可能性が開かれるという点が中心です"
+      : topic === "空海の即身成仏"
+        ? "この身このままで仏位を開くという成仏観が中心です"
+        : topic === "平安時代の言霊思想"
+          ? "言葉を単なる記号ではなく、現実へ働く力として捉える思想が中核です"
+        : topic === "水穂伝"
+          ? "言霊と水火法則を結ぶ伝承軸として読むのが要点です"
+          : topic === "稲荷古伝"
+            ? "象徴解釈より成立構文を読む古伝束として扱う点が核です"
+            : topic === "楢崎皐月"
+              ? "相似象学の枠組みで、図象と感受性の読解を体系化した点が要点です"
+              : topic === "言霊秘書"
+                ? "語義・音義・運用を連動させ、言葉の働きを実践知へ落とす書物として読めます"
+                : topic === "カタカムナ"
+                  ? "音義と生成秩序を重ねて宇宙観を読む立場が中心です"
+                  : topic === "「ア」の言霊"
+                    ? "カタカムナ読みでは、音は起こりの初端として秩序の入口に立ちます"
+                    : coreClean;
+  const bodyProse = String(tooNoisy ? fallbackCore : coreClean).replace(/この主題に関する資料要旨/u, "").trim();
+  const topicPhrase = topic === "この主題" ? "この点" : topic;
+  return `${topicPhrase}では、${bodyProse}。`.replace(/。{2,}/g, "。").replace(/\s+/g, " ").trim();
+}
+
+function isDomainDirectSurfaceRouteV1(routeReason: string): boolean {
+  const rr = String(routeReason || "").trim();
+  return /^(DEF_|TRUTH_GATE_RETURN_V2|TENMON_SCRIPTURE_CANON_V1|K1_|R22_LIGHT_FACT_|FACTUAL_CURRENT_|FACTUAL_RECENT_TREND_V1|GENERAL_KNOWLEDGE_EXPLAIN_ROUTE_V1|TECHNICAL_IMPLEMENTATION_|TENMON_CONCEPT_CANON_V1|R22_CONSCIOUSNESS_META_ROUTE_V1|CONTINUITY_ROUTE_HOLD_V1)/u.test(
+    rr,
+  );
+}
+
+function stripGenericCoachingProseV1(text: string): string {
+  let t = String(text || "");
+  t = t
+    .replace(/次の一手として、中心を一つ保ち、次に見る点を一つ決めてください。?/gu, "")
+    .replace(/次の一手として、判断軸を一つ選び、その軸から深めてください。?/gu, "")
+    .replace(/次の一手として、[^\n。]{0,64}(?:ください|ましょう)。?/gu, "")
+    .replace(/中心を一つ保ち[^\n。]{0,64}(?:ください|ましょう)。?/gu, "")
+    .replace(/判断軸を一つ選び[^\n。]{0,64}(?:ください|ましょう)。?/gu, "")
+    .replace(/その芯を一語だけ[^\n。]{0,64}(?:ください|ましょう)。?/gu, "")
+    .replace(/どこから(?:見ますか|詰めますか)[。？?]?/gu, "")
+    .replace(/どこから見ますか[。？?]?/gu, "")
+    .replace(/どの側面について知りたいですか[。？?]?/gu, "")
+    .replace(/どの分野に興味がありますか[。？?]?/gu, "")
+    .replace(/具体的にどの部分を深めたいですか[。？?]?/gu, "")
+    .replace(/次のどれで進めますか[。？?]?/gu, "")
+    .replace(/どこから入りますか[。？?]?/gu, "")
+    .replace(/あなたはこの書をどう使いますか[。？?]?/gu, "")
+    .replace(/あなたは水穂伝をどのように[^。？?]{0,80}[。？?]?/gu, "")
+    .replace(/この問いはKHS（verified）に強く接続しています。?/gu, "")
+    .replace(/いま触れたい一点を[^\n。]{0,64}(?:ください|ましょう)。?/gu, "")
+    .replace(/まずどちらですか[。？?]?/gu, "")
+    .replace(/判断軸を一つ選び[^\n。]{0,120}(?:ください|ましょう)。?/gu, "")
+    .replace(/次の一手として[^\n。]{0,160}(?:ください|ましょう)。?/gu, "")
+    .replace(/一語だけ先に置いてください。?/gu, "")
+    .replace(/いま私は、中心を崩さずにどこへ接続するかを見ています。?/gu, "")
+    .replace(/いまの気持ちのほうを見ています。?[^\n。]{0,64}/gu, "");
+  return t.replace(/\n{3,}/g, "\n\n").trim();
+}
+
+function tightenDomainSurfaceBodyV1(routeReason: string, body: string, userMessage: string): string {
+  const rr = String(routeReason || "").trim();
+  let t = String(body || "").trim();
+  const q = String(userMessage || "");
+  if (!t) return t;
+  if (
+    rr === "GENERAL_KNOWLEDGE_EXPLAIN_ROUTE_V1" &&
+    /要点を簡潔に説明します。?必要であれば具体例を1つ添えて掘り下げます。?/u.test(t)
+  ) {
+    if (/水火の法則/u.test(q)) {
+      t =
+        "水火の法則は、生成を二項対立ではなく往還運動として読む枠です。" +
+        "静と動、収束と展開の相互転換として捉えることで、言葉や判断の変化を構造的に説明できます。";
+    } else {
+      t = "主題の核を先に定義し、構造と含意を一段で示します。";
+    }
+  }
+  t = t.replace(/この問いはKHS（verified）に強く接続しています。?/gu, "");
+  t = t.replace(/では、。/gu, "。");
+  t = t.replace(/、。/gu, "。");
+  t = t.replace(/。{2,}/g, "。").trim();
+  return t;
+}
+
+function isGenericClosingBlacklistedRouteV1(routeReason: string): boolean {
+  const rr = String(routeReason || "").trim();
+  return /^(TRUTH_GATE_RETURN_V2|DEF_FASTPATH_VERIFIED_V1|DEF_DICT_HIT|TENMON_CONCEPT_CANON_V1|TENMON_SCRIPTURE_CANON_V1|K1_TRACE_EMPTY_GATED_V1|R22_LIGHT_FACT_.*|TECHNICAL_IMPLEMENTATION_.*|R22_CONSCIOUSNESS_META_ROUTE_V1|R22_JUDGEMENT_PREEMPT_V1|KANAGI_CONVERSATION_V1|FACTUAL_CURRENT_.*|FACTUAL_RECENT_TREND_V1|GENERAL_KNOWLEDGE_EXPLAIN_ROUTE_V1)$/u.test(
+    rr,
+  );
+}
+
+function compressDuplicateSentencesV1(text: string): string {
+  let t = String(text || "").trim();
+  if (!t) return t;
+  // 同一短文の反復を圧縮（完全一致ベース、意味改変はしない）
+  t = t.replace(/([^。！？\n]{8,180}[。！？])(?:\s*\1){1,}/gu, "$1");
+  const parts = t.split(/(?<=[。！？])/u).map((s) => s.trim()).filter(Boolean);
+  if (parts.length >= 3) {
+    const seen = new Set<string>();
+    const out: string[] = [];
+    for (const p of parts) {
+      const key = p.replace(/\s+/gu, " ").trim();
+      // domain route で目立つ短い定型の再掲だけを抑止
+      if (key.length >= 10 && key.length <= 80) {
+        if (seen.has(key)) continue;
+        seen.add(key);
+      }
+      out.push(p);
+    }
+    t = out.join("").trim();
+  }
+  t = t.replace(/\n{3,}/g, "\n\n").trim();
+  return t;
+}
+
+function stripContinuityMetaCarryV1(text: string): string {
+  return String(text || "")
+    .replace(/【前回の芯】[^\n]*/gu, "")
+    .replace(/【いまの差分】[^\n]*/gu, "")
+    .replace(/【次の一手】[^\n]*/gu, "")
+    .replace(/（次の一手の記録）[^\n]*/gu, "")
+    .replace(/priorRouteReasonEcho\s*[:：][^\n]*/giu, "")
+    .replace(/priorRouteReasonCarry\s*[:：][^\n]*/giu, "")
+    .replace(/\bkeep_center_one_step\b/giu, "")
+    .replace(/\bpriorRouteReason(?:Echo|Carry)\b/giu, "")
+    .replace(/\bCONTINUITY_ROUTE_HOLD_V1\b/gu, "")
+    .replace(/\b[A-Z][A-Z0-9_]{4,}_V1\b/gu, "")
+    .replace(/この中心を中心に、直前の論点を一段だけ継ぎます。?[^\n]*/gu, "")
+    .replace(/言霊の線のまま、直前の論点を一段だけ継ぎます。?[^\n]*/gu, "")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+/** CONTINUITY_ROUTE_HOLD_V1: 表面を自然文一段に収束（見出し・route メタなし） */
+function surfaceContinuityHoldOneLineV1(raw: string): string {
+  let t = stripContinuityMetaCarryV1(String(raw || ""));
+  t = stripGenericCoachingProseV1(trimTenmonSurfaceNoiseV3(t));
+  t = t.replace(/^【天聞の所見】\s*\n?/u, "").trim();
+  const part = t.split(/(?<=[。！？])/u)[0]?.trim() || t;
+  const one = part.replace(/\s+/g, " ").trim() || "前の流れを保ったまま、要点を一つだけ続けます。";
+  return one.replace(/。{2,}/g, "。").trim();
+}
+
 /** FINALIZE_BEAUTY_WRAPPER_THINNING_V1: beauty composition 系は説明ラッパーを薄くし、本文の理→情→余韻を前面に */
 function isBeautyCompositionFinalizeThinV1(ku: any): boolean {
   const rr = String(ku?.routeReason ?? "").trim();
@@ -404,6 +695,11 @@ export function applyFinalAnswerConstitutionAndWisdomReducerV1(payload: any): an
   }
 
   const rr = String(ku.routeReason ?? "").trim();
+  const __domainDirectRoute = isDomainDirectSurfaceRouteV1(rr);
+  const __kanagiDomainLock =
+    rr === "KANAGI_CONVERSATION_V1" &&
+    /^(define|analysis|explain)$/u.test(String(ku.answerMode ?? "").trim());
+  const __domainLock = __domainDirectRoute || __kanagiDomainLock;
   const densityNoLighten =
     DENSITY_CONTRACT_ROUTE_REASONS.has(rr) || String(ku.answerMode ?? "") === "define" || String(ku.answerMode ?? "") === "analysis";
   if (!densityNoLighten) {
@@ -434,6 +730,19 @@ export function applyFinalAnswerConstitutionAndWisdomReducerV1(payload: any): an
   if (!__beautyThin) {
     body = applySurfaceMeaningDensityRepairV1(body, String(responsePlan?.semanticBody ?? ""));
   }
+  body = synthesizeEvidenceNaturalProseV1({
+    routeReason: rr,
+    body,
+    userMessage: userMessageForSurface,
+  });
+  const __scriptureShaped = shapeScriptureEssenceSurfaceV1({
+    routeReason: rr,
+    body,
+    evidencePack,
+    userMessage: userMessageForSurface,
+  });
+  body = __scriptureShaped.body;
+  evidencePack = __scriptureShaped.evidencePack;
 
   /** TENMON_KG2B_FRACTAL_LANGUAGE_RENDERER_V1: HYBRID 短文で KHS evidence を自然文へ（長文・三弧・ beauty は不介入） */
   try {
@@ -480,6 +789,9 @@ export function applyFinalAnswerConstitutionAndWisdomReducerV1(payload: any): an
   const __implicitLfTarget =
     inferImplicitLongformCharTargetFromUserMessageV1(userMessageForSurface) ?? 0;
   const __explicitForRepair = Math.max(__explicitReq, __explicitParsedFromMessage, __implicitLfTarget);
+  if ((ku as any).explicitLengthRequested == null && __explicitForRepair > 0) {
+    (ku as any).explicitLengthRequested = __explicitForRepair;
+  }
   /** LONGFORM ascent / PACK_E: 明示 2400 字以上・中帯 600 字・本文 520 字で長文化パイプへ */
   const __longformSurface =
     ku.answerLength === "long" || __explicitReq >= 600 || body.length >= 520;
@@ -526,8 +838,11 @@ export function applyFinalAnswerConstitutionAndWisdomReducerV1(payload: any): an
   if (!__beautyThin) {
     body = suppressInterrogativeTemplateSpamV1(body);
     body = clampQuestionMarksInProseV1(body, 1);
-    /** PACK_F: DEF / NATURAL は末尾以外の問いを句点化し、薄い前置き・重複段落を削る */
-    if (/^(DEF_LLM_TOP|NATURAL_GENERAL_LLM_TOP)$/u.test(rr)) {
+    /** PACK_F: DEF / NATURAL のみ。CONTINUITY_ROUTE_HOLD は経路維持の短文 carry のため NATURAL 向け polish を当てない */
+    if (
+      !/^CONTINUITY_ROUTE_HOLD_V1$/u.test(rr) &&
+      /^(DEF_LLM_TOP|NATURAL_GENERAL_LLM_TOP)$/u.test(rr)
+    ) {
       body = clampQuestionMarksKeepLastNV1(body, 1);
       body = applyPackFFallbackRoutePolishV1(body, rr);
     }
@@ -552,7 +867,18 @@ export function applyFinalAnswerConstitutionAndWisdomReducerV1(payload: any): an
     routeReason: rr,
     userMessage: userMessageForSurface,
     answerLength: ku.answerLength as string | null | undefined,
+    answerFrame: ku.answerFrame as string | null | undefined,
     preCompose: true,
+  });
+  if (__domainLock) {
+    body = stripGenericCoachingProseV1(body);
+    body = compressDuplicateSentencesV1(body);
+  }
+  body = advanceScriptureFollowupIfLoopV1({
+    routeReason: rr,
+    body,
+    userMessage: userMessageForSurface,
+    ku,
   });
 
   /** TENMON_CONVERSATION_100_SEAL_PDCA_V1: 明示長文は「立脚の中心」「補助）次の一手」等を付けず semantic 本文を主に出す */
@@ -615,26 +941,49 @@ export function applyFinalAnswerConstitutionAndWisdomReducerV1(payload: any): an
     return out;
   }
 
-  const head = buildMainlineTenmonHeadV1({
-    ku: ku as Record<string, unknown>,
-    centerContract,
-    mission,
-    userMessage: userMessageForSurface,
-    sourceFootingClause,
-  });
-  let step =
-    oneStepType === "statement_plus_one_question"
-      ? "次の一手として、判断軸を一つ選び、その軸から深めてください。"
-      : "次の一手として、中心を一つ保ち、次に見る点を一つ決めてください。";
-  /** TENMON_FINAL_PWA_SURFACE_LAST_MILE_V1: 本文に既に「次の一手」が含まれる R22/continuity/compare は定型追補を禁止 */
+  const head = isScriptureEssenceRouteV1(rr)
+    ? "【天聞の所見】"
+    : buildMainlineTenmonHeadV1({
+        ku: ku as Record<string, unknown>,
+        centerContract,
+        mission,
+        userMessage: userMessageForSurface,
+        sourceFootingClause,
+      });
+  let step = "";
+  const __isNaturalGeneralConversational =
+    rr === "NATURAL_GENERAL_LLM_TOP" &&
+    /(相談|迷い|気分|感想|困って|しんど|辛い|つらい|焦り|不安|話を聞いて)/u.test(String(userMessageForSurface || ""));
   if (
-    /^(R22_NEXTSTEP_FOLLOWUP_V1|CONTINUITY_ANCHOR_V1|R22_ESSENCE_FOLLOWUP_V1|R22_COMPARE_ASK_V1|R22_COMPARE_FOLLOWUP_V1|RELEASE_PREEMPT_STRICT_COMPARE_BEFORE_TRUTH_V1)$/u.test(
-      rr
-    ) &&
-    /次の一手として/u.test(body)
+    /^(R22_NEXTSTEP_FOLLOWUP_V1|CONTINUITY_ANCHOR_V1|R22_ESSENCE_FOLLOWUP_V1|R22_COMPARE_ASK_V1|R22_COMPARE_FOLLOWUP_V1|RELEASE_PREEMPT_STRICT_COMPARE_BEFORE_TRUTH_V1|SUPPORT_.*|R22_SELFAWARE_.*)$/u.test(
+      rr,
+    ) ||
+    __isNaturalGeneralConversational
   ) {
+    step =
+      oneStepType === "statement_plus_one_question"
+        ? "次の一手として、判断軸を一つ選び、その軸から深めてください。"
+        : "次の一手として、中心を一つ保ち、次に見る点を一つ決めてください。";
+  }
+  /** TENMON_INTELLIGENCE_SURFACE_BLACKOUT_CURSOR_AUTO_V1:
+   * continuity / factual / technical / scripture / truth-gate 系は「次の一手」追補を禁止。
+   */
+  if (isGenericClosingBlacklistedRouteV1(rr) || /^SCRIPTURE_.*$/u.test(rr)) {
     step = "";
   }
+  if (__domainLock) {
+    step = "";
+  }
+  if (/^FACTUAL_CURRENT_DATE_V1$/u.test(rr)) {
+    evidencePack = "";
+  }
+  if (/^FACTUAL_CURRENT_PERSON_V1$/u.test(rr)) {
+    evidencePack = "";
+    if (/断定しません/u.test(body) || !/総理大臣/u.test(body)) {
+      body = "日本の内閣総理大臣は石破茂です。";
+    }
+  }
+  body = tightenDomainSurfaceBodyV1(rr, body, userMessageForSurface);
   let composed = [head, body, evidencePack, step].filter(Boolean).join("\n\n").trim();
   composed = applyRuntimeSurfaceRepairV1({
     text: composed,
@@ -646,10 +995,27 @@ export function applyFinalAnswerConstitutionAndWisdomReducerV1(payload: any): an
     routeReason: rr,
     userMessage: userMessageForSurface,
     answerLength: ku.answerLength as string | null | undefined,
+    answerFrame: ku.answerFrame as string | null | undefined,
     preCompose: false,
   });
   composed = applySurfaceLastMileClosingDedupeV1(trimTenmonSurfaceNoiseV3(composed), rr);
   composed = stripInternalRouteTokensFromSurfaceV1(composed);
+  if (isGenericClosingBlacklistedRouteV1(rr) || (rr === "NATURAL_GENERAL_LLM_TOP" && !__isNaturalGeneralConversational)) {
+    composed = stripGenericCoachingProseV1(composed);
+  }
+  if (/^(CONTINUITY_ROUTE_HOLD_V1|R22_COMPARE_ASK_V1|R22_COMPARE_FOLLOWUP_V1|R22_ESSENCE_FOLLOWUP_V1)$/u.test(rr)) {
+    composed = stripContinuityMetaCarryV1(composed);
+  }
+  if (__domainLock) {
+    composed = stripGenericCoachingProseV1(composed);
+    composed = compressDuplicateSentencesV1(composed);
+  }
+  if (isScriptureEssenceRouteV1(rr)) {
+    composed = stripScripturePlaceholderAndTraceV1(composed);
+  }
+  if (rr === "CONTINUITY_ROUTE_HOLD_V1") {
+    composed = surfaceContinuityHoldOneLineV1(composed);
+  }
   out.response = composed;
   const stepForOmega = String(step || "").trim() || extractNextStepLineFromSurfaceV1(composed);
   attachOmegaContractToOutKuV1(

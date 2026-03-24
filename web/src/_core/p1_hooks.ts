@@ -4,7 +4,7 @@
  * Exposes:
  *   - window.tenmonP1Export(): triggers JSON download via existing exportForDownload()
  *   - window.tenmonP1Dump(): returns the JSON object (no download)
- *   - window.tenmonP1Import(json): imports (overwrite) and reloads
+ *   - window.tenmonP1Import(json): imports (overwrite) + localStorage 同期（ページ再読込なし）
  *
  * Notes:
  * - Uses dynamic import to avoid import order issues.
@@ -44,7 +44,11 @@ export function installTenmonP1Hooks() {
   window.tenmonP1Import = async (json: any) => {
     const mod = await import("../lib/exportImport");
     await mod.importOverwrite(json);
-    // Same behavior as UI: reload to rehydrate UI from IDB
-    location.reload();
+    const primaryId = await mod.syncIdbToLocalStorageAfterImportV1();
+    if (primaryId && typeof window !== "undefined") {
+      const { TENMON_THREAD_SWITCH_EVENT } = await import("../hooks/useChat");
+      window.dispatchEvent(new CustomEvent(TENMON_THREAD_SWITCH_EVENT, { detail: { threadId: primaryId } }));
+      window.dispatchEvent(new Event("tenmon:threads-updated"));
+    }
   };
 }

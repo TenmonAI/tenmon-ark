@@ -110,6 +110,10 @@ api/0
 api/=
 api/GROUNDED
 api/answer
+api/out/
+api/scripts/__pycache__/
+api/src/routes/30,
+api/src/routes/=
 
 # TENMON-ARK local backups / logs
 **/*.bak
@@ -142,3 +146,32 @@ api/web/
 
 # Experimental API probe captures (local / CI artifacts; not seal artifacts)
 api/probe.*.json
+
+# BEGIN TENMON_CURSOR_ONLY_REPO_HYGIENE_FINAL_SEAL_V1
+# TENMON_CURSOR_ONLY_REPO_HYGIENE_FINAL_SEAL (generated / runtime)
+api/automation/generated_cursor_apply/
+api/automation/generated_vps_cards/
+api/automation/out/
+api/automation/TENMON_*
+api/TENMON_*
+api/automation/*_report.json
+api/automation/*_report.md
+api/automation/*_verdict.json
+api/automation/*_summary.json
+api/automation/*_readiness.json
+api/automation/*_blockers.json
+api/automation/*_trace.json
+api/automation/*_forensic.json
+api/automation/*.jsonl
+api/audit.json
+api/health.json
+api/final_verdict.json
+api/runtime_matrix.json
+api/runtime_probe_matrix.json
+api/integrated_acceptance_seal.json
+api/longform_audit.json
+api/route_authority_audit.json
+api/route_reason_extract.json
+api/surface_audit.json
+api/vps_acceptance_report.json
+# END TENMON_CURSOR_ONLY_REPO_HYGIENE_FINAL_SEAL_V1

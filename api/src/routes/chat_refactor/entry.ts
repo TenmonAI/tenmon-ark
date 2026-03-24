@@ -42,7 +42,7 @@ export function normalizeChatEntryFromBody(body: any): { message: string; thread
   const b = body || {};
   const messageRaw = b.input ?? b.message;
   const message = String(messageRaw ?? "").trim();
-  const threadId = String(b.threadId ?? "default").trim();
+  const threadId = String(b.threadId ?? b.sessionId ?? "default").trim();
   return { message, threadId };
 }
 

@@ -6,7 +6,7 @@ import { DashboardPage } from "../../pages/DashboardPage";
 import { ProfilePage } from "../../pages/ProfilePage";
 import { SettingsModal } from "./SettingsModal";
 import { APP_TITLE } from "../../config/app";
-import { getStorageKeys, TENMON_THREAD_SWITCH_EVENT, writeThreadIdToUrl } from "../../hooks/useChat";
+import { createNewThreadId, switchThreadCanonicalV1 } from "../../hooks/useChat";
 
 export function GptShell() {
   const [view, setView] = useState<GptView>("chat");
@@ -15,21 +15,11 @@ export function GptShell() {
   const [isOverlayNav, setIsOverlayNav] = useState(false); // <=1024 drawer mode
 
 
+  /** TENMON_PWA_NEWCHAT_SURFACE_BINDING_V1: ページ再読込なし・useChat.resetThread と同系統 */
   const handleNewChat = () => {
     setView("chat");
     setSidebarOpen(false);
-    try {
-      const { THREAD_KEY } = getStorageKeys();
-      const tid = `pwa-${Date.now().toString(36)}`;
-      window.localStorage.setItem(THREAD_KEY, tid);
-      writeThreadIdToUrl(tid);
-      window.dispatchEvent(
-        new CustomEvent(TENMON_THREAD_SWITCH_EVENT, { detail: { threadId: tid } })
-      );
-      window.dispatchEvent(new Event("tenmon:threads-updated"));
-    } catch {
-      // ignore
-    }
+    switchThreadCanonicalV1(createNewThreadId());
   };
 
   const handleChangeView = (next: GptView) => {

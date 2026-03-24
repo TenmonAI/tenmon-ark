@@ -18,6 +18,25 @@ function normalizeSnippet(s: string): string {
     .trim();
 }
 
+/** surface 向けに snippet ノイズを弱化（内部根拠は保持） */
+export function sanitizeKokuzoSnippetForSurfaceV1(s: string): string {
+  let t = normalizeSnippet(s);
+  if (!t) return "";
+  t = t
+    .replace(/\[NON_TEXT_PAGE_OR_OCR_FAILED\]/g, "")
+    .replace(/\b(?:doc|file|filename)\s*[:=]\s*[^\s,;]+/giu, "")
+    .replace(/\bpdfPage\s*[:=]\s*\d+\b/giu, "")
+    .replace(/\b(?:chunk|section|index|toc)\s*[:=#-]?\s*[A-Za-z0-9_.-]+\b/giu, "")
+    .replace(/(?:^|\s)(?:目次|一覧|索引|収録|章立て)\s*[:：][^。]{0,120}/gu, " ")
+    .replace(/(?:資料要旨では|請来目録|訳注)\s*[^。]{0,180}/gu, " ")
+    .replace(/\b(?:KUKAI_COLLECTION_0002|SOGO_1号_pdf|HOKKE|LOTUS_TENMON_DHARANI21)\b/gu, " ")
+    .replace(/HOKKEについて、今回は(?:分析|定義|説明)の立場で答えます。?/gu, "")
+    .replace(/[|｜]{2,}/g, " ")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+  return t.slice(0, 220);
+}
+
 /**
  * テーブルが存在するかチェック
  */
@@ -408,9 +427,9 @@ export function searchPagesForHybrid(docOrNull: string | null, query: string, li
       }
       
       // Phase31: snippet を正規化（空なら pageText500n から生成）
-      let sn = normalizeSnippet(r.snippet || "");
+      let sn = sanitizeKokuzoSnippetForSurfaceV1(r.snippet || "");
       if (!sn) {
-        sn = pageText500n.slice(0, 200); // 120でもOK。Phase31的には"空/\fでない"ことが大事
+        sn = sanitizeKokuzoSnippetForSurfaceV1(pageText500n.slice(0, 200)); // 120でもOK。Phase31的には"空/\fでない"ことが大事
       }
       if (!sn) {
         sn = "(本文抽出不可)"; // それでも空なら固定文（捏造ではなく"抽出不可"の明示）
@@ -805,7 +824,13 @@ export function searchKotodamaFts(query: string, limit = 3): { doc: string; pdfP
         return true;
       }
     });
-    return badGuardOk.slice(0, limit).map(({ doc, pdfPage, snippet }) => ({ doc, pdfPage, snippet }));
+    return badGuardOk
+      .slice(0, limit)
+      .map(({ doc, pdfPage, snippet }) => ({
+        doc,
+        pdfPage,
+        snippet: sanitizeKokuzoSnippetForSurfaceV1(snippet),
+      }));
   } catch (e) {
     console.warn("[KOKUZO-SEARCH] searchKotodamaFts failed:", e);
     return [];

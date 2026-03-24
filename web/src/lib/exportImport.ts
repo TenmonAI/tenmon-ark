@@ -101,6 +101,61 @@ export async function importOverwrite(data: unknown): Promise<void> {
   await dbPutSeeds(ss);
 }
 
+/**
+ * TENMON_PWA_FRONTEND_RESIDUE_PURGE_AND_HYGIENE_CURSOR_AUTO_V1:
+ * importOverwrite（IDB）後に useChat が読む localStorage ミラーを再構築し、ページ再読込なしで再同期する。
+ */
+export async function syncIdbToLocalStorageAfterImportV1(): Promise<string | null> {
+  if (typeof window === "undefined") return null;
+  const { dbGetAllThreads, listMessagesByThread } = await import("./db.js");
+  const { getStorageKeys, writeThreadIdToUrl } = await import("../hooks/useChat");
+
+  const threads = await dbGetAllThreads();
+  const keys = getStorageKeys();
+  const meta: Record<string, { id: string; title?: string; updatedAt?: number }> = {};
+
+  for (const t of threads) {
+    if (!t?.id) continue;
+    const msgs = await listMessagesByThread(t.id);
+    const chatMsgs = msgs.map((m) => ({
+      id: m.id,
+      role: (m.role === "tenmon" ? "assistant" : "user") as "user" | "assistant",
+      content: m.text,
+      at: new Date(typeof m.createdAt === "number" ? m.createdAt : Date.now()).toISOString(),
+    }));
+    try {
+      window.localStorage.setItem(keys.MSGS_KEY_PREFIX + t.id, JSON.stringify(chatMsgs));
+    } catch {
+      /* ignore */
+    }
+    meta[t.id] = {
+      id: t.id,
+      title: t.title,
+      updatedAt: typeof t.updatedAt === "number" ? t.updatedAt : Date.now(),
+    };
+  }
+
+  try {
+    window.localStorage.setItem(keys.THREADS_META_KEY, JSON.stringify(meta));
+  } catch {
+    /* ignore */
+  }
+
+  const sorted = [...threads].filter((t) => t?.id).sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0));
+  const primaryId =
+    sorted.length > 0
+      ? String(sorted[0].id)
+      : `pwa-${Date.now().toString(36)}`;
+
+  try {
+    window.localStorage.setItem(keys.THREAD_KEY, primaryId);
+  } catch {
+    /* ignore */
+  }
+  writeThreadIdToUrl(primaryId);
+  return primaryId;
+}
+
 export function downloadJson(filename: string, obj: any): void {
   const json = JSON.stringify(obj, null, 2);
   const blob = new Blob([json], { type: "application/json" });

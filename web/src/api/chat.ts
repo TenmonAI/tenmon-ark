@@ -1,6 +1,10 @@
 import type { ChatRequest, ChatResponse } from "../types/chat";
 import { getChatApiUrl } from "../config/api.js";
 
+/**
+ * TENMON_PWA_THREAD_URL_CONSTITUTION_CURSOR_AUTO_V1
+ * POST /api/chat — payload は { message, threadId } のみ（session_id 等の別名は付けない）
+ */
 export async function postChat(req: ChatRequest): Promise<ChatResponse> {
   const res = await fetch(getChatApiUrl(), {
     method: "POST",
@@ -14,5 +18,10 @@ export async function postChat(req: ChatRequest): Promise<ChatResponse> {
   });
 
   const data = (await res.json()) as ChatResponse;
-  return data;
+  const normalizedThreadId =
+    String(data?.threadId ?? "").trim() || String(data?.sessionId ?? "").trim() || String(req.threadId ?? "").trim();
+  return {
+    ...data,
+    threadId: normalizedThreadId || undefined,
+  };
 }

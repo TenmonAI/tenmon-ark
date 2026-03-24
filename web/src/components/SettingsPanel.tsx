@@ -1,5 +1,6 @@
 import React, { useRef, useState } from "react";
-import { exportForDownload, importOverwrite } from "../lib/exportImport";
+import { exportForDownload, importOverwrite, syncIdbToLocalStorageAfterImportV1 } from "../lib/exportImport";
+import { TENMON_THREAD_SWITCH_EVENT } from "../hooks/useChat";
 
 interface SettingsPanelProps {
   open: boolean;
@@ -55,8 +56,19 @@ export function SettingsPanel({ open, onClose, onImported }: SettingsPanelProps)
 
       const data = JSON.parse(text);
       await importOverwrite(data);
-      setMessage({ type: "success", text: "Importしました。リロードします…" });
-      setTimeout(() => location.reload(), 100);
+      const primaryId = await syncIdbToLocalStorageAfterImportV1();
+      if (primaryId) {
+        try {
+          window.dispatchEvent(
+            new CustomEvent(TENMON_THREAD_SWITCH_EVENT, { detail: { threadId: primaryId } })
+          );
+          window.dispatchEvent(new Event("tenmon:threads-updated"));
+        } catch {
+          /* ignore */
+        }
+      }
+      setMessage({ type: "success", text: "Importしました（再読み込みなしで同期）" });
+      onImported();
     } catch (err) {
       console.error("Import failed:", err);
       setMessage({ type: "error", text: "インポートに失敗しました（形式が違う可能性）" });

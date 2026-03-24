@@ -19,6 +19,10 @@ export type LlmChatOutput = {
   model: string;
   inputTokens?: number;
   outputTokens?: number;
+  ok?: boolean;
+  err?: string;
+  providerPlanned?: LlmProvider;
+  providerUsed?: LlmProvider | "";
 };
 
 function hasOpenAI(): boolean {
@@ -33,6 +37,18 @@ function pickProvider(explicit?: LlmProvider): LlmProvider {
   if (hasOpenAI()) return "openai";
   if (hasGemini()) return "gemini";
   throw new Error("No LLM provider configured");
+}
+
+export function getLlmProviderReadinessV1() {
+  const openai = hasOpenAI();
+  const gemini = hasGemini();
+  return {
+    hasOpenAI: openai,
+    hasGemini: gemini,
+    providerPlanned: openai ? "openai" : gemini ? "gemini" : "",
+    ok: openai || gemini,
+    err: openai || gemini ? "" : "No LLM provider configured",
+  } as const;
 }
 
 function pickModel(provider: LlmProvider, explicit?: string): string {
@@ -141,10 +157,9 @@ async function callGemini(input: LlmChatInput, model: string): Promise<LlmChatOu
 }
 
 export async function llmChat(input: LlmChatInput): Promise<LlmChatOutput> {
-  const provider = pickProvider(input.provider);
-  const model = pickModel(provider, input.model);
-
   try {
+    const provider = pickProvider(input.provider);
+    const model = pickModel(provider, input.model);
     const out = provider === "openai"
       ? await callOpenAI(input, model)
       : await callGemini(input, model);
@@ -152,13 +167,27 @@ export async function llmChat(input: LlmChatInput): Promise<LlmChatOutput> {
     if (!String(out.text || "").trim()) {
       throw new Error(`${provider} empty response`);
     }
-    return out;
+    return {
+      ...out,
+      ok: true,
+      err: "",
+      providerPlanned: provider,
+      providerUsed: provider,
+    };
   } catch (e: any) {
-    try { console.error("[llmChat]", provider, model, String(e?.message || e)); } catch {}
+    const ready = getLlmProviderReadinessV1();
+    const providerFallback = (input.provider || (ready.providerPlanned as LlmProvider) || "openai") as LlmProvider;
+    const model = pickModel(providerFallback, input.model);
+    const errMsg = String(e?.message || e || "llm_chat_failed");
+    try { console.error("[llmChat]", providerFallback, model, errMsg); } catch {}
     return {
       text: "",
-      provider,
+      provider: providerFallback,
       model,
+      ok: false,
+      err: errMsg,
+      providerPlanned: providerFallback,
+      providerUsed: "",
     };
   }
 }

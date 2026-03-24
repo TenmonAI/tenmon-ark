@@ -6,6 +6,7 @@ import { SettingsPanel } from "../components/SettingsPanel";
 
 import { DebugPanel } from "../components/chat/DebugPanel";
 
+// TENMON_PWA_NEWCHAT_SURFACE_BINDING_V1: 本ページの「新しい会話」は resetThread（フル再読込なし・thread-switch 経路）
 // UI1_CHATPAGE_DEBUGTOGGLE_V1
 // PWA_CHAT_RELEASE_BRIDGE_V1: hidden debug block ON = ?debug=1 or localStorage TENMON_PWA_DEBUG=1
 function isDebugBridgeOn(): boolean {
@@ -29,8 +30,7 @@ export function ChatPage() {
   }, [threadId]);
 
   const handleImported = () => {
-    alert("復元しました。再読み込みします。");
-    window.location.reload();
+    alert("復元しました。");
   };
 
   return (
@@ -65,7 +65,7 @@ export function ChatPage() {
             <div style={{ fontSize: 12, opacity: 0.75 }}>
               Thread: {threadId || "(loading...)"}
             </div>
-            {/* TENMON_PWA_NEWCHAT_SURFACE_BINDING_V1: resetThread は reload せず thread-switch 経路 */}
+            {/* TENMON_PWA_NEWCHAT_SURFACE_BINDING_V1: resetThread はページ再読込せず thread-switch 経路 */}
             <button
               type="button"
               onClick={resetThread}
