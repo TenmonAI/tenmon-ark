@@ -1,6 +1,7 @@
 /**
  * FOUNDER_REQUEST_BOX_V1 + REQUEST_TRIAGE_SCHEMA_V1
  * FOUNDER_RESULT_FEEDBACK_V1
+ * Mac executor 用短命 JWT は POST /api/admin/founder/executor-token（auth_session + 許可メールのみ）
  * （管理者向け Cursor カード投入は別系統: GET /api/admin/remote-build/dashboard — adminRemoteBuild.ts）
  * - POST /api/founder/requests … JSON 保存（data/founder_requests.jsonl）
  * - GET  /api/founder/request-box … 最小 HTML フォーム

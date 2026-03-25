@@ -5,6 +5,7 @@ export const ROUTE_NATURAL_GENERAL_LLM_TOP_V1 = "NATURAL_GENERAL_LLM_TOP" as con
 export const ROUTE_FACTUAL_CURRENT_DATE_V1 = "FACTUAL_CURRENT_DATE_V1" as const;
 export const ROUTE_FACTUAL_CURRENT_PERSON_V1 = "FACTUAL_CURRENT_PERSON_V1" as const;
 export const ROUTE_FACTUAL_RECENT_TREND_V1 = "FACTUAL_RECENT_TREND_V1" as const;
+export const ROUTE_FACTUAL_WEATHER_V1 = "FACTUAL_WEATHER_V1" as const;
 export const ROUTE_TECHNICAL_IMPLEMENTATION_ROUTE_V1 = "TECHNICAL_IMPLEMENTATION_ROUTE_V1" as const;
 export const ROUTE_GENERAL_KNOWLEDGE_EXPLAIN_ROUTE_V1 = "GENERAL_KNOWLEDGE_EXPLAIN_ROUTE_V1" as const;
 
@@ -12,6 +13,7 @@ export type GeneralFactCodingRouteV1 =
   | typeof ROUTE_FACTUAL_CURRENT_DATE_V1
   | typeof ROUTE_FACTUAL_CURRENT_PERSON_V1
   | typeof ROUTE_FACTUAL_RECENT_TREND_V1
+  | typeof ROUTE_FACTUAL_WEATHER_V1
   | typeof ROUTE_TECHNICAL_IMPLEMENTATION_ROUTE_V1
   | typeof ROUTE_GENERAL_KNOWLEDGE_EXPLAIN_ROUTE_V1
   | "";
@@ -22,6 +24,10 @@ export function classifyGeneralFactCodingRouteV1(rawMessage: string): GeneralFac
   // scripture/canon 語彙は domain route（scripture/define）へ優先委譲する
   if (/(水穂伝|法華経|即身成仏|稲荷古伝|言霊秘書|いろは言[霊灵靈]解|カタカムナ言[霊灵靈]解)/u.test(t)) {
     return "";
+  }
+  /** TENMON_FACTUAL_WEATHER_ROUTE_CURSOR_AUTO_V1: 天気・気温・降水表現（正典委譲の後・日付より前） */
+  if (/(天気|気温|降水|気象|予報)/u.test(t) || /(雨|晴れ|曇り)/u.test(t)) {
+    return ROUTE_FACTUAL_WEATHER_V1;
   }
   if (/(今日の日付|今何時|現在日時|いま何時|本日の日付|曜日|西暦|令和|平成|何年)/u.test(t)) return ROUTE_FACTUAL_CURRENT_DATE_V1;
   if (/(今の総理大臣|今の大統領|現総理|現大統領|現CEO|現在のCEO|日本の総理|日本の首相|アメリカ大統領|米国大統領)/u.test(t))

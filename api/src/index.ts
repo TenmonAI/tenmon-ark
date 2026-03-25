@@ -28,10 +28,12 @@ import { markListenReady } from "./health/readiness.js";
 import { getDb } from "./db/index.js";
 import koshikiConsoleRouter from "./routes/koshikiConsole.js";
 import { debugKanagiRouter } from "./routes/debugKanagi.js";
+import { adminFounderExecutorTokenRouter } from "./routes/adminFounderExecutorToken.js";
 import { adminCursorCommandRouter } from "./routes/adminCursorCommand.js";
 import { adminCursorResultRouter } from "./routes/adminCursorResult.js";
 import { adminRemoteIntakeRouter } from "./routes/adminRemoteIntake.js";
 import { adminRemoteBuildRouter } from "./routes/adminRemoteBuild.js";
+import { adminMacDecisionRouter } from "./routes/adminMacDecision.js";
 import healthRouter from "./routes/health.js";
 
 // Debug: 未処理例外のハンドリング
@@ -111,10 +113,12 @@ app.use(cookieParser());
 app.use("/api", kamuRouter);
 // Founder auth endpoints (additive)
 registerFounderAuth(app);
+app.use("/api", adminFounderExecutorTokenRouter);
 app.use("/api", adminCursorCommandRouter);
 app.use("/api", adminCursorResultRouter);
 app.use("/api", adminRemoteIntakeRouter);
 app.use("/api", adminRemoteBuildRouter);
+app.use("/api", adminMacDecisionRouter);
 app.use("/api", meRouter);
 app.use("/api", authLocalRouter);
 
