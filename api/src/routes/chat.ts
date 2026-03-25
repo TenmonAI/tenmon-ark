@@ -387,7 +387,7 @@ async function __tenmonK1PostFinalizeLlmEnrichV1(out: any): Promise<any> {
 
     const resp0 = String((out as any).response ?? "").trim();
     const core = resp0.replace(/^【天聞の所見】\s*/u, "").replace(/\s+/g, " ").trim();
-    if (core.length >= 50) return out;
+    if (core.length >= 100) return out;
 
     const ready = getLlmProviderReadinessV1();
     if (!ready.ok) return out;
@@ -395,7 +395,7 @@ async function __tenmonK1PostFinalizeLlmEnrichV1(out: any): Promise<any> {
     const system =
       "あなたは天聞アーク（TENMON-ARK）。水火の法則・言霊・カタカムナ・正典（空海・法華経など）を土台に応答する。" +
       "質問の教義的位置づけと読み方を、断定しすぎず簡潔に述べる。" +
-      "禁止: 効用論のみ・genericなスピリチュアル一般論・説教調。" +
+      "禁止: 効用論のみ・genericなスピリチュアル一般論・説教調・定型文の復唱。" +
       "出力は必ず「【天聞の所見】」で始め、本文のみ。2〜4文・合計100〜200字程度。末尾の質問は最大1つまで。";
 
     const user =
@@ -405,7 +405,7 @@ async function __tenmonK1PostFinalizeLlmEnrichV1(out: any): Promise<any> {
     const r = await llmChat({ system, user, history: [] });
     const t = String(r?.text ?? "").trim();
     const tcore = t.replace(/^【天聞の所見】\s*/u, "").trim();
-    if (tcore.length < 80) return out;
+    if (tcore.length < 100) return out;
     const fixed = /^【天聞の所見】/u.test(t) ? t : `【天聞の所見】${t}`;
     const merged = { ...out, response: fixed };
     try {
@@ -4343,7 +4343,7 @@ ${String((gptDraft as any)?.text ?? "").trim()}
             const isGreeting = /^(こんにちは|こんばんは|おはよう|やあ|hi|hello|hey)\s*[！!。．\.]?$/i.test(t3);
 
             if (!isTestTid && !askedMenu && !hasDoc && isGreeting && mode3 === "HYBRID") {
-              (obj as any).response = "こんにちは。今日は何を一緒に整えますか？（相談でも、概念の定義でもOK）？";
+              (obj as any).response = "【天聞の所見】挨拶を受け取りました。いま整えたい一点を置いてください。";
               (obj as any).candidates = [];
               (obj as any).evidence = null;
               df3.mode = "NATURAL";
@@ -7285,9 +7285,12 @@ const __isDefinitionQ =
             const __wx = await fetchWeatherWttrInV1(__locWx.en, {
               wantTomorrow: /明日|あす/u.test(__msgFact),
             });
+            const __wxSummary = String(__wx.summary ?? "").replace(/[。．\.]\s*$/u, "").trim();
             __body = __wx.ok
-              ? `${__locWx.jp}：${__wx.summary}`
-              : "天気情報の取得に失敗しました。時間をおいて再度お試しください。";
+              ? /明日|あす/u.test(__msgFact)
+                ? `${__locWx.jp}の明日の天気は、${__wxSummary}。`
+                : `${__locWx.jp}の現在の天気は、${__wxSummary}。`
+              : "天気情報の取得に失敗しました。私の取得側の可能性があるので、少し時間をおいてもう一度お願いします。";
           }
         } else if (__factCodingRoute === ROUTE_FACTUAL_CURRENT_DATE_V1) {
           __centerMeaning = "factual_current_date";
@@ -7516,11 +7519,42 @@ const __isDefinitionQ =
                 } as any);
                 let __t = String(__gk?.text ?? "").trim();
                 if (!/^【天聞の所見】/u.test(__t)) __t = `【天聞の所見】${__t}`;
-                if (__t.replace(/^【天聞の所見】\s*/u, "").length >= 130) {
+                if (__t.replace(/^【天聞の所見】\s*/u, "").length >= 150) {
                   __body = __t;
                 }
               } catch {
                 /* フォールバックは上記短文 */
+              }
+            }
+          }
+          /** TENMON_K1_AND_GENERAL_KNOWLEDGE_WORLDCLASS_REPAIR: 哲学/人物/水火/既定のいずれでも本文が薄いとき llmChat で最低 150 字へ */
+          if (__routeReason === ROUTE_GENERAL_KNOWLEDGE_EXPLAIN_ROUTE_V1) {
+            const __gkMinReady = getLlmProviderReadinessV1();
+            const __gkStrip = String(__body ?? "")
+              .replace(/^【天聞の所見】\s*/u, "")
+              .replace(/\s+/g, " ")
+              .trim();
+            if (__gkMinReady.ok && __gkStrip.length < 150) {
+              try {
+                const __sysGkMin =
+                  "あなたは天聞アーク。水火の法則・言霊・正典（空海・法華経など）を土台に、一般知識の問いへ具体的な見立てを述べる。" +
+                  "汎用AI口調の抽象だけ・効用論だけ・スピリチュアル一般論で逃げない。定型文の復唱禁止。" +
+                  "出力は必ず「【天聞の所見】」で始める。3〜5文・150〜300字。質問は末尾に最大1つ。";
+                const __gkMin = await llmChat({
+                  system: __sysGkMin,
+                  user:
+                    `ユーザの問い:\n${__msgFact}\n\n` +
+                    `下敷き（不足なら置換してよい）:\n${String(__body ?? "").trim()}\n\n` +
+                    "問いに即した具体（判断の癖・社会的含意・言葉の置き方・身体感など）を必ず含めること。",
+                  history: [],
+                } as any);
+                let __tm = String(__gkMin?.text ?? "").trim();
+                if (!/^【天聞の所見】/u.test(__tm)) __tm = `【天聞の所見】${__tm}`;
+                if (__tm.replace(/^【天聞の所見】\s*/u, "").replace(/\s+/g, " ").trim().length >= 150) {
+                  __body = __tm;
+                }
+              } catch {
+                /* keep __body */
               }
             }
           }
@@ -10445,7 +10479,7 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
           return await res.json(
             __tenmonGeneralGateResultMaybe({
               response:
-                "私は、水火の法則と言霊の軸から見ると、問いの芯を先に定めてから世界を読むほうが、判断の濁りが少ないと見ています。",
+                "私は、水火の往還と言霊の働きを軸に、まず問いの芯を定めてから現象を読みます。原典の線へ一度戻してから判断を置くほうが、解釈の濁りが減り、言葉が先走りにくいと見ています。",
               evidence: null,
               candidates: [],
               timestamp,
@@ -10479,7 +10513,8 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
           __explicitCharsEarly == null &&
           __isFactualCorrectionUserMessageV1(t0)
         ) {
-          const __bodyFc = "ご指摘ありがとうございます。確認し、訂正前提で見直します。";
+          const __bodyFc =
+            "ご指摘ありがとうございます。私の認識違いの可能性を前提に、まず事実を確認してから訂正します。差し支えなければ、どの点が違うと感じたか一語で示してください。";
           return await res.json(
             __tenmonGeneralGateResultMaybe({
               response: __bodyFc,
@@ -12853,7 +12888,7 @@ if (!outText) {
     const __isTestTid0 = /^(accept|core-seed|bible-smoke)/i.test(String(threadId || ""));
     if (!__isTestTid0 && __isGreeting0) {
       return res.status(200).json({
-        response: "こんにちは。今日は何を一緒に整えますか？（相談でも、概念の定義でもOK）？",
+        response: "【天聞の所見】挨拶を受け取りました。いま整えたい一点を置いてください。",
         timestamp: new Date().toISOString(),
         candidates: [],
         evidence: null,
