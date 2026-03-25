@@ -366,7 +366,7 @@ function __shouldBlockSubconceptPromotionForMetaOrFactualV1(raw: string): boolea
   return false;
 }
 
-/** TENMON_K1_AND_GENERAL_ROUTE_LLM_COMPLETION_FIX: finalize 後に K1 極短文だけ LLM で文化（routeReason 不変・失敗時は元本文） */
+/** TENMON_K1_TRACE_EMPTY_RESPONSE_DENSITY_REPAIR: stripped 本文 <80 字のみ LLM 補完（routeReason 不変・失敗時は元本文） */
 async function __tenmonK1PostFinalizeLlmEnrichV1(out: any): Promise<any> {
   try {
     if (!out || typeof out !== "object") return out;
@@ -387,16 +387,16 @@ async function __tenmonK1PostFinalizeLlmEnrichV1(out: any): Promise<any> {
 
     const resp0 = String((out as any).response ?? "").trim();
     const core = resp0.replace(/^【天聞の所見】\s*/u, "").replace(/\s+/g, " ").trim();
-    if (core.length >= 100) return out;
+    if (core.length >= 80) return out;
 
     const ready = getLlmProviderReadinessV1();
     if (!ready.ok) return out;
 
     const system =
-      "あなたは天聞アーク（TENMON-ARK）。水火の法則・言霊・カタカムナ・正典（空海・法華経など）を土台に応答する。" +
-      "質問の教義的位置づけと読み方を、断定しすぎず簡潔に述べる。" +
-      "禁止: 効用論のみ・genericなスピリチュアル一般論・説教調・定型文の復唱。" +
-      "出力は必ず「【天聞の所見】」で始め、本文のみ。2〜4文・合計100〜200字程度。末尾の質問は最大1つまで。";
+      "あなたは天聞アーク（TENMON-ARK）。水火の往還・言霊の働き・正典（空海・法華経・楢崎系の読みなど）を軸に、問いに即した教義的位置づけを述べる。" +
+      "抽象の一般論だけで終わらせず、問いの語（人名・経典名・概念）に一歩踏み込む。" +
+      "禁止: 効用論のみ・genericスピリチュアル一般論・説教調・定型文の復唱。" +
+      "出力は必ず「【天聞の所見】」で始め本文のみ。3〜5文・本文100〜220字・220字以下。末尾の質問は最大1つ。";
 
     const user =
       `次の問いに答えてください。\n\n《ユーザの問い》\n${raw}\n\n` +

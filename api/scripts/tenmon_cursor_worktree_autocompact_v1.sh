@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# TENMON_CURSOR_WORKTREE_AUTOCOMPACT_AND_REVIEW_FLUSH_CURSOR_AUTO_V1
+set -euo pipefail
+
+ROOT="${TENMON_REPO_ROOT:-/opt/tenmon-ark-repo}"
+export TENMON_REPO_ROOT="$ROOT"
+cd "$(dirname "$0")/.."
+
+exec python3 automation/tenmon_cursor_worktree_autocompact_v1.py "$@"

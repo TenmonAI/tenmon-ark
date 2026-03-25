@@ -175,3 +175,9 @@ api/route_reason_extract.json
 api/surface_audit.json
 api/vps_acceptance_report.json
 # END TENMON_CURSOR_ONLY_REPO_HYGIENE_FINAL_SEAL_V1
+
+# TENMON_CURSOR_WORKTREE_AUTOCOMPACT_V1 — 退避バッチ（揮発・再生成可）
+api/automation/out/archive/
+**/watch_sessions/
+run.log
+nohup.log
