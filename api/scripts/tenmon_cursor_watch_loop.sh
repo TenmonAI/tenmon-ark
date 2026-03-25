@@ -22,6 +22,9 @@ AUTH_REFRESH="${TENMON_MAC_AUTH_REFRESH_SCRIPT:-$MAC_HOME/tenmon_mac_executor_au
 EXECUTOR_PY="${TENMON_MAC_EXECUTOR_PY:-$MAC_HOME/tenmon_cursor_executor.py}"
 # 任意: bash -c 用（例: python3 ~/tenmon-mac/foo.py）。環境変数 TENMON_WATCH_ITEM_JSON に item JSON パスを渡す。
 EXECUTOR_CMD="${TENMON_MAC_EXECUTOR_CMD:-}"
+REVIEW_ACCEPT_ENABLE="${TENMON_REVIEW_ACCEPT_ENABLE:-1}"
+REVIEW_ACCEPT_TIMEOUT_SEC="${TENMON_REVIEW_ACCEPT_TIMEOUT_SEC:-25}"
+REVIEW_ACCEPTOR="${TENMON_MAC_REVIEW_ACCEPTOR_SCRIPT:-$MAC_HOME/cursor_review_acceptor_v1.py}"
 
 log() {
   local line="[$(date -u +%Y-%m-%dT%H:%M:%SZ)] $*"
@@ -110,6 +113,23 @@ tick() {
     log "no_executor stub_logs_only id=$qid (set TENMON_MAC_EXECUTOR_PY or TENMON_MAC_EXECUTOR_CMD)"
   fi
 
+  local review_json review_status manual_review_required
+  review_json="$LOG_DIR/review_accept_${ts}.json"
+  review_status="skipped"
+  manual_review_required="false"
+  if [[ "$REVIEW_ACCEPT_ENABLE" == "1" ]] && [[ -f "$REVIEW_ACCEPTOR" ]]; then
+    if "$PYTHON" "$REVIEW_ACCEPTOR" --item-json "$item_json" --timeout-sec "$REVIEW_ACCEPT_TIMEOUT_SEC" >"$review_json" 2>>"$MAIN_LOG"; then
+      review_status="$(jq -r '.status // "unknown"' <"$review_json" 2>/dev/null || echo "unknown")"
+      manual_review_required="$(jq -r '.manual_review_required // false' <"$review_json" 2>/dev/null || echo "false")"
+      log "review_acceptor id=$qid status=$review_status manual_review_required=$manual_review_required"
+    else
+      log "review_acceptor_failed id=$qid"
+      jq -n --arg st "acceptor_error" --argjson mr true '{ok:false,status:$st,manual_review_required:$mr}' >"$review_json" || true
+      review_status="acceptor_error"
+      manual_review_required="true"
+    fi
+  fi
+
   local manifest state report session_log
   manifest="$LOG_DIR/cursor_job_session_manifest_${ts}.json"
   state="$LOG_DIR/mac_executor_state_${ts}.json"
@@ -139,6 +159,9 @@ tick() {
     --arg st "$state" \
     --arg rp "$report" \
     --arg lp "$session_log" \
+    --arg ras "$review_status" \
+    --arg rj "$review_json" \
+    --argjson mrr "$manual_review_required" \
     '{
       id:$id, queue_id:$id, job_id:$jid,
       status:"dry_run_started",
@@ -148,6 +171,9 @@ tick() {
       mac_executor_state:$st,
       dangerous_patch_block_report:$rp,
       log_path:$lp,
+      review_acceptor_status:$ras,
+      review_acceptor_output_path:$rj,
+      manual_review_required:$mrr,
       current_run:true
     }' >"$body_file"
 

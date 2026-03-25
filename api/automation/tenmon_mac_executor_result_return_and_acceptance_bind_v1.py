@@ -75,7 +75,12 @@ def main() -> int:
         "http_status": code,
         "response": parsed if parsed is not None else {"raw": raw[:8000]},
     }
-    summary_path = repo / "api" / "automation" / "tenmon_mac_executor_result_return_summary.json"
+    # Mac 既定は repo 配下へ書かない（PermissionError を避ける）。上書きは env で明示。
+    sp = (os.environ.get("TENMON_MAC_RESULT_SUMMARY_PATH") or "").strip()
+    if sp:
+        summary_path = Path(os.path.expanduser(sp)).resolve()
+    else:
+        summary_path = (Path.home() / "tenmon-mac" / "results" / "tenmon_mac_executor_result_return_summary.json").resolve()
     summary_path.parent.mkdir(parents=True, exist_ok=True)
     summary_path.write_text(json.dumps(out, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print(json.dumps(out, ensure_ascii=False, indent=2))

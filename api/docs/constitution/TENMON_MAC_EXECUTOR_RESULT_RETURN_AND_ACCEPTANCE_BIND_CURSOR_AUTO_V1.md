@@ -39,7 +39,7 @@ Founder executor Bearer 必須。本文は JSON。lookup は **`id` → `queue_i
 
 ## 自動化
 
-- `api/automation/tenmon_mac_executor_result_return_and_acceptance_bind_v1.py` — Bearer で API に POST。要 `TENMON_EXECUTOR_BEARER_TOKEN` または `TENMON_FOUNDER_EXECUTOR_BEARER`。
+- `api/automation/tenmon_mac_executor_result_return_and_acceptance_bind_v1.py` — Bearer で API に POST。要 `TENMON_EXECUTOR_BEARER_TOKEN`（固定 Bearer 依存は watch loop では使わない）。
 - `api/scripts/tenmon_mac_executor_result_return_and_acceptance_bind_v1.sh` — 上記のラッパー。
 - 任意: `TENMON_RUN_REJUDGE_AFTER_RESULT=1` かつ `tenmon_latest_state_rejudge_and_seal_refresh_v1.sh` が存在すると、その後に rejudge シェルを **best-effort** で実行。
 
