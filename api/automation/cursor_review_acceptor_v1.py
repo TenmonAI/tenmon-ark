@@ -124,12 +124,15 @@ def _manual(reason: str, clicked: list[str] | None = None, timeout: bool = False
 def main() -> int:
     ap = argparse.ArgumentParser(description=CARD)
     ap.add_argument("--item-json", type=str, default="")
+    ap.add_argument("--manifest", type=str, default="")
     ap.add_argument("--timeout-sec", type=int, default=25)
+    ap.add_argument("--poll-sec", type=float, default=0.4)
     args = ap.parse_args()
 
     item: dict[str, Any] = {}
-    if args.item_json:
-        p = Path(args.item_json)
+    target_json = (args.manifest or args.item_json or "").strip()
+    if target_json:
+        p = Path(target_json)
         if p.is_file():
             try:
                 item = json.loads(p.read_text(encoding="utf-8"))
@@ -164,13 +167,13 @@ def main() -> int:
             did, out = _click_button(label)
             if did:
                 clicked.append(label)
-                time.sleep(0.35)
+                time.sleep(max(0.1, args.poll_sec))
                 break
             if out.startswith("error:"):
                 last_error = out
         else:
             # no button found at this tick
-            time.sleep(0.4)
+            time.sleep(max(0.1, args.poll_sec))
             continue
 
         if any(x in FINAL_ACCEPT_BUTTONS for x in clicked):

@@ -84,6 +84,25 @@ def rejudge_verdict_indicates_stale(auto: Path) -> bool:
     return len(v.get("stale_sources") or []) > 0
 
 
+def delivered_lease_expired(auto: Path) -> bool:
+    """remote_cursor_queue の delivered で leased_until が過去なら True（観測のみ）。"""
+    q = read_json(auto / "remote_cursor_queue.json")
+    items = q.get("items") if isinstance(q.get("items"), list) else []
+    now_s = utc()
+    for it in items:
+        if not isinstance(it, dict):
+            continue
+        if str(it.get("state") or "") != "delivered":
+            continue
+        lu = str(it.get("leased_until") or "").strip()
+        if not lu:
+            continue
+        # simple lexicographic is ok for ISO Z timestamps (UTC)
+        if lu < now_s:
+            return True
+    return False
+
+
 def precondition_resume_after_first_live(auto: Path) -> tuple[bool, str]:
     """first live + real closed loop current-run acceptance + gate + stale."""
     fl = read_json(auto / "tenmon_autonomy_first_live_summary.json")
@@ -258,6 +277,13 @@ def main() -> int:
         pre_ok, pre_reason = precondition_resume_after_first_live(auto)
         if not pre_ok:
             rcl = read_json(auto / "tenmon_real_closed_loop_current_run_acceptance_summary.json")
+            # bootstrap_validation_failed で無限停止しない: 次の一手を明示し exit 0（成功捏造はしない）
+            __soft = pre_reason == "first_live_bootstrap_validation_failed"
+            __next = (
+                "TENMON_AUTONOMY_FIRST_LIVE_BOOTSTRAP_RETRY_CURSOR_AUTO_V1"
+                if __soft
+                else NEXT_BEST_DEFAULT
+            )
             out_pre: dict[str, Any] = {
                 "card": master_card,
                 "generated_at": utc(),
@@ -268,10 +294,10 @@ def main() -> int:
                 "cycle_count": 0,
                 "safe_scope_enforced": True,
                 "current_run_evidence_ok": True,
-                "resume_possible": False,
+                "resume_possible": False if not __soft else True,
                 "completed": False,
                 "stop_reason": pre_reason,
-                "next_best_card": NEXT_BEST_DEFAULT,
+                "next_best_card": __next,
             }
             out_pre.update(rcl_dispatch_flags(rcl))
             write_json(summary_path, out_pre)
@@ -281,10 +307,10 @@ def main() -> int:
             )
             state["stop_reason"] = pre_reason
             state["precondition_pass"] = False
-            state["resume_possible"] = False
+            state["resume_possible"] = False if not __soft else True
             touch_state_timestamp(state)
             write_json(state_path, state)
-            return 1
+            return 0 if __soft else 1
         state["precondition_pass"] = True
 
     lock_path = auto / ".tenmon_overnight_loop.lock"
@@ -394,6 +420,8 @@ def main() -> int:
         blockers = [str(x) for x in (runtime.get("current_blockers") or [])]
         if rejudge_verdict_indicates_stale(auto) and "stale_truth_detected" not in blockers:
             blockers.append("stale_truth_detected")
+        if delivered_lease_expired(auto) and "delivered_lease_expired" not in blockers:
+            blockers.append("delivered_lease_expired")
         return {
             "rejudge": rejudge,
             "hygiene": hygiene,

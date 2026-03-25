@@ -117,6 +117,9 @@ def main() -> int:
     pwa_lived = read_json(auto / "pwa_lived_completion_readiness.json")
     learning_integ = read_json(auto / "tenmon_learning_self_improvement_integrated_verdict.json")
     learn_audit = read_json(auto / "learning_acceptance_audit.json")
+    queue = read_json(auto / "remote_cursor_queue.json")
+    bundle = read_json(auto / "remote_cursor_result_bundle.json")
+    rejudge_summary = read_json(auto / "tenmon_latest_state_rejudge_summary.json")
 
     subs = sysv.get("subsystems") if isinstance(sysv.get("subsystems"), dict) else {}
 
@@ -269,6 +272,21 @@ def main() -> int:
     score_total = round(sum(float(v["score"]) for v in rows.values()), 4)
     score_percent = round(100.0 * score_total / float(SCORE_MAX), 2) if SCORE_MAX else 0.0
 
+    # current-run non-fixture executed evidence（fixture success は含めない）
+    q_items = queue.get("items") if isinstance(queue.get("items"), list) else []
+    b_entries = bundle.get("entries") if isinstance(bundle.get("entries"), list) else []
+    executed_nonfixture_ids = {
+        str(x.get("id"))
+        for x in q_items
+        if isinstance(x, dict) and x.get("fixture") is False and str(x.get("state") or "") == "executed"
+    }
+    current_run_bundle_ids = {
+        str(x.get("queue_id"))
+        for x in b_entries
+        if isinstance(x, dict) and x.get("current_run") is True
+    }
+    current_run_nonfixture_executed = bool(executed_nonfixture_ids & current_run_bundle_ids)
+
     reg_on = regression_detected(reg)
     crit_accepted = sum(1 for k in CRITICAL_KEYS_ORDER if rows[k].get("accepted_complete"))
 
@@ -320,6 +338,12 @@ def main() -> int:
         recommended_next = recommended_next or "TENMON_REPO_HYGIENE_WATCHDOG_CURSOR_AUTO_V1"
     if primary_gap == "pwa_lived_proof":
         recommended_next = recommended_next or "TENMON_PWA_LIVED_GATE_RECHECK_AND_FIX_CURSOR_AUTO_V1"
+    # 最新 rejudge の次カードを優先（single-source 1本化）
+    rj_next = rejudge_summary.get("recommended_next_card")
+    if isinstance(rj_next, str) and rj_next.strip():
+        recommended_next = rj_next.strip()
+    if not current_run_nonfixture_executed:
+        must_fix.insert(0, "current_run_nonfixture_executed_not_observed")
 
     ts = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
     out: dict[str, Any] = {
@@ -333,6 +357,7 @@ def main() -> int:
         "must_fix_before_claim": must_fix,
         "primary_gap": primary_gap,
         "recommended_next_card": recommended_next,
+        "next_best_card": recommended_next,
         "signals": {
             "regression_detected": reg_on,
             "gate_contract_aligned": gate_aligned,
@@ -341,6 +366,7 @@ def main() -> int:
             "critical_subsystems_accepted_count": crit_accepted,
             "critical_subsystems_all_accepted": crit_all_green,
             "overall_band": sysv.get("overall_band"),
+            "current_run_nonfixture_executed": current_run_nonfixture_executed,
         },
         "subsystems": rows,
         "inputs": {

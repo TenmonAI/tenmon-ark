@@ -59,6 +59,7 @@ tick() {
     log "empty_token"
     return 0
   fi
+  log "auth_refresh_ok"
 
   local queue_json
   if ! queue_json="$(curl -fsS -H "Authorization: Bearer $TOKEN" "$BASE/api/admin/cursor/queue")"; then
@@ -89,6 +90,7 @@ tick() {
     log "item_missing_id"
     return 0
   fi
+  log "next_ok_item id=$qid fixture=$fixture"
 
   if [[ "$fixture" == "true" ]]; then
     log "fixture_delivered releasing id=$qid (no result completion)"
@@ -118,7 +120,7 @@ tick() {
   review_status="skipped"
   manual_review_required="false"
   if [[ "$REVIEW_ACCEPT_ENABLE" == "1" ]] && [[ -f "$REVIEW_ACCEPTOR" ]]; then
-    if "$PYTHON" "$REVIEW_ACCEPTOR" --item-json "$item_json" --timeout-sec "$REVIEW_ACCEPT_TIMEOUT_SEC" >"$review_json" 2>>"$MAIN_LOG"; then
+    if "$PYTHON" "$REVIEW_ACCEPTOR" --manifest "$item_json" --timeout-sec "$REVIEW_ACCEPT_TIMEOUT_SEC" >"$review_json" 2>>"$MAIN_LOG"; then
       review_status="$(jq -r '.status // "unknown"' <"$review_json" 2>/dev/null || echo "unknown")"
       manual_review_required="$(jq -r '.manual_review_required // false' <"$review_json" 2>/dev/null || echo "false")"
       log "review_acceptor id=$qid status=$review_status manual_review_required=$manual_review_required"

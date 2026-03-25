@@ -363,6 +363,10 @@ function __shouldBlockSubconceptPromotionForMetaOrFactualV1(raw: string): boolea
   ) {
     return true;
   }
+  /** 事実訂正・修正要求は SUBCONCEPT 昇格を抑止 */
+  if (/(訂正|修正|誤り|間違い|違う)/u.test(t)) {
+    return true;
+  }
   return false;
 }
 
@@ -7527,14 +7531,14 @@ const __isDefinitionQ =
               }
             }
           }
-          /** TENMON_K1_AND_GENERAL_KNOWLEDGE_WORLDCLASS_REPAIR: 哲学/人物/水火/既定のいずれでも本文が薄いとき llmChat で最低 150 字へ */
+          /** TENMON_GENERAL_KNOWLEDGE_DENSITY_AND_SELF_VIEW_POLISH: GK は（LLM準備OKなら）150〜300字へ収束。失敗時は元本文。 */
           if (__routeReason === ROUTE_GENERAL_KNOWLEDGE_EXPLAIN_ROUTE_V1) {
             const __gkMinReady = getLlmProviderReadinessV1();
             const __gkStrip = String(__body ?? "")
               .replace(/^【天聞の所見】\s*/u, "")
               .replace(/\s+/g, " ")
               .trim();
-            if (__gkMinReady.ok && __gkStrip.length < 150) {
+            if (__gkMinReady.ok && __gkStrip.length < 300) {
               try {
                 const __sysGkMin =
                   "あなたは天聞アーク。水火の法則・言霊・正典（空海・法華経など）を土台に、一般知識の問いへ具体的な見立てを述べる。" +
@@ -7550,7 +7554,8 @@ const __isDefinitionQ =
                 } as any);
                 let __tm = String(__gkMin?.text ?? "").trim();
                 if (!/^【天聞の所見】/u.test(__tm)) __tm = `【天聞の所見】${__tm}`;
-                if (__tm.replace(/^【天聞の所見】\s*/u, "").replace(/\s+/g, " ").trim().length >= 150) {
+                const __tmCore = __tm.replace(/^【天聞の所見】\s*/u, "").replace(/\s+/g, " ").trim();
+                if (__tmCore.length >= 150 && __tmCore.length <= 320) {
                   __body = __tm;
                 }
               } catch {
@@ -10479,7 +10484,7 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
           return await res.json(
             __tenmonGeneralGateResultMaybe({
               response:
-                "私は、水火の往還と言霊の働きを軸に、まず問いの芯を定めてから現象を読みます。原典の線へ一度戻してから判断を置くほうが、解釈の濁りが減り、言葉が先走りにくいと見ています。",
+                "私は、水火の往還と言霊の働きを軸に、まず問いの芯を定めてから現象を読みます。原典の線へ一度戻して言葉を置くほうが、解釈の濁りが減り、判断が先走りにくいと見ています。",
               evidence: null,
               candidates: [],
               timestamp,

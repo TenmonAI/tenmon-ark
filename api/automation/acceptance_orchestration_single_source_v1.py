@@ -65,6 +65,9 @@ def main() -> int:
     chat_surface = read_json(auto / "tenmon_chat_surface_stopbleed_summary.json")
     scripture = read_json(auto / "tenmon_scripture_naturalizer_summary.json")
     truth = read_json(auto / "tenmon_latest_truth_rebase_summary.json")
+    queue = read_json(auto / "remote_cursor_queue.json")
+    bundle = read_json(auto / "remote_cursor_result_bundle.json")
+    scorecard = read_json(auto / "tenmon_worldclass_acceptance_scorecard.json")
 
     # stale source exclusion policy comes from latest rejudge/truth summaries
     stale_sources = [str(x) for x in (rejudge.get("stale_sources") or []) if str(x).strip()]
@@ -76,6 +79,19 @@ def main() -> int:
     lived_acceptance = bool((hygiene.get("http") or {}).get("health_ok") and (hygiene.get("http") or {}).get("audit_ok") and (hygiene.get("http") or {}).get("audit_build_ok"))
     conversation_acceptance = bool(chat_surface.get("meta_leak_count") == 0 and chat_surface.get("natural_misdrop_count") == 0)
     scripture_acceptance = bool(scripture.get("autoprobe_pass") is True and scripture.get("need_context_count") == 0)
+    q_items = queue.get("items") if isinstance(queue.get("items"), list) else []
+    b_entries = bundle.get("entries") if isinstance(bundle.get("entries"), list) else []
+    executed_nonfixture_ids = {
+        str(x.get("id"))
+        for x in q_items
+        if isinstance(x, dict) and x.get("fixture") is False and str(x.get("state") or "") == "executed"
+    }
+    current_run_bundle_ids = {
+        str(x.get("queue_id"))
+        for x in b_entries
+        if isinstance(x, dict) and x.get("current_run") is True
+    }
+    current_run_nonfixture_executed = bool(executed_nonfixture_ids & current_run_bundle_ids)
 
     fresh_hygiene, fresh_hygiene_note = is_fresh(hygiene)
     fresh_rejudge, fresh_rejudge_note = is_fresh(rejudge)
@@ -94,6 +110,7 @@ def main() -> int:
             lived_acceptance,
             conversation_acceptance,
             scripture_acceptance,
+            current_run_nonfixture_executed,
             stale_truth_excluded,
             current_run_evidence_ready,
             len(remaining_blockers) == 0,
@@ -112,6 +129,8 @@ def main() -> int:
             "lived_acceptance": lived_acceptance,
             "conversation_acceptance": conversation_acceptance,
             "scripture_acceptance": scripture_acceptance
+            ,
+            "current_run_nonfixture_executed": current_run_nonfixture_executed
         },
         "truth_policy": {
             "current_run_evidence_priority": True,
@@ -120,7 +139,12 @@ def main() -> int:
             "truth_excluded_sources": excluded_truth_sources
         },
         "rejudge": {
-            "remaining_blockers": remaining_blockers
+            "remaining_blockers": remaining_blockers,
+            "recommended_next_card": rejudge.get("recommended_next_card"),
+        },
+        "scorecard": {
+            "score_percent": scorecard.get("score_percent"),
+            "next_best_card": scorecard.get("next_best_card") or scorecard.get("recommended_next_card"),
         },
         "current_run_freshness": {
             "hygiene": {"fresh": fresh_hygiene, "note": fresh_hygiene_note},
@@ -142,7 +166,13 @@ def main() -> int:
         },
         "seal_allowed": acceptance_pass,
         "next_on_pass": "TENMON_AUTO_ROLLBACK_AND_RESTORE_GUARD_CURSOR_AUTO_V1",
-        "next_on_fail": "TENMON_ACCEPTANCE_ORCHESTRATION_SINGLE_SOURCE_RETRY_CURSOR_AUTO_V1"
+        "next_on_fail": "TENMON_ACCEPTANCE_ORCHESTRATION_SINGLE_SOURCE_RETRY_CURSOR_AUTO_V1",
+        "next_best_card": (
+            rejudge.get("recommended_next_card")
+            or scorecard.get("next_best_card")
+            or scorecard.get("recommended_next_card")
+            or "TENMON_ACCEPTANCE_ORCHESTRATION_SINGLE_SOURCE_RETRY_CURSOR_AUTO_V1"
+        ),
     }
 
     write_json(auto / OUT_SUMMARY, singleton)
