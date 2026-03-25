@@ -1,0 +1,55 @@
+{
+  "version": 1,
+  "card": "CHAT_TS_COMPLETION_SUPPLEMENT_V1",
+  "by_blocker_prefix": [
+    {
+      "match": "runtime_probe",
+      "blocker_examples": ["runtime_probe_failure_remaining"],
+      "cursor_card": "CHAT_TS_RUNTIME_ACCEPTANCE_AND_WORLDCLASS_SEAL_V1",
+      "vps_card": "CHAT_TS_RUNTIME_ACCEPTANCE_AND_WORLDCLASS_SEAL_V1",
+      "stage_hint": "runtime_health_audit_chat_url"
+    },
+    {
+      "match": "surface_noise",
+      "blocker_examples": ["surface_noise_remaining"],
+      "cursor_card": "CHAT_TS_STAGE1_SURFACE_POLISH_CURSOR_AUTO_V1",
+      "vps_card": "CHAT_TS_STAGE1_SURFACE_NEXT_PDCA_V1",
+      "stage_hint": "stage1_surface"
+    },
+    {
+      "match": "worldclass_surface",
+      "blocker_examples": ["worldclass_surface_not_clean"],
+      "cursor_card": "CHAT_TS_STAGE1_SURFACE_POLISH_CURSOR_AUTO_V1",
+      "vps_card": "CHAT_TS_STAGE1_SURFACE_NEXT_PDCA_V1",
+      "stage_hint": "stage1_surface_report_inline"
+    },
+    {
+      "match": "static_not",
+      "blocker_examples": ["static_not_100"],
+      "cursor_card": "CHAT_TS_STAGE5_WORLDCLASS_SEAL_AND_BASELINE_CURSOR_AUTO_V1",
+      "vps_card": "CHAT_TS_STAGE5_WORLDCLASS_SEAL_VPS_V1",
+      "stage_hint": "stage5_static_trunk"
+    },
+    {
+      "match": "route_authority",
+      "blocker_examples": ["route_authority_not_clean"],
+      "cursor_card": "CHAT_TS_STAGE2_ROUTE_AUTHORITY_CURSOR_AUTO_V2",
+      "vps_card": "CHAT_TS_STAGE2_ROUTE_NEXT_PDCA_V2",
+      "stage_hint": "stage2_route"
+    },
+    {
+      "match": "longform_quality",
+      "blocker_examples": ["longform_quality_not_clean"],
+      "cursor_card": "CHAT_TS_STAGE3_LONGFORM_STRUCTURE_CURSOR_AUTO_V1",
+      "vps_card": "CHAT_TS_STAGE3_LONGFORM_STRUCTURE_VPS_V1",
+      "stage_hint": "stage3_longform"
+    },
+    {
+      "match": "density_lock",
+      "blocker_examples": ["density_lock_not_clean"],
+      "cursor_card": "CHAT_TS_STAGE5_WORLDCLASS_SEAL_AND_BASELINE_CURSOR_AUTO_V1",
+      "vps_card": "CHAT_TS_STAGE5_WORLDCLASS_SEAL_VPS_V1",
+      "stage_hint": "stage5_density"
+    }
+  ]
+}

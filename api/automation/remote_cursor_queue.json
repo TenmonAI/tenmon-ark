@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "card": "TENMON_REMOTE_CURSOR_COMMAND_CENTER_CURSOR_AUTO_V1",
+  "updatedAt": "2026-03-25T04:33:55Z",
+  "items": [
+    {
+      "job_id": "closed_loop_probe_1774379349",
+      "state": "delivered",
+      "createdAt": "2026-03-24T19:09:09Z",
+      "source": "TENMON_SELF_BUILD_CLOSED_LOOP_PROOF_V2",
+      "cursor_card": "TENMON_CLOSED_LOOP_FIXTURE_CURSOR_AUTO_V1",
+      "objective": "closed loop proof fixture",
+      "job_file": "/var/log/tenmon/card_TENMON_SELF_BUILD_CLOSED_LOOP_PROOF_V2/20260324T190908Z/closed_loop_probe_job.json",
+      "fixture": true,
+      "leased_until": "2026-03-25T04:48:55Z",
+      "dry_run_only": false,
+      "id": "6420def5267dc402"
+    },
+    {
+      "job_id": "probe_job_20260324T193348Z",
+      "state": "executed",
+      "createdAt": "2026-03-24T19:34:00.902891Z",
+      "source": "TENMON_DEEP_COMPLETION_RESIDUAL_FORENSIC_V1",
+      "cursor_card": "TENMON_CLOSED_LOOP_REALITY_PROBE_CURSOR_AUTO_V1",
+      "objective": "closed loop current-run forensic probe",
+      "job_file": "/var/log/tenmon/card_TENMON_DEEP_COMPLETION_RESIDUAL_FORENSIC_V1/20260324T193348Z/closed_loop_probe_job.json",
+      "fixture": false,
+      "leased_until": null,
+      "dry_run_only": false,
+      "id": "2344ae644701487c",
+      "completed_at": "2026-03-25T04:22:35Z"
+    }
+  ],
+  "state_schema": "approval_required|ready|rejected|delivered|executed"
+}

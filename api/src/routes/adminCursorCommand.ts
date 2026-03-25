@@ -4,6 +4,7 @@ import path from "path";
 import { randomBytes } from "crypto";
 import { fileURLToPath } from "url";
 import { guardRemoteCursorPayload } from "../founder/remoteCursorGuardV1.js";
+import { requireFounderOrExecutorBearer } from "../founder/executorTokenV1.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -13,18 +14,7 @@ export const adminCursorCommandRouter = Router();
 const AUTOMATION_DIR = path.join(__dirname, "..", "..", "automation");
 const QUEUE_PATH = process.env.TENMON_REMOTE_CURSOR_QUEUE_PATH || path.join(AUTOMATION_DIR, "remote_cursor_queue.json");
 
-function founderKey(): string {
-  return process.env.FOUNDER_KEY || "CHANGE_ME_FOUNDER_KEY";
-}
-
-function requireFounder(req: Request, res: Response, next: () => void) {
-  const cookieOk = (req as any).cookies?.tenmon_founder === "1";
-  const headerKey = String(req.headers["x-founder-key"] ?? "").trim();
-  if (cookieOk || (headerKey && headerKey === founderKey())) return next();
-  return res.status(403).json({ ok: false, error: "FOUNDER_REQUIRED", detail: "login founder or X-Founder-Key" });
-}
-
-type QueueItem = {
+export type QueueItem = {
   id: string;
   card_name: string;
   card_body_md: string;
@@ -34,6 +24,13 @@ type QueueItem = {
   state: "approval_required" | "ready" | "rejected" | "delivered" | "executed";
   risk_tier: string;
   dry_run_only: boolean;
+  /** キュー JSON の明示 fixture（dry_run_only と併用可） */
+  fixture?: boolean;
+  /** manifest 用（任意） */
+  objective?: string;
+  job_file?: string;
+  /** キュー JSON の明示 job_id（API 正規化の最優先） */
+  job_id?: string;
   reject_reasons: string[];
   matched_rules: string[];
   approved_at: string | null;
@@ -54,7 +51,7 @@ function normalizeQueueState(raw: string): QueueItem["state"] {
   return ok.has(raw as QueueItem["state"]) ? (raw as QueueItem["state"]) : "ready";
 }
 
-type QueueFile = {
+export type QueueFile = {
   version: number;
   card: string;
   updatedAt: string;
@@ -65,7 +62,30 @@ function utcIso() {
   return new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
 }
 
-function readQueue(): QueueFile {
+function normalizeDryRunOnly(raw: unknown): boolean {
+  if (raw === true || raw === 1) return true;
+  const s = String(raw ?? "").trim().toLowerCase();
+  return s === "true" || s === "1" || s === "yes";
+}
+
+/** 空・空白 id を queue_id 列挙または新規 hex で埋め、永続化可能な変更があれば true */
+function repairQueueItemSurfaceId(it: QueueItem): boolean {
+  const trimmed = String(it.id ?? "").trim();
+  if (trimmed) {
+    const changed = it.id !== trimmed;
+    it.id = trimmed;
+    return changed;
+  }
+  const qidField = String((it as Record<string, unknown>).queue_id ?? "").trim();
+  if (qidField) {
+    it.id = qidField;
+    return true;
+  }
+  it.id = randomBytes(8).toString("hex");
+  return true;
+}
+
+export function readQueue(): QueueFile {
   try {
     if (!fs.existsSync(QUEUE_PATH)) {
       return {
@@ -78,9 +98,13 @@ function readQueue(): QueueFile {
     const raw = fs.readFileSync(QUEUE_PATH, "utf-8");
     const j = JSON.parse(raw) as QueueFile;
     if (!Array.isArray(j.items)) j.items = [];
+    let idsRepaired = false;
     for (const it of j.items) {
       it.state = normalizeQueueState(String(it.state ?? "ready"));
+      it.dry_run_only = normalizeDryRunOnly(it.dry_run_only);
+      if (repairQueueItemSurfaceId(it)) idsRepaired = true;
     }
+    if (idsRepaired) writeQueue(j);
     return j;
   } catch {
     return {
@@ -92,15 +116,210 @@ function readQueue(): QueueFile {
   }
 }
 
-function writeQueue(q: QueueFile) {
+export function writeQueue(q: QueueFile) {
   q.updatedAt = utcIso();
   fs.mkdirSync(path.dirname(QUEUE_PATH), { recursive: true });
   fs.writeFileSync(QUEUE_PATH, JSON.stringify(q, null, 2) + "\n", "utf-8");
 }
 
+function leaseExpired(it: QueueItem, nowMs: number): boolean {
+  const lease = it.leased_until ? Date.parse(it.leased_until) : 0;
+  return lease <= nowMs;
+}
+
+/** delivered かつリース期限切れ → ready（leased_until あり・期限切れのみ） */
+function reconcileExpiredDeliveredLeases(q: QueueFile, nowMs: number): number {
+  let n = 0;
+  for (const it of q.items) {
+    const lease = it.leased_until ? Date.parse(it.leased_until) : 0;
+    if (it.state === "delivered" && lease > 0 && lease <= nowMs) {
+      it.state = "ready";
+      it.leased_until = null;
+      n += 1;
+    }
+  }
+  return n;
+}
+
+export function isFixtureItem(it: QueueItem): boolean {
+  if (it.dry_run_only === true) return true;
+  const f = it.fixture;
+  if (f === true) return true;
+  return normalizeDryRunOnly(f);
+}
+
+/** ?dry_run_only=1 のとき fixture のみ。それ以外は fixture でない項目をキュー順で優先し、無ければ fixture */
+function pickNextReadyItem(q: QueueFile, dryOnly: boolean, nowMs: number): QueueItem | null {
+  const ready = q.items.filter((it) => it.state === "ready" && leaseExpired(it, nowMs));
+  if (dryOnly) {
+    const dry = ready.filter((it) => isFixtureItem(it));
+    return dry[0] ?? null;
+  }
+  const nonFixture = ready.filter((it) => !isFixtureItem(it));
+  const fixture = ready.filter((it) => isFixtureItem(it));
+  return nonFixture[0] ?? fixture[0] ?? null;
+}
+
+function extractObjectiveLineFromMd(md: string): string {
+  for (const line of String(md || "").split(/\r?\n/)) {
+    const m = line.match(/^\s*OBJECTIVE\s*[=:]\s*(.+)\s*$/i);
+    if (m) return m[1].trim();
+  }
+  return "";
+}
+
+/** objective は空文字を返さない（Mac executor 向け） */
+function resolveObjective(it: QueueItem): string {
+  const direct = String(it.objective ?? "").trim();
+  if (direct) return direct.slice(0, 4000);
+  const fromTag = extractObjectiveLineFromMd(it.card_body_md);
+  if (fromTag) return fromTag.slice(0, 4000);
+  const bodyPrefix = String(it.card_body_md ?? "").trim().slice(0, 500);
+  if (bodyPrefix) return bodyPrefix.slice(0, 4000);
+  const src = String(it.source ?? "").trim() || "unknown";
+  const card = String(it.card_name ?? "").trim() || "card";
+  return `Remote cursor job (${src}): ${card}`.slice(0, 4000);
+}
+
+function resolveJobFile(it: QueueItem): string | null {
+  const fromItem = String(it.job_file ?? "").trim();
+  if (fromItem) return fromItem;
+  return executorJobFileRel(it.id);
+}
+
+/** カード本文の RUN_ID / JOB_ID / probe_job_* 等（キュー id ではない運用ラベル） */
+function extractJobIdFromCardBody(md: string): string | null {
+  const text = String(md || "");
+  for (const line of text.split(/\r?\n/)) {
+    for (const re of [
+      /^\s*RUN_ID\s*[=:]\s*(\S+)/i,
+      /^\s*JOB_ID\s*[=:]\s*(\S+)/i,
+      /^\s*job_id\s*[=:]\s*(\S+)/i,
+    ]) {
+      const m = line.match(re);
+      if (m) return m[1].trim().slice(0, 240);
+    }
+  }
+  const probe = text.match(/\b(probe_job_[A-Za-z0-9]+)\b/);
+  if (probe) return probe[1];
+  return null;
+}
+
+/** 本文由来の run ラベル（無ければ null、空文字は null） */
+function normalizeRunJobId(runLabel: string | null): string | null {
+  if (runLabel == null) return null;
+  const s = String(runLabel).trim();
+  return s ? s.slice(0, 240) : null;
+}
+
+/**
+ * API 返却用 job_id: item.job_id → 本文ラベル → queue id。空文字は返さない。
+ */
+function resolveSurfaceJobId(it: QueueItem, runLabel: string | null, qid: string): string | null {
+  const fromItem = String(it.job_id ?? "").trim();
+  if (fromItem) return fromItem.slice(0, 240);
+  const run = normalizeRunJobId(runLabel);
+  if (run) return run;
+  const qq = String(qid ?? "").trim();
+  return qq ? qq : null;
+}
+
+function augmentQueueItemForApi(it: QueueItem): Record<string, unknown> {
+  const qid = String(it.id ?? "").trim();
+  const runLabel = extractJobIdFromCardBody(it.card_body_md);
+  const jobIdResolved = resolveSurfaceJobId(it, runLabel, qid);
+  const runJobId = normalizeRunJobId(runLabel);
+  const fixture = isFixtureItem(it);
+  return {
+    ...it,
+    id: qid,
+    queue_id: qid,
+    job_id: jobIdResolved,
+    run_job_id: runJobId,
+    fixture,
+    dry_run_only: it.dry_run_only,
+  };
+}
+
+function hasAnyQueueLookupKey(body: Record<string, unknown> | undefined): boolean {
+  const r = body ?? {};
+  return Boolean(
+    String(r.id ?? "").trim() || String(r.queue_id ?? "").trim() || String(r.job_id ?? "").trim()
+  );
+}
+
+/** 探索順: id → queue_id → job_id（job_id は本文ラベル or キュー id と一致） */
+export function findQueueItem(q: QueueFile, body: Record<string, unknown>): QueueItem | undefined {
+  const raw = body ?? {};
+  const id = String(raw.id ?? "").trim();
+  const queue_id = String(raw.queue_id ?? "").trim();
+  const job_id = String(raw.job_id ?? "").trim();
+  if (id) {
+    const hit = q.items.find((x) => x.id === id);
+    if (hit) return hit;
+  }
+  if (queue_id) {
+    const hit = q.items.find((x) => x.id === queue_id);
+    if (hit) return hit;
+  }
+  if (job_id) {
+    return q.items.find((x) => {
+      const ex = extractJobIdFromCardBody(x.card_body_md);
+      const qxid = String(x.id ?? "").trim();
+      const resolved = resolveSurfaceJobId(x, ex, qxid);
+      return ex === job_id || qxid === job_id || resolved === job_id;
+    });
+  }
+  return undefined;
+}
+
+const DEFAULT_EXECUTOR_JOB_REL_BASE = "api/automation/out/remote_cursor_executor";
+
+/** manifest 用相対パス。base / queueId 欠損時は null（path.join に undefined を渡さない） */
+function executorJobFileRel(queueId: string | null | undefined, baseDir?: string | null): string | null {
+  const base = String(baseDir ?? DEFAULT_EXECUTOR_JOB_REL_BASE).trim();
+  const qid = String(queueId ?? "").trim();
+  if (!base || !qid) return null;
+  return path.posix.join(base, qid, "job.json");
+}
+
+function buildNextManifestPayload(it: QueueItem): Record<string, unknown> {
+  const runLabel = extractJobIdFromCardBody(it.card_body_md);
+  if (!String(it.id ?? "").trim()) repairQueueItemSurfaceId(it);
+  const qid = String(it.id ?? "").trim();
+  const objective = resolveObjective(it);
+  const jobFile = resolveJobFile(it);
+  const fixture = isFixtureItem(it);
+  const jobIdResolved = resolveSurfaceJobId(it, runLabel, qid);
+  const runJobId = normalizeRunJobId(runLabel);
+  return {
+    id: qid,
+    queue_id: qid,
+    job_id: jobIdResolved,
+    run_job_id: runJobId,
+    state: it.state,
+    source: String(it.source ?? ""),
+    cursor_card: String(it.card_name ?? ""),
+    objective,
+    job_file: jobFile,
+    fixture,
+    dry_run_only: it.dry_run_only,
+    leased_until: it.leased_until,
+    createdAt: it.submitted_at,
+    card_name: it.card_name,
+    card_body_md: it.card_body_md,
+  };
+}
+
+const QUEUE_ID_HINT =
+  "Primary key: id / queue_id (equal). job_id is normalized id or label; run_job_id is body label (probe_job_*) if any.";
+
 /** GET queue summary（管理者） */
-adminCursorCommandRouter.get("/admin/cursor/queue", requireFounder, (_req: Request, res: Response) => {
+adminCursorCommandRouter.get("/admin/cursor/queue", requireFounderOrExecutorBearer, (_req: Request, res: Response) => {
   const q = readQueue();
+  const now = Date.now();
+  const lease_reconciled = reconcileExpiredDeliveredLeases(q, now);
+  if (lease_reconciled > 0) writeQueue(q);
   const summary = {
     approval_required: q.items.filter((i) => i.state === "approval_required").length,
     ready: q.items.filter((i) => i.state === "ready").length,
@@ -108,11 +327,18 @@ adminCursorCommandRouter.get("/admin/cursor/queue", requireFounder, (_req: Reque
     delivered: q.items.filter((i) => i.state === "delivered").length,
     executed: q.items.filter((i) => i.state === "executed").length,
   };
-  return res.json({ ok: true, summary, items: q.items.slice(-80), path: QUEUE_PATH });
+  const items = q.items.slice(-80).map((it) => augmentQueueItemForApi(it));
+  return res.json({
+    ok: true,
+    summary,
+    items,
+    path: QUEUE_PATH,
+    lease_reconciled,
+  });
 });
 
 /** POST カード投入 — 承認ゲート必須（既定 approval_required） */
-adminCursorCommandRouter.post("/admin/cursor/submit", requireFounder, (req: Request, res: Response) => {
+adminCursorCommandRouter.post("/admin/cursor/submit", requireFounderOrExecutorBearer, (req: Request, res: Response) => {
   const body = (req.body ?? {}) as any;
   const card_name = String(body.card_name ?? "").trim();
   const card_body_md = String(body.card_body_md ?? body.body ?? "").trim();
@@ -176,17 +402,20 @@ adminCursorCommandRouter.post("/admin/cursor/submit", requireFounder, (req: Requ
   return res.json({
     ok: true,
     item,
+    queue_id: id,
     note: state === "approval_required" ? "承認後に Mac エージェントが取得可能" : "ready（即取得可）",
   });
 });
 
 /** POST 承認 → ready */
-adminCursorCommandRouter.post("/admin/cursor/approve", requireFounder, (req: Request, res: Response) => {
-  const id = String((req.body ?? {}).id ?? "").trim();
-  if (!id) return res.status(400).json({ ok: false, error: "id required" });
+adminCursorCommandRouter.post("/admin/cursor/approve", requireFounderOrExecutorBearer, (req: Request, res: Response) => {
+  const body = (req.body ?? {}) as Record<string, unknown>;
+  if (!hasAnyQueueLookupKey(body)) {
+    return res.status(400).json({ ok: false, error: "id required", detail: "send id, queue_id, or job_id" });
+  }
   const q = readQueue();
-  const it = q.items.find((x) => x.id === id);
-  if (!it) return res.status(404).json({ ok: false, error: "not found" });
+  const it = findQueueItem(q, body);
+  if (!it) return res.status(404).json({ ok: false, error: "not found", hint: QUEUE_ID_HINT });
   if (it.state === "rejected") return res.status(409).json({ ok: false, error: "already rejected" });
   const g = guardRemoteCursorPayload(it.card_name, it.card_body_md);
   if (g.rejected) {
@@ -202,66 +431,68 @@ adminCursorCommandRouter.post("/admin/cursor/approve", requireFounder, (req: Req
 });
 
 /** POST 却下 */
-adminCursorCommandRouter.post("/admin/cursor/reject", requireFounder, (req: Request, res: Response) => {
-  const body = (req.body ?? {}) as any;
-  const id = String(body.id ?? "").trim();
+adminCursorCommandRouter.post("/admin/cursor/reject", requireFounderOrExecutorBearer, (req: Request, res: Response) => {
+  const body = (req.body ?? {}) as Record<string, unknown>;
   const reason = String(body.reason ?? "").trim() || "manual_reject";
-  if (!id) return res.status(400).json({ ok: false, error: "id required" });
+  if (!hasAnyQueueLookupKey(body)) {
+    return res.status(400).json({ ok: false, error: "id required", detail: "send id, queue_id, or job_id" });
+  }
   const q = readQueue();
-  const it = q.items.find((x) => x.id === id);
-  if (!it) return res.status(404).json({ ok: false, error: "not found" });
+  const it = findQueueItem(q, body);
+  if (!it) return res.status(404).json({ ok: false, error: "not found", hint: QUEUE_ID_HINT });
   it.state = "rejected";
   it.reject_reasons = [...it.reject_reasons, `manual:${reason}`];
   writeQueue(q);
   return res.json({ ok: true, item: it });
 });
 
-/** GET エージェント pull: 次の ready をリース */
-adminCursorCommandRouter.get("/admin/cursor/next", requireFounder, (req: Request, res: Response) => {
+/** GET エージェント pull: 次の ready をリースし Mac executor 向け manifest を返す */
+adminCursorCommandRouter.get("/admin/cursor/next", requireFounderOrExecutorBearer, (req: Request, res: Response) => {
   const dryOnly = String(req.query.dry_run_only ?? "") === "1";
   const q = readQueue();
   const now = Date.now();
-  for (const it of q.items) {
-    if (it.state !== "ready") continue;
-    if (dryOnly && !it.dry_run_only) continue;
-    if (!dryOnly && it.dry_run_only) continue;
-    const lease = it.leased_until ? Date.parse(it.leased_until) : 0;
-    if (lease > now) continue;
-    it.state = "delivered";
-    it.leased_until = new Date(now + 15 * 60 * 1000).toISOString().replace(/\.\d{3}Z$/, "Z");
-    writeQueue(q);
+  const lease_reconciled = reconcileExpiredDeliveredLeases(q, now);
+  const it = pickNextReadyItem(q, dryOnly, now);
+  if (!it) {
+    if (lease_reconciled > 0) writeQueue(q);
     return res.json({
       ok: true,
-      item: {
-        id: it.id,
-        card_name: it.card_name,
-        card_body_md: it.card_body_md,
-        dry_run_only: it.dry_run_only,
-        risk_tier: it.risk_tier,
-        leased_until: it.leased_until,
-      },
+      item: null,
+      message: "no ready items",
+      lease_reconciled,
     });
   }
-  return res.json({ ok: true, item: null, message: "no ready items" });
+  it.state = "delivered";
+  it.leased_until = new Date(now + 15 * 60 * 1000).toISOString().replace(/\.\d{3}Z$/, "Z");
+  writeQueue(q);
+  return res.json({
+    ok: true,
+    item: buildNextManifestPayload(it),
+    lease_reconciled,
+  });
 });
 
 /** POST リース解放（失敗時に ready に戻す） */
-adminCursorCommandRouter.post("/admin/cursor/release", requireFounder, (req: Request, res: Response) => {
-  const id = String((req.body ?? {}).id ?? "").trim();
-  if (!id) return res.status(400).json({ ok: false, error: "id required" });
-  const q = readQueue();
-  const it = q.items.find((x) => x.id === id);
-  if (!it) return res.status(404).json({ ok: false, error: "not found" });
-  if (it.state === "delivered") {
-    it.state = "ready";
-    it.leased_until = null;
-    writeQueue(q);
+adminCursorCommandRouter.post("/admin/cursor/release", requireFounderOrExecutorBearer, (req: Request, res: Response) => {
+  const body = (req.body ?? {}) as Record<string, unknown>;
+  if (!hasAnyQueueLookupKey(body)) {
+    return res.status(400).json({ ok: false, error: "id required", detail: "send id, queue_id, or job_id" });
   }
-  return res.json({ ok: true, item: it });
+  const q = readQueue();
+  if (reconcileExpiredDeliveredLeases(q, Date.now()) > 0) writeQueue(q);
+  const it = findQueueItem(q, body);
+  if (!it) return res.status(404).json({ ok: false, error: "not found", hint: QUEUE_ID_HINT });
+  if (it.state === "executed" || it.state === "rejected") {
+    return res.status(409).json({ ok: false, error: "cannot_release_terminal_state", state: it.state });
+  }
+  it.state = "ready";
+  it.leased_until = null;
+  writeQueue(q);
+  return res.json({ ok: true, item: augmentQueueItemForApi(it) });
 });
 
 /** 簡易ダッシュボード HTML（管理者 cookie または手動で founderKey を入力） */
-adminCursorCommandRouter.get("/admin/cursor/dashboard", requireFounder, (_req: Request, res: Response) => {
+adminCursorCommandRouter.get("/admin/cursor/dashboard", requireFounderOrExecutorBearer, (_req: Request, res: Response) => {
   res.type("html").send(`<!doctype html>
 <html lang="ja"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Remote Cursor Command Center</title>

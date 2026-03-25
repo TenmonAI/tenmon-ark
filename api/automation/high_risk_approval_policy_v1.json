@@ -1,0 +1,12 @@
+{
+  "card": "TENMON_HIGH_RISK_APPROVAL_CONTRACT_AND_SEAL_GATE_CURSOR_AUTO_V1",
+  "generated_at": "2026-01-01T00:00:00Z",
+  "high_risk_globs": [
+    "api/src/routes/chat.ts",
+    "api/src/routes/chat_refactor/finalize.ts",
+    "web/src/**"
+  ],
+  "approval_required": true,
+  "seal_only_after_acceptance_pass": true,
+  "notes": "high-risk への自動 apply は明示承認または seal gate 記録が無い限り禁止"
+}

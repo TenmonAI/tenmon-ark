@@ -1,0 +1,188 @@
+{
+  "card": "TENMON_WORLDCLASS_ACCEPTANCE_SCORECARD_CURSOR_AUTO_V1",
+  "generated_at": "2026-03-24T19:47:56Z",
+  "score_total": 66.4,
+  "score_max": 118,
+  "score_percent": 56.27,
+  "sealed_operable_ready": false,
+  "worldclass_ready": false,
+  "must_fix_before_claim": [
+    "conversation_backend:conversation_runner_not_pass",
+    "conversation_backend:chat_ts_overall_not_100",
+    "conversation_continuity:sessionId_reference_in_mainline_web_src",
+    "conversation_continuity:continuity_hold_not_observed",
+    "pwa_lived_proof:chat:continuity_failed",
+    "pwa_lived_proof:chat:new_chat_failed",
+    "pwa_lived_proof:chat:refresh_empty_response",
+    "pwa_lived_proof:chat:refresh_second_request_failed",
+    "pwa_lived_proof:chat:threadId_missing_in_response",
+    "pwa_lived_proof:continuity_fail",
+    "pwa_lived_proof:duplicate_or_bleed_fail",
+    "pwa_lived_proof:gate:audit",
+    "pwa_lived_proof:gate:audit_build",
+    "pwa_lived_proof:gate:health",
+    "pwa_lived_proof:gate_audit_build_fail",
+    "pwa_lived_proof:meta_leak_none",
+    "pwa_lived_proof:lived_proof_not_demonstrated_or_env_failure",
+    "self_audit_os:verdict_source_split_not_single",
+    "self_audit_os:orchestrator_integrated_verdict_exists",
+    "self_audit_os:pwa_false_mostly_due_env_failure",
+    "self_audit_os:pwa_blocker_json_present_and_may_be_stale_until_live_rerun",
+    "self_audit_os:overall_band=code_complete_lived_unproven",
+    "self_repair_os:self_repair: dangerous_patch_blocker_report.blocked=true",
+    "self_repair_os:safe_patch_loop_not_pass",
+    "self_repair_os:self_repair_acceptance_seal_not_pass",
+    "self_build_os:self_build_os_final_seal_not_yet_evidenced",
+    "remote_admin_cursor:remote_admin_runtime_proof_incomplete",
+    "learning_self_improvement:learning_integrated_verdict_not_ok",
+    "learning_self_improvement:learning_chain_not_ok"
+  ],
+  "primary_gap": "conversation_backend",
+  "recommended_next_card": "TENMON_PWA_RUNTIME_ENV_AND_PLAYWRIGHT_RESTORE_CURSOR_AUTO_V1",
+  "signals": {
+    "regression_detected": false,
+    "gate_contract_aligned": true,
+    "repo_must_block_seal": false,
+    "lived_proof_demonstrated": false,
+    "critical_subsystems_accepted_count": 2,
+    "critical_subsystems_all_accepted": false,
+    "overall_band": "code_complete_lived_unproven"
+  },
+  "subsystems": {
+    "infra_gate": {
+      "score": 12.0,
+      "max_score": 12,
+      "band": "green",
+      "accepted_complete": true,
+      "primary_blockers": []
+    },
+    "conversation_backend": {
+      "score": 6.0,
+      "max_score": 12,
+      "band": "yellow",
+      "accepted_complete": false,
+      "primary_blockers": [
+        "conversation_runner_not_pass",
+        "chat_ts_overall_not_100"
+      ]
+    },
+    "conversation_continuity": {
+      "score": 6.0,
+      "max_score": 12,
+      "band": "yellow",
+      "accepted_complete": false,
+      "primary_blockers": [
+        "sessionId_reference_in_mainline_web_src",
+        "continuity_hold_not_observed"
+      ]
+    },
+    "pwa_code_constitution": {
+      "score": 10.0,
+      "max_score": 10,
+      "band": "green",
+      "accepted_complete": true,
+      "primary_blockers": []
+    },
+    "pwa_lived_proof": {
+      "score": 6.0,
+      "max_score": 12,
+      "band": "yellow",
+      "accepted_complete": false,
+      "primary_blockers": [
+        "chat:continuity_failed",
+        "chat:new_chat_failed",
+        "chat:refresh_empty_response",
+        "chat:refresh_second_request_failed",
+        "chat:threadId_missing_in_response",
+        "continuity_fail",
+        "duplicate_or_bleed_fail",
+        "gate:audit",
+        "gate:audit_build",
+        "gate:health",
+        "gate_audit_build_fail",
+        "meta_leak_none",
+        "lived_proof_not_demonstrated_or_env_failure"
+      ]
+    },
+    "repo_hygiene": {
+      "score": 12.0,
+      "max_score": 12,
+      "band": "green",
+      "accepted_complete": true,
+      "primary_blockers": []
+    },
+    "self_audit_os": {
+      "score": 1.8,
+      "max_score": 10,
+      "band": "red_env",
+      "accepted_complete": false,
+      "primary_blockers": [
+        "verdict_source_split_not_single",
+        "orchestrator_integrated_verdict_exists",
+        "pwa_false_mostly_due_env_failure",
+        "pwa_blocker_json_present_and_may_be_stale_until_live_rerun",
+        "overall_band=code_complete_lived_unproven"
+      ]
+    },
+    "self_repair_os": {
+      "score": 1.8,
+      "max_score": 10,
+      "band": "red_env",
+      "accepted_complete": false,
+      "primary_blockers": [
+        "self_repair: dangerous_patch_blocker_report.blocked=true",
+        "safe_patch_loop_not_pass",
+        "self_repair_acceptance_seal_not_pass"
+      ]
+    },
+    "self_build_os": {
+      "score": 5.0,
+      "max_score": 10,
+      "band": "yellow",
+      "accepted_complete": false,
+      "primary_blockers": [
+        "self_build_os_final_seal_not_yet_evidenced"
+      ]
+    },
+    "remote_admin_cursor": {
+      "score": 1.8,
+      "max_score": 10,
+      "band": "red_env",
+      "accepted_complete": false,
+      "primary_blockers": [
+        "remote_admin_runtime_proof_incomplete"
+      ]
+    },
+    "learning_self_improvement": {
+      "score": 4.0,
+      "max_score": 8,
+      "band": "yellow",
+      "accepted_complete": false,
+      "primary_blockers": [
+        "learning_integrated_verdict_not_ok",
+        "learning_chain_not_ok"
+      ]
+    }
+  },
+  "inputs": {
+    "tenmon_system_verdict": "/opt/tenmon-ark-repo/api/automation/tenmon_system_verdict.json",
+    "tenmon_regression_memory": "/opt/tenmon-ark-repo/api/automation/tenmon_regression_memory.json",
+    "tenmon_repo_hygiene_watchdog_verdict": "/opt/tenmon-ark-repo/api/automation/tenmon_repo_hygiene_watchdog_verdict.json",
+    "tenmon_self_repair_safe_loop_verdict": "/opt/tenmon-ark-repo/api/automation/tenmon_self_repair_safe_loop_verdict.json",
+    "tenmon_self_repair_acceptance_seal_verdict": "/opt/tenmon-ark-repo/api/automation/tenmon_self_repair_acceptance_seal_verdict.json",
+    "tenmon_self_build_execution_chain_verdict": "/opt/tenmon-ark-repo/api/automation/tenmon_self_build_execution_chain_verdict.json",
+    "tenmon_remote_admin_cursor_runtime_proof_verdict": "/opt/tenmon-ark-repo/api/automation/tenmon_remote_admin_cursor_runtime_proof_verdict.json",
+    "tenmon_learning_self_improvement_integrated_verdict": "/opt/tenmon-ark-repo/api/automation/tenmon_learning_self_improvement_integrated_verdict.json",
+    "tenmon_gate_contract_verdict": "/opt/tenmon-ark-repo/api/automation/tenmon_gate_contract_verdict.json",
+    "tenmon_phase2_gate_and_runtime_verdict": "/opt/tenmon-ark-repo/api/automation/tenmon_phase2_gate_and_runtime_verdict.json",
+    "tenmon_phase1_conversation_surface_verdict": "/opt/tenmon-ark-repo/api/automation/tenmon_phase1_conversation_surface_verdict.json",
+    "pwa_final_completion_readiness": "/opt/tenmon-ark-repo/api/automation/pwa_final_completion_readiness.json",
+    "pwa_lived_completion_readiness": "/opt/tenmon-ark-repo/api/automation/pwa_lived_completion_readiness.json",
+    "learning_acceptance_audit": "/opt/tenmon-ark-repo/api/automation/learning_acceptance_audit.json"
+  },
+  "notes": [
+    "code-present と accepted-complete は tenmon_system_verdict のサブシステム定義に従う。",
+    "sealed_operable_ready: critical 5 中 4 以上 accepted_complete + regression なし + gate aligned + lived 実証 + repo 非 block。",
+    "worldclass_ready: score_percent>=90 + critical 全緑 + lived 実証 + continuity hold + repo 非 block + remote admin accepted。"
+  ]
+}

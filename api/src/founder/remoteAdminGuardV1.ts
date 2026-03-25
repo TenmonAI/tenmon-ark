@@ -1,6 +1,7 @@
 /**
  * TENMON_PARENT_06 — 管理者遠隔投入（chat 一般面と分離）
  * cursor autobuild / campaign / retry / maintenance / feature spec を型で分け、テキストは remote cursor ガードに通す。
+ * HTTP 認証は executorTokenV1.requireFounderOrExecutorBearer（Bearer executor JWT / X-Founder-Key 等）を参照。
  */
 
 import { guardRemoteCursorPayload, type RemoteGuardOutcome } from "./remoteCursorGuardV1.js";

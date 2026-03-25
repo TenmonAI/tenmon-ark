@@ -1,0 +1,60 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://tenmon.local/schema/chat_refactor_governor_v1.json",
+  "title": "chat_refactor_governor_v1 governance verdict",
+  "type": "object",
+  "required": [
+    "version",
+    "card",
+    "generatedAt",
+    "status",
+    "governor_pass",
+    "seal_allowed",
+    "policy",
+    "fail_next_cursor_card"
+  ],
+  "properties": {
+    "version": { "type": "integer", "const": 1 },
+    "card": { "type": "string", "const": "TENMON_CHAT_REFACTOR_GOVERNOR_V1" },
+    "generatedAt": { "type": "string" },
+    "status": { "type": "string", "enum": ["PASS", "FAIL"] },
+    "governor_pass": { "type": "boolean" },
+    "seal_allowed": { "type": "boolean" },
+    "integrated_cycle_ok": { "type": "boolean" },
+    "policy": {
+      "type": "object",
+      "required": [
+        "auto_apply_allowed",
+        "proposal_only",
+        "gated_apply",
+        "human_gate_required",
+        "rollback_required"
+      ],
+      "properties": {
+        "auto_apply_allowed": { "type": "boolean" },
+        "proposal_only": { "type": "boolean" },
+        "gated_apply": { "type": "boolean" },
+        "human_gate_required": { "type": "boolean" },
+        "rollback_required": { "type": "boolean" }
+      }
+    },
+    "risk": { "type": "string", "enum": ["low", "medium", "high"] },
+    "theme": { "type": "string" },
+    "recommended_card_kind": {
+      "type": "string",
+      "enum": ["cursor_auto_apply", "gated_apply", "proposal_gated", "human_review"]
+    },
+    "rollback_decision": { "type": "object" },
+    "next_card_dispatch": { "type": "object" },
+    "fail_next_cursor_card": {
+      "type": "string",
+      "const": "TENMON_CHAT_REFACTOR_GOVERNOR_RETRY_CURSOR_AUTO_V1"
+    },
+    "vps_validation_card": {
+      "type": "string",
+      "const": "TENMON_CHAT_REFACTOR_GOVERNOR_VPS_V1"
+    },
+    "gate_notes": { "type": "array", "items": { "type": "string" } },
+    "output_paths": { "type": "object" }
+  }
+}

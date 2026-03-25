@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tenmon.local/schemas/remote_build_result_bundle_v1.json",
+  "title": "RemoteBuildResultBundleV1",
+  "description": "Mac → VPS 返送する Cursor / build 実行結果束（rollback / retry / seal にそのまま渡せる）",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["version", "card", "job_id", "collected_at"],
+  "properties": {
+    "version": { "type": "integer", "const": 1 },
+    "card": { "type": "string", "const": "TENMON_REMOTE_BUILD_RESULT_COLLECTOR_V1" },
+    "job_id": { "type": "string", "minLength": 1 },
+    "session_id": { "type": "string" },
+    "collected_at": { "type": "string" },
+    "hostname": { "type": "string" },
+    "build": {
+      "type": "object",
+      "properties": {
+        "ok": { "type": "boolean" },
+        "exit_code": { "type": "integer" },
+        "log_path": { "type": "string" },
+        "log_tail": { "type": "string" }
+      }
+    },
+    "diff": {
+      "type": "object",
+      "properties": {
+        "stat": { "type": "string" },
+        "patch_tail": { "type": "string" },
+        "unified_diff_chars": { "type": "integer" }
+      }
+    },
+    "acceptance": {
+      "type": "object",
+      "properties": {
+        "summary": { "type": "string" },
+        "checks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" },
+              "passed": { "type": "boolean" },
+              "detail": { "type": "string" }
+            }
+          }
+        },
+        "passed": { "type": "boolean" }
+      }
+    },
+    "logs": {
+      "type": "object",
+      "properties": {
+        "stdout_tail": { "type": "string" },
+        "stderr_tail": { "type": "string" },
+        "cursor_session_log_tail": { "type": "string" }
+      }
+    },
+    "artifacts": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  }
+}

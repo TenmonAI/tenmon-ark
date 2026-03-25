@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tenmon.local/schemas/chat_refactor_plan_v1.json",
+  "title": "CHAT_REFACTOR_PLAN_V1",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "schema_version",
+    "card",
+    "generatedAt",
+    "escape_targets",
+    "low_risk_targets",
+    "medium_risk_targets",
+    "high_risk_targets",
+    "next_card_priority",
+    "prioritized_items"
+  ],
+  "properties": {
+    "schema_version": { "type": "integer", "const": 1 },
+    "card": { "type": "string" },
+    "generatedAt": { "type": "string" },
+    "escape_targets": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["target", "destination", "rationale"],
+        "properties": {
+          "target": { "type": "string" },
+          "destination": { "type": "string" },
+          "rationale": { "type": "string" },
+          "risk_hint": { "type": "string", "enum": ["low", "medium", "high"] }
+        }
+      }
+    },
+    "low_risk_targets": { "type": "array" },
+    "medium_risk_targets": { "type": "array" },
+    "high_risk_targets": { "type": "array" },
+    "next_card_priority": {
+      "type": "array",
+      "maxItems": 3,
+      "items": {
+        "type": "object",
+        "required": ["priority", "theme", "risk", "subject"],
+        "properties": {
+          "priority": { "type": "integer", "minimum": 1 },
+          "theme": { "type": "string" },
+          "risk": { "type": "string" },
+          "subject": { "type": "string" },
+          "rationale": { "type": "string" },
+          "suggested_focus": { "type": "string" },
+          "suggested_cursor_card": { "type": "string" },
+          "suggested_vps_card": { "type": "string" }
+        }
+      }
+    },
+    "prioritized_items": { "type": "array" }
+  }
+}

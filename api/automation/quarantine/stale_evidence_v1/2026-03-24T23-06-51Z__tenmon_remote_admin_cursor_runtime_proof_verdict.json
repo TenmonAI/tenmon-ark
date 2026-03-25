@@ -1,0 +1,160 @@
+{
+  "card": "TENMON_REMOTE_ADMIN_CURSOR_RUNTIME_PROOF_CURSOR_AUTO_V1",
+  "generated_at": "2026-03-23T23:01:06Z",
+  "pass": true,
+  "band": "full",
+  "local_chain_proven": true,
+  "remote_chain_proven": true,
+  "admin_surface_proven": true,
+  "primary_gap": null,
+  "recommended_next_card": null,
+  "subsystems": {
+    "admin_route_presence": {
+      "code_present": true,
+      "runtime_proven": true,
+      "accepted_complete": true,
+      "primary_gap": null,
+      "evidence_paths": [
+        "/opt/tenmon-ark-repo/api/src/routes/adminCursorCommand.ts",
+        "/opt/tenmon-ark-repo/api/src/routes/adminCursorResult.ts",
+        "/opt/tenmon-ark-repo/api/src/routes/adminRemoteBuild.ts",
+        "/opt/tenmon-ark-repo/api/src/routes/adminRemoteIntake.ts",
+        "/opt/tenmon-ark-repo/api/src/index.ts"
+      ]
+    },
+    "admin_route_runtime": {
+      "code_present": true,
+      "runtime_proven": true,
+      "accepted_complete": true,
+      "primary_gap": null,
+      "evidence_paths": [
+        "http://127.0.0.1:3000/api/health",
+        "http://127.0.0.1:3000/api/admin/cursor/queue"
+      ]
+    },
+    "cursor_command_runtime": {
+      "code_present": true,
+      "runtime_proven": true,
+      "accepted_complete": true,
+      "primary_gap": null,
+      "evidence_paths": [
+        "/opt/tenmon-ark-repo/api/src/routes/adminCursorCommand.ts",
+        "/opt/tenmon-ark-repo/api/automation/remote_cursor_queue.json"
+      ]
+    },
+    "cursor_result_runtime": {
+      "code_present": true,
+      "runtime_proven": true,
+      "accepted_complete": true,
+      "primary_gap": null,
+      "evidence_paths": [
+        "/opt/tenmon-ark-repo/api/src/routes/adminCursorResult.ts",
+        "/opt/tenmon-ark-repo/api/automation/remote_cursor_result_bundle.json"
+      ]
+    },
+    "remote_build_runtime": {
+      "code_present": true,
+      "runtime_proven": true,
+      "accepted_complete": true,
+      "primary_gap": null,
+      "evidence_paths": [
+        "/opt/tenmon-ark-repo/api/src/routes/adminRemoteBuild.ts"
+      ]
+    },
+    "remote_intake_runtime": {
+      "code_present": true,
+      "runtime_proven": true,
+      "accepted_complete": true,
+      "primary_gap": null,
+      "evidence_paths": [
+        "/opt/tenmon-ark-repo/api/src/routes/adminRemoteIntake.ts"
+      ]
+    },
+    "result_collection_runtime": {
+      "code_present": true,
+      "runtime_proven": true,
+      "accepted_complete": true,
+      "primary_gap": null,
+      "evidence_paths": [
+        "/opt/tenmon-ark-repo/api/automation/remote_cursor_command_center_v1.py",
+        "/opt/tenmon-ark-repo/api/automation/remote_build_result_collector_v1.py",
+        "/opt/tenmon-ark-repo/api/automation/cursor_result_collector_v1.py",
+        "/opt/tenmon-ark-repo/api/automation/remote_cursor_command_center_seal.json"
+      ]
+    },
+    "result_ingest_runtime": {
+      "code_present": true,
+      "runtime_proven": true,
+      "accepted_complete": true,
+      "primary_gap": null,
+      "evidence_paths": [
+        "/opt/tenmon-ark-repo/api/automation/remote_build_result_collector_v1.py",
+        "/opt/tenmon-ark-repo/api/src/routes/adminRemoteBuild.ts"
+      ]
+    }
+  },
+  "runtime_http": {
+    "health": {
+      "ok": true,
+      "status": 200,
+      "url": "http://127.0.0.1:3000/api/health",
+      "method": "GET",
+      "body_preview": "{\"ok\":true,\"timestamp\":\"2026-03-23T23:01:06.480Z\",\"gitSha\":\"3694586\",\"readiness\":{\"ready\":true,\"stage\":\"READY\",\"uptimeMs\":10595,\"listenReady\":true,\"dbReady\":{\"kokuzo\":true,\"audit\":true,\"persona\":true},\"kokuzoVerified\":true}}"
+    },
+    "cursor_queue": {
+      "ok": true,
+      "status": 403,
+      "url": "http://127.0.0.1:3000/api/admin/cursor/queue",
+      "method": "GET",
+      "body_preview": "{\"ok\":false,\"error\":\"FOUNDER_REQUIRED\",\"detail\":\"login founder or X-Founder-Key\"}"
+    },
+    "cursor_result_bundle": {
+      "ok": true,
+      "status": 403,
+      "url": "http://127.0.0.1:3000/api/admin/cursor/result/bundle",
+      "method": "GET",
+      "body_preview": "{\"ok\":false,\"error\":\"FOUNDER_REQUIRED\"}"
+    },
+    "remote_build_jobs": {
+      "ok": true,
+      "status": 403,
+      "url": "http://127.0.0.1:3000/api/admin/remote-build/jobs",
+      "method": "GET",
+      "body_preview": "{\"ok\":false,\"error\":\"FOUNDER_REQUIRED\",\"detail\":\"login founder or X-Founder-Key\"}"
+    },
+    "remote_build_final_verdict": {
+      "ok": true,
+      "status": 403,
+      "url": "http://127.0.0.1:3000/api/admin/remote-build/final-verdict",
+      "method": "GET",
+      "body_preview": "{\"ok\":false,\"error\":\"FOUNDER_REQUIRED\",\"detail\":\"login founder or X-Founder-Key\"}"
+    },
+    "remote_intake_queue": {
+      "ok": true,
+      "status": 403,
+      "url": "http://127.0.0.1:3000/api/admin/remote-intake/queue",
+      "method": "GET",
+      "body_preview": "{\"ok\":false,\"error\":\"FOUNDER_REQUIRED\",\"detail\":\"login founder or X-Founder-Key\"}"
+    },
+    "remote_build_result_ingest_post": {
+      "ok": true,
+      "status": 403,
+      "url": "http://127.0.0.1:3000/api/admin/remote-build/result-ingest",
+      "method": "POST",
+      "body_preview": "{\"ok\":false,\"error\":\"FOUNDER_REQUIRED\",\"detail\":\"login founder or X-Founder-Key\"}"
+    }
+  },
+  "inputs": {
+    "repo_root": "/opt/tenmon-ark-repo",
+    "api_base_url": "http://127.0.0.1:3000",
+    "tenmon_self_build_execution_chain_verdict": "/opt/tenmon-ark-repo/api/automation/tenmon_self_build_execution_chain_verdict.json"
+  },
+  "remote_admin_runtime_proven": true,
+  "notes": [
+    "code_present はリポジトリ実装。runtime_proven は TENMON_API_BASE_URL への HTTP（Founder ガード 401/403）で観測。",
+    "admin_route_runtime は /api/health が 200/204、または admin いずれかが 401/403 JSON で真（health 契約未整合でも admin で API 生存を認める）。",
+    "result_collection_runtime はスクリプト実在 + queue/bundle/seal のいずれかを証拠とする。",
+    "pass は全 subsystem accepted_complete。従来互換で remote_admin_runtime_proven == pass。",
+    "FAIL 時は TENMON_API_BASE_URL を実 API に合わせ、起動後に再実行。"
+  ]
+}

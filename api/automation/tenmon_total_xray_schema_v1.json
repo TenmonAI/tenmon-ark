@@ -1,0 +1,50 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "TENMON_TOTAL_XRAY_REVEAL_V1",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "card",
+    "generatedAt",
+    "subsystems",
+    "subsystem_status_histogram",
+    "crouching_functions",
+    "missing_runners",
+    "output_contract_mismatches",
+    "integrated_master_verdict",
+    "next_priority_cards"
+  ],
+  "properties": {
+    "schema_version": { "type": "integer", "const": 1 },
+    "card": { "type": "string" },
+    "generatedAt": { "type": "string" },
+    "repo_root": { "type": "string" },
+    "api_root": { "type": "string" },
+    "environment_hints": { "type": "object" },
+    "subsystems": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": [
+          "exists",
+          "implemented",
+          "connected",
+          "running",
+          "producing_outputs",
+          "completedness_score",
+          "risk_level",
+          "system_status",
+          "blockers",
+          "evidence_paths"
+        ]
+      }
+    },
+    "subsystem_status_histogram": { "type": "object" },
+    "crouching_functions": { "type": "array" },
+    "missing_runners": { "type": "array" },
+    "output_contract_mismatches": { "type": "array" },
+    "integrated_master_verdict": { "type": "object" },
+    "next_priority_cards": { "type": "array", "maxItems": 5 },
+    "manual_gate_subsystems": { "type": "array", "items": { "type": "string" } }
+  }
+}

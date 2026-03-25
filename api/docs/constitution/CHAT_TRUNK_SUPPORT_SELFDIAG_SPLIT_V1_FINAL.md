@@ -1,0 +1,5 @@
+# CHAT_TRUNK_SUPPORT_SELFDIAG_SPLIT_V1_FINAL
+
+主線カード: `support_selfdiag` trunk の **最終収束**（`CHAT_TRUNK_SUPPORT_SELFDIAG_SPLIT_V1` の完了版）。
+
+詳細は `CHAT_TRUNK_SUPPORT_SELFDIAG_SPLIT_V1.md` を参照。

@@ -1,0 +1,11 @@
+{
+  "card": "TENMON_SAFE_SELF_IMPROVEMENT_PDCA_LOOP_CURSOR_AUTO_V1",
+  "run_id": "pdca_1774384106_b801ffff",
+  "cycle_total": 1,
+  "last_cycle_at": "2026-03-24T20:28:26Z",
+  "last_candidate_id": "stale_truth_rebase",
+  "last_outcome": "dry_run",
+  "consecutive_fail": 0,
+  "stopped": false,
+  "stop_reason": null
+}

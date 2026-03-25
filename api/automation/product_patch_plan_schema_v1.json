@@ -1,0 +1,26 @@
+{
+  "schema": "tenmon.product_patch_plan.v1",
+  "version": 1,
+  "required_top_level": [
+    "card",
+    "generated_at",
+    "run_id",
+    "source_blocker",
+    "cause_candidate",
+    "target_files",
+    "minimal_diff_unit",
+    "acceptance_probe",
+    "rollback_point",
+    "risk_level",
+    "apply_allowed"
+  ],
+  "constraints": {
+    "one_plan_one_change_group": true,
+    "multi_file_large_refactor_forbidden": true,
+    "cause_uncertain_patch_forbidden": true,
+    "probe_required": true,
+    "rollback_required": true,
+    "unsafe_direct_apply_forbidden": true
+  }
+}
+

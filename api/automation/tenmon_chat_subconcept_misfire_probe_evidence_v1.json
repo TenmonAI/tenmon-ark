@@ -1,0 +1,49 @@
+{
+  "card": "TENMON_CHAT_SUBCONCEPT_MISFIRE_AND_TEMPLATE_LEAK_FIX_CURSOR_AUTO_V1",
+  "generated_at": "2026-03-25T07:25:56+09:00",
+  "npm_run_build": "PASS",
+  "systemctl_restart": "tenmon-ark-api.service restarted after build (本環境)",
+  "note_ja": "finalize でゲート短文の density / reseal 二重化を抑止（isDensityEligibleKu + resealFinalMainlineSurfaceV1 早期 return）。",
+  "probe_http_results": [
+    {
+      "probe": 1,
+      "message": "君の思考を聞きたい",
+      "routeReason": "AI_CONSCIOUSNESS_LOCK_V1",
+      "intent": "self_view",
+      "template_leak_語義軸": false,
+      "context_carry_さっき見ていた中心": false,
+      "self_view_first_person": true,
+      "subconcept_route": false
+    },
+    {
+      "probe": 2,
+      "message": "今日の大分の天気は？",
+      "routeReason": "FACTUAL_WEATHER_V1",
+      "context_carry_さっき見ていた中心": false,
+      "template_leak_語義軸": false,
+      "subconcept_route": false
+    },
+    {
+      "probe": 3,
+      "message": "それは違うよ",
+      "routeReason": "FACTUAL_CORRECTION_V1",
+      "intent": "factual_correction",
+      "context_carry_さっき見ていた中心": false,
+      "dup_ご指摘_count": 1
+    },
+    {
+      "probe": 4,
+      "message": "教えて",
+      "thread_setup": "先行: 言霊とは何か（同一 threadId）",
+      "routeReason": "CONTINUITY_ROUTE_HOLD_V1",
+      "context_carry_さっき見ていた中心": false,
+      "response_head": "さきほどの核を崩さず、次の一段へつなげます。"
+    }
+  ],
+  "regression_routes_must_still_work": [
+    "DEF_FASTPATH_VERIFIED_V1",
+    "CONTINUITY_ROUTE_HOLD_V1",
+    "TECHNICAL_IMPLEMENTATION_V1",
+    "FACTUAL_CURRENT_DATE_V1"
+  ]
+}

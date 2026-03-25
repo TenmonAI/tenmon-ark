@@ -1,0 +1,97 @@
+{
+  "card": "TENMON_SELF_BUILD_OS_CURSOR_EXECUTION_CHAIN_CURSOR_AUTO_V1",
+  "generated_at": "2026-03-24T11:23:04Z",
+  "pass": true,
+  "chain_closed": true,
+  "system_verdict_pass": false,
+  "system_verdict_inputs": {
+    "path": "/opt/tenmon-ark-repo/api/automation/tenmon_system_verdict.json",
+    "completion_gate": false,
+    "os_gate": false,
+    "overall_band": "code_complete_lived_unproven"
+  },
+  "band": "full",
+  "local_chain_closed": true,
+  "remote_chain_closed": true,
+  "primary_gap": null,
+  "recommended_fix_card": "TENMON_SELF_BUILD_OS_CURSOR_EXECUTION_CHAIN_RETRY_CURSOR_AUTO_V1",
+  "subsystems": {
+    "cursor_card_generation": {
+      "code_present": true,
+      "runtime_proven": true,
+      "accepted_complete": true,
+      "evidence": {
+        "bridge_report": "/opt/tenmon-ark-repo/api/automation/cursor_autobuild_bridge_report_v2.json",
+        "schema": "/opt/tenmon-ark-repo/api/automation/cursor_card_schema_v2.json"
+      }
+    },
+    "cursor_dispatch": {
+      "code_present": true,
+      "runtime_proven": true,
+      "accepted_complete": true,
+      "evidence": {
+        "campaign": "/opt/tenmon-ark-repo/api/automation/cursor_campaign_manifest.json",
+        "tasks_manifest": "/opt/tenmon-ark-repo/api/automation/generated_cursor_tasks/cursor_tasks_manifest_v1.json",
+        "remote_queue": "/opt/tenmon-ark-repo/api/automation/remote_cursor_queue.json"
+      }
+    },
+    "cursor_execution": {
+      "code_present": true,
+      "runtime_proven": true,
+      "accepted_complete": true,
+      "evidence": {
+        "kernel_result": "/opt/tenmon-ark-repo/api/automation/cursor_kernel_result.json"
+      }
+    },
+    "result_collection": {
+      "code_present": true,
+      "runtime_proven": true,
+      "accepted_complete": true,
+      "evidence": {
+        "cursor_result_bundle": "/opt/tenmon-ark-repo/api/automation/cursor_result_bundle.json"
+      }
+    },
+    "result_ingest": {
+      "code_present": true,
+      "runtime_proven": true,
+      "accepted_complete": true,
+      "evidence": {
+        "bridge_artifacts": {
+          "cursor_card_schema_v2": "/opt/tenmon-ark-repo/api/automation/cursor_card_schema_v2.json",
+          "cursor_campaign_manifest": "/opt/tenmon-ark-repo/api/automation/cursor_campaign_manifest.json",
+          "cursor_result_bundle": "/opt/tenmon-ark-repo/api/automation/cursor_result_bundle.json",
+          "cursor_retry_queue": "/opt/tenmon-ark-repo/api/automation/cursor_retry_queue.json",
+          "cursor_ready_next_cards_v2": "/opt/tenmon-ark-repo/api/automation/cursor_ready_next_cards_v2.json",
+          "cursor_acceptance_manifest_v2": "/opt/tenmon-ark-repo/api/automation/cursor_acceptance_manifest_v2.json"
+        }
+      }
+    },
+    "admin_remote_build_ui": {
+      "code_present": true,
+      "runtime_proven": true,
+      "accepted_complete": true,
+      "evidence": {
+        "remote_cursor_command_center_seal": "/opt/tenmon-ark-repo/api/automation/remote_cursor_command_center_seal.json",
+        "remote_result_bundle": "/opt/tenmon-ark-repo/api/automation/remote_cursor_result_bundle.json"
+      }
+    }
+  },
+  "inputs": {
+    "system_verdict": "/opt/tenmon-ark-repo/api/automation/tenmon_system_verdict.json",
+    "cursor_campaign_manifest": "/opt/tenmon-ark-repo/api/automation/cursor_campaign_manifest.json",
+    "cursor_tasks_manifest": "/opt/tenmon-ark-repo/api/automation/generated_cursor_tasks/cursor_tasks_manifest_v1.json",
+    "cursor_autobuild_bridge_report_v2": "/opt/tenmon-ark-repo/api/automation/cursor_autobuild_bridge_report_v2.json",
+    "cursor_result_bundle": "/opt/tenmon-ark-repo/api/automation/cursor_result_bundle.json",
+    "cursor_kernel_result": "/opt/tenmon-ark-repo/api/automation/cursor_kernel_result.json",
+    "remote_cursor_command_center_seal": "/opt/tenmon-ark-repo/api/automation/remote_cursor_command_center_seal.json",
+    "remote_cursor_queue": "/opt/tenmon-ark-repo/api/automation/remote_cursor_queue.json",
+    "remote_cursor_result_bundle": "/opt/tenmon-ark-repo/api/automation/remote_cursor_result_bundle.json"
+  },
+  "notes": [
+    "local proof: campaign/bridge → bundle → kernel",
+    "remote proof: remote_cursor_command_center_seal + queue/result contracts",
+    "card 生成のみでは completion にしない（accepted_complete が要）",
+    "self-audit: tenmon_system_verdict.json を入力に取り system_verdict_pass を記録",
+    "exit: chain_closed が false なら 1。--require-system-pass 時は system_verdict_pass が false でも 1"
+  ]
+}

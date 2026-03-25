@@ -1,0 +1,113 @@
+{
+  "card": "TENMON_TOTAL_COMPLETION_MASTER_FORENSIC_REPORT_CURSOR_AUTO_V1",
+  "execution_contract_card": "TENMON_TOTAL_COMPLETION_MASTER_FORENSIC_REPORT_EXECUTION_CURSOR_AUTO_V1",
+  "generated_at": "2026-03-24T19:47:57Z",
+  "systems": {
+    "infra_gate": [],
+    "conversation_backend": [
+      "chat_ts_overall_not_100",
+      "conversation_runner_not_pass"
+    ],
+    "conversation_continuity": [],
+    "pwa_code_constitution": [],
+    "pwa_lived_proof": [
+      "chat:continuity_failed",
+      "chat:new_chat_failed",
+      "chat:refresh_empty_response",
+      "chat:refresh_second_request_failed",
+      "chat:threadId_missing_in_response",
+      "continuity_fail",
+      "duplicate_or_bleed_fail",
+      "gate:audit",
+      "gate:audit_build",
+      "gate:health",
+      "gate_audit_build_fail",
+      "meta_leak_none"
+    ],
+    "seal_state": [
+      "final_ready_false"
+    ],
+    "repo_hygiene": [
+      "massive_untracked"
+    ],
+    "self_audit_os": [
+      "orchestrator_integrated_verdict_exists",
+      "overall_band=code_complete_lived_unproven",
+      "pwa_blocker_json_present_and_may_be_stale_until_live_rerun",
+      "pwa_false_mostly_due_env_failure",
+      "verdict_source_split_not_single"
+    ],
+    "self_repair_os": [
+      "self_repair: dangerous_patch_blocker_report.blocked=true",
+      "self_repair_acceptance_not_pass",
+      "self_repair_safe_loop_not_pass"
+    ],
+    "self_build_os": [
+      "self_build_os_final_seal_not_yet_evidenced"
+    ],
+    "remote_admin_cursor": [
+      "remote_admin_runtime_proof_incomplete"
+    ],
+    "learning_self_improvement": [
+      "learning_chain_not_ok",
+      "learning_integrated_verdict_not_ok"
+    ],
+    "worldclass_score": [
+      "worldclass_scorecard_not_pass"
+    ]
+  },
+  "blockers_by_system": {
+    "infra_gate": [],
+    "conversation_backend": [
+      "chat_ts_overall_not_100",
+      "conversation_runner_not_pass"
+    ],
+    "conversation_continuity": [],
+    "pwa_code_constitution": [],
+    "pwa_lived_proof": [
+      "chat:continuity_failed",
+      "chat:new_chat_failed",
+      "chat:refresh_empty_response",
+      "chat:refresh_second_request_failed",
+      "chat:threadId_missing_in_response",
+      "continuity_fail",
+      "duplicate_or_bleed_fail",
+      "gate:audit",
+      "gate:audit_build",
+      "gate:health",
+      "gate_audit_build_fail",
+      "meta_leak_none"
+    ],
+    "seal_state": [
+      "final_ready_false"
+    ],
+    "repo_hygiene": [
+      "massive_untracked"
+    ],
+    "self_audit_os": [
+      "orchestrator_integrated_verdict_exists",
+      "overall_band=code_complete_lived_unproven",
+      "pwa_blocker_json_present_and_may_be_stale_until_live_rerun",
+      "pwa_false_mostly_due_env_failure",
+      "verdict_source_split_not_single"
+    ],
+    "self_repair_os": [
+      "self_repair: dangerous_patch_blocker_report.blocked=true",
+      "self_repair_acceptance_not_pass",
+      "self_repair_safe_loop_not_pass"
+    ],
+    "self_build_os": [
+      "self_build_os_final_seal_not_yet_evidenced"
+    ],
+    "remote_admin_cursor": [
+      "remote_admin_runtime_proof_incomplete"
+    ],
+    "learning_self_improvement": [
+      "learning_chain_not_ok",
+      "learning_integrated_verdict_not_ok"
+    ],
+    "worldclass_score": [
+      "worldclass_scorecard_not_pass"
+    ]
+  }
+}

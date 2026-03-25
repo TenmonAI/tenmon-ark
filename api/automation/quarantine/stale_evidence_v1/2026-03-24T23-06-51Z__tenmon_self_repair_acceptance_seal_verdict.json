@@ -1,0 +1,35 @@
+{
+  "card": "TENMON_SELF_REPAIR_OS_ACCEPTANCE_SEAL_CURSOR_AUTO_V1",
+  "generated_at": "2026-03-23T20:30:39Z",
+  "pass": false,
+  "candidate": {
+    "path": "api/automation/.gitignore",
+    "patch_class": "safe_hygiene",
+    "in_high_risk_list": false,
+    "eligible": true
+  },
+  "build_ok": true,
+  "audit_ok": true,
+  "acceptance_ok": true,
+  "regression_ok": true,
+  "sealed": false,
+  "rollback_required": true,
+  "reason": "safe_patch_loop_not_pass_execution_not_allowed",
+  "inputs": {
+    "safe_loop_verdict": "/opt/tenmon-ark-repo/api/automation/tenmon_self_repair_safe_loop_verdict.json",
+    "vps_acceptance_report": "/opt/tenmon-ark-repo/api/automation/vps_acceptance_report.json",
+    "learning_acceptance_audit": "/opt/tenmon-ark-repo/api/automation/learning_acceptance_audit.json",
+    "integrated_acceptance_seal": "/opt/tenmon-ark-repo/api/automation/integrated_acceptance_seal.json",
+    "regression_report": "/opt/tenmon-ark-repo/api/automation/regression_report.json"
+  },
+  "policy": {
+    "build_success_alone_does_not_adopt": true,
+    "seal_requires_all": [
+      "safe_patch_loop_pass",
+      "build_ok",
+      "audit_ok",
+      "acceptance_ok",
+      "regression_ok"
+    ]
+  }
+}

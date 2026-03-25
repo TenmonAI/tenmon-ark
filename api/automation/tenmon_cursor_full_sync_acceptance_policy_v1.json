@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "card": "TENMON_CURSOR_FULL_SYNC_ACCEPTANCE_AND_WORLDCLASS_COMPLETION_MASTER_CURSOR_AUTO_V1",
+  "max_major_cycles": 6,
+  "one_cycle_one_change_group": true,
+  "high_risk_requires": [
+    "cursor_full_sync_established",
+    "repo_hygiene_clean",
+    "stale_truth_isolated",
+    "execution_gate_hardstop.pass",
+    "scope_policy.allows_high_risk"
+  ],
+  "next_on_pass": "TENMON_WORLDCLASS_DIALOGUE_PDCA_AUTOLOOP_CURSOR_AUTO_V1"
+}
+

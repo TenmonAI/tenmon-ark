@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "card": "TENMON_CURSOR_RUNTIME_EXECUTION_CONTRACT_CURSOR_AUTO_V1",
+  "safe_scope": [
+    "api/automation/**",
+    "api/scripts/**",
+    "api/docs/constitution/**"
+  ],
+  "medium_scope": [
+    "api/src/core/**",
+    "api/src/kokuzo/**",
+    "api/src/routes/chat_refactor/**"
+  ],
+  "high_risk_scope": [
+    "api/src/routes/chat.ts",
+    "api/src/routes/chat_refactor/finalize.ts",
+    "web/src/**"
+  ],
+  "approval_contract": {
+    "safe_scope": "auto_executable",
+    "medium_scope": "hardstop_green_and_hygiene_clean_required",
+    "high_risk_scope": "explicit_gate_green_and_current_run_evidence_and_no_stale_truth_required"
+  }
+}
+

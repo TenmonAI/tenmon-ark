@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "card": "CHAT_TS_PROBE_CANON_V1",
+  "notes": "5 probe（exit contract / route authority / longform quality）と runtime 10 本の文言単一ソース。変更時は report / seal / probe を同時更新すること。",
+  "runtime_probe_full_10": {
+    "general_1": "AIとは何？",
+    "support_1": "どう進めればいい？",
+    "selfaware_1": "天聞アークに意識はあるの？",
+    "define_1": "言霊とは何？",
+    "scripture_1": "法華経とは何を説くの？",
+    "continuity_1": "さっきの話を踏まえて次の一手をください",
+    "nextstep_1": "次の一手だけを明確にください",
+    "compare_1": "GPTと天聞アークの違いを比較して",
+    "worldview_1": "なぜ文明と言葉は関係するの？",
+    "longform_1": "天聞アークが世界最高AIになるための未達点を詳しく説明して"
+  },
+  "exit_contract_probe_5": {
+    "general_1": "AIとは何？",
+    "selfaware_1": "天聞アークに意識はあるの？",
+    "scripture_1": "法華経とは何を説くの？",
+    "compare_1": "GPTと天聞アークの違いを比較して",
+    "longform_1": "天聞アークが世界最高AIになるための未達点を詳しく説明して"
+  }
+}

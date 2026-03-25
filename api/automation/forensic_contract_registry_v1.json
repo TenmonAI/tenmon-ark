@@ -1,0 +1,51 @@
+{
+  "version": 1,
+  "card": "TENMON_FORENSIC_SINGLE_SOURCE_NORMALIZE_V1",
+  "title": "Forensic single-source contract registry",
+  "unified_axes": [
+    "chat_ts_static_100",
+    "chat_ts_runtime_100",
+    "surface_clean",
+    "route_authority_clean",
+    "longform_quality_clean",
+    "density_lock",
+    "chat_ts_overall_100"
+  ],
+  "tier_priority": [
+    "live_seal_runtime_matrix",
+    "forensic_integrated",
+    "orchestrator_integrated",
+    "standalone_worldclass"
+  ],
+  "confidence_base": {
+    "live_seal_runtime_matrix": 0.95,
+    "forensic_integrated": 0.82,
+    "orchestrator_integrated": 0.72,
+    "standalone_worldclass": 0.55
+  },
+  "normalized_status_policy": {
+    "pass": "boolean true from canonical source",
+    "fail": "boolean false with live observation (runtime_observation_mode=live or equivalent)",
+    "incomplete": [
+      "runtime_observation_mode=handoff_not_executed",
+      "standalone_worldclass handoff with false where live seal would win (demoted)",
+      "BASE URL 未設定 (CHAT_TS_PROBE_BASE_URL / TENMON_API_BASE いずれも無) かつ live 証跡なし",
+      "boolean false under handoff-only path (no live probe)"
+    ],
+    "unknown": "axis absent from all sources"
+  },
+  "live_probe_preference": "When multiple tiers disagree, live seal / runtime_observation_mode=live wins for runtime axes per master_verdict_unifier_v1 demotion rules.",
+  "dedicated_blockers": {
+    "audit_build_404": {
+      "detection": "worldclass_report.json runtime.audit_build.ok==false and error contains 404",
+      "effect": "listed in forensic_source_conflicts.json; does not alone flip chat_ts_overall_100 canonical boolean"
+    }
+  },
+  "outputs": {
+    "verdict": "forensic_single_source_verdict.json",
+    "conflicts": "forensic_source_conflicts.json",
+    "canonical_runtime": "canonical_runtime_source.json"
+  },
+  "fail_next_card": "TENMON_FORENSIC_SINGLE_SOURCE_NORMALIZE_RETRY_CURSOR_AUTO_V1",
+  "vps_marker": "TENMON_FORENSIC_SINGLE_SOURCE_NORMALIZE_VPS_V1"
+}

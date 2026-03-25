@@ -1,0 +1,19 @@
+{
+  "schema": "tenmon.cursor_runtime_job.v1",
+  "version": 1,
+  "required": [
+    "run_id",
+    "job_id",
+    "source_card",
+    "objective",
+    "scope_class",
+    "allowed_paths",
+    "forbidden_paths",
+    "verify_commands",
+    "result_required_files",
+    "result_return_mode",
+    "approval_policy",
+    "founder_guard_required"
+  ]
+}
+

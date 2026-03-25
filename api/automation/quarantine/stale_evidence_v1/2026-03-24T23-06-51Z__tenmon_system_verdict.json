@@ -1,0 +1,151 @@
+{
+  "card": "TENMON_SELF_AUDIT_OS_SINGLE_VERDICT_CURSOR_AUTO_V1",
+  "generated_at": "2026-03-24T19:47:56Z",
+  "pass": false,
+  "env_failure_separated": true,
+  "overall_band": "code_complete_lived_unproven",
+  "completion_gate": false,
+  "os_gate": false,
+  "final_recommended_card": "TENMON_PWA_RUNTIME_ENV_AND_PLAYWRIGHT_RESTORE_CURSOR_AUTO_V1",
+  "subsystems": {
+    "conversation_backend": {
+      "code_present": true,
+      "runtime_proven": false,
+      "accepted_complete": false,
+      "band": "yellow",
+      "primary_blockers": [
+        "conversation_runner_not_pass",
+        "chat_ts_overall_not_100"
+      ],
+      "source_files": [
+        "/opt/tenmon-ark-repo/api/automation/tenmon_total_unfinished_completion_report.json"
+      ]
+    },
+    "pwa_code_constitution": {
+      "code_present": true,
+      "runtime_proven": true,
+      "accepted_complete": true,
+      "band": "green",
+      "primary_blockers": [],
+      "source_files": [
+        "/opt/tenmon-ark-repo/api/automation/tenmon_total_unfinished_completion_report.json"
+      ]
+    },
+    "pwa_lived_proof": {
+      "code_present": true,
+      "runtime_proven": false,
+      "accepted_complete": false,
+      "band": "yellow",
+      "primary_blockers": [
+        "chat:continuity_failed",
+        "chat:new_chat_failed",
+        "chat:refresh_empty_response",
+        "chat:refresh_second_request_failed",
+        "chat:threadId_missing_in_response",
+        "continuity_fail",
+        "duplicate_or_bleed_fail",
+        "gate:audit",
+        "gate:audit_build",
+        "gate:health",
+        "gate_audit_build_fail",
+        "meta_leak_none"
+      ],
+      "source_files": [
+        "/opt/tenmon-ark-repo/api/automation/pwa_final_completion_readiness.json",
+        "/opt/tenmon-ark-repo/api/automation/pwa_lived_completion_readiness.json"
+      ]
+    },
+    "self_audit_os": {
+      "code_present": true,
+      "runtime_proven": false,
+      "accepted_complete": false,
+      "band": "red_env",
+      "primary_blockers": [
+        "verdict_source_split_not_single",
+        "orchestrator_integrated_verdict_exists",
+        "pwa_false_mostly_due_env_failure",
+        "pwa_blocker_json_present_and_may_be_stale_until_live_rerun",
+        "overall_band=code_complete_lived_unproven"
+      ],
+      "source_files": [
+        "/opt/tenmon-ark-repo/api/automation/tenmon_total_unfinished_completion_report.json"
+      ]
+    },
+    "self_repair_os": {
+      "code_present": true,
+      "runtime_proven": true,
+      "accepted_complete": false,
+      "band": "red_env",
+      "primary_blockers": [
+        "self_repair: dangerous_patch_blocker_report.blocked=true"
+      ],
+      "source_files": [
+        "/opt/tenmon-ark-repo/api/automation/self_build_os_integrated_verdict.json",
+        "/opt/tenmon-ark-repo/api/automation/final_master_readiness.json"
+      ]
+    },
+    "self_build_os": {
+      "code_present": true,
+      "runtime_proven": true,
+      "accepted_complete": false,
+      "band": "yellow",
+      "primary_blockers": [
+        "self_build_os_final_seal_not_yet_evidenced"
+      ],
+      "source_files": [
+        "/opt/tenmon-ark-repo/api/automation/self_build_os_integrated_verdict.json",
+        "/opt/tenmon-ark-repo/api/automation/tenmon_total_unfinished_completion_report.json"
+      ]
+    },
+    "remote_admin_cursor_bridge": {
+      "code_present": true,
+      "runtime_proven": true,
+      "accepted_complete": false,
+      "band": "red_env",
+      "primary_blockers": [
+        "remote_admin_runtime_proof_incomplete"
+      ],
+      "source_files": [
+        "/opt/tenmon-ark-repo/api/automation/cursor_mac_executor_v1.py",
+        "/opt/tenmon-ark-repo/api/scripts/remote_cursor_agent_mac_v1.sh",
+        "/opt/tenmon-ark-repo/api/scripts/remote_cursor_submit_v1.sh",
+        "/opt/tenmon-ark-repo/api/src/routes/adminCursorCommand.ts",
+        "/opt/tenmon-ark-repo/api/src/routes/adminCursorResult.ts",
+        "/opt/tenmon-ark-repo/api/src/routes/adminRemoteBuild.ts"
+      ],
+      "merged_from": [
+        "cursor_card_insert_ui",
+        "local_cursor_bridge",
+        "remote_build_dashboard"
+      ]
+    },
+    "learning_self_improvement": {
+      "code_present": true,
+      "runtime_proven": false,
+      "accepted_complete": false,
+      "band": "yellow",
+      "primary_blockers": [
+        "learning_integrated_verdict_not_ok",
+        "learning_chain_not_ok"
+      ],
+      "source_files": [
+        "/opt/tenmon-ark-repo/api/automation/learning_acceptance_audit.json",
+        "/opt/tenmon-ark-repo/api/automation/tenmon_total_unfinished_completion_report.json"
+      ]
+    }
+  },
+  "sources_mirrored": {
+    "tenmon_total_unfinished_completion_report.json": "/opt/tenmon-ark-repo/api/automation/tenmon_total_unfinished_completion_report.json",
+    "unfinished_priority_queue.json": "/opt/tenmon-ark-repo/api/automation/unfinished_priority_queue.json",
+    "vps_acceptance_report.json": "/opt/tenmon-ark-repo/api/automation/vps_acceptance_report.json",
+    "final_master_readiness.json": "/opt/tenmon-ark-repo/api/automation/final_master_readiness.json",
+    "learning_acceptance_audit.json": "/opt/tenmon-ark-repo/api/automation/learning_acceptance_audit.json",
+    "self_build_os_integrated_verdict.json": "/opt/tenmon-ark-repo/api/automation/self_build_os_integrated_verdict.json",
+    "pwa_final_completion_readiness.json": "/opt/tenmon-ark-repo/api/automation/pwa_final_completion_readiness.json",
+    "pwa_lived_completion_readiness.json": "/opt/tenmon-ark-repo/api/automation/pwa_lived_completion_readiness.json"
+  },
+  "notes": [
+    "過去の個別 report は削除せず、本ファイルを単一真実源として運用する。",
+    "env_failure と product failure は subsystems と env_failure_separated で分離して読む。"
+  ]
+}

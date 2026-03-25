@@ -1,0 +1,72 @@
+{
+  "version": 1,
+  "card": "TENMON_CURSOR_ONLY_REPO_HYGIENE_FINAL_SEAL_CURSOR_AUTO_V1",
+  "description": "generated / runtime residue — gitignore + 条件付き untracked purge",
+  "safe_relative_rmdirs": [
+    "api/automation/generated_cursor_apply",
+    "api/automation/generated_vps_cards",
+    "api/automation/out"
+  ],
+  "gitignore_lines": [
+    "# TENMON_CURSOR_ONLY_REPO_HYGIENE_FINAL_SEAL (generated / runtime)",
+    "api/automation/generated_cursor_apply/",
+    "api/automation/generated_vps_cards/",
+    "api/automation/out/",
+    "api/automation/TENMON_*",
+    "api/TENMON_*",
+    "api/automation/*_report.json",
+    "api/automation/*_report.md",
+    "api/automation/*_verdict.json",
+    "api/automation/*_summary.json",
+    "api/automation/*_readiness.json",
+    "api/automation/*_blockers.json",
+    "api/automation/*_trace.json",
+    "api/automation/*_forensic.json",
+    "api/automation/*.jsonl",
+    "api/audit.json",
+    "api/health.json",
+    "api/final_verdict.json",
+    "api/runtime_matrix.json",
+    "api/runtime_probe_matrix.json",
+    "api/integrated_acceptance_seal.json",
+    "api/longform_audit.json",
+    "api/route_authority_audit.json",
+    "api/route_reason_extract.json",
+    "api/surface_audit.json",
+    "api/vps_acceptance_report.json"
+  ],
+  "purge_untracked_basename_globs": [
+    "*_report.json",
+    "*_verdict.json",
+    "*_summary.json",
+    "*_readiness.json",
+    "*_blockers.json",
+    "*_trace.json",
+    "*_forensic.json",
+    "*.jsonl"
+  ],
+  "purge_untracked_exact_paths": [
+    "api/audit.json",
+    "api/health.json",
+    "api/final_verdict.json",
+    "api/runtime_matrix.json",
+    "api/runtime_probe_matrix.json",
+    "api/integrated_acceptance_seal.json",
+    "api/longform_audit.json",
+    "api/route_authority_audit.json",
+    "api/route_reason_extract.json",
+    "api/surface_audit.json",
+    "api/vps_acceptance_report.json"
+  ],
+  "purge_untracked_path_prefixes": [
+    "api/automation/TENMON_",
+    "api/TENMON_"
+  ],
+  "purge_untracked_subtree_prefixes": [
+    "api/automation/generated_cursor_apply/",
+    "api/automation/generated_vps_cards/",
+    "api/automation/out/",
+    "api/automation/_campaign/",
+    ".quarantine_untracked/"
+  ]
+}

@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tenmon-ark.local/automation/campaign_schema_v1.json",
+  "title": "AUTO_BUILD_MULTI_CARD_CAMPAIGN_V1 report",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "version",
+    "cardName",
+    "generatedAt",
+    "repoRoot",
+    "campaignPhase",
+    "cards",
+    "currentIndex",
+    "singleFlight",
+    "executionGate",
+    "humanGate",
+    "replayAuditPointer",
+    "transitionPreview",
+    "markdownHint"
+  ],
+  "properties": {
+    "version": { "type": "integer", "const": 1 },
+    "cardName": { "type": "string", "const": "AUTO_BUILD_MULTI_CARD_CAMPAIGN_V1" },
+    "generatedAt": { "type": "string" },
+    "repoRoot": { "type": "string" },
+    "campaignPhase": {
+      "type": "string",
+      "enum": ["stopped", "blocked", "waiting_human_gate", "completed", "idle", "ready"]
+    },
+    "cards": { "type": "array", "items": { "type": "string" } },
+    "currentIndex": { "type": "integer", "minimum": 0 },
+    "singleFlight": { "type": "object" },
+    "executionGate": { "type": "object" },
+    "humanGate": { "type": "object" },
+    "replayAuditPointer": { "type": "object" },
+    "transitionPreview": { "type": "array" },
+    "markdownHint": { "type": "string" },
+    "stateFileRelative": { "type": "string" },
+    "meta": { "type": "object" }
+  }
+}

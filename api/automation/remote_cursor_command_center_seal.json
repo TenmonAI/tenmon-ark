@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "card": "TENMON_REMOTE_CURSOR_COMMAND_CENTER_CURSOR_AUTO_V1",
+  "generatedAt": "2026-03-24T19:34:01Z",
+  "vps_card": "TENMON_REMOTE_CURSOR_COMMAND_CENTER_VPS_V1",
+  "fail_next_cursor_card": "TENMON_REMOTE_CURSOR_COMMAND_CENTER_CURSOR_AUTO_RETRY_V1",
+  "overall_ok": true,
+  "conditions": {
+    "queue_contract_ok": true,
+    "result_bundle_contract_ok": true,
+    "guard_clean": true
+  },
+  "queue_summary": {
+    "approval_required": 0,
+    "ready": 2,
+    "rejected": 0,
+    "delivered": 0,
+    "executed": 0
+  },
+  "guard_flagged_count": 0,
+  "result_bundle_entries": 0,
+  "inputs": {
+    "remote_cursor_queue": "/opt/tenmon-ark-repo/api/automation/remote_cursor_queue.json",
+    "remote_cursor_guard_report": "/opt/tenmon-ark-repo/api/automation/remote_cursor_guard_report.json",
+    "remote_cursor_result_bundle": "/opt/tenmon-ark-repo/api/automation/remote_cursor_result_bundle.json",
+    "remote_cursor_mac_agent_manifest": "/opt/tenmon-ark-repo/api/automation/remote_cursor_mac_agent_manifest.json"
+  },
+  "notes": "guard flagged あり、または queue/bundle 契約破壊で overall_ok=false"
+}

@@ -1,0 +1,297 @@
+{
+  "card": "TENMON_TOTAL_COMPLETION_MASTER_FORENSIC_REPORT_CURSOR_AUTO_V1",
+  "execution_contract_card": "TENMON_TOTAL_COMPLETION_MASTER_FORENSIC_REPORT_EXECUTION_CURSOR_AUTO_V1",
+  "generated_at": "2026-03-24T19:47:57Z",
+  "queue": [
+    {
+      "rank": 0,
+      "blocker": "recommended_card:TENMON_PWA_RUNTIME_ENV_AND_PLAYWRIGHT_RESTORE_CURSOR_AUTO_V1",
+      "severity": "high",
+      "kind": "must_run_first",
+      "seal_impact": "high",
+      "depends_on": []
+    },
+    {
+      "rank": 1,
+      "blocker": "gate:audit",
+      "severity": "high",
+      "kind": "must_run_first",
+      "seal_impact": "high",
+      "depends_on": []
+    },
+    {
+      "rank": 2,
+      "blocker": "gate:health",
+      "severity": "high",
+      "kind": "must_run_first",
+      "seal_impact": "high",
+      "depends_on": []
+    },
+    {
+      "rank": 3,
+      "blocker": "meta_leak_none",
+      "severity": "medium",
+      "kind": "seal_contract_close",
+      "seal_impact": "medium",
+      "depends_on": [
+        "infra_gate"
+      ]
+    },
+    {
+      "rank": 4,
+      "blocker": "continuity_fail",
+      "severity": "medium",
+      "kind": "seal_contract_close",
+      "seal_impact": "medium",
+      "depends_on": [
+        "infra_gate"
+      ]
+    },
+    {
+      "rank": 5,
+      "blocker": "gate:audit_build",
+      "severity": "high",
+      "kind": "must_run_first",
+      "seal_impact": "high",
+      "depends_on": []
+    },
+    {
+      "rank": 6,
+      "blocker": "final_ready_false",
+      "severity": "medium",
+      "kind": "seal_contract_close",
+      "seal_impact": "medium",
+      "depends_on": [
+        "infra_gate"
+      ]
+    },
+    {
+      "rank": 7,
+      "blocker": "massive_untracked",
+      "severity": "medium",
+      "kind": "stabilizer",
+      "seal_impact": "medium",
+      "depends_on": [
+        "infra_gate"
+      ]
+    },
+    {
+      "rank": 8,
+      "blocker": "chat:new_chat_failed",
+      "severity": "medium",
+      "kind": "seal_contract_close",
+      "seal_impact": "medium",
+      "depends_on": [
+        "infra_gate"
+      ]
+    },
+    {
+      "rank": 9,
+      "blocker": "gate_audit_build_fail",
+      "severity": "high",
+      "kind": "must_run_first",
+      "seal_impact": "high",
+      "depends_on": []
+    },
+    {
+      "rank": 10,
+      "blocker": "learning_chain_not_ok",
+      "severity": "medium",
+      "kind": "seal_contract_close",
+      "seal_impact": "medium",
+      "depends_on": [
+        "infra_gate"
+      ]
+    },
+    {
+      "rank": 11,
+      "blocker": "chat:continuity_failed",
+      "severity": "medium",
+      "kind": "seal_contract_close",
+      "seal_impact": "medium",
+      "depends_on": [
+        "infra_gate"
+      ]
+    },
+    {
+      "rank": 12,
+      "blocker": "chat_ts_overall_not_100",
+      "severity": "medium",
+      "kind": "seal_contract_close",
+      "seal_impact": "medium",
+      "depends_on": [
+        "infra_gate"
+      ]
+    },
+    {
+      "rank": 13,
+      "blocker": "duplicate_or_bleed_fail",
+      "severity": "medium",
+      "kind": "seal_contract_close",
+      "seal_impact": "medium",
+      "depends_on": [
+        "infra_gate"
+      ]
+    },
+    {
+      "rank": 14,
+      "blocker": "chat:refresh_empty_response",
+      "severity": "medium",
+      "kind": "seal_contract_close",
+      "seal_impact": "medium",
+      "depends_on": [
+        "infra_gate"
+      ]
+    },
+    {
+      "rank": 15,
+      "blocker": "conversation_runner_not_pass",
+      "severity": "medium",
+      "kind": "seal_contract_close",
+      "seal_impact": "medium",
+      "depends_on": [
+        "infra_gate"
+      ]
+    },
+    {
+      "rank": 16,
+      "blocker": "worldclass_scorecard_not_pass",
+      "severity": "medium",
+      "kind": "seal_contract_close",
+      "seal_impact": "medium",
+      "depends_on": [
+        "infra_gate"
+      ]
+    },
+    {
+      "rank": 17,
+      "blocker": "self_repair_safe_loop_not_pass",
+      "severity": "medium",
+      "kind": "seal_contract_close",
+      "seal_impact": "medium",
+      "depends_on": [
+        "infra_gate"
+      ]
+    },
+    {
+      "rank": 18,
+      "blocker": "self_repair_acceptance_not_pass",
+      "severity": "medium",
+      "kind": "seal_contract_close",
+      "seal_impact": "medium",
+      "depends_on": [
+        "infra_gate"
+      ]
+    },
+    {
+      "rank": 19,
+      "blocker": "verdict_source_split_not_single",
+      "severity": "medium",
+      "kind": "seal_contract_close",
+      "seal_impact": "medium",
+      "depends_on": [
+        "infra_gate"
+      ]
+    },
+    {
+      "rank": 20,
+      "blocker": "pwa_false_mostly_due_env_failure",
+      "severity": "high",
+      "kind": "after_env_restore",
+      "seal_impact": "high",
+      "depends_on": [
+        "infra_gate"
+      ]
+    },
+    {
+      "rank": 21,
+      "blocker": "chat:threadId_missing_in_response",
+      "severity": "medium",
+      "kind": "seal_contract_close",
+      "seal_impact": "medium",
+      "depends_on": [
+        "infra_gate"
+      ]
+    },
+    {
+      "rank": 22,
+      "blocker": "chat:refresh_second_request_failed",
+      "severity": "medium",
+      "kind": "seal_contract_close",
+      "seal_impact": "medium",
+      "depends_on": [
+        "infra_gate"
+      ]
+    },
+    {
+      "rank": 23,
+      "blocker": "learning_integrated_verdict_not_ok",
+      "severity": "medium",
+      "kind": "seal_contract_close",
+      "seal_impact": "medium",
+      "depends_on": [
+        "infra_gate"
+      ]
+    },
+    {
+      "rank": 24,
+      "blocker": "remote_admin_runtime_proof_incomplete",
+      "severity": "medium",
+      "kind": "seal_contract_close",
+      "seal_impact": "medium",
+      "depends_on": [
+        "infra_gate"
+      ]
+    },
+    {
+      "rank": 25,
+      "blocker": "orchestrator_integrated_verdict_exists",
+      "severity": "medium",
+      "kind": "seal_contract_close",
+      "seal_impact": "medium",
+      "depends_on": [
+        "infra_gate"
+      ]
+    },
+    {
+      "rank": 26,
+      "blocker": "overall_band=code_complete_lived_unproven",
+      "severity": "medium",
+      "kind": "seal_contract_close",
+      "seal_impact": "medium",
+      "depends_on": [
+        "infra_gate"
+      ]
+    },
+    {
+      "rank": 27,
+      "blocker": "self_build_os_final_seal_not_yet_evidenced",
+      "severity": "high",
+      "kind": "seal_contract_close",
+      "seal_impact": "high",
+      "depends_on": [
+        "infra_gate"
+      ]
+    },
+    {
+      "rank": 28,
+      "blocker": "self_repair: dangerous_patch_blocker_report.blocked=true",
+      "severity": "medium",
+      "kind": "seal_contract_close",
+      "seal_impact": "medium",
+      "depends_on": [
+        "infra_gate"
+      ]
+    },
+    {
+      "rank": 29,
+      "blocker": "pwa_blocker_json_present_and_may_be_stale_until_live_rerun",
+      "severity": "medium",
+      "kind": "seal_contract_close",
+      "seal_impact": "medium",
+      "depends_on": [
+        "infra_gate"
+      ]
+    }
+  ]
+}

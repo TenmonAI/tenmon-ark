@@ -1,0 +1,72 @@
+{
+  "card": "TENMON_STALE_EVIDENCE_INVALIDATION_CURSOR_AUTO_V1",
+  "generated_at": "2026-03-24T23:06:51Z",
+  "excluded": [
+    {
+      "name": "pwa_lived_completion_readiness.json",
+      "invalidated_at": "2026-03-24T23:06:51Z",
+      "reason": "stale_eight_registry_v1",
+      "card": "TENMON_STALE_EVIDENCE_INVALIDATION_CURSOR_AUTO_V1",
+      "action": "excluded_from_rejudge_stale_hints"
+    },
+    {
+      "name": "tenmon_remote_admin_cursor_runtime_proof_verdict.json",
+      "invalidated_at": "2026-03-24T23:06:51Z",
+      "reason": "stale_eight_registry_v1",
+      "card": "TENMON_STALE_EVIDENCE_INVALIDATION_CURSOR_AUTO_V1",
+      "action": "excluded_from_rejudge_stale_hints"
+    },
+    {
+      "name": "tenmon_repo_hygiene_watchdog_verdict.json",
+      "invalidated_at": "2026-03-24T23:06:51Z",
+      "reason": "stale_eight_registry_v1",
+      "card": "TENMON_STALE_EVIDENCE_INVALIDATION_CURSOR_AUTO_V1",
+      "action": "excluded_from_rejudge_stale_hints"
+    },
+    {
+      "name": "tenmon_self_build_execution_chain_verdict.json",
+      "invalidated_at": "2026-03-24T23:06:51Z",
+      "reason": "stale_eight_registry_v1",
+      "card": "TENMON_STALE_EVIDENCE_INVALIDATION_CURSOR_AUTO_V1",
+      "action": "excluded_from_rejudge_stale_hints"
+    },
+    {
+      "name": "tenmon_self_repair_acceptance_seal_verdict.json",
+      "invalidated_at": "2026-03-24T23:06:51Z",
+      "reason": "stale_eight_registry_v1",
+      "card": "TENMON_STALE_EVIDENCE_INVALIDATION_CURSOR_AUTO_V1",
+      "action": "excluded_from_rejudge_stale_hints"
+    },
+    {
+      "name": "tenmon_self_repair_safe_loop_verdict.json",
+      "invalidated_at": "2026-03-24T23:06:51Z",
+      "reason": "stale_eight_registry_v1",
+      "card": "TENMON_STALE_EVIDENCE_INVALIDATION_CURSOR_AUTO_V1",
+      "action": "excluded_from_rejudge_stale_hints"
+    },
+    {
+      "name": "tenmon_system_verdict.json",
+      "invalidated_at": "2026-03-24T23:06:51Z",
+      "reason": "stale_eight_registry_v1",
+      "card": "TENMON_STALE_EVIDENCE_INVALIDATION_CURSOR_AUTO_V1",
+      "action": "excluded_from_rejudge_stale_hints"
+    },
+    {
+      "name": "tenmon_worldclass_acceptance_scorecard.json",
+      "invalidated_at": "2026-03-24T23:06:51Z",
+      "reason": "stale_eight_registry_v1",
+      "card": "TENMON_STALE_EVIDENCE_INVALIDATION_CURSOR_AUTO_V1",
+      "action": "excluded_from_rejudge_stale_hints"
+    }
+  ],
+  "stale_eight": [
+    "pwa_lived_completion_readiness.json",
+    "tenmon_remote_admin_cursor_runtime_proof_verdict.json",
+    "tenmon_repo_hygiene_watchdog_verdict.json",
+    "tenmon_self_build_execution_chain_verdict.json",
+    "tenmon_self_repair_acceptance_seal_verdict.json",
+    "tenmon_self_repair_safe_loop_verdict.json",
+    "tenmon_system_verdict.json",
+    "tenmon_worldclass_acceptance_scorecard.json"
+  ]
+}

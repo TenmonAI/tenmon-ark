@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "card": "TENMON_CURSOR_RUNTIME_EXECUTION_CONTRACT_CURSOR_AUTO_V1",
+  "transport": {
+    "job_submit": "official_admin_queue_route",
+    "result_return": [
+      "official_admin_result_route",
+      "official_remote_result_ingest_path"
+    ],
+    "forbidden": [
+      "queue_json_manual_edit",
+      "result_bundle_direct_write",
+      "filesystem_drop_only_result_return"
+    ]
+  },
+  "execution": {
+    "scope_policy_path": "api/automation/cursor_runtime_scope_policy_v1.json",
+    "high_risk_guard": "gate_green_until_then_block",
+    "fixture_proof_counted_as_success": false
+  },
+  "approval": {
+    "founder_guard_required_for_high_risk": true,
+    "current_run_evidence_required": true
+  },
+  "verification": {
+    "must_match_same_run_job_pair": true,
+    "must_verify_queue_delivery_result_ingest_rejudge_chain": true,
+    "stale_verdict_as_truth_forbidden": true
+  },
+  "failure": {
+    "pass_without_contract_forbidden": true,
+    "seal_without_pass_forbidden": true
+  }
+}
+

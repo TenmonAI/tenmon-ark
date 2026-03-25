@@ -1,0 +1,68 @@
+{
+  "card": "TENMON_AUTONOMY_FIRST_LIVE_BOOTSTRAP_AND_SAFE_RUN_CURSOR_AUTO_V1",
+  "run_id": "firstlive_1774394394_1450680",
+  "started_at": "2026-03-24T23:19:54Z",
+  "last_updated": "2026-03-24T23:19:54Z",
+  "phase": "bootstrap_validation_failed",
+  "bootstrap_validation_pass": false,
+  "first_live_cycle_pass": false,
+  "safe_scope_enforced": true,
+  "high_risk_not_touched": true,
+  "founder_key_present": false,
+  "runtime_bind_present": true,
+  "queue_ready": true,
+  "result_bundle_ready": true,
+  "rejudge_callable": true,
+  "stop_reason": "founder_or_runtime_bind_missing",
+  "failed_phase": "bootstrap_validation",
+  "current_run_observe": {
+    "observed_at": "2026-03-24T23:19:54Z",
+    "delivery_log_offset_bytes": 1326,
+    "queue": {
+      "path": "/opt/tenmon-ark-repo/api/automation/remote_cursor_queue.json",
+      "exists": true,
+      "mtime_epoch": 1774380840.978967,
+      "size": 1141
+    },
+    "bundle": {
+      "path": "/opt/tenmon-ark-repo/api/automation/remote_cursor_result_bundle.json",
+      "exists": true,
+      "mtime_epoch": 1774380841.0629668,
+      "size": 302
+    },
+    "rebase_summary": {
+      "path": "/opt/tenmon-ark-repo/api/automation/tenmon_latest_truth_rebase_summary.json",
+      "exists": true,
+      "mtime_epoch": 1774393611.5287676,
+      "size": 1070
+    },
+    "rejudge_summary": {
+      "path": "/opt/tenmon-ark-repo/api/automation/tenmon_latest_state_rejudge_summary.json",
+      "exists": true,
+      "mtime_epoch": 1774393614.6527624,
+      "size": 5978
+    },
+    "rejudge_verdict": {
+      "path": "/opt/tenmon-ark-repo/api/automation/tenmon_latest_state_rejudge_and_seal_refresh_verdict.json",
+      "exists": true,
+      "mtime_epoch": 1774393614.6527624,
+      "size": 15401
+    },
+    "autonomy_state": {
+      "path": "/opt/tenmon-ark-repo/api/automation/operations_level_autonomy_state_v1.json",
+      "exists": true,
+      "mtime_epoch": 1774381382.949944,
+      "size": 387
+    },
+    "stale_invalidation_verdict": {
+      "path": "/opt/tenmon-ark-repo/api/automation/tenmon_stale_evidence_invalidation_verdict.json",
+      "exists": true,
+      "mtime_epoch": 1774393611.5287676,
+      "size": 11157
+    },
+    "pre_bundle_entry_count": 0
+  },
+  "last_job_id": "",
+  "chosen_card": null,
+  "recommended_next_card": "TENMON_REAL_CLOSED_LOOP_CURRENT_RUN_ACCEPTANCE_CURSOR_AUTO_V1"
+}

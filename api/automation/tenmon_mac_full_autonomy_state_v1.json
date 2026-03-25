@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "card": "TENMON_MAC_FULL_AUTONOMY_LOOP_RUNTIME_CURSOR_AUTO_V1",
+  "last_run_at": "2026-03-24T20:57:10Z",
+  "last_run_job_id": "",
+  "last_success_at": "",
+  "last_success_job_id": "",
+  "notes": "Mac フル自律閉路の実行状態。last_run_* は毎回更新、成功時のみ last_success_* を更新。"
+}

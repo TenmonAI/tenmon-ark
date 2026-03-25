@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tenmon.local/schemas/card_auto_generator_manifest_v1.json",
+  "title": "TENMON_CARD_AUTO_GENERATOR_MANIFEST_V1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "card",
+    "generatedAt",
+    "focused_theme",
+    "inputs",
+    "outputs"
+  ],
+  "properties": {
+    "schema_version": { "type": "integer", "const": 1 },
+    "card": { "type": "string" },
+    "generatedAt": { "type": "string" },
+    "focused_theme": {
+      "type": "string",
+      "enum": ["surface", "route", "longform", "density", "supplement_seal"]
+    },
+    "blocker_primary": { "type": "string" },
+    "cursor_card_name": { "type": "string" },
+    "vps_card_name": { "type": "string" },
+    "fail_next_card": { "type": "string" },
+    "inputs": {
+      "type": "object",
+      "properties": {
+        "seal_dir": { "type": "string" },
+        "ledger_jsonl": { "type": "string" },
+        "residual_priority_json": { "type": "string" },
+        "final_verdict_json": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "outputs": {
+      "type": "object",
+      "properties": {
+        "cursor_md_repo_path": { "type": "string" },
+        "vps_sh_repo_path": { "type": "string" },
+        "cursor_md_sample_path": { "type": "string" },
+        "vps_sh_sample_path": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "ledger_tail_hint": { "type": "string" },
+    "residual_hint": { "type": "string" }
+  }
+}

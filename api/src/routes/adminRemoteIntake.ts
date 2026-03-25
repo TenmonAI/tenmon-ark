@@ -12,6 +12,7 @@ import {
   guardRemoteAdminIntakePayload,
   type RemoteAdminIntakeKind,
 } from "../founder/remoteAdminGuardV1.js";
+import { requireFounderOrExecutorBearer } from "../founder/executorTokenV1.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -26,17 +27,6 @@ const GATE_PATH =
 const PLAN_PATH = path.join(AUTOMATION_DIR, "feature_autobuild_plan.json");
 const VPS_MARKER = "TENMON_SELF_BUILD_OS_PARENT_06_FEATURE_AUTOBUILD_AND_REMOTE_ADMIN_VPS_V1";
 const VPS_MARKER_PATH = path.join(AUTOMATION_DIR, VPS_MARKER);
-
-function founderKey(): string {
-  return process.env.FOUNDER_KEY || "CHANGE_ME_FOUNDER_KEY";
-}
-
-function requireFounder(req: Request, res: Response, next: () => void) {
-  const cookieOk = (req as any).cookies?.tenmon_founder === "1";
-  const headerKey = String(req.headers["x-founder-key"] ?? "").trim();
-  if (cookieOk || (headerKey && headerKey === founderKey())) return next();
-  return res.status(403).json({ ok: false, error: "FOUNDER_REQUIRED", detail: "login founder or X-Founder-Key" });
-}
 
 function utcIso() {
   return new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
@@ -122,7 +112,7 @@ function mergeMatched(slices: { guard: { matched_rules: string[] } }[]): string[
 }
 
 /** POST 遠隔投入 */
-adminRemoteIntakeRouter.post("/admin/remote-intake/submit", requireFounder, (req: Request, res: Response) => {
+adminRemoteIntakeRouter.post("/admin/remote-intake/submit", requireFounderOrExecutorBearer, (req: Request, res: Response) => {
   touchVpsMarker();
   const body = (req.body ?? {}) as Record<string, unknown>;
   const gate = guardRemoteAdminIntakePayload(body);
@@ -231,7 +221,7 @@ adminRemoteIntakeRouter.post("/admin/remote-intake/submit", requireFounder, (req
 });
 
 /** GET キュー */
-adminRemoteIntakeRouter.get("/admin/remote-intake/queue", requireFounder, (_req: Request, res: Response) => {
+adminRemoteIntakeRouter.get("/admin/remote-intake/queue", requireFounderOrExecutorBearer, (_req: Request, res: Response) => {
   touchVpsMarker();
   const q = readQueue();
   const summary = {
@@ -243,7 +233,7 @@ adminRemoteIntakeRouter.get("/admin/remote-intake/queue", requireFounder, (_req:
 });
 
 /** POST 承認 */
-adminRemoteIntakeRouter.post("/admin/remote-intake/approve", requireFounder, (req: Request, res: Response) => {
+adminRemoteIntakeRouter.post("/admin/remote-intake/approve", requireFounderOrExecutorBearer, (req: Request, res: Response) => {
   const id = String((req.body ?? {}).id ?? "").trim();
   if (!id) return res.status(400).json({ ok: false, error: "id required" });
   const q = readQueue();
@@ -266,7 +256,7 @@ adminRemoteIntakeRouter.post("/admin/remote-intake/approve", requireFounder, (re
 });
 
 /** 最小ダッシュボード */
-adminRemoteIntakeRouter.get("/admin/remote-intake/dashboard", requireFounder, (_req: Request, res: Response) => {
+adminRemoteIntakeRouter.get("/admin/remote-intake/dashboard", requireFounderOrExecutorBearer, (_req: Request, res: Response) => {
   res.type("html").send(`<!doctype html>
 <html lang="ja"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Remote Admin Intake (PARENT_06)</title>

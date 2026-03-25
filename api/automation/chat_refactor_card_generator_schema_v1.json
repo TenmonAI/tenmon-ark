@@ -1,0 +1,59 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://tenmon.local/schema/chat_refactor_card_generator_v1.json",
+  "title": "chat_refactor_card_generator_v1 manifest",
+  "type": "object",
+  "required": ["schema_version", "card", "generatedAt", "pairs", "focused_item", "cursor_card", "vps_card", "fail_next_cursor_card"],
+  "properties": {
+    "schema_version": { "type": "integer", "const": 1 },
+    "card": { "type": "string", "const": "TENMON_CHAT_REFACTOR_CARD_GENERATOR_V1" },
+    "generatedAt": { "type": "string" },
+    "fail_next_cursor_card": {
+      "type": "string",
+      "const": "TENMON_CHAT_REFACTOR_CARD_GENERATOR_RETRY_CURSOR_AUTO_V1"
+    },
+    "generator_vps_card": {
+      "type": "string",
+      "const": "TENMON_CHAT_REFACTOR_CARD_GENERATOR_VPS_V1"
+    },
+    "inputs": {
+      "type": "object",
+      "properties": {
+        "plan_card": { "type": ["string", "null"] },
+        "risk_partition_version": { "type": ["integer", "null"] }
+      }
+    },
+    "pairs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["theme", "risk", "mode", "cursor_card", "vps_card", "paths"],
+        "properties": {
+          "theme": { "type": "string" },
+          "risk": { "type": "string", "enum": ["low", "medium", "high"] },
+          "mode": { "type": "string", "enum": ["cursor_auto_apply", "proposal_gated"] },
+          "cursor_card": { "type": "string" },
+          "vps_card": { "type": "string" },
+          "paths": {
+            "type": "object",
+            "properties": {
+              "cursor_md": { "type": "string" },
+              "vps_sh": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "focused_item": { "type": "object" },
+    "cursor_card": { "type": "string" },
+    "vps_card": { "type": "string" },
+    "paths": {
+      "type": "object",
+      "properties": {
+        "cursor_md": { "type": "string" },
+        "vps_sh": { "type": "string" },
+        "card_manifest": { "type": "string" }
+      }
+    }
+  }
+}

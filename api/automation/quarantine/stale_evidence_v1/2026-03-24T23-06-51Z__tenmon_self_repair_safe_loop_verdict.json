@@ -1,0 +1,376 @@
+{
+  "card": "TENMON_SELF_REPAIR_OS_SAFE_PATCH_LOOP_CURSOR_AUTO_V1",
+  "generated_at": "2026-03-23T20:27:43Z",
+  "pass": false,
+  "repair_candidates": [
+    {
+      "path": "api/automation/.gitignore",
+      "patch_class": "safe_hygiene",
+      "in_high_risk_list": false
+    },
+    {
+      "path": "api/automation/auto_build_runner_v1.py",
+      "patch_class": "safe_hygiene",
+      "in_high_risk_list": false
+    },
+    {
+      "path": "api/automation/card_catalog_v1.json",
+      "patch_class": "safe_hygiene",
+      "in_high_risk_list": false
+    },
+    {
+      "path": "api/automation/card_dependency_graph_v1.json",
+      "patch_class": "safe_hygiene",
+      "in_high_risk_list": false
+    },
+    {
+      "path": "api/automation/chatts_audit_suite_v1.py",
+      "patch_class": "safe_hygiene",
+      "in_high_risk_list": false
+    },
+    {
+      "path": "api/automation/chatts_exit_contract_lock_v1.py",
+      "patch_class": "safe_hygiene",
+      "in_high_risk_list": false
+    },
+    {
+      "path": "api/automation/chatts_trunk_domain_map_v1.py",
+      "patch_class": "safe_hygiene",
+      "in_high_risk_list": false
+    },
+    {
+      "path": "api/automation/cursor_bridge_v1.py",
+      "patch_class": "safe_hygiene",
+      "in_high_risk_list": false
+    },
+    {
+      "path": "api/automation/fail_classifier_v1.py",
+      "patch_class": "safe_hygiene",
+      "in_high_risk_list": false
+    },
+    {
+      "path": "api/automation/patch_planner_v1.py",
+      "patch_class": "safe_hygiene",
+      "in_high_risk_list": false
+    },
+    {
+      "path": "api/automation/queue_scheduler_v1.py",
+      "patch_class": "safe_hygiene",
+      "in_high_risk_list": false
+    },
+    {
+      "path": "api/scripts/probe_matrix.sh",
+      "patch_class": "safe_runner",
+      "in_high_risk_list": false
+    },
+    {
+      "path": "api/src/core/responseComposer.ts",
+      "patch_class": "unsafe_runtime_core",
+      "in_high_risk_list": false
+    },
+    {
+      "path": "api/src/core/subconceptCanon.ts",
+      "patch_class": "unsafe_runtime_core",
+      "in_high_risk_list": false
+    },
+    {
+      "path": "api/src/core/tenmonBrainstem.ts",
+      "patch_class": "unsafe_runtime_core",
+      "in_high_risk_list": false
+    },
+    {
+      "path": "api/src/core/threadCore.ts",
+      "patch_class": "unsafe_runtime_core",
+      "in_high_risk_list": false
+    },
+    {
+      "path": "api/src/core/threadSeed.ts",
+      "patch_class": "unsafe_runtime_core",
+      "in_high_risk_list": false
+    },
+    {
+      "path": "api/src/index.ts",
+      "patch_class": "unsafe_runtime_core",
+      "in_high_risk_list": false
+    },
+    {
+      "path": "api/src/kokuzo/search.ts",
+      "patch_class": "unsafe_runtime_core",
+      "in_high_risk_list": false
+    },
+    {
+      "path": "api/src/planning/responsePlanCore.ts",
+      "patch_class": "unsafe_runtime_core",
+      "in_high_risk_list": false
+    },
+    {
+      "path": "api/src/routes/chat.ts",
+      "patch_class": "unsafe_contract",
+      "in_high_risk_list": true
+    },
+    {
+      "path": "api/src/routes/chat_parts/seed_impl.ts",
+      "patch_class": "unsafe_contract",
+      "in_high_risk_list": false
+    },
+    {
+      "path": "api/src/routes/chat_refactor/finalize.ts",
+      "patch_class": "unsafe_contract",
+      "in_high_risk_list": false
+    },
+    {
+      "path": "api/src/routes/chat_refactor/general.ts",
+      "patch_class": "unsafe_contract",
+      "in_high_risk_list": false
+    },
+    {
+      "path": "api/src/routes/chat_refactor/humanReadableLawLayerV1.ts",
+      "patch_class": "unsafe_contract",
+      "in_high_risk_list": false
+    },
+    {
+      "path": "api/src/routes/chat_refactor/majorRoutes.ts",
+      "patch_class": "unsafe_contract",
+      "in_high_risk_list": false
+    },
+    {
+      "path": "api/src/types/chat.ts",
+      "patch_class": "unsafe_runtime_core",
+      "in_high_risk_list": false
+    }
+  ],
+  "safe_candidates": [
+    {
+      "path": "api/automation/.gitignore",
+      "patch_class": "safe_hygiene",
+      "in_high_risk_list": false,
+      "eligible": true
+    },
+    {
+      "path": "api/automation/auto_build_runner_v1.py",
+      "patch_class": "safe_hygiene",
+      "in_high_risk_list": false,
+      "eligible": true
+    },
+    {
+      "path": "api/automation/card_catalog_v1.json",
+      "patch_class": "safe_hygiene",
+      "in_high_risk_list": false,
+      "eligible": true
+    },
+    {
+      "path": "api/automation/card_dependency_graph_v1.json",
+      "patch_class": "safe_hygiene",
+      "in_high_risk_list": false,
+      "eligible": true
+    },
+    {
+      "path": "api/automation/chatts_audit_suite_v1.py",
+      "patch_class": "safe_hygiene",
+      "in_high_risk_list": false,
+      "eligible": true
+    },
+    {
+      "path": "api/automation/chatts_exit_contract_lock_v1.py",
+      "patch_class": "safe_hygiene",
+      "in_high_risk_list": false,
+      "eligible": true
+    },
+    {
+      "path": "api/automation/chatts_trunk_domain_map_v1.py",
+      "patch_class": "safe_hygiene",
+      "in_high_risk_list": false,
+      "eligible": true
+    },
+    {
+      "path": "api/automation/cursor_bridge_v1.py",
+      "patch_class": "safe_hygiene",
+      "in_high_risk_list": false,
+      "eligible": true
+    },
+    {
+      "path": "api/automation/fail_classifier_v1.py",
+      "patch_class": "safe_hygiene",
+      "in_high_risk_list": false,
+      "eligible": true
+    },
+    {
+      "path": "api/automation/patch_planner_v1.py",
+      "patch_class": "safe_hygiene",
+      "in_high_risk_list": false,
+      "eligible": true
+    },
+    {
+      "path": "api/automation/queue_scheduler_v1.py",
+      "patch_class": "safe_hygiene",
+      "in_high_risk_list": false,
+      "eligible": true
+    },
+    {
+      "path": "api/scripts/probe_matrix.sh",
+      "patch_class": "safe_runner",
+      "in_high_risk_list": false,
+      "eligible": true
+    }
+  ],
+  "blocked_candidates": [
+    {
+      "path": "api/src/core/responseComposer.ts",
+      "patch_class": "unsafe_runtime_core",
+      "in_high_risk_list": false,
+      "block_reasons": [
+        "unsafe_patch_class_not_eligible_for_execution_gate"
+      ]
+    },
+    {
+      "path": "api/src/core/subconceptCanon.ts",
+      "patch_class": "unsafe_runtime_core",
+      "in_high_risk_list": false,
+      "block_reasons": [
+        "unsafe_patch_class_not_eligible_for_execution_gate"
+      ]
+    },
+    {
+      "path": "api/src/core/tenmonBrainstem.ts",
+      "patch_class": "unsafe_runtime_core",
+      "in_high_risk_list": false,
+      "block_reasons": [
+        "unsafe_patch_class_not_eligible_for_execution_gate"
+      ]
+    },
+    {
+      "path": "api/src/core/threadCore.ts",
+      "patch_class": "unsafe_runtime_core",
+      "in_high_risk_list": false,
+      "block_reasons": [
+        "unsafe_patch_class_not_eligible_for_execution_gate"
+      ]
+    },
+    {
+      "path": "api/src/core/threadSeed.ts",
+      "patch_class": "unsafe_runtime_core",
+      "in_high_risk_list": false,
+      "block_reasons": [
+        "unsafe_patch_class_not_eligible_for_execution_gate"
+      ]
+    },
+    {
+      "path": "api/src/index.ts",
+      "patch_class": "unsafe_runtime_core",
+      "in_high_risk_list": false,
+      "block_reasons": [
+        "unsafe_patch_class_not_eligible_for_execution_gate"
+      ]
+    },
+    {
+      "path": "api/src/kokuzo/search.ts",
+      "patch_class": "unsafe_runtime_core",
+      "in_high_risk_list": false,
+      "block_reasons": [
+        "unsafe_patch_class_not_eligible_for_execution_gate"
+      ]
+    },
+    {
+      "path": "api/src/planning/responsePlanCore.ts",
+      "patch_class": "unsafe_runtime_core",
+      "in_high_risk_list": false,
+      "block_reasons": [
+        "unsafe_patch_class_not_eligible_for_execution_gate"
+      ]
+    },
+    {
+      "path": "api/src/routes/chat.ts",
+      "patch_class": "unsafe_contract",
+      "in_high_risk_list": true,
+      "block_reasons": [
+        "unsafe_patch_class_not_eligible_for_execution_gate",
+        "high_risk_hit",
+        "dangerous_blocker_global_blocked"
+      ]
+    },
+    {
+      "path": "api/src/routes/chat_parts/seed_impl.ts",
+      "patch_class": "unsafe_contract",
+      "in_high_risk_list": false,
+      "block_reasons": [
+        "unsafe_patch_class_not_eligible_for_execution_gate"
+      ]
+    },
+    {
+      "path": "api/src/routes/chat_refactor/finalize.ts",
+      "patch_class": "unsafe_contract",
+      "in_high_risk_list": false,
+      "block_reasons": [
+        "unsafe_patch_class_not_eligible_for_execution_gate"
+      ]
+    },
+    {
+      "path": "api/src/routes/chat_refactor/general.ts",
+      "patch_class": "unsafe_contract",
+      "in_high_risk_list": false,
+      "block_reasons": [
+        "unsafe_patch_class_not_eligible_for_execution_gate"
+      ]
+    },
+    {
+      "path": "api/src/routes/chat_refactor/humanReadableLawLayerV1.ts",
+      "patch_class": "unsafe_contract",
+      "in_high_risk_list": false,
+      "block_reasons": [
+        "unsafe_patch_class_not_eligible_for_execution_gate"
+      ]
+    },
+    {
+      "path": "api/src/routes/chat_refactor/majorRoutes.ts",
+      "patch_class": "unsafe_contract",
+      "in_high_risk_list": false,
+      "block_reasons": [
+        "unsafe_patch_class_not_eligible_for_execution_gate"
+      ]
+    },
+    {
+      "path": "api/src/types/chat.ts",
+      "patch_class": "unsafe_runtime_core",
+      "in_high_risk_list": false,
+      "block_reasons": [
+        "unsafe_patch_class_not_eligible_for_execution_gate"
+      ]
+    }
+  ],
+  "rollback_ready": true,
+  "execution_allowed": false,
+  "recommended_candidate": {
+    "path": "api/automation/.gitignore",
+    "patch_class": "safe_hygiene",
+    "in_high_risk_list": false,
+    "eligible": true
+  },
+  "inputs": {
+    "system_verdict": "/opt/tenmon-ark-repo/api/automation/tenmon_system_verdict.json",
+    "regression_memory": "/opt/tenmon-ark-repo/api/automation/tenmon_regression_memory.json",
+    "dangerous_patch_blocker_report": "/opt/tenmon-ark-repo/api/automation/dangerous_patch_blocker_report.json",
+    "patch_diff_minimizer_report": "/opt/tenmon-ark-repo/api/automation/patch_diff_minimizer_report.json",
+    "rollback_plan": "/opt/tenmon-ark-repo/api/automation/rollback_plan.json",
+    "execution_gate_report": null
+  },
+  "signals": {
+    "dangerous_patch_blocked": true,
+    "regression_continue": true,
+    "diff_minimizer_ok": true,
+    "execution_gate_ok": true,
+    "self_repair_subsystem_accepted": false
+  },
+  "patch_class_policy": {
+    "safe_classes": [
+      "safe_hygiene",
+      "safe_runner",
+      "safe_surface"
+    ],
+    "unsafe_classes": [
+      "unsafe_contract",
+      "unsafe_runtime_core",
+      "unsafe_schema"
+    ],
+    "note": "unsafe_* は execution gate に渡さない。auto-apply は safe class のみ。"
+  }
+}

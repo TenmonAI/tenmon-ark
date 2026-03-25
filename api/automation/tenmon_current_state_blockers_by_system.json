@@ -1,0 +1,147 @@
+{
+  "infra_gate": {
+    "code_present": true,
+    "runtime_proven": true,
+    "accepted_complete": true,
+    "band": "runtime_good",
+    "primary_blockers": [],
+    "staleness_risk": false,
+    "evidence_paths": [
+      "health_raw.txt",
+      "audit_raw.json",
+      "audit_build_raw.json"
+    ]
+  },
+  "conversation_backend": {
+    "code_present": true,
+    "runtime_proven": true,
+    "accepted_complete": false,
+    "band": "runtime_good",
+    "primary_blockers": [
+      "duplication_signal"
+    ],
+    "staleness_risk": false,
+    "evidence_paths": [
+      "chat_probe_1.json",
+      "chat_probe_2.json"
+    ]
+  },
+  "pwa_lived_proof": {
+    "code_present": true,
+    "runtime_proven": false,
+    "accepted_complete": false,
+    "band": "lived_blocked",
+    "primary_blockers": [],
+    "staleness_risk": true,
+    "evidence_paths": [
+      "/opt/tenmon-ark-repo/api/automation/pwa_lived_completion_readiness.json"
+    ]
+  },
+  "repo_hygiene": {
+    "code_present": true,
+    "runtime_proven": true,
+    "accepted_complete": true,
+    "band": "dirty_repo",
+    "primary_blockers": [
+      "untracked_600",
+      "reload_residue_0",
+      "sessionid_residue_5",
+      "suspicious_0"
+    ],
+    "staleness_risk": false,
+    "evidence_paths": [
+      "git_status.txt",
+      "reload_residue.txt",
+      "sessionid_residue.txt",
+      "suspicious_untracked.txt"
+    ]
+  },
+  "self_audit_os": {
+    "code_present": true,
+    "runtime_proven": true,
+    "accepted_complete": false,
+    "band": "code_complete_lived_unproven",
+    "primary_blockers": [],
+    "staleness_risk": false,
+    "evidence_paths": [
+      "/opt/tenmon-ark-repo/api/automation/tenmon_system_verdict.json"
+    ]
+  },
+  "self_repair_os": {
+    "code_present": true,
+    "runtime_proven": true,
+    "accepted_complete": false,
+    "band": "safe_loop_present_unsealed",
+    "primary_blockers": [
+      {
+        "path": "api/src/core/responseComposer.ts",
+        "patch_class": "unsafe_runtime_core",
+        "in_high_risk_list": false,
+        "block_reasons": [
+          "unsafe_patch_class_not_eligible_for_execution_gate"
+        ]
+      },
+      {
+        "path": "api/src/core/subconceptCanon.ts",
+        "patch_class": "unsafe_runtime_core",
+        "in_high_risk_list": false,
+        "block_reasons": [
+          "unsafe_patch_class_not_eligible_for_execution_gate"
+        ]
+      },
+      {
+        "path": "api/src/core/tenmonBrainstem.ts",
+        "patch_class": "unsafe_runtime_core",
+        "in_high_risk_list": false,
+        "block_reasons": [
+          "unsafe_patch_class_not_eligible_for_execution_gate"
+        ]
+      },
+      {
+        "path": "api/src/core/threadCore.ts",
+        "patch_class": "unsafe_runtime_core",
+        "in_high_risk_list": false,
+        "block_reasons": [
+          "unsafe_patch_class_not_eligible_for_execution_gate"
+        ]
+      }
+    ],
+    "staleness_risk": false,
+    "evidence_paths": [
+      "/opt/tenmon-ark-repo/api/automation/tenmon_self_repair_safe_loop_verdict.json"
+    ]
+  },
+  "self_build_os": {
+    "code_present": true,
+    "runtime_proven": true,
+    "accepted_complete": true,
+    "band": "chain_present_partial",
+    "primary_blockers": [],
+    "staleness_risk": false,
+    "evidence_paths": [
+      "/opt/tenmon-ark-repo/api/automation/tenmon_self_build_execution_chain_verdict.json"
+    ]
+  },
+  "remote_admin_cursor": {
+    "code_present": true,
+    "runtime_proven": true,
+    "accepted_complete": false,
+    "band": "runtime_proof_partial",
+    "primary_blockers": [],
+    "staleness_risk": false,
+    "evidence_paths": [
+      "/opt/tenmon-ark-repo/api/automation/tenmon_remote_admin_cursor_runtime_proof_verdict.json"
+    ]
+  },
+  "learning_self_improvement": {
+    "code_present": false,
+    "runtime_proven": false,
+    "accepted_complete": false,
+    "band": "absent",
+    "primary_blockers": [],
+    "staleness_risk": false,
+    "evidence_paths": [
+      "/opt/tenmon-ark-repo/api/automation/tenmon_learning_self_improvement_integrated_verdict.json"
+    ]
+  }
+}

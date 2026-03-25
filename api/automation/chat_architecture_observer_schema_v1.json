@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tenmon.local/schemas/chat_architecture_report_v1.json",
+  "title": "CHAT_ARCHITECTURE_REPORT_V1",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "schema_version",
+    "card",
+    "generatedAt",
+    "chat_path",
+    "line_count",
+    "import_count",
+    "route_reason_unique_count",
+    "threadCore_count",
+    "responsePlan_count",
+    "synapse_count",
+    "hot_windows",
+    "duplicate_responsibility",
+    "trunk_wiring",
+    "surface_bleed_points"
+  ],
+  "properties": {
+    "schema_version": { "type": "integer", "const": 1 },
+    "card": { "type": "string" },
+    "generatedAt": { "type": "string" },
+    "chat_path": { "type": "string" },
+    "line_count": { "type": "integer", "minimum": 0 },
+    "import_count": { "type": "integer", "minimum": 0 },
+    "route_reason_unique_count": { "type": "integer", "minimum": 0 },
+    "threadCore_count": { "type": "integer", "minimum": 0 },
+    "responsePlan_count": { "type": "integer", "minimum": 0 },
+    "synapse_count": { "type": "integer", "minimum": 0 },
+    "hot_windows": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["start_line", "end_line", "hit_terms"],
+        "properties": {
+          "start_line": { "type": "integer" },
+          "end_line": { "type": "integer" },
+          "hit_terms": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["term", "count"],
+              "properties": {
+                "term": { "type": "string" },
+                "count": { "type": "integer" }
+              }
+            }
+          },
+          "heat_score": { "type": "number" }
+        }
+      }
+    },
+    "duplicate_responsibility": { "type": "object" },
+    "trunk_wiring": { "type": "object" },
+    "surface_bleed_points": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "line": { "type": "integer" },
+          "category": { "type": "string" },
+          "term": { "type": "string" },
+          "excerpt": { "type": "string" }
+        }
+      }
+    }
+  }
+}

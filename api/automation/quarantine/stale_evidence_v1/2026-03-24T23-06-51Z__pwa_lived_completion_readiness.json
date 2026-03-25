@@ -1,0 +1,18 @@
+{
+  "card": "TENMON_PWA_LIVED_COMPLETION_SEAL_V1",
+  "generated_at": "2026-03-23T23:03:30Z",
+  "health_ok": true,
+  "audit_ok": true,
+  "audit_build_ok": true,
+  "thread_id_presence_ok": true,
+  "url_sync_readiness": true,
+  "refresh_restore_readiness": true,
+  "new_chat_readiness": true,
+  "continuity_readiness": true,
+  "surface_meta_duplicate_bleed_clean": false,
+  "factual_response_ok": true,
+  "final_ready": false,
+  "env_failure": false,
+  "driver_selected": "python_playwright",
+  "playwright_preflight_usable": true
+}

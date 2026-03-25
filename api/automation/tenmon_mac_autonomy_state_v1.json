@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "card": "TENMON_MAC_AUTONOMY_24H_SAFE_GUARD_CURSOR_AUTO_V1",
+  "status": "idle",
+  "heartbeat_at": "",
+  "heartbeat_pid": null,
+  "last_heartbeat_screenshot": "",
+  "last_success_cycle_at": "",
+  "consecutive_failures": 0,
+  "last_stop_reason": "",
+  "auth_session_ok": true,
+  "browser_available": true,
+  "cursor_available": true,
+  "queue_integrity_ok": true,
+  "ui_drift_detected": false,
+  "notes": "watchdog が更新。tenmon_mac_autonomy_24h_guard_v1.py が毎回書き込む。"
+}

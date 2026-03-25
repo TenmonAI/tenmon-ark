@@ -1,0 +1,29 @@
+{
+  "version": 2,
+  "card_format": "markdown_single_source",
+  "generatedAt": "2026-03-23T03:29:37Z",
+  "required_fields": [
+    "CARD_NAME",
+    "OBJECTIVE",
+    "WHY_NOW",
+    "EDIT_SCOPE",
+    "DO_NOT_TOUCH",
+    "IMPLEMENTATION_POLICY",
+    "ACCEPTANCE",
+    "VPS_VALIDATION_OUTPUTS",
+    "FAIL_NEXT_CARD"
+  ],
+  "field_conventions": {
+    "CARD_NAME": "先頭付近に `CARD_NAME: TENMON_...` 形式",
+    "sections": "各フィールドは見出し `## OBJECTIVE` または行 `OBJECTIVE:` で開始"
+  },
+  "outputs_expected": [
+    "cursor_campaign_manifest.json",
+    "cursor_result_bundle.json",
+    "cursor_retry_queue.json"
+  ],
+  "notes": [
+    "VPS bash と Cursor 指示を混在させない — 本スキーマに従う 1 ファイルに統一",
+    "multi-card campaign は cursor_campaign_manifest.json で 1→N 分解"
+  ]
+}

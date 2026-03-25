@@ -23,6 +23,7 @@ import {
   type RemoteBuildJobRecord,
   type RemoteBuildPriority,
 } from "../founder/remoteBuildJobManifestV1.js";
+import { requireFounderOrExecutorBearer } from "../founder/executorTokenV1.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -49,17 +50,6 @@ const VPS_MARKER_PATH = path.join(AUTOMATION_DIR, VPS_MARKER);
 const LOG_HINT_DEFAULT =
   process.env.TENMON_REMOTE_BUILD_LOG_HINT ||
   "automation/out/ · seal 実行時は /var/log/tenmon/card_* の run.log を参照";
-
-function founderKey(): string {
-  return process.env.FOUNDER_KEY || "CHANGE_ME_FOUNDER_KEY";
-}
-
-function requireFounder(req: Request, res: Response, next: () => void) {
-  const cookieOk = (req as any).cookies?.tenmon_founder === "1";
-  const headerKey = String(req.headers["x-founder-key"] ?? "").trim();
-  if (cookieOk || (headerKey && headerKey === founderKey())) return next();
-  return res.status(403).json({ ok: false, error: "FOUNDER_REQUIRED", detail: "login founder or X-Founder-Key" });
-}
 
 function utcIso() {
   return new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
@@ -141,7 +131,7 @@ function parsePriority(x: unknown): RemoteBuildPriority {
 }
 
 /** POST ジョブ登録（実行はしない） */
-adminRemoteBuildRouter.post("/admin/remote-build/jobs", requireFounder, (req: Request, res: Response) => {
+adminRemoteBuildRouter.post("/admin/remote-build/jobs", requireFounderOrExecutorBearer, (req: Request, res: Response) => {
   touchVpsMarker();
   const body = (req.body ?? {}) as Record<string, unknown>;
   const cardName = String(body.cardName ?? body.card_name ?? "").trim();
@@ -204,7 +194,7 @@ adminRemoteBuildRouter.post("/admin/remote-build/jobs", requireFounder, (req: Re
 });
 
 /** GET 一覧 */
-adminRemoteBuildRouter.get("/admin/remote-build/jobs", requireFounder, (_req: Request, res: Response) => {
+adminRemoteBuildRouter.get("/admin/remote-build/jobs", requireFounderOrExecutorBearer, (_req: Request, res: Response) => {
   touchVpsMarker();
   const q = readJobs();
   writeManifestAndArtifacts(q);
@@ -222,7 +212,7 @@ adminRemoteBuildRouter.get("/admin/remote-build/jobs", requireFounder, (_req: Re
 });
 
 /** GET 1 件 */
-adminRemoteBuildRouter.get("/admin/remote-build/jobs/:id", requireFounder, (req: Request, res: Response) => {
+adminRemoteBuildRouter.get("/admin/remote-build/jobs/:id", requireFounderOrExecutorBearer, (req: Request, res: Response) => {
   const id = String(req.params.id ?? "").trim();
   const q = readJobs();
   const it = q.items.find((x) => x.jobId === id);
@@ -231,7 +221,7 @@ adminRemoteBuildRouter.get("/admin/remote-build/jobs/:id", requireFounder, (req:
 });
 
 /** POST rollback 指示（状態のみ更新、実行は別工程） */
-adminRemoteBuildRouter.post("/admin/remote-build/jobs/:id/rollback", requireFounder, (req: Request, res: Response) => {
+adminRemoteBuildRouter.post("/admin/remote-build/jobs/:id/rollback", requireFounderOrExecutorBearer, (req: Request, res: Response) => {
   touchVpsMarker();
   const id = String(req.params.id ?? "").trim();
   const note = String((req.body as any)?.notes ?? "").trim().slice(0, 2000);
@@ -247,7 +237,7 @@ adminRemoteBuildRouter.post("/admin/remote-build/jobs/:id/rollback", requireFoun
 });
 
 /** VPS 用: manifest + 成果物を再出力（応答に manifest 本文を含む） */
-adminRemoteBuildRouter.get("/admin/remote-build/vps-snapshot", requireFounder, (_req: Request, res: Response) => {
+adminRemoteBuildRouter.get("/admin/remote-build/vps-snapshot", requireFounderOrExecutorBearer, (_req: Request, res: Response) => {
   touchVpsMarker();
   const q = readJobs();
   writeManifestAndArtifacts(q);
@@ -274,7 +264,7 @@ adminRemoteBuildRouter.get("/admin/remote-build/vps-snapshot", requireFounder, (
 });
 
 /** POST Mac からの結果束取り込み（remote_build_result_collector_v1.py） */
-adminRemoteBuildRouter.post("/admin/remote-build/result-ingest", requireFounder, (req: Request, res: Response) => {
+adminRemoteBuildRouter.post("/admin/remote-build/result-ingest", requireFounderOrExecutorBearer, (req: Request, res: Response) => {
   touchVpsMarker();
   const body = req.body;
   if (!body || typeof body !== "object") {
@@ -307,7 +297,7 @@ adminRemoteBuildRouter.post("/admin/remote-build/result-ingest", requireFounder,
 });
 
 /** GET seal 裁定（remote_build_final_verdict.json） */
-adminRemoteBuildRouter.get("/admin/remote-build/final-verdict", requireFounder, (_req: Request, res: Response) => {
+adminRemoteBuildRouter.get("/admin/remote-build/final-verdict", requireFounderOrExecutorBearer, (_req: Request, res: Response) => {
   touchVpsMarker();
   if (!fs.existsSync(FINAL_VERDICT_PATH)) {
     return res.status(404).json({ ok: false, error: "final_verdict_not_found", path: FINAL_VERDICT_PATH });
@@ -321,7 +311,7 @@ adminRemoteBuildRouter.get("/admin/remote-build/final-verdict", requireFounder, 
 });
 
 /** POST seal governor 再実行 */
-adminRemoteBuildRouter.post("/admin/remote-build/seal-run", requireFounder, (_req: Request, res: Response) => {
+adminRemoteBuildRouter.post("/admin/remote-build/seal-run", requireFounderOrExecutorBearer, (_req: Request, res: Response) => {
   touchVpsMarker();
   const repoRoot = path.join(__dirname, "..", "..");
   try {
@@ -344,7 +334,7 @@ adminRemoteBuildRouter.post("/admin/remote-build/seal-run", requireFounder, (_re
 });
 
 /** ガード検査のみ（カード投入前の dry-check） */
-adminRemoteBuildRouter.post("/admin/remote-build/guard-check", requireFounder, (req: Request, res: Response) => {
+adminRemoteBuildRouter.post("/admin/remote-build/guard-check", requireFounderOrExecutorBearer, (req: Request, res: Response) => {
   const body = (req.body ?? {}) as Record<string, unknown>;
   const cardName = String(body.cardName ?? "").trim();
   const cardBodyMd = String(body.cardBodyMd ?? body.body ?? "").trim();
@@ -368,7 +358,7 @@ adminRemoteBuildRouter.post("/admin/remote-build/guard-check", requireFounder, (
 });
 
 /** 最小ダッシュボード（管理者 cookie / X-Founder-Key） */
-adminRemoteBuildRouter.get("/admin/remote-build/dashboard", requireFounder, (_req: Request, res: Response) => {
+adminRemoteBuildRouter.get("/admin/remote-build/dashboard", requireFounderOrExecutorBearer, (_req: Request, res: Response) => {
   touchVpsMarker();
   res.type("html").send(`<!doctype html>
 <html lang="ja"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>

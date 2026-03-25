@@ -1,0 +1,113 @@
+{
+  "card": "TENMON_CONVERSATION_QUALITY_ANALYZER_AND_AUTO_CARD_GENERATOR_CURSOR_AUTO_V1",
+  "generated_at": "2026-03-24T21:32:21Z",
+  "candidates": [
+    {
+      "card_id": "CONV_QUALITY_SAFE_PROBE_PACK_V1",
+      "title": "会話品質フォロー用プローブ（低リスク・観測のみ）",
+      "safe_auto_fix": true,
+      "edit_scope": [
+        "api/automation/conversation_quality_safe_probe_pack_v1.json"
+      ],
+      "markdown_body": "## CONV_QUALITY_SAFE_PROBE_PACK_V1\n\n次を同一 threadId で実行し、`ku.routeReason` を記録する。\n\n1. 言霊とは何か → 教えて / 続けて / もっと\n2. 今日の大分の天気は？\n3. それは違います\n4. こんにちは（【天聞の所見】先頭の有無）\n",
+      "json_payload": {
+        "probes": [
+          {
+            "thread_hint": "same_thread",
+            "sequence": [
+              "言霊とは何か",
+              "教えて"
+            ],
+            "expect_route_contains": "CONTINUITY"
+          },
+          {
+            "thread_hint": "fresh",
+            "sequence": [
+              "今日の大分の天気は？"
+            ],
+            "expect_route": "FACTUAL_WEATHER_V1"
+          },
+          {
+            "thread_hint": "fresh",
+            "sequence": [
+              "それは違います"
+            ],
+            "expect_route": "FACTUAL_CORRECTION_V1"
+          },
+          {
+            "thread_hint": "fresh",
+            "sequence": [
+              "こんにちは"
+            ],
+            "expect_response_prefix": "【天聞の所見】"
+          }
+        ]
+      }
+    }
+  ],
+  "requires_human_approval_cards": [
+    {
+      "card_id": "HUMAN_template_preamble_miss_V1",
+      "title": "要人間承認: template_preamble_miss",
+      "safe_auto_fix": false,
+      "requires_human_approval": true,
+      "target_file": "api/src/routes/chat.ts",
+      "fix_hint": "挨拶・所見系で【天聞の所見】先頭を再確認（N1/GENERAL レーン）",
+      "sample_messages": [
+        "user=こんにちは | head='はい。どうぞ。'"
+      ],
+      "markdown_body": "### template_preamble_miss\n- count: 1\n- hint: 挨拶・所見系で【天聞の所見】先頭を再確認（N1/GENERAL レーン）\n- **chat.ts 手動レビュー**（自動適用禁止）\n"
+    },
+    {
+      "card_id": "HUMAN_context_carry_false_positive_V1",
+      "title": "要人間承認: context_carry_false_positive",
+      "safe_auto_fix": false,
+      "requires_human_approval": true,
+      "target_file": "api/src/routes/chat.ts",
+      "fix_hint": "__skipContextCarry / factual パターンと carry 付与条件の見直し",
+      "sample_messages": [
+        "user=今日の東京の天気は？ | carry_snip=yes"
+      ],
+      "markdown_body": "### context_carry_false_positive\n- count: 1\n- hint: __skipContextCarry / factual パターンと carry 付与条件の見直し\n- **chat.ts 手動レビュー**（自動適用禁止）\n"
+    },
+    {
+      "card_id": "HUMAN_short_input_continuity_miss_V1",
+      "title": "要人間承認: short_input_continuity_miss",
+      "safe_auto_fix": false,
+      "requires_human_approval": true,
+      "target_file": "api/src/routes/chat.ts",
+      "fix_hint": "__isShortInputContinuityHold と CONTINUITY_ROUTE_HOLD_V1 接続の再検証",
+      "sample_messages": [
+        "prev=言霊とは何か、短く教えて | user=教えて | rr=NATURAL_GENERAL_LLM_TOP"
+      ],
+      "markdown_body": "### short_input_continuity_miss\n- count: 1\n- hint: __isShortInputContinuityHold と CONTINUITY_ROUTE_HOLD_V1 接続の再検証\n- **chat.ts 手動レビュー**（自動適用禁止）\n"
+    },
+    {
+      "card_id": "HUMAN_correction_route_miss_V1",
+      "title": "要人間承認: correction_route_miss",
+      "safe_auto_fix": false,
+      "requires_human_approval": true,
+      "target_file": "api/src/routes/chat.ts",
+      "fix_hint": "FACTUAL_CORRECTION_V1 ゲートの検知語・位置（continuity より前）",
+      "sample_messages": [
+        "user=それは違います | rr=NATURAL_GENERAL_LLM_TOP"
+      ],
+      "markdown_body": "### correction_route_miss\n- count: 1\n- hint: FACTUAL_CORRECTION_V1 ゲートの検知語・位置（continuity より前）\n- **chat.ts 手動レビュー**（自動適用禁止）\n"
+    },
+    {
+      "card_id": "HUMAN_weather_route_miss_V1",
+      "title": "要人間承認: weather_route_miss",
+      "safe_auto_fix": false,
+      "requires_human_approval": true,
+      "target_file": "api/src/routes/chat.ts",
+      "fix_hint": "FACTUAL_WEATHER_V1 / extractWeatherLocationV1 の網羅",
+      "sample_messages": [
+        "user=今日の東京の天気は？ | rr=NATURAL_GENERAL_LLM_TOP",
+        "user=大分の天気は？ | rr=NATURAL_GENERAL_LLM_TOP"
+      ],
+      "markdown_body": "### weather_route_miss\n- count: 2\n- hint: FACTUAL_WEATHER_V1 / extractWeatherLocationV1 の網羅\n- **chat.ts 手動レビュー**（自動適用禁止）\n"
+    }
+  ],
+  "auto_fix_cards_generated": true,
+  "safe_auto_fix_only": true
+}

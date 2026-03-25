@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tenmon.local/schemas/residual_quality_score_v1.json",
+  "title": "TENMON_RESIDUAL_QUALITY_SCORE_V1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "card",
+    "generatedAt",
+    "seal_dir",
+    "axes",
+    "overall_residual_score",
+    "axis_weights",
+    "inputs_used",
+    "five_family_probes",
+    "lowest_scored_axes"
+  ],
+  "properties": {
+    "schema_version": { "type": "integer", "const": 1 },
+    "card": { "type": "string" },
+    "generatedAt": { "type": "string" },
+    "seal_dir": { "type": "string" },
+    "axes": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "surface_clean_score",
+        "route_authority_score",
+        "longform_quality_score",
+        "density_lock_score",
+        "baseline_reflection_score"
+      ],
+      "properties": {
+        "surface_clean_score": { "$ref": "#/$defs/axisScore" },
+        "route_authority_score": { "$ref": "#/$defs/axisScore" },
+        "longform_quality_score": { "$ref": "#/$defs/axisScore" },
+        "density_lock_score": { "$ref": "#/$defs/axisScore" },
+        "baseline_reflection_score": { "$ref": "#/$defs/axisScore" }
+      }
+    },
+    "overall_residual_score": { "type": "number", "minimum": 0, "maximum": 100 },
+    "axis_weights": {
+      "type": "object",
+      "description": "総合スコアに用いた正規化重み（既定は均等）",
+      "additionalProperties": { "type": "number", "minimum": 0 }
+    },
+    "inputs_used": {
+      "type": "object",
+      "properties": {
+        "worldclass_report": { "type": "boolean" },
+        "final_verdict": { "type": "boolean" },
+        "ledger_jsonl": { "type": "string" },
+        "ledger_tail_parsed": { "type": "integer", "minimum": 0 }
+      },
+      "additionalProperties": true
+    },
+    "five_family_probes": { "type": "object" },
+    "lowest_scored_axes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["public_key", "internal_axis", "score"],
+        "properties": {
+          "public_key": { "type": "string" },
+          "internal_axis": { "type": "string" },
+          "score": { "type": "integer", "minimum": 0, "maximum": 100 }
+        },
+        "additionalProperties": true
+      }
+    }
+  },
+  "$defs": {
+    "axisScore": {
+      "type": "object",
+      "required": ["score", "detail"],
+      "properties": {
+        "score": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "detail": { "type": "object" }
+      },
+      "additionalProperties": false
+    }
+  }
+}

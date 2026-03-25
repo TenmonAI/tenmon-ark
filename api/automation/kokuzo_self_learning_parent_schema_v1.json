@@ -1,0 +1,26 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "kokuzo_self_learning_parent_generator_v1 manifest",
+  "type": "object",
+  "required": ["version", "card", "stage_count", "pairs", "fail_next_cursor_card"],
+  "properties": {
+    "version": { "type": "integer", "const": 1 },
+    "card": { "type": "string" },
+    "parent_cursor": { "type": "string" },
+    "parent_vps": { "type": "string" },
+    "generatedAt": { "type": "string" },
+    "fail_next_cursor_card": { "type": "string" },
+    "stage_count": { "type": "integer", "const": 9 },
+    "pairs": {
+      "type": "array",
+      "minItems": 9,
+      "maxItems": 9,
+      "items": {
+        "type": "object",
+        "required": ["index", "slug", "cursor_card", "vps_card", "paths"]
+      }
+    },
+    "paths": { "type": "object" },
+    "policy": { "type": "object" }
+  }
+}

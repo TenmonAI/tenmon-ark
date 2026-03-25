@@ -1,0 +1,45 @@
+{
+  "card": "TENMON_SAFE_SELF_IMPROVEMENT_PDCA_LOOP_CURSOR_AUTO_V1",
+  "version": 1,
+  "generated_at": "2026-01-01T00:00:00Z",
+  "safe_scope_globs": [
+    "api/automation/**",
+    "api/scripts/**",
+    "api/docs/constitution/**"
+  ],
+  "medium_scope_globs": [
+    "api/src/core/**",
+    "api/src/kokuzo/**",
+    "api/src/routes/chat_refactor/**"
+  ],
+  "high_risk_scope_globs": [
+    "api/src/routes/chat.ts",
+    "api/src/routes/chat_refactor/finalize.ts",
+    "web/src/**"
+  ],
+  "max_cycles_per_run": 1,
+  "max_retry_per_candidate": 1,
+  "stop_conditions": [
+    "precondition_fail",
+    "consecutive_verify_fail",
+    "high_risk_without_approval",
+    "stale_truth_detected"
+  ],
+  "rollback_conditions": [
+    "verify_exit_nonzero",
+    "rejudge_regression",
+    "gate_must_block"
+  ],
+  "acceptance_priority": [
+    "stale_truth_rebase",
+    "dialogue_scorecard_gap",
+    "system_verdict_gap",
+    "next_cards_queue",
+    "retry_queue_pressure",
+    "remote_cursor_queue"
+  ],
+  "one_cycle_one_change_group": true,
+  "separate_generation_from_apply": true,
+  "rejudge_script": "api/scripts/tenmon_latest_state_rejudge_and_seal_refresh_v1.sh",
+  "notes": "high-risk への自動 apply は常に禁止。候補は生成のみ、適用は approval または safe_scope 内の検証スクリプトに限定。"
+}

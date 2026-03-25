@@ -1,0 +1,64 @@
+{
+  "version": 1,
+  "card": "TENMON_SELF_BUILD_OS_PARENT_03_CURSOR_AUTOMATION_KERNEL_CURSOR_AUTO_V1",
+  "generatedAt": "2026-03-23T04:26:59Z",
+  "format": "markdown_single_file",
+  "required": [
+    "CARD_NAME",
+    "OBJECTIVE",
+    "WHY_NOW",
+    "EDIT_SCOPE",
+    "DO_NOT_TOUCH",
+    "IMPLEMENTATION_POLICY",
+    "ACCEPTANCE",
+    "VPS_VALIDATION_OUTPUTS",
+    "FAIL_NEXT_CARD"
+  ],
+  "properties": {
+    "CARD_NAME": {
+      "type": "string",
+      "description": "必須セクション `CARD_NAME`（見出しまたは行ラベルで出現）"
+    },
+    "OBJECTIVE": {
+      "type": "string",
+      "description": "必須セクション `OBJECTIVE`（見出しまたは行ラベルで出現）"
+    },
+    "WHY_NOW": {
+      "type": "string",
+      "description": "必須セクション `WHY_NOW`（見出しまたは行ラベルで出現）"
+    },
+    "EDIT_SCOPE": {
+      "type": "string",
+      "description": "必須セクション `EDIT_SCOPE`（見出しまたは行ラベルで出現）"
+    },
+    "DO_NOT_TOUCH": {
+      "type": "string",
+      "description": "必須セクション `DO_NOT_TOUCH`（見出しまたは行ラベルで出現）"
+    },
+    "IMPLEMENTATION_POLICY": {
+      "type": "string",
+      "description": "必須セクション `IMPLEMENTATION_POLICY`（見出しまたは行ラベルで出現）"
+    },
+    "ACCEPTANCE": {
+      "type": "string",
+      "description": "必須セクション `ACCEPTANCE`（見出しまたは行ラベルで出現）"
+    },
+    "VPS_VALIDATION_OUTPUTS": {
+      "type": "string",
+      "description": "必須セクション `VPS_VALIDATION_OUTPUTS`（見出しまたは行ラベルで出現）"
+    },
+    "FAIL_NEXT_CARD": {
+      "type": "string",
+      "description": "必須セクション `FAIL_NEXT_CARD`（見出しまたは行ラベルで出現）"
+    }
+  },
+  "conventions": {
+    "CARD_NAME": "先頭付近 `CARD_NAME: TENMON_...` または `## CARD_NAME`",
+    "sections": "各フィールドは `## OBJECTIVE` または行 `OBJECTIVE:` で検出"
+  },
+  "canonical_output_dir": "api/automation/generated_cursor_apply",
+  "notes": [
+    "kernel 経由で生成された MD のみを正とする（手編集は PR で契約検証）",
+    "v2 bridge の REQUIRED_CARD_FIELDS と同一 9 項目"
+  ]
+}

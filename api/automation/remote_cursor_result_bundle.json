@@ -1,0 +1,502 @@
+{
+  "version": 1,
+  "card": "TENMON_REMOTE_CURSOR_COMMAND_CENTER_CURSOR_AUTO_V1",
+  "updatedAt": "2026-03-25T04:33:40Z",
+  "entries": [
+    {
+      "schema_version": 2,
+      "queue_id": "2344ae644701487c",
+      "ingested_at": "2026-03-25T04:22:35Z",
+      "touched_files": [],
+      "file_guard_ok": true,
+      "file_guard_blocked": [],
+      "build_result": {
+        "rc": null
+      },
+      "build_rc": null,
+      "acceptance_result": {
+        "ok": null
+      },
+      "acceptance_ok": null,
+      "next_card": null,
+      "log_snippet": "",
+      "dry_run": false,
+      "status": "dry_run_started",
+      "result_type": "executor_session",
+      "session_id": "curs_current_run_probe_001",
+      "cursor_job_session_manifest": "/Users/sarutahiko/tenmon-mac/session_next_v7/cursor_job_session_manifest.json",
+      "mac_executor_state": "/Users/sarutahiko/tenmon-mac/session_next_v7/mac_executor_state.json",
+      "dangerous_patch_block_report": "/Users/sarutahiko/tenmon-mac/session_next_v7/dangerous_patch_block_report.json",
+      "log_path": "/Users/sarutahiko/tenmon-mac/session_next_v7/cursor_session_curs_8bb71690a4a149138f90.log",
+      "current_run": true
+    },
+    {
+      "schema_version": 2,
+      "queue_id": "6420def5267dc402",
+      "ingested_at": "2026-03-25T04:29:33Z",
+      "touched_files": [],
+      "file_guard_ok": true,
+      "file_guard_blocked": [],
+      "build_result": {
+        "rc": null
+      },
+      "build_rc": null,
+      "acceptance_result": {
+        "ok": null
+      },
+      "acceptance_ok": null,
+      "next_card": null,
+      "log_snippet": "",
+      "dry_run": false,
+      "status": "dry_run_started",
+      "result_type": "executor_session",
+      "session_id": "watch_20260325T042933Z",
+      "cursor_job_session_manifest": "/Users/sarutahiko/tenmon-mac/watch_sessions/watch_20260325T042933Z/cursor_job_session_manifest.json",
+      "mac_executor_state": "/Users/sarutahiko/tenmon-mac/watch_sessions/watch_20260325T042933Z/mac_executor_state.json",
+      "dangerous_patch_block_report": "/Users/sarutahiko/tenmon-mac/watch_sessions/watch_20260325T042933Z/dangerous_patch_block_report.json",
+      "log_path": "/Users/sarutahiko/tenmon-mac/watch_sessions/watch_20260325T042933Z/cursor_session_curs_4eeff27d7d8a4d5886f3.log",
+      "current_run": true
+    },
+    {
+      "schema_version": 2,
+      "queue_id": "6420def5267dc402",
+      "ingested_at": "2026-03-25T04:29:49Z",
+      "touched_files": [],
+      "file_guard_ok": true,
+      "file_guard_blocked": [],
+      "build_result": {
+        "rc": null
+      },
+      "build_rc": null,
+      "acceptance_result": {
+        "ok": null
+      },
+      "acceptance_ok": null,
+      "next_card": null,
+      "log_snippet": "",
+      "dry_run": false,
+      "status": "dry_run_started",
+      "result_type": "executor_session",
+      "session_id": "watch_20260325T042949Z",
+      "cursor_job_session_manifest": "/Users/sarutahiko/tenmon-mac/watch_sessions/watch_20260325T042949Z/cursor_job_session_manifest.json",
+      "mac_executor_state": "/Users/sarutahiko/tenmon-mac/watch_sessions/watch_20260325T042949Z/mac_executor_state.json",
+      "dangerous_patch_block_report": "/Users/sarutahiko/tenmon-mac/watch_sessions/watch_20260325T042949Z/dangerous_patch_block_report.json",
+      "log_path": "/Users/sarutahiko/tenmon-mac/watch_sessions/watch_20260325T042949Z/cursor_session_curs_cbac117313d047d39a09.log",
+      "current_run": true
+    },
+    {
+      "schema_version": 2,
+      "queue_id": "6420def5267dc402",
+      "ingested_at": "2026-03-25T04:30:04Z",
+      "touched_files": [],
+      "file_guard_ok": true,
+      "file_guard_blocked": [],
+      "build_result": {
+        "rc": null
+      },
+      "build_rc": null,
+      "acceptance_result": {
+        "ok": null
+      },
+      "acceptance_ok": null,
+      "next_card": null,
+      "log_snippet": "",
+      "dry_run": false,
+      "status": "dry_run_started",
+      "result_type": "executor_session",
+      "session_id": "watch_20260325T043004Z",
+      "cursor_job_session_manifest": "/Users/sarutahiko/tenmon-mac/watch_sessions/watch_20260325T043004Z/cursor_job_session_manifest.json",
+      "mac_executor_state": "/Users/sarutahiko/tenmon-mac/watch_sessions/watch_20260325T043004Z/mac_executor_state.json",
+      "dangerous_patch_block_report": "/Users/sarutahiko/tenmon-mac/watch_sessions/watch_20260325T043004Z/dangerous_patch_block_report.json",
+      "log_path": "/Users/sarutahiko/tenmon-mac/watch_sessions/watch_20260325T043004Z/cursor_session_curs_3cb151b833a24e83b294.log",
+      "current_run": true
+    },
+    {
+      "schema_version": 2,
+      "queue_id": "6420def5267dc402",
+      "ingested_at": "2026-03-25T04:30:19Z",
+      "touched_files": [],
+      "file_guard_ok": true,
+      "file_guard_blocked": [],
+      "build_result": {
+        "rc": null
+      },
+      "build_rc": null,
+      "acceptance_result": {
+        "ok": null
+      },
+      "acceptance_ok": null,
+      "next_card": null,
+      "log_snippet": "",
+      "dry_run": false,
+      "status": "dry_run_started",
+      "result_type": "executor_session",
+      "session_id": "watch_20260325T043019Z",
+      "cursor_job_session_manifest": "/Users/sarutahiko/tenmon-mac/watch_sessions/watch_20260325T043019Z/cursor_job_session_manifest.json",
+      "mac_executor_state": "/Users/sarutahiko/tenmon-mac/watch_sessions/watch_20260325T043019Z/mac_executor_state.json",
+      "dangerous_patch_block_report": "/Users/sarutahiko/tenmon-mac/watch_sessions/watch_20260325T043019Z/dangerous_patch_block_report.json",
+      "log_path": "/Users/sarutahiko/tenmon-mac/watch_sessions/watch_20260325T043019Z/cursor_session_curs_58729b6a9a64426ea22c.log",
+      "current_run": true
+    },
+    {
+      "schema_version": 2,
+      "queue_id": "6420def5267dc402",
+      "ingested_at": "2026-03-25T04:30:35Z",
+      "touched_files": [],
+      "file_guard_ok": true,
+      "file_guard_blocked": [],
+      "build_result": {
+        "rc": null
+      },
+      "build_rc": null,
+      "acceptance_result": {
+        "ok": null
+      },
+      "acceptance_ok": null,
+      "next_card": null,
+      "log_snippet": "",
+      "dry_run": false,
+      "status": "dry_run_started",
+      "result_type": "executor_session",
+      "session_id": "watch_20260325T043035Z",
+      "cursor_job_session_manifest": "/Users/sarutahiko/tenmon-mac/watch_sessions/watch_20260325T043035Z/cursor_job_session_manifest.json",
+      "mac_executor_state": "/Users/sarutahiko/tenmon-mac/watch_sessions/watch_20260325T043035Z/mac_executor_state.json",
+      "dangerous_patch_block_report": "/Users/sarutahiko/tenmon-mac/watch_sessions/watch_20260325T043035Z/dangerous_patch_block_report.json",
+      "log_path": "/Users/sarutahiko/tenmon-mac/watch_sessions/watch_20260325T043035Z/cursor_session_curs_8d7f8e7661834264939e.log",
+      "current_run": true
+    },
+    {
+      "schema_version": 2,
+      "queue_id": "6420def5267dc402",
+      "ingested_at": "2026-03-25T04:30:50Z",
+      "touched_files": [],
+      "file_guard_ok": true,
+      "file_guard_blocked": [],
+      "build_result": {
+        "rc": null
+      },
+      "build_rc": null,
+      "acceptance_result": {
+        "ok": null
+      },
+      "acceptance_ok": null,
+      "next_card": null,
+      "log_snippet": "",
+      "dry_run": false,
+      "status": "dry_run_started",
+      "result_type": "executor_session",
+      "session_id": "watch_20260325T043050Z",
+      "cursor_job_session_manifest": "/Users/sarutahiko/tenmon-mac/watch_sessions/watch_20260325T043050Z/cursor_job_session_manifest.json",
+      "mac_executor_state": "/Users/sarutahiko/tenmon-mac/watch_sessions/watch_20260325T043050Z/mac_executor_state.json",
+      "dangerous_patch_block_report": "/Users/sarutahiko/tenmon-mac/watch_sessions/watch_20260325T043050Z/dangerous_patch_block_report.json",
+      "log_path": "/Users/sarutahiko/tenmon-mac/watch_sessions/watch_20260325T043050Z/cursor_session_curs_13475638317f4b4f80d0.log",
+      "current_run": true
+    },
+    {
+      "schema_version": 2,
+      "queue_id": "6420def5267dc402",
+      "ingested_at": "2026-03-25T04:31:06Z",
+      "touched_files": [],
+      "file_guard_ok": true,
+      "file_guard_blocked": [],
+      "build_result": {
+        "rc": null
+      },
+      "build_rc": null,
+      "acceptance_result": {
+        "ok": null
+      },
+      "acceptance_ok": null,
+      "next_card": null,
+      "log_snippet": "",
+      "dry_run": false,
+      "status": "dry_run_started",
+      "result_type": "executor_session",
+      "session_id": "watch_20260325T043106Z",
+      "cursor_job_session_manifest": "/Users/sarutahiko/tenmon-mac/watch_sessions/watch_20260325T043106Z/cursor_job_session_manifest.json",
+      "mac_executor_state": "/Users/sarutahiko/tenmon-mac/watch_sessions/watch_20260325T043106Z/mac_executor_state.json",
+      "dangerous_patch_block_report": "/Users/sarutahiko/tenmon-mac/watch_sessions/watch_20260325T043106Z/dangerous_patch_block_report.json",
+      "log_path": "/Users/sarutahiko/tenmon-mac/watch_sessions/watch_20260325T043106Z/cursor_session_curs_38bf6497b5234f7d9d0a.log",
+      "current_run": true
+    },
+    {
+      "schema_version": 2,
+      "queue_id": "6420def5267dc402",
+      "ingested_at": "2026-03-25T04:31:21Z",
+      "touched_files": [],
+      "file_guard_ok": true,
+      "file_guard_blocked": [],
+      "build_result": {
+        "rc": null
+      },
+      "build_rc": null,
+      "acceptance_result": {
+        "ok": null
+      },
+      "acceptance_ok": null,
+      "next_card": null,
+      "log_snippet": "",
+      "dry_run": false,
+      "status": "dry_run_started",
+      "result_type": "executor_session",
+      "session_id": "watch_20260325T043121Z",
+      "cursor_job_session_manifest": "/Users/sarutahiko/tenmon-mac/watch_sessions/watch_20260325T043121Z/cursor_job_session_manifest.json",
+      "mac_executor_state": "/Users/sarutahiko/tenmon-mac/watch_sessions/watch_20260325T043121Z/mac_executor_state.json",
+      "dangerous_patch_block_report": "/Users/sarutahiko/tenmon-mac/watch_sessions/watch_20260325T043121Z/dangerous_patch_block_report.json",
+      "log_path": "/Users/sarutahiko/tenmon-mac/watch_sessions/watch_20260325T043121Z/cursor_session_curs_9bd756091bc243879e2d.log",
+      "current_run": true
+    },
+    {
+      "schema_version": 2,
+      "queue_id": "6420def5267dc402",
+      "ingested_at": "2026-03-25T04:31:37Z",
+      "touched_files": [],
+      "file_guard_ok": true,
+      "file_guard_blocked": [],
+      "build_result": {
+        "rc": null
+      },
+      "build_rc": null,
+      "acceptance_result": {
+        "ok": null
+      },
+      "acceptance_ok": null,
+      "next_card": null,
+      "log_snippet": "",
+      "dry_run": false,
+      "status": "dry_run_started",
+      "result_type": "executor_session",
+      "session_id": "watch_20260325T043136Z",
+      "cursor_job_session_manifest": "/Users/sarutahiko/tenmon-mac/watch_sessions/watch_20260325T043136Z/cursor_job_session_manifest.json",
+      "mac_executor_state": "/Users/sarutahiko/tenmon-mac/watch_sessions/watch_20260325T043136Z/mac_executor_state.json",
+      "dangerous_patch_block_report": "/Users/sarutahiko/tenmon-mac/watch_sessions/watch_20260325T043136Z/dangerous_patch_block_report.json",
+      "log_path": "/Users/sarutahiko/tenmon-mac/watch_sessions/watch_20260325T043136Z/cursor_session_curs_d22336b60c7b45239f37.log",
+      "current_run": true
+    },
+    {
+      "schema_version": 2,
+      "queue_id": "6420def5267dc402",
+      "ingested_at": "2026-03-25T04:31:52Z",
+      "touched_files": [],
+      "file_guard_ok": true,
+      "file_guard_blocked": [],
+      "build_result": {
+        "rc": null
+      },
+      "build_rc": null,
+      "acceptance_result": {
+        "ok": null
+      },
+      "acceptance_ok": null,
+      "next_card": null,
+      "log_snippet": "",
+      "dry_run": false,
+      "status": "dry_run_started",
+      "result_type": "executor_session",
+      "session_id": "watch_20260325T043152Z",
+      "cursor_job_session_manifest": "/Users/sarutahiko/tenmon-mac/watch_sessions/watch_20260325T043152Z/cursor_job_session_manifest.json",
+      "mac_executor_state": "/Users/sarutahiko/tenmon-mac/watch_sessions/watch_20260325T043152Z/mac_executor_state.json",
+      "dangerous_patch_block_report": "/Users/sarutahiko/tenmon-mac/watch_sessions/watch_20260325T043152Z/dangerous_patch_block_report.json",
+      "log_path": "/Users/sarutahiko/tenmon-mac/watch_sessions/watch_20260325T043152Z/cursor_session_curs_38d422817af04277a549.log",
+      "current_run": true
+    },
+    {
+      "schema_version": 2,
+      "queue_id": "6420def5267dc402",
+      "ingested_at": "2026-03-25T04:32:07Z",
+      "touched_files": [],
+      "file_guard_ok": true,
+      "file_guard_blocked": [],
+      "build_result": {
+        "rc": null
+      },
+      "build_rc": null,
+      "acceptance_result": {
+        "ok": null
+      },
+      "acceptance_ok": null,
+      "next_card": null,
+      "log_snippet": "",
+      "dry_run": false,
+      "status": "dry_run_started",
+      "result_type": "executor_session",
+      "session_id": "watch_20260325T043207Z",
+      "cursor_job_session_manifest": "/Users/sarutahiko/tenmon-mac/watch_sessions/watch_20260325T043207Z/cursor_job_session_manifest.json",
+      "mac_executor_state": "/Users/sarutahiko/tenmon-mac/watch_sessions/watch_20260325T043207Z/mac_executor_state.json",
+      "dangerous_patch_block_report": "/Users/sarutahiko/tenmon-mac/watch_sessions/watch_20260325T043207Z/dangerous_patch_block_report.json",
+      "log_path": "/Users/sarutahiko/tenmon-mac/watch_sessions/watch_20260325T043207Z/cursor_session_curs_f1a2cc95559d4debad2b.log",
+      "current_run": true
+    },
+    {
+      "schema_version": 2,
+      "queue_id": "6420def5267dc402",
+      "ingested_at": "2026-03-25T04:32:23Z",
+      "touched_files": [],
+      "file_guard_ok": true,
+      "file_guard_blocked": [],
+      "build_result": {
+        "rc": null
+      },
+      "build_rc": null,
+      "acceptance_result": {
+        "ok": null
+      },
+      "acceptance_ok": null,
+      "next_card": null,
+      "log_snippet": "",
+      "dry_run": false,
+      "status": "dry_run_started",
+      "result_type": "executor_session",
+      "session_id": "watch_20260325T043223Z",
+      "cursor_job_session_manifest": "/Users/sarutahiko/tenmon-mac/watch_sessions/watch_20260325T043223Z/cursor_job_session_manifest.json",
+      "mac_executor_state": "/Users/sarutahiko/tenmon-mac/watch_sessions/watch_20260325T043223Z/mac_executor_state.json",
+      "dangerous_patch_block_report": "/Users/sarutahiko/tenmon-mac/watch_sessions/watch_20260325T043223Z/dangerous_patch_block_report.json",
+      "log_path": "/Users/sarutahiko/tenmon-mac/watch_sessions/watch_20260325T043223Z/cursor_session_curs_71bc719ec5234b9690f8.log",
+      "current_run": true
+    },
+    {
+      "schema_version": 2,
+      "queue_id": "6420def5267dc402",
+      "ingested_at": "2026-03-25T04:32:38Z",
+      "touched_files": [],
+      "file_guard_ok": true,
+      "file_guard_blocked": [],
+      "build_result": {
+        "rc": null
+      },
+      "build_rc": null,
+      "acceptance_result": {
+        "ok": null
+      },
+      "acceptance_ok": null,
+      "next_card": null,
+      "log_snippet": "",
+      "dry_run": false,
+      "status": "dry_run_started",
+      "result_type": "executor_session",
+      "session_id": "watch_20260325T043238Z",
+      "cursor_job_session_manifest": "/Users/sarutahiko/tenmon-mac/watch_sessions/watch_20260325T043238Z/cursor_job_session_manifest.json",
+      "mac_executor_state": "/Users/sarutahiko/tenmon-mac/watch_sessions/watch_20260325T043238Z/mac_executor_state.json",
+      "dangerous_patch_block_report": "/Users/sarutahiko/tenmon-mac/watch_sessions/watch_20260325T043238Z/dangerous_patch_block_report.json",
+      "log_path": "/Users/sarutahiko/tenmon-mac/watch_sessions/watch_20260325T043238Z/cursor_session_curs_d4b4e7b73df1445192a3.log",
+      "current_run": true
+    },
+    {
+      "schema_version": 2,
+      "queue_id": "6420def5267dc402",
+      "ingested_at": "2026-03-25T04:32:54Z",
+      "touched_files": [],
+      "file_guard_ok": true,
+      "file_guard_blocked": [],
+      "build_result": {
+        "rc": null
+      },
+      "build_rc": null,
+      "acceptance_result": {
+        "ok": null
+      },
+      "acceptance_ok": null,
+      "next_card": null,
+      "log_snippet": "",
+      "dry_run": false,
+      "status": "dry_run_started",
+      "result_type": "executor_session",
+      "session_id": "watch_20260325T043253Z",
+      "cursor_job_session_manifest": "/Users/sarutahiko/tenmon-mac/watch_sessions/watch_20260325T043253Z/cursor_job_session_manifest.json",
+      "mac_executor_state": "/Users/sarutahiko/tenmon-mac/watch_sessions/watch_20260325T043253Z/mac_executor_state.json",
+      "dangerous_patch_block_report": "/Users/sarutahiko/tenmon-mac/watch_sessions/watch_20260325T043253Z/dangerous_patch_block_report.json",
+      "log_path": "/Users/sarutahiko/tenmon-mac/watch_sessions/watch_20260325T043253Z/cursor_session_curs_8daea7b0e7644f70b16e.log",
+      "current_run": true
+    },
+    {
+      "schema_version": 2,
+      "queue_id": "6420def5267dc402",
+      "ingested_at": "2026-03-25T04:33:09Z",
+      "touched_files": [],
+      "file_guard_ok": true,
+      "file_guard_blocked": [],
+      "build_result": {
+        "rc": null
+      },
+      "build_rc": null,
+      "acceptance_result": {
+        "ok": null
+      },
+      "acceptance_ok": null,
+      "next_card": null,
+      "log_snippet": "",
+      "dry_run": false,
+      "status": "dry_run_started",
+      "result_type": "executor_session",
+      "session_id": "watch_20260325T043309Z",
+      "cursor_job_session_manifest": "/Users/sarutahiko/tenmon-mac/watch_sessions/watch_20260325T043309Z/cursor_job_session_manifest.json",
+      "mac_executor_state": "/Users/sarutahiko/tenmon-mac/watch_sessions/watch_20260325T043309Z/mac_executor_state.json",
+      "dangerous_patch_block_report": "/Users/sarutahiko/tenmon-mac/watch_sessions/watch_20260325T043309Z/dangerous_patch_block_report.json",
+      "log_path": "/Users/sarutahiko/tenmon-mac/watch_sessions/watch_20260325T043309Z/cursor_session_curs_44a728fb9cd64228986e.log",
+      "current_run": true
+    },
+    {
+      "schema_version": 2,
+      "queue_id": "6420def5267dc402",
+      "ingested_at": "2026-03-25T04:33:24Z",
+      "touched_files": [],
+      "file_guard_ok": true,
+      "file_guard_blocked": [],
+      "build_result": {
+        "rc": null
+      },
+      "build_rc": null,
+      "acceptance_result": {
+        "ok": null
+      },
+      "acceptance_ok": null,
+      "next_card": null,
+      "log_snippet": "",
+      "dry_run": false,
+      "status": "dry_run_started",
+      "result_type": "executor_session",
+      "session_id": "watch_20260325T043324Z",
+      "cursor_job_session_manifest": "/Users/sarutahiko/tenmon-mac/watch_sessions/watch_20260325T043324Z/cursor_job_session_manifest.json",
+      "mac_executor_state": "/Users/sarutahiko/tenmon-mac/watch_sessions/watch_20260325T043324Z/mac_executor_state.json",
+      "dangerous_patch_block_report": "/Users/sarutahiko/tenmon-mac/watch_sessions/watch_20260325T043324Z/dangerous_patch_block_report.json",
+      "log_path": "/Users/sarutahiko/tenmon-mac/watch_sessions/watch_20260325T043324Z/cursor_session_curs_39aec4040709445dbf36.log",
+      "current_run": true
+    },
+    {
+      "schema_version": 2,
+      "queue_id": "6420def5267dc402",
+      "ingested_at": "2026-03-25T04:33:40Z",
+      "touched_files": [],
+      "file_guard_ok": true,
+      "file_guard_blocked": [],
+      "build_result": {
+        "rc": null
+      },
+      "build_rc": null,
+      "acceptance_result": {
+        "ok": null
+      },
+      "acceptance_ok": null,
+      "next_card": null,
+      "log_snippet": "",
+      "dry_run": false,
+      "status": "dry_run_started",
+      "result_type": "executor_session",
+      "session_id": "watch_20260325T043340Z",
+      "cursor_job_session_manifest": "/Users/sarutahiko/tenmon-mac/watch_sessions/watch_20260325T043340Z/cursor_job_session_manifest.json",
+      "mac_executor_state": "/Users/sarutahiko/tenmon-mac/watch_sessions/watch_20260325T043340Z/mac_executor_state.json",
+      "dangerous_patch_block_report": "/Users/sarutahiko/tenmon-mac/watch_sessions/watch_20260325T043340Z/dangerous_patch_block_report.json",
+      "log_path": "/Users/sarutahiko/tenmon-mac/watch_sessions/watch_20260325T043340Z/cursor_session_curs_98ca190ba875446a86ad.log",
+      "current_run": true
+    }
+  ],
+  "ingest_schema": {
+    "schema_version": 1,
+    "fields": [
+      "touched_files",
+      "build_result",
+      "acceptance_result",
+      "next_card"
+    ]
+  }
+}

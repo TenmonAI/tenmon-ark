@@ -1,0 +1,19 @@
+{
+  "schema": "tenmon.cursor_runtime_result.v1",
+  "version": 1,
+  "required": [
+    "run_id",
+    "job_id",
+    "status",
+    "applied_files",
+    "diff_summary",
+    "build_status",
+    "verify_status",
+    "artifacts",
+    "stdout_tail",
+    "stderr_tail",
+    "executor_identity",
+    "returned_at"
+  ]
+}
+

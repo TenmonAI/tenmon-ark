@@ -1,0 +1,47 @@
+{
+  "card": "TENMON_SINGLE_TRUTH_RUNTIME_LOCK_CURSOR_AUTO_V1",
+  "generated_at": "2026-03-24T12:10:55Z",
+  "truth_source_selected": "current_run_runtime_gate",
+  "truth_source_selected_path": "http://127.0.0.1:3000/api/health|audit|audit.build",
+  "truth_conflict_detected": true,
+  "truth_conflict_sources": [
+    "current_run_rejudge",
+    "latest_lived_readiness",
+    "latest_repo_hygiene_watchdog",
+    "latest_system_verdict"
+  ],
+  "stale_sources": [
+    "pwa_lived_completion_readiness.json",
+    "tenmon_remote_admin_cursor_runtime_proof_verdict.json",
+    "tenmon_repo_hygiene_watchdog_verdict.json",
+    "tenmon_self_build_execution_chain_verdict.json",
+    "tenmon_self_repair_acceptance_seal_verdict.json",
+    "tenmon_self_repair_safe_loop_verdict.json",
+    "tenmon_system_verdict.json"
+  ],
+  "superseded_sources": [
+    "tenmon_chat_continuity_deep_forensic.json",
+    "tenmon_repo_hygiene_watchdog_verdict.json",
+    "pwa_lived_completion_readiness.json",
+    "tenmon_system_verdict.json",
+    "pwa_final_completion_blockers.json",
+    "pwa_final_completion_readiness.json",
+    "pwa_lived_completion_blockers.json",
+    "tenmon_current_state_detailed_report.json",
+    "tenmon_remote_admin_cursor_runtime_proof_verdict.json",
+    "tenmon_self_build_execution_chain_verdict.json",
+    "tenmon_self_repair_acceptance_seal_verdict.json",
+    "tenmon_self_repair_safe_loop_verdict.json"
+  ],
+  "stale_risk": {
+    "missing_generated_at": false,
+    "older_than_latest_refresh": true
+  },
+  "priority_order": [
+    "current_run_runtime_gate",
+    "current_run_rejudge",
+    "latest_lived_readiness",
+    "latest_repo_hygiene_watchdog",
+    "latest_system_verdict"
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "card": "TENMON_CURSOR_RUNTIME_EXECUTION_CONTRACT_CURSOR_AUTO_V1",
+  "generated_at": "2026-03-24T12:43:58Z",
+  "runtime_contract_ready": false,
+  "queue_submit_ready": false,
+  "delivery_observable": true,
+  "result_ingest_ready": false,
+  "rejudge_refresh_ready": true,
+  "safe_scope_enabled": true,
+  "medium_scope_enabled": false,
+  "high_risk_scope_enabled": false,
+  "cursor_runtime_available": true,
+  "current_blockers": [
+    "queue_file_missing",
+    "result_bundle_missing",
+    "stale_truth_detected"
+  ]
+}

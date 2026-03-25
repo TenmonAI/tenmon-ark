@@ -1,0 +1,32 @@
+{
+  "version": 1,
+  "card": "TENMON_MAC_AUTONOMY_24H_SAFE_GUARD_CURSOR_AUTO_V1",
+  "overlap": {
+    "single_instance_lock": true,
+    "lock_rel_path": "api/automation/out/mac_autonomy_24h_guard/runtime.lock"
+  },
+  "stop": {
+    "consecutive_fail_max": 3,
+    "ui_drift_stop": true,
+    "login_lost_stop": true,
+    "browser_unavailable_stop": true,
+    "cursor_unavailable_stop": true,
+    "queue_corruption_stop": true
+  },
+  "watchdog": {
+    "heartbeat_max_gap_sec": 120,
+    "require_last_screenshot": false
+  },
+  "sleep_prevention": {
+    "mode": "caffeinate_guidance",
+    "notes": "例: caffeinate -dimsu & または launchd で Wake を維持。運用でディスプレイオフのみ許可する場合は -i。"
+  },
+  "resume": {
+    "interrupted_job": "safe_discard",
+    "notes": "中断ジョブはキューを汚染しないよう discard。再試行が必要なら retry_once に変更。"
+  },
+  "approval": {
+    "high_risk_requires_token": true,
+    "token_env": "TENMON_AUTONOMY_HIGH_RISK_APPROVAL"
+  }
+}

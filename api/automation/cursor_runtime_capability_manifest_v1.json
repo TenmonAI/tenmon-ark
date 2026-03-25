@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "card": "TENMON_CURSOR_RUNTIME_EXECUTION_CONTRACT_CURSOR_AUTO_V1",
+  "generated_at": "2026-03-24T12:43:58Z",
+  "queue_route_present": true,
+  "result_ingest_present": true,
+  "command_center_script_present": true,
+  "founder_guard_present": true,
+  "runtime_agent_expected": true,
+  "current_return_path": [
+    "official_admin_result_route",
+    "official_remote_result_ingest_path"
+  ],
+  "supported_scope_classes": [
+    "safe",
+    "medium",
+    "high_risk"
+  ],
+  "approval_mode": "safe:auto, medium:hardstop+hygiene, high_risk:gate+evidence+no_stale",
+  "current_limitations": [
+    "queue_file_missing",
+    "result_bundle_missing",
+    "stale_truth_detected"
+  ]
+}

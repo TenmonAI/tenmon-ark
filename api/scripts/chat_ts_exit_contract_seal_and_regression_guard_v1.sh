@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# CHAT_TS_EXIT_CONTRACT_SEAL_AND_REGRESSION_GUARD_V1 — exit contract lock 後の seal + 回帰ガード（5 probe 文言は CHAT_TS_PROBE_CANON_V1）
+set -euo pipefail
+ROOT="${ROOT:-/opt/tenmon-ark-repo}"
+API="$ROOT/api"
+export CARD="${CARD:-CHAT_TS_EXIT_CONTRACT_SEAL_AND_REGRESSION_GUARD_V1}"
+export CHAT_TS_STAGE5_CARD_NAME="${CHAT_TS_STAGE5_CARD_NAME:-CHAT_TS_EXIT_CONTRACT_SEAL_AND_REGRESSION_GUARD_V1}"
+export CHAT_TS_REGRESSION_REPAIR_MD="${CHAT_TS_REGRESSION_REPAIR_MD:-$API/automation/generated_cursor_apply/CHAT_TS_EXIT_CONTRACT_REGRESSION_REPAIR_CURSOR_AUTO_V1.md}"
+
+echo "CHAT_TS_EXIT_CONTRACT_SEAL_AND_REGRESSION_GUARD_V1"
+echo "[CARD] $CARD"
+echo "[CHAT_TS_STAGE5_CARD_NAME] $CHAT_TS_STAGE5_CARD_NAME"
+
+exec bash "$API/scripts/chat_ts_runtime_acceptance_and_worldclass_seal_v1.sh" "$@"

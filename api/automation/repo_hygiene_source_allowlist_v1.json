@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "card": "TENMON_CURSOR_ONLY_REPO_HYGIENE_FINAL_SEAL_CURSOR_AUTO_V1",
+  "description": "自動 purge 対象から除外する intended source（prefix / パターン）",
+  "keep_prefixes": [
+    "api/src/",
+    "web/src/",
+    "api/docs/",
+    "api/kokuzo/",
+    "api/db/",
+    "api/tenmon/",
+    "web/public/"
+  ],
+  "keep_exact_paths": [
+    "api/package.json",
+    "api/tsconfig.json",
+    "web/package.json",
+    "package.json",
+    "api/automation/repo_hygiene_source_allowlist_v1.json",
+    "api/automation/repo_hygiene_generated_patterns_v1.json"
+  ],
+  "keep_path_globs": [
+    "api/automation/**/*.py",
+    "api/automation/**/*.sh",
+    "api/automation/**/*.mjs",
+    "api/scripts/**/*.py",
+    "api/scripts/**/*.sh",
+    "api/scripts/**/*.mjs",
+    "api/**/*.schema.json",
+    "api/automation/**/*_schema_v1.json",
+    "api/automation/**/*schema*.json",
+    "api/automation/**/*canon*.json",
+    "api/automation/**/*registry*.json",
+    "api/automation/campaign_schema_v1.json",
+    "api/automation/verdict_source_priority_v1.json"
+  ]
+}

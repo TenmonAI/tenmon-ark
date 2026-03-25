@@ -1,0 +1,62 @@
+{
+  "version": 2,
+  "card": "TENMON_LATEST_TRUTH_REBASE_AND_STALE_EVIDENCE_CLOSE_CURSOR_AUTO_V1",
+  "truth_policy": "latest_lived_truth_singleton",
+  "priority_tiers": [
+    {
+      "rank": 1,
+      "id": "current_run_gate_probes",
+      "sources": [
+        "runtime:/api/health",
+        "runtime:/api/audit",
+        "runtime:/api/audit.build"
+      ]
+    },
+    {
+      "rank": 2,
+      "id": "current_run_lived_probes",
+      "sources": [
+        "runtime:/api/chat continuity probe",
+        "runtime:/api/chat thread continuity"
+      ]
+    },
+    {
+      "rank": 3,
+      "id": "latest_lived_completion_artifacts",
+      "sources": [
+        "api/automation/pwa_lived_completion_readiness.json",
+        "api/automation/pwa_lived_completion_blockers.json"
+      ]
+    },
+    {
+      "rank": 4,
+      "id": "latest_rejudge",
+      "sources": [
+        "api/automation/tenmon_latest_state_rejudge_summary.json",
+        "api/automation/tenmon_latest_state_rejudge_and_seal_refresh_verdict.json"
+      ]
+    },
+    {
+      "rank": 5,
+      "id": "latest_system_and_score",
+      "sources": [
+        "api/automation/tenmon_system_verdict.json",
+        "api/automation/tenmon_worldclass_acceptance_scorecard.json"
+      ]
+    }
+  ],
+  "exclude_when": {
+    "missing_generated_at": true,
+    "invalid": true,
+    "superseded": true
+  },
+  "stale_closure_policy": {
+    "prefer_rebase_over_delete": true,
+    "regenerate_if_possible": [
+      "pwa_final_completion_readiness.json",
+      "tenmon_chat_continuity_deep_forensic.json",
+      "tenmon_current_state_detailed_report.json"
+    ],
+    "fallback_action": "invalidate_logical"
+  }
+}

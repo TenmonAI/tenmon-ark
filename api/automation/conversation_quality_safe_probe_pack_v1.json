@@ -1,0 +1,30 @@
+{
+  "schema": "conversation_quality_safe_probe_pack_v1",
+  "description": "会話品質の観測用プローブ（ルート改変なし・手動実行向け）",
+  "probes": [
+    {
+      "id": "continuity_short_followup",
+      "thread_hint": "same_thread",
+      "sequence": ["言霊とは何か", "教えて"],
+      "expect_route_contains": "CONTINUITY"
+    },
+    {
+      "id": "factual_weather_oita",
+      "thread_hint": "fresh",
+      "sequence": ["今日の大分の天気は？"],
+      "expect_route": "FACTUAL_WEATHER_V1"
+    },
+    {
+      "id": "factual_correction",
+      "thread_hint": "fresh",
+      "sequence": ["それは違います"],
+      "expect_route": "FACTUAL_CORRECTION_V1"
+    },
+    {
+      "id": "greeting_template",
+      "thread_hint": "fresh",
+      "sequence": ["こんにちは"],
+      "expect_response_prefix": "【天聞の所見】"
+    }
+  ]
+}
