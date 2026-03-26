@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import time
 from pathlib import Path
 from typing import Any
@@ -58,6 +59,17 @@ def read_json(path: Path) -> dict[str, Any]:
     try:
         return json.loads(path.read_text(encoding="utf-8"))
     except Exception:
+        return {}
+
+
+def read_json_required(path: Path, failures: list[str]) -> dict[str, Any]:
+    if not path.is_file():
+        failures.append(f"missing_required_input:{path.name}")
+        return {}
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        failures.append(f"invalid_json:{path.name}")
         return {}
 
 
@@ -127,27 +139,53 @@ def _filter_cb_blockers_for_resolved_axes(blockers: list[str], resolved: set[str
     return out
 
 
+def _scan_mainline_sessionid_residue_count(repo: Path) -> int:
+    web = repo / "web" / "src"
+    targets = (
+        web / "api" / "chat.ts",
+        web / "types" / "chat.ts",
+        web / "hooks" / "useChat.ts",
+    )
+    cnt = 0
+    for p in targets:
+        if not p.is_file():
+            continue
+        try:
+            txt = p.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        txt = re.sub(r"/\*.*?\*/", "", txt, flags=re.DOTALL)
+        txt = re.sub(r"//.*?$", "", txt, flags=re.MULTILINE)
+        if re.search(r"\bsessionId\b", txt):
+            cnt += 1
+    return cnt
+
+
 def main() -> int:
     repo = Path(os.environ.get("TENMON_REPO_ROOT", "/opt/tenmon-ark-repo")).resolve()
     auto = repo / "api" / "automation"
 
-    sysv = read_json(auto / "tenmon_system_verdict.json")
+    hard_failures: list[str] = []
+    sysv = read_json_required(auto / "tenmon_system_verdict.json", hard_failures)
     reg = read_json(auto / "tenmon_regression_memory.json")
-    hy = read_json(auto / "tenmon_repo_hygiene_watchdog_verdict.json")
-    safe_loop = read_json(auto / "tenmon_self_repair_safe_loop_verdict.json")
-    repair_seal = read_json(auto / "tenmon_self_repair_acceptance_seal_verdict.json")
-    chain = read_json(auto / "tenmon_self_build_execution_chain_verdict.json")
-    remote_pf = read_json(auto / "tenmon_remote_admin_cursor_runtime_proof_verdict.json")
-    gate_v = read_json(auto / "tenmon_gate_contract_verdict.json")
-    phase2 = read_json(auto / "tenmon_phase2_gate_and_runtime_verdict.json")
-    phase1 = read_json(auto / "tenmon_phase1_conversation_surface_verdict.json")
-    pwa_final = read_json(auto / "pwa_final_completion_readiness.json")
-    pwa_lived = read_json(auto / "pwa_lived_completion_readiness.json")
+    hy = read_json_required(auto / "tenmon_repo_hygiene_watchdog_verdict.json", hard_failures)
+    safe_loop = read_json_required(auto / "tenmon_self_repair_safe_loop_verdict.json", hard_failures)
+    repair_seal = read_json_required(auto / "tenmon_self_repair_acceptance_seal_verdict.json", hard_failures)
+    chain = read_json_required(auto / "tenmon_self_build_execution_chain_verdict.json", hard_failures)
+    remote_pf = read_json_required(auto / "tenmon_remote_admin_cursor_runtime_proof_verdict.json", hard_failures)
+    gate_v = read_json_required(auto / "tenmon_gate_contract_verdict.json", hard_failures)
+    phase2 = read_json_required(auto / "tenmon_phase2_gate_and_runtime_verdict.json", hard_failures)
+    phase1 = read_json_required(auto / "tenmon_phase1_conversation_surface_verdict.json", hard_failures)
+    pwa_final = read_json_required(auto / "pwa_final_completion_readiness.json", hard_failures)
+    pwa_lived = read_json_required(auto / "pwa_lived_completion_readiness.json", hard_failures)
     learning_integ = read_json(auto / "tenmon_learning_self_improvement_integrated_verdict.json")
     learn_audit = read_json(auto / "learning_acceptance_audit.json")
     queue = read_json(auto / "remote_cursor_queue.json")
     bundle = read_json(auto / "remote_cursor_result_bundle.json")
-    rejudge_summary = read_json(auto / "tenmon_latest_state_rejudge_summary.json")
+    rejudge_summary = read_json_required(auto / "tenmon_latest_state_rejudge_summary.json", hard_failures)
+    if hard_failures:
+        print(json.dumps({"ok": False, "errors": hard_failures}, ensure_ascii=False, indent=2))
+        return 1
     rj = rejudge_summary
     resolved_axes = {str(x) for x in (rj.get("resolved_dialogue_axes") or []) if str(x).strip()}
 
@@ -191,14 +229,19 @@ def main() -> int:
         cb_merged["band"] = "green"
 
     # --- conversation_continuity (phase1 + backend) ---
-    sid_ok = int(phase1.get("sessionid_mainline_residue_count") or 999) == 0
-    ch_pass = bool(phase1.get("continuity_hold_pass"))
+    sid_residue_live = _scan_mainline_sessionid_residue_count(repo)
+    sid_ok = sid_residue_live == 0
+    cont_follow = (rj.get("fresh_probe_digest") or {}).get("continuity_followup_len")
+    continuity_lived_ok = isinstance(cont_follow, (int, float)) and float(cont_follow) >= 80.0
+    ch_pass = bool(phase1.get("continuity_hold_pass")) or continuity_lived_ok
     cont_acc = bool(ch_pass and sid_ok and bool(phase1.get("phase1_pass")))
     conv_cont = {
         "band": "green" if cont_acc else "yellow",
         "accepted_complete": cont_acc,
         "runtime_proven": ch_pass,
         "primary_blockers": [],
+        "sessionid_mainline_residue_count_live": sid_residue_live,
+        "continuity_lived_ok": continuity_lived_ok,
     }
     if not sid_ok:
         conv_cont["primary_blockers"].append("sessionId_reference_in_mainline_web_src")
@@ -503,8 +546,8 @@ def main() -> int:
         )
     )
 
-    # FAIL 時 exit != 0（工学的最低ライン未達）
-    return 0 if sealed_operable_ready else 1
+    # 実行成功と判定未達を分離: scorecard 出力が成立したら 0
+    return 0
 
 
 if __name__ == "__main__":

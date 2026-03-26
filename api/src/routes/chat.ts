@@ -402,6 +402,206 @@ function __tenmonK1DeterministicDensityBodyV1(raw: string): string | null {
   );
 }
 
+/** K1 scripture-local weak link 補修（routeReason 不変・laws/evidence 非注入） */
+function __rehydrateK1ScriptureWeakLinkV1(out: any, rawMessage: string): any {
+  try {
+    if (!out || typeof out !== "object") return out;
+    const df = (out as any).decisionFrame;
+    const ku = df && typeof df === "object" ? (df as any).ku : null;
+    if (!ku || typeof ku !== "object" || Array.isArray(ku)) return out;
+    if (String(ku.routeReason ?? "").trim() !== "K1_TRACE_EMPTY_GATED_V1") return out;
+
+    const sourceKindsRaw =
+      (((ku as any).thoughtCoreSummary || {}).sourceStackSummary || {}).sourceKinds ??
+      ((ku as any).sourceStackSummary || {}).sourceKinds;
+    const sourceKinds = Array.isArray(sourceKindsRaw)
+      ? sourceKindsRaw.map((x: any) => String(x || "").trim()).filter(Boolean)
+      : [];
+    const hasScriptureLocalKind = sourceKinds.some((k) =>
+      /^(scripture_local|fts|family_resolver)$/u.test(k),
+    );
+    if (!hasScriptureLocalKind) return out;
+
+    const merged = { ...out };
+    (merged as any).decisionFrame = { ...(merged as any).decisionFrame };
+    (merged as any).decisionFrame.ku = { ...(merged as any).decisionFrame.ku };
+    const ku2: any = (merged as any).decisionFrame.ku;
+
+    if (!String(ku2.sourcePack ?? "").trim() || String(ku2.sourcePack) === "general") {
+      ku2.sourcePack = "scripture";
+    }
+    if (ku2.thoughtGuideSummary == null) {
+      ku2.thoughtGuideSummary = getThoughtGuideSummary("scripture");
+    }
+    if (!Array.isArray(ku2.notionCanon) || ku2.notionCanon.length === 0) {
+      ku2.notionCanon = getNotionCanonForRoute("TENMON_SCRIPTURE_CANON_V1", String(rawMessage || ""));
+    }
+    if (ku2.personaConstitutionSummary == null) {
+      ku2.personaConstitutionSummary = getPersonaConstitutionSummary();
+    }
+    if (!ku2.binderSummary || typeof ku2.binderSummary !== "object") {
+      ku2.binderSummary = { sourcePack: "scripture", mode: "scripture_local_read" };
+    } else if (!String((ku2.binderSummary as any).sourcePack || "").trim()) {
+      (ku2.binderSummary as any).sourcePack = "scripture";
+    }
+    if (!ku2.centerPack || typeof ku2.centerPack !== "object") {
+      ku2.centerPack = { sourcePack: "scripture", mode: "scripture_local_read" };
+    } else if (!String((ku2.centerPack as any).sourcePack || "").trim()) {
+      (ku2.centerPack as any).sourcePack = "scripture";
+    }
+    if (!String(ku2.scriptureMode || "").trim()) {
+      ku2.scriptureMode = "scripture_local_read";
+    }
+    try {
+      const ev: any = (merged as any).evidence && typeof (merged as any).evidence === "object" ? (merged as any).evidence : null;
+      const doc = String(ev?.doc || ((ku2 as any).thoughtCoreSummary || {}).sourceStackSummary?.evidenceDoc || ku2.centerMeaning || "").trim();
+      const qHint = String(((ku2 as any).thoughtCoreSummary || {}).continuityHint || rawMessage || "").trim();
+      const candQuote = __pickNonTocQuoteFromCandidatesV1((merged as any).candidates);
+      const currentQuote = String(ev?.quote || "").replace(/\s+/g, " ").trim();
+      const preferredQuote = candQuote || currentQuote;
+      if (ev) {
+        if (preferredQuote && !__isScriptureTocLikeV1(preferredQuote)) {
+          ev.quote = preferredQuote.slice(0, 160);
+        } else {
+          ev.quote = __scriptureFamilyEssenceV1(doc, qHint).slice(0, 160);
+        }
+      }
+      const rp: any = ku2.responsePlan && typeof ku2.responsePlan === "object" ? ku2.responsePlan : null;
+      if (rp) {
+        const sem = String(rp.semanticBody || "").replace(/\s+/g, " ").trim();
+        if (!sem || __isScriptureTocLikeV1(sem)) {
+          const rebuilt = __buildScriptureLocalBodyV1({ doc, q: qHint, quote: preferredQuote || "" });
+          rp.semanticBody = rebuilt;
+          if (__isScriptureTocLikeV1(String((merged as any).response || ""))) {
+            (merged as any).response = rebuilt;
+          }
+        }
+      }
+      const body = String((merged as any).response || "").trim();
+      const bodyHasTocBleed = /(目次|⽬次|訳注)/u.test(body);
+      if (bodyHasTocBleed) {
+        const rebuilt = __buildScriptureLocalBodyV1({ doc, q: qHint, quote: preferredQuote || "" });
+        (merged as any).response = rebuilt;
+        if (rp) rp.semanticBody = rebuilt;
+      }
+      if (body && body.length < 150) {
+        const rebuilt = __buildScriptureLocalBodyV1({ doc, q: qHint, quote: preferredQuote || "" });
+        const ext = "また、本文上の核語を一つ定義してから他段へ接続すると、断片列挙の散漫さを避けて読解の再現性が上がります。";
+        (merged as any).response = `${rebuilt}${ext}`;
+        if (rp) rp.semanticBody = String(rp.semanticBody || rebuilt);
+      }
+    } catch {
+      /* ignore */
+    }
+    ku2.tenmonK1ScriptureBindRehydrationV1 = true;
+    return merged;
+  } catch {
+    return out;
+  }
+}
+
+/** CONCEPT route weak link 補修（routeReason 不変・conceptCanon 存在時のみ） */
+function __rehydrateConceptCanonWeakLinkV1(out: any, rawMessage: string): any {
+  try {
+    if (!out || typeof out !== "object") return out;
+    const df = (out as any).decisionFrame;
+    const ku = df && typeof df === "object" ? (df as any).ku : null;
+    if (!ku || typeof ku !== "object" || Array.isArray(ku)) return out;
+    if (String(ku.routeReason ?? "").trim() !== "TENMON_CONCEPT_CANON_V1") return out;
+    const cc = (ku as any).conceptCanon;
+    if (!cc || typeof cc !== "object") return out;
+    const ck = String((cc as any).conceptKey || "").trim();
+    const cl = String((cc as any).displayName || ck).trim();
+    if (!ck) return out;
+
+    const merged = { ...out };
+    (merged as any).decisionFrame = { ...(merged as any).decisionFrame };
+    (merged as any).decisionFrame.ku = { ...(merged as any).decisionFrame.ku };
+    const ku2: any = (merged as any).decisionFrame.ku;
+
+    ku2.sourcePack = "concept";
+    if (!String(ku2.centerKey || "").trim()) ku2.centerKey = ck;
+    if (!String(ku2.centerMeaning || "").trim()) ku2.centerMeaning = cl || ck;
+    if (!String(ku2.centerLabel || "").trim()) ku2.centerLabel = cl || ck;
+    if (!ku2.thoughtCoreSummary || typeof ku2.thoughtCoreSummary !== "object") ku2.thoughtCoreSummary = {};
+    if (!String((ku2.thoughtCoreSummary as any).centerKey || "").trim()) (ku2.thoughtCoreSummary as any).centerKey = ck;
+    if (!String((ku2.thoughtCoreSummary as any).centerMeaning || "").trim()) (ku2.thoughtCoreSummary as any).centerMeaning = cl || ck;
+    if (!String((ku2.thoughtCoreSummary as any).routeReason || "").trim()) (ku2.thoughtCoreSummary as any).routeReason = "TENMON_CONCEPT_CANON_V1";
+    if (!String((ku2.thoughtCoreSummary as any).modeHint || "").trim()) (ku2.thoughtCoreSummary as any).modeHint = "concept";
+    if (ku2.thoughtGuideSummary == null) ku2.thoughtGuideSummary = getThoughtGuideSummary("scripture");
+    if (!Array.isArray(ku2.notionCanon) || ku2.notionCanon.length === 0) {
+      ku2.notionCanon = getNotionCanonForRoute("TENMON_CONCEPT_CANON_V1", String(rawMessage || ""));
+    }
+    if (!Array.isArray(ku2.notionCanon) || ku2.notionCanon.length === 0) {
+      const __conceptSupport = [
+        {
+          bundleKey: `concept:${ck}`,
+          label: cl || ck,
+          routeReason: "TENMON_CONCEPT_CANON_V1",
+          sourcePack: "concept",
+        },
+      ];
+      ku2.conceptSupportBundles = __conceptSupport;
+      (ku2.thoughtCoreSummary as any).conceptSupportBundles = __conceptSupport;
+    }
+    ku2.tenmonConceptCanonCenterBindRehydrationV1 = true;
+    return merged;
+  } catch {
+    return out;
+  }
+}
+
+function __isScriptureTocLikeV1(text: string): boolean {
+  const t = String(text || "").replace(/\s+/g, " ").trim();
+  if (!t) return true;
+  if (/(目次|⽬次|訳注|解説|請来目録|書誌|参考文献|索引|一覧|収録)/u.test(t)) return true;
+  if (/(法華経.*言[霊灵].*目次|空海コレクション.*目次|コレクション.*訳注)/u.test(t)) return true;
+  if (/(\.{8,}|。{4,}|・{6,})/u.test(t)) return true;
+  if (/((p|P|頁)\s*\d{1,4}([,、\-〜]\s*\d{1,4}){2,})/u.test(t)) return true;
+  if (/(\d{1,4}\s*[,、]\s*){3,}\d{1,4}/u.test(t)) return true;
+  return false;
+}
+
+function __scriptureFamilyEssenceV1(doc: string, q: string): string {
+  const d = String(doc || "");
+  const qq = String(q || "");
+  if (/(KUKAI_COLLECTION_0002|空海コレクション2|空海)/u.test(d + qq)) {
+    return "空海系では、語義の説明に留まらず、実践と教義を同時に読んで核心へ入る構えが中心です。";
+  }
+  if (/(HOKKE|法華)/u.test(d + qq)) {
+    return "法華経系では、一仏乗と方便実相の関係を軸に、教義を本文の流れで読むことが中心です。";
+  }
+  if (/(いろは言霊解|IROHA)/u.test(d + qq)) {
+    return "いろは言霊解系では、音義の説明だけでなく生成秩序との接続で本文を読むことが中心です。";
+  }
+  return "この系統では、章題ではなく本文の命題を先に固定して読むことが中心です。";
+}
+
+function __buildScriptureLocalBodyV1(args: { doc: string; q: string; quote: string }): string {
+  const doc = String(args.doc || "").trim();
+  const q = String(args.q || "").trim();
+  const quoteRaw = String(args.quote || "").replace(/\s+/g, " ").trim();
+  const tocLike = __isScriptureTocLikeV1(quoteRaw);
+  const main = tocLike
+    ? __scriptureFamilyEssenceV1(doc, q)
+    : `${doc} の本文要旨としては、${quoteRaw.slice(0, 120)}と読めます。`;
+  const next = q
+    ? `次は「${q}」を、語義・成立条件・実践含意のどこから深めるかを一つに絞ると、読みが安定します。`
+    : "次は、語義・成立条件・実践含意のどこを先に深めるかを一つに絞ると、読みが安定します。";
+  return `【天聞の所見】${main}${next}`;
+}
+
+function __pickNonTocQuoteFromCandidatesV1(candidates: any[]): string | null {
+  if (!Array.isArray(candidates) || candidates.length === 0) return null;
+  for (const c of candidates) {
+    const s = String(c?.snippet || "").replace(/\s+/g, " ").trim();
+    if (!s) continue;
+    if (__isScriptureTocLikeV1(s)) continue;
+    return s.slice(0, 160);
+  }
+  return null;
+}
+
 /** TENMON_K1_TRACE_EMPTY_RESPONSE_DENSITY_REPAIR: stripped 本文 <140字/反復/汎用締めのみ LLM 補完（routeReason 不変・失敗時は元本文） */
 async function __tenmonK1PostFinalizeLlmEnrichV1(out: any): Promise<any> {
   try {
@@ -461,7 +661,9 @@ async function __tenmonK1PostFinalizeLlmEnrichV1(out: any): Promise<any> {
     // - 140字未満、または
     // - 反復（同一文の重複等）、または
     // - 汎用締め（質問返し/抽象化）が強い
-    if (core.length >= 140 && !hasSentenceDup(core) && !hasGenericClosing(core)) return out;
+    if (core.length >= 140 && !hasSentenceDup(core) && !hasGenericClosing(core)) {
+      return __rehydrateK1ScriptureWeakLinkV1(out, raw);
+    }
 
     const applyK1DeterministicFallback = (): any | null => {
       const fb = __tenmonK1DeterministicDensityBodyV1(raw);
@@ -477,13 +679,13 @@ async function __tenmonK1PostFinalizeLlmEnrichV1(out: any): Promise<any> {
           tenmonK1DeterministicFallbackV1: true,
         };
       } catch {}
-      return mergedDet;
+      return __rehydrateK1ScriptureWeakLinkV1(mergedDet, raw);
     };
 
     const ready = getLlmProviderReadinessV1();
     if (!ready.ok) {
       const d = applyK1DeterministicFallback();
-      return d ?? out;
+      return d ?? __rehydrateK1ScriptureWeakLinkV1(out, raw);
     }
 
     const system =
@@ -503,19 +705,19 @@ async function __tenmonK1PostFinalizeLlmEnrichV1(out: any): Promise<any> {
       r = await llmChat({ system, user, history: [] });
     } catch {
       const d0 = applyK1DeterministicFallback();
-      return d0 ?? out;
+      return d0 ?? __rehydrateK1ScriptureWeakLinkV1(out, raw);
     }
     const t = String(r?.text ?? "").trim();
     const tcore = t.replace(/^【天聞の所見】\s*/u, "").trim();
     // 採用条件（失敗時は決定論フォールバック→元本文）
-    if (tcore.length < 140) return applyK1DeterministicFallback() ?? out;
+    if (tcore.length < 140) return applyK1DeterministicFallback() ?? __rehydrateK1ScriptureWeakLinkV1(out, raw);
     // LLM がやや超過する場合は採用（290 字まで）。それ以上は決定論へ
-    if (tcore.length > 290) return applyK1DeterministicFallback() ?? out;
-    if (hasSentenceDup(tcore)) return applyK1DeterministicFallback() ?? out;
-    if (hasGenericClosing(tcore)) return applyK1DeterministicFallback() ?? out;
+    if (tcore.length > 290) return applyK1DeterministicFallback() ?? __rehydrateK1ScriptureWeakLinkV1(out, raw);
+    if (hasSentenceDup(tcore)) return applyK1DeterministicFallback() ?? __rehydrateK1ScriptureWeakLinkV1(out, raw);
+    if (hasGenericClosing(tcore)) return applyK1DeterministicFallback() ?? __rehydrateK1ScriptureWeakLinkV1(out, raw);
     // meta/trace token の混入を拒否
     if (/(routeReason|responsePlan|SYSTEM_PROMPT|BEGIN_PROMPT|R22_[A-Z0-9_]+_V[0-9]+|TENMON_[A-Z0-9_]+_V[0-9]+)/u.test(t))
-      return applyK1DeterministicFallback() ?? out;
+      return applyK1DeterministicFallback() ?? __rehydrateK1ScriptureWeakLinkV1(out, raw);
     const fixed = /^【天聞の所見】/u.test(t) ? t : `【天聞の所見】${t}`;
     const merged = { ...out, response: fixed };
     try {
@@ -525,7 +727,7 @@ async function __tenmonK1PostFinalizeLlmEnrichV1(out: any): Promise<any> {
         tenmonK1LlmEnrichedV1: true,
       };
     } catch {}
-    return merged;
+    return __rehydrateK1ScriptureWeakLinkV1(merged, raw);
   } catch {
     return out;
   }
@@ -1245,7 +1447,8 @@ if (!(res as any).__TENMON_JSON_WRAP_V7) {
         } catch {}
         const __reducedEarly = applyFinalAnswerConstitutionAndWisdomReducerV1(obj);
         const __enK1 = await __tenmonK1PostFinalizeLlmEnrichV1(__reducedEarly);
-        return (res as any).__TENMON_RUN_OUTER_RES_JSON(__enK1);
+        const __enConcept = __rehydrateConceptCanonWeakLinkV1(__enK1, String(message ?? ""));
+        return (res as any).__TENMON_RUN_OUTER_RES_JSON(__enConcept);
       };
     }
   } catch {}
@@ -2415,10 +2618,12 @@ const pid = process.pid;
           const __top: any = __dedup[0];
           let __quote = String(__top?.snippet || "").replace(/\s+/g, " ").trim().slice(0, 220);
           if (/^です。/u.test(__quote)) __quote = __quote.replace(/^です。\s*/u, "");
+          const __docLocal = String(__top?.doc || __local.primaryDoc || __local.family);
+          const __respLocal = __buildScriptureLocalBodyV1({ doc: __docLocal, q: __q, quote: __quote });
           return await res.json(__tenmonGeneralGateResultMaybe({
-            response: `【天聞の所見】${String(__top?.doc || __local.primaryDoc || __local.family)} の一節では、「${__q}」はこう立ちます。「${__quote}」`,
+            response: __respLocal,
             evidence: {
-              doc: String(__top?.doc || __local.primaryDoc || __local.family),
+              doc: __docLocal,
               pdfPage: Number(__top?.pdfPage || 1),
               quote: __quote,
             },
@@ -2448,7 +2653,11 @@ const pid = process.pid;
                     evidenceDoc: String(__top?.doc || __local.primaryDoc || __local.family),
                     evidencePage: Number(__top?.pdfPage || 1)
                   }
-                }
+                },
+                responsePlan: {
+                  routeReason: "SCRIPTURE_LOCAL_RESOLVER_V4",
+                  semanticBody: __respLocal,
+                },
               }
             }
           }));
@@ -2714,10 +2923,7 @@ const pid = process.pid;
           // bad snippet / query不一致は local read を諦めて後段へ流す
         } else {
         const __threadIdSafe = (typeof threadId !== "undefined" ? threadId : String(((req as any)?.body || {})?.threadId || ""));
-        const __resp =
-          __scriptureLocal.intent === "scripture_local_read"
-            ? `【天聞の所見】${__doc0} では、「${__q}」に関して ${__quote} と読めます。`
-            : `【天聞の所見】${__doc0} の核心は、${__quote} という本文軸から入るのが自然です。`;
+        const __resp = __buildScriptureLocalBodyV1({ doc: __doc0, q: __q, quote: __quote });
 
         return await res.json(__tenmonGeneralGateResultMaybe({
           response: __resp,
@@ -2760,7 +2966,11 @@ const pid = process.pid;
                 primaryMeaning: __quote,
                 evidenceDoc: __doc0,
                 evidencePage: __page0
-              }
+              },
+              responsePlan: {
+                routeReason: "SCRIPTURE_LOCAL_RESOLVER_V4",
+                semanticBody: __resp,
+              },
             }
           }
         }));
@@ -5149,7 +5359,8 @@ ${String((gptDraft as any)?.text ?? "").trim()}
     // RES_JSON_MERGE_B_INTO_C_V1: reducer → K1 極短文 LLM 補完 → 外周 native 連鎖
     const __reducedFree = applyFinalAnswerConstitutionAndWisdomReducerV1(obj);
     const __enrichedFree = await __tenmonK1PostFinalizeLlmEnrichV1(__reducedFree);
-    return (res as any).__TENMON_RUN_OUTER_RES_JSON(__enrichedFree);
+    const __enrichedConcept = __rehydrateConceptCanonWeakLinkV1(__enrichedFree, String(message ?? ""));
+    return (res as any).__TENMON_RUN_OUTER_RES_JSON(__enrichedConcept);
   };
 
   // marker
@@ -8713,6 +8924,18 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
             heart: normalizeHeartShape(__heart),
             conceptCanon: { conceptKey: __canon.conceptKey, displayName: __canon.displayName ?? __canon.conceptKey },
             conceptEvidence: __canon.evidence?.[0] ?? null,
+            sourcePack: __routeReason === "TENMON_CONCEPT_CANON_V1" ? "concept" : "scripture",
+            centerKey: __canon.conceptKey,
+            centerMeaning: __canon.displayName ?? __canon.conceptKey,
+            centerLabel: __canon.displayName ?? __canon.conceptKey,
+            thoughtCoreSummary: {
+              centerKey: __canon.conceptKey,
+              centerMeaning: __canon.displayName ?? __canon.conceptKey,
+              routeReason: __routeReason,
+              modeHint: "concept",
+            },
+            thoughtGuideSummary: getThoughtGuideSummary("scripture"),
+            notionCanon: getNotionCanonForRoute("TENMON_CONCEPT_CANON_V1", String(message ?? "")),
             lawsUsed: [],
             evidenceIds: [],
             lawTrace: [],

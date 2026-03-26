@@ -946,6 +946,19 @@ export function applyFinalAnswerConstitutionAndWisdomReducerV1(payload: any): an
       body = tail ? `${stripped}\n\n${tail}`.trim() : stripped;
     }
   }
+  if (rr === "TENMON_CONCEPT_CANON_V1") {
+    body = body
+      .replace(/^\s*この点では、\s*天聞の所見】\s*/u, "")
+      .replace(/^\s*天聞の所見】\s*/u, "")
+      .replace(/^\s*[【\[]?\s*天聞の所見[】\]]\s*/u, "")
+      .trim();
+  }
+  if (rr === "SCRIPTURE_LOCAL_RESOLVER_V4") {
+    body = body
+      .replace(/(?:目次|訳注|解説|請来目録|書誌|索引)\s*[^\n。]{0,220}/gu, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
 
   /** TENMON_CONVERSATION_100_SEAL_PDCA_V1: 明示長文は「立脚の中心」「補助）次の一手」等を付けず semantic 本文を主に出す */
   if (rr === "EXPLICIT_CHAR_PREEMPT_V1" && __explicitReq >= 2400 && !__beautyThin) {
@@ -1051,6 +1064,19 @@ export function applyFinalAnswerConstitutionAndWisdomReducerV1(payload: any): an
   }
   body = tightenDomainSurfaceBodyV1(rr, body, userMessageForSurface);
   let composed = [head, body, evidencePack, step].filter(Boolean).join("\n\n").trim();
+  if (rr === "SCRIPTURE_LOCAL_RESOLVER_V4") {
+    composed = composed
+      .replace(/(?:目次|訳注|解説|請来目録|書誌|索引)\s*[^\n。]{0,220}/gu, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+  if (rr === "TENMON_CONCEPT_CANON_V1") {
+    composed = composed
+      .replace(/^\s*この点では、\s*天聞の所見】\s*/u, "【天聞の所見】")
+      .replace(/^\s*天聞の所見】\s*/u, "【天聞の所見】")
+      .replace(/^\s*(?:この点では、\s*)?[【\[]?\s*天聞の所見[】\]]\s*/u, "【天聞の所見】")
+      .trim();
+  }
   composed = applyRuntimeSurfaceRepairV1({
     text: composed,
     routeReason: rr,

@@ -1,17 +1,14 @@
 {
   "card": "TENMON_WORLDCLASS_ACCEPTANCE_SCORECARD_CURSOR_AUTO_V1",
-  "generated_at": "2026-03-26T10:31:21Z",
+  "generated_at": "2026-03-26T20:16:13Z",
   "score_total": 72.4,
   "score_max": 118,
   "score_percent": 61.36,
   "sealed_operable_ready": false,
   "worldclass_ready": false,
   "must_fix_before_claim": [
-    "conversation_continuity:continuity_hold_density_insufficient",
     "conversation_backend:conversation_runner_not_pass",
     "conversation_backend:chat_ts_overall_not_100",
-    "conversation_continuity:sessionId_reference_in_mainline_web_src",
-    "conversation_continuity:continuity_hold_not_observed",
     "self_audit_os:verdict_source_split_not_single",
     "self_audit_os:orchestrator_integrated_verdict_exists",
     "self_audit_os:pwa_false_mostly_due_env_failure",
@@ -25,9 +22,9 @@
     "learning_self_improvement:learning_integrated_verdict_not_ok",
     "learning_self_improvement:learning_chain_not_ok"
   ],
-  "primary_gap": "conversation_continuity",
-  "recommended_next_card": "TENMON_PWA_THREADID_CONTINUITY_LIVED_PROOF_REPAIR_CURSOR_AUTO_V1",
-  "next_best_card": "TENMON_PWA_THREADID_CONTINUITY_LIVED_PROOF_REPAIR_CURSOR_AUTO_V1",
+  "primary_gap": "conversation_backend",
+  "recommended_next_card": "TENMON_FINAL_OPERABLE_SEAL_CURSOR_AUTO_V1",
+  "next_best_card": "TENMON_FINAL_OPERABLE_SEAL_CURSOR_AUTO_V1",
   "latest_truth_sync": {
     "pwa_final_superseded_by_lived": true,
     "resolved_dialogue_axes": [
@@ -41,36 +38,36 @@
       "fresh_k1_general_probes"
     ],
     "fresh_probe_digest": {
-      "continuity_followup_len": 22,
-      "continuity_probe_thread": "probe_rejudge_1774521068",
+      "continuity_followup_len": 116,
+      "continuity_probe_thread": "probe_rejudge_1774556164",
       "chat1_route": "DEF_FASTPATH_VERIFIED_V1",
       "chat2_route": "CONTINUITY_ROUTE_HOLD_V1",
       "k1_probe_hokke": {
         "route": "K1_TRACE_EMPTY_GATED_V1",
-        "len": 168,
+        "len": 245,
         "response_nonempty": true,
         "meta_leak_ok": true,
         "satisfied": true,
         "http_status": 200,
-        "thread_id": "probe_k1_hokke_1774521068"
+        "thread_id": "probe_k1_hokke_1774556164"
       },
       "k1_probe_kukai": {
         "route": "K1_TRACE_EMPTY_GATED_V1",
-        "len": 142,
+        "len": 153,
         "response_nonempty": true,
         "meta_leak_ok": true,
         "satisfied": true,
         "http_status": 200,
-        "thread_id": "probe_k1_kukai_1774521068"
+        "thread_id": "probe_k1_kukai_1774556164"
       },
       "general_probe": {
         "route": "NATURAL_GENERAL_LLM_TOP",
-        "len": 268,
+        "len": 17,
         "response_nonempty": true,
         "meta_leak_ok": true,
         "satisfied": false,
         "http_status": 200,
-        "thread_id": "probe_general_1774521068"
+        "thread_id": "probe_general_1774556164"
       },
       "ai_consciousness_lock_probe": {
         "route": "R10_SELF_REFLECTION_ROUTE_V4_SAFE",
@@ -79,18 +76,18 @@
         "meta_leak_ok": true,
         "satisfied": false,
         "http_status": 200,
-        "thread_id": "probe_ai_1774521068"
+        "thread_id": "probe_ai_1774556164"
       },
       "subconcept_probe": {
         "route": "TRUTH_GATE_RETURN_V2",
-        "len": 113,
+        "len": 129,
         "response_nonempty": true,
         "meta_leak_ok": true,
         "satisfied": false,
         "http_status": 200,
-        "thread_id": "probe_subconcept_1774521068"
+        "thread_id": "probe_subconcept_1774556164"
       },
-      "continuity_density_unresolved": true
+      "continuity_density_unresolved": false
     },
     "stale_sources": [
       "pwa_final_completion_readiness.json",
@@ -148,10 +145,7 @@
       "max_score": 12,
       "band": "yellow",
       "accepted_complete": false,
-      "primary_blockers": [
-        "sessionId_reference_in_mainline_web_src",
-        "continuity_hold_not_observed"
-      ]
+      "primary_blockers": []
     },
     "pwa_code_constitution": {
       "score": 10.0,

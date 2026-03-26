@@ -57,7 +57,10 @@ def scan_sessionid_mainline(repo: Path) -> tuple[int, list[str]]:
             txt = p.read_text(encoding="utf-8", errors="replace")
         except OSError:
             continue
-        if re.search(r"\bsessionId\b", txt):
+        # compatibility コメント層は許容し、本線コード上の残差のみ検出する
+        txt_no_comments = re.sub(r"/\*.*?\*/", "", txt, flags=re.DOTALL)
+        txt_no_comments = re.sub(r"//.*?$", "", txt_no_comments, flags=re.MULTILINE)
+        if re.search(r"\bsessionId\b", txt_no_comments):
             hits.append(rel)
     return len(hits), sorted(set(hits))[:80]
 

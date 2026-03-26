@@ -14,6 +14,39 @@ from typing import Any, Dict, List
 from remote_cursor_common_v1 import CARD, VERSION, api_automation, read_json, utc_now_iso
 
 
+ALLOWED_REAL_STATUSES = {"started", "executor_failed", "completed_no_diff", "build_ok", "acceptance_ok"}
+
+
+def normalize_entry_v1(entry: Dict[str, Any]) -> Dict[str, Any]:
+    e = dict(entry)
+    status = str(e.get("status") or "").strip()
+    dry_run = bool(e.get("dry_run") is True)
+    touched_files = e.get("touched_files")
+    if not isinstance(touched_files, list):
+        touched_files = []
+    e["touched_files"] = [str(x) for x in touched_files if str(x).strip()]
+
+    if dry_run:
+        if not status:
+            status = "dry_run_started"
+    else:
+        if status == "dry_run_started":
+            status = "started"
+        if status not in ALLOWED_REAL_STATUSES:
+            status = "executor_failed" if status == "failed" else (status or "started")
+        if not e["touched_files"] and status in {"started", "build_ok", "acceptance_ok"}:
+            status = "completed_no_diff"
+        if status == "completed_no_diff" and not str(e.get("no_diff_reason") or "").strip():
+            e["no_diff_reason"] = "executor_opened_but_no_change"
+
+    e["status"] = status
+    e.setdefault("build_result", {"rc": e.get("build_rc")})
+    e.setdefault("acceptance_result", {"ok": e.get("acceptance_ok")})
+    e.setdefault("log_path", "")
+    e.setdefault("dangerous_patch_block_report", "")
+    return e
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="remote_cursor_result_ingest_v1")
     ap.add_argument("--from-file", type=str, default="", help="単一エントリ JSON")
@@ -67,6 +100,7 @@ def main() -> int:
                 "entries": [],
             }
         entries: List[Dict[str, Any]] = list(bundle.get("entries") or [])
+        entry = normalize_entry_v1(entry)
         entry.setdefault("schema_version", 1)
         entry.setdefault("ingested_via", "remote_cursor_result_ingest_v1.py")
         entry.setdefault("ingested_at", utc_now_iso())

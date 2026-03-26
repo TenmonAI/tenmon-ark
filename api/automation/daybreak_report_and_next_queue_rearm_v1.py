@@ -20,8 +20,8 @@ from pathlib import Path
 from typing import Any
 
 CARD = "TENMON_DAYBREAK_REPORT_AND_NEXT_QUEUE_REARM_CURSOR_AUTO_V1"
-NEXT_ON_PASS = "主線13完了"
-NEXT_ON_FAIL_NOTE = "停止。daybreak retry 1枚のみ生成。"
+NEXT_ON_PASS = "TENMON_CLOSED_LOOP_REAL_EXECUTION_SEAL_CURSOR_AUTO_V1"
+NEXT_ON_FAIL_NOTE = "停止。retry 1枚のみ。"
 OUT_REPORT_JSON = "daybreak_report.json"
 OUT_REPORT_MD = "daybreak_report.md"
 OUT_REARM = "next_queue_rearm.json"
@@ -167,7 +167,7 @@ def _summary_quality_score(js: dict[str, Any]) -> int:
     br = js.get("blocked_reason")
     if isinstance(br, list) and [str(x) for x in br] == ["end_local_reached"]:
         score += 8
-    if "last_master_pass" in js:
+    if js.get("last_master_pass") is True:
         score += 3
     cycles = js.get("cycles")
     if isinstance(cycles, int) and cycles > 1:

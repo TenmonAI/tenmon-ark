@@ -25,6 +25,8 @@ OUT_JSON = "tenmon_full_autonomy_os_13plus4_master_summary.json"
 OUT_MD = "tenmon_full_autonomy_os_13plus4_master_report.md"
 FAIL_NEXT = "TENMON_FULL_AUTONOMY_OS_13PLUS4_MASTER_PARENT_RETRY_CURSOR_AUTO_V1"
 NEXT_ON_PASS = "TENMON_MAC_WATCH_LOOP_REAL_EXECUTION_ENABLE_FOR_APPROVED_HIGH_RISK_CURSOR_AUTO_V1"
+OUT_HEARTBEAT = "tenmon_full_autonomy_os_13plus4_master_heartbeat.json"
+DEFAULT_LOCK = ".tenmon_full_autonomy_os_13plus4_master_parent.lock"
 
 
 def utc() -> str:
@@ -44,6 +46,37 @@ def read_json(path: Path) -> dict[str, Any]:
 def write_json(path: Path, obj: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(obj, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
+def pid_alive(pid: int) -> bool:
+    if pid <= 0:
+        return False
+    try:
+        os.kill(pid, 0)
+        return True
+    except Exception:
+        return False
+
+
+def acquire_lock(lock_file: Path) -> tuple[bool, str]:
+    if lock_file.exists():
+        old = read_json(lock_file)
+        old_pid = int(old.get("pid") or 0)
+        if old_pid and pid_alive(old_pid):
+            return False, "duplicate_master_parent_lock_active"
+        try:
+            lock_file.unlink()
+        except Exception:
+            return False, "stale_master_lock_unremovable"
+    write_json(lock_file, {"card": CARD, "pid": os.getpid(), "started_at": utc()})
+    return True, "ok"
+
+
+def release_lock(lock_file: Path) -> None:
+    try:
+        lock_file.unlink(missing_ok=True)
+    except Exception:
+        pass
 
 
 def is_darwin() -> bool:
@@ -121,6 +154,23 @@ def main() -> int:
     relax_verify = bool(args.relax_verify_rollback) or os.environ.get(
         "TENMON_OS13PLUS4_RELAX_VERIFY_ROLLBACK", ""
     ).strip() in ("1", "true", "yes")
+    heartbeat_path = auto / OUT_HEARTBEAT
+    lock_file = Path(os.environ.get("TENMON_FULL_AUTONOMY_MASTER_LOCK_FILE", str(auto / DEFAULT_LOCK))).expanduser()
+    lock_ok, lock_note = acquire_lock(lock_file)
+    if not lock_ok:
+        write_json(
+            auto / OUT_JSON,
+            {
+                "card": CARD,
+                "generated_at": utc(),
+                "master_pass": False,
+                "halted": True,
+                "halt_reason": lock_note,
+                "next_on_pass": NEXT_ON_PASS,
+                "next_on_fail": {"halt": True, "retry_card": FAIL_NEXT},
+            },
+        )
+        return 1
 
     py = sys.executable
     timeout = max(60, int(args.timeout_sec))
@@ -298,6 +348,46 @@ def main() -> int:
             [0, 1],
             "safe stop / override / fail-closed（running=false で rc=1 を許容）",
         ),
+        (
+            18,
+            "TENMON_CURSOR_SINGLE_FLIGHT_QUEUE_AND_REVIEW_GATE_CURSOR_AUTO_V1",
+            "parent_guard",
+            "py",
+            [py, str(auto / "tenmon_cursor_single_flight_queue_v1.py")],
+            False,
+            None,
+            "single-flight queue state refresh（duplicate suppression）",
+        ),
+        (
+            19,
+            "TENMON_AUTONOMY_HEARTBEAT_ALERT_AND_STALL_RECOVERY_CURSOR_AUTO_V1",
+            "parent_guard",
+            "py",
+            [py, str(auto / "autonomy_stall_recovery_v1.py")],
+            False,
+            None,
+            "stall / heartbeat observation + fail-closed rescue candidates",
+        ),
+        (
+            20,
+            "TENMON_OVERNIGHT_CONTINUITY_OPERABLE_PDCA_ORCHESTRATOR_CURSOR_AUTO_V1",
+            "parent_guard",
+            "py",
+            [py, str(auto / "tenmon_overnight_continuity_operable_pdca_orchestrator_v1.py"), "--one-shot"],
+            False,
+            None,
+            "one-shot low-risk nightly mainline loop",
+        ),
+        (
+            21,
+            "TENMON_AUTONOMY_MORNING_APPROVAL_EXECUTION_CHAIN_CURSOR_AUTO_V1",
+            "parent_guard",
+            "py",
+            [py, str(auto / "morning_approval_execution_chain_v1.py")],
+            False,
+            None,
+            "morning approval list + chain minimization output",
+        ),
     ]
 
     step_results: list[dict[str, Any]] = []
@@ -305,120 +395,120 @@ def main() -> int:
     halt_reason = ""
     evidence_paths: list[str] = []
 
-    for idx, card_id, lane, mode, cmd, mac_only, accept_rc, notes in steps_spec:
-        if idx == 10 and relax_verify:
-            accept_rc = [0, 1]
-        row: dict[str, Any] = {
-            "step": idx,
-            "card": card_id,
-            "lane": lane,
-            "notes": notes,
-            "status": "pending",
-        }
-        if mac_only and not is_darwin():
-            row["status"] = "skipped_mac_only"
-            step_results.append(row)
-            continue
-
-        if mode == "skip":
-            row["status"] = "skipped_no_runner"
-            step_results.append(row)
-            continue
-
-        if mode == "constitution":
-            doc = constitution_path(
-                repo,
-                "TENMON_MAC_WATCH_LOOP_REAL_EXECUTION_ENABLE_FOR_APPROVED_HIGH_RISK_CURSOR_AUTO_V1.md",
-            )
-            row["status"] = "ok" if doc.is_file() else "fail_constitution_missing"
-            row["path"] = str(doc)
-            step_results.append(row)
-            if row["status"] != "ok":
-                halted = True
-                halt_reason = "constitution_missing"
-                evidence_paths.append(str(doc))
-                break
-            continue
-
-        if mode == "compound":
-            r1 = run_cmd(["bash", str(scripts / "tenmon_full_autonomy_acceptance_gate_v1.sh")], cwd=api, timeout=timeout)
-            r2 = run_cmd(["bash", str(scripts / "tenmon_autonomy_priority_loop_to_remote_queue_enqueue_v1.sh")], cwd=api, timeout=timeout)
-            row["runs"] = {"acceptance_gate": r1, "priority_enqueue": r2}
-            ok = bool(r1.get("ok")) and bool(r2.get("ok"))
-            row["status"] = "ok" if ok else "fail"
-            step_results.append(row)
-            if not ok:
-                halted = True
-                halt_reason = "acceptance_or_enqueue_failed"
-                evidence_paths.extend(
-                    [
-                        str(auto / "tenmon_full_autonomy_acceptance_gate_summary.json"),
-                        str(auto / "tenmon_autonomy_priority_loop_to_remote_queue_enqueue_summary.json"),
-                    ]
-                )
-                break
-            continue
-
-        if mode == "compound2":
-            r1 = run_cmd(["bash", str(scripts / "tenmon_autonomy_current_state_forensic_v1.sh")], cwd=api, timeout=timeout)
-            r2 = run_cmd(
-                ["bash", str(scripts / "tenmon_worldclass_dialogue_acceptance_priority_loop_v1.sh")],
-                cwd=api,
-                timeout=timeout,
-            )
-            row["runs"] = {"forensic": r1, "worldclass_dialogue_loop": r2}
-            ok = bool(r1.get("ok")) and bool(r2.get("ok"))
-            row["status"] = "ok" if ok else "fail"
-            step_results.append(row)
-            if not ok:
-                halted = True
-                halt_reason = "daybreak_refresh_failed"
-                evidence_paths.extend(
-                    [
-                        str(auto / "tenmon_autonomy_current_state_forensic.json"),
-                        str(auto / "tenmon_worldclass_dialogue_acceptance_priority_loop_v1.json"),
-                    ]
-                )
-                break
-            continue
-
-        if mode == "heavy_bash":
-            if not run_heavy:
-                row["status"] = "skipped_heavy_default"
-                row["hint"] = "再実行: --run-heavy または TENMON_OS13PLUS4_RUN_HEAVY=1"
+    try:
+        for idx, card_id, lane, mode, cmd, mac_only, accept_rc, notes in steps_spec:
+            if idx == 10 and relax_verify:
+                accept_rc = [0, 1]
+            row: dict[str, Any] = {
+                "step": idx,
+                "card": card_id,
+                "lane": lane,
+                "notes": notes,
+                "status": "pending",
+            }
+            if mac_only and not is_darwin():
+                row["status"] = "skipped_mac_only"
                 step_results.append(row)
+                write_json(heartbeat_path, {"card": CARD, "updated_at": utc(), "step": idx, "status": row["status"], "lock_file": str(lock_file)})
+                continue
+            if mode == "skip":
+                row["status"] = "skipped_no_runner"
+                step_results.append(row)
+                write_json(heartbeat_path, {"card": CARD, "updated_at": utc(), "step": idx, "status": row["status"], "lock_file": str(lock_file)})
+                continue
+            if mode == "constitution":
+                doc = constitution_path(repo, "TENMON_MAC_WATCH_LOOP_REAL_EXECUTION_ENABLE_FOR_APPROVED_HIGH_RISK_CURSOR_AUTO_V1.md")
+                row["status"] = "ok" if doc.is_file() else "fail_constitution_missing"
+                row["path"] = str(doc)
+                step_results.append(row)
+                write_json(heartbeat_path, {"card": CARD, "updated_at": utc(), "step": idx, "status": row["status"], "lock_file": str(lock_file)})
+                if row["status"] != "ok":
+                    halted = True
+                    halt_reason = "constitution_missing"
+                    evidence_paths.append(str(doc))
+                    break
+                continue
+            if mode == "compound":
+                r1 = run_cmd(["bash", str(scripts / "tenmon_full_autonomy_acceptance_gate_v1.sh")], cwd=api, timeout=timeout)
+                r2 = run_cmd(["bash", str(scripts / "tenmon_autonomy_priority_loop_to_remote_queue_enqueue_v1.sh")], cwd=api, timeout=timeout)
+                row["runs"] = {"acceptance_gate": r1, "priority_enqueue": r2}
+                ok = bool(r1.get("ok")) and bool(r2.get("ok"))
+                row["status"] = "ok" if ok else "fail"
+                step_results.append(row)
+                write_json(heartbeat_path, {"card": CARD, "updated_at": utc(), "step": idx, "status": row["status"], "lock_file": str(lock_file)})
+                if not ok:
+                    halted = True
+                    halt_reason = "acceptance_or_enqueue_failed"
+                    evidence_paths.extend([str(auto / "tenmon_full_autonomy_acceptance_gate_summary.json"), str(auto / "tenmon_autonomy_priority_loop_to_remote_queue_enqueue_summary.json")])
+                    break
+                continue
+            if mode == "compound2":
+                r1 = run_cmd(["bash", str(scripts / "tenmon_autonomy_current_state_forensic_v1.sh")], cwd=api, timeout=timeout)
+                r2 = run_cmd(["bash", str(scripts / "tenmon_worldclass_dialogue_acceptance_priority_loop_v1.sh")], cwd=api, timeout=timeout)
+                row["runs"] = {"forensic": r1, "worldclass_dialogue_loop": r2}
+                ok = bool(r1.get("ok")) and bool(r2.get("ok"))
+                row["status"] = "ok" if ok else "fail"
+                step_results.append(row)
+                write_json(heartbeat_path, {"card": CARD, "updated_at": utc(), "step": idx, "status": row["status"], "lock_file": str(lock_file)})
+                if not ok:
+                    halted = True
+                    halt_reason = "daybreak_refresh_failed"
+                    evidence_paths.extend([str(auto / "tenmon_autonomy_current_state_forensic.json"), str(auto / "tenmon_worldclass_dialogue_acceptance_priority_loop_v1.json")])
+                    break
+                continue
+            if mode == "heavy_bash":
+                if not run_heavy:
+                    row["status"] = "skipped_heavy_default"
+                    row["hint"] = "再実行: --run-heavy または TENMON_OS13PLUS4_RUN_HEAVY=1"
+                    step_results.append(row)
+                    write_json(heartbeat_path, {"card": CARD, "updated_at": utc(), "step": idx, "status": row["status"], "lock_file": str(lock_file)})
+                    continue
+                assert cmd is not None
+                r = run_cmd(cmd, cwd=api, timeout=timeout)
+                row["run"] = r
+                row["status"] = "ok" if r.get("ok") else "fail"
+                step_results.append(row)
+                write_json(heartbeat_path, {"card": CARD, "updated_at": utc(), "step": idx, "status": row["status"], "lock_file": str(lock_file)})
+                if not r.get("ok"):
+                    halted = True
+                    halt_reason = "overnight_loop_failed"
+                    evidence_paths.append(str(auto / "tenmon_overnight_full_autonomy_completion_loop_summary.json"))
+                    break
                 continue
             assert cmd is not None
             r = run_cmd(cmd, cwd=api, timeout=timeout)
             row["run"] = r
-            row["status"] = "ok" if r.get("ok") else "fail"
+            ec = r.get("exit_code")
+            allowed = accept_rc if accept_rc is not None else [0]
+            ok = ec in allowed if ec is not None else False
+            row["accepted_exit_codes"] = allowed
+            if ok and ec == 1 and allowed != [0]:
+                row["status"] = "ok_warn"
+                row["warn"] = "nonzero_exit_accepted_as_observation"
+            else:
+                row["status"] = "ok" if ok else "fail"
             step_results.append(row)
-            if not r.get("ok"):
+            write_json(heartbeat_path, {"card": CARD, "updated_at": utc(), "step": idx, "status": row["status"], "lock_file": str(lock_file)})
+            if not ok:
                 halted = True
-                halt_reason = "overnight_loop_failed"
-                evidence_paths.append(str(auto / "tenmon_overnight_full_autonomy_completion_loop_summary.json"))
+                halt_reason = f"step_{idx}_nonzero_exit"
+                if idx == 17:
+                    evidence_paths.append(str(auto / "tenmon_execution_gate_hardstop_verdict.json"))
                 break
-            continue
+    finally:
+        release_lock(lock_file)
 
-        assert cmd is not None
-        r = run_cmd(cmd, cwd=api, timeout=timeout)
-        row["run"] = r
-        ec = r.get("exit_code")
-        allowed = accept_rc if accept_rc is not None else [0]
-        ok = ec in allowed if ec is not None else False
-        row["accepted_exit_codes"] = allowed
-        if ok and ec == 1 and allowed != [0]:
-            row["status"] = "ok_warn"
-            row["warn"] = "nonzero_exit_accepted_as_observation"
-        else:
-            row["status"] = "ok" if ok else "fail"
-        step_results.append(row)
-        if not ok:
-            halted = True
-            halt_reason = f"step_{idx}_nonzero_exit"
-            if idx == 17:
-                evidence_paths.append(str(auto / "tenmon_execution_gate_hardstop_verdict.json"))
-            break
+    failclosed_evidence_files = [
+        auto / "tenmon_high_risk_morning_approval_list.json",
+        auto / "high_risk_escrow_package_latest.json",
+        auto / "tenmon_cursor_single_flight_queue_state.json",
+        auto / "tenmon_overnight_continuity_operable_pdca_orchestrator_heartbeat.json",
+    ]
+    missing_failclosed_evidence = [str(p) for p in failclosed_evidence_files if not p.is_file()]
+    if missing_failclosed_evidence and not halted:
+        halted = True
+        halt_reason = "missing_failclosed_evidence_files"
+        evidence_paths.extend(missing_failclosed_evidence)
 
     master_pass = not halted and all(
         s.get("status")
@@ -440,6 +530,8 @@ def main() -> int:
         "halt_reason": halt_reason or None,
         "next_on_pass": NEXT_ON_PASS,
         "next_on_fail": {"halt": True, "retry_card": FAIL_NEXT},
+        "failclosed_evidence_files": [str(x) for x in failclosed_evidence_files],
+        "missing_failclosed_evidence": missing_failclosed_evidence,
         "steps": step_results,
         "outputs": {
             "summary_json": str(auto / OUT_JSON),

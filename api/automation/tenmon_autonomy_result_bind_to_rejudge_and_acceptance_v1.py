@@ -221,16 +221,42 @@ def main() -> int:
         stale_sources_present = True
         stale_reasons.append("no_eligible_current_run_entry_in_bundle")
 
+    status_now = str((latest_entry or {}).get("status") or "")
+    touched_now = (latest_entry or {}).get("touched_files")
+    no_diff_now = (latest_entry or {}).get("no_diff_reason")
+    build_rc_now = (latest_entry or {}).get("build_rc")
+    acceptance_ok_now = (latest_entry or {}).get("acceptance_ok")
+    real_now = bool((latest_entry or {}).get("dry_run") is False)
+    touched_nonempty = isinstance(touched_now, list) and any(str(x).strip() for x in touched_now)
+    touched_empty_with_reason = isinstance(touched_now, list) and len(touched_now) == 0 and bool(str(no_diff_now or "").strip())
+    status_valid_for_real = status_now in {
+        "started",
+        "executor_failed",
+        "completed_no_diff",
+        "build_ok",
+        "acceptance_ok",
+    }
+    latest_current_run_evidence_ok = bool(
+        latest_current_run_entry_found
+        and current_run_queue_executed
+        and (
+            (not real_now)
+            or (
+                status_valid_for_real
+                and status_now != "dry_run_started"
+                and (touched_nonempty or touched_empty_with_reason)
+                and build_rc_now is not None
+                and acceptance_ok_now is not None
+            )
+        )
+    )
+
     rejudge_refreshed = False
     scorecard_refreshed = False
     rejudge_run: dict[str, Any] = {"ok": False, "skip": True, "reason": "gated_not_met"}
     score_run: dict[str, Any] = {"ok": False, "skip": True, "reason": "gated_not_met"}
 
-    gate_ok = (
-        current_run_result_seen
-        and current_run_queue_executed
-        and not stale_sources_present
-    )
+    gate_ok = current_run_result_seen and current_run_queue_executed and not stale_sources_present and latest_current_run_evidence_ok
     if gate_ok:
         rejudge_run = _run_py(auto / "tenmon_latest_state_rejudge_and_seal_refresh_v1.py", api)
         rejudge_refreshed = bool(rejudge_run.get("ok"))
@@ -241,7 +267,7 @@ def main() -> int:
     rejudge_pending_but_result_bound = bool(
         current_run_queue_executed
         and not stale_sources_present
-        and gate_ok
+        and latest_current_run_evidence_ok
         and not rejudge_refreshed
         and rejudge_run.get("skip") is not True
     )
@@ -277,6 +303,7 @@ def main() -> int:
         "latest_current_run_fixture": latest_current_run_fixture,
         "latest_current_run_queue_state": latest_current_run_queue_state or None,
         "current_run_queue_executed": current_run_queue_executed,
+        "latest_current_run_evidence_ok": latest_current_run_evidence_ok,
         "ignored_fixture_current_run_count": ignored_fixture_count,
         "ignored_fixture_queue_ids": ignored_fixture_queue_ids,
         "match_strategy_used": match_strategy_used,
@@ -288,6 +315,14 @@ def main() -> int:
         "stale_reasons": stale_reasons,
         "next_best_card": next_best_card,
         "queue_match": queue_match,
+        "latest_current_run_evidence": {
+            "status": status_now,
+            "status_valid_for_real": status_valid_for_real,
+            "touched_nonempty": touched_nonempty,
+            "touched_empty_with_reason": touched_empty_with_reason,
+            "build_rc_non_null": build_rc_now is not None,
+            "acceptance_ok_non_null": acceptance_ok_now is not None,
+        },
         "rejudge_run": rejudge_run,
         "scorecard_run": score_run,
         "worldclass_score": scorecard.get("score_percent"),
@@ -306,6 +341,7 @@ def main() -> int:
         f"- generated_at: `{out['generated_at']}`",
         f"- **bundle_seen**: `{bundle_seen}`",
         f"- **current_run_queue_executed**: `{current_run_queue_executed}`",
+        f"- **latest_current_run_evidence_ok**: `{latest_current_run_evidence_ok}`",
         f"- **match_strategy_used**: `{match_strategy_used}`",
         f"- ignored_fixture_current_run_count: `{ignored_fixture_count}`",
         f"- rejudge_refreshed: `{rejudge_refreshed}`",

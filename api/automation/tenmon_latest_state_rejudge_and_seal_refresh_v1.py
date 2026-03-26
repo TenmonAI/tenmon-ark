@@ -429,6 +429,17 @@ def main() -> int:
     cleanup_only_residue = bool(repo_must_block and untracked < 50 and modified < 20)
 
     stale_inputs = list_stale_hints(auto, sources, health_ok, cont_ok, excluded_sources)[:120]
+    actionable_stale_inputs: list[str] = []
+    for it in stale_inputs:
+        nm = it.split(":", 1)[0] if ":" in it else it
+        if nm in excluded_sources:
+            continue
+        if nm in {"tenmon_latest_state_rejudge_and_seal_refresh_verdict.json", "tenmon_latest_state_rejudge_summary.json"} and ":continuity_drop_premise" in it:
+            # self-generated historical snapshots should not keep stale as primary blocker once fresh probes are present
+            continue
+        if ":superseded_by_lived:" in it:
+            continue
+        actionable_stale_inputs.append(it)
 
     # latest truth source priority (cursor-local first)
     priority_order = [
@@ -525,6 +536,7 @@ def main() -> int:
         and (not product_failure)
     )
 
+    continuity_density_short = bool(cont_len < 80)
     remaining_blockers: list[str] = []
     if not health_ok:
         remaining_blockers.append("health_not_ok")
@@ -542,8 +554,10 @@ def main() -> int:
         remaining_blockers.append("product_failure_detected")
     if env_failure:
         remaining_blockers.append("env_failure_detected")
-    if stale_inputs:
+    if actionable_stale_inputs:
         remaining_blockers.append("stale_sources_present")
+    if continuity_density_short:
+        remaining_blockers.insert(0, "conversation_continuity:continuity_hold_density_insufficient")
 
     # scorecard / system verdict — 観測のみ（推測で PASS 付与しない）
     if not score or not score.get("generated_at"):
@@ -567,11 +581,11 @@ def main() -> int:
             sys_gates_ok = False
     worldclass_ready_candidate = bool(score.get("worldclass_ready") is True and sys_gates_ok)
 
-    if cont_len < 80:
-        recommended = "TENMON_PWA_THREADID_CONTINUITY_LIVED_PROOF_REPAIR_CURSOR_AUTO_V1"
+    if continuity_density_short:
+        recommended = "TENMON_CONTINUITY_HOLD_DENSITY_AND_SINGLE_SOURCE_REJUDGE_CURSOR_AUTO_V1"
     elif repo_must_block and not cleanup_only_residue:
         recommended = "TENMON_CURSOR_ONLY_REPO_HYGIENE_FINAL_SEAL_CURSOR_AUTO_V1"
-    elif stale_inputs:
+    elif actionable_stale_inputs:
         recommended = "TENMON_STALE_EVIDENCE_INVALIDATION_CURSOR_AUTO_V1"
     elif operable_ready_candidate:
         recommended = "TENMON_FINAL_OPERABLE_SEAL_CURSOR_AUTO_V1"
@@ -619,6 +633,8 @@ def main() -> int:
         "recommended_next_card": recommended,
         "latest_sources": latest_sources,
         "stale_sources": stale_source_names,
+        "stale_sources_present": bool(actionable_stale_inputs),
+        "stale_inputs_actionable": actionable_stale_inputs,
         "superseded_sources": superseded_sources,
         "latest_truth_rebased": bool(rebase_summary.get("latest_truth_rebased") is True),
         "truth_source_singleton": bool(rebase_summary.get("truth_source_singleton") is True),
@@ -659,6 +675,8 @@ def main() -> int:
         "recommended_next_card": recommended,
         "latest_sources": latest_sources,
         "stale_sources": stale_source_names,
+        "stale_sources_present": bool(actionable_stale_inputs),
+        "stale_inputs_actionable": actionable_stale_inputs,
         "superseded_sources": superseded_sources,
         "latest_truth_rebased": bool(rebase_summary.get("latest_truth_rebased") is True),
         "truth_source_singleton": bool(rebase_summary.get("truth_source_singleton") is True),

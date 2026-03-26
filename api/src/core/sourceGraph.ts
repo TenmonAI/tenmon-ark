@@ -22,6 +22,7 @@ const SOURCE_GRAPH: SourceGraphNode[] = [
   { routeReason: "R22_ESSENCE_ASK_V1", routeClass: "analysis", sourcePack: "natural_analysis", binderMode: "analysis" },
   { routeReason: "R22_COMPARE_ASK_V1", routeClass: "analysis", sourcePack: "natural_analysis", binderMode: "analysis" },
   { routeReason: "EXPLICIT_CHAR_PREEMPT_V1", routeClass: "analysis", sourcePack: "explicit", binderMode: "analysis" },
+  { routeReason: "TENMON_CONCEPT_CANON_V1", routeClass: "analysis", sourcePack: "concept", thoughtGuideKey: "scripture", notionRoute: "TENMON_CONCEPT_CANON_V1", binderMode: "analysis" },
   { routeReason: "TENMON_SCRIPTURE_CANON_V1", routeClass: "continuity", sourcePack: "scripture", thoughtGuideKey: "scripture", notionRoute: "TENMON_SCRIPTURE_CANON_V1", binderMode: "continuity" },
   { routeReason: "SUPPORT_UI_INPUT_V1", routeClass: "support", sourcePack: "support", binderMode: "support" },
 ];

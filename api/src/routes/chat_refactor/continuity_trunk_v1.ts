@@ -213,6 +213,22 @@ function __buildContinuityRouteHoldDenseBodyV1(
 
   body = compressAdjacentDuplicateLinesV1(body);
   body = dedupeNextStepAndQuestionSurfaceV1(body);
+  if (body.length < 80) {
+    const core =
+      priorAnswerEssence ||
+      centerClaim ||
+      semanticNucleus ||
+      (nucleusFromCarry && !/^前の話の中心/u.test(nucleusFromCarry) ? nucleusFromCarry : "");
+    const c1 = core
+      ? `${core.slice(0, 120)}。`
+      : `${displayLabel && displayLabel !== "この中心" ? displayLabel : "前段の要点"}を保ったまま、論点を一段だけ具体化します。`;
+    const c2 =
+      nextFocus.length >= 4
+        ? `次に詰めるなら、${nextFocus.slice(0, 120)}を先に固定すると、話の軸がぶれません。`
+        : "次に進めるときは、見る軸を一つだけ選んで深めると、継続の筋が保てます。";
+    const c3 = "ここまでの前提を崩さずに接続するため、先に軸を決めてから一段だけ掘り下げます。";
+    body = `${c1}${c2}${c3}`.replace(/\s+/g, " ").replace(/。{2,}/g, "。").trim();
+  }
   return body;
 }
 

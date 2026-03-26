@@ -484,6 +484,7 @@ def main() -> int:
         "safe_medium_auto_iterate_note": "router/browser/consensus チェーンは medium 前提; queue の approval_required（high/escrow 系）は API ゲートのまま（本オーケストレータはキューを自動 ready にしない）",
         "finished_normally": blocked == ["end_local_reached"],
         "rearm_hint": "end_local_reached 単独なら正常終了。daybreak_report_and_next_queue_rearm_v1.py で lock/stop clear と next queue rearm を実施。",
+        "continuity_operable_parent_available": str(auto / "tenmon_overnight_continuity_operable_pdca_orchestrator_v1.py"),
     }
     write_json(summary_path, summary)
     print(json.dumps({"ok": True, "cycles": cycle, "summary": str(summary_path)}, ensure_ascii=False))

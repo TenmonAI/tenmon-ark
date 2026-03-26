@@ -24,6 +24,24 @@ import {
   shouldEnterScriptureBoundaryGate,
 } from "./define.js";
 
+function __isTocLikeSnippetV1(text: string): boolean {
+  const t = String(text || "").replace(/\s+/g, " ").trim();
+  if (!t) return true;
+  if (/(目次|もくじ|訳注|解説|請来目録|書誌|参考文献|索引|一覧|収録)/u.test(t)) return true;
+  if (/((p|P|頁)\s*\d{1,4}([,、\-〜]\s*\d{1,4}){2,})/u.test(t)) return true;
+  if (/(\d{1,4}\s*[,、]\s*){3,}\d{1,4}/u.test(t)) return true;
+  return false;
+}
+
+function __pickPreferredScriptureCandidateV1(items: any[]): any | null {
+  if (!Array.isArray(items) || items.length === 0) return null;
+  const top = items[0];
+  const topSnippet = String(top?.snippet || "");
+  if (!__isTocLikeSnippetV1(topSnippet)) return top;
+  const nonToc = items.find((x) => !__isTocLikeSnippetV1(String(x?.snippet || "")));
+  return nonToc || top;
+}
+
 /** TRUTH_GATE より前: 強制 scripture local（従来どおり raw res.json 形状） */
 export function tryScriptureLocalForcePreemptResJsonV1(p: {
   __msgDef: string;
@@ -81,7 +99,7 @@ export function tryScriptureLocalForcePreemptResJsonV1(p: {
           };
           return score(b) - score(a);
         });
-        const __top: any = __dedup[0];
+        const __top: any = __pickPreferredScriptureCandidateV1(__dedup) || __dedup[0];
         let __quote = String(__top?.snippet || "").replace(/\s+/g, " ").trim().slice(0, 220);
         if (/^です。/u.test(__quote)) __quote = __quote.replace(/^です。\s*/u, "");
         return {
@@ -227,8 +245,15 @@ export function tryScriptureLocalResolverV4ResJsonV1(p: {
         });
 
         __ranked2.sort((a: any, b: any) => b.__score - a.__score);
-        const __top2: any = (__ranked2[0] && __ranked2[0].__h) || __top;
-        const __quote = __cleanSnippet((__ranked2[0] && __ranked2[0].__snippet0) || __top2?.snippet || "").slice(0, 160);
+        let __top2: any = (__ranked2[0] && __ranked2[0].__h) || __top;
+        let __quote = __cleanSnippet((__ranked2[0] && __ranked2[0].__snippet0) || __top2?.snippet || "").slice(0, 160);
+        if (__isTocLikeSnippetV1(__quote)) {
+          const __alt = __ranked2.find((r: any) => !__isTocLikeSnippetV1(String(r?.__snippet0 || r?.__h?.snippet || "")));
+          if (__alt && __alt.__h) {
+            __top2 = __alt.__h;
+            __quote = __cleanSnippet(String(__alt.__snippet0 || __alt.__h?.snippet || "")).slice(0, 160);
+          }
+        }
         const __doc0 = String(__top2?.doc || __scriptureLocal.primaryDoc || "");
         const __page0 = Number(__top2?.pdfPage || 1);
 

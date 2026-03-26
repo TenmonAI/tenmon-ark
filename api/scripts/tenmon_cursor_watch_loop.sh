@@ -241,7 +241,10 @@ tick() {
     if bash -c "$EXECUTOR_CMD" >>"${executor_log}" 2>&1; then
       :
     else
+      local __rc
+      __rc="$?"
       executor_failed=1
+      executor_exit_code="${__rc}"
       log "executor_nonzero_exit id=$qid"
     fi
   elif [[ -f "$EXECUTOR_PY" ]]; then
@@ -253,7 +256,10 @@ tick() {
     if "$PYTHON" "$EXECUTOR_PY" "$item_json" >>"${executor_log}" 2>&1; then
       :
     else
+      local __rc
+      __rc="$?"
       executor_failed=1
+      executor_exit_code="${__rc}"
       log "executor_nonzero_exit id=$qid"
     fi
   else
@@ -385,9 +391,14 @@ tick() {
 
   # --- TENMON_REAL_EXECUTION_RESULT_EVIDENCE_BIND: real の status は dry_run_started を禁止。evidence 束 ---
   local final_status no_diff_reason_val git_status_evidence_path executor_configured
+  local evidence_incomplete_reason executor_exit_code acceptance_ok_val build_rc_val
   final_status=""
   no_diff_reason_val=""
   git_status_evidence_path=""
+  evidence_incomplete_reason=""
+  executor_exit_code=""
+  acceptance_ok_val=""
+  build_rc_val=""
   executor_configured="false"
   if [[ -n "${EXECUTOR_CMD}" ]] || [[ -f "${EXECUTOR_PY:-}" ]]; then
     executor_configured="true"
@@ -407,9 +418,9 @@ tick() {
       final_status="executor_failed"
       git_status_evidence_path="${git_status_audit_file:-$git_status_evidence_path}"
     elif [[ "${hr_chain_attempted}" == "true" ]] && [[ "${hr_acc}" == "true" ]] && [[ "${hr_rb}" != "true" ]]; then
-      final_status="completed"
+      final_status="acceptance_ok"
     elif [[ -n "${touched_files}" ]]; then
-      final_status="completed"
+      final_status="build_ok"
     else
       final_status="completed_no_diff"
       if [[ "${executor_configured}" != "true" ]]; then
@@ -449,6 +460,33 @@ tick() {
         no_diff_reason_val="executor_opened_but_no_change"
       fi
     fi
+    if [[ -z "${touched_files}" ]] && [[ -z "${no_diff_reason_val}" ]]; then
+      evidence_incomplete_reason="touched_files_empty_without_no_diff_reason"
+    elif [[ -z "${git_repo_root}" ]]; then
+      evidence_incomplete_reason="git_repo_root_unavailable"
+    fi
+    if [[ "${executor_failed}" -eq 1 ]]; then
+      if [[ -n "${executor_exit_code}" ]]; then
+        build_rc_val="${executor_exit_code}"
+      else
+        build_rc_val="1"
+      fi
+      acceptance_ok_val="false"
+    elif [[ "${hr_chain_attempted}" == "true" ]]; then
+      build_rc_val="${hr_br_str}"
+      if [[ "${hr_acc}" == "true" ]]; then
+        acceptance_ok_val="true"
+      else
+        acceptance_ok_val="false"
+      fi
+    else
+      build_rc_val="0"
+      if [[ "${manual_review_required}" == "true" ]] || [[ "${review_status}" == "acceptor_error" ]]; then
+        acceptance_ok_val="false"
+      else
+        acceptance_ok_val="true"
+      fi
+    fi
   fi
 
   body_file="$(mktemp)"
@@ -466,6 +504,9 @@ tick() {
     --arg slp "$session_log" \
     --arg gsp "${git_status_evidence_path}" \
     --arg ndr "$no_diff_reason_val" \
+    --arg eir "$evidence_incomplete_reason" \
+    --arg acv "$acceptance_ok_val" \
+    --arg brv "$build_rc_val" \
     --arg ras "$review_status" \
     --arg rj "$review_json" \
     --argjson mrr "$manual_review_required" \
@@ -495,16 +536,17 @@ tick() {
       current_run:$item_current_run,
       touched_files:(if ($dry_run_bool==1) then [] else $touched_files end),
       no_diff_reason:(if ($dry_run_bool==1) then null elif ($ndr|length) > 0 then $ndr else null end),
+      evidence_incomplete_reason:(if ($dry_run_bool==1) then null elif ($eir|length) > 0 then $eir else null end),
       dry_run:($dry_run_bool==1),
       real_execution:($dry_run_bool==0),
       real_execution_enabled:($dry_run_bool==0),
       executor_mode:$emode,
       escrow_approved:$item_escrow_approved,
       high_risk_acceptance_chain_attempted:($hrc == "true"),
-      acceptance_ok:(if ($hrc == "true") then ($acc == "true") else null end),
+      acceptance_ok:(if ($dry_run_bool==1) then null elif ($acv=="true") then true elif ($acv=="false") then false else null end),
       rollback_executed:(if ($hrc == "true") then ($rb == "true") else false end),
       commit_ready:(if ($hrc == "true") then ($cr == "true") else false end),
-      build_rc:(if ($hrc == "true") and ($brs != "null") and ($brs != "") then ($brs | tonumber) elif ($hrc == "true") then null else null end)
+      build_rc:(if ($dry_run_bool==1) then null elif ($brv|length)>0 and ($brv!="null") then ($brv|tonumber) else null end)
     }' >"$body_file"
 
   http_out="$LOG_DIR/result_${exec_mode}_${ts}_${qid}.json"

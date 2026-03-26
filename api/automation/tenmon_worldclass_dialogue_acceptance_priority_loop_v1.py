@@ -130,8 +130,13 @@ def main() -> int:
     gen = _read_json(auto / "conversation_quality_generated_cards.json")
     sc = _read_json(auto / "tenmon_worldclass_acceptance_scorecard.json")
     sysv = _read_json(auto / "tenmon_system_verdict.json")
+    rj = _read_json(auto / "tenmon_latest_state_rejudge_summary.json")
 
-    stale = bool(cq.get("stale_sources_present"))
+    rj_stale = bool(rj.get("stale_sources_present"))
+    rj_blockers = rj.get("remaining_blockers") if isinstance(rj.get("remaining_blockers"), list) else []
+    if not rj_stale and any(str(x) == "stale_sources_present" for x in rj_blockers):
+        rj_stale = True
+    stale = rj_stale if rj else bool(cq.get("stale_sources_present"))
     dialogue_findings = cq.get("dialogue_quality_findings") if isinstance(cq.get("dialogue_quality_findings"), dict) else {}
     dialogue_axes_flags = {
         "k1_depth": bool(dialogue_findings.get("k1_trace_empty_short_response")),
@@ -168,6 +173,15 @@ def main() -> int:
             next_best = "TENMON_SUBCONCEPT_CANON_SURFACE_CLEAN_AND_CONTEXT_CARRY_SKIP_CURSOR_AUTO_V1"
         elif dialogue_axes_flags["pwa_continuity_lived_experience"]:
             next_best = "TENMON_PWA_CONTINUITY_LIVED_PROOF_REPAIR_CURSOR_AUTO_V1"
+    # fresh truth 同期: continuity 密度不足は本カード優先
+    fp = rj.get("fresh_probe_digest") if isinstance(rj.get("fresh_probe_digest"), dict) else {}
+    cont_len = fp.get("continuity_followup_len")
+    continuity_density_short = isinstance(cont_len, (int, float)) and float(cont_len) < 80.0
+    if continuity_density_short:
+        next_best = "TENMON_CONTINUITY_HOLD_DENSITY_AND_SINGLE_SOURCE_REJUDGE_CURSOR_AUTO_V1"
+    rj_next = str(rj.get("recommended_next_card") or "").strip()
+    if rj_next:
+        next_best = rj_next
     if not next_best:
         next_best = cq.get("next_best_card") if not stale else None
     if not next_best:
@@ -180,6 +194,14 @@ def main() -> int:
     dialogue_axis_names = [k for k in DIALOGUE_PRIORITY_AXES if dialogue_axes_flags.get(k)]
     if dialogue_axis_names:
         blockers.insert(0, f"dialogue_priority_axes: {', '.join(dialogue_axis_names)}")
+    if continuity_density_short:
+        b = "conversation_continuity:continuity_hold_density_insufficient"
+        if b not in blockers:
+            blockers.insert(0, b)
+    if rj_blockers:
+        merged = [str(x) for x in rj_blockers if str(x).strip()]
+        merged.extend([b for b in blockers if b not in merged])
+        blockers = merged[:80]
 
     # acceptance seal: product rule — scorecard sealed path + no stale dialogue evidence
     acceptance_seal_allowed = bool(sealed_ok and wc_ready and not stale)

@@ -20,6 +20,8 @@ REAL_RESULT_STATUS_VOCAB = (
     "started",
     "executor_failed",
     "completed_no_diff",
+    "build_ok",
+    "acceptance_ok",
     "completed",
 )
 NO_DIFF_REASON_VOCAB = (
@@ -64,6 +66,39 @@ def queue_valid(q: dict[str, Any]) -> bool:
 
 def bundle_valid(b: dict[str, Any]) -> bool:
     return bool(b) and isinstance(b.get("entries"), list) and b.get("version") is not None
+
+
+def _current_run_nonfixture_entries(bundle: dict[str, Any]) -> list[dict[str, Any]]:
+    entries = bundle.get("entries") if isinstance(bundle.get("entries"), list) else []
+    out: list[dict[str, Any]] = []
+    for e in entries:
+        if not isinstance(e, dict):
+            continue
+        if e.get("current_run") is not True:
+            continue
+        if e.get("fixture") is True:
+            continue
+        qid = str(e.get("queue_id") or e.get("id") or "").strip()
+        if not qid or qid.startswith("6420"):
+            continue
+        out.append(e)
+    return out
+
+
+def _latest_nonfixture_current_run(bundle: dict[str, Any]) -> dict[str, Any] | None:
+    cur = _current_run_nonfixture_entries(bundle)
+    if not cur:
+        return None
+
+    def _ts(e: dict[str, Any]) -> str:
+        for k in ("created_at", "timestamp", "generated_at"):
+            v = e.get(k)
+            if isinstance(v, str) and v.strip():
+                return v
+        return ""
+
+    cur.sort(key=_ts)
+    return cur[-1]
 
 
 def admin_endpoints_ok(m: dict[str, Any]) -> bool:
@@ -175,6 +210,29 @@ def main() -> int:
     queue_watch_ready = queue_path.is_file() and queue_valid(queue)
     result_bundle_observable = bundle_path.is_file() and bundle_valid(bundle)
 
+    latest_nf = _latest_nonfixture_current_run(bundle) if result_bundle_observable else None
+    latest_nf_status = latest_nf.get("status") if isinstance(latest_nf, dict) else None
+    latest_nf_touched = latest_nf.get("touched_files") if isinstance(latest_nf, dict) else None
+    latest_nf_build_rc = latest_nf.get("build_rc") if isinstance(latest_nf, dict) else None
+    latest_nf_accept = latest_nf.get("acceptance_ok") if isinstance(latest_nf, dict) else None
+
+    latest_nf_touched_count = len(latest_nf_touched) if isinstance(latest_nf_touched, list) else None
+    latest_nf_real_ok = True
+    if latest_nf is not None:
+        latest_nf_real_ok = bool(
+            isinstance(latest_nf_touched, list)
+            and latest_nf_touched_count is not None
+            and latest_nf_touched_count >= 1
+            and isinstance(latest_nf_build_rc, int)
+            and latest_nf_accept in (True, False)
+            and isinstance(latest_nf_status, str)
+            and latest_nf_status.strip() != ""
+            and latest_nf_status in REAL_RESULT_STATUS_VOCAB
+            and latest_nf_status != "dry_run_started"
+        )
+        if not latest_nf_real_ok:
+            issues.append("latest_nonfixture_current_run_evidence_incomplete")
+
     manifest_mode_effective = str(m.get("executor_mode") or EXECUTOR_MODE)
     mode_bind_ok = manifest_mode_effective == EXECUTOR_MODE
 
@@ -191,6 +249,7 @@ def main() -> int:
         and mode_bind_ok
         and base_url_bind_ok
         and agent_routes_ok
+        and latest_nf_real_ok
     )
 
     out: dict[str, Any] = {
@@ -219,6 +278,10 @@ def main() -> int:
         "issues": issues,
         "dry_bind_only": True,
         "no_queue_or_result_writes": True,
+        "latest_nonfixture_current_run_status": latest_nf_status,
+        "latest_nonfixture_touched_files_count": latest_nf_touched_count,
+        "latest_nonfixture_build_rc": latest_nf_build_rc,
+        "latest_nonfixture_acceptance_ok": latest_nf_accept,
         "real_execution_result_evidence_v1": {
             "status_vocab": list(REAL_RESULT_STATUS_VOCAB),
             "status_vocab_when_real": [x for x in REAL_RESULT_STATUS_VOCAB if x != "dry_run_started"],
