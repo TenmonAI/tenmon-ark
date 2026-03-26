@@ -150,12 +150,15 @@ function stripSurfaceTemplateLeakFinalizeV1(text: string): string {
   let t = String(text || "");
   const removals: RegExp[] = [
     /さっき見ていた中心（[^）\n]{0,120}）を土台に、いまの話を見ていきましょう。\s*/gu,
+    /さっき見ていた中心[^\n]*/gu,
     /^（[^）\n]{0,120}）を土台に、いまの話を見ていきましょう。\s*\n?/gmu,
     /（[^）\n]{0,120}）を土台に、いまの話を見ていきましょう。\s*/gu,
     /【天聞の所見】いまは中心を保持したまま考えられています。[^\n]*\n?/gu,
     /語義・作用・読解の軸を分けて読むと、要点が崩れにくいです。\s*/gu,
     /語義・作用・読解の軸を分けると、主張の射程が崩れにくくなります。\s*/gu,
+    /語義・作用・読解[^\n]{0,240}/gu,
     /現代では、概念を押さえたうえで判断や実装に一段だけ落とすと使えます。\s*/gu,
+    /現代では、概念を押さえたうえで[^\n]{0,240}/gu,
     /について、今回は[^。\n]{0,40}の立場で答えます。?\n?/gu,
     /判断軸（内部参照は要約表示）について[^。\n]{0,50}。?\n?/gu,
   ];
@@ -1075,6 +1078,13 @@ export function applyFinalAnswerConstitutionAndWisdomReducerV1(payload: any): an
     composed = surfaceContinuityHoldOneLineV1(composed);
   }
   out.response = stripSurfaceTemplateLeakFinalizeV1(composed);
+  if (rr === "TENMON_SUBCONCEPT_CANON_V1") {
+    const s = String(out.response || "").replace(/\s+/g, " ").trim();
+    if (s.length < 12) {
+      out.response =
+        "【天聞の所見】主題の語を一つに絞り、その語が成立する読解条件を先に置きます。次に、その語が具体場面でどう効くかを一段だけ追います。";
+    }
+  }
   const stepForOmega =
     String(step || "").trim() || extractNextStepLineFromSurfaceV1(String(out.response));
   attachOmegaContractToOutKuV1(

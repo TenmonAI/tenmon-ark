@@ -18,8 +18,8 @@ export async function postChat(req: ChatRequest): Promise<ChatResponse> {
   });
 
   const data = (await res.json()) as ChatResponse;
-  const normalizedThreadId =
-    String(data?.threadId ?? "").trim() || String(data?.sessionId ?? "").trim() || String(req.threadId ?? "").trim();
+  // TENMON_PWA_THREAD_URL_CONSTITUTION_CURSOR_AUTO_V1: mainline は threadId のみを正とする
+  const normalizedThreadId = String(data?.threadId ?? "").trim() || String(req.threadId ?? "").trim();
   return {
     ...data,
     threadId: normalizedThreadId || undefined,

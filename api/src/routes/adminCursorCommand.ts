@@ -292,6 +292,11 @@ function buildNextManifestPayload(it: QueueItem): Record<string, unknown> {
   const fixture = isFixtureItem(it);
   const jobIdResolved = resolveSurfaceJobId(it, runLabel, qid);
   const runJobId = normalizeRunJobId(runLabel);
+  const ext = it as unknown as Record<string, unknown>;
+  const currentRun = ext.current_run === true;
+  const escrowApproved = ext.escrow_approved === true;
+  const riskTier = String(ext.risk_tier ?? it.risk_tier ?? "").trim();
+  const highRisk = riskTier === "high" || ext.high_risk === true;
   return {
     id: qid,
     queue_id: qid,
@@ -308,6 +313,10 @@ function buildNextManifestPayload(it: QueueItem): Record<string, unknown> {
     createdAt: it.submitted_at,
     card_name: it.card_name,
     card_body_md: it.card_body_md,
+    current_run: currentRun,
+    escrow_approved: escrowApproved,
+    risk_tier: riskTier,
+    high_risk: highRisk,
   };
 }
 

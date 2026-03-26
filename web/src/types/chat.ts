@@ -15,8 +15,6 @@ export type Message = {
 export type ChatRequest = {
   message: string;
   threadId: string;
-  /** 互換: backend 側が sessionId を受ける経路でも threadId を正とする */
-  sessionId?: string;
 };
 
 /** POST /api/chat レスポンス（backend は threadId を返し得る） */
@@ -24,8 +22,6 @@ export type ChatResponse = {
   response: string;
   timestamp: string;
   threadId?: string;
-  /** 互換: 旧経路の sessionId 応答を threadId へ正規化するため */
-  sessionId?: string;
   decisionFrame?: {
     ku?: {
       routeReason?: string;

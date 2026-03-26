@@ -27,6 +27,14 @@ PRIORITY_ORDER = [
     "template_leak_recurrence",
 ]
 
+DIALOGUE_PRIORITY_AXES = [
+    "k1_depth",
+    "general_substance",
+    "self_view_authenticity",
+    "subconcept_leak_and_context_carry",
+    "pwa_continuity_lived_experience",
+]
+
 CARD_BY_AXIS = {
     "k1_trace_empty_short_response": "TENMON_K1_TRACE_EMPTY_RESPONSE_DENSITY_REPAIR_CURSOR_AUTO_V1",
     "general_knowledge_insufficient_substance": "TENMON_GENERAL_KNOWLEDGE_SUBSTANCE_REPAIR_CURSOR_AUTO_V1",
@@ -37,6 +45,16 @@ CARD_BY_AXIS = {
     "template_leak_recurrence": "TENMON_TEMPLATE_LEAK_GUARD_REINFORCE_CURSOR_AUTO_V1",
 }
 
+CARD_PRIORITY_DIALOGUE = [
+    "TENMON_K1_TRACE_EMPTY_RESPONSE_DENSITY_REPAIR_CURSOR_AUTO_V1",
+    "TENMON_GENERAL_KNOWLEDGE_DENSITY_AND_SELF_VIEW_POLISH_CURSOR_AUTO_V1",
+    "TENMON_SUBCONCEPT_CANON_SURFACE_CLEAN_AND_CONTEXT_CARRY_SKIP_CURSOR_AUTO_V1",
+    "TENMON_PWA_CONTINUITY_LIVED_PROOF_REPAIR_CURSOR_AUTO_V1",
+    "TENMON_FACTUAL_POLISH_AND_RESPONSE_NATURALIZATION_CURSOR_AUTO_V1",
+]
+
+MANUAL_GATE_CARD_SET = set(CARD_PRIORITY_DIALOGUE)
+SAFE_ANALYSIS_CARD = "TENMON_PWA_DIALOGUE_SUPREMACY_CAMPAIGN_CURSOR_AUTO_V1"
 
 def _repo_api() -> Path:
     return Path(__file__).resolve().parents[1]
@@ -73,6 +91,16 @@ def _find_kokuzo_db(api_root: Path) -> Path | None:
 
 def _open_sqlite_ro(path: Path) -> sqlite3.Connection:
     return sqlite3.connect(f"file:{path}?mode=ro", uri=True, timeout=5.0)
+
+
+def _read_json(path: Path) -> dict[str, Any]:
+    if not path.is_file():
+        return {}
+    try:
+        raw = json.loads(path.read_text(encoding="utf-8"))
+        return raw if isinstance(raw, dict) else {}
+    except Exception:
+        return {}
 
 
 def _table_columns(conn: sqlite3.Connection, table: str) -> list[str]:
@@ -235,6 +263,92 @@ def _analyze_findings(pairs: list[dict[str, Any]]) -> dict[str, list[dict[str, A
     return out
 
 
+def _dialogue_findings_v1(findings: dict[str, list[dict[str, Any]]], api_root: Path) -> dict[str, list[dict[str, Any]]]:
+    auto = api_root / "automation"
+    pwa_blocker = _read_json(auto / "tenmon_pwa_lived_gate_blockers.json")
+    pwa_summary = _read_json(auto / "pwa_lived_completion_readiness.json")
+    rejudge = _read_json(auto / "tenmon_latest_state_rejudge_summary.json")
+
+    out: dict[str, list[dict[str, Any]]] = {
+        "k1_trace_empty_short_response": list(findings.get("k1_trace_empty_short_response") or []),
+        "general_knowledge_insufficient_substance": list(findings.get("general_knowledge_insufficient_substance") or []),
+        "self_view_not_tenmon_authentic": [],
+        "subconcept_template_leak_or_context_bleed": [],
+        "pwa_continuity_unproven_or_failed": [],
+        "factual_polish_needed": [],
+    }
+    out["self_view_not_tenmon_authentic"] = list(findings.get("self_view_generic_tone_residual") or [])
+    out["factual_polish_needed"] = list(findings.get("factual_weather_correction_residual") or [])
+
+    # 既存 template/context carry の観測を統合
+    out["subconcept_template_leak_or_context_bleed"].extend(list(findings.get("template_leak_recurrence") or []))
+    misdrop = int(rejudge.get("natural_misdrop_count", 0) or 0)
+    if misdrop > 0:
+        out["subconcept_template_leak_or_context_bleed"].append(
+            _mk_finding(
+                "template_leak_recurrence",
+                {
+                    "source": "tenmon_latest_state_rejudge_summary.json",
+                    "user": "n/a",
+                    "route_reason": None,
+                    "response_head": f"natural_misdrop_count={misdrop}",
+                },
+            )
+        )
+
+    # PWA continuity lived proof
+    pwa_fail = bool((pwa_summary.get("lived_proof_demonstrated") is False) or (pwa_blocker.get("ok") is False))
+    if pwa_fail:
+        out["pwa_continuity_unproven_or_failed"].append(
+            _mk_finding(
+                "continuity_short_input_hold_residual",
+                {
+                    "source": "pwa_lived_completion_readiness.json",
+                    "user": "n/a",
+                    "route_reason": None,
+                    "response_head": "pwa lived proof unproven or failed",
+                },
+            )
+        )
+    out["pwa_continuity_unproven_or_failed"].extend(list(findings.get("continuity_short_input_hold_residual") or []))
+    return out
+
+
+def _to_dialogue_axes_flags(dialogue_findings: dict[str, list[dict[str, Any]]]) -> dict[str, bool]:
+    return {
+        "k1_depth": bool(dialogue_findings.get("k1_trace_empty_short_response")),
+        "general_substance": bool(dialogue_findings.get("general_knowledge_insufficient_substance")),
+        "self_view_authenticity": bool(dialogue_findings.get("self_view_not_tenmon_authentic")),
+        "subconcept_leak_and_context_carry": bool(dialogue_findings.get("subconcept_template_leak_or_context_bleed")),
+        "pwa_continuity_lived_experience": bool(dialogue_findings.get("pwa_continuity_unproven_or_failed")),
+    }
+
+
+def _pick_dialogue_next_cards(stale: bool, axes: dict[str, bool]) -> tuple[str | None, list[str]]:
+    ordered: list[str] = []
+    if stale:
+        return None, ordered
+    if axes.get("k1_depth"):
+        ordered.append("TENMON_K1_TRACE_EMPTY_RESPONSE_DENSITY_REPAIR_CURSOR_AUTO_V1")
+    if axes.get("general_substance") or axes.get("self_view_authenticity"):
+        ordered.append("TENMON_GENERAL_KNOWLEDGE_DENSITY_AND_SELF_VIEW_POLISH_CURSOR_AUTO_V1")
+    if axes.get("subconcept_leak_and_context_carry"):
+        ordered.append("TENMON_SUBCONCEPT_CANON_SURFACE_CLEAN_AND_CONTEXT_CARRY_SKIP_CURSOR_AUTO_V1")
+    if axes.get("pwa_continuity_lived_experience"):
+        ordered.append("TENMON_PWA_CONTINUITY_LIVED_PROOF_REPAIR_CURSOR_AUTO_V1")
+    if axes.get("general_substance") and "TENMON_FACTUAL_POLISH_AND_RESPONSE_NATURALIZATION_CURSOR_AUTO_V1" not in ordered:
+        ordered.append("TENMON_FACTUAL_POLISH_AND_RESPONSE_NATURALIZATION_CURSOR_AUTO_V1")
+    # deterministic + dedup
+    seen: set[str] = set()
+    out: list[str] = []
+    for c in ordered:
+        if c in seen:
+            continue
+        seen.add(c)
+        out.append(c)
+    return (out[0] if out else None), out
+
+
 def run_analyzer(api_root: Path) -> dict[str, Any]:
     auto = api_root / "automation"
     db_path = _find_kokuzo_db(api_root)
@@ -254,7 +368,7 @@ def run_analyzer(api_root: Path) -> dict[str, Any]:
     findings = _analyze_findings(pairs)
     counts = {k: len(v) for k, v in findings.items()}
     prioritized_axes = [k for k in PRIORITY_ORDER if counts.get(k, 0) > 0]
-    next_cards = [CARD_BY_AXIS[k] for k in prioritized_axes]
+    legacy_next_cards = [CARD_BY_AXIS[k] for k in prioritized_axes]
     newest = max([x for x in [db_latest, probe_latest] if x is not None], default=None)
     stale = newest is None or (datetime.now(timezone.utc) - newest) > timedelta(hours=48)
     stale_sources = []
@@ -263,6 +377,19 @@ def run_analyzer(api_root: Path) -> dict[str, Any]:
     elif stale:
         stale_sources.append("latest_conversation_or_probe_older_than_48h")
     top = prioritized_axes[0] if prioritized_axes else None
+    dialogue_quality_findings = _dialogue_findings_v1(findings, api_root)
+    dialogue_axes_flags = _to_dialogue_axes_flags(dialogue_quality_findings)
+    dialogue_axes = [k for k in DIALOGUE_PRIORITY_AXES if dialogue_axes_flags.get(k)]
+    dialogue_next_best, dialogue_recommended = _pick_dialogue_next_cards(bool(stale_sources), dialogue_axes_flags)
+    manual_gate_cards = [c for c in dialogue_recommended if c in MANUAL_GATE_CARD_SET]
+    safe_next_cards = [SAFE_ANALYSIS_CARD]
+    if not stale_sources:
+        safe_next_cards.extend([c for c in dialogue_recommended if c not in MANUAL_GATE_CARD_SET])
+    conversation_quality_band = "clear"
+    if stale_sources:
+        conversation_quality_band = "stale_or_unverified"
+    elif dialogue_axes:
+        conversation_quality_band = "needs_dialogue_attention"
     summary = {
         "card": CARD,
         "generated_at": _utc_now_iso(),
@@ -278,8 +405,13 @@ def run_analyzer(api_root: Path) -> dict[str, Any]:
         "quality_findings": {k: v[:8] for k, v in findings.items()},
         "evidence_probes": sorted({str(x.get("source")) for x in probe_pairs})[:30],
         "prioritized_axes": prioritized_axes,
-        "recommended_next_cards": next_cards,
-        "next_best_card": CARD_BY_AXIS[top] if top else None,
+        "recommended_next_cards": dialogue_recommended or legacy_next_cards,
+        "next_best_card": dialogue_next_best or (CARD_BY_AXIS[top] if top else None),
+        "dialogue_priority_axes": DIALOGUE_PRIORITY_AXES,
+        "dialogue_quality_findings": {k: v[:8] for k, v in dialogue_quality_findings.items()},
+        "manual_gate_cards": manual_gate_cards,
+        "safe_next_cards": safe_next_cards[:12],
+        "conversation_quality_band": conversation_quality_band,
         "current_run_evidence_preferred": True,
         "stale_sources_present": bool(stale_sources),
         "stale_sources": stale_sources,

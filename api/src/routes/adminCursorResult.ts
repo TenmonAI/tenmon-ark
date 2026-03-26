@@ -55,6 +55,13 @@ function strPath(v: unknown, max = 4096): string {
   return String(v ?? "").trim().slice(0, max);
 }
 
+function queueItemHighRisk(it: QueueItem | undefined): boolean {
+  if (!it) return false;
+  const ext = it as unknown as Record<string, unknown>;
+  if (ext.high_risk === true) return true;
+  return String(ext.risk_tier ?? it.risk_tier ?? "").toLowerCase() === "high";
+}
+
 function applyQueueAfterResult(
   q: QueueFile,
   it: QueueItem | undefined,
@@ -84,6 +91,23 @@ function applyQueueAfterResult(
   }
 
   if (executorSession && currentRun && fileGuardOk) {
+    const chainAttempted = entry.high_risk_acceptance_chain_attempted === true;
+    if (chainAttempted && queueItemHighRisk(it)) {
+      const rb = entry.rollback_executed === true;
+      const brc = entry.build_rc != null ? Number(entry.build_rc) : null;
+      const acceptPass = entry.acceptance_ok === true;
+      if (acceptPass && brc === 0 && !rb) {
+        it.state = "executed";
+        it.completed_at = utcIso();
+        it.leased_until = null;
+        writeQueue(q);
+        return { transition: "current_run_high_risk_acceptance_pass" };
+      }
+      it.state = "ready";
+      it.leased_until = null;
+      writeQueue(q);
+      return { transition: "high_risk_acceptance_fail_ready" };
+    }
     it.state = "executed";
     it.completed_at = utcIso();
     it.leased_until = null;
@@ -133,9 +157,15 @@ adminCursorResultRouter.post("/admin/cursor/result", requireFounderOrExecutorBea
     build_rc: body.build_rc != null ? Number(body.build_rc) : null,
     acceptance_result: { ok: body.acceptance_ok != null ? Boolean(body.acceptance_ok) : null },
     acceptance_ok: body.acceptance_ok != null ? Boolean(body.acceptance_ok) : null,
+    rollback_executed: body.rollback_executed === true,
+    commit_ready: body.commit_ready === true,
+    high_risk_acceptance_chain_attempted: body.high_risk_acceptance_chain_attempted === true,
     next_card: body.next_card != null ? String(body.next_card) : null,
     log_snippet: body.log_snippet != null ? String(body.log_snippet).slice(0, 8000) : "",
     dry_run: Boolean(body.dry_run),
+    real_execution_enabled: body.real_execution_enabled === true,
+    escrow_approved:
+      typeof body.escrow_approved === "boolean" ? Boolean(body.escrow_approved) : null,
     status: strPath(body.status, 240) || null,
     result_type: strPath(body.result_type, 120) || null,
     session_id: strPath(body.session_id, 500) || null,
@@ -156,6 +186,8 @@ adminCursorResultRouter.post("/admin/cursor/result", requireFounderOrExecutorBea
   let statusLabel = fileGuard.ok ? "accepted" : "blocked_paths";
   if (transition === "fixture_released_ready") statusLabel = "ingested_fixture_not_completed";
   else if (transition === "current_run_executed") statusLabel = "executed";
+  else if (transition === "current_run_high_risk_acceptance_pass") statusLabel = "executed";
+  else if (transition === "high_risk_acceptance_fail_ready") statusLabel = "high_risk_acceptance_fail_retry_ready";
   else if (transition === "legacy_executed") statusLabel = "executed";
   else if (transition === "executor_session_missing_current_run") statusLabel = "executor_session_requires_current_run";
 

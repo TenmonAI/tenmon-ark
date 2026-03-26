@@ -1,6 +1,6 @@
 {
   "card": "TENMON_WORLDCLASS_ACCEPTANCE_SCORECARD_CURSOR_AUTO_V1",
-  "generated_at": "2026-03-24T19:47:56Z",
+  "generated_at": "2026-03-26T00:34:12Z",
   "score_total": 66.4,
   "score_max": 118,
   "score_percent": 56.27,
@@ -23,7 +23,6 @@
     "pwa_lived_proof:gate:health",
     "pwa_lived_proof:gate_audit_build_fail",
     "pwa_lived_proof:meta_leak_none",
-    "pwa_lived_proof:lived_proof_not_demonstrated_or_env_failure",
     "self_audit_os:verdict_source_split_not_single",
     "self_audit_os:orchestrator_integrated_verdict_exists",
     "self_audit_os:pwa_false_mostly_due_env_failure",
@@ -38,15 +37,17 @@
     "learning_self_improvement:learning_chain_not_ok"
   ],
   "primary_gap": "conversation_backend",
-  "recommended_next_card": "TENMON_PWA_RUNTIME_ENV_AND_PLAYWRIGHT_RESTORE_CURSOR_AUTO_V1",
+  "recommended_next_card": "TENMON_FINAL_OPERABLE_SEAL_CURSOR_AUTO_V1",
+  "next_best_card": "TENMON_FINAL_OPERABLE_SEAL_CURSOR_AUTO_V1",
   "signals": {
     "regression_detected": false,
     "gate_contract_aligned": true,
     "repo_must_block_seal": false,
-    "lived_proof_demonstrated": false,
+    "lived_proof_demonstrated": true,
     "critical_subsystems_accepted_count": 2,
     "critical_subsystems_all_accepted": false,
-    "overall_band": "code_complete_lived_unproven"
+    "overall_band": "code_complete_lived_unproven",
+    "current_run_nonfixture_executed": true
   },
   "subsystems": {
     "infra_gate": {
@@ -100,8 +101,7 @@
         "gate:audit_build",
         "gate:health",
         "gate_audit_build_fail",
-        "meta_leak_none",
-        "lived_proof_not_demonstrated_or_env_failure"
+        "meta_leak_none"
       ]
     },
     "repo_hygiene": {

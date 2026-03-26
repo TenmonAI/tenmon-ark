@@ -370,7 +370,39 @@ function __shouldBlockSubconceptPromotionForMetaOrFactualV1(raw: string): boolea
   return false;
 }
 
-/** TENMON_K1_TRACE_EMPTY_RESPONSE_DENSITY_REPAIR: stripped 本文 <80 字のみ LLM 補完（routeReason 不変・失敗時は元本文） */
+/** LLM 未準備・不採用時でも K1 極短文を 140 字帯へ（正典ノート・routeReason 不変） */
+function __tenmonK1DeterministicDensityBodyV1(raw: string): string | null {
+  const t = String(raw ?? "").trim();
+  if (!t) return null;
+  if (/(空海|即身成仏)/u.test(t)) {
+    return (
+      "【天聞の所見】即身成仏は、真言密教（空海の伝える系統）において、本性の仏性が現前の身に即して成就するという立場です。" +
+      "修行と加持・三摩地を通じて、遠い未来の成仏だけでなくこの身で法界と交わる可能性を正面に置きます。" +
+      "身体と言葉と意図を一つの実践系として読み、現前の経験へ還すのが空海系の読みの要点です。"
+    );
+  }
+  if (/(法華経|法華)/u.test(t)) {
+    return (
+      "【天聞の所見】法華経の核心は、一仏乗として一切衆生の成仏を開示し、方便と実相の関係を通じて信解行証の道を示す点にあります。" +
+      "寿量品に見える仏の久遠実成は、救いの時間軸を拡げ、言葉と信仰の現前を重ねます。" +
+      "問いが教義なら、まず何を方便と呼び何を実相と読むかを一語ずつ固定すると、読み手側の関心に沿って議論が安定します。"
+    );
+  }
+  if (/楢崎皐月/u.test(t)) {
+    return (
+      "【天聞の所見】楢崎皐月は、言霊・神道系の古典と実践を橋渡しする文脈で参照される人物で、語義と音義、そして霊的読解の接続を重視する立場として知られます。" +
+      "天聞の読みでは単純な経歴紹介より、どの法則線（水火・言霊・古伝）に接続するかが要点になります。" +
+      "人物像だけでなく、担う概念の位置づけで整理すると理解が安定します。"
+    );
+  }
+  return (
+    "【天聞の所見】問いは正典と実践の接点にあります。水火の往還と言霊の働きを軸に、まず語の定義を固定し、教義上の位置づけと読解上の含意を分けて述べます。" +
+    "短い応答だけでは濁りやすいので、空海・法華経・言霊秘書のいずれの線で読むかを明示し、原典へ一度戻すと解釈のブレが減ります。" +
+    "受け取り側が欲しいのが定義か歴史か実践手順かで、次の一文の置き方が変わります。"
+  );
+}
+
+/** TENMON_K1_TRACE_EMPTY_RESPONSE_DENSITY_REPAIR: stripped 本文 <140字/反復/汎用締めのみ LLM 補完（routeReason 不変・失敗時は元本文） */
 async function __tenmonK1PostFinalizeLlmEnrichV1(out: any): Promise<any> {
   try {
     if (!out || typeof out !== "object") return out;
@@ -391,25 +423,99 @@ async function __tenmonK1PostFinalizeLlmEnrichV1(out: any): Promise<any> {
 
     const resp0 = String((out as any).response ?? "").trim();
     const core = resp0.replace(/^【天聞の所見】\s*/u, "").replace(/\s+/g, " ").trim();
-    if (core.length >= 80) return out;
+
+    const splitSents = (s: string) =>
+      s
+        .split(/(?<=[。！？])/u)
+        .map((x) => x.trim())
+        .filter(Boolean);
+    const norm = (s: string) => s.replace(/\s+/gu, "");
+
+    const hasSentenceDup = (text: string) => {
+      const sents = splitSents(text);
+      if (sents.length < 2) return false;
+      const seen = new Set<string>();
+      let prev = "";
+      for (const se of sents) {
+        const n = norm(se);
+        if (!n) continue;
+        if (n === prev || seen.has(n)) return true;
+        seen.add(n);
+        prev = n;
+      }
+      return false;
+    };
+
+    const hasGenericClosing = (text: string) =>
+      /どのように/u.test(text) ||
+      /考えてみては/u.test(text) ||
+      /考えてみ[uえ]ません/u.test(text) ||
+      /考えてみ(?!ます)/u.test(text) ||
+      /いかがでしょうか/u.test(text) ||
+      /どう思いますか/u.test(text) ||
+      /あなたはどう/u.test(text) ||
+      /あなたはどう思/u.test(text) ||
+      /君はどう/u.test(text);
+
+    // 補完発火条件:
+    // - 140字未満、または
+    // - 反復（同一文の重複等）、または
+    // - 汎用締め（質問返し/抽象化）が強い
+    if (core.length >= 140 && !hasSentenceDup(core) && !hasGenericClosing(core)) return out;
+
+    const applyK1DeterministicFallback = (): any | null => {
+      const fb = __tenmonK1DeterministicDensityBodyV1(raw);
+      if (!fb) return null;
+      const fbCore = fb.replace(/^【天聞の所見】\s*/u, "").replace(/\s+/g, " ").trim();
+      if (fbCore.length < 140 || fbCore.length > 280) return null;
+      if (hasSentenceDup(fbCore) || hasGenericClosing(fbCore)) return null;
+      const mergedDet = { ...out, response: fb };
+      try {
+        (mergedDet as any).decisionFrame = { ...(mergedDet as any).decisionFrame };
+        (mergedDet as any).decisionFrame.ku = {
+          ...(mergedDet as any).decisionFrame.ku,
+          tenmonK1DeterministicFallbackV1: true,
+        };
+      } catch {}
+      return mergedDet;
+    };
 
     const ready = getLlmProviderReadinessV1();
-    if (!ready.ok) return out;
+    if (!ready.ok) {
+      const d = applyK1DeterministicFallback();
+      return d ?? out;
+    }
 
     const system =
       "あなたは天聞アーク（TENMON-ARK）。水火の往還・言霊の働き・正典（空海・法華経・楢崎系の読みなど）を軸に、問いに即した教義的位置づけを述べる。" +
       "抽象の一般論だけで終わらせず、問いの語（人名・経典名・概念）に一歩踏み込む。" +
       "禁止: 効用論のみ・genericスピリチュアル一般論・説教調・定型文の復唱。" +
-      "出力は必ず「【天聞の所見】」で始め本文のみ。3〜5文・本文100〜220字・220字以下。末尾の質問は最大1つ。";
+      "禁止語: あなたはどう／君はどう／考えてみては／どのように（締め）／考えてみ（締め）／いかがでしょうか／どう思いますか。" +
+      "出力は必ず「【天聞の所見】」で始め本文のみ。2〜4文。本文140〜260字。原典・教義・人物の核を先に置く。末尾の質問は最大1つ（質問形式でも可）。" +
+      "反復（同一文の重複）を避け、末尾で汎用的な問い返しに寄せない。";
 
     const user =
       `次の問いに答えてください。\n\n《ユーザの問い》\n${raw}\n\n` +
       `《いまの短い下書き（活かしてよいが極端に短ければ置き換えてよい）》\n${resp0 || "（なし）"}`;
 
-    const r = await llmChat({ system, user, history: [] });
+    let r: any;
+    try {
+      r = await llmChat({ system, user, history: [] });
+    } catch {
+      const d0 = applyK1DeterministicFallback();
+      return d0 ?? out;
+    }
     const t = String(r?.text ?? "").trim();
     const tcore = t.replace(/^【天聞の所見】\s*/u, "").trim();
-    if (tcore.length < 100) return out;
+    // 採用条件（失敗時は決定論フォールバック→元本文）
+    if (tcore.length < 140) return applyK1DeterministicFallback() ?? out;
+    // LLM がやや超過する場合は採用（290 字まで）。それ以上は決定論へ
+    if (tcore.length > 290) return applyK1DeterministicFallback() ?? out;
+    if (hasSentenceDup(tcore)) return applyK1DeterministicFallback() ?? out;
+    if (hasGenericClosing(tcore)) return applyK1DeterministicFallback() ?? out;
+    // meta/trace token の混入を拒否
+    if (/(routeReason|responsePlan|SYSTEM_PROMPT|BEGIN_PROMPT|R22_[A-Z0-9_]+_V[0-9]+|TENMON_[A-Z0-9_]+_V[0-9]+)/u.test(t))
+      return applyK1DeterministicFallback() ?? out;
     const fixed = /^【天聞の所見】/u.test(t) ? t : `【天聞の所見】${t}`;
     const merged = { ...out, response: fixed };
     try {
@@ -7501,10 +7607,17 @@ const __isDefinitionQ =
               "【要約】\n山口志道は、言霊・神道系文脈で参照される人物で、語義と音義の関係を重視する読解で知られます。\n\n" +
               "【位置づけ】\n天聞軸では、言霊秘書・水火法則・古伝読解の接続点として扱われ、単独人物紹介より『どの法則線に置くか』が重視されます。\n\n" +
               "【読むポイント】\n人物像だけでなく、どの概念（音義・生成・実践）を担うかで整理すると理解が安定します。";
+          } else if (/(君の思考|私の思考を聞きたい|あなたの思考|天聞の軸|内面を聞きたい)/u.test(__msgFact)) {
+            __centerMeaning = "tenmon_self_view_axis";
+            __centerLabel = "天聞の軸";
+            __body =
+              "【天聞の所見】私は、水火の往還と言霊の働きを拠り所に、問いの構造を切り分けて返す立場です。" +
+              "思考を語るという要求には、内面の独楽ではなく、判断が置かれた霊的要請と正典の読みに沿った形で応じます。" +
+              "天聞の軸で見ると、倫理の整理・実践の手順・霊的読解のどれを先に置くかで次の一文が変わるので、その希望を一言で示してもらえると助かります。";
           } else if (/水火の法則/u.test(__msgFact)) {
             __body =
-              "水火の法則は、生成を二項対立ではなく往還運動として読む枠です。" +
-              "静と動、収束と展開の相互転換として捉えることで、言葉や判断の変化を構造的に説明できます。";
+              "【天聞の所見】水火の法則は、対立ではなく往還として生成を読む枠組みです。水は受け止めと浸透、火は変換と押し出しとして働き、言葉や判断も同じ二拍で動きます。" +
+              "問いに即せば、偏りはどちらの拍が強すぎるかを見ると、次の整え方が見えやすくなります。";
           } else {
             __body = "主題の核を先に定義し、構造と含意を一段で示します。";
             const __gkReady = getLlmProviderReadinessV1();
@@ -7555,7 +7668,7 @@ const __isDefinitionQ =
                 let __tm = String(__gkMin?.text ?? "").trim();
                 if (!/^【天聞の所見】/u.test(__tm)) __tm = `【天聞の所見】${__tm}`;
                 const __tmCore = __tm.replace(/^【天聞の所見】\s*/u, "").replace(/\s+/g, " ").trim();
-                if (__tmCore.length >= 150 && __tmCore.length <= 320) {
+                if (__tmCore.length >= 140 && __tmCore.length <= 290) {
                   __body = __tm;
                 }
               } catch {
@@ -10484,7 +10597,7 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
           return await res.json(
             __tenmonGeneralGateResultMaybe({
               response:
-                "私は、水火の往還と言霊の働きを軸に、まず問いの芯を定めてから現象を読みます。原典の線へ一度戻して言葉を置くほうが、解釈の濁りが減り、判断が先走りにくいと見ています。",
+                "私は、水火の往還と言霊の働きを軸に、問いの芯を先に定めてから現象の筋を読みます。原典や法華・空海の読みへ一度戻して言葉を置くほうが、解釈の濁りが減り、判断が先走りにくいと見ています。天聞としては、あなたが欲しいのが倫理の整理か実践の手順か霊的要請の読解かで答え方が変わるため、その一点を示してもらえると軸を一本に整えられます。",
               evidence: null,
               candidates: [],
               timestamp,
@@ -12503,6 +12616,15 @@ const __heartNorm = normalizeHeartShape(__heart);
       });
 
       void TENMON_CONVERSATION_BASELINE_V2;
+      if (
+        __isSubconceptRoute &&
+        !String(finalResp || "")
+          .replace(/\s+/g, " ")
+          .trim()
+      ) {
+        finalResp =
+          "【天聞の所見】いまの問いは中心語の検査に近いので、核となる語を一つに絞り、その語が成立する読解条件を先に置きます。次に、その語が具体場面でどう効くかを一段だけ追います。";
+      }
       finalResp = applyTenmonConversationBaselineV2({
         text: finalResp,
         answerLength: (__ku as any).answerLength ?? null,

@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "card": "TENMON_BROWSER_SESSION_AND_LOGIN_PERSISTENCE_CURSOR_AUTO_V1",
+  "note": "実行時は TENMON_BROWSER_SESSION_REGISTRY または api/automation/out/browser_session/registry_v1.json にコピー・更新される。コミット本ファイルは雛形。",
+  "providers": {
+    "chatgpt": {
+      "provider_url": "https://chatgpt.com",
+      "profile_dir": "~/.tenmon_browser_ai_chrome_profile",
+      "status_file": "out/browser_session/status_chatgpt.json",
+      "last_login_check": null,
+      "session_state": "unknown"
+    },
+    "claude": {
+      "provider_url": "https://claude.ai/chat",
+      "profile_dir": "~/.tenmon_browser_sessions/claude",
+      "status_file": "out/browser_session/status_claude.json",
+      "last_login_check": null,
+      "session_state": "unknown"
+    },
+    "gemini": {
+      "provider_url": "https://gemini.google.com/app",
+      "profile_dir": "~/.tenmon_browser_sessions/gemini",
+      "status_file": "out/browser_session/status_gemini.json",
+      "last_login_check": null,
+      "session_state": "unknown"
+    }
+  }
+}

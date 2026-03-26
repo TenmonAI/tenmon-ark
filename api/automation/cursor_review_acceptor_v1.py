@@ -1,23 +1,25 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-TENMON_CURSOR_AGENT_REVIEW_BYPASS_OR_SINGLE_ACCEPT_RUNTIME_CURSOR_AUTO_V1
+TENMON_CURSOR_REVIEW_ACCEPTOR_RUNTIME_CURSOR_AUTO_V1
 
-Cursor review 停止点を可能な範囲で自動通過する。
-- bypass 可能なら accepted
-- 不可なら manual_review_required=true で明示停止
+Cursor review UI が残っている場合に、Mac 上で System Events 経由のボタンクリックのみ補助する。
+非 Darwin / ゲート違反時は fail-closed（成功の捏造なし）。
 """
 from __future__ import annotations
 
 import argparse
 import json
+import os
 import platform
 import subprocess
 import time
 from pathlib import Path
 from typing import Any
 
-CARD = "TENMON_CURSOR_AGENT_REVIEW_BYPASS_OR_SINGLE_ACCEPT_RUNTIME_CURSOR_AUTO_V1"
+CARD = "TENMON_CURSOR_REVIEW_ACCEPTOR_RUNTIME_CURSOR_AUTO_V1"
+LEGACY_CARD = "TENMON_CURSOR_AGENT_REVIEW_BYPASS_OR_SINGLE_ACCEPT_RUNTIME_CURSOR_AUTO_V1"
+
 BUTTON_ORDER = [
     "Continue without reverting",
     "Review",
@@ -25,15 +27,11 @@ BUTTON_ORDER = [
     "Accept All",
     "Apply All",
 ]
-FINAL_ACCEPT_BUTTONS = {"Keep All", "Accept All", "Apply All"}
-HIGH_RISK_PATTERNS = [
-    "chat.ts",
-    "finalize.ts",
-    "web/src/",
-    "auth",
-    "queue",
-    "token",
-]
+FINAL_ACCEPT_BUTTONS = frozenset({"Keep All", "Accept All", "Apply All"})
+
+
+def _apple_escape(s: str) -> str:
+    return s.replace("\\", "\\\\").replace('"', '\\"')
 
 
 def _run_osascript(script: str) -> tuple[int, str, str]:
@@ -41,7 +39,7 @@ def _run_osascript(script: str) -> tuple[int, str, str]:
         ["osascript", "-e", script],
         capture_output=True,
         text=True,
-        timeout=20,
+        timeout=12,
     )
     return r.returncode, (r.stdout or "").strip(), (r.stderr or "").strip()
 
@@ -53,24 +51,53 @@ def _activate_cursor() -> tuple[bool, str]:
     return False, err or out or "activate_failed"
 
 
-def _button_exists(label: str) -> tuple[bool, str]:
-    script = f'''
+def _button_script_body(action: str, label_escaped: str) -> str:
+    """action: exists | click — window / sheet / 1-level group を走査。"""
+    return f'''
+set targetLabel to "{label_escaped}"
 tell application "System Events"
   if not (exists process "Cursor") then return "no_cursor_process"
   tell process "Cursor"
     try
-      set matches to (every button whose name is "{label}")
-      if (count of matches) > 0 then
-        return "yes"
-      else
-        return "no"
-      end if
+      repeat with w in windows
+        repeat with b in (buttons of w)
+          if (name of b as string) is targetLabel then
+            if "{action}" is "exists" then return "yes"
+            click b
+            return "clicked"
+          end if
+        end repeat
+        repeat with s in sheets of w
+          repeat with b in (buttons of s)
+            if (name of b as string) is targetLabel then
+              if "{action}" is "exists" then return "yes"
+              click b
+              return "clicked"
+            end if
+          end repeat
+        end repeat
+        repeat with g in groups of w
+          repeat with b in (buttons of g)
+            if (name of b as string) is targetLabel then
+              if "{action}" is "exists" then return "yes"
+              click b
+              return "clicked"
+            end if
+          end repeat
+        end repeat
+      end repeat
     on error errMsg
       return "error:" & errMsg
     end try
+    if "{action}" is "exists" then return "no"
+    return "not_found"
   end tell
 end tell
 '''
+
+
+def _button_exists(label: str) -> tuple[bool, str]:
+    script = _button_script_body("exists", _apple_escape(label))
     code, out, err = _run_osascript(script)
     if code != 0:
         return False, err or out or "osascript_nonzero"
@@ -80,45 +107,82 @@ end tell
 
 
 def _click_button(label: str) -> tuple[bool, str]:
-    script = f'''
-tell application "System Events"
-  if not (exists process "Cursor") then return "no_cursor_process"
-  tell process "Cursor"
-    try
-      set matches to (every button whose name is "{label}")
-      if (count of matches) > 0 then
-        click item 1 of matches
-        return "clicked"
-      else
-        return "not_found"
-      end if
-    on error errMsg
-      return "error:" & errMsg
-    end try
-  end tell
-end tell
-'''
+    script = _button_script_body("click", _apple_escape(label))
     code, out, err = _run_osascript(script)
     if code != 0:
         return False, err or out or "osascript_nonzero"
     return out == "clicked", out
 
 
-def _is_high_risk(item: dict[str, Any]) -> bool:
-    txt = json.dumps(item, ensure_ascii=False).lower()
-    return any(p.lower() in txt for p in HIGH_RISK_PATTERNS)
+def _env_substring_blocks() -> list[str]:
+    raw = (os.environ.get("TENMON_REVIEW_ACCEPTOR_BLOCK_SUBSTRINGS") or "").strip()
+    if not raw:
+        return []
+    return [x.strip().lower() for x in raw.split(",") if x.strip()]
+
+
+def _substring_guard_blocks(item: dict[str, Any]) -> tuple[bool, str]:
+    blocks = _env_substring_blocks()
+    if not blocks:
+        return False, ""
+    blob = json.dumps(item, ensure_ascii=False).lower()
+    for frag in blocks:
+        if frag and frag in blob:
+            return True, f"block_substring_match:{frag}"
+    return False, ""
+
+
+def _item_requires_manual(item: dict[str, Any]) -> tuple[bool, str]:
+    """queue 契約に沿った high-risk / 状態ゲート（観測のみ、キューは変更しない）。"""
+    if not item:
+        return False, ""
+    st = str(item.get("state") or "").lower()
+    if st == "approval_required":
+        return True, "queue_state_approval_required"
+    if st == "rejected":
+        return True, "queue_state_rejected"
+    hr = item.get("high_risk") is True
+    rt = str(item.get("risk_tier") or "").lower()
+    high_tier = rt in ("high", "critical", "escrow", "severe", "blocker", "p0")
+    esc = item.get("escrow_approved") is True
+    if (hr or high_tier) and not esc:
+        return True, "high_risk_or_tier_without_escrow_approval"
+    blocked, why = _substring_guard_blocks(item)
+    if blocked:
+        return True, why
+    return False, ""
+
+
+def _emit(
+    ok: bool,
+    clicked: list[str],
+    manual_review_required: bool,
+    reason: str,
+    *,
+    status: str,
+    timeout: bool = False,
+) -> dict[str, Any]:
+    return {
+        "ok": ok,
+        "clicked": clicked,
+        "manual_review_required": manual_review_required,
+        "reason": reason,
+        "card": CARD,
+        "legacy_card": LEGACY_CARD,
+        "status": status,
+        "timeout": timeout,
+    }
 
 
 def _manual(reason: str, clicked: list[str] | None = None, timeout: bool = False) -> dict[str, Any]:
-    return {
-        "ok": False,
-        "card": CARD,
-        "status": "manual_review_required",
-        "clicked": clicked or [],
-        "manual_review_required": True,
-        "timeout": timeout,
-        "reason": reason,
-    }
+    return _emit(
+        False,
+        clicked or [],
+        True,
+        reason,
+        status="manual_review_required",
+        timeout=timeout,
+    )
 
 
 def main() -> int:
@@ -139,16 +203,17 @@ def main() -> int:
             except Exception:
                 item = {}
 
-    if _is_high_risk(item):
-        print(json.dumps(_manual("high_risk_item_blocked"), ensure_ascii=False))
+    manual, why = _item_requires_manual(item)
+    if manual:
+        print(json.dumps(_manual(why), ensure_ascii=False))
         return 0
 
     if platform.system().lower() != "darwin":
         print(json.dumps(_manual("non_darwin_environment"), ensure_ascii=False))
         return 0
 
-    ok, msg = _activate_cursor()
-    if not ok:
+    ok_act, msg = _activate_cursor()
+    if not ok_act:
         print(json.dumps(_manual(f"cursor_activate_failed:{msg}"), ensure_ascii=False))
         return 0
 
@@ -156,12 +221,11 @@ def main() -> int:
     started = time.time()
     last_error = ""
 
-    # single accept runtime: ボタン探索は優先順で繰り返し
     while time.time() - started <= max(5, args.timeout_sec):
         for label in BUTTON_ORDER:
             found, state = _button_exists(label)
             if not found:
-                if state.startswith("error:"):
+                if isinstance(state, str) and state.startswith("error:"):
                     last_error = state
                 continue
             did, out = _click_button(label)
@@ -169,30 +233,27 @@ def main() -> int:
                 clicked.append(label)
                 time.sleep(max(0.1, args.poll_sec))
                 break
-            if out.startswith("error:"):
+            if isinstance(out, str) and out.startswith("error:"):
                 last_error = out
         else:
-            # no button found at this tick
             time.sleep(max(0.1, args.poll_sec))
             continue
 
         if any(x in FINAL_ACCEPT_BUTTONS for x in clicked):
             print(
                 json.dumps(
-                    {
-                        "ok": True,
-                        "card": CARD,
-                        "status": "accepted",
-                        "clicked": clicked,
-                        "manual_review_required": False,
-                        "timeout": False,
-                    },
+                    _emit(
+                        True,
+                        clicked,
+                        False,
+                        "accepted_final_button",
+                        status="accepted",
+                    ),
                     ensure_ascii=False,
                 )
             )
             return 0
 
-        # Continue without reverting のみ押せた場合、Review/Final がまだ無ければ single accept 完了
         if clicked and clicked[-1] == "Continue without reverting":
             has_review, _ = _button_exists("Review")
             has_keep, _ = _button_exists("Keep All")
@@ -201,14 +262,13 @@ def main() -> int:
             if not (has_review or has_keep or has_accept or has_apply):
                 print(
                     json.dumps(
-                        {
-                            "ok": True,
-                            "card": CARD,
-                            "status": "accepted",
-                            "clicked": clicked,
-                            "manual_review_required": False,
-                            "timeout": False,
-                        },
+                        _emit(
+                            True,
+                            clicked,
+                            False,
+                            "continue_without_reverting_dialog_cleared",
+                            status="accepted",
+                        ),
                         ensure_ascii=False,
                     )
                 )
@@ -223,4 +283,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

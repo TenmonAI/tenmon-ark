@@ -26,6 +26,15 @@ from typing import Any
 CARD = "TENMON_WORLDCLASS_DIALOGUE_ACCEPTANCE_AND_PRIORITY_LOOP_CURSOR_AUTO_V1"
 OUT_JSON = "tenmon_worldclass_dialogue_acceptance_priority_loop_v1.json"
 OUT_MD = "tenmon_worldclass_dialogue_acceptance_priority_loop_v1.md"
+CAMPAIGN_JSON = "tenmon_pwa_dialogue_supremacy_campaign_summary.json"
+
+DIALOGUE_PRIORITY_AXES = [
+    "k1_depth",
+    "general_substance",
+    "self_view_authenticity",
+    "subconcept_leak_and_context_carry",
+    "pwa_continuity_lived_experience",
+]
 
 
 def _utc_now_iso() -> str:
@@ -123,6 +132,14 @@ def main() -> int:
     sysv = _read_json(auto / "tenmon_system_verdict.json")
 
     stale = bool(cq.get("stale_sources_present"))
+    dialogue_findings = cq.get("dialogue_quality_findings") if isinstance(cq.get("dialogue_quality_findings"), dict) else {}
+    dialogue_axes_flags = {
+        "k1_depth": bool(dialogue_findings.get("k1_trace_empty_short_response")),
+        "general_substance": bool(dialogue_findings.get("general_knowledge_insufficient_substance")),
+        "self_view_authenticity": bool(dialogue_findings.get("self_view_not_tenmon_authentic")),
+        "subconcept_leak_and_context_carry": bool(dialogue_findings.get("subconcept_template_leak_or_context_bleed")),
+        "pwa_continuity_lived_experience": bool(dialogue_findings.get("pwa_continuity_unproven_or_failed")),
+    }
     overall_band = (
         (sc.get("signals") or {}).get("overall_band")
         if isinstance(sc.get("signals"), dict)
@@ -137,14 +154,22 @@ def main() -> int:
     wc_ready = bool(sc.get("worldclass_ready"))
     must_fix = list(sc.get("must_fix_before_claim") or [])[:80]
 
-    safe_cards: list[str] = []
-    for c in gen.get("candidates") or []:
-        if isinstance(c, dict) and c.get("safe_auto_fix") is True:
-            cid = str(c.get("card_id") or "").strip()
-            if cid and not cid.startswith("HUMAN_REVIEW_"):
-                safe_cards.append(cid)
+    safe_cards: list[str] = [str(x) for x in (gen.get("safe_next_cards") or cq.get("safe_next_cards") or []) if str(x).strip()]
+    manual_cards: list[str] = [str(x) for x in (gen.get("manual_gate_cards") or cq.get("manual_gate_cards") or []) if str(x).strip()]
 
-    next_best = cq.get("next_best_card") if not stale else None
+    # dialogue supremacy: deterministic next_best priority
+    next_best: str | None = None
+    if not stale:
+        if dialogue_axes_flags["k1_depth"]:
+            next_best = "TENMON_K1_TRACE_EMPTY_RESPONSE_DENSITY_REPAIR_CURSOR_AUTO_V1"
+        elif dialogue_axes_flags["general_substance"] or dialogue_axes_flags["self_view_authenticity"]:
+            next_best = "TENMON_GENERAL_KNOWLEDGE_DENSITY_AND_SELF_VIEW_POLISH_CURSOR_AUTO_V1"
+        elif dialogue_axes_flags["subconcept_leak_and_context_carry"]:
+            next_best = "TENMON_SUBCONCEPT_CANON_SURFACE_CLEAN_AND_CONTEXT_CARRY_SKIP_CURSOR_AUTO_V1"
+        elif dialogue_axes_flags["pwa_continuity_lived_experience"]:
+            next_best = "TENMON_PWA_CONTINUITY_LIVED_PROOF_REPAIR_CURSOR_AUTO_V1"
+    if not next_best:
+        next_best = cq.get("next_best_card") if not stale else None
     if not next_best:
         next_best = sc.get("recommended_next_card") or sc.get("primary_gap")
 
@@ -152,9 +177,9 @@ def main() -> int:
     if stale:
         blockers.append("stale_evidence: conversation/probe data missing or older than policy window")
     blockers.extend(must_fix[:40])
-    pf = cq.get("prioritized_axes") if isinstance(cq.get("prioritized_axes"), list) else []
-    if pf:
-        blockers.append(f"dialogue_priority_axes: {', '.join(str(x) for x in pf[:8])}")
+    dialogue_axis_names = [k for k in DIALOGUE_PRIORITY_AXES if dialogue_axes_flags.get(k)]
+    if dialogue_axis_names:
+        blockers.insert(0, f"dialogue_priority_axes: {', '.join(dialogue_axis_names)}")
 
     # acceptance seal: product rule — scorecard sealed path + no stale dialogue evidence
     acceptance_seal_allowed = bool(sealed_ok and wc_ready and not stale)
@@ -172,17 +197,17 @@ def main() -> int:
             "current_blockers": blockers,
             "next_best_card": next_best,
             "safe_next_cards": safe_cards[:12],
+            "manual_gate_cards": manual_cards[:12],
             "acceptance_seal_allowed": acceptance_seal_allowed,
         },
         "dialogue_quality": {
             "stale_sources_present": stale,
             "stale_sources": cq.get("stale_sources") or [],
             "recommended_next_cards": cq.get("recommended_next_cards") or [],
-            "quality_findings_axes": [
-                k
-                for k, v in (cq.get("counts") or {}).items()
-                if int(v or 0) > 0
-            ],
+            "quality_findings_axes": [k for k in DIALOGUE_PRIORITY_AXES if dialogue_axes_flags.get(k)],
+            "dialogue_priority_axes": DIALOGUE_PRIORITY_AXES,
+            "dialogue_quality_findings": dialogue_findings,
+            "conversation_quality_band": cq.get("conversation_quality_band"),
         },
         "scorecard_snapshot": {
             "primary_gap": sc.get("primary_gap"),
@@ -205,6 +230,21 @@ def main() -> int:
     }
 
     (auto / OUT_JSON).write_text(json.dumps(out, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+    campaign = {
+        "ok": True,
+        "generated_at": out["generated_at"],
+        "conversation_quality_band": (cq.get("conversation_quality_band") or "unknown"),
+        "dialogue_priority_axes": DIALOGUE_PRIORITY_AXES,
+        "dialogue_quality_findings": dialogue_findings,
+        "next_best_card": next_best,
+        "safe_next_cards": safe_cards[:12],
+        "manual_gate_cards": manual_cards[:12],
+        "worldclass_score_snapshot": worldclass_score,
+        "current_blockers": blockers[:60],
+        "stale_sources": cq.get("stale_sources") or [],
+    }
+    (auto / CAMPAIGN_JSON).write_text(json.dumps(campaign, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
     md = [
         f"# {CARD}",
