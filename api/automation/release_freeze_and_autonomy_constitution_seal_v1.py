@@ -372,7 +372,7 @@ def main() -> int:
     print(
         json.dumps(
             {
-                "ok": True,
+                "ok": bool(autonomy_seal_ready or human_override),
                 "path": str(auto / OUT_JSON),
                 "report": str(auto / OUT_MD),
                 "autonomy_seal_ready": autonomy_seal_ready,

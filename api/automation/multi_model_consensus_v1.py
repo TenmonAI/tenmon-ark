@@ -166,7 +166,8 @@ def build_consensus_v1(
                 "value_digest": _digest(_sample or ""),
             }
         )
-    if len(buckets) > 1 and maj_n < len(valid):
+    # 3 割れ（多数派なし）のみ conflict。2/3 一致は agreed のみ。
+    if len(buckets) > 1 and maj_n < 2:
         conflicts.append(
             {
                 "field": "proposed_change",
