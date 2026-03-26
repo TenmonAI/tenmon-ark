@@ -1,12 +1,12 @@
 {
   "version": 1,
   "card": "TENMON_OPERATIONS_LEVEL_AUTONOMY_ENABLE_CURSOR_AUTO_V1",
-  "last_cycle_at": "2026-03-26T05:50:44Z",
-  "last_cycle_id": "ops_1774504231_1729789",
+  "last_cycle_at": "2026-03-26T08:51:34Z",
+  "last_cycle_id": "ops_1774515068_1766930",
   "last_outcome": "backpressure",
-  "consecutive_failures": 4,
+  "consecutive_failures": 5,
   "last_chosen_card": null,
   "retry_used": false,
-  "last_unsafe_unknown_count": 0,
+  "last_unsafe_unknown_count": 2,
   "notes": "updated by tenmon_operations_level_autonomy_v1.py"
 }

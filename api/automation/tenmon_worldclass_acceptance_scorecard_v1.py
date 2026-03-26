@@ -99,6 +99,34 @@ def regression_detected(mem: dict[str, Any]) -> bool:
     return False
 
 
+def _drop_stale_must_fix_line(line: str, rj: dict[str, Any]) -> bool:
+    lo = line.lower()
+    for s in rj.get("must_fix_exclusion_substrings") or []:
+        if s and str(s).lower() in lo:
+            return True
+    if rj.get("pwa_final_superseded_by_lived") is True:
+        stale_pf = {str(x) for x in (rj.get("pwa_final_stale_postfix_blockers") or [])}
+        if line.startswith("pwa_lived_proof:"):
+            blk = line[len("pwa_lived_proof:") :]
+            if blk in stale_pf:
+                return True
+    return False
+
+
+def _filter_cb_blockers_for_resolved_axes(blockers: list[str], resolved: set[str]) -> list[str]:
+    out: list[str] = []
+    for b in blockers:
+        lo = b.lower()
+        if "k1_depth" in resolved and ("k1_trace" in lo or "k1_trace_empty" in lo):
+            continue
+        if "general_substance" in resolved and (
+            "general_knowledge" in lo or "general_knowledge_insufficient" in lo
+        ):
+            continue
+        out.append(b)
+    return out
+
+
 def main() -> int:
     repo = Path(os.environ.get("TENMON_REPO_ROOT", "/opt/tenmon-ark-repo")).resolve()
     auto = repo / "api" / "automation"
@@ -120,6 +148,8 @@ def main() -> int:
     queue = read_json(auto / "remote_cursor_queue.json")
     bundle = read_json(auto / "remote_cursor_result_bundle.json")
     rejudge_summary = read_json(auto / "tenmon_latest_state_rejudge_summary.json")
+    rj = rejudge_summary
+    resolved_axes = {str(x) for x in (rj.get("resolved_dialogue_axes") or []) if str(x).strip()}
 
     subs = sysv.get("subsystems") if isinstance(sysv.get("subsystems"), dict) else {}
 
@@ -152,6 +182,13 @@ def main() -> int:
 
     # --- conversation_backend ---
     cb = get_sub("conversation_backend")
+    cb_merged = dict(cb)
+    cb_merged["primary_blockers"] = _filter_cb_blockers_for_resolved_axes(
+        list(cb.get("primary_blockers") or []), resolved_axes
+    )
+    if not cb_merged["primary_blockers"] and bool(cb.get("code_present", True)):
+        cb_merged["accepted_complete"] = True
+        cb_merged["band"] = "green"
 
     # --- conversation_continuity (phase1 + backend) ---
     sid_ok = int(phase1.get("sessionid_mainline_residue_count") or 999) == 0
@@ -186,6 +223,13 @@ def main() -> int:
         plp_merged["primary_blockers"] = list(
             dict.fromkeys(list(plp_merged["primary_blockers"]) + ["lived_proof_not_demonstrated_or_env_failure"])
         )
+    else:
+        stale_pf = {str(x) for x in (rj.get("pwa_final_stale_postfix_blockers") or [])}
+        if rj.get("pwa_final_superseded_by_lived") is True and stale_pf:
+            plp_merged["primary_blockers"] = [b for b in plp_merged["primary_blockers"] if b not in stale_pf]
+        if not plp_merged.get("primary_blockers"):
+            plp_merged["accepted_complete"] = True
+            plp_merged["band"] = "green"
 
     # --- repo_hygiene ---
     must_block = bool(hy.get("must_block_seal"))
@@ -257,7 +301,7 @@ def main() -> int:
     # Build rows
     rows: dict[str, dict[str, Any]] = {
         "infra_gate": score_from_dict(infra_d, MAX_INFRA),
-        "conversation_backend": score_from_dict(cb, MAX_CONV_BACKEND),
+        "conversation_backend": score_from_dict(cb_merged, MAX_CONV_BACKEND),
         "conversation_continuity": score_from_dict(conv_cont, MAX_CONV_CONTINUITY),
         "pwa_code_constitution": score_from_dict(pcc, MAX_PWA_CONST),
         "pwa_lived_proof": score_from_dict(plp_merged, MAX_PWA_LIVED),
@@ -316,6 +360,7 @@ def main() -> int:
         if not v.get("accepted_complete"):
             for b in v.get("primary_blockers") or []:
                 must_fix.append(f"{k}:{b}")
+    must_fix = [m for m in must_fix if not _drop_stale_must_fix_line(m, rj)]
     must_fix = must_fix[:120]
 
     primary_gap: str | None = None
@@ -342,6 +387,11 @@ def main() -> int:
     rj_next = rejudge_summary.get("recommended_next_card")
     if isinstance(rj_next, str) and rj_next.strip():
         recommended_next = rj_next.strip()
+    cont_follow = (rj.get("fresh_probe_digest") or {}).get("continuity_followup_len")
+    if isinstance(cont_follow, (int, float)) and float(cont_follow) < 80.0:
+        must_fix.insert(0, "conversation_continuity:continuity_hold_density_insufficient")
+        primary_gap = "conversation_continuity"
+        recommended_next = "TENMON_PWA_THREADID_CONTINUITY_LIVED_PROOF_REPAIR_CURSOR_AUTO_V1"
     if not current_run_nonfixture_executed:
         must_fix.insert(0, "current_run_nonfixture_executed_not_observed")
 
@@ -358,6 +408,16 @@ def main() -> int:
         "primary_gap": primary_gap,
         "recommended_next_card": recommended_next,
         "next_best_card": recommended_next,
+        "latest_truth_sync": {
+            "pwa_final_superseded_by_lived": bool(rj.get("pwa_final_superseded_by_lived") is True),
+            "resolved_dialogue_axes": list(rj.get("resolved_dialogue_axes") or []),
+            "latest_truth_resolved_from": rj.get("latest_truth_resolved_from"),
+            "fresh_probe_digest": rj.get("fresh_probe_digest"),
+            "stale_sources": rj.get("stale_sources"),
+            "superseded_sources_sample": [
+                x.get("name") for x in (rj.get("superseded_sources") or [])[:24] if isinstance(x, dict)
+            ],
+        },
         "signals": {
             "regression_detected": reg_on,
             "gate_contract_aligned": gate_aligned,

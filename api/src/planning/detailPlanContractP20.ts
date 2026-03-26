@@ -85,10 +85,10 @@ export function ensureDetailPlanContractP20OnGatePayloadV1(payload: unknown): vo
 
     const ku = df2.ku as Record<string, unknown> | undefined;
     const mode = String(df2.mode ?? "");
-    const rr = ku && typeof ku.routeReason === "string" ? ku.routeReason.trim() : "";
-    if (mode === "HYBRID" && rr) {
+    const rrKu = ku && typeof ku.routeReason === "string" ? ku.routeReason.trim() : "";
+    if (mode === "HYBRID" && rrKu) {
       if (!plan.routeReason || !String(plan.routeReason).trim()) {
-        plan.routeReason = rr;
+        plan.routeReason = rrKu;
       }
     }
 
@@ -96,6 +96,7 @@ export function ensureDetailPlanContractP20OnGatePayloadV1(payload: unknown): vo
       plan.debug && typeof plan.debug === "object" && !Array.isArray(plan.debug)
         ? { ...plan.debug }
         : {};
+    /** 監査・プローブ用の固定タグ（値は文字列リテラル `20A_V1`） */
     dbg.detailPlanContractR1 = "20A_V1";
     if (mode === "HYBRID") {
       dbg.detailPlanContract = "P20_HYBRID_R1_20A_V1";

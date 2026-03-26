@@ -22,6 +22,8 @@ export type ChatResponseBody = {
     intent: string;
     llm: string | null;
     ku: Record<string, unknown>;
+    /** ゲート出口で常に object（top-level detailPlan と同一参照） */
+    detailPlan?: DetailPlanContractP20V1;
   };
 
   caps?: {

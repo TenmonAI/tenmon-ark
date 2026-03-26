@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-TENMON_RELEASE_FREEZE_AND_AUTONOMY_CONSTITUTION_SEAL_CURSOR_AUTO_V1
+TENMON_AUTONOMY_CONSTITUTION_SEAL_V1
 
-overnight / scorecard / PWA lived seal / self-commit / morning list を集約し、
-release freeze と autonomy constitution の単一真実源を残す。成功の捏造はしない。
+overnight / scorecard / PWA lived seal / self-commit / morning list と補助観測を集約し、
+release freeze と autonomy constitution の evidence を単一化する。観測と封印判定のみ。成功の捏造はしない。
 """
 from __future__ import annotations
 
+import argparse
 import json
 import os
 import sys
@@ -15,13 +16,14 @@ from datetime import datetime, timezone
 from pathlib import Path, PurePath
 from typing import Any
 
-CARD = "TENMON_RELEASE_FREEZE_AND_AUTONOMY_CONSTITUTION_SEAL_CURSOR_AUTO_V1"
-CONSTITUTION_CARD = "TENMON_AUTONOMY_CONSTITUTION_SEAL_V1"
+CARD = "TENMON_AUTONOMY_CONSTITUTION_SEAL_V1"
+LEGACY_CARD = "TENMON_RELEASE_FREEZE_AND_AUTONOMY_CONSTITUTION_SEAL_CURSOR_AUTO_V1"
 OUT_JSON = "release_freeze_autonomy_seal_summary.json"
 OUT_MD = "autonomy_constitution_seal_report.md"
-NEXT_ON_PASS = "後段5枚完了"
-NEXT_ON_FAIL_NOTE = "停止。release freeze retry 1枚のみ生成。"
-RETRY_CARD = CARD
+OUT_RETRY_HINT = "retry_cursor_card_hint.md"
+NEXT_ON_PASS = "MAINLINE_COMPLETED_READ_ONLY_SEAL_V1"
+NEXT_ON_FAIL_NOTE = "停止。retry 1枚のみ生成。"
+RETRY_CARD = "TENMON_AUTONOMY_CONSTITUTION_SEAL_RETRY_CURSOR_AUTO_V1"
 
 # 運用上の mainline / 保護参照（コード変更はしない。freeze 記録のみ）
 DEFAULT_PROTECTED_RELPATHS = [
@@ -129,7 +131,19 @@ def _list_constitutions(repo: Path, docs: Path) -> list[str]:
 
 
 def main() -> int:
-    repo = Path(os.environ.get("TENMON_REPO_ROOT", "/opt/tenmon-ark-repo")).resolve()
+    ap = argparse.ArgumentParser(description=CARD)
+    ap.add_argument(
+        "--repo-root",
+        type=Path,
+        default=None,
+        help="リポジトリルート（既定: TENMON_REPO_ROOT またはカレント推定）",
+    )
+    ns = ap.parse_args()
+    repo = (
+        ns.repo_root.resolve()
+        if ns.repo_root
+        else Path(os.environ.get("TENMON_REPO_ROOT", "/opt/tenmon-ark-repo")).resolve()
+    )
     api = repo / "api"
     auto = api / "automation"
     docs_const = api / "docs" / "constitution"
@@ -194,7 +208,11 @@ def main() -> int:
 
     pwa_ok = bool(pwa.get("seal_ready") is True)
 
-    dialogue_ok = bool(d_out.get("worldclass_ready") is True and d_out.get("sealed_operable_ready") is True)
+    dialogue_loop_ok = bool(
+        d_out.get("worldclass_ready") is True and d_out.get("sealed_operable_ready") is True
+    )
+    scorecard_worldclass_ok = bool(sc.get("worldclass_ready") is True)
+    dialogue_ok = dialogue_loop_ok and scorecard_worldclass_ok
 
     gates: dict[str, Any] = {
         "self_improvement_loop_ready": si_ok,
@@ -221,7 +239,10 @@ def main() -> int:
     if not pwa_ok:
         blocked_reasons.append("gate:pwa_worldclass_seal_not_ready")
     if not dialogue_ok:
-        blocked_reasons.append("gate:worldclass_dialogue_loop_not_ready")
+        if not dialogue_loop_ok:
+            blocked_reasons.append("gate:worldclass_dialogue_loop_outputs_not_ready")
+        if not scorecard_worldclass_ok:
+            blocked_reasons.append("gate:scorecard_worldclass_ready_false")
 
     if not overnight_path.is_file():
         blocked_reasons.append("input:overnight_autonomy_summary_missing")
@@ -265,7 +286,9 @@ def main() -> int:
             "pwa_seal_ready": pwa.get("seal_ready"),
             "dialogue_outputs_worldclass_ready": d_out.get("worldclass_ready"),
             "dialogue_outputs_sealed_operable_ready": d_out.get("sealed_operable_ready"),
+            "dialogue_loop_ok": dialogue_loop_ok,
             "scorecard_worldclass_ready": sc.get("worldclass_ready"),
+            "scorecard_worldclass_ok_evidence": scorecard_worldclass_ok,
             "scorecard_overall_band": (sc.get("signals") or {}).get("overall_band") if isinstance(sc.get("signals"), dict) else None,
             "pwa_dialogue_worldclass_band": pwa.get("dialogue_worldclass_band"),
             "dialogue_overall_completion_band": d_out.get("overall_completion_band"),
@@ -277,7 +300,7 @@ def main() -> int:
 
     summary: dict[str, Any] = {
         "card": CARD,
-        "autonomy_constitution_card": CONSTITUTION_CARD,
+        "legacy_card": LEGACY_CARD,
         "generated_at": _utc(),
         "next_on_pass": NEXT_ON_PASS,
         "next_on_fail_note": NEXT_ON_FAIL_NOTE,
@@ -302,7 +325,8 @@ def main() -> int:
         "evidence": evidence,
         "notes": [
             "autonomy_seal_ready は6ゲートすべてが evidence で true のときのみ true（捏造なし）。",
-            "TENMON_AUTONOMY_CONSTITUTION_SEAL_HUMAN_OVERRIDE=1 で運用上 exit 0 にできるが gates / autonomy_seal_ready は変えない。",
+            "worldclass_dialogue_band_ok は dialogue priority loop の outputs と scorecard.worldclass_ready の両方が true。",
+            "TENMON_AUTONOMY_CONSTITUTION_SEAL_HUMAN_OVERRIDE=1 で運用上 exit 0 にできるが gates / autonomy_seal_ready の真偽は書き換えない。",
             "freeze 後は mainline・protected paths・constitution 一覧を不用意に崩さないこと。",
         ],
     }
@@ -310,7 +334,7 @@ def main() -> int:
     (auto / OUT_JSON).write_text(json.dumps(summary, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
     md_lines = [
-        f"# Autonomy constitution seal — {CONSTITUTION_CARD} / {CARD}",
+        f"# Autonomy constitution seal — {CARD}",
         "",
         f"- generated_at: `{summary['generated_at']}`",
         f"- **autonomy_seal_ready**: `{autonomy_seal_ready}`",
@@ -369,14 +393,18 @@ def main() -> int:
     )
     (auto / OUT_MD).write_text("\n".join(md_lines) + "\n", encoding="utf-8")
 
+    exit_relaxed = bool(human_override and not autonomy_seal_ready)
     print(
         json.dumps(
             {
-                "ok": bool(autonomy_seal_ready or human_override),
+                "autonomy_seal_ready": autonomy_seal_ready,
+                "gates": gates,
+                "human_override_exit_relaxed": exit_relaxed,
+                "human_override_applied": human_override,
                 "path": str(auto / OUT_JSON),
                 "report": str(auto / OUT_MD),
-                "autonomy_seal_ready": autonomy_seal_ready,
-                "human_override_applied": human_override,
+                "next_on_pass": NEXT_ON_PASS,
+                "retry_card": RETRY_CARD,
             },
             ensure_ascii=False,
         ),
@@ -387,6 +415,13 @@ def main() -> int:
         return 0
     if human_override:
         return 0
+    hint = (
+        f"# {RETRY_CARD}\n\n"
+        f"- {NEXT_ON_FAIL_NOTE}\n"
+        f"- 親: `{CARD}`\n"
+        f"- summary: `{OUT_JSON}`\n"
+    )
+    (auto / OUT_RETRY_HINT).write_text(hint, encoding="utf-8")
     return 1
 
 

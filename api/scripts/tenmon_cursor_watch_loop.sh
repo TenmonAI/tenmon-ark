@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 # TENMON_MAC_WATCH_LOOP_REFRESH_AUTH_AND_NONFIXTURE_RUNTIME_CURSOR_AUTO_V1
+# TENMON_APPROVED_HIGH_RISK_REAL_RUN_GUARD_AND_AUDIT_CURSOR_AUTO_V1（fail-closed）
 # Mac 常駐: refresh で Bearer を都度取得 → /queue → /next（non-fixture 優先は API 側）→
 # non-fixture は原則 dry-run 証跡。**承認済み high-risk（escrow_approved・current_run 明示 true）のみ** real（CURSOR_EXECUTOR_DRY_RUN=0）。
+# high-risk の real は escrow 未承認では絶対に起動しない（REAL_EXEC_REQUIRE_ESCROW の緩和で逃げない）。
 # fixture は release のみ（完了にしない）。本ファイル先頭に CURSOR_EXECUTOR_DRY_RUN の固定 export を置かないこと。
 set -euo pipefail
 
@@ -130,8 +132,7 @@ tick() {
     return 0
   fi
 
-  # real: **high-risk（明示 or escrow_human_approval）** ∧ non-fixture ∧ ¬dry_run_only ∧ current_run 明示 true
-  #        ∧ (require_escrow → escrow_approved) ∧ ¬FORCE_DRY_RUN
+  # real: **high-risk のみ** ∧ non-fixture ∧ ¬dry_run_only ∧ current_run 明示 true ∧ escrow_approved（必須）∧ ¬FORCE_DRY_RUN
   # 上記以外の non-fixture は常に dry-run（一般ジョブを勝手に本実行しない）
   want_real=0
   if [[ "${FORCE_DRY_RUN}" == "1" ]]; then
@@ -142,7 +143,7 @@ tick() {
     want_real=0
   elif [[ "${high_risk}" != "true" ]]; then
     want_real=0
-  elif [[ "${REAL_EXEC_REQUIRE_ESCROW}" == "1" ]] && [[ "${escrow_approved}" != "true" ]]; then
+  elif [[ "${escrow_approved}" != "true" ]]; then
     want_real=0
   else
     want_real=1
@@ -184,7 +185,8 @@ tick() {
         --arg slog "$LOG_DIR/cursor_session_watch_dry_${ts}_${qid}.log" \
         --arg gsf "${git_status_audit_file}" \
         --argjson tf "${tf_guard}" \
-        '{kind:"guard_fail",queue_id:$qid,session_id:$sid,session_log:$slog,touched_files:$tf,git_status_path:$gsf}' \
+        --arg rs "${gf}" \
+        '{kind:"guard_fail",event:"real_guard_fail",reasons:($rs|split(",")|map(select(length>0))),queue_id:$qid,session_id:$sid,session_log:$slog,touched_files:$tf,git_status_path:$gsf}' \
         >"$LOG_DIR/real_execution_audit_guardfail_${ts}_${qid}.json"
     else
       local card_log
@@ -195,19 +197,15 @@ tick() {
 
   dry_run_flag="1"
   dry_run_status="dry_run_started"
-  local exec_mode session_id result_status
+  local exec_mode session_id
   exec_mode="dry"
   session_id="watch_dry_${ts}_${qid}"
-  result_status="dry_run_started"
   if [[ "${want_real}" -eq 1 ]]; then
     dry_run_flag="0"
     dry_run_status="started"
     exec_mode="real"
     session_id="watch_real_${ts}_${qid}"
-    result_status="${TENMON_WATCH_REAL_RESULT_STATUS:-started}"
-    if [[ "${result_status}" != "started" && "${result_status}" != "running" ]]; then
-      result_status="started"
-    fi
+    # real: 最終 status は後段の final_status（dry_run_started は dry のみ）
   fi
   log "exec_decision id=$qid want_real=${want_real} dry_run_flag=${dry_run_flag} force_dry=${FORCE_DRY_RUN} require_escrow=${REAL_EXEC_REQUIRE_ESCROW} exec_mode=${exec_mode} high_risk=${high_risk}"
 
@@ -328,7 +326,7 @@ tick() {
       --arg slog "$session_log" \
       --arg gsf "${git_status_audit_file}" \
       --argjson tf "${touched_json}" \
-      '{kind:"executor_fail",queue_id:$qid,session_id:$sid,session_log:$slog,touched_files:$tf,git_status_path:$gsf}' \
+      '{kind:"executor_fail",event:"executor_nonzero_exit",queue_id:$qid,session_id:$sid,session_log:$slog,touched_files:$tf,git_status_path:$gsf}' \
       >"$LOG_DIR/real_execution_audit_executorfail_${ts}_${qid}.json"
   fi
 
@@ -382,12 +380,75 @@ tick() {
     else
       hr_cr="false"
     fi
-    if [[ "${hr_acc}" == "true" && "${hr_rb}" != "true" ]]; then
-      result_status="real_high_risk_acceptance_pass"
-    else
-      result_status="real_high_risk_acceptance_fail"
-    fi
     log "high_risk_chain id=$qid acceptance_ok=${hr_acc} rollback_executed=${hr_rb} build_rc=${hr_br_str} commit_ready=${hr_cr}"
+  fi
+
+  # --- TENMON_REAL_EXECUTION_RESULT_EVIDENCE_BIND: real の status は dry_run_started を禁止。evidence 束 ---
+  local final_status no_diff_reason_val git_status_evidence_path executor_configured
+  final_status=""
+  no_diff_reason_val=""
+  git_status_evidence_path=""
+  executor_configured="false"
+  if [[ -n "${EXECUTOR_CMD}" ]] || [[ -f "${EXECUTOR_PY:-}" ]]; then
+    executor_configured="true"
+  fi
+
+  git_status_evidence_path=""
+  if [[ "${dry_run_flag}" == "1" ]]; then
+    final_status="dry_run_started"
+  else
+    git_status_evidence_path="$LOG_DIR/git_status_post_${ts}_${qid}.txt"
+    if [[ -n "${git_repo_root}" ]]; then
+      git -C "${git_repo_root}" status --porcelain -uall >"${git_status_evidence_path}" 2>/dev/null || : >"${git_status_evidence_path}"
+    else
+      : >"${git_status_evidence_path}"
+    fi
+    if [[ "${executor_failed}" -eq 1 ]]; then
+      final_status="executor_failed"
+      git_status_evidence_path="${git_status_audit_file:-$git_status_evidence_path}"
+    elif [[ "${hr_chain_attempted}" == "true" ]] && [[ "${hr_acc}" == "true" ]] && [[ "${hr_rb}" != "true" ]]; then
+      final_status="completed"
+    elif [[ -n "${touched_files}" ]]; then
+      final_status="completed"
+    else
+      final_status="completed_no_diff"
+      if [[ "${executor_configured}" != "true" ]]; then
+        no_diff_reason_val="no_executor_configured"
+      elif [[ "${manual_review_required}" == "true" ]] || [[ "${review_status}" == "acceptor_error" ]]; then
+        no_diff_reason_val="review_not_applied"
+      elif [[ "${hr_chain_attempted}" == "true" ]] && [[ "${hr_rb}" == "true" ]]; then
+        no_diff_reason_val="patch_already_applied"
+      elif [[ "${hr_chain_attempted}" == "true" ]] && [[ "${hr_acc}" != "true" ]]; then
+        no_diff_reason_val="acceptance_gated_fail"
+      else
+        no_diff_reason_val="executor_opened_but_no_change"
+      fi
+    fi
+  fi
+
+  # --- real execution の status / no-diff 契約を fail-closed で正規化 ---
+  if [[ "${dry_run_flag}" == "0" ]]; then
+    # real で dry_run_started は禁止（異常系は started に丸める）
+    if [[ "${final_status}" == "dry_run_started" ]]; then
+      final_status="started"
+    fi
+    # 実差分が無い completed は completed_no_diff へ寄せ、理由を必須化
+    if [[ -z "${touched_files}" ]] && [[ "${final_status}" == "completed" || "${final_status}" == "started" ]]; then
+      final_status="completed_no_diff"
+    fi
+    if [[ "${final_status}" == "completed_no_diff" ]] && [[ -z "${no_diff_reason_val}" ]]; then
+      if [[ "${executor_configured}" != "true" ]]; then
+        no_diff_reason_val="no_executor_configured"
+      elif [[ "${manual_review_required}" == "true" ]] || [[ "${review_status}" == "acceptor_error" ]]; then
+        no_diff_reason_val="review_not_applied"
+      elif [[ "${hr_chain_attempted}" == "true" ]] && [[ "${hr_rb}" == "true" ]]; then
+        no_diff_reason_val="patch_already_applied"
+      elif [[ "${hr_chain_attempted}" == "true" ]] && [[ "${hr_acc}" != "true" ]]; then
+        no_diff_reason_val="acceptance_gated_fail"
+      else
+        no_diff_reason_val="executor_opened_but_no_change"
+      fi
+    fi
   fi
 
   body_file="$(mktemp)"
@@ -400,7 +461,11 @@ tick() {
     --arg rp "$report" \
     --arg lp "$session_log" \
     --arg elp "${executor_log}" \
-    --arg rst "$result_status" \
+    --arg fst "$final_status" \
+    --arg emode "$exec_mode" \
+    --arg slp "$session_log" \
+    --arg gsp "${git_status_evidence_path}" \
+    --arg ndr "$no_diff_reason_val" \
     --arg ras "$review_status" \
     --arg rj "$review_json" \
     --argjson mrr "$manual_review_required" \
@@ -415,20 +480,25 @@ tick() {
     --arg brs "${hr_br_str}" \
     '{
       id:$id, queue_id:$id, job_id:$jid,
-      status:(if ($dry_run_bool==1) then "dry_run_started" else $rst end),
+      status:$fst,
       result_type:"executor_session",
       session_id:$sid,
       cursor_job_session_manifest:(if ($mp|length) > 0 then $mp else "" end),
       mac_executor_state:(if ($st|length) > 0 then $st else "" end),
       dangerous_patch_block_report:(if ($rp|length) > 0 then $rp else "" end),
       log_path:(if ($dry_run_bool==1) then $lp else $elp end),
+      session_log_path:$slp,
+      git_status_path:(if ($gsp|length) > 0 then $gsp else null end),
       review_acceptor_status:$ras,
       review_acceptor_output_path:$rj,
       manual_review_required:$mrr,
       current_run:$item_current_run,
       touched_files:(if ($dry_run_bool==1) then [] else $touched_files end),
+      no_diff_reason:(if ($dry_run_bool==1) then null elif ($ndr|length) > 0 then $ndr else null end),
       dry_run:($dry_run_bool==1),
+      real_execution:($dry_run_bool==0),
       real_execution_enabled:($dry_run_bool==0),
+      executor_mode:$emode,
       escrow_approved:$item_escrow_approved,
       high_risk_acceptance_chain_attempted:($hrc == "true"),
       acceptance_ok:(if ($hrc == "true") then ($acc == "true") else null end),

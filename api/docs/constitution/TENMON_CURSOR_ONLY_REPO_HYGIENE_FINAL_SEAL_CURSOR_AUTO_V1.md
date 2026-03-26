@@ -27,7 +27,7 @@
 `python3 api/automation/tenmon_repo_hygiene_final_seal_v1.py --repo-root <repo>`  
 （`--skip-gates` / `--skip-watchdog` / `--skip-rejudge` で局所実行可）
 
-終了コード（抜粋）: `0` は衛生・gate・watchdog・rejudge まで通過。rejudge 失敗時は `7`。gate 失敗 `2`、watchdog block `3`、不安全残存 `4`／生成残渣 `5`／system verdict 上の hygiene 系ブロッカー `6`。
+終了コード（抜粋）: `0` は **seal_candidate_ready**（部分実行 `--skip-*` なし・衛生クリーン・gate 全系・watchdog・rejudge・system hygiene ブロッカーなし）。`2` gate、`3` watchdog block、`4` 不安全残存、`5` 生成残渣、`6` system verdict hygiene、`7` rejudge 失敗、`8` 上記以外で seal 候補未達（例: `--skip-watchdog` 等の部分実行）。
 
 ## 条件付きコミット（Phase E）
 
@@ -41,5 +41,5 @@
 
 ## NEXT
 
-- **PASS**: `TENMON_OPERATIONS_LEVEL_AUTONOMY_ENABLE_CURSOR_AUTO_V1`
-- **FAIL / 再試行**: `TENMON_CURSOR_ONLY_REPO_HYGIENE_FINAL_SEAL_RETRY_CURSOR_AUTO_V1`
+- **PASS**: `TENMON_AUTONOMY_CONSTITUTION_SEAL_V1`
+- **FAIL / 再試行**: 停止。`api/automation/retry_cursor_card_hint.md`（retry カード `TENMON_CURSOR_ONLY_REPO_HYGIENE_FINAL_SEAL_RETRY_CURSOR_AUTO_V1` 1 枚のみ）

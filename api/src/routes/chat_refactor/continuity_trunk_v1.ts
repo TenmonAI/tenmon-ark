@@ -115,8 +115,17 @@ function __resolveSemanticCarryForHold(ctx: ContinuityTrunkContextV1): {
   }
   if (priorAnswerEssence) return { source: "priorAnswerEssence", text: priorAnswerEssence, centerKey, centerLabel, centerClaim };
   if (centerClaim) return { source: "centerClaim", text: centerClaim, centerKey, centerLabel, centerClaim };
-  if (centerKey) return { source: "centerKey", text: centerLabel ? `${centerLabel}の要点` : centerKey, centerKey, centerLabel, centerClaim };
-  if (centerLabel) return { source: "centerLabel", text: `${centerLabel}の要点`, centerKey, centerLabel, centerClaim };
+  if (semanticNucleus) return { source: "semanticNucleus", text: semanticNucleus, centerKey, centerLabel, centerClaim };
+  if (centerLabel || centerKey) {
+    const text =
+      centerLabel && String(centerLabel).trim()
+        ? `${String(centerLabel).trim()}の要点`
+        : centerKey
+          ? `${ctx.getCenterLabelForDisplay(String(centerKey))}の要点`
+          : null;
+    if (text) return { source: "threadCore.centerLabel|centerKey", text, centerKey, centerLabel, centerClaim };
+  }
+  if (nextFocus) return { source: "nextFocus", text: nextFocus, centerKey, centerLabel, centerClaim };
   if (rrCenterGuess)
     return {
       source: "priorRouteReason(center_guess)",
@@ -134,10 +143,77 @@ function __resolveSemanticCarryForHold(ctx: ContinuityTrunkContextV1): {
       centerClaim: histCenterGuess.claim,
     };
   if (tcsPrimaryMeaning) return { source: "thoughtCoreSummary.primaryMeaning", text: tcsPrimaryMeaning, centerKey, centerLabel, centerClaim };
-  if (semanticNucleus) return { source: "semanticNucleus", text: semanticNucleus, centerKey, centerLabel, centerClaim };
-  if (nextFocus) return { source: "nextFocus", text: nextFocus, centerKey, centerLabel, centerClaim };
   if (unresolvedPoint) return { source: "unresolvedPoint", text: unresolvedPoint, centerKey, centerLabel, centerClaim };
   return { source: "safe_fallback", text: centerLabel || centerKey || "前の話の中心", centerKey, centerLabel, centerClaim };
+}
+
+/** CONTINUITY_ROUTE_HOLD_V1: 前返答の要点を一段具体化した自然文 2〜3 文（route メタは出さない） */
+function __buildContinuityRouteHoldDenseBodyV1(
+  ctx: ContinuityTrunkContextV1,
+  carry: ReturnType<typeof __resolveSemanticCarryForHold>,
+  displayLabel: string,
+  isKotodama: boolean,
+): string {
+  const tc = ctx.threadCore as Record<string, unknown>;
+  const pick = (k: string) => __sanitizeContinuityCarryTextV1(String(tc[k] ?? "").trim());
+
+  const priorAnswerEssence = pick("priorAnswerEssence");
+  const centerClaim = pick("centerClaim");
+  const semanticNucleus = pick("semanticNucleus");
+  const nextFocus = pick("nextFocus");
+  const ck = String(ctx.threadCenterForGeneral?.center_key || ctx.threadCore.centerKey || "").trim();
+  const nucleusFromCarry = __sanitizeContinuityCarryTextV1(String(carry.text || ""));
+
+  let primary = "";
+  let primaryFromNextFocus = false;
+  if (priorAnswerEssence.length >= 6) primary = priorAnswerEssence.slice(0, 220);
+  else if (centerClaim.length >= 4) primary = centerClaim.slice(0, 220);
+  else if (semanticNucleus.length >= 4) primary = semanticNucleus.slice(0, 220);
+  else if (displayLabel && displayLabel !== "この中心")
+    primary = `${displayLabel}の要点は、前段で示した立脚を保ったまま、読みを一段だけ具体化することです`;
+  else if (ck)
+    primary = `${ctx.getCenterLabelForDisplay(ck)}の要点を、前の返答の筋を崩さずに一段だけ継ぎます`;
+  else if (nextFocus.length >= 6) {
+    primary = `前段の芯を保ったまま、${nextFocus.slice(0, 130)}を一段だけ手前に置くと、論点がぶれにくいです`;
+    primaryFromNextFocus = true;
+  } else if (nucleusFromCarry.length >= 4 && !/^前の話の中心/u.test(nucleusFromCarry))
+    primary = nucleusFromCarry.slice(0, 220);
+  else if (isKotodama)
+    primary =
+      "言霊の要点は、音を単なる記号でなく生成の法則として読む点にあります。前段の芯を保ったまま次へ進めるなら、読みの軸を一つに絞るのが安全です";
+  else primary = "前の返答の要点を、中心を一つに保ったまま一段だけ具体化します";
+
+  primary = primary
+    .replace(/さきほどの核を崩さず、次の一段へつなげます。?/gu, "")
+    .replace(/次の一段へつなげます/gu, "")
+    .trim();
+  if (primary && !/[。！？]$/u.test(primary)) primary += "。";
+
+  const secondary =
+    nextFocus.length >= 4 && !primaryFromNextFocus
+      ? `次に詰めるなら、${nextFocus.slice(0, 130)}を手前に置くと、会話の芯が切れにくいです。`
+      : isKotodama
+        ? "前段を継ぐなら、次は音の秩序を見るか、水火との関係を見るかのどちらかに絞ると流れが崩れません。"
+        : displayLabel && displayLabel !== "この中心"
+          ? `前段を継ぐなら、${displayLabel}の中で「法則を読む」か「背景を読む」か、どちらか一方に絞ると読みが締まります。`
+          : "前段を継ぐなら、いま見る軸を一つに決めてから掘り下げると、継続の筋が切れにくいです。";
+
+  let body = `${primary}${secondary}`.replace(/\s+/g, " ").replace(/。{2,}/g, "。").trim();
+
+  if (body.length < 80) {
+    const pad =
+      "要点を一段だけ具体化し、読みの芯を保ったまま次の論点へ接続します。";
+    body = `${primary} ${pad}`.replace(/\s+/g, " ").replace(/。{2,}/g, "。").trim();
+  }
+
+  const sentenceCount = body.split(/(?<=[。！？])/u).filter((s) => s.trim().length > 0).length;
+  if (sentenceCount < 3 && body.length < 160) {
+    body = `${body}次の一歩だけ先に決めれば、前段との接続が見えやすくなります。`.replace(/。{2,}/g, "。").trim();
+  }
+
+  body = compressAdjacentDuplicateLinesV1(body);
+  body = dedupeNextStepAndQuestionSurfaceV1(body);
+  return body;
 }
 
 /** 2ターン目以降相当: prior 契約・中心・次の一手のいずれかがあれば hold 文脈あり */
@@ -206,23 +282,8 @@ export async function tryContinuityRouteHoldPreemptGatePayloadV1(
     (ck ? ctx.getCenterLabelForDisplay(ck) : "") ||
     "この中心";
 
-  /** 表面は自然文一段のみ（内部 route / next_hand は ku のみ） */
-  let corePlain = "";
-  const nucleus = __sanitizeContinuityCarryTextV1(String(carry.text || ""));
-  if (nucleus && nucleus.length >= 4 && !/^前の話の中心/u.test(nucleus)) {
-    corePlain = `${nucleus.slice(0, 200).trim()}。さきほどの核を崩さず、次の一段へつなげます。`;
-  } else if (isKotodama) {
-    corePlain = "言霊の流れを保ったまま、要点を一つだけ続けます。";
-  } else {
-    corePlain = "前の話の中心を保ったまま、要点を一つだけ続けます。";
-  }
-  corePlain = corePlain.replace(/([^。]{2,80}。)\1+/gu, "$1").trim();
-  if (!corePlain) {
-    corePlain = "前の話の中心を保ったまま、要点を一つだけ続けます。";
-  }
-  let __body = corePlain.trim();
-  __body = compressAdjacentDuplicateLinesV1(__body);
-  __body = dedupeNextStepAndQuestionSurfaceV1(__body);
+  /** 80〜160字目安: 核（priorAnswerEssence → centerClaim → semanticNucleus → center → nextFocus）から 2〜3 文。22字固定文は使わない */
+  const __body = __buildContinuityRouteHoldDenseBodyV1(ctx, carry, __displayLabel, isKotodama);
 
   const priorMode = ctx.threadCore.lastResponseContract?.answerMode ?? "analysis";
   const priorFrame = ctx.threadCore.lastResponseContract?.answerFrame ?? "one_step";
@@ -284,6 +345,14 @@ export async function tryContinuityRouteHoldPreemptGatePayloadV1(
       threadCenter: ctx.threadCenterForGeneral ?? null,
     });
     ctx.applyKnowledgeBinderToKu(__kuHold, __binderH);
+  } catch {
+    /* ignore */
+  }
+  /** binder が付けた responsePlan.semanticBody 短文で finalize / trace が本文と乖離しないよう同期 */
+  try {
+    if (__kuHold.responsePlan && typeof __kuHold.responsePlan === "object") {
+      (__kuHold.responsePlan as { semanticBody?: string }).semanticBody = __body;
+    }
   } catch {
     /* ignore */
   }

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# TENMON_IMPROVEMENT_LEDGER_VPS_V1 — サンプル生成・seal から ledger 追記・collect 用 final_verdict
+# TENMON_IMPROVEMENT_LEDGER_CURSOR_AUTO_V1 — サンプル生成・seal から ledger 追記・collect 用 final_verdict
 set -euo pipefail
 set +H
 set +o histexpand
@@ -8,7 +8,7 @@ if [ -z "${CARD:-}" ]; then
   if [ "${1:-}" != "" ]; then
     CARD="$1"
   else
-    CARD="TENMON_IMPROVEMENT_LEDGER_VPS_V1"
+    CARD="TENMON_IMPROVEMENT_LEDGER_CURSOR_AUTO_V1"
   fi
 fi
 
@@ -71,7 +71,7 @@ seal_dir = sys.argv[5]
 card = sys.argv[6]
 body = {
     "version": 1,
-    "card": "TENMON_IMPROVEMENT_LEDGER_COLLECT_V1",
+    "card": "TENMON_IMPROVEMENT_LEDGER_CURSOR_AUTO_V1",
     "collect_ok": bool(collect_ok),
     "append_ok": bool(append_ok),
     "reason": reason or None,

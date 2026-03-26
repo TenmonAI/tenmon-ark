@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-TENMON_IMPROVEMENT_LEDGER_CURSOR_AUTO_V1 / VPS
-改善履歴を JSONL に追記。seal 成果物・任意 JSON・touch リストから機械可読エントリを生成。
+TENMON_IMPROVEMENT_LEDGER_CURSOR_AUTO_V1
+改善履歴を JSONL に追記（1 行 1 エントリ）。seal 成果物・任意 JSON・touch リストから機械可読エントリを生成。
+観測と ledger 追記のみ。product core 非改変。
 """
 from __future__ import annotations
 
@@ -16,10 +17,32 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
-CARD = "TENMON_IMPROVEMENT_LEDGER_V1"
+CARD = "TENMON_IMPROVEMENT_LEDGER_CURSOR_AUTO_V1"
+NEXT_ON_PASS = "TENMON_R1_20A_DETAILPLAN_STABILIZE_CURSOR_AUTO_V1"
+NEXT_ON_FAIL_NOTE = "停止。retry 1枚のみ生成。"
+RETRY_CARD = "TENMON_IMPROVEMENT_LEDGER_RETRY_CURSOR_AUTO_V1"
 SCHEMA_VERSION = 1
 DEFAULT_JSONL = "improvement_ledger_entries_v1.jsonl"
 TAIL_FOR_RECURRENCE = 80
+
+# append-json 最低限（longform は seal 由来では残すが任意入力ではデフォルト補完）
+ENTRY_MIN_KEYS = frozenset(
+    {
+        "card_name",
+        "touched_files",
+        "blocker_types",
+        "acceptance_result",
+        "runtime_result",
+        "surface_result",
+        "route_result",
+        "density_result",
+        "recurrence_signals",
+        "next_card",
+        "summary_human_ja",
+        "summary_machine",
+        "outcome_class",
+    }
+)
 
 
 def _utc_now_iso() -> str:
@@ -294,10 +317,16 @@ def build_entry_from_seal(
         if rec_notes:
             human += " 再発傾向: " + "; ".join(rec_notes[:3])
 
+    next_obj: Dict[str, Any] = {
+        "primary_cursor": pc,
+        "primary_vps": pv,
+        "candidates": cands,
+    }
     entry: Dict[str, Any] = {
         "schema_version": SCHEMA_VERSION,
         "entry_id": str(uuid.uuid4()),
         "recorded_at": _utc_now_iso(),
+        "ledger_card": CARD,
         "card_name": card_name,
         "source_kind": "seal_dir",
         "seal_dir": str(seal_dir),
@@ -314,11 +343,8 @@ def build_entry_from_seal(
             "notes": rec_notes,
             "compared_tail_entries": compared,
         },
-        "next_card": {
-            "primary_cursor": pc,
-            "primary_vps": pv,
-            "candidates": cands,
-        },
+        "next_card": next_obj,
+        "next_card_primary_cursor": pc,
         "touched_files": touched_files,
         "summary_human_ja": human,
         "summary_machine": summary_machine,
@@ -332,11 +358,39 @@ def append_jsonl(jsonl: Path, entry: Dict[str, Any]) -> None:
         f.write(json.dumps(entry, ensure_ascii=False) + "\n")
 
 
+def _normalize_append_json_entry(raw: Dict[str, Any]) -> Dict[str, Any]:
+    """append-json: 必須キー検査と longform / next_card_primary 補完（捏造なし・欠損は null/空で明示）。"""
+    missing = sorted(ENTRY_MIN_KEYS - set(raw.keys()))
+    if missing:
+        raise ValueError(f"missing_keys:{','.join(missing)}")
+    out = dict(raw)
+    if "longform_result" not in out:
+        out["longform_result"] = {
+            "longform_quality_clean": None,
+            "longform_1": {},
+        }
+    if "schema_version" not in out:
+        out["schema_version"] = SCHEMA_VERSION
+    if "entry_id" not in out:
+        out["entry_id"] = str(uuid.uuid4())
+    if "recorded_at" not in out:
+        out["recorded_at"] = _utc_now_iso()
+    if "ledger_card" not in out:
+        out["ledger_card"] = CARD
+    nc = out.get("next_card")
+    if isinstance(nc, dict) and "next_card_primary_cursor" not in out:
+        out["next_card_primary_cursor"] = str(nc.get("primary_cursor") or "")
+    return out
+
+
 def emit_sample_entry() -> Dict[str, Any]:
+    pc = "CHAT_TS_STAGE1_SURFACE_POLISH_CURSOR_AUTO_V1"
+    pv = "CHAT_TS_STAGE1_SURFACE_NEXT_PDCA_V1"
     return {
         "schema_version": SCHEMA_VERSION,
         "entry_id": "sample-entry-id-replace-me",
         "recorded_at": _utc_now_iso(),
+        "ledger_card": CARD,
         "card_name": "TENMON_IMPROVEMENT_LEDGER_SAMPLE_V1",
         "source_kind": "cli_minimal",
         "seal_dir": "/var/log/tenmon/card_EXAMPLE/20260101T000000Z",
@@ -373,16 +427,17 @@ def emit_sample_entry() -> Dict[str, Any]:
             "compared_tail_entries": 5,
         },
         "next_card": {
-            "primary_cursor": "CHAT_TS_STAGE1_SURFACE_POLISH_CURSOR_AUTO_V1",
-            "primary_vps": "CHAT_TS_STAGE1_SURFACE_NEXT_PDCA_V1",
+            "primary_cursor": pc,
+            "primary_vps": pv,
             "candidates": [
                 {
-                    "cursor_card": "CHAT_TS_STAGE1_SURFACE_POLISH_CURSOR_AUTO_V1",
-                    "vps_card": "CHAT_TS_STAGE1_SURFACE_NEXT_PDCA_V1",
+                    "cursor_card": pc,
+                    "vps_card": pv,
                     "from_blocker": "surface_noise_remaining",
                 }
             ],
         },
+        "next_card_primary_cursor": pc,
         "touched_files": ["api/automation/example.py"],
         "summary_human_ja": "[未達] サンプル: surface にノイズ残存。次は Stage1 surface カード。",
         "summary_machine": {
@@ -420,7 +475,13 @@ def cmd_append_from_seal(ns: argparse.Namespace) -> int:
     if ns.stdout_json:
         print(
             json.dumps(
-                {"appended": True, "entry_id": entry["entry_id"], "jsonl": str(jsonl)},
+                {
+                    "appended": True,
+                    "entry_id": entry["entry_id"],
+                    "jsonl": str(jsonl),
+                    "next_on_pass": NEXT_ON_PASS,
+                    "retry_card": RETRY_CARD,
+                },
                 ensure_ascii=False,
                 indent=2,
             )
@@ -432,12 +493,32 @@ def cmd_append_json(ns: argparse.Namespace) -> int:
     jsonl = Path(ns.jsonl_out).resolve() if ns.jsonl_out else _default_jsonl_path()
     raw = Path(ns.entry_json).read_text(encoding="utf-8", errors="replace")
     entry = json.loads(raw)
+    if not isinstance(entry, dict):
+        print(json.dumps({"ok": False, "error": "entry_json_must_be_object"}, ensure_ascii=False), file=sys.stderr)
+        return 2
+    try:
+        entry = _normalize_append_json_entry(entry)
+    except ValueError as e:
+        print(json.dumps({"ok": False, "error": str(e)}, ensure_ascii=False), file=sys.stderr)
+        return 2
     if ns.dry_run:
         print(json.dumps(entry, ensure_ascii=False, indent=2))
         return 0
     append_jsonl(jsonl, entry)
     if ns.stdout_json:
-        print(json.dumps({"appended": True, "jsonl": str(jsonl)}, ensure_ascii=False, indent=2))
+        print(
+            json.dumps(
+                {
+                    "appended": True,
+                    "entry_id": entry.get("entry_id"),
+                    "jsonl": str(jsonl),
+                    "next_on_pass": NEXT_ON_PASS,
+                    "retry_card": RETRY_CARD,
+                },
+                ensure_ascii=False,
+                indent=2,
+            )
+        )
     return 0
 
 
@@ -447,7 +528,18 @@ def cmd_emit_sample(ns: argparse.Namespace) -> int:
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(sample, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     if ns.stdout_json:
-        print(json.dumps({"wrote": str(out)}, ensure_ascii=False, indent=2))
+        print(
+            json.dumps(
+                {
+                    "wrote": str(out),
+                    "next_on_pass": NEXT_ON_PASS,
+                    "next_on_fail_note": NEXT_ON_FAIL_NOTE,
+                    "retry_card": RETRY_CARD,
+                },
+                ensure_ascii=False,
+                indent=2,
+            )
+        )
     return 0
 
 
@@ -457,7 +549,7 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     p_seal = sub.add_parser("append-from-seal", help="seal ディレクトリからエントリを生成して JSONL 追記")
     p_seal.add_argument("--seal-dir", required=True)
-    p_seal.add_argument("--card-name", default="", help="記録するカード名（例: TENMON_IMPROVEMENT_LEDGER_VPS_V1）")
+    p_seal.add_argument("--card-name", default="", help="記録するカード名（例: TENMON_SEAL_GOVERNOR_AND_OS_INTEGRATION_VPS_V1）")
     p_seal.add_argument("--card", default="", help="--card-name の別名")
     p_seal.add_argument("--seal-exit-code", type=int, default=0)
     p_seal.add_argument("--touched-files", default="", help="改行区切りの触ったファイルリスト")

@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# TENMON_R1_20A_DETAILPLAN_STABILIZE_VPS_V1
+# TENMON_R1_20A_DETAILPLAN_STABILIZE_CURSOR_AUTO_V1
+# P20/HYBRID detailPlan 契約の観測・監査（最小）。nextOnPass: TENMON_K1_SUBCONCEPT_GENERAL_EXECUTION_CAMPAIGN_CURSOR_AUTO_V1
 set -euo pipefail
 set +H
 set +o histexpand
@@ -8,7 +9,7 @@ if [ -z "${CARD:-}" ]; then
   if [ "${1:-}" != "" ]; then
     CARD="$1"
   else
-    CARD="TENMON_R1_20A_DETAILPLAN_STABILIZE_VPS_V1"
+    CARD="TENMON_R1_20A_DETAILPLAN_STABILIZE_CURSOR_AUTO_V1"
   fi
 fi
 
@@ -25,53 +26,88 @@ BASE="${R1_20A_PROBE_BASE_URL:-http://127.0.0.1:3000}"
 cd "$API"
 npm run build
 
-curl -fsS "$BASE/health" | tee "$DIR/health.json" >/dev/null || echo '{"ok":false}' > "$DIR/health.json"
-curl -fsS "$BASE/api/audit" | tee "$DIR/audit.json" >/dev/null || echo '{}' > "$DIR/audit.json"
+curl -fsS "${BASE}/health" | tee "$DIR/health.json" >/dev/null || echo '{"ok":false}' >"$DIR/health.json"
+curl -fsS "${BASE}/api/audit" | tee "$DIR/audit.json" >/dev/null || echo '{}' >"$DIR/audit.json"
 
-# Phase20 / coreplan プローブ（HYBRID に流す — サーバ未起動時はスキップ）
+# Phase20 / coreplan プローブ（サーバ未起動時はスキップ）
 PROBE_OUT="$DIR/detailplan_probe.json"
-if curl -fsS -X POST "$BASE/api/chat" \
+if curl -fsS -X POST "${BASE}/api/chat" \
   -H "Content-Type: application/json" \
   -d '{"message":"coreplan probe","threadId":"smoke-hybrid-r1-20a"}' \
   >"$PROBE_OUT" 2>/dev/null; then
   :
 else
-  echo '{"error":"chat_probe_skipped_or_failed"}' > "$PROBE_OUT"
+  echo '{"error":"chat_probe_skipped_or_failed"}' >"$PROBE_OUT"
 fi
 
 python3 - "$DIR" "$PROBE_OUT" <<'PY'
-import json, pathlib, sys
+import json
+import pathlib
+import sys
+
 d = pathlib.Path(sys.argv[1])
 probe_path = pathlib.Path(sys.argv[2])
-body = {}
+body: dict = {}
 try:
     body = json.loads(probe_path.read_text(encoding="utf-8", errors="replace"))
 except Exception:
     body = {}
-dp = body.get("detailPlan")
+
+def pick_detail_plan(b: dict):
+    dp = b.get("detailPlan")
+    if isinstance(dp, dict) and not isinstance(dp, type(None)):
+        return dp
+    df = b.get("decisionFrame")
+    if isinstance(df, dict):
+        dp2 = df.get("detailPlan")
+        if isinstance(dp2, dict):
+            return dp2
+    return None
+
+dp = pick_detail_plan(body)
+dbg = (dp or {}).get("debug") if isinstance(dp, dict) else {}
+c1 = dbg.get("detailPlanContractR1") if isinstance(dbg, dict) else None
+
 audit = {
-    "card": "TENMON_R1_20A_DETAILPLAN_STABILIZE_V1",
-    "detailPlan_is_object": isinstance(dp, dict) and not isinstance(dp, type(None)),
+    "card": "TENMON_R1_20A_DETAILPLAN_STABILIZE_CURSOR_AUTO_V1",
+    "detailPlan_is_object": isinstance(dp, dict),
     "has_chainOrder": isinstance(dp, dict) and isinstance(dp.get("chainOrder"), list),
     "has_warnings": isinstance(dp, dict) and isinstance(dp.get("warnings"), list),
     "has_evidenceIds": isinstance(dp, dict) and isinstance(dp.get("evidenceIds"), list),
-    "has_debug_contract": isinstance(dp, dict) and isinstance((dp.get("debug") or {}).get("detailPlanContractR1"), str),
+    "has_claims": isinstance(dp, dict) and isinstance(dp.get("claims"), list),
+    "has_centerClaim_string": isinstance(dp, dict) and isinstance(dp.get("centerClaim"), str),
+    "has_khsCandidates": isinstance(dp, dict) and isinstance(dp.get("khsCandidates"), list),
+    "debug_detailPlanContractR1_is_20A_V1": c1 == "20A_V1",
+    "next_on_pass": "TENMON_K1_SUBCONCEPT_GENERAL_EXECUTION_CAMPAIGN_CURSOR_AUTO_V1",
+    "next_on_fail_note": "停止。retry 1枚のみ生成。",
+    "retry_card": "TENMON_R1_20A_DETAILPLAN_STABILIZE_RETRY_CURSOR_AUTO_V1",
 }
 (d / "p20_contract_audit.json").write_text(json.dumps(audit, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-pass_ = audit["detailPlan_is_object"] and audit["has_chainOrder"] and audit["has_warnings"]
+
+pass_ = bool(
+    audit["detailPlan_is_object"]
+    and audit["has_chainOrder"]
+    and audit["has_warnings"]
+    and audit["has_evidenceIds"]
+    and audit["has_claims"]
+    and audit["has_centerClaim_string"]
+    and audit["has_khsCandidates"]
+    and audit["debug_detailPlanContractR1_is_20A_V1"]
+)
 fv = {
     "version": 1,
-    "card": "TENMON_R1_20A_DETAILPLAN_STABILIZE_VPS_V1",
+    "card": "TENMON_R1_20A_DETAILPLAN_STABILIZE_CURSOR_AUTO_V1",
     "pass": pass_,
     "paths": {
         "p20_contract_audit": str(d / "p20_contract_audit.json"),
         "detailplan_probe": str(probe_path),
     },
+    "next_on_pass": "TENMON_K1_SUBCONCEPT_GENERAL_EXECUTION_CAMPAIGN_CURSOR_AUTO_V1",
     "fail_next_cursor_card": "TENMON_R1_20A_DETAILPLAN_STABILIZE_RETRY_CURSOR_AUTO_V1",
 }
 (d / "final_verdict.json").write_text(json.dumps(fv, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 print(json.dumps(fv, ensure_ascii=False, indent=2))
+raise SystemExit(0 if pass_ else 1)
 PY
 
 echo "[DONE] $DIR"
-exit 0

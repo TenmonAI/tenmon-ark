@@ -1,28 +1,17 @@
 {
   "card": "TENMON_WORLDCLASS_ACCEPTANCE_SCORECARD_CURSOR_AUTO_V1",
-  "generated_at": "2026-03-26T00:34:12Z",
-  "score_total": 66.4,
+  "generated_at": "2026-03-26T10:31:21Z",
+  "score_total": 72.4,
   "score_max": 118,
-  "score_percent": 56.27,
+  "score_percent": 61.36,
   "sealed_operable_ready": false,
   "worldclass_ready": false,
   "must_fix_before_claim": [
+    "conversation_continuity:continuity_hold_density_insufficient",
     "conversation_backend:conversation_runner_not_pass",
     "conversation_backend:chat_ts_overall_not_100",
     "conversation_continuity:sessionId_reference_in_mainline_web_src",
     "conversation_continuity:continuity_hold_not_observed",
-    "pwa_lived_proof:chat:continuity_failed",
-    "pwa_lived_proof:chat:new_chat_failed",
-    "pwa_lived_proof:chat:refresh_empty_response",
-    "pwa_lived_proof:chat:refresh_second_request_failed",
-    "pwa_lived_proof:chat:threadId_missing_in_response",
-    "pwa_lived_proof:continuity_fail",
-    "pwa_lived_proof:duplicate_or_bleed_fail",
-    "pwa_lived_proof:gate:audit",
-    "pwa_lived_proof:gate:audit_build",
-    "pwa_lived_proof:gate:health",
-    "pwa_lived_proof:gate_audit_build_fail",
-    "pwa_lived_proof:meta_leak_none",
     "self_audit_os:verdict_source_split_not_single",
     "self_audit_os:orchestrator_integrated_verdict_exists",
     "self_audit_os:pwa_false_mostly_due_env_failure",
@@ -36,15 +25,102 @@
     "learning_self_improvement:learning_integrated_verdict_not_ok",
     "learning_self_improvement:learning_chain_not_ok"
   ],
-  "primary_gap": "conversation_backend",
-  "recommended_next_card": "TENMON_FINAL_OPERABLE_SEAL_CURSOR_AUTO_V1",
-  "next_best_card": "TENMON_FINAL_OPERABLE_SEAL_CURSOR_AUTO_V1",
+  "primary_gap": "conversation_continuity",
+  "recommended_next_card": "TENMON_PWA_THREADID_CONTINUITY_LIVED_PROOF_REPAIR_CURSOR_AUTO_V1",
+  "next_best_card": "TENMON_PWA_THREADID_CONTINUITY_LIVED_PROOF_REPAIR_CURSOR_AUTO_V1",
+  "latest_truth_sync": {
+    "pwa_final_superseded_by_lived": true,
+    "resolved_dialogue_axes": [
+      "k1_depth"
+    ],
+    "latest_truth_resolved_from": [
+      "pwa_lived_completion_readiness.json overrides pwa_final_completion_readiness.json",
+      "pwa_lived_completion_readiness.json",
+      "latest_gate_check",
+      "latest_continuity_probe",
+      "fresh_k1_general_probes"
+    ],
+    "fresh_probe_digest": {
+      "continuity_followup_len": 22,
+      "continuity_probe_thread": "probe_rejudge_1774521068",
+      "chat1_route": "DEF_FASTPATH_VERIFIED_V1",
+      "chat2_route": "CONTINUITY_ROUTE_HOLD_V1",
+      "k1_probe_hokke": {
+        "route": "K1_TRACE_EMPTY_GATED_V1",
+        "len": 168,
+        "response_nonempty": true,
+        "meta_leak_ok": true,
+        "satisfied": true,
+        "http_status": 200,
+        "thread_id": "probe_k1_hokke_1774521068"
+      },
+      "k1_probe_kukai": {
+        "route": "K1_TRACE_EMPTY_GATED_V1",
+        "len": 142,
+        "response_nonempty": true,
+        "meta_leak_ok": true,
+        "satisfied": true,
+        "http_status": 200,
+        "thread_id": "probe_k1_kukai_1774521068"
+      },
+      "general_probe": {
+        "route": "NATURAL_GENERAL_LLM_TOP",
+        "len": 268,
+        "response_nonempty": true,
+        "meta_leak_ok": true,
+        "satisfied": false,
+        "http_status": 200,
+        "thread_id": "probe_general_1774521068"
+      },
+      "ai_consciousness_lock_probe": {
+        "route": "R10_SELF_REFLECTION_ROUTE_V4_SAFE",
+        "len": 57,
+        "response_nonempty": true,
+        "meta_leak_ok": true,
+        "satisfied": false,
+        "http_status": 200,
+        "thread_id": "probe_ai_1774521068"
+      },
+      "subconcept_probe": {
+        "route": "TRUTH_GATE_RETURN_V2",
+        "len": 113,
+        "response_nonempty": true,
+        "meta_leak_ok": true,
+        "satisfied": false,
+        "http_status": 200,
+        "thread_id": "probe_subconcept_1774521068"
+      },
+      "continuity_density_unresolved": true
+    },
+    "stale_sources": [
+      "pwa_final_completion_readiness.json",
+      "tenmon_latest_state_rejudge_and_seal_refresh_verdict.json",
+      "tenmon_latest_state_rejudge_summary.json"
+    ],
+    "superseded_sources_sample": [
+      "tenmon_chat_continuity_deep_forensic.json",
+      "tenmon_latest_state_rejudge_summary.json",
+      "tenmon_repo_hygiene_watchdog_verdict.json",
+      "tenmon_system_verdict.json",
+      "tenmon_worldclass_acceptance_scorecard.json",
+      "pwa_final_completion_blockers.json",
+      "pwa_final_completion_readiness.json",
+      "pwa_lived_completion_blockers.json",
+      "tenmon_current_state_detailed_report.json",
+      "tenmon_latest_state_rejudge_and_seal_refresh_verdict.json",
+      "tenmon_remote_admin_cursor_runtime_proof_verdict.json",
+      "tenmon_self_build_execution_chain_verdict.json",
+      "tenmon_self_repair_acceptance_seal_verdict.json",
+      "tenmon_self_repair_safe_loop_verdict.json",
+      "pwa_final_completion_readiness.json"
+    ]
+  },
   "signals": {
     "regression_detected": false,
     "gate_contract_aligned": true,
     "repo_must_block_seal": false,
     "lived_proof_demonstrated": true,
-    "critical_subsystems_accepted_count": 2,
+    "critical_subsystems_accepted_count": 3,
     "critical_subsystems_all_accepted": false,
     "overall_band": "code_complete_lived_unproven",
     "current_run_nonfixture_executed": true
@@ -85,24 +161,11 @@
       "primary_blockers": []
     },
     "pwa_lived_proof": {
-      "score": 6.0,
+      "score": 12.0,
       "max_score": 12,
-      "band": "yellow",
-      "accepted_complete": false,
-      "primary_blockers": [
-        "chat:continuity_failed",
-        "chat:new_chat_failed",
-        "chat:refresh_empty_response",
-        "chat:refresh_second_request_failed",
-        "chat:threadId_missing_in_response",
-        "continuity_fail",
-        "duplicate_or_bleed_fail",
-        "gate:audit",
-        "gate:audit_build",
-        "gate:health",
-        "gate_audit_build_fail",
-        "meta_leak_none"
-      ]
+      "band": "green",
+      "accepted_complete": true,
+      "primary_blockers": []
     },
     "repo_hygiene": {
       "score": 12.0,

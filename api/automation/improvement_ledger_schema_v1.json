@@ -2,8 +2,9 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://tenmon.local/schemas/improvement_ledger_entry_v1.json",
   "title": "TENMON_IMPROVEMENT_LEDGER_ENTRY_V1",
+  "description": "TENMON_IMPROVEMENT_LEDGER_CURSOR_AUTO_V1 — JSONL 1 行 1 エントリ。記録項目は card_name / touched_files / blocker_types / acceptance_result / runtime_result / surface_result / route_result / density_result / recurrence_signals / next_card / summary_human_ja / summary_machine / outcome_class（+ seal 由来 longform_result）。",
   "type": "object",
-  "additionalProperties": false,
+  "additionalProperties": true,
   "required": [
     "schema_version",
     "entry_id",
@@ -27,6 +28,10 @@
     "schema_version": { "type": "integer", "const": 1 },
     "entry_id": { "type": "string", "minLength": 8 },
     "recorded_at": { "type": "string", "description": "ISO8601 UTC Z" },
+    "ledger_card": {
+      "type": "string",
+      "description": "ledger ランナー（TENMON_IMPROVEMENT_LEDGER_CURSOR_AUTO_V1）"
+    },
     "card_name": { "type": "string", "minLength": 1 },
     "source_kind": {
       "type": "string",
@@ -86,6 +91,10 @@
         }
       },
       "additionalProperties": true
+    },
+    "next_card_primary_cursor": {
+      "type": "string",
+      "description": "next_card.primary_cursor と同一の短縮参照（任意・追記時に付与）"
     },
     "touched_files": {
       "type": "array",

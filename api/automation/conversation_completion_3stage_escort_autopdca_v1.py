@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-TENMON_CONVERSATION_COMPLETION_3STAGE_ESCORT_AUTOPDCA_V1
+TENMON_CONVERSATION_COMPLETION_3STAGE_ESCORT_AUTOPDCA_CURSOR_AUTO_V1
 
-3 枚の completion カードを順固定で追従。未達なら同段を再試行し、
-Stage3 中に Stage1/2 再発が観測されたら該当段へ戻す親オーケストレーター。
+3 枚の completion カードを順固定で escort。未達の段では次段へ進まない。
+Stage2 は Stage1 ガード、Stage3 は Stage2 ガードを再実行。
 
-観測中心（パッチ適用は別工程）。各 cycle: build → restart → health/audit →
+観測中心（パッチ適用は別工程）。各 cycle: build → restart → health / audit / audit.build →
 full_completion → final_seal → 悪化検査 → 現行段の stage ランナー 1 本のみ。
 """
 from __future__ import annotations
@@ -24,8 +24,12 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
-CARD = "TENMON_CONVERSATION_COMPLETION_3STAGE_ESCORT_AUTOPDCA_V1"
+CARD = "TENMON_CONVERSATION_COMPLETION_3STAGE_ESCORT_AUTOPDCA_CURSOR_AUTO_V1"
 VERSION = 1
+NEXT_ON_PASS = "TENMON_CURSOR_ONLY_REPO_HYGIENE_FINAL_SEAL_CURSOR_AUTO_V1"
+NEXT_ON_FAIL_NOTE = "停止。retry 1枚のみ生成。"
+RETRY_CARD = "TENMON_CONVERSATION_COMPLETION_3STAGE_ESCORT_AUTOPDCA_RETRY_CURSOR_AUTO_V1"
+STATE_MIRROR_DIR = "conversation_completion_3stage_escort_state"
 
 _AUTOMATION_DIR = Path(__file__).resolve().parent
 _REPO_ROOT = _AUTOMATION_DIR.parents[1]
@@ -49,6 +53,29 @@ def _atomic_write(path: Path, obj: Any) -> None:
     else:
         tmp.write_text(json.dumps(obj, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     tmp.replace(path)
+
+
+def _mirror_escort_state(auto: Path, escort_root: Path, session: str) -> None:
+    """api/automation/conversation_completion_3stage_escort_state/ に最新セッションの 4 ファイルをミラー。"""
+    mdir = auto / STATE_MIRROR_DIR
+    mdir.mkdir(parents=True, exist_ok=True)
+    for name in (
+        "full_stage_state.json",
+        "stage_progress_matrix.json",
+        "rollback_reason.json",
+        "deterioration_guard.json",
+    ):
+        src = escort_root / name
+        if src.is_file():
+            dst = mdir / name
+            try:
+                dst.write_bytes(src.read_bytes())
+            except OSError:
+                pass
+    _atomic_write(
+        mdir / "latest_session.txt",
+        f"{session}\n{escort_root}\n",
+    )
 
 
 def _run_shell(cmd: str, cwd: Path, timeout: int = 900) -> Tuple[int, str]:
@@ -272,14 +299,30 @@ def main() -> int:
 
         time.sleep(1)
 
-        # --- health / audit
-        health = _http_json("GET", args.base_url.rstrip("/") + "/health", 15)
-        audit = _http_json("GET", args.base_url.rstrip("/") + "/api/audit", 25)
-        health_ok = bool(health.get("ok") and (health.get("json") or {}).get("status") == "ok")
-        audit_ok = bool(audit.get("ok") and audit.get("status") == 200)
+        # --- health / audit / audit.build（ゲート契約）
+        base_u = args.base_url.rstrip("/")
+        health = _http_json("GET", f"{base_u}/api/health", 20)
+        audit = _http_json("GET", f"{base_u}/api/audit", 30)
+        audit_b = _http_json("GET", f"{base_u}/api/audit.build", 30)
+        hj = health.get("json") if isinstance(health.get("json"), dict) else {}
+        aj = audit.get("json") if isinstance(audit.get("json"), dict) else {}
+        abj = audit_b.get("json") if isinstance(audit_b.get("json"), dict) else {}
+        health_ok = bool(health.get("ok") and health.get("status") == 200 and hj.get("ok") is True)
+        audit_ok = bool(audit.get("ok") and audit.get("status") == 200 and aj.get("ok") is True)
+        audit_build_ok = bool(audit_b.get("ok") and audit_b.get("status") == 200 and abj.get("ok") is True)
         _atomic_write(
             cdir / "cycle_health_audit.json",
-            {"health_ok": health_ok, "audit_ok": audit_ok, "health": health, "audit": audit},
+            {
+                "health_ok": health_ok,
+                "audit_ok": audit_ok,
+                "audit_build_ok": audit_build_ok,
+                "health": health,
+                "audit": audit,
+                "audit_build": audit_b,
+            },
+        )
+        cycle_gate_ok = bool(
+            build_ok and restart_ok and health_ok and audit_ok and audit_build_ok
         )
 
         # full PDCA
@@ -454,10 +497,23 @@ def main() -> int:
         if stage_pass:
             last_pass[runner_stage] = latest_stage_dir
 
-        if runner_stage == 1 and stage_pass:
+        if runner_stage == 1 and stage_pass and cycle_gate_ok:
             active = 2
-        elif runner_stage == 2 and stage_pass:
+        elif runner_stage == 2 and stage_pass and cycle_gate_ok:
             active = 3
+        if stage_pass and not cycle_gate_ok and runner_stage in (1, 2):
+            guard_events.append(
+                {
+                    "cycle": cycle,
+                    "kind": "infrastructure_gate_blocked_advance",
+                    "runner_stage": runner_stage,
+                    "build_ok": build_ok,
+                    "restart_ok": restart_ok,
+                    "health_ok": health_ok,
+                    "audit_ok": audit_ok,
+                    "audit_build_ok": audit_build_ok,
+                }
+            )
 
         row = {
             "cycle": cycle,
@@ -465,6 +521,8 @@ def main() -> int:
             "restart_ok": restart_ok,
             "health_ok": health_ok,
             "audit_ok": audit_ok,
+            "audit_build_ok": audit_build_ok,
+            "cycle_gate_ok": cycle_gate_ok,
             "full_pdca_exit": fc,
             "final_seal_exit": sc,
             "workspace_observer_exit": woc,
@@ -482,10 +540,6 @@ def main() -> int:
         matrix_rows.append(row)
 
         deterioration_cycles.append(det)
-        _atomic_write(
-            escort_root / "deterioration_guard.json",
-            {"version": 1, "per_cycle": deterioration_cycles, "events": guard_events},
-        )
 
         state = {
             "version": VERSION,
@@ -495,12 +549,42 @@ def main() -> int:
             "active_stage": active,
             "last_pass_stage_dirs": {str(k): str(v) for k, v in last_pass.items() if v},
             "cycle": cycle,
+            "next_on_pass": NEXT_ON_PASS,
+            "next_on_fail_note": NEXT_ON_FAIL_NOTE,
+            "retry_card": RETRY_CARD,
+            "ordered_stage_cards": [STAGE1_CARD, STAGE2_CARD, STAGE3_CARD],
         }
         _atomic_write(escort_root / "full_stage_state.json", state)
         _atomic_write(escort_root / "stage_progress_matrix.json", {"rows": matrix_rows})
         _atomic_write(
             escort_root / "rollback_reason.json",
             {"version": 1, "events": rollback_log},
+        )
+        _mirror_escort_state(repo / "api" / "automation", escort_root, session)
+        _atomic_write(
+            escort_root / "escort_report.json",
+            {
+                "version": VERSION,
+                "card": CARD,
+                "sessionUtc": session,
+                "escort_root": str(escort_root),
+                "state_mirror": str(repo / "api" / "automation" / STATE_MIRROR_DIR),
+                "next_on_pass": NEXT_ON_PASS,
+                "retry_card": RETRY_CARD,
+                "active_stage": active,
+                "cycle": cycle,
+            },
+        )
+        _atomic_write(
+            repo / "api" / "automation" / STATE_MIRROR_DIR / "escort_report.json",
+            {
+                "version": VERSION,
+                "card": CARD,
+                "sessionUtc": session,
+                "escort_root": str(escort_root),
+                "next_on_pass": NEXT_ON_PASS,
+                "retry_card": RETRY_CARD,
+            },
         )
 
         merged_summary = {
@@ -540,7 +624,22 @@ def main() -> int:
             replay_ok,
             strict_unknown_bridge=bool(args.strict_unknown_bridge_100),
         )
-        if runner_stage == 3 and stage_pass and stop_ok:
+        if runner_stage == 3 and stage_pass and stop_ok and not cycle_gate_ok:
+            guard_events.append(
+                {
+                    "cycle": cycle,
+                    "kind": "final_seal_blocked_by_infrastructure_gate",
+                    "stop_ok": True,
+                    "cycle_gate_ok": False,
+                }
+            )
+        _atomic_write(
+            escort_root / "deterioration_guard.json",
+            {"version": 1, "per_cycle": deterioration_cycles, "events": guard_events},
+        )
+        _mirror_escort_state(repo / "api" / "automation", escort_root, session)
+
+        if runner_stage == 3 and stage_pass and stop_ok and cycle_gate_ok:
             lg(f"STOP: all criteria met at cycle {cycle}")
             for sn, pth in (
                 ("stage1_final", last_pass[1]),
@@ -549,9 +648,24 @@ def main() -> int:
             ):
                 if pth and pth.is_dir():
                     _copy_tree_summary(pth, escort_root / sn, ("*.json", "*.md", "*.log"))
-            _atomic_write(escort_root / "stop_verdict.json", {"ok": True, "cycle": cycle, "checks": stop_miss})
+            _atomic_write(
+                escort_root / "stop_verdict.json",
+                {"ok": True, "cycle": cycle, "checks": stop_miss, "next_on_pass": NEXT_ON_PASS},
+            )
             _atomic_write(escort_root / "escort_run.log", "\n".join(log_lines) + "\n")
-            print(json.dumps({"ok": True, "stopped": True, "cycle": cycle}, indent=2))
+            print(
+                json.dumps(
+                    {
+                        "ok": True,
+                        "stopped": True,
+                        "cycle": cycle,
+                        "next_on_pass": NEXT_ON_PASS,
+                        "retry_card": RETRY_CARD,
+                        "escort_root": str(escort_root),
+                    },
+                    indent=2,
+                )
+            )
             return 0
 
         if args.dry_run:
@@ -559,10 +673,37 @@ def main() -> int:
 
     _atomic_write(
         escort_root / "stop_verdict.json",
-        {"ok": False, "reason": "max_cycles_or_dry_run", "active_stage": active},
+        {
+            "ok": False,
+            "reason": "max_cycles_or_dry_run",
+            "active_stage": active,
+            "retry_card": RETRY_CARD,
+            "next_on_fail_note": NEXT_ON_FAIL_NOTE,
+        },
     )
+    _mirror_escort_state(repo / "api" / "automation", escort_root, session)
+    retry_md = (
+        f"# {RETRY_CARD}\n\n"
+        f"- {NEXT_ON_FAIL_NOTE}\n"
+        f"- 親: `{CARD}`\n"
+        f"- セッション: `{session}`\n"
+    )
+    _atomic_write(escort_root / "retry_cursor_card_hint.md", retry_md)
+    _atomic_write(repo / "api" / "automation" / STATE_MIRROR_DIR / "retry_cursor_card_hint.md", retry_md)
     _atomic_write(escort_root / "escort_run.log", "\n".join(log_lines) + "\n")
-    print(json.dumps({"ok": False, "stopped": False, "active_stage": active}, indent=2))
+    print(
+        json.dumps(
+            {
+                "ok": False,
+                "stopped": False,
+                "active_stage": active,
+                "next_on_pass": NEXT_ON_PASS,
+                "retry_card": RETRY_CARD,
+                "escort_root": str(escort_root),
+            },
+            indent=2,
+        )
+    )
     return 1
 
 

@@ -12,9 +12,19 @@ from __future__ import annotations
 
 import json
 import os
+import sys
 import time
 from pathlib import Path
 from typing import Any
+
+_AUTOMATION_DIR = Path(__file__).resolve().parent
+if str(_AUTOMATION_DIR) not in sys.path:
+    sys.path.insert(0, str(_AUTOMATION_DIR))
+
+try:
+    from tenmon_fixture_drain_v1 import apply_closed_loop_fixture_drain
+except ImportError:
+    apply_closed_loop_fixture_drain = None  # type: ignore[misc, assignment]
 
 CARD = "TENMON_QUEUE_DEDUP_BACKPRESSURE_AND_FIXTURE_DRAIN_CURSOR_AUTO_V1"
 LEGACY_CARD = "TENMON_CONTINUOUS_QUEUE_DEDUP_AND_BACKPRESSURE_CURSOR_AUTO_V1"
@@ -180,6 +190,15 @@ def main() -> int:
     fixture_delivered_max_age = int(os.environ.get("TENMON_QUEUE_FIXTURE_DELIVERED_MAX_AGE_SEC", "3600"))
 
     queue = read_json(qpath)
+    closed_loop_drained = 0
+    closed_loop_ids: list[str] = []
+    if apply_closed_loop_fixture_drain is not None:
+        queue, drain_stats = apply_closed_loop_fixture_drain(queue)
+        if drain_stats.get("queue_mutated"):
+            qpath.write_text(json.dumps(queue, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        closed_loop_drained = int(drain_stats.get("fixture_items_drained") or 0)
+        closed_loop_ids = list(drain_stats.get("drained_queue_ids") or [])
+
     items: list[Any] = queue.get("items") if isinstance(queue.get("items"), list) else []
 
     now_ms = int(time.time() * 1000)
@@ -229,6 +248,8 @@ def main() -> int:
         "card": CARD,
         "legacy_card": LEGACY_CARD,
         "generated_at": utc(),
+        "closed_loop_fixture_canonicalize_drained": closed_loop_drained,
+        "closed_loop_fixture_drained_ids": closed_loop_ids,
         "queue_changed": changed,
         "duplicates_removed": duplicates_removed,
         "removed_duplicate_pending_ids": removed_ids,

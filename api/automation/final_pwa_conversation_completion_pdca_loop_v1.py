@@ -3,6 +3,15 @@
 """
 TENMON_FINAL_PWA_CONVERSATION_COMPLETION_PDCA_LOOP_CURSOR_AUTO_V1
 実PWA会話基準の最終PDCAオーケストレータ（観測・整流中心）。
+
+主要フェーズ（観測優先・成功の捏造なし）:
+1. real PWA forensic fixation（single-source trace）
+2. PWA chat path repair（probe gap / bleed 観測）
+3. acceptance single-source normalization（verdict）
+4. output contract normalization
+5. self-improvement reflection lock（観測）
+6. storage / backup / NAS recovery（観測）
+7. final PWA experience seal（readiness 判定）
 """
 from __future__ import annotations
 
@@ -16,8 +25,10 @@ from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
 CARD = "TENMON_FINAL_PWA_CONVERSATION_COMPLETION_PDCA_LOOP_CURSOR_AUTO_V1"
-VPS = "TENMON_FINAL_PWA_CONVERSATION_COMPLETION_PDCA_LOOP_VPS_V1"
-FAIL_NEXT = "TENMON_FINAL_PWA_CONVERSATION_COMPLETION_PDCA_LOOP_RETRY_CURSOR_AUTO_V1"
+NEXT_ON_PASS = "TENMON_CONVERSATION_COMPLETION_3STAGE_ESCORT_AUTOPDCA_CURSOR_AUTO_V1"
+NEXT_ON_FAIL_NOTE = "停止。retry 1枚のみ生成。"
+RETRY_CARD = "TENMON_FINAL_PWA_CONVERSATION_COMPLETION_PDCA_LOOP_RETRY_CURSOR_AUTO_V1"
+STAMP_JSON = "tenmon_final_pwa_pdca_loop_stamp_v1.json"
 
 TARGET_QUESTIONS = [
     "おはよう",
@@ -120,6 +131,31 @@ def _has_leak(text: str) -> bool:
     return False
 
 
+def _read_json(path: Path) -> Dict[str, Any]:
+    if not path.is_file():
+        return {}
+    try:
+        x = json.loads(path.read_text(encoding="utf-8", errors="replace"))
+        return x if isinstance(x, dict) else {}
+    except Exception:
+        return {}
+
+
+def _lived_proof_blockers_observed(lived: Dict[str, Any]) -> List[str]:
+    """pwa_lived_completion_readiness から false / env_failure を観測のみ列挙（捏造なし）。"""
+    out: List[str] = []
+    skip = frozenset({"card", "generated_at", "driver_selected"})
+    for k, v in lived.items():
+        if k in skip:
+            continue
+        if k == "env_failure" and v is True:
+            out.append("lived:env_failure")
+            continue
+        if isinstance(v, bool) and not v:
+            out.append(f"lived:{k}")
+    return sorted(set(out))
+
+
 def _dup_paragraph(text: str) -> bool:
     parts = [p.strip() for p in (text or "").split("\n\n") if p.strip()]
     seen = set()
@@ -152,10 +188,19 @@ def main() -> int:
 
     api = _api()
     auto = api / "automation"
+    auto.mkdir(parents=True, exist_ok=True)
+    (auto / "generated_cursor_apply").mkdir(parents=True, exist_ok=True)
     endpoint = f"{ns.api_base}/api/chat"
     ts = datetime.now().strftime("%Y%m%d%H%M%S")
 
-    # PHASE 0/1: single source trace
+    lived_path = auto / "pwa_lived_completion_readiness.json"
+    lived = _read_json(lived_path)
+    if not lived:
+        lived_blockers = ["lived:pwa_lived_completion_readiness.json_missing_or_empty"]
+    else:
+        lived_blockers = _lived_proof_blockers_observed(lived)
+
+    # PHASE 1–2: real PWA trace + gap / bleed
     continuity_tid = f"pwa-final-cont-{ts}"
     new_tid = f"pwa-final-new-{ts}"
 
@@ -215,7 +260,18 @@ def main() -> int:
             )
 
     (auto / "pwa_probe_gap_report.json").write_text(
-        json.dumps({"version": 1, "card": CARD, "generated_at": _utc(), "rows": gap_rows}, ensure_ascii=False, indent=2) + "\n",
+        json.dumps(
+            {
+                "version": 1,
+                "card": CARD,
+                "generated_at": _utc(),
+                "lived_proof_blockers_observed": lived_blockers,
+                "rows": gap_rows,
+            },
+            ensure_ascii=False,
+            indent=2,
+        )
+        + "\n",
         encoding="utf-8",
     )
     (auto / "thread_center_bleed_report.json").write_text(
@@ -234,7 +290,7 @@ def main() -> int:
         encoding="utf-8",
     )
 
-    # PHASE 2/3/4/5: reuse existing normalizers/observers and summarize
+    # PHASE 3–4: contract / output normalization（観測）
     oc_norm = _run_py(api / "automation" / "contract_stabilization_master_v1.py", ["--api-base", ns.api_base])
     out_mismatch = {}
     p = auto / "output_contract_path_mismatch.json"
@@ -258,7 +314,7 @@ def main() -> int:
         encoding="utf-8",
     )
 
-    # self-improvement reflection
+    # PHASE 5: self-improvement reflection（観測）
     self_manifest = auto / "out" / "tenmon_self_improvement_os_v1" / "self_improvement_os_manifest.json"
     self_integrated = auto / "out" / "tenmon_self_improvement_os_v1" / "integrated_final_verdict.json"
     kokuzo_integrated = auto / "out" / "tenmon_kokuzo_learning_improvement_os_v1" / "integrated_learning_verdict.json"
@@ -274,7 +330,7 @@ def main() -> int:
         encoding="utf-8",
     )
 
-    # storage backup nas
+    # PHASE 6: storage / backup / NAS（観測）
     nas = _run_py(api / "automation" / "storage_backup_nas_observer_v1.py", [])
     nas_blockers = {}
     nb = auto / "out" / "storage_backup_nas_recovery_v1" / "backup_blockers.json"
@@ -297,7 +353,7 @@ def main() -> int:
         encoding="utf-8",
     )
 
-    # phase 6 final verdict
+    # PHASE 7: final seal / readiness（lived proof blocker は観測で結合）
     checks = {
         "meta_leak_none": all(not r["meta_leak"] for r in gap_rows),
         "compare_duplicate_none": all(not r["duplicate_paragraph"] for r in gap_rows),
@@ -305,6 +361,7 @@ def main() -> int:
         "output_contract_real_missing_zero": int(out_mismatch.get("real_missing_count", 0)) == 0,
         "self_reflection_ready": bool(sim["reflection_ready"]),
         "nas_ready": int(nas_blockers.get("rc", 1)) == 0,
+        "lived_proof_clean": len(lived_blockers) == 0,
     }
     blockers = [k for k, v in checks.items() if not v]
     final_ready = len(blockers) == 0
@@ -316,6 +373,8 @@ def main() -> int:
                 "card": CARD,
                 "generated_at": _utc(),
                 "single_source": "real_pwa_chat_trace",
+                "lived_proof_blockers_observed": lived_blockers,
+                "lived_proof_source": str(auto / "pwa_lived_completion_readiness.json"),
                 "checks": checks,
                 "blockers": blockers,
                 "ready": final_ready,
@@ -332,9 +391,13 @@ def main() -> int:
                 "version": 1,
                 "card": CARD,
                 "generated_at": _utc(),
+                "next_on_pass": NEXT_ON_PASS,
+                "next_on_fail_note": NEXT_ON_FAIL_NOTE,
+                "retry_card": RETRY_CARD,
                 "final_pwa_completion_readiness": final_ready,
                 "blockers": blockers,
-                "fail_next_card": FAIL_NEXT if not final_ready else None,
+                "lived_proof_blockers_observed": lived_blockers,
+                "fail_next_card": RETRY_CARD if not final_ready else None,
             },
             ensure_ascii=False,
             indent=2,
@@ -351,6 +414,7 @@ def main() -> int:
         "output_contract_real_missing_zero": "TENMON_OUTPUT_CONTRACT_PATH_NORMALIZE_V1",
         "self_reflection_ready": "TENMON_SELF_IMPROVEMENT_REFLECTION_LOCK_V1",
         "nas_ready": "TENMON_STORAGE_BACKUP_NAS_RECOVERY_CURSOR_AUTO_V1",
+        "lived_proof_clean": "TENMON_PWA_LIVED_COMPLETION_SEAL_CURSOR_AUTO_V1",
     }
     focused = []
     for b in blockers:
@@ -359,28 +423,78 @@ def main() -> int:
         if len(focused) >= 3:
             break
     if not focused:
-        focused = [FAIL_NEXT]
+        focused = [RETRY_CARD]
 
-    md = [
-        "# TENMON_FINAL_PWA_NEXT_PDCA_AUTO_V1",
-        "",
-        f"- card: `{CARD}`",
-        f"- generated_at: `{_utc()}`",
-        f"- final_ready: `{final_ready}`",
-        "",
-        "## Focused Next Cards",
-    ]
+    md = (
+        [
+            "# TENMON_FINAL_PWA_NEXT_PDCA_AUTO_V1",
+            "",
+            f"- card: `{CARD}`",
+            f"- generated_at: `{_utc()}`",
+            f"- final_ready: `{final_ready}`",
+            f"- **next_on_pass**: `{NEXT_ON_PASS}`",
+            f"- **retry_card**: `{RETRY_CARD}`",
+            f"- {NEXT_ON_FAIL_NOTE}",
+            "",
+            "## Lived proof blockers (観測)",
+            "",
+        ]
+        + ([f"- `{x}`" for x in lived_blockers] if lived_blockers else ["- (none)"])
+        + [
+            "",
+            "## Focused Next Cards",
+        ]
+    )
     md.extend([f"- `{c}`" for c in focused[:3]])
     md.append("")
     md.append("## Blockers")
     md.extend([f"- `{b}`" for b in blockers] or ["- none"])
     (auto / "generated_cursor_apply" / "TENMON_FINAL_PWA_NEXT_PDCA_AUTO_V1.md").write_text("\n".join(md) + "\n", encoding="utf-8")
 
-    (auto / VPS).write_text(f"{VPS}\n{_utc()}\nready={final_ready}\n", encoding="utf-8")
+    (auto / STAMP_JSON).write_text(
+        json.dumps(
+            {
+                "version": 1,
+                "card": CARD,
+                "generated_at": _utc(),
+                "final_pwa_completion_readiness": final_ready,
+                "next_on_pass": NEXT_ON_PASS,
+                "retry_card": RETRY_CARD,
+            },
+            ensure_ascii=False,
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
 
+    out_summary = {
+        "ok": final_ready,
+        "final_ready": final_ready,
+        "final_pwa_completion_readiness": final_ready,
+        "blockers": blockers,
+        "lived_proof_blockers_observed": lived_blockers,
+        "focused_next_cards": focused[:3],
+        "next_on_pass": NEXT_ON_PASS,
+        "retry_card": RETRY_CARD,
+        "artifacts": {
+            "trace": str(auto / "pwa_real_chat_single_source_trace.json"),
+            "gap": str(auto / "pwa_probe_gap_report.json"),
+            "bleed": str(auto / "thread_center_bleed_report.json"),
+            "verdict": str(auto / "pwa_acceptance_final_verdict.json"),
+            "output_contract": str(auto / "output_contract_normalization_report.json"),
+            "reflection": str(auto / "self_improvement_reflection_report.json"),
+            "nas": str(auto / "storage_backup_nas_recovery_report.json"),
+            "readiness": str(auto / "final_pwa_completion_readiness.json"),
+            "next_pdca_md": str(auto / "generated_cursor_apply" / "TENMON_FINAL_PWA_NEXT_PDCA_AUTO_V1.md"),
+            "stamp": str(auto / STAMP_JSON),
+        },
+    }
     if ns.stdout_json:
-        print(json.dumps({"ok": True, "final_ready": final_ready, "blockers": blockers, "focused_next_cards": focused[:3]}, ensure_ascii=False, indent=2))
-    return 0
+        print(json.dumps(out_summary, ensure_ascii=False, indent=2))
+    else:
+        print(json.dumps({k: out_summary[k] for k in ("ok", "final_ready", "next_on_pass", "retry_card")}, ensure_ascii=False))
+    return 0 if final_ready else 1
 
 
 if __name__ == "__main__":

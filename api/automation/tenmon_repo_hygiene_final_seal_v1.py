@@ -29,9 +29,13 @@ from repo_manifest_v1 import (
 
 CARD = "TENMON_CURSOR_ONLY_REPO_HYGIENE_FINAL_SEAL_CURSOR_AUTO_V1"
 LEGACY_CARD = "TENMON_REPO_HYGIENE_FINAL_SEAL_CURSOR_AUTO_V1"
+NEXT_ON_PASS = "TENMON_AUTONOMY_CONSTITUTION_SEAL_V1"
+NEXT_ON_FAIL_NOTE = "停止。retry 1枚のみ生成。"
+RETRY_CARD = "TENMON_CURSOR_ONLY_REPO_HYGIENE_FINAL_SEAL_RETRY_CURSOR_AUTO_V1"
 OUT_VERDICT = "tenmon_repo_hygiene_final_seal_verdict.json"
 OUT_SUMMARY = "tenmon_repo_hygiene_final_seal_summary.json"
 OUT_MD = "tenmon_repo_hygiene_final_seal_report.md"
+OUT_RETRY_HINT = "retry_cursor_card_hint.md"
 
 GI_BEGIN = "# BEGIN TENMON_CURSOR_ONLY_REPO_HYGIENE_FINAL_SEAL_V1"
 GI_END = "# END TENMON_CURSOR_ONLY_REPO_HYGIENE_FINAL_SEAL_V1"
@@ -539,10 +543,43 @@ def main() -> int:
 
     commit_info = try_seal_commit(repo, auto, summary, args.dry_run)
     summary["seal_commit"] = commit_info
+    summary["next_on_pass"] = NEXT_ON_PASS
+    summary["next_on_fail_note"] = NEXT_ON_FAIL_NOTE
+    summary["retry_card"] = RETRY_CARD
+    summary["execution_order_phase_d"] = [
+        "npm_run_build(api)",
+        "GET_/api/health",
+        "GET_/api/audit",
+        "GET_/api/audit.build",
+        "tenmon_repo_hygiene_watchdog_v1.py",
+        "tenmon_latest_state_rejudge_and_seal_refresh_v1.sh",
+    ]
+
+    exit_code = 0
+    if not args.dry_run:
+        if not gates_ok:
+            exit_code = 2
+        elif must_block:
+            exit_code = 3
+        elif unsafe_unknown > 0:
+            exit_code = 4
+        elif untracked_generated_left > 0:
+            exit_code = 5
+        elif hygiene_product_failure:
+            exit_code = 6
+        elif rejudge_rc not in (None, 0) and not args.skip_rejudge:
+            exit_code = 7
+        elif not seal_candidate_ready:
+            exit_code = 8
+    summary["exit_code"] = 0 if args.dry_run else exit_code
 
     verdict: dict[str, Any] = {
         "card": CARD,
         "legacy_card": LEGACY_CARD,
+        "next_on_pass": NEXT_ON_PASS,
+        "next_on_fail_note": NEXT_ON_FAIL_NOTE,
+        "retry_card": RETRY_CARD,
+        "exit_code": summary["exit_code"],
         "generated_at": summary["generated_at"],
         "dry_run": args.dry_run,
         "phase_a_watchdog_classification": phase_watchdog_snapshot,
@@ -620,6 +657,14 @@ def main() -> int:
             f"- must_block_seal: `{must_block}`",
             f"- untracked_count: `{summary['watchdog'].get('untracked_count')}`",
             "",
+            "## Chain",
+            f"- next_on_pass: `{NEXT_ON_PASS}`",
+            f"- retry_card: `{RETRY_CARD}`",
+            f"- {NEXT_ON_FAIL_NOTE}",
+            "",
+            "## Exit",
+            f"- exit_code: `{summary['exit_code']}`（2=gate 3=watchdog_block 4=unsafe 5=generated 6=system_hygiene 7=rejudge 8=not_seal_candidate）",
+            "",
             "## Seal commit",
             json.dumps(commit_info, ensure_ascii=False, indent=2),
         ]
@@ -631,19 +676,20 @@ def main() -> int:
 
     if args.dry_run:
         return 0
-    if not gates_ok:
-        return 2
-    if must_block:
-        return 3
-    if unsafe_unknown > 0:
-        return 4
-    if untracked_generated_left > 0:
-        return 5
-    if hygiene_product_failure:
-        return 6
-    if rejudge_rc not in (None, 0) and not args.skip_rejudge:
-        return 7
-    return 0
+
+    def _retry_hint_body() -> str:
+        return (
+            f"# {RETRY_CARD}\n\n"
+            f"- {NEXT_ON_FAIL_NOTE}\n"
+            f"- 親: `{CARD}`\n"
+            f"- exit_code: `{exit_code}`\n"
+            f"- summary: `{OUT_SUMMARY}`\n"
+        )
+
+    if exit_code != 0:
+        (auto / OUT_RETRY_HINT).write_text(_retry_hint_body(), encoding="utf-8")
+
+    return exit_code
 
 
 if __name__ == "__main__":

@@ -38,9 +38,13 @@ set -e
 echo "[VERDICT] $API/automation/tenmon_repo_hygiene_final_seal_verdict.json"
 echo "[REPORT] $API/automation/tenmon_repo_hygiene_final_seal_report.md"
 echo "[SUMMARY] $API/automation/tenmon_repo_hygiene_final_seal_summary.json"
+echo "[NEXT_ON_PASS] TENMON_AUTONOMY_CONSTITUTION_SEAL_V1"
 if [[ "$RC" -eq 0 ]]; then
-  echo "[RESULT] watchdog_clean_or_ok"
+  echo "[RESULT] hygiene_gate_ok seal_candidate_ready (see summary)"
 else
-  echo "[RESULT] watchdog_still_blocking_rc=$RC"
+  echo "[RESULT] blocked_or_incomplete_rc=$RC (2=gate 3=watchdog 4=unsafe 5=generated 6=system 7=rejudge 8=not_seal_candidate)"
+  if [[ -f "$API/automation/retry_cursor_card_hint.md" ]]; then
+    echo "[RETRY_HINT] $API/automation/retry_cursor_card_hint.md"
+  fi
 fi
 exit "$RC"

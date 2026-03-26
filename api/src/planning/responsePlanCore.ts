@@ -927,6 +927,10 @@ export type ResealFinalMainlineSurfaceInputV1 = {
  */
 export function resealFinalMainlineSurfaceV1(input: ResealFinalMainlineSurfaceInputV1): string {
   const rrReseal = String(input.routeReason || "").trim();
+  /** CONTINUITY_ROUTE_HOLD_V1: ゲートが組んだ 2〜3 文を semantic マージで潰さない */
+  if (rrReseal === "CONTINUITY_ROUTE_HOLD_V1") {
+    return String(input.surfaceBody || "").trim();
+  }
   /** ゲート短文: semantic 主命題マージで二重化しやすいため surface をそのまま返す */
   if (
     /^(AI_CONSCIOUSNESS_LOCK_V1|FACTUAL_CORRECTION_V1|FACTUAL_WEATHER_V1|FACTUAL_CURRENT_DATE_V1|FACTUAL_CURRENT_PERSON_V1|FACTUAL_RECENT_TREND_V1|R22_LIGHT_FACT_DATE_V1|R22_LIGHT_FACT_TIME_V1|R22_LIGHT_FACT_WEEKDAY_V1)$/u.test(

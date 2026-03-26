@@ -416,14 +416,27 @@ function stripContinuityMetaCarryV1(text: string): string {
     .trim();
 }
 
-/** CONTINUITY_ROUTE_HOLD_V1: 表面を自然文一段に収束（見出し・route メタなし） */
+/** CONTINUITY_ROUTE_HOLD_V1: 2〜3 文まで維持（1 文へ潰さない。密度 repair 用） */
 function surfaceContinuityHoldOneLineV1(raw: string): string {
-  let t = stripContinuityMetaCarryV1(String(raw || ""));
-  t = stripGenericCoachingProseV1(trimTenmonSurfaceNoiseV3(t));
+  const raw0 = String(raw || "");
+  const light = stripContinuityMetaCarryV1(raw0)
+    .replace(/^【天聞の所見】\s*\n?/u, "")
+    .trim();
+  let t = stripGenericCoachingProseV1(trimTenmonSurfaceNoiseV3(light));
   t = t.replace(/^【天聞の所見】\s*\n?/u, "").trim();
-  const part = t.split(/(?<=[。！？])/u)[0]?.trim() || t;
-  const one = part.replace(/\s+/g, " ").trim() || "前の流れを保ったまま、要点を一つだけ続けます。";
-  return one.replace(/。{2,}/g, "。").trim();
+  const sentences = t.split(/(?<=[。！？])/u).map((s) => s.trim()).filter(Boolean);
+  let out = sentences.slice(0, 3).join("");
+  if (!out.trim()) out = t;
+  out = out.replace(/\s+/g, " ").trim();
+  if (out.length < 60 && t.length > out.length) {
+    out = t.replace(/\s+/g, " ").trim().slice(0, 480);
+  }
+  /** ノイズ除去で短文化した場合は、メタ strip のみの本文へ戻して密度を維持する */
+  if (out.length < 80 && light.replace(/\s+/g, " ").trim().length >= 80) {
+    out = light.replace(/\s+/g, " ").trim().slice(0, 480);
+  }
+  if (!out.trim()) out = "前の流れを保ったまま、要点を一つだけ続けます。";
+  return out.replace(/。{2,}/g, "。").trim();
 }
 
 /** FINALIZE_BEAUTY_WRAPPER_THINNING_V1: beauty composition 系は説明ラッパーを薄くし、本文の理→情→余韻を前面に */
@@ -704,7 +717,8 @@ export function applyFinalAnswerConstitutionAndWisdomReducerV1(payload: any): an
 
   // MEANING_COMPILER_V1: semanticBody → 命題/原理/還元/次軸 を表面へ還元（薄い 100 字級との乖離を縮小）
   // beauty composition は理→情→余韻の本文を優先し、compiler で置換しない
-  if (!__beautyThin) {
+  // CONTINUITY_ROUTE_HOLD_V1: ゲート生成の 2〜3 文本文を compiler で潰さない（routeReason は不変）
+  if (!__beautyThin && __rrEarly !== "CONTINUITY_ROUTE_HOLD_V1") {
     try {
       const __mc = buildMeaningCompilerProseV1({
         semanticBody: String(responsePlan?.semanticBody ?? ""),
@@ -746,22 +760,24 @@ export function applyFinalAnswerConstitutionAndWisdomReducerV1(payload: any): an
   }
 
   /** MAINLINE_FINAL_RESPONSE_DENSITY_RESEAL_V1: semanticBody 主命題・内部束圧縮・問い過多抑制 */
-  body = resealFinalMainlineSurfaceV1({
-    routeReason: rr,
-    semanticBody: String(responsePlan?.semanticBody ?? ""),
-    surfaceBody: body,
-    thoughtCoreSummary: ku.thoughtCoreSummary,
-    binderSummary: ku.binderSummary,
-    sourceStackSummary: ku.sourceStackSummary,
-    sourcePack: ku.sourcePack,
-    centerKey: ku.centerKey,
-    centerLabel: ku.centerLabel,
-    scriptureKey: ku.scriptureKey,
-    beautyMode: __beautyThin,
-  });
+  if (rr !== "CONTINUITY_ROUTE_HOLD_V1") {
+    body = resealFinalMainlineSurfaceV1({
+      routeReason: rr,
+      semanticBody: String(responsePlan?.semanticBody ?? ""),
+      surfaceBody: body,
+      thoughtCoreSummary: ku.thoughtCoreSummary,
+      binderSummary: ku.binderSummary,
+      sourceStackSummary: ku.sourceStackSummary,
+      sourcePack: ku.sourcePack,
+      centerKey: ku.centerKey,
+      centerLabel: ku.centerLabel,
+      scriptureKey: ku.scriptureKey,
+      beautyMode: __beautyThin,
+    });
+  }
 
   /** MAINLINE_SURFACE_MEANING_DENSITY_REPAIR_V1: 一般論先頭剥がし＋ semantic 第2層補強 */
-  if (!__beautyThin) {
+  if (!__beautyThin && rr !== "CONTINUITY_ROUTE_HOLD_V1") {
     body = applySurfaceMeaningDensityRepairV1(body, String(responsePlan?.semanticBody ?? ""));
   }
   body = synthesizeEvidenceNaturalProseV1({

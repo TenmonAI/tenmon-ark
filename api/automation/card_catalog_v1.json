@@ -2945,7 +2945,7 @@
       }
     },
     {
-      "cardName": "TENMON_CONVERSATION_COMPLETION_3STAGE_ESCORT_AUTOPDCA_V1",
+      "cardName": "TENMON_CONVERSATION_COMPLETION_3STAGE_ESCORT_AUTOPDCA_CURSOR_AUTO_V1",
       "class": "orchestration",
       "objective": "Stage1→2→3 を順固定で追従し、未達時は同段再試行・悪化時は rollback 記録・Stage3 で再発時は前段へ戻す親オーケストレーター。",
       "allowedPaths": [
@@ -2956,7 +2956,8 @@
         "api/automation/conversation_full_completion_pdca_autoloop_v1.py",
         "api/automation/final_seal_autopilot_v3.py",
         "api/automation/seal_contract_normalize_v1.py",
-        "api/automation/reports/TENMON_CONVERSATION_COMPLETION_3STAGE_ESCORT_AUTOPDCA_V1/**",
+        "api/automation/conversation_completion_3stage_escort_state/**",
+        "api/automation/reports/TENMON_CONVERSATION_COMPLETION_3STAGE_ESCORT_AUTOPDCA_CURSOR_AUTO_V1/**",
         "api/docs/constitution/TENMON_CONVERSATION_COMPLETION_3STAGE_ESCORT_AUTOPDCA_V1.md"
       ],
       "forbiddenPaths": [
@@ -2979,7 +2980,7 @@
       },
       "postchecks": [],
       "acceptanceProfile": "build_only",
-      "nextOnPass": "STOP",
+      "nextOnPass": "TENMON_CURSOR_ONLY_REPO_HYGIENE_FINAL_SEAL_CURSOR_AUTO_V1",
       "nextOnFail": "STOP",
       "rollbackStrategy": {
         "autoRollbackAllowed": false,

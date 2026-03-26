@@ -12,7 +12,9 @@
 
 - `current_run`（厳密に `true` のときのみ real 候補）
 - `escrow_approved`
-- `risk_tier` / `high_risk`（高リスク判定）
+- `risk_tier` / `high_risk`（高リスク判定。`enqueue_reason=escrow_human_approval` でも `high_risk: true`）
+- `enqueue_reason`（参照用）
+- `cursor_card`（`cursor_card` と `card_name` の解決値を透過）
 
 実装: `api/src/routes/adminCursorCommand.ts` の `buildNextManifestPayload`。
 
@@ -52,8 +54,8 @@
 
 ## nextOnPass
 
-`TENMON_BROWSER_AI_OPERATOR_MAC_RUNTIME_CURSOR_AUTO_V1`
+`TENMON_IMPROVEMENT_LEDGER_CURSOR_AUTO_V1`
 
 ## nextOnFail
 
-停止。guard retry カード 1 枚のみ。
+停止。`TENMON_APPROVED_HIGH_RISK_REAL_RUN_GUARD_AND_AUDIT_RETRY_CURSOR_AUTO_V1` を 1 枚のみ生成してから手戻り（成功の捏造なし）。

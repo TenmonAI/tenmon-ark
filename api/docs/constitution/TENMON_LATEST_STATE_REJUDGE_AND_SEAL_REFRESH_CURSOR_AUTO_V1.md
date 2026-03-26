@@ -82,7 +82,9 @@
   - continuity ok
   - `repo_must_block_seal=false` または cleanup-only residue
   - self_build chain closed
-- `worldclass_ready_candidate` は本カードでは false 寄り（原則 false）
+- `worldclass_ready_candidate`: **観測のみ** — `tenmon_worldclass_acceptance_scorecard.json` の `worldclass_ready==true` かつ `tenmon_system_verdict.json` の `completion_gate` / `os_gate` がいずれも false でない（ファイルが無い場合は worldclass 候補にしない）
+- `worldclass_claim_ready`: `seal_ready` かつ `operable_ready` かつ `worldclass_ready_candidate`
+- `remaining_blockers` に scorecard / system verdict の観測タグを付与（例: `scorecard_worldclass_not_ready`, `system_verdict_completion_gate_false`）— **推測で PASS を付けない**
 
 ### next card
 
@@ -109,5 +111,10 @@ summary 必須キー:
 
 ## FAIL policy
 
-- `pass=false` なら exit 非ゼロ
+- `pass=false`（`seal_ready` が false）なら exit 非ゼロ
 - raw evidence（health/audit/audit.build + chat probe）をログに残す
+
+## チェーン（メタ）
+
+- **nextOnPass**: `TENMON_MAC_CURSOR_EXECUTOR_RUNTIME_BIND_CURSOR_AUTO_V1`
+- **nextOnFail**: 停止。`TENMON_LATEST_STATE_REJUDGE_AND_SEAL_REFRESH_RETRY_CURSOR_AUTO_V1` を **1 枚のみ**生成してから手戻り（成功の捏造なし）

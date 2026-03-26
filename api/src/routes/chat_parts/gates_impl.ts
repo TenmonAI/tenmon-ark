@@ -1687,21 +1687,8 @@ try {
   }
 } catch {}
 
-// FINAL_SURFACE_SINGLE_SOURCE_LOCK_V1
-try {
-  const __df: any = (x as any)?.decisionFrame || null;
-  const __ku: any =
-    __df && __df.ku && typeof __df.ku === "object" && !Array.isArray(__df.ku)
-      ? __df.ku
-      : null;
-
-  const __rpBody = String(__ku?.responsePlan?.semanticBody || "").trim();
-
-  if (__rpBody) {
-    (x as any).response = __surfaceDetoneResponseV1(__rpBody);
-  }
-} catch {}
-
+/** NOTE: responsePlan.semanticBody での無条件上書きは削除（CONTINUITY_ROUTE_HOLD_V1 等で binder 短文が本文を潰すため）。
+ * 単一ソース化は上の __singleSourceRoutes ブロックのみで行う。 */
 
 
 

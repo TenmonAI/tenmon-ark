@@ -6098,7 +6098,16 @@ return await res.json(__tenmonGeneralGateResultMaybe({
   // P0_SAFE_GUEST: 未ログインはLLM_CHAT禁止（NATURAL/HYBRID/GROUNDEDはOK）
   const shouldBlockLLMChatForGuest = !isAuthed;
 
-  if (!message) return res.status(400).json({ response: "message required", error: "message required", timestamp, decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: {} } });
+  if (!message) {
+    const _bad: any = {
+      response: "message required",
+      error: "message required",
+      timestamp,
+      decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: {} },
+    };
+    ensureDetailPlanContractP20OnGatePayloadV1(_bad);
+    return res.status(400).json(_bad);
+  }
 
   if (message.startsWith("#seed")) {
     const db = new DatabaseSync(getDbPath("kokuzo.sqlite"));
@@ -14953,11 +14962,13 @@ if (typeof out === "string" && out.trim()) nat.responseText = out.trim();
 
   
   if (!sanitized.isValid) {
-    return res.status(400).json({
+    const _bad: any = {
       response: sanitized.error || "message is required",
       timestamp: new Date().toISOString(),
       decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: {} },
-    });
+    };
+    ensureDetailPlanContractP20OnGatePayloadV1(_bad);
+    return res.status(400).json(_bad);
   }
 
   try {

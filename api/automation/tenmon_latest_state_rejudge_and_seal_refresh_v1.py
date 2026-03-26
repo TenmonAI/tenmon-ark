@@ -10,6 +10,7 @@ import json
 import os
 import re
 import subprocess
+import sys
 import time
 import urllib.error
 import urllib.request
@@ -21,6 +22,9 @@ CARD = "TENMON_LATEST_STATE_REJUDGE_AND_SEAL_REFRESH_CURSOR_AUTO_V1"
 OUT_JSON = "tenmon_latest_state_rejudge_and_seal_refresh_verdict.json"
 OUT_MD = "tenmon_latest_state_rejudge_and_seal_refresh_report.md"
 OUT_SUMMARY_JSON = "tenmon_latest_state_rejudge_summary.json"
+NEXT_ON_PASS = "TENMON_MAC_CURSOR_EXECUTOR_RUNTIME_BIND_CURSOR_AUTO_V1"
+NEXT_ON_FAIL_NOTE = "停止。retry 1枚のみ生成。"
+RETRY_CARD = "TENMON_LATEST_STATE_REJUDGE_AND_SEAL_REFRESH_RETRY_CURSOR_AUTO_V1"
 
 
 def utc() -> str:
@@ -95,6 +99,65 @@ def route_reason(chat_json: dict[str, Any]) -> str:
 def response_head(chat_json: dict[str, Any]) -> str:
     t = str(chat_json.get("response") or "").strip()
     return t[:120] if t else ""
+
+
+def response_len(chat_json: dict[str, Any]) -> int:
+    return len(str(chat_json.get("response") or "").strip())
+
+
+def meta_leak_false(chat_json: dict[str, Any]) -> bool:
+    t = str(chat_json.get("response") or "")
+    if not t.strip():
+        return True
+    if any(x in t for x in ("priorRouteReason", "keep_center_one_step", "decisionFrame")):
+        return False
+    if re.search(r"\b[A-Z][A-Z0-9_]{4,}_V1\b", t):
+        return False
+    return True
+
+
+RR_K1 = "K1_TRACE_EMPTY_GATED_V1"
+RR_GEN = "GENERAL_KNOWLEDGE_EXPLAIN_ROUTE_V1"
+RR_AI = "AI_CONSCIOUSNESS_LOCK_V1"
+RR_SUBCONCEPT = "TENMON_SUBCONCEPT_CANON_V1"
+
+
+def probe_route_axis(
+    base: str,
+    thread_id: str,
+    message: str,
+    expected_rr: str,
+    min_len: int,
+) -> dict[str, Any]:
+    r = http_post_json(f"{base}/api/chat", {"threadId": thread_id, "message": message})
+    j = r.get("json") if isinstance(r.get("json"), dict) else {}
+    rr = route_reason(j)
+    ln = response_len(j)
+    ml = meta_leak_false(j)
+    ok = rr == expected_rr and ln >= min_len and ml
+    return {
+        "route": rr,
+        "len": ln,
+        "response_nonempty": ln > 0,
+        "meta_leak_ok": ml,
+        "satisfied": ok,
+        "http_status": r.get("status"),
+        "thread_id": thread_id,
+    }
+
+
+def pwa_final_superseded_by_lived(lived: dict[str, Any], pwa_final: dict[str, Any]) -> tuple[bool, str | None]:
+    lived_ready = bool(lived.get("final_ready") is True)
+    final_ready = bool(pwa_final.get("final_ready") is True)
+    tl = source_generated_at(lived)
+    tf = source_generated_at(pwa_final)
+    if not (lived_ready and not final_ready):
+        return False, None
+    if tl is None:
+        return True, "lived_ready_final_not_no_lived_ts"
+    if tf is None or tl >= tf:
+        return True, "lived_newer_or_final_time_missing"
+    return False, None
 
 
 def continuity_ok(rr2: str, chat2: dict[str, Any], same_thread: bool) -> bool:
@@ -172,6 +235,11 @@ def list_stale_hints(
             hints.append(f"{name}:continuity_drop_premise")
         if "env_failure" in js and js.get("env_failure") is True and "product" in txt and "blocker" in txt:
             hints.append(f"{name}:env_failure_mixed_with_product")
+    lived = sources.get("pwa_lived_completion_readiness.json") or {}
+    pwa_final = sources.get("pwa_final_completion_readiness.json") or {}
+    pwa_sup, pwa_reason = pwa_final_superseded_by_lived(lived, pwa_final)
+    if pwa_sup:
+        hints.append(f"pwa_final_completion_readiness.json:superseded_by_lived:{pwa_reason or 'lived_truth'}")
     return sorted(set(hints))
 
 
@@ -203,6 +271,11 @@ def _exclusion_names_from_list(raw: Any) -> set[str]:
         elif isinstance(x, dict) and x.get("name"):
             out.add(str(x.get("name")).strip())
     return out
+
+
+def add_blocker(blockers: list[str], tag: str) -> None:
+    if tag not in blockers:
+        blockers.append(tag)
 
 
 def load_truth_rebase_exclusions(auto: Path) -> tuple[set[str], dict[str, Any]]:
@@ -251,6 +324,10 @@ def main() -> int:
     sources = {n: read_json(auto / n) for n in source_names}
     excluded_sources, rebase_summary = load_truth_rebase_exclusions(auto)
 
+    lived_early = sources.get("pwa_lived_completion_readiness.json") or {}
+    pwa_final_early = sources.get("pwa_final_completion_readiness.json") or {}
+    pwa_superseded, pwa_sup_reason = pwa_final_superseded_by_lived(lived_early, pwa_final_early)
+
     # live probes
     health_probe = http_get_json(f"{base}/api/health")
     audit_probe = http_get_json(f"{base}/api/audit")
@@ -269,15 +346,78 @@ def main() -> int:
     rr2 = route_reason(c2j)
     th_same = bool(str(c1j.get("threadId") or "") and str(c1j.get("threadId")) == str(c2j.get("threadId") or ""))
     cont_ok = continuity_ok(rr2, c2j, th_same)
+    cont_len = response_len(c2j)
+    ts_probe = int(time.time())
+    msg_k1_hokke = os.environ.get(
+        "TENMON_REJUDGE_K1_HOKKE_PROBE_MSG",
+        "法華経とは何かを140字前後で答えて",
+    )
+    msg_k1_kukai = os.environ.get(
+        "TENMON_REJUDGE_K1_KUKAI_PROBE_MSG",
+        "空海の即身成仏とは何かを140字前後で答えて",
+    )
+    msg_gen = os.environ.get(
+        "TENMON_REJUDGE_GENERAL_PROBE_MSG",
+        "現代人のよくない点を一般知識として300字前後で説明して",
+    )
+    msg_ai = os.environ.get(
+        "TENMON_REJUDGE_AI_LOCK_PROBE_MSG",
+        "あなた自身をどう見ているかを160字前後で答えて",
+    )
+    msg_subconcept = os.environ.get(
+        "TENMON_REJUDGE_SUBCONCEPT_PROBE_MSG",
+        "言霊の下位概念を一つだけ短く示して",
+    )
+
+    k1_probe_hokke = probe_route_axis(base, f"probe_k1_hokke_{ts_probe}", msg_k1_hokke, RR_K1, 120)
+    k1_probe_kukai = probe_route_axis(base, f"probe_k1_kukai_{ts_probe}", msg_k1_kukai, RR_K1, 120)
+    gen_probe = probe_route_axis(base, f"probe_general_{ts_probe}", msg_gen, RR_GEN, 260)
+    ai_probe = probe_route_axis(base, f"probe_ai_{ts_probe}", msg_ai, RR_AI, 140)
+    subconcept_probe = probe_route_axis(base, f"probe_subconcept_{ts_probe}", msg_subconcept, RR_SUBCONCEPT, 1)
+    subconcept_probe["satisfied"] = bool(
+        subconcept_probe.get("route") == RR_SUBCONCEPT
+        and int(subconcept_probe.get("len") or 0) > 0
+        and bool(subconcept_probe.get("meta_leak_ok"))
+    )
+
+    resolved_dialogue_axes: list[str] = []
+    if k1_probe_hokke.get("satisfied") and k1_probe_kukai.get("satisfied"):
+        resolved_dialogue_axes.append("k1_depth")
+    if gen_probe.get("satisfied"):
+        resolved_dialogue_axes.append("general_substance")
+    if ai_probe.get("satisfied"):
+        resolved_dialogue_axes.append("ai_self_view")
+    if subconcept_probe.get("satisfied"):
+        resolved_dialogue_axes.append("subconcept_nonempty")
+    must_fix_exclusion_substrings: list[str] = []
+    if "k1_depth" in resolved_dialogue_axes:
+        must_fix_exclusion_substrings.extend(["k1_trace_empty", "K1_TRACE_EMPTY", "k1_trace_empty_short"])
+    if "general_substance" in resolved_dialogue_axes:
+        must_fix_exclusion_substrings.extend(
+            ["general_knowledge_insufficient", "GENERAL_KNOWLEDGE_EXPLAIN", "general_knowledge"]
+        )
+    fresh_probe_digest: dict[str, Any] = {
+        "continuity_followup_len": cont_len,
+        "continuity_probe_thread": probe_tid,
+        "chat1_route": rr1,
+        "chat2_route": rr2,
+        "k1_probe_hokke": k1_probe_hokke,
+        "k1_probe_kukai": k1_probe_kukai,
+        "general_probe": gen_probe,
+        "ai_consciousness_lock_probe": ai_probe,
+        "subconcept_probe": subconcept_probe,
+        "continuity_density_unresolved": bool(rr2 == "CONTINUITY_ROUTE_HOLD_V1" and cont_len < 80),
+    }
 
     pre = sources.get("pwa_playwright_preflight.json") or {}
     env_failure = bool(pre.get("usable") is False or pre.get("env_failure") is True)
 
-    lived = sources.get("pwa_lived_completion_readiness.json") or {}
-    pwa_final = sources.get("pwa_final_completion_readiness.json") or {}
+    lived = lived_early
+    pwa_final = pwa_final_early
     remote_admin = sources.get("tenmon_remote_admin_cursor_runtime_proof_verdict.json") or {}
     hyg = sources.get("tenmon_repo_hygiene_watchdog_verdict.json") or {}
     score = sources.get("tenmon_worldclass_acceptance_scorecard.json") or {}
+    sv = sources.get("tenmon_system_verdict.json") or {}
     self_build = sources.get("tenmon_self_build_execution_chain_verdict.json") or {}
 
     # lived truth を primary source とし、旧 final readiness へのフォールバックはしない
@@ -300,14 +440,19 @@ def main() -> int:
         "tenmon_worldclass_acceptance_scorecard.json",
     ]
     stale_source_names = sorted({x.split(":", 1)[0] for x in stale_inputs if ":" in x})
-    stale_name_set = set(stale_source_names)
+    if pwa_superseded:
+        stale_source_names = sorted(set(stale_source_names) | {"pwa_final_completion_readiness.json"})
+    # lived JSON は primary truth — stale ヒントに含まれても superseded に回さない
+    stale_name_set = set(stale_source_names) - {"pwa_lived_completion_readiness.json"}
     latest_sources: list[dict[str, Any]] = []
     superseded_sources: list[dict[str, Any]] = []
     for name in priority_order:
         p = auto / name
         js = sources.get(name) or {}
         info = compact_source_info(name, p, js)
-        if name in stale_name_set or name in excluded_sources:
+        if name != "pwa_lived_completion_readiness.json" and (
+            name in stale_name_set or name in excluded_sources
+        ):
             superseded_sources.append({**info, "reason": "superseded_by_latest_lived_truth"})
         else:
             latest_sources.append(info)
@@ -344,6 +489,16 @@ def main() -> int:
             }
         )
 
+    if pwa_superseded:
+        pfp = auto / "pwa_final_completion_readiness.json"
+        superseded_sources.append(
+            {
+                **compact_source_info("pwa_final_completion_readiness.json", pfp, pwa_final),
+                "reason": "superseded_by_pwa_lived_truth",
+                "detail": pwa_sup_reason,
+            }
+        )
+
     prev = sources.get("tenmon_latest_state_rejudge_and_seal_refresh_verdict.json") or {}
     prev_cont = bool(prev.get("continuity_ok"))
     prev_health = bool(prev.get("health_ok"))
@@ -352,7 +507,7 @@ def main() -> int:
     mismatch = (prev and ((prev_health != health_ok) or (prev_audit != audit_ok) or (prev_ab != audit_build_ok)))
     continuity_changed = bool(prev and prev_cont != cont_ok)
 
-    seal_refresh_needed = bool(mismatch or continuity_changed or len(stale_inputs) > 0)
+    seal_refresh_needed = bool(mismatch or continuity_changed or len(stale_inputs) > 0 or pwa_superseded)
 
     self_build_closed = bool(
         self_build.get("accepted_complete") is True
@@ -369,9 +524,6 @@ def main() -> int:
         and self_build_closed
         and (not product_failure)
     )
-
-    # deliberately conservative for this card
-    worldclass_ready_candidate = False
 
     remaining_blockers: list[str] = []
     if not health_ok:
@@ -393,7 +545,31 @@ def main() -> int:
     if stale_inputs:
         remaining_blockers.append("stale_sources_present")
 
-    if repo_must_block and not cleanup_only_residue:
+    # scorecard / system verdict — 観測のみ（推測で PASS 付与しない）
+    if not score or not score.get("generated_at"):
+        add_blocker(remaining_blockers, "scorecard_missing_or_empty")
+    else:
+        if score.get("worldclass_ready") is not True:
+            add_blocker(remaining_blockers, "scorecard_worldclass_not_ready")
+        if score.get("sealed_operable_ready") is not True:
+            add_blocker(remaining_blockers, "scorecard_sealed_operable_not_ready")
+    if sv:
+        if sv.get("completion_gate") is False:
+            add_blocker(remaining_blockers, "system_verdict_completion_gate_false")
+        if sv.get("os_gate") is False:
+            add_blocker(remaining_blockers, "system_verdict_os_gate_false")
+
+    sys_gates_ok = True
+    if sv:
+        if sv.get("completion_gate") is False:
+            sys_gates_ok = False
+        if sv.get("os_gate") is False:
+            sys_gates_ok = False
+    worldclass_ready_candidate = bool(score.get("worldclass_ready") is True and sys_gates_ok)
+
+    if cont_len < 80:
+        recommended = "TENMON_PWA_THREADID_CONTINUITY_LIVED_PROOF_REPAIR_CURSOR_AUTO_V1"
+    elif repo_must_block and not cleanup_only_residue:
         recommended = "TENMON_CURSOR_ONLY_REPO_HYGIENE_FINAL_SEAL_CURSOR_AUTO_V1"
     elif stale_inputs:
         recommended = "TENMON_STALE_EVIDENCE_INVALIDATION_CURSOR_AUTO_V1"
@@ -413,11 +589,29 @@ def main() -> int:
 
     seal_ready = bool((not seal_refresh_needed) and operable_ready_candidate and (not env_failure))
     operable_ready = bool(operable_ready_candidate and not product_failure)
-    worldclass_claim_ready = bool(worldclass_ready_candidate and seal_ready and len(remaining_blockers) == 0)
+    worldclass_claim_ready = bool(seal_ready and operable_ready and worldclass_ready_candidate)
+
+    pwa_final_stale_postfix_blockers: list[str] = (
+        [str(x) for x in (pwa_final.get("postfix_blockers") or [])] if pwa_superseded else []
+    )
+    latest_truth_resolved_from: list[str] = [
+        "pwa_lived_completion_readiness.json",
+        "latest_gate_check",
+        "latest_continuity_probe",
+        "fresh_k1_general_probes",
+    ]
+    if pwa_superseded:
+        latest_truth_resolved_from.insert(
+            0,
+            "pwa_lived_completion_readiness.json overrides pwa_final_completion_readiness.json",
+        )
 
     summary = {
         "card": CARD,
         "generated_at": utc(),
+        "next_on_pass": NEXT_ON_PASS,
+        "next_on_fail_note": NEXT_ON_FAIL_NOTE,
+        "retry_card": RETRY_CARD,
         "seal_ready": seal_ready,
         "operable_ready": operable_ready,
         "worldclass_claim_ready": worldclass_claim_ready,
@@ -429,11 +623,21 @@ def main() -> int:
         "latest_truth_rebased": bool(rebase_summary.get("latest_truth_rebased") is True),
         "truth_source_singleton": bool(rebase_summary.get("truth_source_singleton") is True),
         "truth_excluded_sources": sorted(excluded_sources),
+        "worldclass_ready_candidate": worldclass_ready_candidate,
+        "latest_truth_resolved_from": latest_truth_resolved_from,
+        "pwa_final_superseded_by_lived": pwa_superseded,
+        "pwa_final_stale_postfix_blockers": pwa_final_stale_postfix_blockers,
+        "resolved_dialogue_axes": resolved_dialogue_axes,
+        "fresh_probe_digest": fresh_probe_digest,
+        "must_fix_exclusion_substrings": must_fix_exclusion_substrings,
     }
 
     verdict = {
         "card": CARD,
         "generated_at": summary["generated_at"],
+        "next_on_pass": NEXT_ON_PASS,
+        "next_on_fail_note": NEXT_ON_FAIL_NOTE,
+        "retry_card": RETRY_CARD,
         "pass": bool(seal_ready),
         "overall_band": overall_band,
         "seal_ready": seal_ready,
@@ -466,11 +670,34 @@ def main() -> int:
                 "audit_status": audit_probe.get("status"),
                 "audit_build_status": audit_build_probe.get("status"),
             },
+            "runtime_http": {
+                "health_ok_http": bool(health_probe.get("ok_http")),
+                "health_json_ok": health_probe.get("json", {}).get("ok") if isinstance(health_probe.get("json"), dict) else None,
+                "audit_ok_http": bool(audit_probe.get("ok_http")),
+                "audit_json_ok": audit_probe.get("json", {}).get("ok") if isinstance(audit_probe.get("json"), dict) else None,
+                "audit_build_ok_http": bool(audit_build_probe.get("ok_http")),
+                "audit_build_json_ok": audit_build_probe.get("json", {}).get("ok")
+                if isinstance(audit_build_probe.get("json"), dict)
+                else None,
+            },
+            "scorecard_observed": {
+                "generated_at": score.get("generated_at"),
+                "worldclass_ready": score.get("worldclass_ready"),
+                "sealed_operable_ready": score.get("sealed_operable_ready"),
+            },
+            "system_verdict_observed": {
+                "generated_at": sv.get("generated_at"),
+                "pass": sv.get("pass"),
+                "completion_gate": sv.get("completion_gate"),
+                "os_gate": sv.get("os_gate"),
+            },
             "continuity_probe": {
                 "thread_id": probe_tid,
                 "chat1_route_reason": rr1,
                 "chat2_route_reason": rr2,
                 "chat2_answer_head": response_head(c2j),
+                "continuity_followup_len": cont_len,
+                "fresh_probe_digest": fresh_probe_digest,
                 "chat1_http_status": chat1.get("status"),
                 "chat2_http_status": chat2.get("status"),
             },
@@ -490,8 +717,61 @@ def main() -> int:
         "summary": summary,
     }
 
-    (auto / OUT_JSON).write_text(json.dumps(verdict, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     (auto / OUT_SUMMARY_JSON).write_text(json.dumps(summary, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+    if pwa_superseded:
+        pf_merge = dict(pwa_final)
+        pf_merge["lived_truth_reconciliation"] = {
+            "written_at": summary["generated_at"],
+            "superseded_by": "pwa_lived_completion_readiness.json",
+            "reason": pwa_sup_reason,
+            "stale_postfix_blockers": pwa_final_stale_postfix_blockers,
+        }
+        (auto / "pwa_final_completion_readiness.json").write_text(
+            json.dumps(pf_merge, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+        )
+
+    loop_path = auto / "tenmon_worldclass_dialogue_acceptance_priority_loop_v1.json"
+    if loop_path.is_file():
+        try:
+            loop_js = read_json(loop_path)
+            outs = loop_js.setdefault("outputs", {})
+            cur_bl = list(outs.get("current_blockers") or [])
+            new_bl: list[str] = []
+            for line in cur_bl:
+                if not line.startswith("dialogue_priority_axes:"):
+                    new_bl.append(line)
+                    continue
+                rest = line.split(":", 1)[1] if ":" in line else ""
+                parts = [p.strip() for p in rest.split(",") if p.strip()]
+                parts = [p for p in parts if p not in resolved_dialogue_axes]
+                if parts:
+                    new_bl.append("dialogue_priority_axes: " + ", ".join(parts))
+            outs["current_blockers"] = new_bl
+            outs["next_best_card"] = recommended
+            loop_js["rejudge_sync"] = {
+                "generated_at": summary["generated_at"],
+                "resolved_dialogue_axes": resolved_dialogue_axes,
+                "fresh_probe_digest": fresh_probe_digest,
+                "recommended_next_card": recommended,
+            }
+            loop_path.write_text(json.dumps(loop_js, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        except Exception:
+            pass
+
+    sc_run = subprocess.run(
+        [sys.executable, str(auto / "tenmon_worldclass_acceptance_scorecard_v1.py")],
+        cwd=str(repo_root / "api"),
+        capture_output=True,
+        text=True,
+        timeout=180,
+    )
+    verdict["scorecard_refresh"] = {
+        "exit_code": sc_run.returncode,
+        "stderr_tail": (sc_run.stderr or "")[-2000:],
+    }
+
+    (auto / OUT_JSON).write_text(json.dumps(verdict, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
     md = [
         f"# {CARD}",
@@ -537,6 +817,11 @@ def main() -> int:
     else:
         md.append("  - none")
     md.append("")
+    md.append("## Chain")
+    md.append(f"- **next_on_pass**: `{NEXT_ON_PASS}`")
+    md.append(f"- **retry_card** (fail 時 1 枚): `{RETRY_CARD}`")
+    md.append(f"- {NEXT_ON_FAIL_NOTE}")
+    md.append("")
     md.append("## Policy")
     md.append("- observation first, no speculative patch")
     md.append("- stale report overwrite allowed; raw evidence kept")
@@ -545,6 +830,24 @@ def main() -> int:
 
     if args.stdout_json:
         print(json.dumps(verdict, ensure_ascii=False, indent=2))
+    else:
+        print(
+            json.dumps(
+                {
+                    "ok": bool(verdict["pass"]),
+                    "path": str(auto / OUT_JSON),
+                    "summary_path": str(auto / OUT_SUMMARY_JSON),
+                    "seal_ready": seal_ready,
+                    "operable_ready": operable_ready,
+                    "worldclass_claim_ready": worldclass_claim_ready,
+                    "remaining_blockers": remaining_blockers,
+                    "recommended_next_card": recommended,
+                    "next_on_pass": NEXT_ON_PASS,
+                    "retry_card": RETRY_CARD,
+                },
+                ensure_ascii=False,
+            )
+        )
 
     return 0 if verdict["pass"] else 1
 

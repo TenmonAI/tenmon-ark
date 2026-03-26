@@ -17,6 +17,8 @@ const QUEUE_PATH = process.env.TENMON_REMOTE_CURSOR_QUEUE_PATH || path.join(AUTO
 export type QueueItem = {
   id: string;
   card_name: string;
+  /** キュー投入ブリッジ等が `cursor_card` のみ載せる場合あり（manifest の cursor_card に透過） */
+  cursor_card?: string;
   card_body_md: string;
   source: string;
   submitted_at: string;
@@ -36,6 +38,14 @@ export type QueueItem = {
   approved_at: string | null;
   leased_until: string | null;
   completed_at: string | null;
+  /** Mac real guard: 明示 true のときのみ real 候補（next manifest に透過） */
+  current_run?: boolean;
+  /** escrow 経路で人間承認済みのとき true（next manifest に透過） */
+  escrow_approved?: boolean;
+  /** 高リスク明示（next manifest に透過。無ければ risk_tier から推定） */
+  high_risk?: boolean;
+  enqueue_reason?: string;
+  escrow_package?: string;
 };
 
 function normalizeQueueState(raw: string): QueueItem["state"] {
@@ -177,7 +187,7 @@ function resolveObjective(it: QueueItem): string {
   const bodyPrefix = String(it.card_body_md ?? "").trim().slice(0, 500);
   if (bodyPrefix) return bodyPrefix.slice(0, 4000);
   const src = String(it.source ?? "").trim() || "unknown";
-  const card = String(it.card_name ?? "").trim() || "card";
+  const card = String(it.cursor_card ?? it.card_name ?? "").trim() || "card";
   return `Remote cursor job (${src}): ${card}`.slice(0, 4000);
 }
 
@@ -293,10 +303,16 @@ function buildNextManifestPayload(it: QueueItem): Record<string, unknown> {
   const jobIdResolved = resolveSurfaceJobId(it, runLabel, qid);
   const runJobId = normalizeRunJobId(runLabel);
   const ext = it as unknown as Record<string, unknown>;
-  const currentRun = ext.current_run === true;
-  const escrowApproved = ext.escrow_approved === true;
-  const riskTier = String(ext.risk_tier ?? it.risk_tier ?? "").trim();
-  const highRisk = riskTier === "high" || ext.high_risk === true;
+  const currentRun = it.current_run === true || ext.current_run === true;
+  const escrowApproved = it.escrow_approved === true || ext.escrow_approved === true;
+  const riskTier = String(it.risk_tier ?? ext.risk_tier ?? "").trim();
+  const enqueueReason = String(it.enqueue_reason ?? ext.enqueue_reason ?? "").trim();
+  const highRisk =
+    it.high_risk === true ||
+    ext.high_risk === true ||
+    riskTier === "high" ||
+    enqueueReason === "escrow_human_approval";
+  const cardNameResolved = String(it.cursor_card ?? it.card_name ?? ext.cursor_card ?? "").trim();
   return {
     id: qid,
     queue_id: qid,
@@ -304,19 +320,20 @@ function buildNextManifestPayload(it: QueueItem): Record<string, unknown> {
     run_job_id: runJobId,
     state: it.state,
     source: String(it.source ?? ""),
-    cursor_card: String(it.card_name ?? ""),
+    cursor_card: cardNameResolved,
     objective,
     job_file: jobFile,
     fixture,
     dry_run_only: it.dry_run_only,
     leased_until: it.leased_until,
     createdAt: it.submitted_at,
-    card_name: it.card_name,
+    card_name: cardNameResolved || String(it.card_name ?? ""),
     card_body_md: it.card_body_md,
     current_run: currentRun,
     escrow_approved: escrowApproved,
     risk_tier: riskTier,
     high_risk: highRisk,
+    enqueue_reason: enqueueReason,
   };
 }
 

@@ -20,6 +20,9 @@ from typing import Any
 CARD = "TENMON_CURSOR_SINGLE_FLIGHT_QUEUE_AND_REVIEW_GATE_CURSOR_AUTO_V1"
 OUT_JSON = "tenmon_cursor_single_flight_queue_state.json"
 OUT_MD = "tenmon_cursor_single_flight_queue_report.md"
+NEXT_ON_PASS = "TENMON_OS_OUTPUT_CONTRACT_NORMALIZE_CURSOR_AUTO_V1"
+NEXT_ON_FAIL_NOTE = "停止。retry 1枚のみ生成。"
+RETRY_CARD = "TENMON_CURSOR_SINGLE_FLIGHT_QUEUE_AND_REVIEW_GATE_RETRY_CURSOR_AUTO_V1"
 
 REVIEW_FILE_MAX = 120
 HIGH_RISK_MAX = 25
@@ -66,7 +69,7 @@ def _read_json(path: Path) -> dict[str, Any]:
         return {}
 
 
-def _git_paths(repo: Path) -> list[str]:
+def _git_paths(repo: Path) -> tuple[list[str], bool]:
     try:
         r = subprocess.run(
             ["git", "status", "--porcelain", "-uall"],
@@ -76,9 +79,9 @@ def _git_paths(repo: Path) -> list[str]:
             timeout=120,
         )
         if r.returncode != 0:
-            return []
+            return [], False
     except Exception:
-        return []
+        return [], False
     out: list[str] = []
     for line in (r.stdout or "").splitlines():
         line = line.strip("\r")
@@ -89,7 +92,7 @@ def _git_paths(repo: Path) -> list[str]:
             path = path.split(" -> ", 1)[-1].strip()
         if path:
             out.append(path.replace("\\", "/"))
-    return out
+    return out, True
 
 
 def _classify_git(paths: list[str]) -> dict[str, Any]:
@@ -119,7 +122,7 @@ def _tier(card_id: str) -> int:
 
 
 def _sort_key_cid(card_id: str) -> tuple[int, int, str]:
-    """tier 3 内: K1 → general knowledge → その他。"""
+    """tier 内サブ順 → カード名で deterministic に一意化。"""
     t = _tier(card_id)
     sub = 0
     if t == 3:
@@ -140,10 +143,16 @@ def _collect_candidates(repo: Path) -> list[str]:
     for c in out.get("safe_next_cards") or []:
         if isinstance(c, str) and c.strip():
             seen.append(c.strip())
+    nb_loop = out.get("next_best_card")
+    if isinstance(nb_loop, str) and nb_loop.strip():
+        seen.append(nb_loop.strip())
     forensic = _read_json(auto / "tenmon_autonomy_current_state_forensic.json")
     nb = forensic.get("next_best_card")
     if isinstance(nb, str) and nb.strip():
         seen.append(nb.strip())
+    for c in forensic.get("safe_next_cards") or []:
+        if isinstance(c, str) and c.strip():
+            seen.append(c.strip())
     sc = _read_json(auto / "tenmon_conversation_quality_priority_summary.json")
     for c in sc.get("recommended_next_cards") or []:
         if isinstance(c, str) and c.strip():
@@ -152,7 +161,14 @@ def _collect_candidates(repo: Path) -> list[str]:
     for c in conv.get("next_cards") or []:
         if isinstance(c, str) and c.strip():
             seen.append(c.strip())
-    # unique 保持順
+    mainline = _read_json(auto / "tenmon_conversation_worldclass_mainline_selector.json")
+    for c in mainline.get("safe_next_cards") or []:
+        if isinstance(c, str) and c.strip():
+            seen.append(c.strip())
+    nb_ml = mainline.get("next_best_card")
+    if isinstance(nb_ml, str) and nb_ml.strip():
+        seen.append(nb_ml.strip())
+    # unique 保持順 → tier 昇順・カード名でソートし先頭 1 本を next に固定
     out_l: list[str] = []
     for x in seen:
         if x not in out_l:
@@ -162,9 +178,20 @@ def _collect_candidates(repo: Path) -> list[str]:
 
 
 def _pending_queue_items(q: dict[str, Any]) -> list[dict[str, Any]]:
+    """主線 single-flight: released_fixture / ignored_fixture は pending に含めない（fixture drain 退避）。"""
     items = q.get("items") if isinstance(q.get("items"), list) else []
     pending_states = frozenset({"approval_required", "ready", "delivered"})
-    return [x for x in items if isinstance(x, dict) and str(x.get("state") or "") in pending_states]
+    out: list[dict[str, Any]] = []
+    for x in items:
+        if not isinstance(x, dict):
+            continue
+        if str(x.get("state") or "") == "released_fixture":
+            continue
+        if x.get("ignored_fixture") is True:
+            continue
+        if str(x.get("state") or "") in pending_states:
+            out.append(x)
+    return out
 
 
 def _delivered_without_bundle(queue: dict[str, Any], bundle: dict[str, Any]) -> list[str]:
@@ -183,12 +210,26 @@ def _delivered_without_bundle(queue: dict[str, Any], bundle: dict[str, Any]) -> 
     return bad
 
 
+def _current_card_pipeline(pending: list[dict[str, Any]]) -> Any:
+    """approval_required → ready → delivered の順で最古を current とみなす。"""
+    order = {"approval_required": 0, "ready": 1, "delivered": 2}
+
+    def _k(x: dict[str, Any]) -> tuple[int, str]:
+        st = str(x.get("state") or "")
+        return (order.get(st, 99), str(x.get("createdAt") or ""))
+
+    if not pending:
+        return None
+    head = sorted(pending, key=_k)[0]
+    return head.get("cursor_card")
+
+
 def main() -> int:
     repo = Path(os.environ.get("TENMON_REPO_ROOT", "/opt/tenmon-ark-repo")).resolve()
     api = repo / "api"
     auto = api / "automation"
 
-    paths = _git_paths(repo)
+    paths, git_ok = _git_paths(repo)
     n_changed = len(paths)
     cls = _classify_git(paths)
     high_n = int(cls["high_risk_count"])
@@ -208,6 +249,8 @@ def main() -> int:
     delivered_gap = _delivered_without_bundle(q, b)
 
     blocked: list[str] = []
+    if not git_ok:
+        blocked.append("git_status_unavailable")
     if n_changed > REVIEW_FILE_MAX:
         blocked.append(f"review_pressure:changed_files>{REVIEW_FILE_MAX}")
     if high_n > HIGH_RISK_MAX:
@@ -224,14 +267,13 @@ def main() -> int:
     if delivered_gap:
         blocked.append("delivered_queue_ids_without_bundle_entry:" + ",".join(delivered_gap[:8]))
 
-    review_pressure = round(min(1.0, n_changed / float(REVIEW_FILE_MAX)), 4) if REVIEW_FILE_MAX else 0.0
+    rp_git = min(1.0, n_changed / float(REVIEW_FILE_MAX)) if REVIEW_FILE_MAX else 0.0
+    rp_high = min(1.0, high_n / float(HIGH_RISK_MAX)) if HIGH_RISK_MAX else 0.0
+    rp_queue = min(1.0, queue_depth / float(QUEUE_PENDING_MAX)) if QUEUE_PENDING_MAX else 0.0
+    review_pressure = round(max(rp_git, rp_high, rp_queue), 4)
 
     candidates = _collect_candidates(repo)
-    current_items = [x for x in pending if str(x.get("state") or "") == "delivered"]
-    current_card = None
-    if current_items:
-        current_items.sort(key=lambda x: str(x.get("createdAt") or ""))
-        current_card = current_items[-1].get("cursor_card")
+    current_card = _current_card_pipeline(pending)
 
     next_card: str | None = None
     next_allowed = len(blocked) == 0
@@ -241,16 +283,25 @@ def main() -> int:
     state: dict[str, Any] = {
         "card": CARD,
         "generated_at": _utc_iso(),
+        "next_on_pass": NEXT_ON_PASS,
+        "next_on_fail_note": NEXT_ON_FAIL_NOTE,
+        "retry_card": RETRY_CARD,
         "current_card": current_card,
         "queued_cards": [str(x.get("cursor_card") or "") for x in pending if x.get("cursor_card")][:16],
         "queue_pending_count": queue_depth,
         "blocked_reason": blocked,
         "changed_file_count": n_changed,
         "review_pressure": review_pressure,
+        "review_pressure_detail": {
+            "changed_files_ratio": round(rp_git, 4),
+            "high_risk_ratio": round(rp_high, 4),
+            "queue_pending_ratio": round(rp_queue, 4),
+        },
         "next_card_allowed": next_allowed,
         "next_card": next_card,
         "candidates_ranked": candidates[:24],
         "gates": {
+            "git_status_ok": git_ok,
             "review_file_max": REVIEW_FILE_MAX,
             "high_risk_max": HIGH_RISK_MAX,
             "queue_pending_max": QUEUE_PENDING_MAX,
@@ -264,6 +315,11 @@ def main() -> int:
             "autocompact_summary": str(ac_path),
             "remote_queue": str(auto / "remote_cursor_queue.json"),
             "result_bundle": str(auto / "remote_cursor_result_bundle.json"),
+            "worldclass_loop": str(auto / "tenmon_worldclass_dialogue_acceptance_priority_loop_v1.json"),
+            "forensic": str(auto / "tenmon_autonomy_current_state_forensic.json"),
+            "conversation_quality": str(auto / "tenmon_conversation_quality_priority_summary.json"),
+            "state_convergence": str(auto / "state_convergence_next_cards.json"),
+            "worldclass_mainline_selector": str(auto / "tenmon_conversation_worldclass_mainline_selector.json"),
         },
     }
 
@@ -290,9 +346,34 @@ def main() -> int:
     md.extend(["", "## Queued (pending states)", ""])
     for qc in state["queued_cards"][:12]:
         md.append(f"- `{qc}`")
+    md.extend(
+        [
+            "",
+            "## chain",
+            "",
+            f"- **next_on_pass**: `{NEXT_ON_PASS}`",
+            f"- **retry_card** (fail 時 1 枚): `{RETRY_CARD}`",
+            f"- {NEXT_ON_FAIL_NOTE}",
+            "",
+        ]
+    )
     (auto / OUT_MD).write_text("\n".join(md) + "\n", encoding="utf-8")
 
-    print(json.dumps({"ok": True, "path": str(auto / OUT_JSON), "next_card_allowed": next_allowed, "next_card": next_card}, ensure_ascii=False))
+    print(
+        json.dumps(
+            {
+                "ok": True,
+                "path": str(auto / OUT_JSON),
+                "next_card_allowed": next_allowed,
+                "blocked_reason": blocked,
+                "current_card": current_card,
+                "queued_cards": state["queued_cards"],
+                "next_card": next_card,
+                "review_pressure": review_pressure,
+            },
+            ensure_ascii=False,
+        )
+    )
     return 0
 
 
