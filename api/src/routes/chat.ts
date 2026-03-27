@@ -187,6 +187,8 @@ import { emptyThreadCore, centerLabelFromKey, type ThreadCore } from "../core/th
 import { buildThreadCoreLinkSurfaceV1, formatStage2ConversationCarryBlockV1 } from "../core/threadCoreLinkSurfaceV1.js";
 import { buildThreadCoreKuProjectionV1 } from "../core/threadCoreCarryProjectionV1.js";
 import { buildGrowthCirculationHintV1 } from "../core/tenmonSelfImprovementOsV1.js";
+import { attachKnowledgePriorityKernelToKuV1 } from "../core/tenmonKnowledgePriorityKernelV1.js";
+import { attachUnderstandingReductionToKuV1 } from "../core/tenmonUnderstandingReducerV1.js";
 import {
   buildSoulBridgeGatePayloadV1,
   buildSoulCompareGatePayloadV1,
@@ -399,6 +401,16 @@ function __tenmonGeneralGateResultMaybe(x: any, rawMessageOverride?: string): an
       }
     }
   } catch {}
+  try {
+    const kuK = (x as any)?.decisionFrame?.ku;
+    const rawK = String(rawMessageOverride ?? (x as any)?.rawMessage ?? (x as any)?.message ?? "");
+    if (kuK && typeof kuK === "object" && !Array.isArray(kuK)) {
+      attachKnowledgePriorityKernelToKuV1(kuK as Record<string, unknown>, rawK);
+      attachUnderstandingReductionToKuV1(kuK as Record<string, unknown>, rawK);
+    }
+  } catch {
+    /* fail-closed: routeReason / decisionFrame は不変 */
+  }
   ensureDetailPlanContractP20OnGatePayloadV1(x);
   return __tenmonGeneralGateCoreV1(x, rawMessageOverride);
 }

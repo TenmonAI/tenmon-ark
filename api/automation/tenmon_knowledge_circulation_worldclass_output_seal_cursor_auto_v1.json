@@ -1,0 +1,59 @@
+{
+  "ok": false,
+  "card": "TENMON_KNOWLEDGE_CIRCULATION_WORLDCLASS_OUTPUT_SEAL_CURSOR_AUTO_V1",
+  "knowledge_circulation_ready": true,
+  "understanding_reduction_ready": true,
+  "beautiful_output_ready": true,
+  "worldclass_output_ready": false,
+  "single_source_preserved": true,
+  "rollback_used": false,
+  "next_card_if_fail": "TENMON_FINAL_OPERABLE_SEAL_CURSOR_AUTO_V1",
+  "generated_at": "2026-03-27T01:13:48Z",
+  "case": "C",
+  "failed_axes": [
+    "general_output_quality",
+    "selfaware_output_quality"
+  ],
+  "axes": {
+    "knowledge_priority_stability": true,
+    "understanding_reduction_quality": true,
+    "scripture_output_quality": true,
+    "general_output_quality": false,
+    "selfaware_output_quality": false,
+    "continuity_beauty_stability": true,
+    "meta_leak_none": true,
+    "single_source_preserved": true
+  },
+  "probe_helpers": {
+    "continuity_ok": true,
+    "scripture_ok": true,
+    "general_ok": false,
+    "selfaware_ok": false,
+    "surface_ok": false,
+    "subconcept_len": 233.0,
+    "subconcept_meta_ok": true,
+    "meta_leak_all": true
+  },
+  "stale_sources_present": false,
+  "scorecard_worldclass_ready": false,
+  "steps": {
+    "tenmon_worldclass_acceptance_scorecard_v1": {
+      "script": "tenmon_worldclass_acceptance_scorecard_v1.py",
+      "exit_code": 0,
+      "stdout_tail": "{\n  \"ok\": true,\n  \"score_percent\": 61.36,\n  \"sealed_operable_ready\": false,\n  \"worldclass_ready\": false\n}\n",
+      "stderr_tail": ""
+    }
+  },
+  "inputs": {
+    "scorecard": "/opt/tenmon-ark-repo/api/automation/tenmon_worldclass_acceptance_scorecard.json",
+    "learning_quality_bridge": "/opt/tenmon-ark-repo/api/automation/learning_quality_bridge.json",
+    "final_operable_seal": "/opt/tenmon-ark-repo/api/automation/tenmon_final_operable_seal.json",
+    "rejudge_summary": "/opt/tenmon-ark-repo/api/automation/tenmon_latest_state_rejudge_summary.json"
+  },
+  "notes": [
+    "8 軸は fresh_probe_digest（stale 時は空扱い）+ learning_quality_bridge + final_operable_seal + scorecard regression で決定。",
+    "understanding_reduction_quality は subconcept の長さと meta_leak_ok（satisfied 非依存）。",
+    "beautiful_output_ready は meta_leak 全通過かつ（subconcept satisfied または長文+メタ無漏れ）。",
+    "CASE B の補修は next_card を実行後に本スクリプトで再採点。"
+  ]
+}

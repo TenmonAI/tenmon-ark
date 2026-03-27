@@ -3,6 +3,9 @@
  * routeReason から表面整形契約を決定し、finalize 最終段で本文へ軽く適用する（routeReason / decisionFrame は不変）。
  */
 
+import { applyBeautifulOutputRefinementV1 } from "./tenmonBeautifulOutputRefinerV1.js";
+import { buildKnowledgeSurfaceBridgeHintsV1 } from "./tenmonKnowledgeStyleBridgeV1.js";
+
 export type TenmonSurfaceContractV1 = {
   surfaceContractKey: string;
   shortformShape: "short_define" | "short_analysis" | "continuity";
@@ -47,8 +50,8 @@ export function resolveTenmonSurfaceContractV1(routeReason: string): TenmonSurfa
       closingShape: "soft_next_step",
       minParagraphs: 1,
       mustIncludeCenterClaim: true,
-      /** SECOND_TUNE: semantic 第2段落と nextAxis 推論が二重になりやすいため追補は off（本文は不変） */
-      mustIncludeNextAxis: false,
+      /** KNOWLEDGE_TO_STYLE_BRIDGE: 還元 centerClaim + semantic 第2軸を重複検知付きで追補 */
+      mustIncludeNextAxis: true,
       allowQuestion: false,
       toneProfile: "tenmon_scripture",
     };
@@ -78,7 +81,7 @@ export function resolveTenmonSurfaceContractV1(routeReason: string): TenmonSurfa
       closingShape: "soft_next_step",
       minParagraphs: 1,
       mustIncludeCenterClaim: true,
-      mustIncludeNextAxis: false,
+      mustIncludeNextAxis: true,
       allowQuestion: true,
       toneProfile: "tenmon_selfaware",
     };
@@ -93,7 +96,7 @@ export function resolveTenmonSurfaceContractV1(routeReason: string): TenmonSurfa
       closingShape: "soft_next_step",
       minParagraphs: 1,
       mustIncludeCenterClaim: true,
-      mustIncludeNextAxis: false,
+      mustIncludeNextAxis: true,
       allowQuestion: true,
       toneProfile: "tenmon_selfaware",
     };
@@ -108,7 +111,7 @@ export function resolveTenmonSurfaceContractV1(routeReason: string): TenmonSurfa
       closingShape: "soft_next_step",
       minParagraphs: 1,
       mustIncludeCenterClaim: true,
-      mustIncludeNextAxis: false,
+      mustIncludeNextAxis: true,
       allowQuestion: true,
       toneProfile: "tenmon_selfaware",
     };
@@ -184,7 +187,7 @@ export function resolveTenmonSurfaceContractV1(routeReason: string): TenmonSurfa
       closingShape: "soft_next_step",
       minParagraphs: 2,
       mustIncludeCenterClaim: true,
-      mustIncludeNextAxis: false,
+      mustIncludeNextAxis: true,
       allowQuestion: true,
       toneProfile: "tenmon_define",
     };
@@ -200,7 +203,7 @@ export function resolveTenmonSurfaceContractV1(routeReason: string): TenmonSurfa
       closingShape: "soft_next_step",
       minParagraphs: 2,
       mustIncludeCenterClaim: true,
-      mustIncludeNextAxis: false,
+      mustIncludeNextAxis: true,
       allowQuestion: true,
       toneProfile: "tenmon_define",
     };
@@ -214,8 +217,8 @@ export function resolveTenmonSurfaceContractV1(routeReason: string): TenmonSurfa
       longformShape: "longform_tenmon",
       closingShape: "soft_next_step",
       minParagraphs: 1,
-      mustIncludeCenterClaim: false,
-      mustIncludeNextAxis: false,
+      mustIncludeCenterClaim: true,
+      mustIncludeNextAxis: true,
       allowQuestion: true,
       toneProfile: "tenmon_define",
     };
@@ -258,7 +261,8 @@ export function inferNextAxisLineV1(args: { semanticBody?: string; centerClaimHi
     }
     return lines[1].slice(0, 240);
   }
-  return lines[0]?.slice(0, 240) || "";
+  /** 第2段落が無いときは次軸を捏造しない */
+  return "";
 }
 
 /**
@@ -381,7 +385,8 @@ export function applyTenmonSurfaceContractV1(args: ApplyTenmonSurfaceContractV1A
   rest = applyAskOneAxisClosingV1(rest, c);
 
   t = head ? `${head}\n\n${rest}`.trim() : rest;
-  return t.replace(/\n{3,}/g, "\n\n").trim();
+  t = t.replace(/\n{3,}/g, "\n\n").trim();
+  return applyBeautifulOutputRefinementV1({ surface: t, contract: c });
 }
 
 /** @deprecated 同名の統合 API へ集約 */
@@ -413,14 +418,20 @@ export function finalizeApplyTenmonSurfaceContractV1(args: {
   const cm0 = String(kuAny?.centerMeaning ?? "").trim();
   const pm0 = String(kuAny?.sourceStackSummary?.primaryMeaning ?? "").trim();
   const cl0 = String(kuAny?.centerLabel || kuAny?.centerKey || "").trim();
-  const centerClaimHint = (cm0 || pm0 || cl0).slice(0, 240);
+  const legacyCenter = (cm0 || pm0 || cl0).slice(0, 240);
   const semBody = String(args.responsePlan?.semanticBody || "").trim();
-  const nextAxisLine = inferNextAxisLineV1({
-    semanticBody: semBody,
-    centerClaimHint: centerClaimHint || undefined,
-  }).slice(0, 240);
-  const nextAxisHint =
-    nextAxisLine && nextAxisLine !== centerClaimHint.slice(0, 240) ? nextAxisLine : undefined;
+  const bridge = buildKnowledgeSurfaceBridgeHintsV1(args.ku, rr, semBody);
+  const centerClaimHint =
+    bridge.centerClaimHint.length >= 6 ? bridge.centerClaimHint : legacyCenter;
+  let nextAxisHint = bridge.nextAxisHint;
+  if (!nextAxisHint || nextAxisHint.length < 8) {
+    const nextAxisLine = inferNextAxisLineV1({
+      semanticBody: semBody,
+      centerClaimHint: centerClaimHint || undefined,
+    }).slice(0, 240);
+    nextAxisHint =
+      nextAxisLine && nextAxisLine !== centerClaimHint.slice(0, 240) ? nextAxisLine : undefined;
+  }
   return applyTenmonSurfaceContractV1({
     surface: args.surface,
     contract: sc,
