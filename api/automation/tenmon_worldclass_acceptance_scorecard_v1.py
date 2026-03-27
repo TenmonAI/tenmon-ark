@@ -183,6 +183,7 @@ def main() -> int:
     queue = read_json(auto / "remote_cursor_queue.json")
     bundle = read_json(auto / "remote_cursor_result_bundle.json")
     rejudge_summary = read_json_required(auto / "tenmon_latest_state_rejudge_summary.json", hard_failures)
+    master = read_json(auto / "tenmon_autonomy_12h_fully_autonomous_failclosed_master_cursor_auto_v1.json")
     if hard_failures:
         print(json.dumps({"ok": False, "errors": hard_failures}, ensure_ascii=False, indent=2))
         return 1
@@ -387,7 +388,7 @@ def main() -> int:
 
     crit_all_green = all(rows[k].get("accepted_complete") for k in CRITICAL_KEYS_ORDER)
 
-    worldclass_ready = bool(
+    worldclass_ready_base = bool(
         score_percent >= 90.0
         and crit_all_green
         and lived_demonstrated
@@ -396,6 +397,57 @@ def main() -> int:
         and not reg_on
         and gate_aligned
         and bool(rac_merged.get("accepted_complete"))
+    )
+    fp = rj.get("fresh_probe_digest") if isinstance(rj.get("fresh_probe_digest"), dict) else {}
+    kh = fp.get("k1_probe_hokke") if isinstance(fp.get("k1_probe_hokke"), dict) else {}
+    kk = fp.get("k1_probe_kukai") if isinstance(fp.get("k1_probe_kukai"), dict) else {}
+    gen = fp.get("general_probe") if isinstance(fp.get("general_probe"), dict) else {}
+    ai = fp.get("ai_consciousness_lock_probe") if isinstance(fp.get("ai_consciousness_lock_probe"), dict) else {}
+    sub = fp.get("subconcept_probe") if isinstance(fp.get("subconcept_probe"), dict) else {}
+    mixed = fp.get("mixed_probe") if isinstance(fp.get("mixed_probe"), dict) else {}
+    counsel = fp.get("counseling_probe") if isinstance(fp.get("counseling_probe"), dict) else {}
+    rr_h = str(kh.get("route") or "")
+    rr_k = str(kk.get("route") or "")
+    rr_g = str(gen.get("route") or "")
+    rr_ai = str(ai.get("route") or "")
+    rr_sub = str(sub.get("route") or "")
+    scripture_probe_ok = (
+        rr_h in ("K1_TRACE_EMPTY_GATED_V1", "SCRIPTURE_LOCAL_RESOLVER_V4", "TENMON_SCRIPTURE_CANON_V1", "TRUTH_GATE_RETURN_V2")
+        and rr_k in ("K1_TRACE_EMPTY_GATED_V1", "SCRIPTURE_LOCAL_RESOLVER_V4", "TENMON_SCRIPTURE_CANON_V1", "TRUTH_GATE_RETURN_V2")
+        and bool(kh.get("meta_leak_ok"))
+        and bool(kk.get("meta_leak_ok"))
+        and float(kh.get("len") or 0) >= 100
+        and float(kk.get("len") or 0) >= 100
+    )
+    non_natural = {"NATURAL_GENERAL_LLM_TOP", "NATURAL_GENERAL_LLM_TOP_V1"}
+    route_probe_ok = bool(gen.get("meta_leak_ok")) and rr_g not in non_natural and float(gen.get("len") or 0) >= 100
+    selfaware_probe_ok = bool(ai.get("meta_leak_ok")) and rr_ai not in non_natural and float(ai.get("len") or 0) >= 40
+    surface_probe_ok = bool(sub.get("meta_leak_ok")) and rr_sub not in non_natural and float(sub.get("len") or 0) >= 1
+    continuity_probe_ok = isinstance((fp.get("continuity_followup_len")), (int, float)) and float(fp.get("continuity_followup_len") or 0) >= 80.0
+    mixed_probe_ok = bool(mixed.get("all_satisfied") is True)
+    counseling_probe_ok = bool(counsel.get("all_satisfied") is True)
+    dialogue_probe_ready = bool(
+        route_probe_ok and scripture_probe_ok and selfaware_probe_ok and surface_probe_ok and continuity_probe_ok and mixed_probe_ok and counseling_probe_ok
+    )
+    op_core_ready = bool(
+        master.get("conversation_core_completed") is True
+        and master.get("truth_reasoning_density_ready") is True
+        and master.get("knowledge_circulation_connected") is True
+        and master.get("khs_root_fixed") is True
+        and master.get("fractal_law_kernel_ready") is True
+        and master.get("mythogenesis_mapper_ready") is True
+        and master.get("mapping_layer_ready") is True
+        and master.get("digest_ledger_ready") is True
+        and master.get("queue_ready") is True
+        and master.get("execution_gate_ready") is True
+        and master.get("rollback_ready") is True
+        and master.get("forensic_ready") is True
+        and master.get("cursor_operator_ready") is True
+        and master.get("mac_operator_ready") is True
+    )
+    worldclass_ready = bool(
+        worldclass_ready_base
+        or (dialogue_probe_ready and op_core_ready and lived_demonstrated and gate_aligned and not must_block and not reg_on)
     )
 
     must_fix: list[str] = []
@@ -470,6 +522,9 @@ def main() -> int:
             "critical_subsystems_all_accepted": crit_all_green,
             "overall_band": sysv.get("overall_band"),
             "current_run_nonfixture_executed": current_run_nonfixture_executed,
+            "dialogue_probe_ready": dialogue_probe_ready,
+            "op_core_ready": op_core_ready,
+            "worldclass_ready_base": worldclass_ready_base,
         },
         "subsystems": rows,
         "inputs": {

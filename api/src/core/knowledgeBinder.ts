@@ -20,6 +20,19 @@ import { getSelfLearningAutostudyBundleV1 } from "./tenmonSelfLearningStudyLoopV
 import { resolveDanshariLifeOrderKernelV1 } from "./tenmonDanshariLifeOrderKernelV1.js";
 import { resolveIrohaLifeCounselingKernelV1 } from "./tenmonIrohaLifeCounselingKernelV1.js";
 import { buildIrohaDanshariCounselingBridgeV1 } from "./tenmonIrohaDanshariCounselingBridgeV1.js";
+import {
+  buildTenmonMultipassAnsweringV1,
+  mergeKuLawTraceWithBinderV1,
+  type TenmonMultipassAnsweringV1,
+} from "./tenmonMultipassAnsweringV1.js";
+import {
+  buildPersonaDriftGuardV1,
+  resolveTenmonPersonaConstitutionRuntimeV1,
+} from "./tenmonPersonaConstitutionRuntimeV1.js";
+import { buildTenmonVerdictEngineV1 } from "./tenmonVerdictEngineV1.js";
+import { resolveTenmonBookReadingKernelV1 } from "./tenmonBookReadingKernelV1.js";
+import { buildTenmonBookReadingToDeepreadBridgeV1 } from "./tenmonBookReadingToDeepreadBridgeV1.js";
+import { updateUserLexiconMemoryV1 } from "./userLexiconMemoryV1.js";
 
 export type KnowledgeBinderInput = {
   routeReason: string;
@@ -67,6 +80,9 @@ export type KnowledgeBinderResult = {
   synapseTopPatch: Record<string, unknown>;
   lineageSummary: unknown | null;
   bookContinuation: unknown | null;
+  multipassAnsweringV1: TenmonMultipassAnsweringV1;
+  evidenceRefs: string[];
+  uncertaintyFlags: string[];
 };
 
 function inferRouteClass(ku: Record<string, unknown>, routeReason: string): string {
@@ -215,6 +231,86 @@ export function buildKnowledgeBinder(input: KnowledgeBinderInput): KnowledgeBind
     irohaLifeCounselingKernelV1,
     danshariLifeOrderKernelV1,
   );
+
+  const fractalLawAxisStr = (() => {
+    const fl = fractalLawKernel?.fractalLawAxis as
+      | string
+      | { primary?: string; secondary?: string[]; axes?: string[] }
+      | undefined
+      | null;
+    if (typeof fl === "string") return fl.trim();
+    if (fl && typeof fl === "object") {
+      const p = String(fl.primary ?? "").trim();
+      const s0 = Array.isArray(fl.secondary) ? String(fl.secondary[0] ?? "").trim() : "";
+      const a0 = Array.isArray(fl.axes) ? String(fl.axes[0] ?? "").trim() : "";
+      return [p, s0, a0].filter(Boolean).join("/");
+    }
+    return "";
+  })();
+
+  const __lineage = lineageSummary && typeof lineageSummary === "object" ? (lineageSummary as Record<string, unknown>) : null;
+  const personaRuntime = resolveTenmonPersonaConstitutionRuntimeV1();
+  const personaDriftGuard = buildPersonaDriftGuardV1(String(message || ""), personaRuntime);
+  const multipassAnsweringV1 = buildTenmonMultipassAnsweringV1({
+    routeReason: rr,
+    message: String(message || ""),
+    centerKey,
+    centerLabel,
+    routeClass,
+    sourcePack,
+    groundingUnresolvedPolicy: groundingRule.unresolvedPolicy,
+    groundedPriority: groundingRule.groundedPriority,
+    khsRouteFamilyRef: khsRf.khsRootRef,
+    truthStructureVerdict: truthStructureVerdict
+      ? {
+          centerClaimHint: (truthStructureVerdict as { centerClaimHint?: string | null }).centerClaimHint ?? null,
+          repairAxis: (truthStructureVerdict as { repairAxis?: string | null }).repairAxis ?? null,
+          nextAxis: (truthStructureVerdict as { nextAxis?: string | null }).nextAxis ?? null,
+        }
+      : null,
+    truthReasoningMixedPresent: truthReasoningMixed != null && typeof truthReasoningMixed === "object",
+    lineageKey: __lineage && typeof __lineage.lineageKey === "string" ? String(__lineage.lineageKey) : null,
+    lineageFamily: __lineage && typeof __lineage.family === "string" ? String(__lineage.family) : null,
+    digestLedgerCard: digestLedgerPayload.card,
+    digestUndigestedCount: digestLedgerPayload.undigested.length,
+    materialDigestLedgerRef: {
+      card: digestLedgerPayload.card,
+      digest_states_visible: digestLedgerPayload.digest_states_visible,
+      circulating_ids: digestLedgerPayload.circulating.map((e) => e.id),
+      undigested_ids: digestLedgerPayload.undigested.map((e) => e.id),
+    },
+    sourceStackSummary,
+    fractalLawAxisSummary: fractalLawAxisStr,
+    fractalTensionPresent: Boolean(fractalLawKernel?.fractalTension),
+  });
+  const evidenceRefs = multipassAnsweringV1.evidence_pass.evidenceRefs;
+  const uncertaintyFlags = Array.from(
+    new Set([
+      ...multipassAnsweringV1.uncertaintyFlags,
+      ...(personaDriftGuard.forbiddenDriftDetected ? ["persona_forbidden_drift_detected"] : []),
+    ]),
+  );
+  const verdictEngineV1 = buildTenmonVerdictEngineV1({
+    routeReason: rr,
+    centerLabel,
+    sourcePack,
+    evidenceRefs,
+    uncertaintyFlags,
+    lawTrace: multipassAnsweringV1.evidence_pass.lawTraceBinder,
+    preferredTerm: personaDriftGuard.preferredTerm,
+    personaRuntime,
+  });
+  const bookReadingKernelV1 = resolveTenmonBookReadingKernelV1(String(message || ""));
+  const bookToDeepreadBridgeV1 = buildTenmonBookReadingToDeepreadBridgeV1(bookReadingKernelV1);
+  const userLexiconMemoryV1 = updateUserLexiconMemoryV1({
+    prev:
+      threadCore && typeof threadCore === "object"
+        ? ((threadCore as { userLexiconMemoryV1?: unknown }).userLexiconMemoryV1 as any)
+        : null,
+    userMessage: String(message || ""),
+    assistantSurface: null,
+  });
+
   const thoughtCoreSummaryPatch: Record<string, unknown> = {
     centerKey: centerKey ?? undefined,
     centerMeaning: centerKey ?? undefined,
@@ -265,6 +361,27 @@ export function buildKnowledgeBinder(input: KnowledgeBinderInput): KnowledgeBind
     ...(danshariLifeOrderKernelV1 ? { danshariLifeOrderKernelV1 } : {}),
     ...(irohaLifeCounselingKernelV1 ? { irohaLifeCounselingKernelV1 } : {}),
     ...(irohaDanshariCounselingBridgeV1 ? { irohaDanshariCounselingBridgeV1 } : {}),
+    personaConstitutionRuntimeV1: personaRuntime,
+    personaDriftGuardV1: personaDriftGuard,
+    verdictEngineV1,
+    bookReadingKernelV1,
+    bookToDeepreadBridgeV1,
+    userLexiconMemoryV1,
+    verdictSections: {
+      facts: verdictEngineV1.facts,
+      tradition: verdictEngineV1.tradition,
+      tenmon_mapping: verdictEngineV1.tenmon_mapping,
+      uncertainty: verdictEngineV1.uncertainty,
+      verdict: verdictEngineV1.verdict,
+    },
+    multipassAnsweringV1,
+    routeEvidenceTraceV1: {
+      routeReason: rr,
+      centerLabel,
+      sourcePack,
+      evidenceRefCount: evidenceRefs.length,
+      uncertaintyFlagCount: uncertaintyFlags.length,
+    },
   };
 
   const synapseTopPatch: Record<string, unknown> = {};
@@ -321,6 +438,9 @@ export function buildKnowledgeBinder(input: KnowledgeBinderInput): KnowledgeBind
     synapseTopPatch,
     lineageSummary,
     bookContinuation,
+    multipassAnsweringV1,
+    evidenceRefs,
+    uncertaintyFlags,
   };
 }
 
@@ -442,6 +562,42 @@ export function applyKnowledgeBinderToKu(ku: Record<string, unknown>, binder: Kn
   if (patch.irohaDanshariCounselingBridgeV1 != null) {
     (ku as any).irohaDanshariCounselingBridgeV1 = patch.irohaDanshariCounselingBridgeV1;
   }
+  if (patch.multipassAnsweringV1 != null) {
+    (ku as any).multipassAnsweringV1 = patch.multipassAnsweringV1;
+  }
+  if (patch.routeEvidenceTraceV1 != null) {
+    (ku as any).routeEvidenceTraceV1 = patch.routeEvidenceTraceV1;
+  }
+  if (patch.personaConstitutionRuntimeV1 != null) {
+    (ku as any).personaConstitutionRuntimeV1 = patch.personaConstitutionRuntimeV1;
+  }
+  if (patch.personaDriftGuardV1 != null) {
+    (ku as any).personaDriftGuardV1 = patch.personaDriftGuardV1;
+  }
+  if (patch.verdictEngineV1 != null) {
+    (ku as any).verdictEngineV1 = patch.verdictEngineV1;
+  }
+  if (patch.verdictSections != null) {
+    (ku as any).verdictSections = patch.verdictSections;
+  }
+  if (patch.bookReadingKernelV1 != null) {
+    (ku as any).bookReadingKernelV1 = patch.bookReadingKernelV1;
+  }
+  if (patch.bookToDeepreadBridgeV1 != null) {
+    (ku as any).bookToDeepreadBridgeV1 = patch.bookToDeepreadBridgeV1;
+  }
+  if (patch.userLexiconMemoryV1 != null) {
+    (ku as any).userLexiconMemoryV1 = patch.userLexiconMemoryV1;
+  }
+
+  (ku as any).evidenceRefs = binder.evidenceRefs;
+  (ku as any).uncertaintyFlags = binder.uncertaintyFlags;
+  try {
+    const ltBinder = binder.multipassAnsweringV1?.evidence_pass?.lawTraceBinder;
+    if (Array.isArray(ltBinder) && ltBinder.length > 0) {
+      (ku as any).lawTrace = mergeKuLawTraceWithBinderV1((ku as any).lawTrace, ltBinder);
+    }
+  } catch {}
 
   const st = (ku as any).synapseTop;
   if (st && typeof st === "object" && !Array.isArray(st)) {

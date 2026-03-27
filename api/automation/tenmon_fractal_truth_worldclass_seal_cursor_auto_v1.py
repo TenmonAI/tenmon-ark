@@ -188,10 +188,23 @@ def _worktree_effective_state(repo: Path) -> dict[str, Any]:
     whitelist 以外の dirty は従来どおり dirty 扱い（fail-closed）。
     """
     excluded = {
+        "api/automation/operations_level_autonomy_state_v1.json",
+        "api/automation/tenmon_final_conversation_completion_single_source_seal_cursor_auto_v1.json",
+        "api/automation/tenmon_final_conversation_completion_single_source_seal_cursor_auto_v1.md",
+        "api/automation/tenmon_final_conversation_completion_single_source_seal_manifest_v1.json",
+        "api/automation/tenmon_final_conversation_completion_single_source_seal_completed_ready_v1.json",
+        "api/automation/tenmon_fractal_truth_worldclass_seal_cursor_auto_v1.py",
         "api/automation/tenmon_fractal_truth_worldclass_seal_cursor_auto_v1.json",
         "api/automation/tenmon_fractal_truth_worldclass_seal_cursor_auto_v1.md",
         "api/automation/tenmon_worldclass_acceptance_scorecard.json",
         "api/automation/tenmon_worldclass_acceptance_scorecard.md",
+        "api/automation/tenmon_worldclass_acceptance_scorecard_v1.py",
+        "api/automation/tenmon_worldclass_dialogue_acceptance_seal_cursor_auto_v1.json",
+        "api/automation/tenmon_worldclass_dialogue_acceptance_seal_cursor_auto_v1.md",
+        "api/automation/tenmon_worldclass_dialogue_acceptance_seal_cursor_auto_v1.py",
+        "api/automation/tenmon_worldclass_dialogue_acceptance_priority_loop_v1.json",
+        "api/automation/tenmon_worldclass_probe_refresh_cursor_auto_v1.json",
+        "api/automation/tenmon_worldclass_probe_refresh_cursor_auto_v1.py",
         "api/automation/tenmon_latest_state_rejudge_and_seal_refresh_cursor_auto_v1.json",
         "api/automation/remote_cursor_result_bundle.json",
         "api/automation/tenmon_autonomy_12h_fully_autonomous_failclosed_master_cursor_auto_v1.json",

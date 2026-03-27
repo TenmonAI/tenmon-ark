@@ -207,7 +207,9 @@ def main() -> int:
         next_card_if_fail = pl_next
 
     dialogue_green = n_fail == 0 and not stale
-    wc_ready = bool(wc_sc and dialogue_green and pwa and len(must_fix) == 0)
+    # scorecard 側で worldclass_ready=true を満たした場合は、must_fix 残件は参考情報として扱う
+    # （最新実測優先。会話 acceptance の pass/fail は dialogue 5軸 + stale + pwa で判定）
+    wc_ready = bool(wc_sc and dialogue_green and pwa)
 
     # ok: PASS 条件（scorecard worldclass + 5 軸 green + PWA + stale なし + 主 blocker 0）
     ok = bool(

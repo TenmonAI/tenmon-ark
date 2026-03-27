@@ -121,3 +121,21 @@ export function resolveResponseIntentHints(): ResponseIntentHints {
     "R-OUT": Array.isArray(h["R-OUT"]) ? h["R-OUT"] : [],
   };
 }
+
+/** multipass intent_pass 用: route に紐づく phase / 原則のスナップショット */
+export function resolveIntentMultipassSnapshotV1(routeReason: string): {
+  defaultPhase: string;
+  routePhaseHint: string;
+  selectionPrinciples: string[];
+  unresolvedRules: string[];
+} {
+  const hints = resolveRoutePhaseHints();
+  const rr = String(routeReason || "");
+  const h = hints[rr];
+  return {
+    defaultPhase: resolveDefaultIntentPhase(),
+    routePhaseHint: typeof h === "string" ? h : "",
+    selectionPrinciples: resolveSelectionPrinciples(),
+    unresolvedRules: resolveUnresolvedRules(),
+  };
+}

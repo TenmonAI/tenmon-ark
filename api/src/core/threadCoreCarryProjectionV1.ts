@@ -4,6 +4,7 @@
  */
 
 import type { ThreadCore, ThreadCoreCarryModeV1, ThreadCoreTurnKindV1 } from "./threadCore.js";
+import { resolveThreadCenterRecoveryV1 } from "./threadCenterRecoveryV1.js";
 
 export type { ThreadCoreTurnKindV1, ThreadCoreCarryModeV1 } from "./threadCore.js";
 
@@ -277,6 +278,31 @@ export function buildThreadCoreKuProjectionV1(input: {
         String((ku as any)?.priorSelfLearningRuleFeedbackV1?.routeReason ?? "").trim() || null,
     },
   };
+
+  const recovery = resolveThreadCenterRecoveryV1({
+    rawMessage: input.rawMessage,
+    routeReason: rr,
+    centerKey: out.centerKey,
+    centerLabel: out.centerLabel,
+    scriptureKey: String((ku as any)?.scriptureKey ?? "").trim() || null,
+    previous: tc,
+    thoughtCoreSummary:
+      ku && typeof ku === "object" && !Array.isArray(ku) && ku.thoughtCoreSummary && typeof ku.thoughtCoreSummary === "object"
+        ? (ku.thoughtCoreSummary as Record<string, unknown>)
+        : null,
+  });
+  out.threadCenter = recovery.threadCenter;
+  out.centerKey = recovery.centerKey;
+  out.centerMeaning = recovery.centerMeaning;
+  out.currentQuestionRole = recovery.currentQuestionRole;
+  out.unresolvedAxis = recovery.unresolvedAxis;
+  out.priorVerdict = recovery.priorVerdict;
+  out.scriptureCenter = recovery.scriptureCenter;
+  out.userIntentThread = recovery.userIntentThread;
+  out.threadCenterRecoveryHint = recovery.threadCenterRecoveryHint;
+  if ((ku as any)?.userLexiconMemoryV1 && typeof (ku as any).userLexiconMemoryV1 === "object") {
+    out.userLexiconMemoryV1 = (ku as any).userLexiconMemoryV1 as ThreadCore["userLexiconMemoryV1"];
+  }
 
   return out;
 }

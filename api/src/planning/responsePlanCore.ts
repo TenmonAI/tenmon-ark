@@ -4,6 +4,7 @@ import {
 } from "../routes/chat_refactor/humanReadableLawLayerV1.js";
 import { isTenmonBinaryCompareQuestionV1 } from "../core/compareAskDisambigV1.js";
 import { isSoulCompareQuestionV1 } from "../core/soulDefineDisambigV1.js";
+import type { TenmonMultipassAnsweringV1 } from "../core/tenmonMultipassAnsweringV1.js";
 
 export type AnswerLength = "short" | "medium" | "long";
 export type AnswerMode = "support" | "define" | "analysis" | "worldview" | "continuity";
@@ -626,6 +627,35 @@ export function buildResponsePlan(input: {
   }
 
   return merged;
+}
+
+/**
+ * finalize 等: ku.multipassAnsweringV1 の compose/style pass を responsePlan に連結（広域配線なし）
+ */
+export function enrichKuMultipassFromResponsePlanV1(ku: Record<string, unknown>, plan: ResponsePlan | null): void {
+  if (!ku || typeof ku !== "object") return;
+  if (!plan || typeof plan !== "object") return;
+  const mp = ku.multipassAnsweringV1 as TenmonMultipassAnsweringV1 | undefined;
+  if (!mp || mp.schema !== "TENMON_MULTIPASS_ANSWERING_V1") return;
+  const sem = String(plan.semanticBody || "").trim();
+  mp.compose_pass = {
+    ...mp.compose_pass,
+    ok: true,
+    stage: "linked_response_plan",
+    lengthBand: plan.lengthBand,
+    stance: plan.stance,
+    kind: plan.kind,
+    semanticBodyPreview: sem.length > 200 ? `${sem.slice(0, 200)}…` : sem,
+    summary: `compose:${plan.lengthBand}/${plan.kind}`,
+  };
+  mp.style_pass = {
+    ...mp.style_pass,
+    ok: true,
+    stage: "linked_response_plan",
+    closeStyle: plan.closeStyle,
+    followupPolicy: plan.followupPolicy,
+    summary: `style:${plan.closeStyle}/${plan.followupPolicy}`,
+  };
 }
 
 /**

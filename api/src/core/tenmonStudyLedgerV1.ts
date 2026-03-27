@@ -79,3 +79,43 @@ export function buildStudyLedgerEntriesV1(nowIso: string = new Date().toISOStrin
     };
   });
 }
+
+/** TENMON_SANSKRIT_GODNAME_SCHEMA_AND_INGEST_CURSOR_AUTO_V2: ingest 結果の追跡用（メタのみ） */
+export type SanskritGodnameIngestLedgerEntryV1 = {
+  card: "TENMON_SANSKRIT_GODNAME_SCHEMA_AND_INGEST_CURSOR_AUTO_V2";
+  materialId: string;
+  ingestIndex: number;
+  status: "accepted" | "rejected";
+  validationErrors: string[];
+  ingestedAt: string;
+};
+
+export function buildSanskritGodnameIngestLedgerRowsV1(args: {
+  accepted: Array<{ index: number; materialId: string }>;
+  rejected: Array<{ index: number; errors: string[] }>;
+  nowIso?: string;
+}): readonly SanskritGodnameIngestLedgerEntryV1[] {
+  const ts = args.nowIso ?? new Date().toISOString();
+  const out: SanskritGodnameIngestLedgerEntryV1[] = [];
+  for (const a of args.accepted) {
+    out.push({
+      card: "TENMON_SANSKRIT_GODNAME_SCHEMA_AND_INGEST_CURSOR_AUTO_V2",
+      materialId: a.materialId,
+      ingestIndex: a.index,
+      status: "accepted",
+      validationErrors: [],
+      ingestedAt: ts,
+    });
+  }
+  for (const r of args.rejected) {
+    out.push({
+      card: "TENMON_SANSKRIT_GODNAME_SCHEMA_AND_INGEST_CURSOR_AUTO_V2",
+      materialId: `reject:${r.index}`,
+      ingestIndex: r.index,
+      status: "rejected",
+      validationErrors: [...r.errors],
+      ingestedAt: ts,
+    });
+  }
+  return out.sort((x, y) => x.ingestIndex - y.ingestIndex);
+}

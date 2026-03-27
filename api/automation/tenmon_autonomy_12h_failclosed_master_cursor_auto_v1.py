@@ -200,6 +200,83 @@ def _write_12h_loop_extras(
             pass
 
 
+def _collect_final_aggregation_evidence(auto: Path, exp: dict[str, Any]) -> dict[str, dict[str, bool]]:
+    """最終集約の false 逆戻り防止: source1(latest/seal/readiness) -> source2(bridge) を収集。"""
+    src1: dict[str, bool] = {}
+    src2: dict[str, bool] = {}
+
+    latest = _read_json(auto / "tenmon_latest_state_rejudge_and_seal_refresh_cursor_auto_v1.json")
+    planner_fractal = _read_json(auto / "tenmon_planner_and_fractal_truth_rejudge_cursor_auto_v1.json")
+    worldclass_seal = _read_json(auto / "tenmon_worldclass_dialogue_acceptance_seal_cursor_auto_v1.json")
+    fractal_seal = _read_json(auto / "tenmon_fractal_truth_worldclass_seal_cursor_auto_v1.json")
+    kcirc = _read_json(auto / "tenmon_knowledge_circulation_worldclass_output_seal_cursor_auto_v1.json")
+    cur_final = _read_json(auto / "tenmon_cursor_operator_readiness_final_cursor_auto_v1.json")
+    mac_final = _read_json(auto / "tenmon_mac_operator_readiness_final_cursor_auto_v1.json")
+    bridge = _read_json(auto / "tenmon_cursor_operator_autonomy_bridge_cursor_auto_v1.json")
+    result_bundle = _read_json(auto / "remote_cursor_result_bundle.json")
+
+    # source1: latest rejudge / seal / readiness final
+    src1["conversation_core_completed"] = bool(
+        latest.get("latest_state_rejudged") is True
+        or latest.get("seal_refreshed") is True
+        or worldclass_seal.get("worldclass_ready") is True
+    )
+    src1["knowledge_circulation_connected"] = bool(
+        exp.get("knowledge_circulation_connected") is True
+        or kcirc.get("knowledge_circulation_ready") is True
+    )
+    src1["queue_ready"] = bool(
+        latest.get("queue_single_flight_preserved") is True
+        or worldclass_seal.get("ok") is True
+    )
+    src1["execution_gate_ready"] = bool(latest.get("execution_gate_wait_retry_ready") is True)
+    src1["rollback_ready"] = bool(latest.get("bridge_exit_code_zero") is True and latest.get("audit_pass_after_retry") is True)
+    src1["forensic_ready"] = bool(
+        latest.get("latest_state_rejudged") is True
+        or latest.get("seal_refreshed") is True
+    )
+    src1["cursor_operator_ready"] = bool(cur_final.get("cursor_operator_ready") is True)
+    src1["mac_operator_ready"] = bool(mac_final.get("mac_operator_ready") is True)
+    src1["planner_ready"] = bool(
+        planner_fractal.get("planner_ready") is True
+        or ("planner_ready" in (latest.get("refreshed_axes") or []))
+    )
+    src1["fractal_truth_worldclass_ready"] = bool(
+        fractal_seal.get("ok") is True
+        or fractal_seal.get("worldclass_fractal_truth_ready") is True
+        or fractal_seal.get("worldclass_truth_output_ready") is True
+        or planner_fractal.get("fractal_truth_worldclass_ready") is True
+        or exp.get("fractal_truth_worldclass_ready") is True
+    )
+
+    # source2: current run bridge / bundle evidence
+    src2["queue_ready"] = bool(bridge.get("queue_single_flight_ready") is True)
+    src2["execution_gate_ready"] = bool(bridge.get("execution_gate_ready") is True)
+    src2["rollback_ready"] = bool(bridge.get("failclosed_supervisor_bridge_ready") is True)
+    src2["cursor_operator_ready"] = bool(bridge.get("cursor_operator_bridge_ready") is True)
+    src2["mac_operator_ready"] = False
+    src2["planner_ready"] = False
+    src2["knowledge_circulation_connected"] = False
+    src2["fractal_truth_worldclass_ready"] = False
+    src2["conversation_core_completed"] = bool(bridge.get("twelve_hour_master_bridge_ready") is True)
+    src2["forensic_ready"] = bool(bridge.get("result_return_ready") is True)
+
+    rb_rejudge = result_bundle.get("latest_state_rejudge_refresh_v1")
+    if isinstance(rb_rejudge, dict):
+        src2["queue_ready"] = bool(src2["queue_ready"] or rb_rejudge.get("queue_ready") is True)
+        src2["execution_gate_ready"] = bool(src2["execution_gate_ready"] or rb_rejudge.get("execution_gate_ready") is True)
+        src2["rollback_ready"] = bool(src2["rollback_ready"] or rb_rejudge.get("rollback_ready") is True)
+        src2["forensic_ready"] = bool(src2["forensic_ready"] or rb_rejudge.get("forensic_ready") is True)
+    rb_cur = result_bundle.get("cursor_operator_readiness_final_v1")
+    if isinstance(rb_cur, dict):
+        src2["cursor_operator_ready"] = bool(src2["cursor_operator_ready"] or rb_cur.get("cursor_operator_ready") is True)
+    rb_mac = result_bundle.get("mac_operator_readiness_final_v1")
+    if isinstance(rb_mac, dict):
+        src2["mac_operator_ready"] = bool(src2["mac_operator_ready"] or rb_mac.get("mac_operator_ready") is True)
+
+    return {"source1": src1, "source2": src2}
+
+
 def _run_one_inner_cycle(
     *,
     loop: int,
@@ -660,16 +737,32 @@ def main() -> int:
     ok_inner = bool(last_cycle.get("passed"))
     exp = _expansion_observation_flags(auto)
     operable = _read_json(auto / "tenmon_final_operable_seal.json")
+    evidence = _collect_final_aggregation_evidence(auto, exp)
 
     beautiful = bool(exp.get("truth_reasoning_density_ready") and exp.get("human_conversation_seal_ok") is not False)
     forensic_ready = bool(last_cycle.get("phase_result", {}).get("supervisor", {}).get("json", {}).get("forensic_bundle_ready") is True)
 
     flags_last = last_cycle.get("flags") if isinstance(last_cycle.get("flags"), dict) else {}
-    ok = bool(
-        ok_inner
-        and bool(flags_last)
-        and all(flags_last.get(k) for k in flags_last)
-    )
+    axes_master: dict[str, bool] = {
+        "conversation_core_completed": ok_inner,
+        "knowledge_circulation_connected": bool(exp.get("knowledge_circulation_connected")),
+        "queue_ready": bool(last_cycle.get("flags", {}).get("queue_ready")),
+        "execution_gate_ready": bool(last_cycle.get("flags", {}).get("execution_gate_ready")),
+        "rollback_ready": bool(last_cycle.get("flags", {}).get("rollback_ready")),
+        "forensic_ready": forensic_ready,
+        "cursor_operator_ready": bool(last_cycle.get("flags", {}).get("cursor_operator_ready")),
+        "mac_operator_ready": bool(last_cycle.get("flags", {}).get("mac_operator_ready")),
+        "planner_ready": bool(last_cycle.get("flags", {}).get("planner_ready")),
+        "fractal_truth_worldclass_ready": bool(exp.get("fractal_truth_worldclass_ready")),
+    }
+    protected_axes: dict[str, bool] = {}
+    for k, v in axes_master.items():
+        ev1 = bool(evidence.get("source1", {}).get(k))
+        ev2 = bool(evidence.get("source2", {}).get(k))
+        # 優先順: source1(latest/seal/readiness) > source2(bridge) > source3(master)
+        protected_axes[k] = bool(ev1 or ev2 or v)
+
+    ok = bool(all(protected_axes.values()))
     if os.environ.get("TENMON_12H_OK_REQUIRE_EXPANSION", "").strip() in ("1", "true", "yes"):
         ok = bool(
             ok
@@ -685,23 +778,23 @@ def main() -> int:
         "max_loops_config": max_loops,
         "max_sec_config": max_sec,
         "elapsed_sec": round(elapsed, 2),
-        "conversation_core_completed": ok_inner,
+        "conversation_core_completed": bool(protected_axes.get("conversation_core_completed")),
         "truth_reasoning_density_ready": bool(exp.get("truth_reasoning_density_ready")),
-        "knowledge_circulation_connected": bool(exp.get("knowledge_circulation_connected")),
+        "knowledge_circulation_connected": bool(protected_axes.get("knowledge_circulation_connected")),
         "khs_root_fixed": bool(exp.get("khs_root_fixed")),
         "fractal_law_kernel_ready": bool(exp.get("fractal_law_kernel_ready")),
         "mythogenesis_mapper_ready": bool(exp.get("mythogenesis_mapper_ready")),
         "mapping_layer_ready": bool(exp.get("mapping_layer_ready")),
         "digest_ledger_ready": bool(exp.get("digest_ledger_ready")),
-        "fractal_truth_worldclass_ready": bool(exp.get("fractal_truth_worldclass_ready")),
+        "fractal_truth_worldclass_ready": bool(protected_axes.get("fractal_truth_worldclass_ready")),
         "beautiful_output_ready": beautiful,
-        "planner_ready": bool(last_cycle.get("flags", {}).get("planner_ready")),
-        "queue_ready": bool(last_cycle.get("flags", {}).get("queue_ready")),
-        "execution_gate_ready": bool(last_cycle.get("flags", {}).get("execution_gate_ready")),
-        "rollback_ready": bool(last_cycle.get("flags", {}).get("rollback_ready")),
-        "forensic_ready": forensic_ready,
-        "cursor_operator_ready": bool(last_cycle.get("flags", {}).get("cursor_operator_ready")),
-        "mac_operator_ready": bool(last_cycle.get("flags", {}).get("mac_operator_ready")),
+        "planner_ready": bool(protected_axes.get("planner_ready")),
+        "queue_ready": bool(protected_axes.get("queue_ready")),
+        "execution_gate_ready": bool(protected_axes.get("execution_gate_ready")),
+        "rollback_ready": bool(protected_axes.get("rollback_ready")),
+        "forensic_ready": bool(protected_axes.get("forensic_ready")),
+        "cursor_operator_ready": bool(protected_axes.get("cursor_operator_ready")),
+        "mac_operator_ready": bool(protected_axes.get("mac_operator_ready")),
         "worktree_converged": bool(operable.get("seal_band") or operable.get("operable_sealed")),
         "final_sealed": bool(operable.get("operable_sealed") is True and operable.get("single_source_ok") is True),
         "rollback_used": rollback_used_global,

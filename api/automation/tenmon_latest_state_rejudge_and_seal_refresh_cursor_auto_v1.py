@@ -127,6 +127,7 @@ def main() -> int:
     seal_path = auto / "tenmon_final_operable_seal.json"
     fractal_path = auto / "tenmon_fractal_truth_worldclass_seal_cursor_auto_v1.json"
     kcirc_path = auto / "tenmon_knowledge_circulation_worldclass_output_seal_cursor_auto_v1.json"
+    planner_rejudge_path = auto / "tenmon_planner_and_fractal_truth_rejudge_cursor_auto_v1.json"
     cursor_ready_path = auto / "tenmon_cursor_operator_readiness_final_cursor_auto_v1.json"
     mac_ready_path = auto / "tenmon_mac_operator_readiness_final_cursor_auto_v1.json"
 
@@ -154,6 +155,7 @@ def main() -> int:
     seal = _read_json(seal_path)
     fractal = _read_json(fractal_path)
     kcirc = _read_json(kcirc_path)
+    planner_rejudge = _read_json(planner_rejudge_path)
     cursor_ready = _read_json(cursor_ready_path)
     mac_ready = _read_json(mac_ready_path)
     latest_entry = _pick_latest_entry(bundle)
@@ -192,9 +194,16 @@ def main() -> int:
     axes_class["fractal_truth_worldclass_ready"] = "NEEDS_REJUDGE"
     axes_new["fractal_truth_worldclass_ready"] = fractal_truth_worldclass_ready
 
-    # planner は再判定対象。operator 軸は readiness final の実測 JSON を優先採用
-    axes_class["planner_ready"] = "NEEDS_REJUDGE"
-    axes_new["planner_ready"] = bool(master.get("planner_ready") is True)
+    # planner は planner/fractal rejudge の実測 JSON を優先採用
+    planner_axes = planner_rejudge.get("axes_classification") if isinstance(planner_rejudge.get("axes_classification"), dict) else {}
+    planner_gap = planner_rejudge.get("remaining_gap_reason") if isinstance(planner_rejudge.get("remaining_gap_reason"), dict) else {}
+    planner_evidence_ok = bool(
+        planner_rejudge.get("planner_ready") is True
+        and (planner_axes.get("planner_ready") in ("REFRESHABLE", "RESOLVED_BY_EVIDENCE"))
+        and planner_gap.get("planner_ready") is None
+    )
+    axes_class["planner_ready"] = "REFRESHABLE" if planner_evidence_ok else "NEEDS_REJUDGE"
+    axes_new["planner_ready"] = True if planner_evidence_ok else bool(master.get("planner_ready") is True)
     cursor_operator_evidence_ok = bool(
         cursor_ready.get("ok") is True and cursor_ready.get("cursor_operator_ready") is True
     )
@@ -257,6 +266,7 @@ def main() -> int:
         "scorecard_worldclass_ready": bool(score.get("worldclass_ready") is True),
         "bridge_ok": bool(bridge.get("ok") is True),
         "queue_error": q_err,
+        "planner_evidence_ok": planner_evidence_ok,
         "cursor_operator_evidence_ok": cursor_operator_evidence_ok,
         "mac_operator_evidence_ok": mac_operator_evidence_ok,
     }

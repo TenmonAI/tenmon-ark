@@ -5,6 +5,7 @@
 
 import {
   type DensityContractV1,
+  type ResponsePlan,
   applyLongformDensityProfileV1,
   applyLongformWorldclassThreeArcV1,
   applyPackFFallbackRoutePolishV1,
@@ -19,6 +20,7 @@ import {
   parseExplicitCharTargetFromUserMessageV1,
   resealFinalMainlineSurfaceV1,
   suppressInterrogativeTemplateSpamV1,
+  enrichKuMultipassFromResponsePlanV1,
 } from "../../planning/responsePlanCore.js";
 import {
   applyRuntimeSurfaceRepairV1,
@@ -54,6 +56,12 @@ import { appendConversationDensityLedgerRuntimeV1 } from "../../core/conversatio
 import { applyKokuzoSeedLearningBridgeV1 } from "../../core/kokuzoSeedLearningBridgeV1.js";
 import { tryAppendEvolutionLedgerSnapshotOnceV1 } from "../../core/evolutionLedgerV1.js";
 import { finalizeApplyTenmonSurfaceContractV1 } from "../../core/tenmonSurfaceContractV1.js";
+import {
+  TENMON_LONGFORM_CONTRACT_V1,
+  composeTenmonLongformV1,
+  inferTenmonLongformModeV1,
+} from "../../core/tenmonLongformComposerV1.js";
+import { selectTenmonSurfaceStyleV1 } from "../../core/tenmonSurfaceStyleSelectorV1.js";
 
 /** FINAL_DENSITY_CONTRACT_AND_GENERAL_SOURCEPACK_V1: 密度対象 route（routeReason 不変・PATCH29 期待と独立） */
 const DENSITY_CONTRACT_ROUTE_REASONS = new Set<string>([
@@ -647,6 +655,9 @@ export function applyFinalAnswerConstitutionAndWisdomReducerV1(payload: any): an
   } catch {}
 
   const responsePlan = ku.responsePlan && typeof ku.responsePlan === "object" ? ku.responsePlan : null;
+  try {
+    enrichKuMultipassFromResponsePlanV1(ku as Record<string, unknown>, responsePlan as ResponsePlan | null);
+  } catch {}
   const centerContract = humanReadableCenterContractFromKu(ku as Record<string, unknown>);
   const missionRaw =
     String(ku.answerMode || ku.routeClass || "analysis").trim() || "analysis";
@@ -871,6 +882,45 @@ export function applyFinalAnswerConstitutionAndWisdomReducerV1(payload: any): an
       /** PACK_E: composer 非経由の明示長文にも五段骨格ラベルを付与 */
       body = applyTenmonLongformSectionLabelsOnlyV1(body, userMessageForSurface);
     }
+
+    /** TENMON_LONGFORM_COMPOSER_AND_SURFACE_STYLE_CURSOR_AUTO_V2: longform骨格 + style選択（最小 glue） */
+    try {
+      const __mode = inferTenmonLongformModeV1(userMessageForSurface, body);
+      const __centerClaimHint = String(
+        (ku as any)?.thoughtCoreSummary?.truthStructureCenterClaimHint ??
+          (ku as any)?.thoughtCoreSummary?.centerLabel ??
+          (ku as any)?.centerLabel ??
+          "",
+      ).trim();
+      const __nextAxisHint = String(
+        (ku as any)?.thoughtCoreSummary?.truthStructureNextAxisHint ??
+          (ku as any)?.thoughtCoreSummary?.truthStructureNextAxis ??
+          "",
+      ).trim();
+      const __lf = composeTenmonLongformV1({
+        mode: __mode,
+        body,
+        centerClaim: __centerClaimHint,
+        nextAxis: __nextAxisHint,
+        targetLength: __explicitForRepair >= 2800 ? 3000 : (__explicitForRepair >= 900 ? 1000 : 0),
+      });
+      if (__lf.longform) body = __lf.longform;
+      (ku as any).tenmonLongformContractV1 = TENMON_LONGFORM_CONTRACT_V1;
+      (ku as any).tenmonLongformTraceV1 = {
+        mode: __lf.mode,
+        centerLockPassed: __lf.centerLockPassed,
+        outputLength: String(body || "").length,
+      };
+      const __style = selectTenmonSurfaceStyleV1({
+        routeReason: rr,
+        rawMessage: userMessageForSurface,
+        mode: __lf.mode,
+        targetLength: __explicitForRepair,
+      });
+      (ku as any).surfaceStyle = __style.style;
+      (ku as any).closingType = __style.closingType;
+      (ku as any).surfaceStyleSelectionV1 = __style;
+    } catch {}
   }
 
   /** CHAT_TS_EXIT_CONTRACT_LOCK_V1: longform で semanticBody が空なら user 主題句を残す（上書きしない） */

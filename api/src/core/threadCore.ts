@@ -34,8 +34,16 @@ export type ThreadDialogueContract = {
 
 export type ThreadCore = {
   threadId: string;
+  threadCenter?: string | null;
   centerKey: string | null;
   centerLabel: string | null;
+  centerMeaning?: string | null;
+  scriptureCenter?: string | null;
+  userIntentThread?: string | null;
+  currentQuestionRole?: string | null;
+  unresolvedAxis?: string | null;
+  priorVerdict?: string | null;
+  threadCenterRecoveryHint?: string | null;
   /** 中心命題（短文） */
   centerClaim?: string | null;
   /** 直前回答の本質（短文） */
@@ -86,6 +94,17 @@ export type ThreadCore = {
     session: Record<string, unknown>;
     persistentCanon: Record<string, unknown>;
     growth: Record<string, unknown>;
+  } | null;
+  /** user-specific lexicon memory（runtime projection） */
+  userLexiconMemoryV1?: {
+    schema?: string;
+    preferred_lexicon?: Record<string, string>;
+    distinction_rules?: string[];
+    prohibited_forms?: string[];
+    seen_terms?: string[];
+    drift_hits?: string[];
+    drift_detected?: boolean;
+    updated_at?: string;
   } | null;
 };
 
