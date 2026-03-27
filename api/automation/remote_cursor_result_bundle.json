@@ -1,7 +1,7 @@
 {
   "version": 1,
   "card": "TENMON_REMOTE_CURSOR_COMMAND_CENTER_CURSOR_AUTO_V1",
-  "updatedAt": "2026-03-27T08:23:40Z",
+  "updatedAt": "2026-03-27T08:30:48Z",
   "autonomy_execution_gate_policy_v1": {
     "version": 1,
     "card": "TENMON_AUTONOMY_EXECUTION_GATE_AND_RESULT_RETURN_CURSOR_AUTO_V1",
@@ -22101,6 +22101,3294 @@
       },
       "forensic_bundle": {},
       "next_card": "TENMON_OS_OUTPUT_CONTRACT_NORMALIZE_CURSOR_AUTO_V1"
+    },
+    {
+      "schema_version": 3,
+      "card": "TENMON_CURSOR_OPERATOR_AUTONOMY_BRIDGE_CURSOR_AUTO_V1",
+      "cursor_card": "TENMON_WORLDCLASS_FINAL_REASONING_DENSITY_CURSOR_AUTO_V1",
+      "queue_id": "",
+      "operator_status": "queued",
+      "status": "queued",
+      "started_at": "2026-03-27T08:25:25Z",
+      "ended_at": "2026-03-27T08:25:39Z",
+      "summary_path": "/var/log/tenmon/autonomy_safe/TENMON_CURSOR_OPERATOR_AUTONOMY_BRIDGE_CURSOR_AUTO_V1__TENMON_WORLDCLASS_FINAL_REASONING_DENSITY_CURSOR_AUTO_V1__20260327T082525Z.json",
+      "skipped_probe_mode": false,
+      "execution_gate": {
+        "build_pass": true,
+        "restart_pass": true,
+        "audit_pass": true,
+        "probe_pass": true,
+        "gate_success": true
+      },
+      "restart_info": {
+        "ok": true,
+        "exit_code": 0
+      },
+      "gate_wait_seconds": 1.038,
+      "gate_retry_count": 1,
+      "gate_last_error": null,
+      "build": {
+        "ok": true,
+        "exit_code": 0,
+        "stderr_tail": ""
+      },
+      "gates": {
+        "health": {
+          "ok_http": true,
+          "status": 200,
+          "json": {
+            "ok": true,
+            "timestamp": "2026-03-27T08:25:39.292Z",
+            "gitSha": "0b8c1c8",
+            "readiness": {
+              "ready": true,
+              "stage": "READY",
+              "uptimeMs": 749,
+              "listenReady": true,
+              "dbReady": {
+                "kokuzo": true,
+                "audit": true,
+                "persona": true
+              },
+              "kokuzoVerified": true
+            }
+          }
+        },
+        "audit": {
+          "ok_http": true,
+          "status": 200,
+          "json": {
+            "constitution": {
+              "OMEGA_CONTRACT_v1": "e897a092cfc4048fbc9116879c02455a90759c09488e4c891d9f150fc8446ac4",
+              "PDCA_BUILD_CONTRACT_v1": "600554aef7e529f5e4a6261dfe4383bc3cb4c1d5c1a2e280b5410d0cf7e6a8c3",
+              "KHS_RUNTIME_CONTRACT_v1": "9f9ff182b7cb50e20bff30733f9bb6d16e91049146dd1e58ea39b41d7a9ec951"
+            },
+            "ok": true,
+            "timestamp": "2026-03-27T08:25:39.313Z",
+            "gitSha": "0b8c1c8",
+            "pid": 2034970,
+            "uptime": 1,
+            "readiness": {
+              "ready": true,
+              "stage": "READY",
+              "uptimeMs": 758,
+              "listenReady": true,
+              "dbReady": {
+                "kokuzo": true,
+                "audit": true,
+                "persona": true
+              },
+              "kokuzoVerified": true
+            },
+            "build": {
+              "mark": "BUILD_MARK:DET_RECALL_V1+MEMLOG_V1+LOW_SIGNAL_V1+LLMCHAT_V1",
+              "features": {
+                "detRecallPassphrase": true,
+                "memPersistLog": true,
+                "lowSignalFallback": true,
+                "llmChat": true,
+                "koshikiKernel": true
+              }
+            }
+          }
+        },
+        "audit_build": {
+          "ok_http": true,
+          "status": 200,
+          "json": {
+            "ok": true,
+            "card": "TENMON_AUDIT_BUILD_ROUTE_RESTORE_V1",
+            "timestamp": "2026-03-27T08:25:39.316Z",
+            "gitSha": "0b8c1c8",
+            "readiness": {
+              "ready": true,
+              "stage": "READY",
+              "uptimeMs": 767,
+              "listenReady": true,
+              "dbReady": {
+                "kokuzo": true,
+                "audit": true,
+                "persona": true
+              },
+              "kokuzoVerified": true
+            },
+            "build": {
+              "mark": "BUILD_MARK:DET_RECALL_V1+MEMLOG_V1+LOW_SIGNAL_V1+LLMCHAT_V1",
+              "features": {
+                "detRecallPassphrase": true,
+                "memPersistLog": true,
+                "lowSignalFallback": true,
+                "llmChat": true,
+                "koshikiKernel": true
+              }
+            },
+            "contract": {
+              "endpoint": "/api/audit.build",
+              "minimal_fields": [
+                "ok",
+                "timestamp",
+                "gitSha",
+                "readiness",
+                "build"
+              ],
+              "purpose": "minimum build audit contract for stabilization cards"
+            }
+          }
+        }
+      },
+      "forensic_bundle": {},
+      "next_card": "TENMON_OS_OUTPUT_CONTRACT_NORMALIZE_CURSOR_AUTO_V1"
+    },
+    {
+      "schema_version": 3,
+      "card": "TENMON_CURSOR_OPERATOR_AUTONOMY_BRIDGE_CURSOR_AUTO_V1",
+      "cursor_card": "TENMON_WORLDCLASS_FINAL_REASONING_DENSITY_CURSOR_AUTO_V1",
+      "queue_id": "",
+      "operator_status": "queued",
+      "status": "queued",
+      "started_at": "2026-03-27T08:25:39Z",
+      "ended_at": "2026-03-27T08:25:52Z",
+      "summary_path": "/var/log/tenmon/autonomy_safe/TENMON_CURSOR_OPERATOR_AUTONOMY_BRIDGE_CURSOR_AUTO_V1__TENMON_WORLDCLASS_FINAL_REASONING_DENSITY_CURSOR_AUTO_V1__20260327T082539Z.json",
+      "skipped_probe_mode": false,
+      "execution_gate": {
+        "build_pass": true,
+        "restart_pass": true,
+        "audit_pass": true,
+        "probe_pass": true,
+        "gate_success": true
+      },
+      "restart_info": {
+        "ok": true,
+        "exit_code": 0
+      },
+      "gate_wait_seconds": 1.033,
+      "gate_retry_count": 1,
+      "gate_last_error": null,
+      "build": {
+        "ok": true,
+        "exit_code": 0,
+        "stderr_tail": ""
+      },
+      "gates": {
+        "health": {
+          "ok_http": true,
+          "status": 200,
+          "json": {
+            "ok": true,
+            "timestamp": "2026-03-27T08:25:52.830Z",
+            "gitSha": "0b8c1c8",
+            "readiness": {
+              "ready": true,
+              "stage": "READY",
+              "uptimeMs": 755,
+              "listenReady": true,
+              "dbReady": {
+                "kokuzo": true,
+                "audit": true,
+                "persona": true
+              },
+              "kokuzoVerified": true
+            }
+          }
+        },
+        "audit": {
+          "ok_http": true,
+          "status": 200,
+          "json": {
+            "constitution": {
+              "OMEGA_CONTRACT_v1": "e897a092cfc4048fbc9116879c02455a90759c09488e4c891d9f150fc8446ac4",
+              "PDCA_BUILD_CONTRACT_v1": "600554aef7e529f5e4a6261dfe4383bc3cb4c1d5c1a2e280b5410d0cf7e6a8c3",
+              "KHS_RUNTIME_CONTRACT_v1": "9f9ff182b7cb50e20bff30733f9bb6d16e91049146dd1e58ea39b41d7a9ec951"
+            },
+            "ok": true,
+            "timestamp": "2026-03-27T08:25:52.847Z",
+            "gitSha": "0b8c1c8",
+            "pid": 2035134,
+            "uptime": 1,
+            "readiness": {
+              "ready": true,
+              "stage": "READY",
+              "uptimeMs": 763,
+              "listenReady": true,
+              "dbReady": {
+                "kokuzo": true,
+                "audit": true,
+                "persona": true
+              },
+              "kokuzoVerified": true
+            },
+            "build": {
+              "mark": "BUILD_MARK:DET_RECALL_V1+MEMLOG_V1+LOW_SIGNAL_V1+LLMCHAT_V1",
+              "features": {
+                "detRecallPassphrase": true,
+                "memPersistLog": true,
+                "lowSignalFallback": true,
+                "llmChat": true,
+                "koshikiKernel": true
+              }
+            }
+          }
+        },
+        "audit_build": {
+          "ok_http": true,
+          "status": 200,
+          "json": {
+            "ok": true,
+            "card": "TENMON_AUDIT_BUILD_ROUTE_RESTORE_V1",
+            "timestamp": "2026-03-27T08:25:52.849Z",
+            "gitSha": "0b8c1c8",
+            "readiness": {
+              "ready": true,
+              "stage": "READY",
+              "uptimeMs": 769,
+              "listenReady": true,
+              "dbReady": {
+                "kokuzo": true,
+                "audit": true,
+                "persona": true
+              },
+              "kokuzoVerified": true
+            },
+            "build": {
+              "mark": "BUILD_MARK:DET_RECALL_V1+MEMLOG_V1+LOW_SIGNAL_V1+LLMCHAT_V1",
+              "features": {
+                "detRecallPassphrase": true,
+                "memPersistLog": true,
+                "lowSignalFallback": true,
+                "llmChat": true,
+                "koshikiKernel": true
+              }
+            },
+            "contract": {
+              "endpoint": "/api/audit.build",
+              "minimal_fields": [
+                "ok",
+                "timestamp",
+                "gitSha",
+                "readiness",
+                "build"
+              ],
+              "purpose": "minimum build audit contract for stabilization cards"
+            }
+          }
+        }
+      },
+      "forensic_bundle": {},
+      "next_card": "TENMON_OS_OUTPUT_CONTRACT_NORMALIZE_CURSOR_AUTO_V1"
+    },
+    {
+      "schema_version": 3,
+      "card": "TENMON_CURSOR_OPERATOR_AUTONOMY_BRIDGE_CURSOR_AUTO_V1",
+      "cursor_card": "TENMON_WORLDCLASS_FINAL_REASONING_DENSITY_CURSOR_AUTO_V1",
+      "queue_id": "",
+      "operator_status": "queued",
+      "status": "queued",
+      "started_at": "2026-03-27T08:25:53Z",
+      "ended_at": "2026-03-27T08:26:06Z",
+      "summary_path": "/var/log/tenmon/autonomy_safe/TENMON_CURSOR_OPERATOR_AUTONOMY_BRIDGE_CURSOR_AUTO_V1__TENMON_WORLDCLASS_FINAL_REASONING_DENSITY_CURSOR_AUTO_V1__20260327T082553Z.json",
+      "skipped_probe_mode": false,
+      "execution_gate": {
+        "build_pass": true,
+        "restart_pass": true,
+        "audit_pass": true,
+        "probe_pass": true,
+        "gate_success": true
+      },
+      "restart_info": {
+        "ok": true,
+        "exit_code": 0
+      },
+      "gate_wait_seconds": 1.038,
+      "gate_retry_count": 1,
+      "gate_last_error": null,
+      "build": {
+        "ok": true,
+        "exit_code": 0,
+        "stderr_tail": ""
+      },
+      "gates": {
+        "health": {
+          "ok_http": true,
+          "status": 200,
+          "json": {
+            "ok": true,
+            "timestamp": "2026-03-27T08:26:06.488Z",
+            "gitSha": "0b8c1c8",
+            "readiness": {
+              "ready": true,
+              "stage": "READY",
+              "uptimeMs": 737,
+              "listenReady": true,
+              "dbReady": {
+                "kokuzo": true,
+                "audit": true,
+                "persona": true
+              },
+              "kokuzoVerified": true
+            }
+          }
+        },
+        "audit": {
+          "ok_http": true,
+          "status": 200,
+          "json": {
+            "constitution": {
+              "OMEGA_CONTRACT_v1": "e897a092cfc4048fbc9116879c02455a90759c09488e4c891d9f150fc8446ac4",
+              "PDCA_BUILD_CONTRACT_v1": "600554aef7e529f5e4a6261dfe4383bc3cb4c1d5c1a2e280b5410d0cf7e6a8c3",
+              "KHS_RUNTIME_CONTRACT_v1": "9f9ff182b7cb50e20bff30733f9bb6d16e91049146dd1e58ea39b41d7a9ec951"
+            },
+            "ok": true,
+            "timestamp": "2026-03-27T08:26:06.509Z",
+            "gitSha": "0b8c1c8",
+            "pid": 2035256,
+            "uptime": 1,
+            "readiness": {
+              "ready": true,
+              "stage": "READY",
+              "uptimeMs": 746,
+              "listenReady": true,
+              "dbReady": {
+                "kokuzo": true,
+                "audit": true,
+                "persona": true
+              },
+              "kokuzoVerified": true
+            },
+            "build": {
+              "mark": "BUILD_MARK:DET_RECALL_V1+MEMLOG_V1+LOW_SIGNAL_V1+LLMCHAT_V1",
+              "features": {
+                "detRecallPassphrase": true,
+                "memPersistLog": true,
+                "lowSignalFallback": true,
+                "llmChat": true,
+                "koshikiKernel": true
+              }
+            }
+          }
+        },
+        "audit_build": {
+          "ok_http": true,
+          "status": 200,
+          "json": {
+            "ok": true,
+            "card": "TENMON_AUDIT_BUILD_ROUTE_RESTORE_V1",
+            "timestamp": "2026-03-27T08:26:06.511Z",
+            "gitSha": "0b8c1c8",
+            "readiness": {
+              "ready": true,
+              "stage": "READY",
+              "uptimeMs": 753,
+              "listenReady": true,
+              "dbReady": {
+                "kokuzo": true,
+                "audit": true,
+                "persona": true
+              },
+              "kokuzoVerified": true
+            },
+            "build": {
+              "mark": "BUILD_MARK:DET_RECALL_V1+MEMLOG_V1+LOW_SIGNAL_V1+LLMCHAT_V1",
+              "features": {
+                "detRecallPassphrase": true,
+                "memPersistLog": true,
+                "lowSignalFallback": true,
+                "llmChat": true,
+                "koshikiKernel": true
+              }
+            },
+            "contract": {
+              "endpoint": "/api/audit.build",
+              "minimal_fields": [
+                "ok",
+                "timestamp",
+                "gitSha",
+                "readiness",
+                "build"
+              ],
+              "purpose": "minimum build audit contract for stabilization cards"
+            }
+          }
+        }
+      },
+      "forensic_bundle": {},
+      "next_card": "TENMON_OS_OUTPUT_CONTRACT_NORMALIZE_CURSOR_AUTO_V1"
+    },
+    {
+      "schema_version": 3,
+      "card": "TENMON_CURSOR_OPERATOR_AUTONOMY_BRIDGE_CURSOR_AUTO_V1",
+      "cursor_card": "TENMON_WORLDCLASS_FINAL_REASONING_DENSITY_CURSOR_AUTO_V1",
+      "queue_id": "",
+      "operator_status": "queued",
+      "status": "queued",
+      "started_at": "2026-03-27T08:26:06Z",
+      "ended_at": "2026-03-27T08:26:20Z",
+      "summary_path": "/var/log/tenmon/autonomy_safe/TENMON_CURSOR_OPERATOR_AUTONOMY_BRIDGE_CURSOR_AUTO_V1__TENMON_WORLDCLASS_FINAL_REASONING_DENSITY_CURSOR_AUTO_V1__20260327T082606Z.json",
+      "skipped_probe_mode": false,
+      "execution_gate": {
+        "build_pass": true,
+        "restart_pass": true,
+        "audit_pass": true,
+        "probe_pass": true,
+        "gate_success": true
+      },
+      "restart_info": {
+        "ok": true,
+        "exit_code": 0
+      },
+      "gate_wait_seconds": 1.034,
+      "gate_retry_count": 1,
+      "gate_last_error": null,
+      "build": {
+        "ok": true,
+        "exit_code": 0,
+        "stderr_tail": ""
+      },
+      "gates": {
+        "health": {
+          "ok_http": true,
+          "status": 200,
+          "json": {
+            "ok": true,
+            "timestamp": "2026-03-27T08:26:20.283Z",
+            "gitSha": "0b8c1c8",
+            "readiness": {
+              "ready": true,
+              "stage": "READY",
+              "uptimeMs": 736,
+              "listenReady": true,
+              "dbReady": {
+                "kokuzo": true,
+                "audit": true,
+                "persona": true
+              },
+              "kokuzoVerified": true
+            }
+          }
+        },
+        "audit": {
+          "ok_http": true,
+          "status": 200,
+          "json": {
+            "constitution": {
+              "OMEGA_CONTRACT_v1": "e897a092cfc4048fbc9116879c02455a90759c09488e4c891d9f150fc8446ac4",
+              "PDCA_BUILD_CONTRACT_v1": "600554aef7e529f5e4a6261dfe4383bc3cb4c1d5c1a2e280b5410d0cf7e6a8c3",
+              "KHS_RUNTIME_CONTRACT_v1": "9f9ff182b7cb50e20bff30733f9bb6d16e91049146dd1e58ea39b41d7a9ec951"
+            },
+            "ok": true,
+            "timestamp": "2026-03-27T08:26:20.300Z",
+            "gitSha": "0b8c1c8",
+            "pid": 2035367,
+            "uptime": 1,
+            "readiness": {
+              "ready": true,
+              "stage": "READY",
+              "uptimeMs": 743,
+              "listenReady": true,
+              "dbReady": {
+                "kokuzo": true,
+                "audit": true,
+                "persona": true
+              },
+              "kokuzoVerified": true
+            },
+            "build": {
+              "mark": "BUILD_MARK:DET_RECALL_V1+MEMLOG_V1+LOW_SIGNAL_V1+LLMCHAT_V1",
+              "features": {
+                "detRecallPassphrase": true,
+                "memPersistLog": true,
+                "lowSignalFallback": true,
+                "llmChat": true,
+                "koshikiKernel": true
+              }
+            }
+          }
+        },
+        "audit_build": {
+          "ok_http": true,
+          "status": 200,
+          "json": {
+            "ok": true,
+            "card": "TENMON_AUDIT_BUILD_ROUTE_RESTORE_V1",
+            "timestamp": "2026-03-27T08:26:20.303Z",
+            "gitSha": "0b8c1c8",
+            "readiness": {
+              "ready": true,
+              "stage": "READY",
+              "uptimeMs": 750,
+              "listenReady": true,
+              "dbReady": {
+                "kokuzo": true,
+                "audit": true,
+                "persona": true
+              },
+              "kokuzoVerified": true
+            },
+            "build": {
+              "mark": "BUILD_MARK:DET_RECALL_V1+MEMLOG_V1+LOW_SIGNAL_V1+LLMCHAT_V1",
+              "features": {
+                "detRecallPassphrase": true,
+                "memPersistLog": true,
+                "lowSignalFallback": true,
+                "llmChat": true,
+                "koshikiKernel": true
+              }
+            },
+            "contract": {
+              "endpoint": "/api/audit.build",
+              "minimal_fields": [
+                "ok",
+                "timestamp",
+                "gitSha",
+                "readiness",
+                "build"
+              ],
+              "purpose": "minimum build audit contract for stabilization cards"
+            }
+          }
+        }
+      },
+      "forensic_bundle": {},
+      "next_card": "TENMON_OS_OUTPUT_CONTRACT_NORMALIZE_CURSOR_AUTO_V1"
+    },
+    {
+      "schema_version": 3,
+      "card": "TENMON_CURSOR_OPERATOR_AUTONOMY_BRIDGE_CURSOR_AUTO_V1",
+      "cursor_card": "TENMON_WORLDCLASS_FINAL_REASONING_DENSITY_CURSOR_AUTO_V1",
+      "queue_id": "",
+      "operator_status": "queued",
+      "status": "queued",
+      "started_at": "2026-03-27T08:26:20Z",
+      "ended_at": "2026-03-27T08:26:33Z",
+      "summary_path": "/var/log/tenmon/autonomy_safe/TENMON_CURSOR_OPERATOR_AUTONOMY_BRIDGE_CURSOR_AUTO_V1__TENMON_WORLDCLASS_FINAL_REASONING_DENSITY_CURSOR_AUTO_V1__20260327T082620Z.json",
+      "skipped_probe_mode": false,
+      "execution_gate": {
+        "build_pass": true,
+        "restart_pass": true,
+        "audit_pass": true,
+        "probe_pass": true,
+        "gate_success": true
+      },
+      "restart_info": {
+        "ok": true,
+        "exit_code": 0
+      },
+      "gate_wait_seconds": 1.038,
+      "gate_retry_count": 1,
+      "gate_last_error": null,
+      "build": {
+        "ok": true,
+        "exit_code": 0,
+        "stderr_tail": ""
+      },
+      "gates": {
+        "health": {
+          "ok_http": true,
+          "status": 200,
+          "json": {
+            "ok": true,
+            "timestamp": "2026-03-27T08:26:33.833Z",
+            "gitSha": "0b8c1c8",
+            "readiness": {
+              "ready": true,
+              "stage": "READY",
+              "uptimeMs": 714,
+              "listenReady": true,
+              "dbReady": {
+                "kokuzo": true,
+                "audit": true,
+                "persona": true
+              },
+              "kokuzoVerified": true
+            }
+          }
+        },
+        "audit": {
+          "ok_http": true,
+          "status": 200,
+          "json": {
+            "constitution": {
+              "OMEGA_CONTRACT_v1": "e897a092cfc4048fbc9116879c02455a90759c09488e4c891d9f150fc8446ac4",
+              "PDCA_BUILD_CONTRACT_v1": "600554aef7e529f5e4a6261dfe4383bc3cb4c1d5c1a2e280b5410d0cf7e6a8c3",
+              "KHS_RUNTIME_CONTRACT_v1": "9f9ff182b7cb50e20bff30733f9bb6d16e91049146dd1e58ea39b41d7a9ec951"
+            },
+            "ok": true,
+            "timestamp": "2026-03-27T08:26:33.853Z",
+            "gitSha": "0b8c1c8",
+            "pid": 2035511,
+            "uptime": 1,
+            "readiness": {
+              "ready": true,
+              "stage": "READY",
+              "uptimeMs": 722,
+              "listenReady": true,
+              "dbReady": {
+                "kokuzo": true,
+                "audit": true,
+                "persona": true
+              },
+              "kokuzoVerified": true
+            },
+            "build": {
+              "mark": "BUILD_MARK:DET_RECALL_V1+MEMLOG_V1+LOW_SIGNAL_V1+LLMCHAT_V1",
+              "features": {
+                "detRecallPassphrase": true,
+                "memPersistLog": true,
+                "lowSignalFallback": true,
+                "llmChat": true,
+                "koshikiKernel": true
+              }
+            }
+          }
+        },
+        "audit_build": {
+          "ok_http": true,
+          "status": 200,
+          "json": {
+            "ok": true,
+            "card": "TENMON_AUDIT_BUILD_ROUTE_RESTORE_V1",
+            "timestamp": "2026-03-27T08:26:33.856Z",
+            "gitSha": "0b8c1c8",
+            "readiness": {
+              "ready": true,
+              "stage": "READY",
+              "uptimeMs": 730,
+              "listenReady": true,
+              "dbReady": {
+                "kokuzo": true,
+                "audit": true,
+                "persona": true
+              },
+              "kokuzoVerified": true
+            },
+            "build": {
+              "mark": "BUILD_MARK:DET_RECALL_V1+MEMLOG_V1+LOW_SIGNAL_V1+LLMCHAT_V1",
+              "features": {
+                "detRecallPassphrase": true,
+                "memPersistLog": true,
+                "lowSignalFallback": true,
+                "llmChat": true,
+                "koshikiKernel": true
+              }
+            },
+            "contract": {
+              "endpoint": "/api/audit.build",
+              "minimal_fields": [
+                "ok",
+                "timestamp",
+                "gitSha",
+                "readiness",
+                "build"
+              ],
+              "purpose": "minimum build audit contract for stabilization cards"
+            }
+          }
+        }
+      },
+      "forensic_bundle": {},
+      "next_card": "TENMON_OS_OUTPUT_CONTRACT_NORMALIZE_CURSOR_AUTO_V1"
+    },
+    {
+      "schema_version": 3,
+      "card": "TENMON_CURSOR_OPERATOR_AUTONOMY_BRIDGE_CURSOR_AUTO_V1",
+      "cursor_card": "TENMON_WORLDCLASS_FINAL_REASONING_DENSITY_CURSOR_AUTO_V1",
+      "queue_id": "",
+      "operator_status": "queued",
+      "status": "queued",
+      "started_at": "2026-03-27T08:26:34Z",
+      "ended_at": "2026-03-27T08:26:47Z",
+      "summary_path": "/var/log/tenmon/autonomy_safe/TENMON_CURSOR_OPERATOR_AUTONOMY_BRIDGE_CURSOR_AUTO_V1__TENMON_WORLDCLASS_FINAL_REASONING_DENSITY_CURSOR_AUTO_V1__20260327T082634Z.json",
+      "skipped_probe_mode": false,
+      "execution_gate": {
+        "build_pass": true,
+        "restart_pass": true,
+        "audit_pass": true,
+        "probe_pass": true,
+        "gate_success": true
+      },
+      "restart_info": {
+        "ok": true,
+        "exit_code": 0
+      },
+      "gate_wait_seconds": 1.038,
+      "gate_retry_count": 1,
+      "gate_last_error": null,
+      "build": {
+        "ok": true,
+        "exit_code": 0,
+        "stderr_tail": ""
+      },
+      "gates": {
+        "health": {
+          "ok_http": true,
+          "status": 200,
+          "json": {
+            "ok": true,
+            "timestamp": "2026-03-27T08:26:47.494Z",
+            "gitSha": "0b8c1c8",
+            "readiness": {
+              "ready": true,
+              "stage": "READY",
+              "uptimeMs": 739,
+              "listenReady": true,
+              "dbReady": {
+                "kokuzo": true,
+                "audit": true,
+                "persona": true
+              },
+              "kokuzoVerified": true
+            }
+          }
+        },
+        "audit": {
+          "ok_http": true,
+          "status": 200,
+          "json": {
+            "constitution": {
+              "OMEGA_CONTRACT_v1": "e897a092cfc4048fbc9116879c02455a90759c09488e4c891d9f150fc8446ac4",
+              "PDCA_BUILD_CONTRACT_v1": "600554aef7e529f5e4a6261dfe4383bc3cb4c1d5c1a2e280b5410d0cf7e6a8c3",
+              "KHS_RUNTIME_CONTRACT_v1": "9f9ff182b7cb50e20bff30733f9bb6d16e91049146dd1e58ea39b41d7a9ec951"
+            },
+            "ok": true,
+            "timestamp": "2026-03-27T08:26:47.513Z",
+            "gitSha": "0b8c1c8",
+            "pid": 2035640,
+            "uptime": 1,
+            "readiness": {
+              "ready": true,
+              "stage": "READY",
+              "uptimeMs": 747,
+              "listenReady": true,
+              "dbReady": {
+                "kokuzo": true,
+                "audit": true,
+                "persona": true
+              },
+              "kokuzoVerified": true
+            },
+            "build": {
+              "mark": "BUILD_MARK:DET_RECALL_V1+MEMLOG_V1+LOW_SIGNAL_V1+LLMCHAT_V1",
+              "features": {
+                "detRecallPassphrase": true,
+                "memPersistLog": true,
+                "lowSignalFallback": true,
+                "llmChat": true,
+                "koshikiKernel": true
+              }
+            }
+          }
+        },
+        "audit_build": {
+          "ok_http": true,
+          "status": 200,
+          "json": {
+            "ok": true,
+            "card": "TENMON_AUDIT_BUILD_ROUTE_RESTORE_V1",
+            "timestamp": "2026-03-27T08:26:47.516Z",
+            "gitSha": "0b8c1c8",
+            "readiness": {
+              "ready": true,
+              "stage": "READY",
+              "uptimeMs": 755,
+              "listenReady": true,
+              "dbReady": {
+                "kokuzo": true,
+                "audit": true,
+                "persona": true
+              },
+              "kokuzoVerified": true
+            },
+            "build": {
+              "mark": "BUILD_MARK:DET_RECALL_V1+MEMLOG_V1+LOW_SIGNAL_V1+LLMCHAT_V1",
+              "features": {
+                "detRecallPassphrase": true,
+                "memPersistLog": true,
+                "lowSignalFallback": true,
+                "llmChat": true,
+                "koshikiKernel": true
+              }
+            },
+            "contract": {
+              "endpoint": "/api/audit.build",
+              "minimal_fields": [
+                "ok",
+                "timestamp",
+                "gitSha",
+                "readiness",
+                "build"
+              ],
+              "purpose": "minimum build audit contract for stabilization cards"
+            }
+          }
+        }
+      },
+      "forensic_bundle": {},
+      "next_card": "TENMON_OS_OUTPUT_CONTRACT_NORMALIZE_CURSOR_AUTO_V1"
+    },
+    {
+      "schema_version": 3,
+      "card": "TENMON_CURSOR_OPERATOR_AUTONOMY_BRIDGE_CURSOR_AUTO_V1",
+      "cursor_card": "TENMON_WORLDCLASS_FINAL_REASONING_DENSITY_CURSOR_AUTO_V1",
+      "queue_id": "",
+      "operator_status": "queued",
+      "status": "queued",
+      "started_at": "2026-03-27T08:26:47Z",
+      "ended_at": "2026-03-27T08:27:01Z",
+      "summary_path": "/var/log/tenmon/autonomy_safe/TENMON_CURSOR_OPERATOR_AUTONOMY_BRIDGE_CURSOR_AUTO_V1__TENMON_WORLDCLASS_FINAL_REASONING_DENSITY_CURSOR_AUTO_V1__20260327T082647Z.json",
+      "skipped_probe_mode": false,
+      "execution_gate": {
+        "build_pass": true,
+        "restart_pass": true,
+        "audit_pass": true,
+        "probe_pass": true,
+        "gate_success": true
+      },
+      "restart_info": {
+        "ok": true,
+        "exit_code": 0
+      },
+      "gate_wait_seconds": 1.037,
+      "gate_retry_count": 1,
+      "gate_last_error": null,
+      "build": {
+        "ok": true,
+        "exit_code": 0,
+        "stderr_tail": ""
+      },
+      "gates": {
+        "health": {
+          "ok_http": true,
+          "status": 200,
+          "json": {
+            "ok": true,
+            "timestamp": "2026-03-27T08:27:01.195Z",
+            "gitSha": "0b8c1c8",
+            "readiness": {
+              "ready": true,
+              "stage": "READY",
+              "uptimeMs": 742,
+              "listenReady": true,
+              "dbReady": {
+                "kokuzo": true,
+                "audit": true,
+                "persona": true
+              },
+              "kokuzoVerified": true
+            }
+          }
+        },
+        "audit": {
+          "ok_http": true,
+          "status": 200,
+          "json": {
+            "constitution": {
+              "OMEGA_CONTRACT_v1": "e897a092cfc4048fbc9116879c02455a90759c09488e4c891d9f150fc8446ac4",
+              "PDCA_BUILD_CONTRACT_v1": "600554aef7e529f5e4a6261dfe4383bc3cb4c1d5c1a2e280b5410d0cf7e6a8c3",
+              "KHS_RUNTIME_CONTRACT_v1": "9f9ff182b7cb50e20bff30733f9bb6d16e91049146dd1e58ea39b41d7a9ec951"
+            },
+            "ok": true,
+            "timestamp": "2026-03-27T08:27:01.214Z",
+            "gitSha": "0b8c1c8",
+            "pid": 2035872,
+            "uptime": 1,
+            "readiness": {
+              "ready": true,
+              "stage": "READY",
+              "uptimeMs": 751,
+              "listenReady": true,
+              "dbReady": {
+                "kokuzo": true,
+                "audit": true,
+                "persona": true
+              },
+              "kokuzoVerified": true
+            },
+            "build": {
+              "mark": "BUILD_MARK:DET_RECALL_V1+MEMLOG_V1+LOW_SIGNAL_V1+LLMCHAT_V1",
+              "features": {
+                "detRecallPassphrase": true,
+                "memPersistLog": true,
+                "lowSignalFallback": true,
+                "llmChat": true,
+                "koshikiKernel": true
+              }
+            }
+          }
+        },
+        "audit_build": {
+          "ok_http": true,
+          "status": 200,
+          "json": {
+            "ok": true,
+            "card": "TENMON_AUDIT_BUILD_ROUTE_RESTORE_V1",
+            "timestamp": "2026-03-27T08:27:01.217Z",
+            "gitSha": "0b8c1c8",
+            "readiness": {
+              "ready": true,
+              "stage": "READY",
+              "uptimeMs": 759,
+              "listenReady": true,
+              "dbReady": {
+                "kokuzo": true,
+                "audit": true,
+                "persona": true
+              },
+              "kokuzoVerified": true
+            },
+            "build": {
+              "mark": "BUILD_MARK:DET_RECALL_V1+MEMLOG_V1+LOW_SIGNAL_V1+LLMCHAT_V1",
+              "features": {
+                "detRecallPassphrase": true,
+                "memPersistLog": true,
+                "lowSignalFallback": true,
+                "llmChat": true,
+                "koshikiKernel": true
+              }
+            },
+            "contract": {
+              "endpoint": "/api/audit.build",
+              "minimal_fields": [
+                "ok",
+                "timestamp",
+                "gitSha",
+                "readiness",
+                "build"
+              ],
+              "purpose": "minimum build audit contract for stabilization cards"
+            }
+          }
+        }
+      },
+      "forensic_bundle": {},
+      "next_card": "TENMON_OS_OUTPUT_CONTRACT_NORMALIZE_CURSOR_AUTO_V1"
+    },
+    {
+      "schema_version": 3,
+      "card": "TENMON_CURSOR_OPERATOR_AUTONOMY_BRIDGE_CURSOR_AUTO_V1",
+      "cursor_card": "TENMON_WORLDCLASS_FINAL_REASONING_DENSITY_CURSOR_AUTO_V1",
+      "queue_id": "",
+      "operator_status": "queued",
+      "status": "queued",
+      "started_at": "2026-03-27T08:27:01Z",
+      "ended_at": "2026-03-27T08:27:14Z",
+      "summary_path": "/var/log/tenmon/autonomy_safe/TENMON_CURSOR_OPERATOR_AUTONOMY_BRIDGE_CURSOR_AUTO_V1__TENMON_WORLDCLASS_FINAL_REASONING_DENSITY_CURSOR_AUTO_V1__20260327T082701Z.json",
+      "skipped_probe_mode": false,
+      "execution_gate": {
+        "build_pass": true,
+        "restart_pass": true,
+        "audit_pass": true,
+        "probe_pass": true,
+        "gate_success": true
+      },
+      "restart_info": {
+        "ok": true,
+        "exit_code": 0
+      },
+      "gate_wait_seconds": 1.033,
+      "gate_retry_count": 1,
+      "gate_last_error": null,
+      "build": {
+        "ok": true,
+        "exit_code": 0,
+        "stderr_tail": ""
+      },
+      "gates": {
+        "health": {
+          "ok_http": true,
+          "status": 200,
+          "json": {
+            "ok": true,
+            "timestamp": "2026-03-27T08:27:14.758Z",
+            "gitSha": "0b8c1c8",
+            "readiness": {
+              "ready": true,
+              "stage": "READY",
+              "uptimeMs": 760,
+              "listenReady": true,
+              "dbReady": {
+                "kokuzo": true,
+                "audit": true,
+                "persona": true
+              },
+              "kokuzoVerified": true
+            }
+          }
+        },
+        "audit": {
+          "ok_http": true,
+          "status": 200,
+          "json": {
+            "constitution": {
+              "OMEGA_CONTRACT_v1": "e897a092cfc4048fbc9116879c02455a90759c09488e4c891d9f150fc8446ac4",
+              "PDCA_BUILD_CONTRACT_v1": "600554aef7e529f5e4a6261dfe4383bc3cb4c1d5c1a2e280b5410d0cf7e6a8c3",
+              "KHS_RUNTIME_CONTRACT_v1": "9f9ff182b7cb50e20bff30733f9bb6d16e91049146dd1e58ea39b41d7a9ec951"
+            },
+            "ok": true,
+            "timestamp": "2026-03-27T08:27:14.776Z",
+            "gitSha": "0b8c1c8",
+            "pid": 2036060,
+            "uptime": 1,
+            "readiness": {
+              "ready": true,
+              "stage": "READY",
+              "uptimeMs": 767,
+              "listenReady": true,
+              "dbReady": {
+                "kokuzo": true,
+                "audit": true,
+                "persona": true
+              },
+              "kokuzoVerified": true
+            },
+            "build": {
+              "mark": "BUILD_MARK:DET_RECALL_V1+MEMLOG_V1+LOW_SIGNAL_V1+LLMCHAT_V1",
+              "features": {
+                "detRecallPassphrase": true,
+                "memPersistLog": true,
+                "lowSignalFallback": true,
+                "llmChat": true,
+                "koshikiKernel": true
+              }
+            }
+          }
+        },
+        "audit_build": {
+          "ok_http": true,
+          "status": 200,
+          "json": {
+            "ok": true,
+            "card": "TENMON_AUDIT_BUILD_ROUTE_RESTORE_V1",
+            "timestamp": "2026-03-27T08:27:14.779Z",
+            "gitSha": "0b8c1c8",
+            "readiness": {
+              "ready": true,
+              "stage": "READY",
+              "uptimeMs": 774,
+              "listenReady": true,
+              "dbReady": {
+                "kokuzo": true,
+                "audit": true,
+                "persona": true
+              },
+              "kokuzoVerified": true
+            },
+            "build": {
+              "mark": "BUILD_MARK:DET_RECALL_V1+MEMLOG_V1+LOW_SIGNAL_V1+LLMCHAT_V1",
+              "features": {
+                "detRecallPassphrase": true,
+                "memPersistLog": true,
+                "lowSignalFallback": true,
+                "llmChat": true,
+                "koshikiKernel": true
+              }
+            },
+            "contract": {
+              "endpoint": "/api/audit.build",
+              "minimal_fields": [
+                "ok",
+                "timestamp",
+                "gitSha",
+                "readiness",
+                "build"
+              ],
+              "purpose": "minimum build audit contract for stabilization cards"
+            }
+          }
+        }
+      },
+      "forensic_bundle": {},
+      "next_card": "TENMON_OS_OUTPUT_CONTRACT_NORMALIZE_CURSOR_AUTO_V1"
+    },
+    {
+      "schema_version": 3,
+      "card": "TENMON_CURSOR_OPERATOR_AUTONOMY_BRIDGE_CURSOR_AUTO_V1",
+      "cursor_card": "TENMON_WORLDCLASS_FINAL_REASONING_DENSITY_CURSOR_AUTO_V1",
+      "queue_id": "",
+      "operator_status": "queued",
+      "status": "queued",
+      "started_at": "2026-03-27T08:27:14Z",
+      "ended_at": "2026-03-27T08:27:28Z",
+      "summary_path": "/var/log/tenmon/autonomy_safe/TENMON_CURSOR_OPERATOR_AUTONOMY_BRIDGE_CURSOR_AUTO_V1__TENMON_WORLDCLASS_FINAL_REASONING_DENSITY_CURSOR_AUTO_V1__20260327T082714Z.json",
+      "skipped_probe_mode": false,
+      "execution_gate": {
+        "build_pass": true,
+        "restart_pass": true,
+        "audit_pass": true,
+        "probe_pass": true,
+        "gate_success": true
+      },
+      "restart_info": {
+        "ok": true,
+        "exit_code": 0
+      },
+      "gate_wait_seconds": 1.049,
+      "gate_retry_count": 1,
+      "gate_last_error": null,
+      "build": {
+        "ok": true,
+        "exit_code": 0,
+        "stderr_tail": ""
+      },
+      "gates": {
+        "health": {
+          "ok_http": true,
+          "status": 200,
+          "json": {
+            "ok": true,
+            "timestamp": "2026-03-27T08:27:28.568Z",
+            "gitSha": "0b8c1c8",
+            "readiness": {
+              "ready": true,
+              "stage": "READY",
+              "uptimeMs": 722,
+              "listenReady": true,
+              "dbReady": {
+                "kokuzo": true,
+                "audit": true,
+                "persona": true
+              },
+              "kokuzoVerified": true
+            }
+          }
+        },
+        "audit": {
+          "ok_http": true,
+          "status": 200,
+          "json": {
+            "constitution": {
+              "OMEGA_CONTRACT_v1": "e897a092cfc4048fbc9116879c02455a90759c09488e4c891d9f150fc8446ac4",
+              "PDCA_BUILD_CONTRACT_v1": "600554aef7e529f5e4a6261dfe4383bc3cb4c1d5c1a2e280b5410d0cf7e6a8c3",
+              "KHS_RUNTIME_CONTRACT_v1": "9f9ff182b7cb50e20bff30733f9bb6d16e91049146dd1e58ea39b41d7a9ec951"
+            },
+            "ok": true,
+            "timestamp": "2026-03-27T08:27:28.595Z",
+            "gitSha": "0b8c1c8",
+            "pid": 2036196,
+            "uptime": 1,
+            "readiness": {
+              "ready": true,
+              "stage": "READY",
+              "uptimeMs": 732,
+              "listenReady": true,
+              "dbReady": {
+                "kokuzo": true,
+                "audit": true,
+                "persona": true
+              },
+              "kokuzoVerified": true
+            },
+            "build": {
+              "mark": "BUILD_MARK:DET_RECALL_V1+MEMLOG_V1+LOW_SIGNAL_V1+LLMCHAT_V1",
+              "features": {
+                "detRecallPassphrase": true,
+                "memPersistLog": true,
+                "lowSignalFallback": true,
+                "llmChat": true,
+                "koshikiKernel": true
+              }
+            }
+          }
+        },
+        "audit_build": {
+          "ok_http": true,
+          "status": 200,
+          "json": {
+            "ok": true,
+            "card": "TENMON_AUDIT_BUILD_ROUTE_RESTORE_V1",
+            "timestamp": "2026-03-27T08:27:28.600Z",
+            "gitSha": "0b8c1c8",
+            "readiness": {
+              "ready": true,
+              "stage": "READY",
+              "uptimeMs": 744,
+              "listenReady": true,
+              "dbReady": {
+                "kokuzo": true,
+                "audit": true,
+                "persona": true
+              },
+              "kokuzoVerified": true
+            },
+            "build": {
+              "mark": "BUILD_MARK:DET_RECALL_V1+MEMLOG_V1+LOW_SIGNAL_V1+LLMCHAT_V1",
+              "features": {
+                "detRecallPassphrase": true,
+                "memPersistLog": true,
+                "lowSignalFallback": true,
+                "llmChat": true,
+                "koshikiKernel": true
+              }
+            },
+            "contract": {
+              "endpoint": "/api/audit.build",
+              "minimal_fields": [
+                "ok",
+                "timestamp",
+                "gitSha",
+                "readiness",
+                "build"
+              ],
+              "purpose": "minimum build audit contract for stabilization cards"
+            }
+          }
+        }
+      },
+      "forensic_bundle": {},
+      "next_card": "TENMON_OS_OUTPUT_CONTRACT_NORMALIZE_CURSOR_AUTO_V1"
+    },
+    {
+      "schema_version": 3,
+      "card": "TENMON_CURSOR_OPERATOR_AUTONOMY_BRIDGE_CURSOR_AUTO_V1",
+      "cursor_card": "TENMON_WORLDCLASS_FINAL_REASONING_DENSITY_CURSOR_AUTO_V1",
+      "queue_id": "",
+      "operator_status": "queued",
+      "status": "queued",
+      "started_at": "2026-03-27T08:27:28Z",
+      "ended_at": "2026-03-27T08:27:42Z",
+      "summary_path": "/var/log/tenmon/autonomy_safe/TENMON_CURSOR_OPERATOR_AUTONOMY_BRIDGE_CURSOR_AUTO_V1__TENMON_WORLDCLASS_FINAL_REASONING_DENSITY_CURSOR_AUTO_V1__20260327T082728Z.json",
+      "skipped_probe_mode": false,
+      "execution_gate": {
+        "build_pass": true,
+        "restart_pass": true,
+        "audit_pass": true,
+        "probe_pass": true,
+        "gate_success": true
+      },
+      "restart_info": {
+        "ok": true,
+        "exit_code": 0
+      },
+      "gate_wait_seconds": 1.036,
+      "gate_retry_count": 1,
+      "gate_last_error": null,
+      "build": {
+        "ok": true,
+        "exit_code": 0,
+        "stderr_tail": ""
+      },
+      "gates": {
+        "health": {
+          "ok_http": true,
+          "status": 200,
+          "json": {
+            "ok": true,
+            "timestamp": "2026-03-27T08:27:42.316Z",
+            "gitSha": "0b8c1c8",
+            "readiness": {
+              "ready": true,
+              "stage": "READY",
+              "uptimeMs": 749,
+              "listenReady": true,
+              "dbReady": {
+                "kokuzo": true,
+                "audit": true,
+                "persona": true
+              },
+              "kokuzoVerified": true
+            }
+          }
+        },
+        "audit": {
+          "ok_http": true,
+          "status": 200,
+          "json": {
+            "constitution": {
+              "OMEGA_CONTRACT_v1": "e897a092cfc4048fbc9116879c02455a90759c09488e4c891d9f150fc8446ac4",
+              "PDCA_BUILD_CONTRACT_v1": "600554aef7e529f5e4a6261dfe4383bc3cb4c1d5c1a2e280b5410d0cf7e6a8c3",
+              "KHS_RUNTIME_CONTRACT_v1": "9f9ff182b7cb50e20bff30733f9bb6d16e91049146dd1e58ea39b41d7a9ec951"
+            },
+            "ok": true,
+            "timestamp": "2026-03-27T08:27:42.336Z",
+            "gitSha": "0b8c1c8",
+            "pid": 2036330,
+            "uptime": 1,
+            "readiness": {
+              "ready": true,
+              "stage": "READY",
+              "uptimeMs": 757,
+              "listenReady": true,
+              "dbReady": {
+                "kokuzo": true,
+                "audit": true,
+                "persona": true
+              },
+              "kokuzoVerified": true
+            },
+            "build": {
+              "mark": "BUILD_MARK:DET_RECALL_V1+MEMLOG_V1+LOW_SIGNAL_V1+LLMCHAT_V1",
+              "features": {
+                "detRecallPassphrase": true,
+                "memPersistLog": true,
+                "lowSignalFallback": true,
+                "llmChat": true,
+                "koshikiKernel": true
+              }
+            }
+          }
+        },
+        "audit_build": {
+          "ok_http": true,
+          "status": 200,
+          "json": {
+            "ok": true,
+            "card": "TENMON_AUDIT_BUILD_ROUTE_RESTORE_V1",
+            "timestamp": "2026-03-27T08:27:42.339Z",
+            "gitSha": "0b8c1c8",
+            "readiness": {
+              "ready": true,
+              "stage": "READY",
+              "uptimeMs": 765,
+              "listenReady": true,
+              "dbReady": {
+                "kokuzo": true,
+                "audit": true,
+                "persona": true
+              },
+              "kokuzoVerified": true
+            },
+            "build": {
+              "mark": "BUILD_MARK:DET_RECALL_V1+MEMLOG_V1+LOW_SIGNAL_V1+LLMCHAT_V1",
+              "features": {
+                "detRecallPassphrase": true,
+                "memPersistLog": true,
+                "lowSignalFallback": true,
+                "llmChat": true,
+                "koshikiKernel": true
+              }
+            },
+            "contract": {
+              "endpoint": "/api/audit.build",
+              "minimal_fields": [
+                "ok",
+                "timestamp",
+                "gitSha",
+                "readiness",
+                "build"
+              ],
+              "purpose": "minimum build audit contract for stabilization cards"
+            }
+          }
+        }
+      },
+      "forensic_bundle": {},
+      "next_card": "TENMON_OS_OUTPUT_CONTRACT_NORMALIZE_CURSOR_AUTO_V1"
+    },
+    {
+      "schema_version": 3,
+      "card": "TENMON_CURSOR_OPERATOR_AUTONOMY_BRIDGE_CURSOR_AUTO_V1",
+      "cursor_card": "TENMON_WORLDCLASS_FINAL_REASONING_DENSITY_CURSOR_AUTO_V1",
+      "queue_id": "",
+      "operator_status": "queued",
+      "status": "queued",
+      "started_at": "2026-03-27T08:27:42Z",
+      "ended_at": "2026-03-27T08:27:55Z",
+      "summary_path": "/var/log/tenmon/autonomy_safe/TENMON_CURSOR_OPERATOR_AUTONOMY_BRIDGE_CURSOR_AUTO_V1__TENMON_WORLDCLASS_FINAL_REASONING_DENSITY_CURSOR_AUTO_V1__20260327T082742Z.json",
+      "skipped_probe_mode": false,
+      "execution_gate": {
+        "build_pass": true,
+        "restart_pass": true,
+        "audit_pass": true,
+        "probe_pass": true,
+        "gate_success": true
+      },
+      "restart_info": {
+        "ok": true,
+        "exit_code": 0
+      },
+      "gate_wait_seconds": 1.035,
+      "gate_retry_count": 1,
+      "gate_last_error": null,
+      "build": {
+        "ok": true,
+        "exit_code": 0,
+        "stderr_tail": ""
+      },
+      "gates": {
+        "health": {
+          "ok_http": true,
+          "status": 200,
+          "json": {
+            "ok": true,
+            "timestamp": "2026-03-27T08:27:55.784Z",
+            "gitSha": "0b8c1c8",
+            "readiness": {
+              "ready": true,
+              "stage": "READY",
+              "uptimeMs": 754,
+              "listenReady": true,
+              "dbReady": {
+                "kokuzo": true,
+                "audit": true,
+                "persona": true
+              },
+              "kokuzoVerified": true
+            }
+          }
+        },
+        "audit": {
+          "ok_http": true,
+          "status": 200,
+          "json": {
+            "constitution": {
+              "OMEGA_CONTRACT_v1": "e897a092cfc4048fbc9116879c02455a90759c09488e4c891d9f150fc8446ac4",
+              "PDCA_BUILD_CONTRACT_v1": "600554aef7e529f5e4a6261dfe4383bc3cb4c1d5c1a2e280b5410d0cf7e6a8c3",
+              "KHS_RUNTIME_CONTRACT_v1": "9f9ff182b7cb50e20bff30733f9bb6d16e91049146dd1e58ea39b41d7a9ec951"
+            },
+            "ok": true,
+            "timestamp": "2026-03-27T08:27:55.802Z",
+            "gitSha": "0b8c1c8",
+            "pid": 2036456,
+            "uptime": 1,
+            "readiness": {
+              "ready": true,
+              "stage": "READY",
+              "uptimeMs": 763,
+              "listenReady": true,
+              "dbReady": {
+                "kokuzo": true,
+                "audit": true,
+                "persona": true
+              },
+              "kokuzoVerified": true
+            },
+            "build": {
+              "mark": "BUILD_MARK:DET_RECALL_V1+MEMLOG_V1+LOW_SIGNAL_V1+LLMCHAT_V1",
+              "features": {
+                "detRecallPassphrase": true,
+                "memPersistLog": true,
+                "lowSignalFallback": true,
+                "llmChat": true,
+                "koshikiKernel": true
+              }
+            }
+          }
+        },
+        "audit_build": {
+          "ok_http": true,
+          "status": 200,
+          "json": {
+            "ok": true,
+            "card": "TENMON_AUDIT_BUILD_ROUTE_RESTORE_V1",
+            "timestamp": "2026-03-27T08:27:55.805Z",
+            "gitSha": "0b8c1c8",
+            "readiness": {
+              "ready": true,
+              "stage": "READY",
+              "uptimeMs": 770,
+              "listenReady": true,
+              "dbReady": {
+                "kokuzo": true,
+                "audit": true,
+                "persona": true
+              },
+              "kokuzoVerified": true
+            },
+            "build": {
+              "mark": "BUILD_MARK:DET_RECALL_V1+MEMLOG_V1+LOW_SIGNAL_V1+LLMCHAT_V1",
+              "features": {
+                "detRecallPassphrase": true,
+                "memPersistLog": true,
+                "lowSignalFallback": true,
+                "llmChat": true,
+                "koshikiKernel": true
+              }
+            },
+            "contract": {
+              "endpoint": "/api/audit.build",
+              "minimal_fields": [
+                "ok",
+                "timestamp",
+                "gitSha",
+                "readiness",
+                "build"
+              ],
+              "purpose": "minimum build audit contract for stabilization cards"
+            }
+          }
+        }
+      },
+      "forensic_bundle": {},
+      "next_card": "TENMON_OS_OUTPUT_CONTRACT_NORMALIZE_CURSOR_AUTO_V1"
+    },
+    {
+      "schema_version": 3,
+      "card": "TENMON_CURSOR_OPERATOR_AUTONOMY_BRIDGE_CURSOR_AUTO_V1",
+      "cursor_card": "TENMON_WORLDCLASS_FINAL_REASONING_DENSITY_CURSOR_AUTO_V1",
+      "queue_id": "",
+      "operator_status": "queued",
+      "status": "queued",
+      "started_at": "2026-03-27T08:27:55Z",
+      "ended_at": "2026-03-27T08:28:09Z",
+      "summary_path": "/var/log/tenmon/autonomy_safe/TENMON_CURSOR_OPERATOR_AUTONOMY_BRIDGE_CURSOR_AUTO_V1__TENMON_WORLDCLASS_FINAL_REASONING_DENSITY_CURSOR_AUTO_V1__20260327T082755Z.json",
+      "skipped_probe_mode": false,
+      "execution_gate": {
+        "build_pass": true,
+        "restart_pass": true,
+        "audit_pass": true,
+        "probe_pass": true,
+        "gate_success": true
+      },
+      "restart_info": {
+        "ok": true,
+        "exit_code": 0
+      },
+      "gate_wait_seconds": 1.034,
+      "gate_retry_count": 1,
+      "gate_last_error": null,
+      "build": {
+        "ok": true,
+        "exit_code": 0,
+        "stderr_tail": ""
+      },
+      "gates": {
+        "health": {
+          "ok_http": true,
+          "status": 200,
+          "json": {
+            "ok": true,
+            "timestamp": "2026-03-27T08:28:09.276Z",
+            "gitSha": "0b8c1c8",
+            "readiness": {
+              "ready": true,
+              "stage": "READY",
+              "uptimeMs": 750,
+              "listenReady": true,
+              "dbReady": {
+                "kokuzo": true,
+                "audit": true,
+                "persona": true
+              },
+              "kokuzoVerified": true
+            }
+          }
+        },
+        "audit": {
+          "ok_http": true,
+          "status": 200,
+          "json": {
+            "constitution": {
+              "OMEGA_CONTRACT_v1": "e897a092cfc4048fbc9116879c02455a90759c09488e4c891d9f150fc8446ac4",
+              "PDCA_BUILD_CONTRACT_v1": "600554aef7e529f5e4a6261dfe4383bc3cb4c1d5c1a2e280b5410d0cf7e6a8c3",
+              "KHS_RUNTIME_CONTRACT_v1": "9f9ff182b7cb50e20bff30733f9bb6d16e91049146dd1e58ea39b41d7a9ec951"
+            },
+            "ok": true,
+            "timestamp": "2026-03-27T08:28:09.294Z",
+            "gitSha": "0b8c1c8",
+            "pid": 2036601,
+            "uptime": 1,
+            "readiness": {
+              "ready": true,
+              "stage": "READY",
+              "uptimeMs": 758,
+              "listenReady": true,
+              "dbReady": {
+                "kokuzo": true,
+                "audit": true,
+                "persona": true
+              },
+              "kokuzoVerified": true
+            },
+            "build": {
+              "mark": "BUILD_MARK:DET_RECALL_V1+MEMLOG_V1+LOW_SIGNAL_V1+LLMCHAT_V1",
+              "features": {
+                "detRecallPassphrase": true,
+                "memPersistLog": true,
+                "lowSignalFallback": true,
+                "llmChat": true,
+                "koshikiKernel": true
+              }
+            }
+          }
+        },
+        "audit_build": {
+          "ok_http": true,
+          "status": 200,
+          "json": {
+            "ok": true,
+            "card": "TENMON_AUDIT_BUILD_ROUTE_RESTORE_V1",
+            "timestamp": "2026-03-27T08:28:09.297Z",
+            "gitSha": "0b8c1c8",
+            "readiness": {
+              "ready": true,
+              "stage": "READY",
+              "uptimeMs": 765,
+              "listenReady": true,
+              "dbReady": {
+                "kokuzo": true,
+                "audit": true,
+                "persona": true
+              },
+              "kokuzoVerified": true
+            },
+            "build": {
+              "mark": "BUILD_MARK:DET_RECALL_V1+MEMLOG_V1+LOW_SIGNAL_V1+LLMCHAT_V1",
+              "features": {
+                "detRecallPassphrase": true,
+                "memPersistLog": true,
+                "lowSignalFallback": true,
+                "llmChat": true,
+                "koshikiKernel": true
+              }
+            },
+            "contract": {
+              "endpoint": "/api/audit.build",
+              "minimal_fields": [
+                "ok",
+                "timestamp",
+                "gitSha",
+                "readiness",
+                "build"
+              ],
+              "purpose": "minimum build audit contract for stabilization cards"
+            }
+          }
+        }
+      },
+      "forensic_bundle": {},
+      "next_card": "TENMON_OS_OUTPUT_CONTRACT_NORMALIZE_CURSOR_AUTO_V1"
+    },
+    {
+      "schema_version": 3,
+      "card": "TENMON_CURSOR_OPERATOR_AUTONOMY_BRIDGE_CURSOR_AUTO_V1",
+      "cursor_card": "TENMON_WORLDCLASS_FINAL_REASONING_DENSITY_CURSOR_AUTO_V1",
+      "queue_id": "",
+      "operator_status": "queued",
+      "status": "queued",
+      "started_at": "2026-03-27T08:28:09Z",
+      "ended_at": "2026-03-27T08:28:22Z",
+      "summary_path": "/var/log/tenmon/autonomy_safe/TENMON_CURSOR_OPERATOR_AUTONOMY_BRIDGE_CURSOR_AUTO_V1__TENMON_WORLDCLASS_FINAL_REASONING_DENSITY_CURSOR_AUTO_V1__20260327T082809Z.json",
+      "skipped_probe_mode": false,
+      "execution_gate": {
+        "build_pass": true,
+        "restart_pass": true,
+        "audit_pass": true,
+        "probe_pass": true,
+        "gate_success": true
+      },
+      "restart_info": {
+        "ok": true,
+        "exit_code": 0
+      },
+      "gate_wait_seconds": 1.039,
+      "gate_retry_count": 1,
+      "gate_last_error": null,
+      "build": {
+        "ok": true,
+        "exit_code": 0,
+        "stderr_tail": ""
+      },
+      "gates": {
+        "health": {
+          "ok_http": true,
+          "status": 200,
+          "json": {
+            "ok": true,
+            "timestamp": "2026-03-27T08:28:22.798Z",
+            "gitSha": "0b8c1c8",
+            "readiness": {
+              "ready": true,
+              "stage": "READY",
+              "uptimeMs": 736,
+              "listenReady": true,
+              "dbReady": {
+                "kokuzo": true,
+                "audit": true,
+                "persona": true
+              },
+              "kokuzoVerified": true
+            }
+          }
+        },
+        "audit": {
+          "ok_http": true,
+          "status": 200,
+          "json": {
+            "constitution": {
+              "OMEGA_CONTRACT_v1": "e897a092cfc4048fbc9116879c02455a90759c09488e4c891d9f150fc8446ac4",
+              "PDCA_BUILD_CONTRACT_v1": "600554aef7e529f5e4a6261dfe4383bc3cb4c1d5c1a2e280b5410d0cf7e6a8c3",
+              "KHS_RUNTIME_CONTRACT_v1": "9f9ff182b7cb50e20bff30733f9bb6d16e91049146dd1e58ea39b41d7a9ec951"
+            },
+            "ok": true,
+            "timestamp": "2026-03-27T08:28:22.819Z",
+            "gitSha": "0b8c1c8",
+            "pid": 2036825,
+            "uptime": 1,
+            "readiness": {
+              "ready": true,
+              "stage": "READY",
+              "uptimeMs": 744,
+              "listenReady": true,
+              "dbReady": {
+                "kokuzo": true,
+                "audit": true,
+                "persona": true
+              },
+              "kokuzoVerified": true
+            },
+            "build": {
+              "mark": "BUILD_MARK:DET_RECALL_V1+MEMLOG_V1+LOW_SIGNAL_V1+LLMCHAT_V1",
+              "features": {
+                "detRecallPassphrase": true,
+                "memPersistLog": true,
+                "lowSignalFallback": true,
+                "llmChat": true,
+                "koshikiKernel": true
+              }
+            }
+          }
+        },
+        "audit_build": {
+          "ok_http": true,
+          "status": 200,
+          "json": {
+            "ok": true,
+            "card": "TENMON_AUDIT_BUILD_ROUTE_RESTORE_V1",
+            "timestamp": "2026-03-27T08:28:22.822Z",
+            "gitSha": "0b8c1c8",
+            "readiness": {
+              "ready": true,
+              "stage": "READY",
+              "uptimeMs": 753,
+              "listenReady": true,
+              "dbReady": {
+                "kokuzo": true,
+                "audit": true,
+                "persona": true
+              },
+              "kokuzoVerified": true
+            },
+            "build": {
+              "mark": "BUILD_MARK:DET_RECALL_V1+MEMLOG_V1+LOW_SIGNAL_V1+LLMCHAT_V1",
+              "features": {
+                "detRecallPassphrase": true,
+                "memPersistLog": true,
+                "lowSignalFallback": true,
+                "llmChat": true,
+                "koshikiKernel": true
+              }
+            },
+            "contract": {
+              "endpoint": "/api/audit.build",
+              "minimal_fields": [
+                "ok",
+                "timestamp",
+                "gitSha",
+                "readiness",
+                "build"
+              ],
+              "purpose": "minimum build audit contract for stabilization cards"
+            }
+          }
+        }
+      },
+      "forensic_bundle": {},
+      "next_card": "TENMON_OS_OUTPUT_CONTRACT_NORMALIZE_CURSOR_AUTO_V1"
+    },
+    {
+      "schema_version": 3,
+      "card": "TENMON_CURSOR_OPERATOR_AUTONOMY_BRIDGE_CURSOR_AUTO_V1",
+      "cursor_card": "TENMON_WORLDCLASS_FINAL_REASONING_DENSITY_CURSOR_AUTO_V1",
+      "queue_id": "",
+      "operator_status": "queued",
+      "status": "queued",
+      "started_at": "2026-03-27T08:28:23Z",
+      "ended_at": "2026-03-27T08:28:36Z",
+      "summary_path": "/var/log/tenmon/autonomy_safe/TENMON_CURSOR_OPERATOR_AUTONOMY_BRIDGE_CURSOR_AUTO_V1__TENMON_WORLDCLASS_FINAL_REASONING_DENSITY_CURSOR_AUTO_V1__20260327T082823Z.json",
+      "skipped_probe_mode": false,
+      "execution_gate": {
+        "build_pass": true,
+        "restart_pass": true,
+        "audit_pass": true,
+        "probe_pass": true,
+        "gate_success": true
+      },
+      "restart_info": {
+        "ok": true,
+        "exit_code": 0
+      },
+      "gate_wait_seconds": 1.037,
+      "gate_retry_count": 1,
+      "gate_last_error": null,
+      "build": {
+        "ok": true,
+        "exit_code": 0,
+        "stderr_tail": ""
+      },
+      "gates": {
+        "health": {
+          "ok_http": true,
+          "status": 200,
+          "json": {
+            "ok": true,
+            "timestamp": "2026-03-27T08:28:36.151Z",
+            "gitSha": "0b8c1c8",
+            "readiness": {
+              "ready": true,
+              "stage": "READY",
+              "uptimeMs": 751,
+              "listenReady": true,
+              "dbReady": {
+                "kokuzo": true,
+                "audit": true,
+                "persona": true
+              },
+              "kokuzoVerified": true
+            }
+          }
+        },
+        "audit": {
+          "ok_http": true,
+          "status": 200,
+          "json": {
+            "constitution": {
+              "OMEGA_CONTRACT_v1": "e897a092cfc4048fbc9116879c02455a90759c09488e4c891d9f150fc8446ac4",
+              "PDCA_BUILD_CONTRACT_v1": "600554aef7e529f5e4a6261dfe4383bc3cb4c1d5c1a2e280b5410d0cf7e6a8c3",
+              "KHS_RUNTIME_CONTRACT_v1": "9f9ff182b7cb50e20bff30733f9bb6d16e91049146dd1e58ea39b41d7a9ec951"
+            },
+            "ok": true,
+            "timestamp": "2026-03-27T08:28:36.171Z",
+            "gitSha": "0b8c1c8",
+            "pid": 2037052,
+            "uptime": 1,
+            "readiness": {
+              "ready": true,
+              "stage": "READY",
+              "uptimeMs": 759,
+              "listenReady": true,
+              "dbReady": {
+                "kokuzo": true,
+                "audit": true,
+                "persona": true
+              },
+              "kokuzoVerified": true
+            },
+            "build": {
+              "mark": "BUILD_MARK:DET_RECALL_V1+MEMLOG_V1+LOW_SIGNAL_V1+LLMCHAT_V1",
+              "features": {
+                "detRecallPassphrase": true,
+                "memPersistLog": true,
+                "lowSignalFallback": true,
+                "llmChat": true,
+                "koshikiKernel": true
+              }
+            }
+          }
+        },
+        "audit_build": {
+          "ok_http": true,
+          "status": 200,
+          "json": {
+            "ok": true,
+            "card": "TENMON_AUDIT_BUILD_ROUTE_RESTORE_V1",
+            "timestamp": "2026-03-27T08:28:36.174Z",
+            "gitSha": "0b8c1c8",
+            "readiness": {
+              "ready": true,
+              "stage": "READY",
+              "uptimeMs": 768,
+              "listenReady": true,
+              "dbReady": {
+                "kokuzo": true,
+                "audit": true,
+                "persona": true
+              },
+              "kokuzoVerified": true
+            },
+            "build": {
+              "mark": "BUILD_MARK:DET_RECALL_V1+MEMLOG_V1+LOW_SIGNAL_V1+LLMCHAT_V1",
+              "features": {
+                "detRecallPassphrase": true,
+                "memPersistLog": true,
+                "lowSignalFallback": true,
+                "llmChat": true,
+                "koshikiKernel": true
+              }
+            },
+            "contract": {
+              "endpoint": "/api/audit.build",
+              "minimal_fields": [
+                "ok",
+                "timestamp",
+                "gitSha",
+                "readiness",
+                "build"
+              ],
+              "purpose": "minimum build audit contract for stabilization cards"
+            }
+          }
+        }
+      },
+      "forensic_bundle": {},
+      "next_card": "TENMON_OS_OUTPUT_CONTRACT_NORMALIZE_CURSOR_AUTO_V1"
+    },
+    {
+      "schema_version": 3,
+      "card": "TENMON_CURSOR_OPERATOR_AUTONOMY_BRIDGE_CURSOR_AUTO_V1",
+      "cursor_card": "TENMON_WORLDCLASS_FINAL_REASONING_DENSITY_CURSOR_AUTO_V1",
+      "queue_id": "",
+      "operator_status": "queued",
+      "status": "queued",
+      "started_at": "2026-03-27T08:28:36Z",
+      "ended_at": "2026-03-27T08:28:49Z",
+      "summary_path": "/var/log/tenmon/autonomy_safe/TENMON_CURSOR_OPERATOR_AUTONOMY_BRIDGE_CURSOR_AUTO_V1__TENMON_WORLDCLASS_FINAL_REASONING_DENSITY_CURSOR_AUTO_V1__20260327T082836Z.json",
+      "skipped_probe_mode": false,
+      "execution_gate": {
+        "build_pass": true,
+        "restart_pass": true,
+        "audit_pass": true,
+        "probe_pass": true,
+        "gate_success": true
+      },
+      "restart_info": {
+        "ok": true,
+        "exit_code": 0
+      },
+      "gate_wait_seconds": 1.034,
+      "gate_retry_count": 1,
+      "gate_last_error": null,
+      "build": {
+        "ok": true,
+        "exit_code": 0,
+        "stderr_tail": ""
+      },
+      "gates": {
+        "health": {
+          "ok_http": true,
+          "status": 200,
+          "json": {
+            "ok": true,
+            "timestamp": "2026-03-27T08:28:49.351Z",
+            "gitSha": "0b8c1c8",
+            "readiness": {
+              "ready": true,
+              "stage": "READY",
+              "uptimeMs": 759,
+              "listenReady": true,
+              "dbReady": {
+                "kokuzo": true,
+                "audit": true,
+                "persona": true
+              },
+              "kokuzoVerified": true
+            }
+          }
+        },
+        "audit": {
+          "ok_http": true,
+          "status": 200,
+          "json": {
+            "constitution": {
+              "OMEGA_CONTRACT_v1": "e897a092cfc4048fbc9116879c02455a90759c09488e4c891d9f150fc8446ac4",
+              "PDCA_BUILD_CONTRACT_v1": "600554aef7e529f5e4a6261dfe4383bc3cb4c1d5c1a2e280b5410d0cf7e6a8c3",
+              "KHS_RUNTIME_CONTRACT_v1": "9f9ff182b7cb50e20bff30733f9bb6d16e91049146dd1e58ea39b41d7a9ec951"
+            },
+            "ok": true,
+            "timestamp": "2026-03-27T08:28:49.369Z",
+            "gitSha": "0b8c1c8",
+            "pid": 2037240,
+            "uptime": 1,
+            "readiness": {
+              "ready": true,
+              "stage": "READY",
+              "uptimeMs": 767,
+              "listenReady": true,
+              "dbReady": {
+                "kokuzo": true,
+                "audit": true,
+                "persona": true
+              },
+              "kokuzoVerified": true
+            },
+            "build": {
+              "mark": "BUILD_MARK:DET_RECALL_V1+MEMLOG_V1+LOW_SIGNAL_V1+LLMCHAT_V1",
+              "features": {
+                "detRecallPassphrase": true,
+                "memPersistLog": true,
+                "lowSignalFallback": true,
+                "llmChat": true,
+                "koshikiKernel": true
+              }
+            }
+          }
+        },
+        "audit_build": {
+          "ok_http": true,
+          "status": 200,
+          "json": {
+            "ok": true,
+            "card": "TENMON_AUDIT_BUILD_ROUTE_RESTORE_V1",
+            "timestamp": "2026-03-27T08:28:49.372Z",
+            "gitSha": "0b8c1c8",
+            "readiness": {
+              "ready": true,
+              "stage": "READY",
+              "uptimeMs": 774,
+              "listenReady": true,
+              "dbReady": {
+                "kokuzo": true,
+                "audit": true,
+                "persona": true
+              },
+              "kokuzoVerified": true
+            },
+            "build": {
+              "mark": "BUILD_MARK:DET_RECALL_V1+MEMLOG_V1+LOW_SIGNAL_V1+LLMCHAT_V1",
+              "features": {
+                "detRecallPassphrase": true,
+                "memPersistLog": true,
+                "lowSignalFallback": true,
+                "llmChat": true,
+                "koshikiKernel": true
+              }
+            },
+            "contract": {
+              "endpoint": "/api/audit.build",
+              "minimal_fields": [
+                "ok",
+                "timestamp",
+                "gitSha",
+                "readiness",
+                "build"
+              ],
+              "purpose": "minimum build audit contract for stabilization cards"
+            }
+          }
+        }
+      },
+      "forensic_bundle": {},
+      "next_card": "TENMON_OS_OUTPUT_CONTRACT_NORMALIZE_CURSOR_AUTO_V1"
+    },
+    {
+      "schema_version": 3,
+      "card": "TENMON_CURSOR_OPERATOR_AUTONOMY_BRIDGE_CURSOR_AUTO_V1",
+      "cursor_card": "TENMON_WORLDCLASS_FINAL_REASONING_DENSITY_CURSOR_AUTO_V1",
+      "queue_id": "",
+      "operator_status": "queued",
+      "status": "queued",
+      "started_at": "2026-03-27T08:28:49Z",
+      "ended_at": "2026-03-27T08:29:02Z",
+      "summary_path": "/var/log/tenmon/autonomy_safe/TENMON_CURSOR_OPERATOR_AUTONOMY_BRIDGE_CURSOR_AUTO_V1__TENMON_WORLDCLASS_FINAL_REASONING_DENSITY_CURSOR_AUTO_V1__20260327T082849Z.json",
+      "skipped_probe_mode": false,
+      "execution_gate": {
+        "build_pass": true,
+        "restart_pass": true,
+        "audit_pass": true,
+        "probe_pass": true,
+        "gate_success": true
+      },
+      "restart_info": {
+        "ok": true,
+        "exit_code": 0
+      },
+      "gate_wait_seconds": 1.033,
+      "gate_retry_count": 1,
+      "gate_last_error": null,
+      "build": {
+        "ok": true,
+        "exit_code": 0,
+        "stderr_tail": ""
+      },
+      "gates": {
+        "health": {
+          "ok_http": true,
+          "status": 200,
+          "json": {
+            "ok": true,
+            "timestamp": "2026-03-27T08:29:02.498Z",
+            "gitSha": "0b8c1c8",
+            "readiness": {
+              "ready": true,
+              "stage": "READY",
+              "uptimeMs": 724,
+              "listenReady": true,
+              "dbReady": {
+                "kokuzo": true,
+                "audit": true,
+                "persona": true
+              },
+              "kokuzoVerified": true
+            }
+          }
+        },
+        "audit": {
+          "ok_http": true,
+          "status": 200,
+          "json": {
+            "constitution": {
+              "OMEGA_CONTRACT_v1": "e897a092cfc4048fbc9116879c02455a90759c09488e4c891d9f150fc8446ac4",
+              "PDCA_BUILD_CONTRACT_v1": "600554aef7e529f5e4a6261dfe4383bc3cb4c1d5c1a2e280b5410d0cf7e6a8c3",
+              "KHS_RUNTIME_CONTRACT_v1": "9f9ff182b7cb50e20bff30733f9bb6d16e91049146dd1e58ea39b41d7a9ec951"
+            },
+            "ok": true,
+            "timestamp": "2026-03-27T08:29:02.515Z",
+            "gitSha": "0b8c1c8",
+            "pid": 2037405,
+            "uptime": 1,
+            "readiness": {
+              "ready": true,
+              "stage": "READY",
+              "uptimeMs": 732,
+              "listenReady": true,
+              "dbReady": {
+                "kokuzo": true,
+                "audit": true,
+                "persona": true
+              },
+              "kokuzoVerified": true
+            },
+            "build": {
+              "mark": "BUILD_MARK:DET_RECALL_V1+MEMLOG_V1+LOW_SIGNAL_V1+LLMCHAT_V1",
+              "features": {
+                "detRecallPassphrase": true,
+                "memPersistLog": true,
+                "lowSignalFallback": true,
+                "llmChat": true,
+                "koshikiKernel": true
+              }
+            }
+          }
+        },
+        "audit_build": {
+          "ok_http": true,
+          "status": 200,
+          "json": {
+            "ok": true,
+            "card": "TENMON_AUDIT_BUILD_ROUTE_RESTORE_V1",
+            "timestamp": "2026-03-27T08:29:02.518Z",
+            "gitSha": "0b8c1c8",
+            "readiness": {
+              "ready": true,
+              "stage": "READY",
+              "uptimeMs": 739,
+              "listenReady": true,
+              "dbReady": {
+                "kokuzo": true,
+                "audit": true,
+                "persona": true
+              },
+              "kokuzoVerified": true
+            },
+            "build": {
+              "mark": "BUILD_MARK:DET_RECALL_V1+MEMLOG_V1+LOW_SIGNAL_V1+LLMCHAT_V1",
+              "features": {
+                "detRecallPassphrase": true,
+                "memPersistLog": true,
+                "lowSignalFallback": true,
+                "llmChat": true,
+                "koshikiKernel": true
+              }
+            },
+            "contract": {
+              "endpoint": "/api/audit.build",
+              "minimal_fields": [
+                "ok",
+                "timestamp",
+                "gitSha",
+                "readiness",
+                "build"
+              ],
+              "purpose": "minimum build audit contract for stabilization cards"
+            }
+          }
+        }
+      },
+      "forensic_bundle": {},
+      "next_card": "TENMON_OS_OUTPUT_CONTRACT_NORMALIZE_CURSOR_AUTO_V1"
+    },
+    {
+      "schema_version": 3,
+      "card": "TENMON_CURSOR_OPERATOR_AUTONOMY_BRIDGE_CURSOR_AUTO_V1",
+      "cursor_card": "TENMON_WORLDCLASS_FINAL_REASONING_DENSITY_CURSOR_AUTO_V1",
+      "queue_id": "",
+      "operator_status": "queued",
+      "status": "queued",
+      "started_at": "2026-03-27T08:29:02Z",
+      "ended_at": "2026-03-27T08:29:15Z",
+      "summary_path": "/var/log/tenmon/autonomy_safe/TENMON_CURSOR_OPERATOR_AUTONOMY_BRIDGE_CURSOR_AUTO_V1__TENMON_WORLDCLASS_FINAL_REASONING_DENSITY_CURSOR_AUTO_V1__20260327T082902Z.json",
+      "skipped_probe_mode": false,
+      "execution_gate": {
+        "build_pass": true,
+        "restart_pass": true,
+        "audit_pass": true,
+        "probe_pass": true,
+        "gate_success": true
+      },
+      "restart_info": {
+        "ok": true,
+        "exit_code": 0
+      },
+      "gate_wait_seconds": 1.037,
+      "gate_retry_count": 1,
+      "gate_last_error": null,
+      "build": {
+        "ok": true,
+        "exit_code": 0,
+        "stderr_tail": ""
+      },
+      "gates": {
+        "health": {
+          "ok_http": true,
+          "status": 200,
+          "json": {
+            "ok": true,
+            "timestamp": "2026-03-27T08:29:15.642Z",
+            "gitSha": "0b8c1c8",
+            "readiness": {
+              "ready": true,
+              "stage": "READY",
+              "uptimeMs": 752,
+              "listenReady": true,
+              "dbReady": {
+                "kokuzo": true,
+                "audit": true,
+                "persona": true
+              },
+              "kokuzoVerified": true
+            }
+          }
+        },
+        "audit": {
+          "ok_http": true,
+          "status": 200,
+          "json": {
+            "constitution": {
+              "OMEGA_CONTRACT_v1": "e897a092cfc4048fbc9116879c02455a90759c09488e4c891d9f150fc8446ac4",
+              "PDCA_BUILD_CONTRACT_v1": "600554aef7e529f5e4a6261dfe4383bc3cb4c1d5c1a2e280b5410d0cf7e6a8c3",
+              "KHS_RUNTIME_CONTRACT_v1": "9f9ff182b7cb50e20bff30733f9bb6d16e91049146dd1e58ea39b41d7a9ec951"
+            },
+            "ok": true,
+            "timestamp": "2026-03-27T08:29:15.663Z",
+            "gitSha": "0b8c1c8",
+            "pid": 2037551,
+            "uptime": 1,
+            "readiness": {
+              "ready": true,
+              "stage": "READY",
+              "uptimeMs": 761,
+              "listenReady": true,
+              "dbReady": {
+                "kokuzo": true,
+                "audit": true,
+                "persona": true
+              },
+              "kokuzoVerified": true
+            },
+            "build": {
+              "mark": "BUILD_MARK:DET_RECALL_V1+MEMLOG_V1+LOW_SIGNAL_V1+LLMCHAT_V1",
+              "features": {
+                "detRecallPassphrase": true,
+                "memPersistLog": true,
+                "lowSignalFallback": true,
+                "llmChat": true,
+                "koshikiKernel": true
+              }
+            }
+          }
+        },
+        "audit_build": {
+          "ok_http": true,
+          "status": 200,
+          "json": {
+            "ok": true,
+            "card": "TENMON_AUDIT_BUILD_ROUTE_RESTORE_V1",
+            "timestamp": "2026-03-27T08:29:15.666Z",
+            "gitSha": "0b8c1c8",
+            "readiness": {
+              "ready": true,
+              "stage": "READY",
+              "uptimeMs": 769,
+              "listenReady": true,
+              "dbReady": {
+                "kokuzo": true,
+                "audit": true,
+                "persona": true
+              },
+              "kokuzoVerified": true
+            },
+            "build": {
+              "mark": "BUILD_MARK:DET_RECALL_V1+MEMLOG_V1+LOW_SIGNAL_V1+LLMCHAT_V1",
+              "features": {
+                "detRecallPassphrase": true,
+                "memPersistLog": true,
+                "lowSignalFallback": true,
+                "llmChat": true,
+                "koshikiKernel": true
+              }
+            },
+            "contract": {
+              "endpoint": "/api/audit.build",
+              "minimal_fields": [
+                "ok",
+                "timestamp",
+                "gitSha",
+                "readiness",
+                "build"
+              ],
+              "purpose": "minimum build audit contract for stabilization cards"
+            }
+          }
+        }
+      },
+      "forensic_bundle": {},
+      "next_card": "TENMON_OS_OUTPUT_CONTRACT_NORMALIZE_CURSOR_AUTO_V1"
+    },
+    {
+      "schema_version": 3,
+      "card": "TENMON_CURSOR_OPERATOR_AUTONOMY_BRIDGE_CURSOR_AUTO_V1",
+      "cursor_card": "TENMON_WORLDCLASS_FINAL_REASONING_DENSITY_CURSOR_AUTO_V1",
+      "queue_id": "",
+      "operator_status": "queued",
+      "status": "queued",
+      "started_at": "2026-03-27T08:29:15Z",
+      "ended_at": "2026-03-27T08:29:29Z",
+      "summary_path": "/var/log/tenmon/autonomy_safe/TENMON_CURSOR_OPERATOR_AUTONOMY_BRIDGE_CURSOR_AUTO_V1__TENMON_WORLDCLASS_FINAL_REASONING_DENSITY_CURSOR_AUTO_V1__20260327T082915Z.json",
+      "skipped_probe_mode": false,
+      "execution_gate": {
+        "build_pass": true,
+        "restart_pass": true,
+        "audit_pass": true,
+        "probe_pass": true,
+        "gate_success": true
+      },
+      "restart_info": {
+        "ok": true,
+        "exit_code": 0
+      },
+      "gate_wait_seconds": 1.033,
+      "gate_retry_count": 1,
+      "gate_last_error": null,
+      "build": {
+        "ok": true,
+        "exit_code": 0,
+        "stderr_tail": ""
+      },
+      "gates": {
+        "health": {
+          "ok_http": true,
+          "status": 200,
+          "json": {
+            "ok": true,
+            "timestamp": "2026-03-27T08:29:29.094Z",
+            "gitSha": "0b8c1c8",
+            "readiness": {
+              "ready": true,
+              "stage": "READY",
+              "uptimeMs": 749,
+              "listenReady": true,
+              "dbReady": {
+                "kokuzo": true,
+                "audit": true,
+                "persona": true
+              },
+              "kokuzoVerified": true
+            }
+          }
+        },
+        "audit": {
+          "ok_http": true,
+          "status": 200,
+          "json": {
+            "constitution": {
+              "OMEGA_CONTRACT_v1": "e897a092cfc4048fbc9116879c02455a90759c09488e4c891d9f150fc8446ac4",
+              "PDCA_BUILD_CONTRACT_v1": "600554aef7e529f5e4a6261dfe4383bc3cb4c1d5c1a2e280b5410d0cf7e6a8c3",
+              "KHS_RUNTIME_CONTRACT_v1": "9f9ff182b7cb50e20bff30733f9bb6d16e91049146dd1e58ea39b41d7a9ec951"
+            },
+            "ok": true,
+            "timestamp": "2026-03-27T08:29:29.111Z",
+            "gitSha": "0b8c1c8",
+            "pid": 2037712,
+            "uptime": 1,
+            "readiness": {
+              "ready": true,
+              "stage": "READY",
+              "uptimeMs": 756,
+              "listenReady": true,
+              "dbReady": {
+                "kokuzo": true,
+                "audit": true,
+                "persona": true
+              },
+              "kokuzoVerified": true
+            },
+            "build": {
+              "mark": "BUILD_MARK:DET_RECALL_V1+MEMLOG_V1+LOW_SIGNAL_V1+LLMCHAT_V1",
+              "features": {
+                "detRecallPassphrase": true,
+                "memPersistLog": true,
+                "lowSignalFallback": true,
+                "llmChat": true,
+                "koshikiKernel": true
+              }
+            }
+          }
+        },
+        "audit_build": {
+          "ok_http": true,
+          "status": 200,
+          "json": {
+            "ok": true,
+            "card": "TENMON_AUDIT_BUILD_ROUTE_RESTORE_V1",
+            "timestamp": "2026-03-27T08:29:29.113Z",
+            "gitSha": "0b8c1c8",
+            "readiness": {
+              "ready": true,
+              "stage": "READY",
+              "uptimeMs": 762,
+              "listenReady": true,
+              "dbReady": {
+                "kokuzo": true,
+                "audit": true,
+                "persona": true
+              },
+              "kokuzoVerified": true
+            },
+            "build": {
+              "mark": "BUILD_MARK:DET_RECALL_V1+MEMLOG_V1+LOW_SIGNAL_V1+LLMCHAT_V1",
+              "features": {
+                "detRecallPassphrase": true,
+                "memPersistLog": true,
+                "lowSignalFallback": true,
+                "llmChat": true,
+                "koshikiKernel": true
+              }
+            },
+            "contract": {
+              "endpoint": "/api/audit.build",
+              "minimal_fields": [
+                "ok",
+                "timestamp",
+                "gitSha",
+                "readiness",
+                "build"
+              ],
+              "purpose": "minimum build audit contract for stabilization cards"
+            }
+          }
+        }
+      },
+      "forensic_bundle": {},
+      "next_card": "TENMON_OS_OUTPUT_CONTRACT_NORMALIZE_CURSOR_AUTO_V1"
+    },
+    {
+      "schema_version": 3,
+      "card": "TENMON_CURSOR_OPERATOR_AUTONOMY_BRIDGE_CURSOR_AUTO_V1",
+      "cursor_card": "TENMON_WORLDCLASS_FINAL_REASONING_DENSITY_CURSOR_AUTO_V1",
+      "queue_id": "",
+      "operator_status": "queued",
+      "status": "queued",
+      "started_at": "2026-03-27T08:29:29Z",
+      "ended_at": "2026-03-27T08:29:42Z",
+      "summary_path": "/var/log/tenmon/autonomy_safe/TENMON_CURSOR_OPERATOR_AUTONOMY_BRIDGE_CURSOR_AUTO_V1__TENMON_WORLDCLASS_FINAL_REASONING_DENSITY_CURSOR_AUTO_V1__20260327T082929Z.json",
+      "skipped_probe_mode": false,
+      "execution_gate": {
+        "build_pass": true,
+        "restart_pass": true,
+        "audit_pass": true,
+        "probe_pass": true,
+        "gate_success": true
+      },
+      "restart_info": {
+        "ok": true,
+        "exit_code": 0
+      },
+      "gate_wait_seconds": 1.036,
+      "gate_retry_count": 1,
+      "gate_last_error": null,
+      "build": {
+        "ok": true,
+        "exit_code": 0,
+        "stderr_tail": ""
+      },
+      "gates": {
+        "health": {
+          "ok_http": true,
+          "status": 200,
+          "json": {
+            "ok": true,
+            "timestamp": "2026-03-27T08:29:42.366Z",
+            "gitSha": "0b8c1c8",
+            "readiness": {
+              "ready": true,
+              "stage": "READY",
+              "uptimeMs": 755,
+              "listenReady": true,
+              "dbReady": {
+                "kokuzo": true,
+                "audit": true,
+                "persona": true
+              },
+              "kokuzoVerified": true
+            }
+          }
+        },
+        "audit": {
+          "ok_http": true,
+          "status": 200,
+          "json": {
+            "constitution": {
+              "OMEGA_CONTRACT_v1": "e897a092cfc4048fbc9116879c02455a90759c09488e4c891d9f150fc8446ac4",
+              "PDCA_BUILD_CONTRACT_v1": "600554aef7e529f5e4a6261dfe4383bc3cb4c1d5c1a2e280b5410d0cf7e6a8c3",
+              "KHS_RUNTIME_CONTRACT_v1": "9f9ff182b7cb50e20bff30733f9bb6d16e91049146dd1e58ea39b41d7a9ec951"
+            },
+            "ok": true,
+            "timestamp": "2026-03-27T08:29:42.385Z",
+            "gitSha": "0b8c1c8",
+            "pid": 2037902,
+            "uptime": 1,
+            "readiness": {
+              "ready": true,
+              "stage": "READY",
+              "uptimeMs": 763,
+              "listenReady": true,
+              "dbReady": {
+                "kokuzo": true,
+                "audit": true,
+                "persona": true
+              },
+              "kokuzoVerified": true
+            },
+            "build": {
+              "mark": "BUILD_MARK:DET_RECALL_V1+MEMLOG_V1+LOW_SIGNAL_V1+LLMCHAT_V1",
+              "features": {
+                "detRecallPassphrase": true,
+                "memPersistLog": true,
+                "lowSignalFallback": true,
+                "llmChat": true,
+                "koshikiKernel": true
+              }
+            }
+          }
+        },
+        "audit_build": {
+          "ok_http": true,
+          "status": 200,
+          "json": {
+            "ok": true,
+            "card": "TENMON_AUDIT_BUILD_ROUTE_RESTORE_V1",
+            "timestamp": "2026-03-27T08:29:42.388Z",
+            "gitSha": "0b8c1c8",
+            "readiness": {
+              "ready": true,
+              "stage": "READY",
+              "uptimeMs": 771,
+              "listenReady": true,
+              "dbReady": {
+                "kokuzo": true,
+                "audit": true,
+                "persona": true
+              },
+              "kokuzoVerified": true
+            },
+            "build": {
+              "mark": "BUILD_MARK:DET_RECALL_V1+MEMLOG_V1+LOW_SIGNAL_V1+LLMCHAT_V1",
+              "features": {
+                "detRecallPassphrase": true,
+                "memPersistLog": true,
+                "lowSignalFallback": true,
+                "llmChat": true,
+                "koshikiKernel": true
+              }
+            },
+            "contract": {
+              "endpoint": "/api/audit.build",
+              "minimal_fields": [
+                "ok",
+                "timestamp",
+                "gitSha",
+                "readiness",
+                "build"
+              ],
+              "purpose": "minimum build audit contract for stabilization cards"
+            }
+          }
+        }
+      },
+      "forensic_bundle": {},
+      "next_card": "TENMON_OS_OUTPUT_CONTRACT_NORMALIZE_CURSOR_AUTO_V1"
+    },
+    {
+      "schema_version": 3,
+      "card": "TENMON_CURSOR_OPERATOR_AUTONOMY_BRIDGE_CURSOR_AUTO_V1",
+      "cursor_card": "TENMON_WORLDCLASS_FINAL_REASONING_DENSITY_CURSOR_AUTO_V1",
+      "queue_id": "",
+      "operator_status": "queued",
+      "status": "queued",
+      "started_at": "2026-03-27T08:29:42Z",
+      "ended_at": "2026-03-27T08:29:55Z",
+      "summary_path": "/var/log/tenmon/autonomy_safe/TENMON_CURSOR_OPERATOR_AUTONOMY_BRIDGE_CURSOR_AUTO_V1__TENMON_WORLDCLASS_FINAL_REASONING_DENSITY_CURSOR_AUTO_V1__20260327T082942Z.json",
+      "skipped_probe_mode": false,
+      "execution_gate": {
+        "build_pass": true,
+        "restart_pass": true,
+        "audit_pass": true,
+        "probe_pass": true,
+        "gate_success": true
+      },
+      "restart_info": {
+        "ok": true,
+        "exit_code": 0
+      },
+      "gate_wait_seconds": 1.034,
+      "gate_retry_count": 1,
+      "gate_last_error": null,
+      "build": {
+        "ok": true,
+        "exit_code": 0,
+        "stderr_tail": ""
+      },
+      "gates": {
+        "health": {
+          "ok_http": true,
+          "status": 200,
+          "json": {
+            "ok": true,
+            "timestamp": "2026-03-27T08:29:55.724Z",
+            "gitSha": "0b8c1c8",
+            "readiness": {
+              "ready": true,
+              "stage": "READY",
+              "uptimeMs": 740,
+              "listenReady": true,
+              "dbReady": {
+                "kokuzo": true,
+                "audit": true,
+                "persona": true
+              },
+              "kokuzoVerified": true
+            }
+          }
+        },
+        "audit": {
+          "ok_http": true,
+          "status": 200,
+          "json": {
+            "constitution": {
+              "OMEGA_CONTRACT_v1": "e897a092cfc4048fbc9116879c02455a90759c09488e4c891d9f150fc8446ac4",
+              "PDCA_BUILD_CONTRACT_v1": "600554aef7e529f5e4a6261dfe4383bc3cb4c1d5c1a2e280b5410d0cf7e6a8c3",
+              "KHS_RUNTIME_CONTRACT_v1": "9f9ff182b7cb50e20bff30733f9bb6d16e91049146dd1e58ea39b41d7a9ec951"
+            },
+            "ok": true,
+            "timestamp": "2026-03-27T08:29:55.742Z",
+            "gitSha": "0b8c1c8",
+            "pid": 2038101,
+            "uptime": 1,
+            "readiness": {
+              "ready": true,
+              "stage": "READY",
+              "uptimeMs": 748,
+              "listenReady": true,
+              "dbReady": {
+                "kokuzo": true,
+                "audit": true,
+                "persona": true
+              },
+              "kokuzoVerified": true
+            },
+            "build": {
+              "mark": "BUILD_MARK:DET_RECALL_V1+MEMLOG_V1+LOW_SIGNAL_V1+LLMCHAT_V1",
+              "features": {
+                "detRecallPassphrase": true,
+                "memPersistLog": true,
+                "lowSignalFallback": true,
+                "llmChat": true,
+                "koshikiKernel": true
+              }
+            }
+          }
+        },
+        "audit_build": {
+          "ok_http": true,
+          "status": 200,
+          "json": {
+            "ok": true,
+            "card": "TENMON_AUDIT_BUILD_ROUTE_RESTORE_V1",
+            "timestamp": "2026-03-27T08:29:55.745Z",
+            "gitSha": "0b8c1c8",
+            "readiness": {
+              "ready": true,
+              "stage": "READY",
+              "uptimeMs": 755,
+              "listenReady": true,
+              "dbReady": {
+                "kokuzo": true,
+                "audit": true,
+                "persona": true
+              },
+              "kokuzoVerified": true
+            },
+            "build": {
+              "mark": "BUILD_MARK:DET_RECALL_V1+MEMLOG_V1+LOW_SIGNAL_V1+LLMCHAT_V1",
+              "features": {
+                "detRecallPassphrase": true,
+                "memPersistLog": true,
+                "lowSignalFallback": true,
+                "llmChat": true,
+                "koshikiKernel": true
+              }
+            },
+            "contract": {
+              "endpoint": "/api/audit.build",
+              "minimal_fields": [
+                "ok",
+                "timestamp",
+                "gitSha",
+                "readiness",
+                "build"
+              ],
+              "purpose": "minimum build audit contract for stabilization cards"
+            }
+          }
+        }
+      },
+      "forensic_bundle": {},
+      "next_card": "TENMON_OS_OUTPUT_CONTRACT_NORMALIZE_CURSOR_AUTO_V1"
+    },
+    {
+      "schema_version": 3,
+      "card": "TENMON_CURSOR_OPERATOR_AUTONOMY_BRIDGE_CURSOR_AUTO_V1",
+      "cursor_card": "TENMON_WORLDCLASS_FINAL_REASONING_DENSITY_CURSOR_AUTO_V1",
+      "queue_id": "",
+      "operator_status": "queued",
+      "status": "queued",
+      "started_at": "2026-03-27T08:29:55Z",
+      "ended_at": "2026-03-27T08:30:09Z",
+      "summary_path": "/var/log/tenmon/autonomy_safe/TENMON_CURSOR_OPERATOR_AUTONOMY_BRIDGE_CURSOR_AUTO_V1__TENMON_WORLDCLASS_FINAL_REASONING_DENSITY_CURSOR_AUTO_V1__20260327T082955Z.json",
+      "skipped_probe_mode": false,
+      "execution_gate": {
+        "build_pass": true,
+        "restart_pass": true,
+        "audit_pass": true,
+        "probe_pass": true,
+        "gate_success": true
+      },
+      "restart_info": {
+        "ok": true,
+        "exit_code": 0
+      },
+      "gate_wait_seconds": 1.034,
+      "gate_retry_count": 1,
+      "gate_last_error": null,
+      "build": {
+        "ok": true,
+        "exit_code": 0,
+        "stderr_tail": ""
+      },
+      "gates": {
+        "health": {
+          "ok_http": true,
+          "status": 200,
+          "json": {
+            "ok": true,
+            "timestamp": "2026-03-27T08:30:09.090Z",
+            "gitSha": "0b8c1c8",
+            "readiness": {
+              "ready": true,
+              "stage": "READY",
+              "uptimeMs": 756,
+              "listenReady": true,
+              "dbReady": {
+                "kokuzo": true,
+                "audit": true,
+                "persona": true
+              },
+              "kokuzoVerified": true
+            }
+          }
+        },
+        "audit": {
+          "ok_http": true,
+          "status": 200,
+          "json": {
+            "constitution": {
+              "OMEGA_CONTRACT_v1": "e897a092cfc4048fbc9116879c02455a90759c09488e4c891d9f150fc8446ac4",
+              "PDCA_BUILD_CONTRACT_v1": "600554aef7e529f5e4a6261dfe4383bc3cb4c1d5c1a2e280b5410d0cf7e6a8c3",
+              "KHS_RUNTIME_CONTRACT_v1": "9f9ff182b7cb50e20bff30733f9bb6d16e91049146dd1e58ea39b41d7a9ec951"
+            },
+            "ok": true,
+            "timestamp": "2026-03-27T08:30:09.108Z",
+            "gitSha": "0b8c1c8",
+            "pid": 2038323,
+            "uptime": 1,
+            "readiness": {
+              "ready": true,
+              "stage": "READY",
+              "uptimeMs": 763,
+              "listenReady": true,
+              "dbReady": {
+                "kokuzo": true,
+                "audit": true,
+                "persona": true
+              },
+              "kokuzoVerified": true
+            },
+            "build": {
+              "mark": "BUILD_MARK:DET_RECALL_V1+MEMLOG_V1+LOW_SIGNAL_V1+LLMCHAT_V1",
+              "features": {
+                "detRecallPassphrase": true,
+                "memPersistLog": true,
+                "lowSignalFallback": true,
+                "llmChat": true,
+                "koshikiKernel": true
+              }
+            }
+          }
+        },
+        "audit_build": {
+          "ok_http": true,
+          "status": 200,
+          "json": {
+            "ok": true,
+            "card": "TENMON_AUDIT_BUILD_ROUTE_RESTORE_V1",
+            "timestamp": "2026-03-27T08:30:09.111Z",
+            "gitSha": "0b8c1c8",
+            "readiness": {
+              "ready": true,
+              "stage": "READY",
+              "uptimeMs": 771,
+              "listenReady": true,
+              "dbReady": {
+                "kokuzo": true,
+                "audit": true,
+                "persona": true
+              },
+              "kokuzoVerified": true
+            },
+            "build": {
+              "mark": "BUILD_MARK:DET_RECALL_V1+MEMLOG_V1+LOW_SIGNAL_V1+LLMCHAT_V1",
+              "features": {
+                "detRecallPassphrase": true,
+                "memPersistLog": true,
+                "lowSignalFallback": true,
+                "llmChat": true,
+                "koshikiKernel": true
+              }
+            },
+            "contract": {
+              "endpoint": "/api/audit.build",
+              "minimal_fields": [
+                "ok",
+                "timestamp",
+                "gitSha",
+                "readiness",
+                "build"
+              ],
+              "purpose": "minimum build audit contract for stabilization cards"
+            }
+          }
+        }
+      },
+      "forensic_bundle": {},
+      "next_card": "TENMON_OS_OUTPUT_CONTRACT_NORMALIZE_CURSOR_AUTO_V1"
+    },
+    {
+      "schema_version": 3,
+      "card": "TENMON_CURSOR_OPERATOR_AUTONOMY_BRIDGE_CURSOR_AUTO_V1",
+      "cursor_card": "TENMON_WORLDCLASS_FINAL_REASONING_DENSITY_CURSOR_AUTO_V1",
+      "queue_id": "",
+      "operator_status": "queued",
+      "status": "queued",
+      "started_at": "2026-03-27T08:30:09Z",
+      "ended_at": "2026-03-27T08:30:22Z",
+      "summary_path": "/var/log/tenmon/autonomy_safe/TENMON_CURSOR_OPERATOR_AUTONOMY_BRIDGE_CURSOR_AUTO_V1__TENMON_WORLDCLASS_FINAL_REASONING_DENSITY_CURSOR_AUTO_V1__20260327T083009Z.json",
+      "skipped_probe_mode": false,
+      "execution_gate": {
+        "build_pass": true,
+        "restart_pass": true,
+        "audit_pass": true,
+        "probe_pass": true,
+        "gate_success": true
+      },
+      "restart_info": {
+        "ok": true,
+        "exit_code": 0
+      },
+      "gate_wait_seconds": 1.037,
+      "gate_retry_count": 1,
+      "gate_last_error": null,
+      "build": {
+        "ok": true,
+        "exit_code": 0,
+        "stderr_tail": ""
+      },
+      "gates": {
+        "health": {
+          "ok_http": true,
+          "status": 200,
+          "json": {
+            "ok": true,
+            "timestamp": "2026-03-27T08:30:22.155Z",
+            "gitSha": "0b8c1c8",
+            "readiness": {
+              "ready": true,
+              "stage": "READY",
+              "uptimeMs": 748,
+              "listenReady": true,
+              "dbReady": {
+                "kokuzo": true,
+                "audit": true,
+                "persona": true
+              },
+              "kokuzoVerified": true
+            }
+          }
+        },
+        "audit": {
+          "ok_http": true,
+          "status": 200,
+          "json": {
+            "constitution": {
+              "OMEGA_CONTRACT_v1": "e897a092cfc4048fbc9116879c02455a90759c09488e4c891d9f150fc8446ac4",
+              "PDCA_BUILD_CONTRACT_v1": "600554aef7e529f5e4a6261dfe4383bc3cb4c1d5c1a2e280b5410d0cf7e6a8c3",
+              "KHS_RUNTIME_CONTRACT_v1": "9f9ff182b7cb50e20bff30733f9bb6d16e91049146dd1e58ea39b41d7a9ec951"
+            },
+            "ok": true,
+            "timestamp": "2026-03-27T08:30:22.174Z",
+            "gitSha": "0b8c1c8",
+            "pid": 2038541,
+            "uptime": 1,
+            "readiness": {
+              "ready": true,
+              "stage": "READY",
+              "uptimeMs": 757,
+              "listenReady": true,
+              "dbReady": {
+                "kokuzo": true,
+                "audit": true,
+                "persona": true
+              },
+              "kokuzoVerified": true
+            },
+            "build": {
+              "mark": "BUILD_MARK:DET_RECALL_V1+MEMLOG_V1+LOW_SIGNAL_V1+LLMCHAT_V1",
+              "features": {
+                "detRecallPassphrase": true,
+                "memPersistLog": true,
+                "lowSignalFallback": true,
+                "llmChat": true,
+                "koshikiKernel": true
+              }
+            }
+          }
+        },
+        "audit_build": {
+          "ok_http": true,
+          "status": 200,
+          "json": {
+            "ok": true,
+            "card": "TENMON_AUDIT_BUILD_ROUTE_RESTORE_V1",
+            "timestamp": "2026-03-27T08:30:22.177Z",
+            "gitSha": "0b8c1c8",
+            "readiness": {
+              "ready": true,
+              "stage": "READY",
+              "uptimeMs": 764,
+              "listenReady": true,
+              "dbReady": {
+                "kokuzo": true,
+                "audit": true,
+                "persona": true
+              },
+              "kokuzoVerified": true
+            },
+            "build": {
+              "mark": "BUILD_MARK:DET_RECALL_V1+MEMLOG_V1+LOW_SIGNAL_V1+LLMCHAT_V1",
+              "features": {
+                "detRecallPassphrase": true,
+                "memPersistLog": true,
+                "lowSignalFallback": true,
+                "llmChat": true,
+                "koshikiKernel": true
+              }
+            },
+            "contract": {
+              "endpoint": "/api/audit.build",
+              "minimal_fields": [
+                "ok",
+                "timestamp",
+                "gitSha",
+                "readiness",
+                "build"
+              ],
+              "purpose": "minimum build audit contract for stabilization cards"
+            }
+          }
+        }
+      },
+      "forensic_bundle": {},
+      "next_card": "TENMON_OS_OUTPUT_CONTRACT_NORMALIZE_CURSOR_AUTO_V1"
+    },
+    {
+      "schema_version": 3,
+      "card": "TENMON_CURSOR_OPERATOR_AUTONOMY_BRIDGE_CURSOR_AUTO_V1",
+      "cursor_card": "TENMON_WORLDCLASS_FINAL_REASONING_DENSITY_CURSOR_AUTO_V1",
+      "queue_id": "",
+      "operator_status": "queued",
+      "status": "queued",
+      "started_at": "2026-03-27T08:30:22Z",
+      "ended_at": "2026-03-27T08:30:35Z",
+      "summary_path": "/var/log/tenmon/autonomy_safe/TENMON_CURSOR_OPERATOR_AUTONOMY_BRIDGE_CURSOR_AUTO_V1__TENMON_WORLDCLASS_FINAL_REASONING_DENSITY_CURSOR_AUTO_V1__20260327T083022Z.json",
+      "skipped_probe_mode": false,
+      "execution_gate": {
+        "build_pass": true,
+        "restart_pass": true,
+        "audit_pass": true,
+        "probe_pass": true,
+        "gate_success": true
+      },
+      "restart_info": {
+        "ok": true,
+        "exit_code": 0
+      },
+      "gate_wait_seconds": 1.035,
+      "gate_retry_count": 1,
+      "gate_last_error": null,
+      "build": {
+        "ok": true,
+        "exit_code": 0,
+        "stderr_tail": ""
+      },
+      "gates": {
+        "health": {
+          "ok_http": true,
+          "status": 200,
+          "json": {
+            "ok": true,
+            "timestamp": "2026-03-27T08:30:35.148Z",
+            "gitSha": "0b8c1c8",
+            "readiness": {
+              "ready": true,
+              "stage": "READY",
+              "uptimeMs": 754,
+              "listenReady": true,
+              "dbReady": {
+                "kokuzo": true,
+                "audit": true,
+                "persona": true
+              },
+              "kokuzoVerified": true
+            }
+          }
+        },
+        "audit": {
+          "ok_http": true,
+          "status": 200,
+          "json": {
+            "constitution": {
+              "OMEGA_CONTRACT_v1": "e897a092cfc4048fbc9116879c02455a90759c09488e4c891d9f150fc8446ac4",
+              "PDCA_BUILD_CONTRACT_v1": "600554aef7e529f5e4a6261dfe4383bc3cb4c1d5c1a2e280b5410d0cf7e6a8c3",
+              "KHS_RUNTIME_CONTRACT_v1": "9f9ff182b7cb50e20bff30733f9bb6d16e91049146dd1e58ea39b41d7a9ec951"
+            },
+            "ok": true,
+            "timestamp": "2026-03-27T08:30:35.166Z",
+            "gitSha": "0b8c1c8",
+            "pid": 2038738,
+            "uptime": 1,
+            "readiness": {
+              "ready": true,
+              "stage": "READY",
+              "uptimeMs": 761,
+              "listenReady": true,
+              "dbReady": {
+                "kokuzo": true,
+                "audit": true,
+                "persona": true
+              },
+              "kokuzoVerified": true
+            },
+            "build": {
+              "mark": "BUILD_MARK:DET_RECALL_V1+MEMLOG_V1+LOW_SIGNAL_V1+LLMCHAT_V1",
+              "features": {
+                "detRecallPassphrase": true,
+                "memPersistLog": true,
+                "lowSignalFallback": true,
+                "llmChat": true,
+                "koshikiKernel": true
+              }
+            }
+          }
+        },
+        "audit_build": {
+          "ok_http": true,
+          "status": 200,
+          "json": {
+            "ok": true,
+            "card": "TENMON_AUDIT_BUILD_ROUTE_RESTORE_V1",
+            "timestamp": "2026-03-27T08:30:35.168Z",
+            "gitSha": "0b8c1c8",
+            "readiness": {
+              "ready": true,
+              "stage": "READY",
+              "uptimeMs": 768,
+              "listenReady": true,
+              "dbReady": {
+                "kokuzo": true,
+                "audit": true,
+                "persona": true
+              },
+              "kokuzoVerified": true
+            },
+            "build": {
+              "mark": "BUILD_MARK:DET_RECALL_V1+MEMLOG_V1+LOW_SIGNAL_V1+LLMCHAT_V1",
+              "features": {
+                "detRecallPassphrase": true,
+                "memPersistLog": true,
+                "lowSignalFallback": true,
+                "llmChat": true,
+                "koshikiKernel": true
+              }
+            },
+            "contract": {
+              "endpoint": "/api/audit.build",
+              "minimal_fields": [
+                "ok",
+                "timestamp",
+                "gitSha",
+                "readiness",
+                "build"
+              ],
+              "purpose": "minimum build audit contract for stabilization cards"
+            }
+          }
+        }
+      },
+      "forensic_bundle": {},
+      "next_card": "TENMON_OS_OUTPUT_CONTRACT_NORMALIZE_CURSOR_AUTO_V1"
+    },
+    {
+      "schema_version": 3,
+      "card": "TENMON_CURSOR_OPERATOR_AUTONOMY_BRIDGE_CURSOR_AUTO_V1",
+      "cursor_card": "TENMON_WORLDCLASS_FINAL_REASONING_DENSITY_CURSOR_AUTO_V1",
+      "queue_id": "",
+      "operator_status": "queued",
+      "status": "queued",
+      "started_at": "2026-03-27T08:30:35Z",
+      "ended_at": "2026-03-27T08:30:48Z",
+      "summary_path": "/var/log/tenmon/autonomy_safe/TENMON_CURSOR_OPERATOR_AUTONOMY_BRIDGE_CURSOR_AUTO_V1__TENMON_WORLDCLASS_FINAL_REASONING_DENSITY_CURSOR_AUTO_V1__20260327T083035Z.json",
+      "skipped_probe_mode": false,
+      "execution_gate": {
+        "build_pass": true,
+        "restart_pass": true,
+        "audit_pass": true,
+        "probe_pass": true,
+        "gate_success": true
+      },
+      "restart_info": {
+        "ok": true,
+        "exit_code": 0
+      },
+      "gate_wait_seconds": 1.032,
+      "gate_retry_count": 1,
+      "gate_last_error": null,
+      "build": {
+        "ok": true,
+        "exit_code": 0,
+        "stderr_tail": ""
+      },
+      "gates": {
+        "health": {
+          "ok_http": true,
+          "status": 200,
+          "json": {
+            "ok": true,
+            "timestamp": "2026-03-27T08:30:48.082Z",
+            "gitSha": "0b8c1c8",
+            "readiness": {
+              "ready": true,
+              "stage": "READY",
+              "uptimeMs": 761,
+              "listenReady": true,
+              "dbReady": {
+                "kokuzo": true,
+                "audit": true,
+                "persona": true
+              },
+              "kokuzoVerified": true
+            }
+          }
+        },
+        "audit": {
+          "ok_http": true,
+          "status": 200,
+          "json": {
+            "constitution": {
+              "OMEGA_CONTRACT_v1": "e897a092cfc4048fbc9116879c02455a90759c09488e4c891d9f150fc8446ac4",
+              "PDCA_BUILD_CONTRACT_v1": "600554aef7e529f5e4a6261dfe4383bc3cb4c1d5c1a2e280b5410d0cf7e6a8c3",
+              "KHS_RUNTIME_CONTRACT_v1": "9f9ff182b7cb50e20bff30733f9bb6d16e91049146dd1e58ea39b41d7a9ec951"
+            },
+            "ok": true,
+            "timestamp": "2026-03-27T08:30:48.098Z",
+            "gitSha": "0b8c1c8",
+            "pid": 2038944,
+            "uptime": 1,
+            "readiness": {
+              "ready": true,
+              "stage": "READY",
+              "uptimeMs": 768,
+              "listenReady": true,
+              "dbReady": {
+                "kokuzo": true,
+                "audit": true,
+                "persona": true
+              },
+              "kokuzoVerified": true
+            },
+            "build": {
+              "mark": "BUILD_MARK:DET_RECALL_V1+MEMLOG_V1+LOW_SIGNAL_V1+LLMCHAT_V1",
+              "features": {
+                "detRecallPassphrase": true,
+                "memPersistLog": true,
+                "lowSignalFallback": true,
+                "llmChat": true,
+                "koshikiKernel": true
+              }
+            }
+          }
+        },
+        "audit_build": {
+          "ok_http": true,
+          "status": 200,
+          "json": {
+            "ok": true,
+            "card": "TENMON_AUDIT_BUILD_ROUTE_RESTORE_V1",
+            "timestamp": "2026-03-27T08:30:48.101Z",
+            "gitSha": "0b8c1c8",
+            "readiness": {
+              "ready": true,
+              "stage": "READY",
+              "uptimeMs": 775,
+              "listenReady": true,
+              "dbReady": {
+                "kokuzo": true,
+                "audit": true,
+                "persona": true
+              },
+              "kokuzoVerified": true
+            },
+            "build": {
+              "mark": "BUILD_MARK:DET_RECALL_V1+MEMLOG_V1+LOW_SIGNAL_V1+LLMCHAT_V1",
+              "features": {
+                "detRecallPassphrase": true,
+                "memPersistLog": true,
+                "lowSignalFallback": true,
+                "llmChat": true,
+                "koshikiKernel": true
+              }
+            },
+            "contract": {
+              "endpoint": "/api/audit.build",
+              "minimal_fields": [
+                "ok",
+                "timestamp",
+                "gitSha",
+                "readiness",
+                "build"
+              ],
+              "purpose": "minimum build audit contract for stabilization cards"
+            }
+          }
+        }
+      },
+      "forensic_bundle": {},
+      "next_card": "TENMON_OS_OUTPUT_CONTRACT_NORMALIZE_CURSOR_AUTO_V1"
     }
   ],
   "ingest_schema": {
@@ -22119,9 +25407,9 @@
     "queue_id": "",
     "operator_status": "queued",
     "status": "queued",
-    "started_at": "2026-03-27T08:15:50Z",
-    "ended_at": "2026-03-27T08:16:03Z",
-    "summary_path": "/var/log/tenmon/autonomy_safe/TENMON_CURSOR_OPERATOR_AUTONOMY_BRIDGE_CURSOR_AUTO_V1__TENMON_WORLDCLASS_FINAL_REASONING_DENSITY_CURSOR_AUTO_V1__20260327T081550Z.json",
+    "started_at": "2026-03-27T08:30:35Z",
+    "ended_at": "2026-03-27T08:30:48Z",
+    "summary_path": "/var/log/tenmon/autonomy_safe/TENMON_CURSOR_OPERATOR_AUTONOMY_BRIDGE_CURSOR_AUTO_V1__TENMON_WORLDCLASS_FINAL_REASONING_DENSITY_CURSOR_AUTO_V1__20260327T083035Z.json",
     "skipped_probe_mode": false,
     "execution_gate": {
       "build_pass": true,
@@ -22148,12 +25436,12 @@
         "status": 200,
         "json": {
           "ok": true,
-          "timestamp": "2026-03-27T08:16:03.364Z",
-          "gitSha": "60a36c4",
+          "timestamp": "2026-03-27T08:30:48.082Z",
+          "gitSha": "0b8c1c8",
           "readiness": {
             "ready": true,
             "stage": "READY",
-            "uptimeMs": 759,
+            "uptimeMs": 761,
             "listenReady": true,
             "dbReady": {
               "kokuzo": true,
@@ -22174,14 +25462,14 @@
             "KHS_RUNTIME_CONTRACT_v1": "9f9ff182b7cb50e20bff30733f9bb6d16e91049146dd1e58ea39b41d7a9ec951"
           },
           "ok": true,
-          "timestamp": "2026-03-27T08:16:03.382Z",
-          "gitSha": "60a36c4",
-          "pid": 2032136,
+          "timestamp": "2026-03-27T08:30:48.098Z",
+          "gitSha": "0b8c1c8",
+          "pid": 2038944,
           "uptime": 1,
           "readiness": {
             "ready": true,
             "stage": "READY",
-            "uptimeMs": 767,
+            "uptimeMs": 768,
             "listenReady": true,
             "dbReady": {
               "kokuzo": true,
@@ -22208,12 +25496,12 @@
         "json": {
           "ok": true,
           "card": "TENMON_AUDIT_BUILD_ROUTE_RESTORE_V1",
-          "timestamp": "2026-03-27T08:16:03.384Z",
-          "gitSha": "60a36c4",
+          "timestamp": "2026-03-27T08:30:48.101Z",
+          "gitSha": "0b8c1c8",
           "readiness": {
             "ready": true,
             "stage": "READY",
-            "uptimeMs": 773,
+            "uptimeMs": 775,
             "listenReady": true,
             "dbReady": {
               "kokuzo": true,
@@ -22256,9 +25544,9 @@
     "queue_id": "",
     "operator_status": "queued",
     "status": "queued",
-    "started_at": "2026-03-27T08:15:50Z",
-    "ended_at": "2026-03-27T08:16:03Z",
-    "summary_path": "/var/log/tenmon/autonomy_safe/TENMON_CURSOR_OPERATOR_AUTONOMY_BRIDGE_CURSOR_AUTO_V1__TENMON_WORLDCLASS_FINAL_REASONING_DENSITY_CURSOR_AUTO_V1__20260327T081550Z.json",
+    "started_at": "2026-03-27T08:30:35Z",
+    "ended_at": "2026-03-27T08:30:48Z",
+    "summary_path": "/var/log/tenmon/autonomy_safe/TENMON_CURSOR_OPERATOR_AUTONOMY_BRIDGE_CURSOR_AUTO_V1__TENMON_WORLDCLASS_FINAL_REASONING_DENSITY_CURSOR_AUTO_V1__20260327T083035Z.json",
     "skipped_probe_mode": false,
     "execution_gate": {
       "build_pass": true,
@@ -22285,12 +25573,12 @@
         "status": 200,
         "json": {
           "ok": true,
-          "timestamp": "2026-03-27T08:16:03.364Z",
-          "gitSha": "60a36c4",
+          "timestamp": "2026-03-27T08:30:48.082Z",
+          "gitSha": "0b8c1c8",
           "readiness": {
             "ready": true,
             "stage": "READY",
-            "uptimeMs": 759,
+            "uptimeMs": 761,
             "listenReady": true,
             "dbReady": {
               "kokuzo": true,
@@ -22311,14 +25599,14 @@
             "KHS_RUNTIME_CONTRACT_v1": "9f9ff182b7cb50e20bff30733f9bb6d16e91049146dd1e58ea39b41d7a9ec951"
           },
           "ok": true,
-          "timestamp": "2026-03-27T08:16:03.382Z",
-          "gitSha": "60a36c4",
-          "pid": 2032136,
+          "timestamp": "2026-03-27T08:30:48.098Z",
+          "gitSha": "0b8c1c8",
+          "pid": 2038944,
           "uptime": 1,
           "readiness": {
             "ready": true,
             "stage": "READY",
-            "uptimeMs": 767,
+            "uptimeMs": 768,
             "listenReady": true,
             "dbReady": {
               "kokuzo": true,
@@ -22345,12 +25633,12 @@
         "json": {
           "ok": true,
           "card": "TENMON_AUDIT_BUILD_ROUTE_RESTORE_V1",
-          "timestamp": "2026-03-27T08:16:03.384Z",
-          "gitSha": "60a36c4",
+          "timestamp": "2026-03-27T08:30:48.101Z",
+          "gitSha": "0b8c1c8",
           "readiness": {
             "ready": true,
             "stage": "READY",
-            "uptimeMs": 773,
+            "uptimeMs": 775,
             "listenReady": true,
             "dbReady": {
               "kokuzo": true,
@@ -22398,7 +25686,7 @@
   "cursor_operator_bridge_v1": {
     "version": 1,
     "card": "TENMON_CURSOR_OPERATOR_AUTONOMY_BRIDGE_CURSOR_AUTO_V1",
-    "updated_at": "2026-03-27T08:16:03Z",
+    "updated_at": "2026-03-27T08:30:48Z",
     "queue_ok": true,
     "current_run_entry": {
       "schema_version": 3,
@@ -22407,9 +25695,9 @@
       "queue_id": "",
       "operator_status": "queued",
       "status": "queued",
-      "started_at": "2026-03-27T08:15:50Z",
-      "ended_at": "2026-03-27T08:16:03Z",
-      "summary_path": "/var/log/tenmon/autonomy_safe/TENMON_CURSOR_OPERATOR_AUTONOMY_BRIDGE_CURSOR_AUTO_V1__TENMON_WORLDCLASS_FINAL_REASONING_DENSITY_CURSOR_AUTO_V1__20260327T081550Z.json",
+      "started_at": "2026-03-27T08:30:35Z",
+      "ended_at": "2026-03-27T08:30:48Z",
+      "summary_path": "/var/log/tenmon/autonomy_safe/TENMON_CURSOR_OPERATOR_AUTONOMY_BRIDGE_CURSOR_AUTO_V1__TENMON_WORLDCLASS_FINAL_REASONING_DENSITY_CURSOR_AUTO_V1__20260327T083035Z.json",
       "skipped_probe_mode": false,
       "execution_gate": {
         "build_pass": true,
@@ -22436,12 +25724,12 @@
           "status": 200,
           "json": {
             "ok": true,
-            "timestamp": "2026-03-27T08:16:03.364Z",
-            "gitSha": "60a36c4",
+            "timestamp": "2026-03-27T08:30:48.082Z",
+            "gitSha": "0b8c1c8",
             "readiness": {
               "ready": true,
               "stage": "READY",
-              "uptimeMs": 759,
+              "uptimeMs": 761,
               "listenReady": true,
               "dbReady": {
                 "kokuzo": true,
@@ -22462,14 +25750,14 @@
               "KHS_RUNTIME_CONTRACT_v1": "9f9ff182b7cb50e20bff30733f9bb6d16e91049146dd1e58ea39b41d7a9ec951"
             },
             "ok": true,
-            "timestamp": "2026-03-27T08:16:03.382Z",
-            "gitSha": "60a36c4",
-            "pid": 2032136,
+            "timestamp": "2026-03-27T08:30:48.098Z",
+            "gitSha": "0b8c1c8",
+            "pid": 2038944,
             "uptime": 1,
             "readiness": {
               "ready": true,
               "stage": "READY",
-              "uptimeMs": 767,
+              "uptimeMs": 768,
               "listenReady": true,
               "dbReady": {
                 "kokuzo": true,
@@ -22496,12 +25784,12 @@
           "json": {
             "ok": true,
             "card": "TENMON_AUDIT_BUILD_ROUTE_RESTORE_V1",
-            "timestamp": "2026-03-27T08:16:03.384Z",
-            "gitSha": "60a36c4",
+            "timestamp": "2026-03-27T08:30:48.101Z",
+            "gitSha": "0b8c1c8",
             "readiness": {
               "ready": true,
               "stage": "READY",
-              "uptimeMs": 773,
+              "uptimeMs": 775,
               "listenReady": true,
               "dbReady": {
                 "kokuzo": true,
@@ -22544,9 +25832,9 @@
       "queue_id": "",
       "operator_status": "queued",
       "status": "queued",
-      "started_at": "2026-03-27T08:15:50Z",
-      "ended_at": "2026-03-27T08:16:03Z",
-      "summary_path": "/var/log/tenmon/autonomy_safe/TENMON_CURSOR_OPERATOR_AUTONOMY_BRIDGE_CURSOR_AUTO_V1__TENMON_WORLDCLASS_FINAL_REASONING_DENSITY_CURSOR_AUTO_V1__20260327T081550Z.json",
+      "started_at": "2026-03-27T08:30:35Z",
+      "ended_at": "2026-03-27T08:30:48Z",
+      "summary_path": "/var/log/tenmon/autonomy_safe/TENMON_CURSOR_OPERATOR_AUTONOMY_BRIDGE_CURSOR_AUTO_V1__TENMON_WORLDCLASS_FINAL_REASONING_DENSITY_CURSOR_AUTO_V1__20260327T083035Z.json",
       "skipped_probe_mode": false,
       "execution_gate": {
         "build_pass": true,
@@ -22573,12 +25861,12 @@
           "status": 200,
           "json": {
             "ok": true,
-            "timestamp": "2026-03-27T08:16:03.364Z",
-            "gitSha": "60a36c4",
+            "timestamp": "2026-03-27T08:30:48.082Z",
+            "gitSha": "0b8c1c8",
             "readiness": {
               "ready": true,
               "stage": "READY",
-              "uptimeMs": 759,
+              "uptimeMs": 761,
               "listenReady": true,
               "dbReady": {
                 "kokuzo": true,
@@ -22599,14 +25887,14 @@
               "KHS_RUNTIME_CONTRACT_v1": "9f9ff182b7cb50e20bff30733f9bb6d16e91049146dd1e58ea39b41d7a9ec951"
             },
             "ok": true,
-            "timestamp": "2026-03-27T08:16:03.382Z",
-            "gitSha": "60a36c4",
-            "pid": 2032136,
+            "timestamp": "2026-03-27T08:30:48.098Z",
+            "gitSha": "0b8c1c8",
+            "pid": 2038944,
             "uptime": 1,
             "readiness": {
               "ready": true,
               "stage": "READY",
-              "uptimeMs": 767,
+              "uptimeMs": 768,
               "listenReady": true,
               "dbReady": {
                 "kokuzo": true,
@@ -22633,12 +25921,12 @@
           "json": {
             "ok": true,
             "card": "TENMON_AUDIT_BUILD_ROUTE_RESTORE_V1",
-            "timestamp": "2026-03-27T08:16:03.384Z",
-            "gitSha": "60a36c4",
+            "timestamp": "2026-03-27T08:30:48.101Z",
+            "gitSha": "0b8c1c8",
             "readiness": {
               "ready": true,
               "stage": "READY",
-              "uptimeMs": 773,
+              "uptimeMs": 775,
               "listenReady": true,
               "dbReady": {
                 "kokuzo": true,
@@ -22678,7 +25966,7 @@
   },
   "latest_state_rejudge_refresh_v1": {
     "card": "TENMON_LATEST_STATE_REJUDGE_AND_SEAL_REFRESH_CURSOR_AUTO_V1",
-    "updated_at": "2026-03-27T08:23:40Z",
+    "updated_at": "2026-03-27T08:25:17Z",
     "source_master": "tenmon_autonomy_12h_fully_autonomous_failclosed_master_cursor_auto_v1.json",
     "execution_gate_ready": true,
     "queue_ready": true,

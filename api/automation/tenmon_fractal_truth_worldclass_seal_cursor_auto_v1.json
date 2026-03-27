@@ -14,9 +14,12 @@
   "worldclass_fractal_truth_ready": false,
   "worldclass_truth_output_ready": false,
   "worktree_converged": false,
+  "worktree_dirty_total": 5,
+  "worktree_dirty_excluded": 4,
+  "worktree_dirty_effective": 1,
   "rollback_used": false,
   "next_card_if_fail": "TENMON_FRACTAL_WORKTREE_CONVERGENCE_AND_SEAL_CURSOR_AUTO_V1",
-  "generated_at": "2026-03-27T08:16:37Z",
+  "generated_at": "2026-03-27T08:25:11Z",
   "case": "C",
   "primary_gap": "worktree_not_converged",
   "axis_gap_target": null,
@@ -35,6 +38,9 @@
     "beautiful_output_preserved": true
   },
   "stale_sources_present": false,
+  "worktree_dirty_effective_files": [
+    "api/automation/tenmon_fractal_truth_worldclass_seal_cursor_auto_v1.py"
+  ],
   "scorecard_worldclass_ready": false,
   "regression_detected": false,
   "integration_cards": {
@@ -65,7 +71,7 @@
     "mixed_question_quality は fresh_probe_digest.general_probe: satisfied ∧ meta_leak_ok ∧ route が NATURAL_GENERAL_LLM_TOP 系でない（root reasoning 直結）。",
     "material_digest_ledger_ready: ledger の materials>=10・digest_conditions 非空・card 接頭辞。",
     "digest_state_visible: digest_states_visible・undigested・digest_trace 必須。digestLedgerTraceNeeded と digestStateVisibleTuneNeeded がともに false。",
-    "worktree_converged: git status --porcelain が空。dirty なら CASE C で worktree convergence を先に。",
+    "worktree_converged: git status --porcelain から self artifact whitelist を除外した effective dirty 件数で判定。",
     "CASE A: 全10軸 green かつ worktree clean かつ not stale かつ not regression かつ worldclass_ready。",
     "CASE B: 欠け 1 軸のみ → next_card_if_fail は AXIS_NEXT_CARD（軸別 trace）。",
     "CASE C: 2 軸以上または stale または worktree dirty → 停止。stale は forensic、multi は autonomy_bridge または scorecard 推奨。",

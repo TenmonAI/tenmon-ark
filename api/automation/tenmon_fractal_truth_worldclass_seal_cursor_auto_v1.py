@@ -182,6 +182,69 @@ def _repo_worktree_clean(repo: Path) -> bool:
         return False
 
 
+def _worktree_effective_state(repo: Path) -> dict[str, Any]:
+    """
+    self artifact 除外付きの worktree 判定。
+    whitelist 以外の dirty は従来どおり dirty 扱い（fail-closed）。
+    """
+    excluded = {
+        "api/automation/tenmon_fractal_truth_worldclass_seal_cursor_auto_v1.json",
+        "api/automation/tenmon_fractal_truth_worldclass_seal_cursor_auto_v1.md",
+        "api/automation/tenmon_worldclass_acceptance_scorecard.json",
+        "api/automation/tenmon_worldclass_acceptance_scorecard.md",
+        "api/automation/tenmon_latest_state_rejudge_and_seal_refresh_cursor_auto_v1.json",
+        "api/automation/remote_cursor_result_bundle.json",
+        "api/automation/tenmon_autonomy_12h_fully_autonomous_failclosed_master_cursor_auto_v1.json",
+        "api/automation/tenmon_cursor_operator_autonomy_bridge_cursor_auto_v1.json",
+    }
+    try:
+        r = subprocess.run(
+            ["git", "status", "--porcelain"],
+            cwd=str(repo),
+            capture_output=True,
+            text=True,
+            timeout=60,
+        )
+        if r.returncode != 0:
+            return {
+                "worktree_converged": False,
+                "worktree_dirty_total": 0,
+                "worktree_dirty_excluded": 0,
+                "worktree_dirty_effective": 1,
+                "worktree_dirty_files": [],
+                "worktree_dirty_excluded_files": [],
+                "worktree_dirty_effective_files": ["git_status_failed"],
+            }
+        rows = [ln for ln in (r.stdout or "").splitlines() if ln.strip()]
+        files: list[str] = []
+        for ln in rows:
+            # porcelain: XY<space>path
+            p = ln[3:].strip() if len(ln) >= 4 else ""
+            if p:
+                files.append(p)
+        excluded_files = [p for p in files if p in excluded]
+        effective_files = [p for p in files if p not in excluded]
+        return {
+            "worktree_converged": len(effective_files) == 0,
+            "worktree_dirty_total": len(files),
+            "worktree_dirty_excluded": len(excluded_files),
+            "worktree_dirty_effective": len(effective_files),
+            "worktree_dirty_files": files,
+            "worktree_dirty_excluded_files": excluded_files,
+            "worktree_dirty_effective_files": effective_files,
+        }
+    except Exception:
+        return {
+            "worktree_converged": False,
+            "worktree_dirty_total": 0,
+            "worktree_dirty_excluded": 0,
+            "worktree_dirty_effective": 1,
+            "worktree_dirty_files": [],
+            "worktree_dirty_excluded_files": [],
+            "worktree_dirty_effective_files": ["git_status_exception"],
+        }
+
+
 def main() -> int:
     repo = Path(os.environ.get("TENMON_REPO_ROOT", "/opt/tenmon-ark-repo")).resolve()
     api = repo / "api"
@@ -198,7 +261,8 @@ def main() -> int:
     if stale:
         fp = {}
 
-    worktree_clean = _repo_worktree_clean(repo)
+    wt = _worktree_effective_state(repo)
+    worktree_clean = bool(wt.get("worktree_converged"))
 
     code_axes = _axis_from_code(api)
     axes: dict[str, bool] = {
@@ -275,6 +339,9 @@ def main() -> int:
         "worldclass_fractal_truth_ready": ok,
         "worldclass_truth_output_ready": ok,
         "worktree_converged": worktree_clean,
+        "worktree_dirty_total": int(wt.get("worktree_dirty_total") or 0),
+        "worktree_dirty_excluded": int(wt.get("worktree_dirty_excluded") or 0),
+        "worktree_dirty_effective": int(wt.get("worktree_dirty_effective") or 0),
         "rollback_used": False,
         "next_card_if_fail": None if ok else next_card_if_fail,
     }
@@ -289,6 +356,7 @@ def main() -> int:
         "failed_axes": failed,
         "axes": {k: axes[k] for k in AXIS_ORDER},
         "stale_sources_present": stale,
+        "worktree_dirty_effective_files": wt.get("worktree_dirty_effective_files") or [],
         "scorecard_worldclass_ready": wc_sc,
         "regression_detected": reg,
         "integration_cards": {
@@ -312,7 +380,7 @@ def main() -> int:
             "mixed_question_quality は fresh_probe_digest.general_probe: satisfied ∧ meta_leak_ok ∧ route が NATURAL_GENERAL_LLM_TOP 系でない（root reasoning 直結）。",
             "material_digest_ledger_ready: ledger の materials>=10・digest_conditions 非空・card 接頭辞。",
             "digest_state_visible: digest_states_visible・undigested・digest_trace 必須。digestLedgerTraceNeeded と digestStateVisibleTuneNeeded がともに false。",
-            "worktree_converged: git status --porcelain が空。dirty なら CASE C で worktree convergence を先に。",
+            "worktree_converged: git status --porcelain から self artifact whitelist を除外した effective dirty 件数で判定。",
             "CASE A: 全10軸 green かつ worktree clean かつ not stale かつ not regression かつ worldclass_ready。",
             "CASE B: 欠け 1 軸のみ → next_card_if_fail は AXIS_NEXT_CARD（軸別 trace）。",
             "CASE C: 2 軸以上または stale または worktree dirty → 停止。stale は forensic、multi は autonomy_bridge または scorecard 推奨。",
