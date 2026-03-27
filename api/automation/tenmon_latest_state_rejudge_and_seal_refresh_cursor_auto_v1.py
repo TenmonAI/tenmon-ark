@@ -127,6 +127,8 @@ def main() -> int:
     seal_path = auto / "tenmon_final_operable_seal.json"
     fractal_path = auto / "tenmon_fractal_truth_worldclass_seal_cursor_auto_v1.json"
     kcirc_path = auto / "tenmon_knowledge_circulation_worldclass_output_seal_cursor_auto_v1.json"
+    cursor_ready_path = auto / "tenmon_cursor_operator_readiness_final_cursor_auto_v1.json"
+    mac_ready_path = auto / "tenmon_mac_operator_readiness_final_cursor_auto_v1.json"
 
     if not master:
         out = {
@@ -152,6 +154,8 @@ def main() -> int:
     seal = _read_json(seal_path)
     fractal = _read_json(fractal_path)
     kcirc = _read_json(kcirc_path)
+    cursor_ready = _read_json(cursor_ready_path)
+    mac_ready = _read_json(mac_ready_path)
     latest_entry = _pick_latest_entry(bundle)
     eg = latest_entry.get("execution_gate") if isinstance(latest_entry.get("execution_gate"), dict) else {}
 
@@ -188,13 +192,23 @@ def main() -> int:
     axes_class["fractal_truth_worldclass_ready"] = "NEEDS_REJUDGE"
     axes_new["fractal_truth_worldclass_ready"] = fractal_truth_worldclass_ready
 
-    # planner は再判定対象。operator 軸は source が partial/未観測のため REAL_GAP 維持
+    # planner は再判定対象。operator 軸は readiness final の実測 JSON を優先採用
     axes_class["planner_ready"] = "NEEDS_REJUDGE"
     axes_new["planner_ready"] = bool(master.get("planner_ready") is True)
-    axes_class["cursor_operator_ready"] = "REAL_GAP"
-    axes_new["cursor_operator_ready"] = bool(master.get("cursor_operator_ready") is True)
-    axes_class["mac_operator_ready"] = "REAL_GAP"
-    axes_new["mac_operator_ready"] = bool(master.get("mac_operator_ready") is True)
+    cursor_operator_evidence_ok = bool(
+        cursor_ready.get("ok") is True and cursor_ready.get("cursor_operator_ready") is True
+    )
+    mac_operator_evidence_ok = bool(
+        mac_ready.get("ok") is True and mac_ready.get("mac_operator_ready") is True
+    )
+    axes_class["cursor_operator_ready"] = "REFRESHABLE" if cursor_operator_evidence_ok else "REAL_GAP"
+    axes_new["cursor_operator_ready"] = (
+        True if cursor_operator_evidence_ok else bool(master.get("cursor_operator_ready") is True)
+    )
+    axes_class["mac_operator_ready"] = "REFRESHABLE" if mac_operator_evidence_ok else "REAL_GAP"
+    axes_new["mac_operator_ready"] = (
+        True if mac_operator_evidence_ok else bool(master.get("mac_operator_ready") is True)
+    )
 
     # 相互排他: 同一軸は refreshed / real_gap / needs_rejudge_unresolved のどれか1つのみ
     refreshed_axes = [k for k, v in axes_new.items() if bool(master.get(k)) is not v and v is True]
@@ -243,6 +257,8 @@ def main() -> int:
         "scorecard_worldclass_ready": bool(score.get("worldclass_ready") is True),
         "bridge_ok": bool(bridge.get("ok") is True),
         "queue_error": q_err,
+        "cursor_operator_evidence_ok": cursor_operator_evidence_ok,
+        "mac_operator_evidence_ok": mac_operator_evidence_ok,
     }
 
     # overall ok for this card = state rejudge pipeline success (not "all green")

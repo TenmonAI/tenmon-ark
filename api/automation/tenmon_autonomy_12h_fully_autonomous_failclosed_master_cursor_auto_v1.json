@@ -21,18 +21,18 @@
   "execution_gate_ready": true,
   "rollback_ready": true,
   "forensic_ready": true,
-  "cursor_operator_ready": false,
-  "mac_operator_ready": false,
+  "cursor_operator_ready": true,
+  "mac_operator_ready": true,
   "worktree_converged": true,
   "final_sealed": true,
   "rollback_used": true,
   "next_card_if_fail": "TENMON_LATEST_STATE_REJUDGE_AND_SEAL_REFRESH_CURSOR_AUTO_V1",
-  "generated_at": "2026-03-27T08:13:26Z",
+  "generated_at": "2026-03-27T08:23:40Z",
   "run_directory": "/opt/tenmon-ark-repo/api/automation/autonomy_12h_fully_autonomous_failclosed_master_v1/20260327T072953Z",
   "last_primary_gap": "gates",
   "state_rejudge_refresh_v1": {
     "card": "TENMON_LATEST_STATE_REJUDGE_AND_SEAL_REFRESH_CURSOR_AUTO_V1",
-    "updated_at": "2026-03-27T08:13:26Z",
+    "updated_at": "2026-03-27T08:23:40Z",
     "source_master": "tenmon_autonomy_12h_fully_autonomous_failclosed_master_cursor_auto_v1.json",
     "axes_classification": {
       "execution_gate_ready": "REFRESHABLE",
@@ -43,12 +43,14 @@
       "knowledge_circulation_connected": "NEEDS_REJUDGE",
       "fractal_truth_worldclass_ready": "NEEDS_REJUDGE",
       "planner_ready": "NEEDS_REJUDGE",
-      "cursor_operator_ready": "REAL_GAP",
-      "mac_operator_ready": "REAL_GAP"
+      "cursor_operator_ready": "REFRESHABLE",
+      "mac_operator_ready": "REFRESHABLE"
     },
     "scorecard_worldclass_ready": false,
     "bridge_ok": true,
-    "queue_error": null
+    "queue_error": null,
+    "cursor_operator_evidence_ok": true,
+    "mac_operator_evidence_ok": true
   },
   "planner_fractal_truth_rejudge_v1": {
     "card": "TENMON_PLANNER_AND_FRACTAL_TRUTH_REJUDGE_CURSOR_AUTO_V1",

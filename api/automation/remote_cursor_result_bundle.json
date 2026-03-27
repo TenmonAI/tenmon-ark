@@ -1,7 +1,7 @@
 {
   "version": 1,
   "card": "TENMON_REMOTE_CURSOR_COMMAND_CENTER_CURSOR_AUTO_V1",
-  "updatedAt": "2026-03-27T08:16:03Z",
+  "updatedAt": "2026-03-27T08:23:40Z",
   "autonomy_execution_gate_policy_v1": {
     "version": 1,
     "card": "TENMON_AUTONOMY_EXECUTION_GATE_AND_RESULT_RETURN_CURSOR_AUTO_V1",
@@ -22678,7 +22678,7 @@
   },
   "latest_state_rejudge_refresh_v1": {
     "card": "TENMON_LATEST_STATE_REJUDGE_AND_SEAL_REFRESH_CURSOR_AUTO_V1",
-    "updated_at": "2026-03-27T08:13:26Z",
+    "updated_at": "2026-03-27T08:23:40Z",
     "source_master": "tenmon_autonomy_12h_fully_autonomous_failclosed_master_cursor_auto_v1.json",
     "execution_gate_ready": true,
     "queue_ready": true,

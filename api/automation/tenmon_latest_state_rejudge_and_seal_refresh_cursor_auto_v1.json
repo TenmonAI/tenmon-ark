@@ -8,12 +8,12 @@
   "audit_pass_after_retry": true,
   "result_bundle_updated": true,
   "queue_single_flight_preserved": true,
-  "refreshed_axes": [],
-  "remaining_real_gaps": [
+  "refreshed_axes": [
     "cursor_operator_ready",
     "mac_operator_ready"
   ],
+  "remaining_real_gaps": [],
   "rollback_used": false,
   "next_card_if_fail": null,
-  "generated_at": "2026-03-27T08:13:26Z"
+  "generated_at": "2026-03-27T08:23:40Z"
 }
