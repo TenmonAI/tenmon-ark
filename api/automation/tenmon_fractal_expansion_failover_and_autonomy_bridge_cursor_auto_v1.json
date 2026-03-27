@@ -1,0 +1,31 @@
+{
+  "ok": true,
+  "card": "TENMON_FRACTAL_EXPANSION_FAILOVER_AND_AUTONOMY_BRIDGE_CURSOR_AUTO_V1",
+  "fractal_autonomy_bridge_ready": true,
+  "single_flight_preserved": true,
+  "next_card_bridge_ready": true,
+  "failover_path_ready": true,
+  "rollback_used": false,
+  "next_card_if_fail": null,
+  "generated_at": "2026-03-27T02:15:25Z",
+  "checks": {
+    "branches_complete": true,
+    "branch_issues": [],
+    "trace_card_ok": true,
+    "mainline_id_ok": true,
+    "policy_sync_ok": true,
+    "planner_dry_run_ok": true,
+    "planner_stdout_tail": "{\n  \"ok\": true,\n  \"card\": \"TENMON_AUTONOMY_PLANNER_AND_QUEUE_SINGLE_FLIGHT_CURSOR_AUTO_V1\",\n  \"planner_ready\": true,\n  \"queue_ready\": true,\n  \"single_flight_ready\": true,\n  \"duplicate_reject_ok\": true,\n  \"stale_running_cleanup_ok\": true,\n  \"state_persistence_ok\": true,\n  \"rollback_used\": false,\n  \"next_card_if_fail\": null\n}\n",
+    "single_flight_signal_ok": true,
+    "enqueue_cursor_card_ok": true,
+    "enqueue_matching_queue_items": 0,
+    "integration_cards_subset_ok": true
+  },
+  "bridge_config_path": "/opt/tenmon-ark-repo/api/automation/tenmon_fractal_expansion_autonomy_bridge_v1.json",
+  "evidence_dir": null,
+  "notes": [
+    "planner dry-run: tenmon_autonomy_planner_and_queue_single_flight_cursor_auto_v1.py --dry-run",
+    "single-flight: remote_cursor_queue と tenmon_cursor_single_flight_queue_state の policy 一致・mainline_max_concurrent=1",
+    "fail 時 evidence: automation/fractal_expansion_failover_bridge_evidence/<ts>/evidence_bundle.json"
+  ]
+}

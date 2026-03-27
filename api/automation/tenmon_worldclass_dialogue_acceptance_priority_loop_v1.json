@@ -146,41 +146,39 @@
     "fixture 成功の偽装は行わない。TENMON_LOOP_PROBE_BASE を設定すると current-run health を記録。"
   ],
   "rejudge_sync": {
-    "generated_at": "2026-03-26T23:52:04Z",
-    "resolved_dialogue_axes": [
-      "k1_depth"
-    ],
+    "generated_at": "2026-03-27T02:52:13Z",
+    "resolved_dialogue_axes": [],
     "fresh_probe_digest": {
       "continuity_followup_len": 116,
-      "continuity_probe_thread": "probe_rejudge_1774569115",
+      "continuity_probe_thread": "probe_rejudge_1774579926",
       "chat1_route": "DEF_FASTPATH_VERIFIED_V1",
       "chat2_route": "CONTINUITY_ROUTE_HOLD_V1",
       "k1_probe_hokke": {
-        "route": "K1_TRACE_EMPTY_GATED_V1",
-        "len": 245,
-        "response_nonempty": true,
-        "meta_leak_ok": true,
-        "satisfied": true,
-        "http_status": 200,
-        "thread_id": "probe_k1_hokke_1774569115"
-      },
-      "k1_probe_kukai": {
-        "route": "K1_TRACE_EMPTY_GATED_V1",
-        "len": 177,
-        "response_nonempty": true,
-        "meta_leak_ok": true,
-        "satisfied": true,
-        "http_status": 200,
-        "thread_id": "probe_k1_kukai_1774569115"
-      },
-      "general_probe": {
-        "route": "NATURAL_GENERAL_LLM_TOP",
-        "len": 317,
+        "route": "SCRIPTURE_LOCAL_RESOLVER_V4",
+        "len": 146,
         "response_nonempty": true,
         "meta_leak_ok": true,
         "satisfied": false,
         "http_status": 200,
-        "thread_id": "probe_general_1774569115"
+        "thread_id": "probe_k1_hokke_1774579926"
+      },
+      "k1_probe_kukai": {
+        "route": "SCRIPTURE_LOCAL_RESOLVER_V4",
+        "len": 185,
+        "response_nonempty": true,
+        "meta_leak_ok": true,
+        "satisfied": false,
+        "http_status": 200,
+        "thread_id": "probe_k1_kukai_1774579926"
+      },
+      "general_probe": {
+        "route": "NATURAL_GENERAL_LLM_TOP",
+        "len": 240,
+        "response_nonempty": true,
+        "meta_leak_ok": true,
+        "satisfied": false,
+        "http_status": 200,
+        "thread_id": "probe_general_1774579926"
       },
       "ai_consciousness_lock_probe": {
         "route": "R10_SELF_REFLECTION_ROUTE_V4_SAFE",
@@ -189,16 +187,16 @@
         "meta_leak_ok": true,
         "satisfied": false,
         "http_status": 200,
-        "thread_id": "probe_ai_1774569115"
+        "thread_id": "probe_ai_1774579926"
       },
       "subconcept_probe": {
         "route": "TRUTH_GATE_RETURN_V2",
-        "len": 233,
+        "len": 133,
         "response_nonempty": true,
         "meta_leak_ok": true,
         "satisfied": false,
         "http_status": 200,
-        "thread_id": "probe_subconcept_1774569115"
+        "thread_id": "probe_subconcept_1774579926"
       },
       "continuity_density_unresolved": false
     },

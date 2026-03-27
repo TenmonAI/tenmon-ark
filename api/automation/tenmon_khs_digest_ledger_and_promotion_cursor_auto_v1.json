@@ -1,0 +1,11 @@
+{
+  "ok": true,
+  "card": "TENMON_KHS_DIGEST_LEDGER_AND_PROMOTION_CURSOR_AUTO_V1",
+  "material_digest_ledger_ready": true,
+  "digest_states_visible": true,
+  "promotion_ready": true,
+  "rollback_used": false,
+  "next_card_if_fail": null,
+  "version": 1,
+  "generated_at": "2026-03-27T02:21:56.535Z"
+}

@@ -1,0 +1,780 @@
+{
+  "ok": true,
+  "card": "TENMON_REFLECTION_STACK_WORKTREE_CONVERGENCE_CURSOR_AUTO_V1",
+  "generated_at": "2026-03-27T05:04:48Z",
+  "repo_root": "/opt/tenmon-ark-repo",
+  "modified": [
+    {
+      "path": "api/automation/operations_level_autonomy_state_v1.json",
+      "role": "automation JSON artifact",
+      "decision": "keep",
+      "reason": "review then seal or archive"
+    },
+    {
+      "path": "api/automation/tenmon_worldclass_acceptance_scorecard.json",
+      "role": "automation JSON artifact",
+      "decision": "seal",
+      "reason": "convergence / seal / card artifact: commit when PASS after audit"
+    },
+    {
+      "path": "api/automation/tenmon_worldclass_acceptance_scorecard.md",
+      "role": "automation report MD",
+      "decision": "seal",
+      "reason": "card report MD: commit when PASS after audit"
+    },
+    {
+      "path": "api/automation/tenmon_worldclass_dialogue_acceptance_priority_loop_v1.json",
+      "role": "automation JSON artifact",
+      "decision": "seal",
+      "reason": "convergence / seal / card artifact: commit when PASS after audit"
+    },
+    {
+      "path": "api/src/core/intentKernel.ts",
+      "role": "core module",
+      "decision": "keep",
+      "reason": "ambiguous: manual review before seal"
+    },
+    {
+      "path": "api/src/core/knowledgeBinder.ts",
+      "role": "core module",
+      "decision": "keep",
+      "reason": "ambiguous: manual review before seal"
+    },
+    {
+      "path": "api/src/core/scriptureCanon.ts",
+      "role": "core module",
+      "decision": "keep",
+      "reason": "ambiguous: manual review before seal"
+    },
+    {
+      "path": "api/src/core/tenmonKnowledgeStyleBridgeV1.ts",
+      "role": "core module",
+      "decision": "keep",
+      "reason": "ambiguous: manual review before seal"
+    },
+    {
+      "path": "api/src/core/tenmonSurfaceContractV1.ts",
+      "role": "core module",
+      "decision": "keep",
+      "reason": "ambiguous: manual review before seal"
+    },
+    {
+      "path": "api/src/core/thoughtGuide.ts",
+      "role": "core module",
+      "decision": "keep",
+      "reason": "ambiguous: manual review before seal"
+    },
+    {
+      "path": "canon/tenmon_intent_kernel_v1.json",
+      "role": "canon",
+      "decision": "keep",
+      "reason": "ambiguous: manual review before seal"
+    }
+  ],
+  "untracked": [
+    {
+      "path": "api/automation/khs_fractal_expansion_worldclass_master_autoloop_v1/",
+      "role": "automation path",
+      "decision": "keep",
+      "reason": "review then seal or archive"
+    },
+    {
+      "path": "api/automation/tenmon_fractal_expansion_autonomy_bridge_v1.json",
+      "role": "automation JSON artifact",
+      "decision": "seal",
+      "reason": "convergence / seal / card artifact: commit when PASS after audit"
+    },
+    {
+      "path": "api/automation/tenmon_fractal_expansion_failover_and_autonomy_bridge_cursor_auto_v1.json",
+      "role": "automation JSON artifact",
+      "decision": "seal",
+      "reason": "convergence / seal / card artifact: commit when PASS after audit"
+    },
+    {
+      "path": "api/automation/tenmon_fractal_expansion_failover_and_autonomy_bridge_cursor_auto_v1.md",
+      "role": "automation report MD",
+      "decision": "seal",
+      "reason": "card report MD: commit when PASS after audit"
+    },
+    {
+      "path": "api/automation/tenmon_fractal_expansion_failover_and_autonomy_bridge_cursor_auto_v1.py",
+      "role": "automation script",
+      "decision": "seal",
+      "reason": "convergence / seal / card artifact: commit when PASS after audit"
+    },
+    {
+      "path": "api/automation/tenmon_fractal_law_kernel_from_khs_cursor_auto_v1.json",
+      "role": "automation JSON artifact",
+      "decision": "seal",
+      "reason": "convergence / seal / card artifact: commit when PASS after audit"
+    },
+    {
+      "path": "api/automation/tenmon_fractal_truth_worldclass_seal_cursor_auto_v1.json",
+      "role": "automation JSON artifact",
+      "decision": "seal",
+      "reason": "convergence / seal / card artifact: commit when PASS after audit"
+    },
+    {
+      "path": "api/automation/tenmon_fractal_truth_worldclass_seal_cursor_auto_v1.md",
+      "role": "automation report MD",
+      "decision": "seal",
+      "reason": "card report MD: commit when PASS after audit"
+    },
+    {
+      "path": "api/automation/tenmon_fractal_truth_worldclass_seal_cursor_auto_v1.py",
+      "role": "automation script",
+      "decision": "seal",
+      "reason": "convergence / seal / card artifact: commit when PASS after audit"
+    },
+    {
+      "path": "api/automation/tenmon_katakamuna_iroha_mapping_layer_cursor_auto_v1.json",
+      "role": "automation JSON artifact",
+      "decision": "seal",
+      "reason": "convergence / seal / card artifact: commit when PASS after audit"
+    },
+    {
+      "path": "api/automation/tenmon_khs_digest_ledger_and_promotion_cursor_auto_v1.json",
+      "role": "automation JSON artifact",
+      "decision": "seal",
+      "reason": "convergence / seal / card artifact: commit when PASS after audit"
+    },
+    {
+      "path": "api/automation/tenmon_khs_fractal_expansion_worldclass_master_autoloop_cursor_auto_v1.json",
+      "role": "automation JSON artifact",
+      "decision": "seal",
+      "reason": "convergence / seal / card artifact: commit when PASS after audit"
+    },
+    {
+      "path": "api/automation/tenmon_khs_fractal_expansion_worldclass_master_autoloop_cursor_auto_v1.py",
+      "role": "automation script",
+      "decision": "seal",
+      "reason": "convergence / seal / card artifact: commit when PASS after audit"
+    },
+    {
+      "path": "api/automation/tenmon_khs_fractal_root_constitution_cursor_auto_v1.json",
+      "role": "automation JSON artifact",
+      "decision": "seal",
+      "reason": "convergence / seal / card artifact: commit when PASS after audit"
+    },
+    {
+      "path": "api/automation/tenmon_kojiki_mythogenesis_mapper_cursor_auto_v1.json",
+      "role": "automation JSON artifact",
+      "decision": "seal",
+      "reason": "convergence / seal / card artifact: commit when PASS after audit"
+    },
+    {
+      "path": "api/automation/tenmon_material_digest_ledger_v1.json",
+      "role": "automation JSON artifact",
+      "decision": "seal",
+      "reason": "convergence / seal / card artifact: commit when PASS after audit"
+    },
+    {
+      "path": "api/automation/tenmon_reflection_stack_worktree_convergence_cursor_auto_v1.json",
+      "role": "automation JSON artifact",
+      "decision": "seal",
+      "reason": "convergence / seal / card artifact: commit when PASS after audit"
+    },
+    {
+      "path": "api/automation/tenmon_reflection_stack_worktree_convergence_cursor_auto_v1.md",
+      "role": "automation report MD",
+      "decision": "seal",
+      "reason": "card report MD: commit when PASS after audit"
+    },
+    {
+      "path": "api/automation/tenmon_reflection_stack_worktree_convergence_cursor_auto_v1.py",
+      "role": "automation script",
+      "decision": "seal",
+      "reason": "convergence / seal / card artifact: commit when PASS after audit"
+    },
+    {
+      "path": "api/automation/tenmon_self_learning_khs_sanskrit_fractal_autostudy_cursor_auto_v1.json",
+      "role": "automation JSON artifact",
+      "decision": "seal",
+      "reason": "convergence / seal / card artifact: commit when PASS after audit"
+    },
+    {
+      "path": "api/automation/tenmon_truth_reasoning_density_tune_cursor_auto_v1.json",
+      "role": "automation JSON artifact",
+      "decision": "seal",
+      "reason": "convergence / seal / card artifact: commit when PASS after audit"
+    },
+    {
+      "path": "api/automation/tenmon_truth_structure_reasoning_engine_cursor_auto_v1.json",
+      "role": "automation JSON artifact",
+      "decision": "seal",
+      "reason": "convergence / seal / card artifact: commit when PASS after audit"
+    },
+    {
+      "path": "api/automation/tenmon_worldclass_and_fractal_truth_final_green_cursor_auto_v1.json",
+      "role": "automation JSON artifact",
+      "decision": "seal",
+      "reason": "convergence / seal / card artifact: commit when PASS after audit"
+    },
+    {
+      "path": "api/automation/tenmon_worldclass_final_reasoning_density_cursor_auto_v1.json",
+      "role": "automation JSON artifact",
+      "decision": "seal",
+      "reason": "convergence / seal / card artifact: commit when PASS after audit"
+    },
+    {
+      "path": "api/src/core/khsRootFractalConstitutionV1.ts",
+      "role": "core module",
+      "decision": "keep",
+      "reason": "ambiguous: manual review before seal"
+    },
+    {
+      "path": "api/src/core/tenmonComparativeMappingV1.ts",
+      "role": "core module",
+      "decision": "keep",
+      "reason": "ambiguous: manual review before seal"
+    },
+    {
+      "path": "api/src/core/tenmonFractalLawKernelV1.ts",
+      "role": "core module",
+      "decision": "keep",
+      "reason": "ambiguous: manual review before seal"
+    },
+    {
+      "path": "api/src/core/tenmonFractalPhysicsProjectionV1.ts",
+      "role": "core module",
+      "decision": "keep",
+      "reason": "ambiguous: manual review before seal"
+    },
+    {
+      "path": "api/src/core/tenmonKhsFractalRootAndLawKernelV1.ts",
+      "role": "core module",
+      "decision": "keep",
+      "reason": "ambiguous: manual review before seal"
+    },
+    {
+      "path": "api/src/core/tenmonKhsFractalRootV1.ts",
+      "role": "core module",
+      "decision": "keep",
+      "reason": "ambiguous: manual review before seal"
+    },
+    {
+      "path": "api/src/core/tenmonKhsGengoLawKernelV1.ts",
+      "role": "core module",
+      "decision": "keep",
+      "reason": "ambiguous: manual review before seal"
+    },
+    {
+      "path": "api/src/core/tenmonKojikiAndMappingLayerV1.ts",
+      "role": "core module",
+      "decision": "keep",
+      "reason": "ambiguous: manual review before seal"
+    },
+    {
+      "path": "api/src/core/tenmonKojikiMythogenesisMapperV1.ts",
+      "role": "core module",
+      "decision": "keep",
+      "reason": "ambiguous: manual review before seal"
+    },
+    {
+      "path": "api/src/core/tenmonLawPromotionGateV1.ts",
+      "role": "core module",
+      "decision": "keep",
+      "reason": "ambiguous: manual review before seal"
+    },
+    {
+      "path": "api/src/core/tenmonLearningConversationBridgeV1.ts",
+      "role": "core module",
+      "decision": "keep",
+      "reason": "ambiguous: manual review before seal"
+    },
+    {
+      "path": "api/src/core/tenmonMappingLayerV1.ts",
+      "role": "core module",
+      "decision": "keep",
+      "reason": "ambiguous: manual review before seal"
+    },
+    {
+      "path": "api/src/core/tenmonMaterialDigestLedgerV1.ts",
+      "role": "core module",
+      "decision": "keep",
+      "reason": "ambiguous: manual review before seal"
+    },
+    {
+      "path": "api/src/core/tenmonMaterialDigestPromotionV1.ts",
+      "role": "core module",
+      "decision": "keep",
+      "reason": "ambiguous: manual review before seal"
+    },
+    {
+      "path": "api/src/core/tenmonMaterialStudyPlannerV1.ts",
+      "role": "core module",
+      "decision": "keep",
+      "reason": "ambiguous: manual review before seal"
+    },
+    {
+      "path": "api/src/core/tenmonMythogenesisMapperV1.ts",
+      "role": "core module",
+      "decision": "keep",
+      "reason": "ambiguous: manual review before seal"
+    },
+    {
+      "path": "api/src/core/tenmonSanskritComparativeKernelV1.ts",
+      "role": "core module",
+      "decision": "keep",
+      "reason": "ambiguous: manual review before seal"
+    },
+    {
+      "path": "api/src/core/tenmonSelfLearningStudyLoopV1.ts",
+      "role": "core module",
+      "decision": "keep",
+      "reason": "ambiguous: manual review before seal"
+    },
+    {
+      "path": "api/src/core/tenmonStudyLedgerV1.ts",
+      "role": "core module",
+      "decision": "keep",
+      "reason": "ambiguous: manual review before seal"
+    },
+    {
+      "path": "api/src/core/tenmonTruthReasoningAndMixedQuestionV1.ts",
+      "role": "core module",
+      "decision": "keep",
+      "reason": "ambiguous: manual review before seal"
+    },
+    {
+      "path": "api/src/core/tenmonTruthStructureReasonerV1.ts",
+      "role": "core module",
+      "decision": "keep",
+      "reason": "ambiguous: manual review before seal"
+    }
+  ],
+  "git": {
+    "status_short_rc": 0,
+    "diff_name_only_rc": 0,
+    "diff_stat_rc": 0,
+    "status_short": "M api/automation/operations_level_autonomy_state_v1.json\n M api/automation/tenmon_worldclass_acceptance_scorecard.json\n M api/automation/tenmon_worldclass_acceptance_scorecard.md\n M api/automation/tenmon_worldclass_dialogue_acceptance_priority_loop_v1.json\n M api/src/core/intentKernel.ts\n M api/src/core/knowledgeBinder.ts\n M api/src/core/scriptureCanon.ts\n M api/src/core/tenmonKnowledgeStyleBridgeV1.ts\n M api/src/core/tenmonSurfaceContractV1.ts\n M api/src/core/thoughtGuide.ts\n M canon/tenmon_intent_kernel_v1.json\n?? api/automation/khs_fractal_expansion_worldclass_master_autoloop_v1/\n?? api/automation/tenmon_fractal_expansion_autonomy_bridge_v1.json\n?? api/automation/tenmon_fractal_expansion_failover_and_autonomy_bridge_cursor_auto_v1.json\n?? api/automation/tenmon_fractal_expansion_failover_and_autonomy_bridge_cursor_auto_v1.md\n?? api/automation/tenmon_fractal_expansion_failover_and_autonomy_bridge_cursor_auto_v1.py\n?? api/automation/tenmon_fractal_law_kernel_from_khs_cursor_auto_v1.json\n?? api/automation/tenmon_fractal_truth_worldclass_seal_cursor_auto_v1.json\n?? api/automation/tenmon_fractal_truth_worldclass_seal_cursor_auto_v1.md\n?? api/automation/tenmon_fractal_truth_worldclass_seal_cursor_auto_v1.py\n?? api/automation/tenmon_katakamuna_iroha_mapping_layer_cursor_auto_v1.json\n?? api/automation/tenmon_khs_digest_ledger_and_promotion_cursor_auto_v1.json\n?? api/automation/tenmon_khs_fractal_expansion_worldclass_master_autoloop_cursor_auto_v1.json\n?? api/automation/tenmon_khs_fractal_expansion_worldclass_master_autoloop_cursor_auto_v1.py\n?? api/automation/tenmon_khs_fractal_root_constitution_cursor_auto_v1.json\n?? api/automation/tenmon_kojiki_mythogenesis_mapper_cursor_auto_v1.json\n?? api/automation/tenmon_material_digest_ledger_v1.json\n?? api/automation/tenmon_reflection_stack_worktree_convergence_cursor_auto_v1.json\n?? api/automation/tenmon_reflection_stack_worktree_convergence_cursor_auto_v1.md\n?? api/automation/tenmon_reflection_stack_worktree_convergence_cursor_auto_v1.py\n?? api/automation/tenmon_self_learning_khs_sanskrit_fractal_autostudy_cursor_auto_v1.json\n?? api/automation/tenmon_truth_reasoning_density_tune_cursor_auto_v1.json\n?? api/automation/tenmon_truth_structure_reasoning_engine_cursor_auto_v1.json\n?? api/automation/tenmon_worldclass_and_fractal_truth_final_green_cursor_auto_v1.json\n?? api/automation/tenmon_worldclass_final_reasoning_density_cursor_auto_v1.json\n?? api/src/core/khsRootFractalConstitutionV1.ts\n?? api/src/core/tenmonComparativeMappingV1.ts\n?? api/src/core/tenmonFractalLawKernelV1.ts\n?? api/src/core/tenmonFractalPhysicsProjectionV1.ts\n?? api/src/core/tenmonKhsFractalRootAndLawKernelV1.ts\n?? api/src/core/tenmonKhsFractalRootV1.ts\n?? api/src/core/tenmonKhsGengoLawKernelV1.ts\n?? api/src/core/tenmonKojikiAndMappingLayerV1.ts\n?? api/src/core/tenmonKojikiMythogenesisMapperV1.ts\n?? api/src/core/tenmonLawPromotionGateV1.ts\n?? api/src/core/tenmonLearningConversationBridgeV1.ts\n?? api/src/core/tenmonMappingLayerV1.ts\n?? api/src/core/tenmonMaterialDigestLedgerV1.ts\n?? api/src/core/tenmonMaterialDigestPromotionV1.ts\n?? api/src/core/tenmonMaterialStudyPlannerV1.ts\n?? api/src/core/tenmonMythogenesisMapperV1.ts\n?? api/src/core/tenmonSanskritComparativeKernelV1.ts\n?? api/src/core/tenmonSelfLearningStudyLoopV1.ts\n?? api/src/core/tenmonStudyLedgerV1.ts\n?? api/src/core/tenmonTruthReasoningAndMixedQuestionV1.ts\n?? api/src/core/tenmonTruthStructureReasonerV1.ts",
+    "diff_name_only": "api/automation/operations_level_autonomy_state_v1.json\napi/automation/tenmon_worldclass_acceptance_scorecard.json\napi/automation/tenmon_worldclass_acceptance_scorecard.md\napi/automation/tenmon_worldclass_dialogue_acceptance_priority_loop_v1.json\napi/src/core/intentKernel.ts\napi/src/core/knowledgeBinder.ts\napi/src/core/scriptureCanon.ts\napi/src/core/tenmonKnowledgeStyleBridgeV1.ts\napi/src/core/tenmonSurfaceContractV1.ts\napi/src/core/thoughtGuide.ts\ncanon/tenmon_intent_kernel_v1.json",
+    "diff_stat": ".../operations_level_autonomy_state_v1.json        |   6 +-\n .../tenmon_worldclass_acceptance_scorecard.json    |  34 +++---\n .../tenmon_worldclass_acceptance_scorecard.md      |   2 +-\n ...class_dialogue_acceptance_priority_loop_v1.json |  34 +++---\n api/src/core/intentKernel.ts                       |  13 +++\n api/src/core/knowledgeBinder.ts                    | 119 +++++++++++++++++++++\n api/src/core/scriptureCanon.ts                     |   7 +-\n api/src/core/tenmonKnowledgeStyleBridgeV1.ts       |  36 ++++++-\n api/src/core/tenmonSurfaceContractV1.ts            |  18 +++-\n api/src/core/thoughtGuide.ts                       |  32 +++++-\n canon/tenmon_intent_kernel_v1.json                 |   2 +\n 11 files changed, 255 insertions(+), 48 deletions(-)"
+  },
+  "classification_detail": {
+    "modified": [
+      {
+        "path": "api/automation/operations_level_autonomy_state_v1.json",
+        "git_status": "M",
+        "role": "automation JSON artifact",
+        "decision": "keep",
+        "reason": "review then seal or archive"
+      },
+      {
+        "path": "api/automation/tenmon_worldclass_acceptance_scorecard.json",
+        "git_status": "M",
+        "role": "automation JSON artifact",
+        "decision": "seal",
+        "reason": "convergence / seal / card artifact: commit when PASS after audit"
+      },
+      {
+        "path": "api/automation/tenmon_worldclass_acceptance_scorecard.md",
+        "git_status": "M",
+        "role": "automation report MD",
+        "decision": "seal",
+        "reason": "card report MD: commit when PASS after audit"
+      },
+      {
+        "path": "api/automation/tenmon_worldclass_dialogue_acceptance_priority_loop_v1.json",
+        "git_status": "M",
+        "role": "automation JSON artifact",
+        "decision": "seal",
+        "reason": "convergence / seal / card artifact: commit when PASS after audit"
+      },
+      {
+        "path": "api/src/core/intentKernel.ts",
+        "git_status": "M",
+        "role": "core module",
+        "decision": "keep",
+        "reason": "ambiguous: manual review before seal"
+      },
+      {
+        "path": "api/src/core/knowledgeBinder.ts",
+        "git_status": "M",
+        "role": "core module",
+        "decision": "keep",
+        "reason": "ambiguous: manual review before seal"
+      },
+      {
+        "path": "api/src/core/scriptureCanon.ts",
+        "git_status": "M",
+        "role": "core module",
+        "decision": "keep",
+        "reason": "ambiguous: manual review before seal"
+      },
+      {
+        "path": "api/src/core/tenmonKnowledgeStyleBridgeV1.ts",
+        "git_status": "M",
+        "role": "core module",
+        "decision": "keep",
+        "reason": "ambiguous: manual review before seal"
+      },
+      {
+        "path": "api/src/core/tenmonSurfaceContractV1.ts",
+        "git_status": "M",
+        "role": "core module",
+        "decision": "keep",
+        "reason": "ambiguous: manual review before seal"
+      },
+      {
+        "path": "api/src/core/thoughtGuide.ts",
+        "git_status": "M",
+        "role": "core module",
+        "decision": "keep",
+        "reason": "ambiguous: manual review before seal"
+      },
+      {
+        "path": "canon/tenmon_intent_kernel_v1.json",
+        "git_status": "M",
+        "role": "canon",
+        "decision": "keep",
+        "reason": "ambiguous: manual review before seal"
+      }
+    ],
+    "untracked": [
+      {
+        "path": "api/automation/khs_fractal_expansion_worldclass_master_autoloop_v1/",
+        "git_status": "??",
+        "role": "automation path",
+        "decision": "keep",
+        "reason": "review then seal or archive"
+      },
+      {
+        "path": "api/automation/tenmon_fractal_expansion_autonomy_bridge_v1.json",
+        "git_status": "??",
+        "role": "automation JSON artifact",
+        "decision": "seal",
+        "reason": "convergence / seal / card artifact: commit when PASS after audit"
+      },
+      {
+        "path": "api/automation/tenmon_fractal_expansion_failover_and_autonomy_bridge_cursor_auto_v1.json",
+        "git_status": "??",
+        "role": "automation JSON artifact",
+        "decision": "seal",
+        "reason": "convergence / seal / card artifact: commit when PASS after audit"
+      },
+      {
+        "path": "api/automation/tenmon_fractal_expansion_failover_and_autonomy_bridge_cursor_auto_v1.md",
+        "git_status": "??",
+        "role": "automation report MD",
+        "decision": "seal",
+        "reason": "card report MD: commit when PASS after audit"
+      },
+      {
+        "path": "api/automation/tenmon_fractal_expansion_failover_and_autonomy_bridge_cursor_auto_v1.py",
+        "git_status": "??",
+        "role": "automation script",
+        "decision": "seal",
+        "reason": "convergence / seal / card artifact: commit when PASS after audit"
+      },
+      {
+        "path": "api/automation/tenmon_fractal_law_kernel_from_khs_cursor_auto_v1.json",
+        "git_status": "??",
+        "role": "automation JSON artifact",
+        "decision": "seal",
+        "reason": "convergence / seal / card artifact: commit when PASS after audit"
+      },
+      {
+        "path": "api/automation/tenmon_fractal_truth_worldclass_seal_cursor_auto_v1.json",
+        "git_status": "??",
+        "role": "automation JSON artifact",
+        "decision": "seal",
+        "reason": "convergence / seal / card artifact: commit when PASS after audit"
+      },
+      {
+        "path": "api/automation/tenmon_fractal_truth_worldclass_seal_cursor_auto_v1.md",
+        "git_status": "??",
+        "role": "automation report MD",
+        "decision": "seal",
+        "reason": "card report MD: commit when PASS after audit"
+      },
+      {
+        "path": "api/automation/tenmon_fractal_truth_worldclass_seal_cursor_auto_v1.py",
+        "git_status": "??",
+        "role": "automation script",
+        "decision": "seal",
+        "reason": "convergence / seal / card artifact: commit when PASS after audit"
+      },
+      {
+        "path": "api/automation/tenmon_katakamuna_iroha_mapping_layer_cursor_auto_v1.json",
+        "git_status": "??",
+        "role": "automation JSON artifact",
+        "decision": "seal",
+        "reason": "convergence / seal / card artifact: commit when PASS after audit"
+      },
+      {
+        "path": "api/automation/tenmon_khs_digest_ledger_and_promotion_cursor_auto_v1.json",
+        "git_status": "??",
+        "role": "automation JSON artifact",
+        "decision": "seal",
+        "reason": "convergence / seal / card artifact: commit when PASS after audit"
+      },
+      {
+        "path": "api/automation/tenmon_khs_fractal_expansion_worldclass_master_autoloop_cursor_auto_v1.json",
+        "git_status": "??",
+        "role": "automation JSON artifact",
+        "decision": "seal",
+        "reason": "convergence / seal / card artifact: commit when PASS after audit"
+      },
+      {
+        "path": "api/automation/tenmon_khs_fractal_expansion_worldclass_master_autoloop_cursor_auto_v1.py",
+        "git_status": "??",
+        "role": "automation script",
+        "decision": "seal",
+        "reason": "convergence / seal / card artifact: commit when PASS after audit"
+      },
+      {
+        "path": "api/automation/tenmon_khs_fractal_root_constitution_cursor_auto_v1.json",
+        "git_status": "??",
+        "role": "automation JSON artifact",
+        "decision": "seal",
+        "reason": "convergence / seal / card artifact: commit when PASS after audit"
+      },
+      {
+        "path": "api/automation/tenmon_kojiki_mythogenesis_mapper_cursor_auto_v1.json",
+        "git_status": "??",
+        "role": "automation JSON artifact",
+        "decision": "seal",
+        "reason": "convergence / seal / card artifact: commit when PASS after audit"
+      },
+      {
+        "path": "api/automation/tenmon_material_digest_ledger_v1.json",
+        "git_status": "??",
+        "role": "automation JSON artifact",
+        "decision": "seal",
+        "reason": "convergence / seal / card artifact: commit when PASS after audit"
+      },
+      {
+        "path": "api/automation/tenmon_reflection_stack_worktree_convergence_cursor_auto_v1.json",
+        "git_status": "??",
+        "role": "automation JSON artifact",
+        "decision": "seal",
+        "reason": "convergence / seal / card artifact: commit when PASS after audit"
+      },
+      {
+        "path": "api/automation/tenmon_reflection_stack_worktree_convergence_cursor_auto_v1.md",
+        "git_status": "??",
+        "role": "automation report MD",
+        "decision": "seal",
+        "reason": "card report MD: commit when PASS after audit"
+      },
+      {
+        "path": "api/automation/tenmon_reflection_stack_worktree_convergence_cursor_auto_v1.py",
+        "git_status": "??",
+        "role": "automation script",
+        "decision": "seal",
+        "reason": "convergence / seal / card artifact: commit when PASS after audit"
+      },
+      {
+        "path": "api/automation/tenmon_self_learning_khs_sanskrit_fractal_autostudy_cursor_auto_v1.json",
+        "git_status": "??",
+        "role": "automation JSON artifact",
+        "decision": "seal",
+        "reason": "convergence / seal / card artifact: commit when PASS after audit"
+      },
+      {
+        "path": "api/automation/tenmon_truth_reasoning_density_tune_cursor_auto_v1.json",
+        "git_status": "??",
+        "role": "automation JSON artifact",
+        "decision": "seal",
+        "reason": "convergence / seal / card artifact: commit when PASS after audit"
+      },
+      {
+        "path": "api/automation/tenmon_truth_structure_reasoning_engine_cursor_auto_v1.json",
+        "git_status": "??",
+        "role": "automation JSON artifact",
+        "decision": "seal",
+        "reason": "convergence / seal / card artifact: commit when PASS after audit"
+      },
+      {
+        "path": "api/automation/tenmon_worldclass_and_fractal_truth_final_green_cursor_auto_v1.json",
+        "git_status": "??",
+        "role": "automation JSON artifact",
+        "decision": "seal",
+        "reason": "convergence / seal / card artifact: commit when PASS after audit"
+      },
+      {
+        "path": "api/automation/tenmon_worldclass_final_reasoning_density_cursor_auto_v1.json",
+        "git_status": "??",
+        "role": "automation JSON artifact",
+        "decision": "seal",
+        "reason": "convergence / seal / card artifact: commit when PASS after audit"
+      },
+      {
+        "path": "api/src/core/khsRootFractalConstitutionV1.ts",
+        "git_status": "??",
+        "role": "core module",
+        "decision": "keep",
+        "reason": "ambiguous: manual review before seal"
+      },
+      {
+        "path": "api/src/core/tenmonComparativeMappingV1.ts",
+        "git_status": "??",
+        "role": "core module",
+        "decision": "keep",
+        "reason": "ambiguous: manual review before seal"
+      },
+      {
+        "path": "api/src/core/tenmonFractalLawKernelV1.ts",
+        "git_status": "??",
+        "role": "core module",
+        "decision": "keep",
+        "reason": "ambiguous: manual review before seal"
+      },
+      {
+        "path": "api/src/core/tenmonFractalPhysicsProjectionV1.ts",
+        "git_status": "??",
+        "role": "core module",
+        "decision": "keep",
+        "reason": "ambiguous: manual review before seal"
+      },
+      {
+        "path": "api/src/core/tenmonKhsFractalRootAndLawKernelV1.ts",
+        "git_status": "??",
+        "role": "core module",
+        "decision": "keep",
+        "reason": "ambiguous: manual review before seal"
+      },
+      {
+        "path": "api/src/core/tenmonKhsFractalRootV1.ts",
+        "git_status": "??",
+        "role": "core module",
+        "decision": "keep",
+        "reason": "ambiguous: manual review before seal"
+      },
+      {
+        "path": "api/src/core/tenmonKhsGengoLawKernelV1.ts",
+        "git_status": "??",
+        "role": "core module",
+        "decision": "keep",
+        "reason": "ambiguous: manual review before seal"
+      },
+      {
+        "path": "api/src/core/tenmonKojikiAndMappingLayerV1.ts",
+        "git_status": "??",
+        "role": "core module",
+        "decision": "keep",
+        "reason": "ambiguous: manual review before seal"
+      },
+      {
+        "path": "api/src/core/tenmonKojikiMythogenesisMapperV1.ts",
+        "git_status": "??",
+        "role": "core module",
+        "decision": "keep",
+        "reason": "ambiguous: manual review before seal"
+      },
+      {
+        "path": "api/src/core/tenmonLawPromotionGateV1.ts",
+        "git_status": "??",
+        "role": "core module",
+        "decision": "keep",
+        "reason": "ambiguous: manual review before seal"
+      },
+      {
+        "path": "api/src/core/tenmonLearningConversationBridgeV1.ts",
+        "git_status": "??",
+        "role": "core module",
+        "decision": "keep",
+        "reason": "ambiguous: manual review before seal"
+      },
+      {
+        "path": "api/src/core/tenmonMappingLayerV1.ts",
+        "git_status": "??",
+        "role": "core module",
+        "decision": "keep",
+        "reason": "ambiguous: manual review before seal"
+      },
+      {
+        "path": "api/src/core/tenmonMaterialDigestLedgerV1.ts",
+        "git_status": "??",
+        "role": "core module",
+        "decision": "keep",
+        "reason": "ambiguous: manual review before seal"
+      },
+      {
+        "path": "api/src/core/tenmonMaterialDigestPromotionV1.ts",
+        "git_status": "??",
+        "role": "core module",
+        "decision": "keep",
+        "reason": "ambiguous: manual review before seal"
+      },
+      {
+        "path": "api/src/core/tenmonMaterialStudyPlannerV1.ts",
+        "git_status": "??",
+        "role": "core module",
+        "decision": "keep",
+        "reason": "ambiguous: manual review before seal"
+      },
+      {
+        "path": "api/src/core/tenmonMythogenesisMapperV1.ts",
+        "git_status": "??",
+        "role": "core module",
+        "decision": "keep",
+        "reason": "ambiguous: manual review before seal"
+      },
+      {
+        "path": "api/src/core/tenmonSanskritComparativeKernelV1.ts",
+        "git_status": "??",
+        "role": "core module",
+        "decision": "keep",
+        "reason": "ambiguous: manual review before seal"
+      },
+      {
+        "path": "api/src/core/tenmonSelfLearningStudyLoopV1.ts",
+        "git_status": "??",
+        "role": "core module",
+        "decision": "keep",
+        "reason": "ambiguous: manual review before seal"
+      },
+      {
+        "path": "api/src/core/tenmonStudyLedgerV1.ts",
+        "git_status": "??",
+        "role": "core module",
+        "decision": "keep",
+        "reason": "ambiguous: manual review before seal"
+      },
+      {
+        "path": "api/src/core/tenmonTruthReasoningAndMixedQuestionV1.ts",
+        "git_status": "??",
+        "role": "core module",
+        "decision": "keep",
+        "reason": "ambiguous: manual review before seal"
+      },
+      {
+        "path": "api/src/core/tenmonTruthStructureReasonerV1.ts",
+        "git_status": "??",
+        "role": "core module",
+        "decision": "keep",
+        "reason": "ambiguous: manual review before seal"
+      }
+    ]
+  },
+  "automation_queue_observation": {
+    "remote_cursor_queue.json": {
+      "exists": true,
+      "path": "/opt/tenmon-ark-repo/api/automation/remote_cursor_queue.json"
+    },
+    "remote_cursor_result_bundle.json": {
+      "exists": true,
+      "path": "/opt/tenmon-ark-repo/api/automation/remote_cursor_result_bundle.json"
+    },
+    "tenmon_cursor_single_flight_queue_state.json": {
+      "exists": true,
+      "path": "/opt/tenmon-ark-repo/api/automation/tenmon_cursor_single_flight_queue_state.json"
+    }
+  },
+  "integration_cards": {
+    "worktree_classify": "TENMON_WORKTREE_CONVERGENCE_CLASSIFY_AND_FINALIZE_CURSOR_AUTO_V1",
+    "final_seal_worktree": "TENMON_FINAL_CONVERSATION_SEAL_AND_WORKTREE_CONVERGENCE_CURSOR_AUTO_V1",
+    "fractal_worktree": "TENMON_FRACTAL_WORKTREE_CONVERGENCE_AND_SEAL_CURSOR_AUTO_V1",
+    "queue_repair": "TENMON_AUTONOMY_QUEUE_STATE_REPAIR_CURSOR_AUTO_V1",
+    "result_return_repair": "TENMON_AUTONOMY_RESULT_RETURN_PATH_REPAIR_CURSOR_AUTO_V1"
+  },
+  "rollback_used": false,
+  "next_card_if_fail": null,
+  "notes": [
+    "分類のみ。delete/archive は人手または専用カードで実行。",
+    "latest_lived_truth_singleton / superseded report は再注入しない（観測のみ）。",
+    "truth reasoning density は別カード（TENMON_TRUTH_REASONING_DENSITY_TUNE_*）。"
+  ]
+}

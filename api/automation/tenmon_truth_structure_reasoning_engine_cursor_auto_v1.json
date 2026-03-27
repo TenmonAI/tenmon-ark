@@ -1,0 +1,18 @@
+{
+  "ok": true,
+  "card": "TENMON_TRUTH_STRUCTURE_REASONING_ENGINE_CURSOR_AUTO_V1",
+  "truth_structure_reasoning_ready": true,
+  "verdict_projection_ready": true,
+  "issue_axes": [
+    "center_loss",
+    "over_split",
+    "failed_binding",
+    "unfinished_formation",
+    "broken_circulation"
+  ],
+  "llm_layer": "auxiliary_only",
+  "rollback_used": false,
+  "next_card_if_fail": "TENMON_TRUTH_STRUCTURE_TRACE_CURSOR_AUTO_V1",
+  "version": 1,
+  "generated_at": "2026-03-27T02:21:17.630Z"
+}

@@ -1,6 +1,6 @@
 # TENMON_WORLDCLASS_ACCEPTANCE_SCORECARD_CURSOR_AUTO_V1
 
-- generated_at: `2026-03-27T01:13:48Z`
+- generated_at: `2026-03-27T03:03:08Z`
 - **score_total** / **score_max**: `72.4` / `118`
 - **score_percent**: `61.36`
 - **sealed_operable_ready**: `False`

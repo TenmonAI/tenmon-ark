@@ -1,0 +1,17 @@
+{
+  "ok": true,
+  "card": "TENMON_KATAKAMUNA_IROHA_MAPPING_LAYER_CURSOR_AUTO_V1",
+  "mapping_layer_ready": true,
+  "root_vs_mapping_separated": true,
+  "edge_count": 5,
+  "primary_four_pair_labels": [
+    "KHS↔カタカムナ",
+    "KHS↔いろは言霊解",
+    "KHS↔空海",
+    "KHS↔法華経"
+  ],
+  "rollback_used": false,
+  "next_card_if_fail": "TENMON_MAPPING_LAYER_TRACE_CURSOR_AUTO_V1",
+  "version": 1,
+  "generated_at": "2026-03-27T02:20:39.315Z"
+}
