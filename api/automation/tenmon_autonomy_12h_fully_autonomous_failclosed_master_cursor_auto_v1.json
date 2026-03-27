@@ -27,12 +27,12 @@
   "final_sealed": true,
   "rollback_used": true,
   "next_card_if_fail": "TENMON_LATEST_STATE_REJUDGE_AND_SEAL_REFRESH_CURSOR_AUTO_V1",
-  "generated_at": "2026-03-27T07:58:31Z",
+  "generated_at": "2026-03-27T08:13:26Z",
   "run_directory": "/opt/tenmon-ark-repo/api/automation/autonomy_12h_fully_autonomous_failclosed_master_v1/20260327T072953Z",
   "last_primary_gap": "gates",
   "state_rejudge_refresh_v1": {
     "card": "TENMON_LATEST_STATE_REJUDGE_AND_SEAL_REFRESH_CURSOR_AUTO_V1",
-    "updated_at": "2026-03-27T07:58:31Z",
+    "updated_at": "2026-03-27T08:13:26Z",
     "source_master": "tenmon_autonomy_12h_fully_autonomous_failclosed_master_cursor_auto_v1.json",
     "axes_classification": {
       "execution_gate_ready": "REFRESHABLE",

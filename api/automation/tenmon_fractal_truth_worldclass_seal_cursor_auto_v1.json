@@ -16,7 +16,7 @@
   "worktree_converged": false,
   "rollback_used": false,
   "next_card_if_fail": "TENMON_FRACTAL_WORKTREE_CONVERGENCE_AND_SEAL_CURSOR_AUTO_V1",
-  "generated_at": "2026-03-27T08:07:07Z",
+  "generated_at": "2026-03-27T08:16:37Z",
   "case": "C",
   "primary_gap": "worktree_not_converged",
   "axis_gap_target": null,

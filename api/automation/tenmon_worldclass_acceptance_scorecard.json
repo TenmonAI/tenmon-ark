@@ -1,6 +1,6 @@
 {
   "card": "TENMON_WORLDCLASS_ACCEPTANCE_SCORECARD_CURSOR_AUTO_V1",
-  "generated_at": "2026-03-27T08:07:07Z",
+  "generated_at": "2026-03-27T08:16:37Z",
   "score_total": 72.4,
   "score_max": 118,
   "score_percent": 61.36,
@@ -61,12 +61,12 @@
       },
       "general_probe": {
         "route": "TENMON_SCRIPTURE_CANON_V1",
-        "len": 387,
+        "len": 391,
         "response_nonempty": true,
         "meta_leak_ok": true,
         "satisfied": true,
         "http_status": 200,
-        "thread_id": "mixed_probe_refresh_1774598809_1",
+        "thread_id": "mixed_probe_refresh_1774599115_1",
         "source": "TENMON_MIXED_QUESTION_PROBE_DIGEST_REFRESH_CURSOR_AUTO_V1"
       },
       "ai_consciousness_lock_probe": {
@@ -90,57 +90,57 @@
       "continuity_density_unresolved": false,
       "mixed_probe": {
         "card": "TENMON_MIXED_QUESTION_PROBE_DIGEST_REFRESH_CURSOR_AUTO_V1",
-        "generated_at": "2026-03-27T08:07:03Z",
+        "generated_at": "2026-03-27T08:12:04Z",
         "all_satisfied": true,
         "probes": [
           {
             "route": "TENMON_SCRIPTURE_CANON_V1",
-            "len": 387,
+            "len": 391,
             "response_nonempty": true,
             "meta_leak_ok": true,
             "satisfied": true,
             "http_status": 200,
-            "thread_id": "mixed_probe_refresh_1774598809_1",
+            "thread_id": "mixed_probe_refresh_1774599115_1",
             "message": "法華経の中心と水火の法則の接点を、一般知識ではなく天聞アークの理解として説明して"
           },
           {
             "route": "TRUTH_GATE_RETURN_V2",
-            "len": 335,
+            "len": 390,
             "response_nonempty": true,
             "meta_leak_ok": true,
             "satisfied": true,
             "http_status": 200,
-            "thread_id": "mixed_probe_refresh_1774598809_2",
+            "thread_id": "mixed_probe_refresh_1774599115_2",
             "message": "古事記生成とカタカムナの接点を、言霊法則の根から説明して"
           },
           {
             "route": "TRUTH_GATE_RETURN_V2",
-            "len": 353,
+            "len": 366,
             "response_nonempty": true,
             "meta_leak_ok": true,
             "satisfied": true,
             "http_status": 200,
-            "thread_id": "mixed_probe_refresh_1774598813_3",
+            "thread_id": "mixed_probe_refresh_1774599119_3",
             "message": "いろはと言霊秘書の違いを、root と mapping の関係で説明して"
           },
           {
             "route": "KANAGI_CONVERSATION_V1",
-            "len": 253,
+            "len": 260,
             "response_nonempty": true,
             "meta_leak_ok": true,
             "satisfied": true,
             "http_status": 200,
-            "thread_id": "mixed_probe_refresh_1774598816_4",
+            "thread_id": "mixed_probe_refresh_1774599124_4",
             "message": "人生の迷いを、火水とテニヲハの法則でどう読むか"
           },
           {
-            "route": "GENERAL_KNOWLEDGE_EXPLAIN_ROUTE_V1",
-            "len": 596,
+            "route": "SYSTEM_DIAGNOSIS_PREEMPT_V1",
+            "len": 84,
             "response_nonempty": true,
             "meta_leak_ok": true,
             "satisfied": true,
             "http_status": 200,
-            "thread_id": "mixed_probe_refresh_1774598816_5",
+            "thread_id": "mixed_probe_refresh_1774599124_5",
             "message": "サンスクリットとKHSの共通構造を、root と comparative の違いを保って説明して"
           }
         ]
