@@ -1,0 +1,16 @@
+{
+  "ok": true,
+  "card": "TENMON_SELF_LEARNING_KHS_SANSKRIT_FRACTAL_AUTOSTUDY_CURSOR_AUTO_V1",
+  "study_planner_ready": true,
+  "study_loop_ready": true,
+  "khs_gengo_law_kernel_ready": true,
+  "sanskrit_comparative_ready": true,
+  "comparative_mapping_ready": true,
+  "material_digest_promotion_ready": true,
+  "law_promotion_gate_ready": true,
+  "fractal_physics_projection_ready": true,
+  "learning_conversation_bridge_ready": true,
+  "study_ledger_ready": true,
+  "rollback_used": false,
+  "next_card_if_fail": null
+}

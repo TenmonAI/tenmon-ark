@@ -1,0 +1,18 @@
+{
+  "ok": true,
+  "card": "TENMON_TRUTH_REASONING_DENSITY_TUNE_CURSOR_AUTO_V1",
+  "truth_reasoning_density_ready": true,
+  "life_consulting_ok": true,
+  "tech_consulting_ok": true,
+  "mixed_question_still_ok": true,
+  "route_reason_preserved": true,
+  "rollback_used": false,
+  "next_card_if_fail": "TENMON_TRUTH_REASONING_DENSITY_TRACE_CURSOR_AUTO_V1",
+  "version": 1,
+  "generated_at": "2026-03-27T03:10:00Z",
+  "implementation_notes": [
+    "tenmonKnowledgeStyleBridgeV1: truthStructureCenterClaimHint / truthStructureNextAxisHint を thoughtCoreSummary から優先接続、KANAGI / NATURAL_GENERAL_LLM_TOP_V1 の次軸推論",
+    "tenmonSurfaceContractV1: KANAGI_CONVERSATION_V1 / N2_KANAGI_PHASE_TOP に mustIncludeCenterClaim + mustIncludeNextAxis、NATURAL_GENERAL_LLM_TOP_V1 を general 契約に合流",
+    "tenmonTruthStructureReasonerV1: life_dialogue / technical（+ NATURAL_GENERAL の general_inquiry）で verdict に応じた密度語を centerClaimHint に自然文追補（scripture_general_mixed は対象外）"
+  ]
+}

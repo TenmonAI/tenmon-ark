@@ -1,0 +1,407 @@
+{
+  "card": "TENMON_KHS_DIGEST_LEDGER_AND_PROMOTION_CURSOR_AUTO_V1",
+  "version": 1,
+  "generated_at": "2026-03-27T02:21:56.535Z",
+  "digest_conditions": [
+    "centerClaim 化が thought core に載る",
+    "law / alg / acceptance への昇格が scorecard・seal で追跡可能",
+    "mixed question の truth-structure / mapping 還元が一貫"
+  ],
+  "materials": [
+    {
+      "id": "kotodama_hisho_khs",
+      "label": "言霊秘書（KHS）",
+      "category": "khs",
+      "state": "circulating",
+      "promotionHints": [
+        "centerClaim",
+        "law_kernel",
+        "mapping_layer",
+        "acceptance_loop",
+        "mixed_question_restored"
+      ]
+    },
+    {
+      "id": "mizuho_den",
+      "label": "水穂伝",
+      "category": "den",
+      "state": "digested",
+      "promotionHints": [
+        "centerClaim",
+        "scripture_canon_edge"
+      ]
+    },
+    {
+      "id": "kasai_den",
+      "label": "火水伝",
+      "category": "den",
+      "state": "connected",
+      "promotionHints": [
+        "general_axis",
+        "law_axis"
+      ]
+    },
+    {
+      "id": "goju_ren_jukko",
+      "label": "五十連十行",
+      "category": "practice",
+      "state": "digested",
+      "promotionHints": [
+        "iroha_bridge",
+        "fractal_law",
+        "mixed_question_restored"
+      ]
+    },
+    {
+      "id": "iroha_kotodama_kai",
+      "label": "いろは言霊解",
+      "category": "practice",
+      "state": "digested",
+      "promotionHints": [
+        "mapping_layer",
+        "thought_guide_axes",
+        "mixed_question_restored"
+      ]
+    },
+    {
+      "id": "katakamuna_kotodama_kai",
+      "label": "カタカムナ言霊解",
+      "category": "practice",
+      "state": "connected",
+      "promotionHints": [
+        "mapping_layer",
+        "khs_not_root"
+      ]
+    },
+    {
+      "id": "hokekyo",
+      "label": "法華経",
+      "category": "scripture",
+      "state": "digested",
+      "promotionHints": [
+        "scripture_canon",
+        "mapping_layer",
+        "mixed_question_restored"
+      ]
+    },
+    {
+      "id": "kukai_lineage",
+      "label": "空海・伝承系",
+      "category": "scripture",
+      "state": "connected",
+      "promotionHints": [
+        "mapping_layer",
+        "lineage_summary"
+      ]
+    },
+    {
+      "id": "siddham_sandoku",
+      "label": "悉曇・梵字",
+      "category": "scripture",
+      "state": "unconnected",
+      "promotionHints": [
+        "mapping_layer_pending"
+      ]
+    },
+    {
+      "id": "governance_constitution",
+      "label": "governance docs",
+      "category": "governance",
+      "state": "connected",
+      "promotionHints": [
+        "audit_gate",
+        "single_source"
+      ]
+    },
+    {
+      "id": "books_superpack",
+      "label": "books superpack",
+      "category": "books",
+      "state": "connected",
+      "promotionHints": [
+        "book_continuation",
+        "centerClaim_pending"
+      ]
+    },
+    {
+      "id": "inari_koden",
+      "label": "稲荷古伝",
+      "category": "den",
+      "state": "connected",
+      "promotionHints": [
+        "scripture_canon_edge"
+      ]
+    },
+    {
+      "id": "manyoshu_kotodama",
+      "label": "万葉集・言霊観（参照層）",
+      "category": "other",
+      "state": "unconnected",
+      "promotionHints": [
+        "mapping_layer_pending"
+      ]
+    }
+  ],
+  "undigested": [
+    {
+      "id": "kasai_den",
+      "label": "火水伝",
+      "category": "den",
+      "state": "connected",
+      "promotionHints": [
+        "general_axis",
+        "law_axis"
+      ]
+    },
+    {
+      "id": "katakamuna_kotodama_kai",
+      "label": "カタカムナ言霊解",
+      "category": "practice",
+      "state": "connected",
+      "promotionHints": [
+        "mapping_layer",
+        "khs_not_root"
+      ]
+    },
+    {
+      "id": "kukai_lineage",
+      "label": "空海・伝承系",
+      "category": "scripture",
+      "state": "connected",
+      "promotionHints": [
+        "mapping_layer",
+        "lineage_summary"
+      ]
+    },
+    {
+      "id": "siddham_sandoku",
+      "label": "悉曇・梵字",
+      "category": "scripture",
+      "state": "unconnected",
+      "promotionHints": [
+        "mapping_layer_pending"
+      ]
+    },
+    {
+      "id": "governance_constitution",
+      "label": "governance docs",
+      "category": "governance",
+      "state": "connected",
+      "promotionHints": [
+        "audit_gate",
+        "single_source"
+      ]
+    },
+    {
+      "id": "books_superpack",
+      "label": "books superpack",
+      "category": "books",
+      "state": "connected",
+      "promotionHints": [
+        "book_continuation",
+        "centerClaim_pending"
+      ]
+    },
+    {
+      "id": "inari_koden",
+      "label": "稲荷古伝",
+      "category": "den",
+      "state": "connected",
+      "promotionHints": [
+        "scripture_canon_edge"
+      ]
+    },
+    {
+      "id": "manyoshu_kotodama",
+      "label": "万葉集・言霊観（参照層）",
+      "category": "other",
+      "state": "unconnected",
+      "promotionHints": [
+        "mapping_layer_pending"
+      ]
+    }
+  ],
+  "circulating": [
+    {
+      "id": "kotodama_hisho_khs",
+      "label": "言霊秘書（KHS）",
+      "category": "khs",
+      "state": "circulating",
+      "promotionHints": [
+        "centerClaim",
+        "law_kernel",
+        "mapping_layer",
+        "acceptance_loop",
+        "mixed_question_restored"
+      ]
+    }
+  ],
+  "promotion_candidates": [
+    {
+      "id": "mizuho_den",
+      "label": "水穂伝",
+      "category": "den",
+      "state": "digested",
+      "promotionHints": [
+        "centerClaim",
+        "scripture_canon_edge"
+      ]
+    },
+    {
+      "id": "kasai_den",
+      "label": "火水伝",
+      "category": "den",
+      "state": "connected",
+      "promotionHints": [
+        "general_axis",
+        "law_axis"
+      ]
+    },
+    {
+      "id": "goju_ren_jukko",
+      "label": "五十連十行",
+      "category": "practice",
+      "state": "digested",
+      "promotionHints": [
+        "iroha_bridge",
+        "fractal_law",
+        "mixed_question_restored"
+      ]
+    },
+    {
+      "id": "iroha_kotodama_kai",
+      "label": "いろは言霊解",
+      "category": "practice",
+      "state": "digested",
+      "promotionHints": [
+        "mapping_layer",
+        "thought_guide_axes",
+        "mixed_question_restored"
+      ]
+    },
+    {
+      "id": "katakamuna_kotodama_kai",
+      "label": "カタカムナ言霊解",
+      "category": "practice",
+      "state": "connected",
+      "promotionHints": [
+        "mapping_layer",
+        "khs_not_root"
+      ]
+    },
+    {
+      "id": "hokekyo",
+      "label": "法華経",
+      "category": "scripture",
+      "state": "digested",
+      "promotionHints": [
+        "scripture_canon",
+        "mapping_layer",
+        "mixed_question_restored"
+      ]
+    },
+    {
+      "id": "kukai_lineage",
+      "label": "空海・伝承系",
+      "category": "scripture",
+      "state": "connected",
+      "promotionHints": [
+        "mapping_layer",
+        "lineage_summary"
+      ]
+    },
+    {
+      "id": "governance_constitution",
+      "label": "governance docs",
+      "category": "governance",
+      "state": "connected",
+      "promotionHints": [
+        "audit_gate",
+        "single_source"
+      ]
+    },
+    {
+      "id": "books_superpack",
+      "label": "books superpack",
+      "category": "books",
+      "state": "connected",
+      "promotionHints": [
+        "book_continuation",
+        "centerClaim_pending"
+      ]
+    },
+    {
+      "id": "inari_koden",
+      "label": "稲荷古伝",
+      "category": "den",
+      "state": "connected",
+      "promotionHints": [
+        "scripture_canon_edge"
+      ]
+    }
+  ],
+  "mixed_question_restored": [
+    {
+      "id": "kotodama_hisho_khs",
+      "label": "言霊秘書（KHS）",
+      "category": "khs",
+      "state": "circulating",
+      "promotionHints": [
+        "centerClaim",
+        "law_kernel",
+        "mapping_layer",
+        "acceptance_loop",
+        "mixed_question_restored"
+      ]
+    },
+    {
+      "id": "goju_ren_jukko",
+      "label": "五十連十行",
+      "category": "practice",
+      "state": "digested",
+      "promotionHints": [
+        "iroha_bridge",
+        "fractal_law",
+        "mixed_question_restored"
+      ]
+    },
+    {
+      "id": "iroha_kotodama_kai",
+      "label": "いろは言霊解",
+      "category": "practice",
+      "state": "digested",
+      "promotionHints": [
+        "mapping_layer",
+        "thought_guide_axes",
+        "mixed_question_restored"
+      ]
+    },
+    {
+      "id": "hokekyo",
+      "label": "法華経",
+      "category": "scripture",
+      "state": "digested",
+      "promotionHints": [
+        "scripture_canon",
+        "mapping_layer",
+        "mixed_question_restored"
+      ]
+    }
+  ],
+  "material_digest_ledger_ready": true,
+  "digest_states_visible": true,
+  "promotion_ready": true,
+  "digest_trace": {
+    "digestLedgerTraceNeeded": false,
+    "digestStateVisibleTuneNeeded": false,
+    "nextCardIfFail": null,
+    "digestLedgerTraceCard": null,
+    "digestStateVisibleTuneCard": null
+  },
+  "notes": [
+    "state: unconnected < connected < digested < circulating（学習循環済み）",
+    "undigested = unconnected | connected のみを列挙",
+    "circulating / promotion_candidates は state で分類",
+    "mixed_question_restored は promotionHints で識別"
+  ]
+}

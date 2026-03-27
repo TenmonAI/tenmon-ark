@@ -2,6 +2,7 @@
   "schema": "TENMON_INTENT_KERNEL_V1",
   "updated_at": "2026-03-10T14:00:00Z",
   "source_constitutions": [
+    "KHS_ROOT_FRACTAL_CONSTITUTION_V1",
     "canon/tenmon_intention_constitution_v1.json"
   ],
   "default_phase": "CENTER",
@@ -13,6 +14,7 @@
     "N2_KANAGI_PHASE_TOP": "L-IN"
   },
   "selection_principles": [
+    "言霊秘書(KHS)を root reasoning source とし、外部典拠・経典・一般知識は写像レイヤーとして扱う（root との同一視はしない）。",
     "真理を優先する意志のときは CENTER または L-IN を強める。普遍の真理と整合し、信仰の中心・原点に立ち帰る。",
     "盲信拒否のときは L-IN に寄せる。真理の正しい理解と識別、本来の信仰心への繋がり。",
     "悟りと真理の融合を重んじるときは R-IN。大日如来の心と己の心の結びつき、正中での調和。",

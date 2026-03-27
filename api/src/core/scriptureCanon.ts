@@ -1,6 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import { KHS_ROOT_FRACTAL_CONSTITUTION_V1 } from "./khsRootFractalConstitutionV1.js";
+
 export type ScriptureCanonItem = {
   scriptureKey: string;
   displayName: string;
@@ -121,7 +123,7 @@ export function buildScriptureCanonResponse(
 }
 
 export function getScriptureConceptEvidence(scriptureKey: string):
-  | { doc: string; pdfPage: number; lawKey: string; quoteHint: string }
+  | { doc: string; pdfPage: number; lawKey: string; quoteHint: string; rootConstitutionCard?: string }
   | null {
   switch (scriptureKey) {
     case "kotodama_hisho":
@@ -129,7 +131,8 @@ export function getScriptureConceptEvidence(scriptureKey: string):
         doc: "KHS",
         pdfPage: 24,
         lawKey: "KHSL:LAW:KHSU:41c0bff9cfb8:p0:q043f16b3a0e8",
-        quoteHint: "言霊秘書・五十音一言法則",
+        quoteHint: "言霊秘書・五十音一言法則（root constitution / 外部は写像）",
+        rootConstitutionCard: KHS_ROOT_FRACTAL_CONSTITUTION_V1.card,
       };
     case "iroha_kotodama_kai":
       return {

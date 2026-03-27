@@ -11,6 +11,12 @@ import { resolveGroundingRule } from "./sourceGraph.js";
 import { buildScriptureLineageSummary } from "./scriptureLineageEngine.js";
 import { getBookContinuation } from "./bookContinuationMemory.js";
 import type { ThreadCore } from "./threadCore.js";
+import { KHS_ROOT_FRACTAL_CONSTITUTION_V1, resolveRouteFamilyKhsRootHintV1 } from "./khsRootFractalConstitutionV1.js";
+import { resolveTruthReasoningAndMixedQuestionV1 } from "./tenmonTruthReasoningAndMixedQuestionV1.js";
+import { resolveKojikiAndMappingLayerV1 } from "./tenmonKojikiAndMappingLayerV1.js";
+import { resolveKhsFractalRootAndLawKernelV1 } from "./tenmonKhsFractalRootAndLawKernelV1.js";
+import { getMaterialDigestLedgerPayloadV1 } from "./tenmonMaterialDigestLedgerV1.js";
+import { getSelfLearningAutostudyBundleV1 } from "./tenmonSelfLearningStudyLoopV1.js";
 
 export type KnowledgeBinderInput = {
   routeReason: string;
@@ -187,13 +193,64 @@ export function buildKnowledgeBinder(input: KnowledgeBinderInput): KnowledgeBind
     } as Record<string, unknown>;
   })();
 
+  const khsRf = resolveRouteFamilyKhsRootHintV1(rr);
+  const khsRootLawKernel = resolveKhsFractalRootAndLawKernelV1(String(message || ""), rr);
+  const fractalRootBundle = khsRootLawKernel.fractalRootAxis;
+  const fractalLawKernel = khsRootLawKernel.fractalLawKernel;
+  const kojikiAndMapping = resolveKojikiAndMappingLayerV1(String(message || ""), rr);
+  const mythPh = kojikiAndMapping.mythogenesisPhase;
+  const mapLayer = kojikiAndMapping.mappingLayer;
+  const truthReasoningMixed = resolveTruthReasoningAndMixedQuestionV1(String(message || ""), rr);
+  const truthStructureVerdict = truthReasoningMixed.truthStructureVerdict;
+  const digestLedgerPayload = getMaterialDigestLedgerPayloadV1();
+  const selfLearningAutostudyV1 = getSelfLearningAutostudyBundleV1(String(message || ""));
   const thoughtCoreSummaryPatch: Record<string, unknown> = {
     centerKey: centerKey ?? undefined,
     centerMeaning: centerKey ?? undefined,
     routeReason: rr,
     modeHint: routeClass === "define" ? "define" : routeClass === "continuity" ? "continuity" : "analysis",
     continuityHint: centerKey ?? undefined,
+    khsRootConstitutionCard: KHS_ROOT_FRACTAL_CONSTITUTION_V1.card,
+    khsRootAxes: [...KHS_ROOT_FRACTAL_CONSTITUTION_V1.rootAxes],
+    khsRouteFamilyHint: khsRf.khsRootRef,
+    fractalLawAxis: fractalLawKernel.fractalLawAxis,
+    fractalTension: fractalLawKernel.fractalTension,
+    fractalRepairHint: fractalLawKernel.fractalRepairHint,
+    fractalRootAxis: fractalRootBundle,
+    rootConstitutionSource: fractalRootBundle.rootConstitutionSource,
+    rootCenterClaim: fractalRootBundle.rootCenterClaim,
+    khsFractalRootAndLawKernel: khsRootLawKernel,
+    kojikiAndMappingLayer: kojikiAndMapping,
+    ...(mythPh
+      ? {
+          mythogenesisPhase: mythPh,
+          mythogenesisCenterClaim: mythPh.mythogenesisCenterClaim,
+          mythogenesisProjectionHint: mythPh.mythogenesisProjectionHint,
+        }
+      : {}),
+    ...(mapLayer ? { mappingLayer: mapLayer } : {}),
+    truthReasoningAndMixedQuestion: truthReasoningMixed,
+    materialDigestLedgerRef: {
+      card: digestLedgerPayload.card,
+      digest_states_visible: digestLedgerPayload.digest_states_visible,
+      promotion_ready: digestLedgerPayload.promotion_ready,
+      digest_conditions_count: digestLedgerPayload.digest_conditions.length,
+      undigested_ids: digestLedgerPayload.undigested.map((e) => e.id),
+      circulating_ids: digestLedgerPayload.circulating.map((e) => e.id),
+      promotion_candidate_ids: digestLedgerPayload.promotion_candidates.map((e) => e.id),
+      mixed_question_restored_ids: digestLedgerPayload.mixed_question_restored.map((e) => e.id),
+    },
+    ...(truthStructureVerdict ? { truthStructureVerdict } : {}),
+    ...(truthStructureVerdict
+      ? {
+          truthStructureCenterClaimHint: truthStructureVerdict.centerClaimHint,
+          truthStructureNextAxisHint: truthStructureVerdict.nextAxisHint,
+          truthStructureRepairAxis: truthStructureVerdict.repairAxis,
+          truthStructureNextAxis: truthStructureVerdict.nextAxis,
+        }
+      : {}),
     ...(routeClass === "continuity" ? { intentKind: "continuation_summary" } : {}),
+    selfLearningAutostudyV1,
   };
 
   const synapseTopPatch: Record<string, unknown> = {};
@@ -299,6 +356,68 @@ export function applyKnowledgeBinderToKu(ku: Record<string, unknown>, binder: Kn
     Object.assign(tcs, binder.thoughtCoreSummaryPatch);
   } else if (Object.keys(binder.thoughtCoreSummaryPatch).length > 0) {
     (ku as any).thoughtCoreSummary = { ...binder.thoughtCoreSummaryPatch };
+  }
+
+  const patch = binder.thoughtCoreSummaryPatch as Record<string, unknown>;
+  if (patch.fractalRootAxis != null) {
+    (ku as any).fractalRootAxis = patch.fractalRootAxis;
+  }
+  if (patch.rootConstitutionSource != null) {
+    (ku as any).rootConstitutionSource = patch.rootConstitutionSource;
+  }
+  if (patch.rootCenterClaim != null) {
+    (ku as any).rootCenterClaim = patch.rootCenterClaim;
+  }
+  if (patch.fractalLawAxis != null) {
+    (ku as any).fractalLawAxis = patch.fractalLawAxis;
+  }
+  if (patch.fractalTension !== undefined) {
+    (ku as any).fractalTension = patch.fractalTension;
+  }
+  if (patch.fractalRepairHint !== undefined) {
+    (ku as any).fractalRepairHint = patch.fractalRepairHint;
+  }
+  if (patch.mythogenesisPhase != null) {
+    (ku as any).mythogenesisPhase = patch.mythogenesisPhase;
+  }
+  if (patch.mythogenesisCenterClaim != null) {
+    (ku as any).mythogenesisCenterClaim = patch.mythogenesisCenterClaim;
+  }
+  if (patch.mythogenesisProjectionHint != null) {
+    (ku as any).mythogenesisProjectionHint = patch.mythogenesisProjectionHint;
+  }
+  if (patch.mappingLayer != null) {
+    (ku as any).mappingLayer = patch.mappingLayer;
+  }
+  if (patch.khsFractalRootAndLawKernel != null) {
+    (ku as any).khsFractalRootAndLawKernel = patch.khsFractalRootAndLawKernel;
+  }
+  if (patch.kojikiAndMappingLayer != null) {
+    (ku as any).kojikiAndMappingLayer = patch.kojikiAndMappingLayer;
+  }
+  if (patch.truthReasoningAndMixedQuestion != null) {
+    (ku as any).truthReasoningAndMixedQuestion = patch.truthReasoningAndMixedQuestion;
+  }
+  if (patch.materialDigestLedgerRef != null) {
+    (ku as any).materialDigestLedgerRef = patch.materialDigestLedgerRef;
+  }
+  if (patch.truthStructureVerdict != null) {
+    (ku as any).truthStructureVerdict = patch.truthStructureVerdict;
+  }
+  if (patch.truthStructureCenterClaimHint != null) {
+    (ku as any).truthStructureCenterClaimHint = patch.truthStructureCenterClaimHint;
+  }
+  if (patch.truthStructureNextAxisHint != null) {
+    (ku as any).truthStructureNextAxisHint = patch.truthStructureNextAxisHint;
+  }
+  if (patch.truthStructureRepairAxis != null) {
+    (ku as any).truthStructureRepairAxis = patch.truthStructureRepairAxis;
+  }
+  if (patch.truthStructureNextAxis != null) {
+    (ku as any).truthStructureNextAxis = patch.truthStructureNextAxis;
+  }
+  if (patch.selfLearningAutostudyV1 != null) {
+    (ku as any).selfLearningAutostudyV1 = patch.selfLearningAutostudyV1;
   }
 
   const st = (ku as any).synapseTop;

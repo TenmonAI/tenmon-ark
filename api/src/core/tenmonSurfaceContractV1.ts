@@ -209,7 +209,23 @@ export function resolveTenmonSurfaceContractV1(routeReason: string): TenmonSurfa
     };
   }
 
-  if (/^(NATURAL_GENERAL_LLM_TOP|GENERAL_KNOWLEDGE_EXPLAIN_ROUTE_V1)$/u.test(rr)) {
+  /** 人生相談系: truth reasoning density（center + 次軸を finalize で軽く担保） */
+  if (rr === "KANAGI_CONVERSATION_V1" || rr === "N2_KANAGI_PHASE_TOP") {
+    return {
+      surfaceContractKey: "kanagi_truth_density_v1",
+      shortformShape: "short_analysis",
+      mediumShape: "medium_analysis",
+      longformShape: "longform_tenmon",
+      closingShape: "soft_next_step",
+      minParagraphs: 1,
+      mustIncludeCenterClaim: true,
+      mustIncludeNextAxis: true,
+      allowQuestion: true,
+      toneProfile: "tenmon_define",
+    };
+  }
+
+  if (/^(NATURAL_GENERAL_LLM_TOP|NATURAL_GENERAL_LLM_TOP_V1|GENERAL_KNOWLEDGE_EXPLAIN_ROUTE_V1)$/u.test(rr)) {
     return {
       surfaceContractKey: "general_define_v1",
       shortformShape: "short_define",

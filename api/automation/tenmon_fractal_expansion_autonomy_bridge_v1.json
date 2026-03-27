@@ -1,0 +1,58 @@
+{
+  "version": 1,
+  "card": "TENMON_FRACTAL_EXPANSION_FAILOVER_AND_AUTONOMY_BRIDGE_CURSOR_AUTO_V1",
+  "fractal_expansion_mainline_id": "TENMON_FRACTAL_TRUTH_WORLDCLASS_SEAL_CURSOR_AUTO_V1",
+  "enqueue_cursor_card": "TENMON_FRACTAL_EXPANSION_FAILOVER_AND_AUTONOMY_BRIDGE_CURSOR_AUTO_V1",
+  "trace_after_fail": "TENMON_FRACTAL_EXPANSION_AUTONOMY_TRACE_CURSOR_AUTO_V1",
+  "worktree_then_final_seal": {
+    "after_convergence": "TENMON_FRACTAL_WORKTREE_CONVERGENCE_AND_SEAL_CURSOR_AUTO_V1",
+    "then": "TENMON_FINAL_OPERABLE_SEAL_CURSOR_AUTO_V1"
+  },
+  "failover_branches": {
+    "stale_block": {
+      "next_card": "TENMON_FRACTAL_TRUTH_STALE_BLOCKER_FORENSIC_CURSOR_AUTO_V1",
+      "from": "worldclass_seal.primary_gap=stale_evidence"
+    },
+    "worktree_not_converged": {
+      "next_card": "TENMON_FRACTAL_WORKTREE_CONVERGENCE_AND_SEAL_CURSOR_AUTO_V1",
+      "from": "worldclass_seal.primary_gap=worktree_not_converged"
+    },
+    "axis_fail_single": {
+      "next_card": "TENMON_FRACTAL_TRUTH_SINGLE_AXIS_REPAIR_CURSOR_AUTO_V1",
+      "from": "worldclass_seal.case=B"
+    },
+    "axis_fail_multi": {
+      "next_card": "TENMON_FRACTAL_AUTONOMY_BRIDGE_CURSOR_AUTO_V1",
+      "from": "worldclass_seal.case=C&multi_axis"
+    },
+    "digest_ledger_trace": {
+      "next_card": "TENMON_DIGEST_LEDGER_TRACE_CURSOR_AUTO_V1",
+      "from": "digest_ledger.digest_trace.digestLedgerTraceNeeded"
+    },
+    "digest_state_visible_tune": {
+      "next_card": "TENMON_DIGEST_STATE_VISIBLE_TUNE_CURSOR_AUTO_V1",
+      "from": "digest_ledger.digest_trace.digestStateVisibleTuneNeeded"
+    },
+    "mixed_question_fail": {
+      "next_card": "TENMON_GENERAL_KNOWLEDGE_DENSITY_AND_SELF_VIEW_POLISH_CURSOR_AUTO_V1",
+      "from": "worldclass_seal.failed_axes=mixed_question_quality"
+    },
+    "beautiful_output_axis": {
+      "next_card": "TENMON_FRACTAL_OUTPUT_STYLE_TUNE_CURSOR_AUTO_V1",
+      "from": "worldclass_seal.failed_axes=beautiful_output_preserved"
+    },
+    "worldclass_seal_rerun": {
+      "next_card": "TENMON_FRACTAL_TRUTH_WORLDCLASS_SEAL_CURSOR_AUTO_V1",
+      "from": "any_fractal_truth_axis_fail"
+    }
+  },
+  "autonomy_planner_contract": {
+    "planner_card": "TENMON_AUTONOMY_PLANNER_AND_QUEUE_SINGLE_FLIGHT_CURSOR_AUTO_V1",
+    "queue_repair_on_planner_fail": "TENMON_AUTONOMY_QUEUE_STATE_REPAIR_CURSOR_AUTO_V1"
+  },
+  "notes": [
+    "single-flight: remote_cursor_queue.json と tenmon_cursor_single_flight_queue_state.json の autonomy_single_flight_policy_v1 を同期。",
+    "主線は fractal_expansion_mainline_id（worldclass seal）→ 本 bridge → autonomy planner / queue。",
+    "失敗ループ証拠は tenmon_fractal_expansion_failover_and_autonomy_bridge_cursor_auto_v1 が evidence ディレクトリへ保存。"
+  ]
+}

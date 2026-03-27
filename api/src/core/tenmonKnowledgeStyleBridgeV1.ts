@@ -1,6 +1,9 @@
 /**
  * TENMON_KNOWLEDGE_TO_STYLE_BRIDGE_V1
  * understandingReductionV1 を表面整形 hint へ橋渡し（本文捏造なし・meta 文字列は本文に出さない）。
+ *
+ * TENMON_TRUTH_REASONING_DENSITY_TUNE: thoughtCoreSummary の truthStructure* を
+ * center/next へ優先接続し、KANAGI / NATURAL_GENERAL で次軸推論を有効化。
  */
 
 /** 表面に出す一行から内部ラベルを落とす（本文捏造はしない） */
@@ -58,13 +61,23 @@ export function buildKnowledgeSurfaceBridgeHintsV1(
   if (claim.length >= 6) centerClaimHint = stripMetaLeakFromHint(claim).slice(0, 240);
   else if (meaning.length >= 6) centerClaimHint = stripMetaLeakFromHint(meaning).slice(0, 240);
 
+  const tsCenter = stripMetaLeakFromHint(String(tcs?.truthStructureCenterClaimHint ?? "").trim());
+  const tsNext = stripMetaLeakFromHint(String(tcs?.truthStructureNextAxisHint ?? "").trim());
+  if (tsCenter.length >= 8) {
+    centerClaimHint = tsCenter.slice(0, 240);
+  } else if (tsCenter.length >= 6 && centerClaimHint.length < 6) {
+    centerClaimHint = tsCenter.slice(0, 240);
+  }
+
   let nextAxisHint: string | undefined;
 
   const scriptureLike =
     /^(K1_TRACE_EMPTY_GATED_V1|SCRIPTURE_LOCAL_RESOLVER_V4|TENMON_SCRIPTURE_CANON_V1|TRUTH_GATE_RETURN_V2)$/u.test(rr);
   const selfawareLike = /^R22_SELFAWARE_/u.test(rr) || rr === "WILL_CORE_PREEMPT_V1";
   const continuityLike = rr === "CONTINUITY_ROUTE_HOLD_V1";
-  const generalLike = /^(NATURAL_GENERAL_LLM_TOP|GENERAL_KNOWLEDGE_EXPLAIN_ROUTE_V1)$/u.test(rr);
+  const generalLike =
+    /^(NATURAL_GENERAL_LLM_TOP|NATURAL_GENERAL_LLM_TOP_V1|GENERAL_KNOWLEDGE_EXPLAIN_ROUTE_V1)$/u.test(rr);
+  const kanagiLike = rr === "KANAGI_CONVERSATION_V1" || rr === "N2_KANAGI_PHASE_TOP";
 
   if (scriptureLike) {
     const na = inferSecondSemanticLine(semanticBody, centerClaimHint);
@@ -76,11 +89,28 @@ export function buildKnowledgeSurfaceBridgeHintsV1(
     /* 質問は surface 契約側で抑制。次軸は付けない */
     nextAxisHint = undefined;
   } else if (generalLike) {
-    const na = inferSecondSemanticLine(semanticBody, centerClaimHint);
-    if (na.length >= 8 && na !== centerClaimHint.slice(0, 240)) nextAxisHint = na;
+    // truth structure の次軸を優先して本文へ還元（内部裁定済みの薄化を防ぐ）
+    if (tsNext.length >= 8) {
+      nextAxisHint = tsNext.slice(0, 240);
+    } else {
+      const na = inferSecondSemanticLine(semanticBody, centerClaimHint);
+      if (na.length >= 8 && na !== centerClaimHint.slice(0, 240)) nextAxisHint = na;
+    }
+  } else if (kanagiLike) {
+    // 人生相談系も同様に nextAxis を優先し、center/repair の密度を維持
+    if (tsNext.length >= 8) {
+      nextAxisHint = tsNext.slice(0, 240);
+    } else {
+      const na = inferSecondSemanticLine(semanticBody, centerClaimHint);
+      if (na.length >= 8 && na !== centerClaimHint.slice(0, 240)) nextAxisHint = na;
+    }
   } else if (/^DEF_/u.test(rr) || axis === "kotodama_define") {
     const na = inferSecondSemanticLine(semanticBody, centerClaimHint);
     if (na.length >= 8 && na !== centerClaimHint.slice(0, 240)) nextAxisHint = na;
+  }
+
+  if (!nextAxisHint && tsNext.length >= 8) {
+    nextAxisHint = tsNext.slice(0, 240);
   }
 
   return { centerClaimHint: centerClaimHint || "", nextAxisHint };

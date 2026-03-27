@@ -1,6 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import { KHS_ROOT_FRACTAL_CONSTITUTION_V1 } from "./khsRootFractalConstitutionV1.js";
+
 const EXPECTED_SCHEMA = "TENMON_INTENT_KERNEL_V1";
 
 /** 天津金木四相。CENTER / L-IN / R-IN / L-OUT / R-OUT を許容する。 */
@@ -89,6 +91,17 @@ export function resolveUnresolvedRules(): string[] {
 /**
  * Return response_intent_hints. Empty per-phase arrays if not loaded.
  */
+/**
+ * source_constitutions を読み、KHS root を先頭に固定（重複は除去）。
+ */
+export function resolveSourceConstitutionsWithKhsRootFirst(): string[] {
+  const kernel = loadTenmonIntentKernel();
+  const raw = kernel && Array.isArray(kernel.source_constitutions) ? kernel.source_constitutions : [];
+  const khs = KHS_ROOT_FRACTAL_CONSTITUTION_V1.card;
+  const rest = raw.filter((x) => String(x) !== khs);
+  return [khs, ...rest.map((x) => String(x))];
+}
+
 export function resolveResponseIntentHints(): ResponseIntentHints {
   const empty: ResponseIntentHints = {
     CENTER: [],
