@@ -1,0 +1,19 @@
+{
+  "ok": true,
+  "card": "TENMON_LATEST_STATE_REJUDGE_AND_SEAL_REFRESH_CURSOR_AUTO_V1",
+  "latest_state_rejudged": true,
+  "seal_refreshed": true,
+  "execution_gate_wait_retry_ready": true,
+  "bridge_exit_code_zero": true,
+  "audit_pass_after_retry": true,
+  "result_bundle_updated": true,
+  "queue_single_flight_preserved": true,
+  "refreshed_axes": [],
+  "remaining_real_gaps": [
+    "cursor_operator_ready",
+    "mac_operator_ready"
+  ],
+  "rollback_used": false,
+  "next_card_if_fail": null,
+  "generated_at": "2026-03-27T07:58:31Z"
+}

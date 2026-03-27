@@ -1,0 +1,19 @@
+{
+  "ok": true,
+  "card": "TENMON_CURSOR_PILOT_QUEUE_PREPARE_CURSOR_AUTO_V1",
+  "pilot_queue_prepare_ready": false,
+  "single_current_run": false,
+  "duplicate_resolved": false,
+  "active_item_count": 0,
+  "chosen_queue_id": null,
+  "chosen_cursor_card": null,
+  "allowlist": [
+    "TENMON_REFLECTION_STACK_WORKTREE_CONVERGENCE_CURSOR_AUTO_V1",
+    "TENMON_WORLDCLASS_FINAL_REASONING_DENSITY_CURSOR_AUTO_V1"
+  ],
+  "rollback_used": false,
+  "next_card_if_fail": null,
+  "generated_at": "2026-03-27T06:15:47Z",
+  "dry_run": true,
+  "would_write_queue": true
+}

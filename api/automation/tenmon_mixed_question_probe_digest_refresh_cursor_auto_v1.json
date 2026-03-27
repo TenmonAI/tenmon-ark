@@ -1,0 +1,11 @@
+{
+  "ok": true,
+  "card": "TENMON_MIXED_QUESTION_PROBE_DIGEST_REFRESH_CURSOR_AUTO_V1",
+  "mixed_probe_digest_refreshed": true,
+  "mixed_question_quality_ready": true,
+  "fresh_probe_digest_current": true,
+  "fractal_truth_worldclass_candidate": true,
+  "rollback_used": false,
+  "next_card_if_fail": null,
+  "summary_path": "/opt/tenmon-ark-repo/api/automation/tenmon_latest_state_rejudge_summary.json"
+}

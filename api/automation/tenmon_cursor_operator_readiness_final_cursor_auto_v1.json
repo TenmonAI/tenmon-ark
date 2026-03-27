@@ -1,0 +1,10 @@
+{
+  "ok": true,
+  "card": "TENMON_CURSOR_OPERATOR_READINESS_FINAL_CURSOR_AUTO_V1",
+  "cursor_operator_ready": true,
+  "result_bundle_updated": true,
+  "next_card_if_fail": null,
+  "rollback_used": false,
+  "queue_error": null,
+  "observation_ok": true
+}

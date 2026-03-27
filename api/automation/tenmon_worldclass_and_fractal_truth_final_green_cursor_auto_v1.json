@@ -9,5 +9,21 @@
   "worktree_converged": false,
   "rollback_used": false,
   "next_card_if_fail": "TENMON_FRACTAL_WORKTREE_CONVERGENCE_AND_SEAL_CURSOR_AUTO_V1",
-  "generated_at": "2026-03-27T03:03:18Z"
+  "generated_at": "2026-03-27T05:21:41Z",
+  "case": "C",
+  "primary_gap": "worktree_not_converged",
+  "observation": {
+    "scorecard_worldclass_ready": false,
+    "fractal_seal_ok": false,
+    "stale_sources_present": false,
+    "failed_axes": [
+      "mixed_question_quality"
+    ],
+    "git_dirty_hint": "git status --porcelain 非空（未コミット変更あり）"
+  },
+  "notes": [
+    "fail-closed: worldclass_ready が false のままでは final green を宣言しない。",
+    "fractal seal は worktree clean かつ worldclass_ready かつ mixed_question_quality 等が揃うまで ok にならない。",
+    "CASE C（複合不足）: 先に worktree 収束、その後 mixed / worldclass 軸を順に。"
+  ]
 }

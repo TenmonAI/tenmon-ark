@@ -3,6 +3,14 @@
 """
 TENMON_AUTONOMY_EXECUTION_GATE_AND_RESULT_RETURN_CURSOR_AUTO_V1
 
+`TENMON_LATEST_STATE_REJUDGE_AND_SEAL_REFRESH_CURSOR_AUTO_V1` 後の最終段: master の安定軸（conversation_core 等）を検証し、
+result bundle を safe summary へ返却（コピー）し、execution_gate_snapshot_v1 / 要約 JSON を更新する。
+
+- STEP0: `tenmon_autonomy_12h_fully_autonomous_failclosed_master_cursor_auto_v1.json`（なければ failclosed master）で
+  conversation_core / knowledge_circulation / execution_gate / queue / rollback / forensic がすべて true か検証。
+- STEP1: audit（bundle または bridge JSON）、result return（要約 + bundle コピー）、next_card（policy 橋渡し）。
+- fail-closed: 前提未達時は書き込みスキップ。`TENMON_PDCA_SKIP_PROBES` は本スクリプトでは設定しない。
+
 execution gate（build / audit / probe のみ strict success）と result return（repo 外安全パスへ要約、親ディレクトリ自動作成）。
 dry_run_started / blocked / failed / success を正規化。result bundle に execution_gate_snapshot_v1（status, card,
 started_at, ended_at, summary_path, next_card）と current_run 正規化を付与。--apply で bundle 更新。
@@ -13,6 +21,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import shutil
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -33,6 +42,18 @@ NEXT_ON_FAIL = "TENMON_AUTONOMY_RESULT_RETURN_PATH_REPAIR_CURSOR_AUTO_V1"
 NEXT_ON_PASS_DEFAULT = "TENMON_OS_OUTPUT_CONTRACT_NORMALIZE_CURSOR_AUTO_V1"
 OUT_JSON = "tenmon_autonomy_execution_gate_and_result_return_cursor_auto_v1.json"
 BUNDLE_NAME = "remote_cursor_result_bundle.json"
+QUEUE_NAME = "remote_cursor_queue.json"
+MASTER_FULL_JSON = "tenmon_autonomy_12h_fully_autonomous_failclosed_master_cursor_auto_v1.json"
+MASTER_FALLBACK_JSON = "tenmon_autonomy_12h_failclosed_master_cursor_auto_v1.json"
+STABLE_MASTER_KEYS = (
+    "conversation_core_completed",
+    "knowledge_circulation_connected",
+    "execution_gate_ready",
+    "queue_ready",
+    "rollback_ready",
+    "forensic_ready",
+)
+PREREQ_FAIL_NEXT = "TENMON_LATEST_STATE_REJUDGE_AND_SEAL_REFRESH_CURSOR_AUTO_V1"
 
 DEFAULT_EXEC_POLICY: dict[str, Any] = {
     "version": 1,
@@ -245,6 +266,66 @@ def _merge_exec_policy(existing: dict[str, Any] | None) -> dict[str, Any]:
     return merged
 
 
+def _read_stable_master(auto: Path) -> tuple[Path, dict[str, Any]]:
+    p1 = auto / MASTER_FULL_JSON
+    j1 = _read_json(p1)
+    if j1:
+        return p1, j1
+    p2 = auto / MASTER_FALLBACK_JSON
+    return p2, _read_json(p2)
+
+
+def _stable_prereq_ok(m: dict[str, Any]) -> tuple[bool, list[str]]:
+    miss = [k for k in STABLE_MASTER_KEYS if m.get(k) is not True]
+    return len(miss) == 0, miss
+
+
+def _queued_cards(queue: dict[str, Any]) -> list[str]:
+    items = queue.get("items") if isinstance(queue.get("items"), list) else []
+    out: list[str] = []
+    for it in items:
+        if not isinstance(it, dict):
+            continue
+        cc = str(it.get("cursor_card") or it.get("card") or "").strip()
+        if cc:
+            out.append(cc)
+    return out
+
+
+def _audit_pass_from_bundle(bundle: dict[str, Any]) -> bool:
+    for key in ("latest_current_run_entry", "current_run_entry"):
+        e = bundle.get(key)
+        if not isinstance(e, dict):
+            continue
+        eg = e.get("execution_gate")
+        if not isinstance(eg, dict):
+            continue
+        if eg.get("audit_pass") is not True:
+            continue
+        if eg.get("gate_success") is True:
+            return True
+        if int(e.get("gate_retry_count") or 0) > 0:
+            return True
+        if float(e.get("gate_wait_seconds") or 0) > 0:
+            return True
+    return False
+
+
+def _bridge_audit_ok(auto: Path) -> bool:
+    br = _read_json(auto / "tenmon_cursor_operator_autonomy_bridge_cursor_auto_v1.json")
+    return br.get("ok") is True and br.get("execution_gate_ready") is True
+
+
+def _copy_bundle_return(bundle_path: Path, safe_root: Path, gen_at: str) -> str | None:
+    slug = gen_at.replace(":", "").replace("-", "")
+    dst = safe_root / f"remote_cursor_result_bundle_returned_{slug}.json"
+    try:
+        shutil.copy2(bundle_path, dst)
+        return str(dst)
+    except OSError:
+        return None
+
+
 def _dedupe_current_run_flags(entries: list[Any]) -> tuple[list[Any], bool]:
     """非 fixture の current_run を最新 ingested_at の 1 件だけに収束。"""
     idx_map: list[tuple[int, dict[str, Any], str]] = []
@@ -289,12 +370,18 @@ def main() -> int:
     rollback_used = False
 
     bundle = _read_json(bundle_path)
+    queue = _read_json(auto / QUEUE_NAME)
+    queued_cards_list = _queued_cards(queue)
+    master_path, master = _read_stable_master(auto)
+    prereq_ok, prereq_missing = _stable_prereq_ok(master)
+    audit_pass_after_retry = _audit_pass_from_bundle(bundle) or _bridge_audit_ok(auto)
+
     entries = bundle.get("entries") if isinstance(bundle.get("entries"), list) else []
     raw_policy = bundle.get("autonomy_execution_gate_policy_v1")
     policy = _merge_exec_policy(raw_policy if isinstance(raw_policy, dict) else None)
     policy_ok = int(policy.get("version") or 0) >= 1
 
-    if args.apply and not args.dry_run:
+    if args.apply and not args.dry_run and prereq_ok:
         entries, _deduped = _dedupe_current_run_flags(entries)
 
     latest = _latest_current_run_entry([e for e in entries if isinstance(e, dict)])
@@ -334,10 +421,36 @@ def main() -> int:
     except OSError:
         safe_summary_write_ok = False
 
+    npass = str(policy.get("nextOnPass") or "").strip()
     next_c = bridge_next_card(policy, enriched_latest)
+    leg0 = bundle.get("latest_current_run_entry")
+    if isinstance(leg0, dict):
+        eg0 = leg0.get("execution_gate")
+        if (
+            isinstance(eg0, dict)
+            and eg0.get("gate_success") is True
+            and prereq_ok
+            and audit_pass_after_retry
+        ):
+            if npass:
+                next_c = npass
+    if prereq_ok and audit_pass_after_retry and npass:
+        next_c = npass
+
+    env_safe = (os.environ.get("TENMON_AUTONOMY_SAFE_SUMMARY_ROOT") or "").strip()
+    safe_summary_env_match = False
+    if env_safe and safe_root:
+        try:
+            safe_summary_env_match = Path(env_safe).resolve() == Path(safe_root).resolve()
+        except OSError:
+            safe_summary_env_match = False
+
+    bundle_return_path: str | None = None
 
     if args.dry_run:
         summary_path_str = str(summary_path) if summary_path and safe_summary_write_ok else None
+    elif not prereq_ok:
+        summary_path_str = None
     elif summary_path is not None and safe_summary_write_ok:
         try:
             snap_w = execution_gate_snapshot_v1(
@@ -382,7 +495,8 @@ def main() -> int:
     )
 
     result_bundle_update_ok = bool(policy_ok and isinstance(entries, list) and bundle_path.is_file())
-    if args.apply and not args.dry_run:
+    result_bundle_updated = False
+    if args.apply and not args.dry_run and prereq_ok:
         if not bundle_path.is_file():
             result_bundle_update_ok = False
         else:
@@ -396,28 +510,52 @@ def main() -> int:
                 b2["updatedAt"] = gen_at
                 _atomic_write_json(bundle_path, b2)
                 result_bundle_update_ok = True
+                result_bundle_updated = True
+                if safe_root is not None:
+                    bundle_return_path = _copy_bundle_return(bundle_path, safe_root, gen_at)
             except OSError:
                 result_bundle_update_ok = False
+                result_bundle_updated = False
                 rollback_used = True
+    elif args.apply and not args.dry_run and not prereq_ok:
+        result_bundle_update_ok = False
 
     ok = (
-        execution_gate_ready
+        prereq_ok
+        and audit_pass_after_retry
+        and execution_gate_ready
         and result_return_ready
         and result_bundle_update_ok
         and safe_summary_write_ok
         and next_card_bridge_ok
     )
 
+    next_fail: str | None = None
+    if not ok:
+        next_fail = npass or (PREREQ_FAIL_NEXT if not prereq_ok else NEXT_ON_FAIL)
+        if next_fail:
+            next_c = next_fail
+
     out_min: dict[str, Any] = {
         "ok": ok,
         "card": CARD,
+        "prereq_ok": prereq_ok,
+        "prereq_missing_axes": prereq_missing,
+        "master_json": str(master_path.name),
         "execution_gate_ready": execution_gate_ready,
         "result_return_ready": result_return_ready,
+        "audit_pass_after_retry": audit_pass_after_retry,
         "result_bundle_update_ok": result_bundle_update_ok,
+        "result_bundle_updated": result_bundle_updated,
+        "bundle_return_path": bundle_return_path,
+        "queued_cards": queued_cards_list,
+        "next_card": next_c,
         "safe_summary_write_ok": safe_summary_write_ok,
+        "safe_summary_env_match": safe_summary_env_match,
+        "safe_summary_root_resolved": str(safe_root) if safe_root else None,
         "next_card_bridge_ok": next_card_bridge_ok,
         "rollback_used": rollback_used,
-        "next_card_if_fail": None if ok else NEXT_ON_FAIL,
+        "next_card_if_fail": next_fail,
     }
 
     out_path = auto / OUT_JSON

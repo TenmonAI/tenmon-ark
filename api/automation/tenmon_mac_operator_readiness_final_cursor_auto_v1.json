@@ -1,0 +1,8 @@
+{
+  "ok": true,
+  "card": "TENMON_MAC_OPERATOR_READINESS_FINAL_CURSOR_AUTO_V1",
+  "mac_operator_ready": true,
+  "result_bundle_updated": true,
+  "next_card_if_fail": "TENMON_FINAL_SEAL_CURSOR_AUTO_V1",
+  "rollback_used": false
+}

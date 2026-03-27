@@ -146,17 +146,18 @@ function buildHints(
   const mixedOrGeneral =
     phase === "scripture_general_mixed" ||
     /NATURAL_GENERAL|GENERAL_KNOWLEDGE|^GENERAL_/u.test(rr);
-  let center = mixedOrGeneral ? "root_reasoning: " : "";
-  center += `truth_structure:相=${phase}。`;
-  if (issue) center += `verdict=${issue}。`;
-  center += repairAxis.slice(0, 120);
   const densityEligible =
     phase === "life_dialogue" ||
     phase === "technical" ||
     (phase === "general_inquiry" && /NATURAL_GENERAL|GENERAL_KNOWLEDGE_EXPLAIN_ROUTE/u.test(rr));
+  let center = mixedOrGeneral ? "root_reasoning: " : "";
+  center += `truth_structure:相=${phase}。`;
+  if (issue) center += `verdict=${issue}。`;
+  /** 裁定の自然文（中心/分断/結び/循環/修復）を repair ラベルより前に置き、240 字切りで落ちにくくする */
   if (densityEligible && issue) {
-    center = `${center} ${densityNudgeForIssueV1(issue)}`.trim();
+    center += `${densityNudgeForIssueV1(issue)} `;
   }
+  center += repairAxis.slice(0, 120);
   if (center.length > 240) center = center.slice(0, 237) + "...";
   let next = `次軸: ${nextAxis}`;
   if (mixedOrGeneral) next = `root_reasoning: ${next}`;

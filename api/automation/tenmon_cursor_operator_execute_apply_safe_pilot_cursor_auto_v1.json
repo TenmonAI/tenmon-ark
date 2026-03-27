@@ -1,0 +1,16 @@
+{
+  "ok": false,
+  "card": "TENMON_CURSOR_OPERATOR_EXECUTE_APPLY_SAFE_PILOT_CURSOR_AUTO_V1",
+  "safe_summary_root_ok": true,
+  "safe_summary_resolution": "/var/log/tenmon/autonomy_safe",
+  "queue_validation_ok": true,
+  "queue_error": null,
+  "pilot_loops": 2,
+  "bridge_exit_code": 0,
+  "master_exit_code": 1,
+  "bridge_stdout_tail": "{\n  \"ok\": true,\n  \"card\": \"TENMON_CURSOR_OPERATOR_AUTONOMY_BRIDGE_CURSOR_AUTO_V1\",\n  \"cursor_operator_bridge_ready\": true,\n  \"queue_single_flight_ready\": true,\n  \"execution_gate_ready\": true,\n  \"result_return_ready\": true,\n  \"failclosed_supervisor_bridge_ready\": true,\n  \"twelve_hour_master_bridge_ready\": true,\n  \"rollback_used\": false,\n  \"next_card_if_fail\": null,\n  \"queue_error\": null,\n  \"skipped_probe_mode\": false,\n  \"generated_at\": \"2026-03-27T06:51:08Z\"\n}\n",
+  "bridge_stderr_tail": "",
+  "master_stdout_tail": "{\n  \"ok\": false,\n  \"card\": \"TENMON_AUTONOMY_12H_FAILCLOSED_MASTER_CURSOR_AUTO_V1\",\n  \"elapsed_mode\": \"12h_or_24loops\",\n  \"loops_completed\": 2,\n  \"elapsed_sec\": 64.81,\n  \"conversation_core_completed\": false,\n  \"truth_reasoning_density_ready\": true,\n  \"knowledge_circulation_connected\": false,\n  \"khs_root_fixed\": true,\n  \"fractal_law_kernel_ready\": true,\n  \"mythogenesis_mapper_ready\": true,\n  \"mapping_layer_ready\": true,\n  \"digest_ledger_ready\": true,\n  \"fractal_truth_worldclass_ready\": false,\n  \"beautiful_output_ready\": true,\n  \"planner_ready\": false,\n  \"queue_ready\": false,\n  \"execution_gate_ready\": false,\n  \"rollback_ready\": false,\n  \"forensic_ready\": false,\n  \"cursor_operator_ready\": false,\n  \"mac_operator_ready\": false,\n  \"worktree_converged\": true,\n  \"final_sealed\": true,\n  \"rollback_used\": false,\n  \"next_card_if_fail\": \"TENMON_WORLDCLASS_DIALOGUE_ACCEPTANCE_SEAL_CURSOR_AUTO_V1\"\n}\n",
+  "master_stderr_tail": "",
+  "next_card_if_fail": "TENMON_CURSOR_OPERATOR_AUTONOMY_TRACE_CURSOR_AUTO_V1"
+}

@@ -435,6 +435,21 @@ function __isFactualCorrectionUserMessageV1(t0: string): boolean {
   return /それは違う|それは違|違います|間違い|正しくない|違う|ちがう/u.test(s);
 }
 
+/** TENMON_MIXED_QUESTION_ROUTE_GUARD_LOCAL_FIX_CURSOR_AUTO_V1
+ * mixed scripture/KHS/mapping 問いを general fact-coding 落下から外す（局所ガード）。
+ */
+function __isMixedRootReasoningIntentV1(raw: string): boolean {
+  const t = String(raw ?? "").trim();
+  if (!t) return false;
+  const s = t.replace(/[？?！!。．]/g, " ");
+  const hasScripture = /(法華経|法華|空海|古事記|神話|経典|いろは|カタカムナ|言霊秘書)/u.test(s);
+  const hasRootLaw = /(KHS|言霊|水火|火水|五十連|テニヲハ|root|根)/iu.test(s);
+  const hasMapping = /(mapping|comparative|接点|構造|生成|写像|主従)/iu.test(s);
+  const explicitTenmon = /(一般知識ではなく|天聞アークの理解として|root reasoning)/iu.test(s);
+  const pairCount = Number(hasScripture) + Number(hasRootLaw) + Number(hasMapping);
+  return explicitTenmon || pairCount >= 2;
+}
+
 /** TENMON_CHAT_SUBCONCEPT_MISFIRE_AND_TEMPLATE_LEAK_FIX: factual / 訂正 / 自己内省で SUBCONCEPT 昇格しない */
 function __shouldBlockSubconceptPromotionForMetaOrFactualV1(raw: string): boolean {
   const t = String(raw ?? "").trim();
@@ -7719,6 +7734,7 @@ const __isDefinitionQ =
         !hasDoc0 &&
         !askedMenu0 &&
         __factCodingRoute &&
+        !__isMixedRootReasoningIntentV1(__msgCovNorm) &&
         !__tenmonSelfawareConsciousnessMetaProbeV1(__msgCovNorm)
       ) {
         const __msgFact = String(message ?? "").trim();

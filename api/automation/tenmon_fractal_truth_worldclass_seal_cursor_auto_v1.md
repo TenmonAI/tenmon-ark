@@ -1,6 +1,6 @@
 # TENMON_FRACTAL_TRUTH_WORLDCLASS_SEAL_CURSOR_AUTO_V1
 
-- generated_at: `2026-03-27T03:03:08Z`
+- generated_at: `2026-03-27T08:07:07Z`
 - **ok**: `False`
 - **case**: `C`
 - **worktree_converged**: `False`
@@ -18,11 +18,11 @@
   "truth_structure_reasoning_ready": true,
   "material_digest_ledger_ready": true,
   "digest_state_visible": true,
-  "mixed_question_quality": false,
+  "mixed_question_quality": true,
   "single_source_preserved": true,
   "beautiful_output_preserved": true
 }
 
 ## failed_axes
 
-mixed_question_quality
+(none)

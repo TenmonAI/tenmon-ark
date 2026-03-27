@@ -1,0 +1,16 @@
+{
+  "ok": true,
+  "card": "TENMON_IROHA_DANSHARI_COUNSELING_BRIDGE_CURSOR_AUTO_V1",
+  "human_counseling_bridge_ready": true,
+  "iroha_danshari_integration_ready": true,
+  "life_consulting_density_improved": true,
+  "rollback_used": false,
+  "next_card_if_fail": "TENMON_IROHA_DANSHARI_COUNSELING_TRACE_CURSOR_AUTO_V1",
+  "version": 1,
+  "generated_at": "2026-03-27T05:37:04Z",
+  "implementation_notes": [
+    "tenmonIrohaLifeCounselingKernelV1.ts: mapping layer",
+    "tenmonIrohaDanshariCounselingBridgeV1.ts: KANAGI + (iroha|danshari のいずれか)",
+    "knowledgeBinder + tenmonKnowledgeStyleBridgeV1: combinedSurfaceHint 優先"
+  ]
+}

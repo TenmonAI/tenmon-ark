@@ -1,0 +1,15 @@
+{
+  "ok": true,
+  "card": "TENMON_CURSOR_OPERATOR_AUTONOMY_BRIDGE_CURSOR_AUTO_V1",
+  "cursor_operator_bridge_ready": true,
+  "queue_single_flight_ready": true,
+  "execution_gate_ready": true,
+  "result_return_ready": true,
+  "failclosed_supervisor_bridge_ready": true,
+  "twelve_hour_master_bridge_ready": true,
+  "rollback_used": false,
+  "next_card_if_fail": null,
+  "queue_error": null,
+  "skipped_probe_mode": false,
+  "generated_at": "2026-03-27T08:00:37Z"
+}

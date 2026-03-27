@@ -1,6 +1,6 @@
 {
   "card": "TENMON_CURSOR_SINGLE_FLIGHT_QUEUE_AND_REVIEW_GATE_CURSOR_AUTO_V1",
-  "generated_at": "2026-03-27T01:00:41Z",
+  "generated_at": "2026-03-27T06:15:47Z",
   "single_flight_lock_v1": {
     "relative_path": "api/automation/tenmon_cursor_single_flight_mainline.lock",
     "exclusive_mainline": true
@@ -31,10 +31,10 @@
   },
   "next_on_fail_note": "停止。retry 1枚のみ生成。",
   "retry_card": "TENMON_CURSOR_SINGLE_FLIGHT_QUEUE_AND_REVIEW_GATE_RETRY_CURSOR_AUTO_V1",
-  "current_card": "TENMON_STALE_EVIDENCE_INVALIDATION_CURSOR_AUTO_V1",
+  "current_card": "TENMON_WORLDCLASS_FINAL_REASONING_DENSITY_CURSOR_AUTO_V1",
   "queued_cards": [
-    "TENMON_FINAL_OPERABLE_SEAL_CURSOR_AUTO_V1",
-    "TENMON_STALE_EVIDENCE_INVALIDATION_CURSOR_AUTO_V1"
+    "TENMON_WORLDCLASS_FINAL_REASONING_DENSITY_CURSOR_AUTO_V1",
+    "TENMON_REFLECTION_STACK_WORKTREE_CONVERGENCE_CURSOR_AUTO_V1"
   ],
   "queue_pending_count": 2,
   "blocked_reason": [],
@@ -67,7 +67,7 @@
     "high_risk_count": 2,
     "auto_accept_candidate": false
   },
-  "manual_review_recommended": true,
+  "manual_review_recommended": false,
   "inputs": {
     "autocompact_summary": "/opt/tenmon-ark-repo/api/automation/tenmon_cursor_worktree_autocompact_summary.json",
     "remote_queue": "/opt/tenmon-ark-repo/api/automation/remote_cursor_queue.json",

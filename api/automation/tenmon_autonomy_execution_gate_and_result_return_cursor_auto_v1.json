@@ -1,10 +1,23 @@
 {
   "ok": true,
   "card": "TENMON_AUTONOMY_EXECUTION_GATE_AND_RESULT_RETURN_CURSOR_AUTO_V1",
+  "prereq_ok": true,
+  "prereq_missing_axes": [],
+  "master_json": "tenmon_autonomy_12h_fully_autonomous_failclosed_master_cursor_auto_v1.json",
   "execution_gate_ready": true,
   "result_return_ready": true,
+  "audit_pass_after_retry": true,
   "result_bundle_update_ok": true,
+  "result_bundle_updated": true,
+  "bundle_return_path": "/var/log/tenmon/autonomy_safe/remote_cursor_result_bundle_returned_20260327T071310Z.json",
+  "queued_cards": [
+    "TENMON_WORLDCLASS_FINAL_REASONING_DENSITY_CURSOR_AUTO_V1",
+    "TENMON_REFLECTION_STACK_WORKTREE_CONVERGENCE_CURSOR_AUTO_V1"
+  ],
+  "next_card": "TENMON_OS_OUTPUT_CONTRACT_NORMALIZE_CURSOR_AUTO_V1",
   "safe_summary_write_ok": true,
+  "safe_summary_env_match": true,
+  "safe_summary_root_resolved": "/var/log/tenmon/autonomy_safe",
   "next_card_bridge_ok": true,
   "rollback_used": false,
   "next_card_if_fail": null

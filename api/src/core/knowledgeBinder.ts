@@ -17,6 +17,9 @@ import { resolveKojikiAndMappingLayerV1 } from "./tenmonKojikiAndMappingLayerV1.
 import { resolveKhsFractalRootAndLawKernelV1 } from "./tenmonKhsFractalRootAndLawKernelV1.js";
 import { getMaterialDigestLedgerPayloadV1 } from "./tenmonMaterialDigestLedgerV1.js";
 import { getSelfLearningAutostudyBundleV1 } from "./tenmonSelfLearningStudyLoopV1.js";
+import { resolveDanshariLifeOrderKernelV1 } from "./tenmonDanshariLifeOrderKernelV1.js";
+import { resolveIrohaLifeCounselingKernelV1 } from "./tenmonIrohaLifeCounselingKernelV1.js";
+import { buildIrohaDanshariCounselingBridgeV1 } from "./tenmonIrohaDanshariCounselingBridgeV1.js";
 
 export type KnowledgeBinderInput = {
   routeReason: string;
@@ -204,6 +207,14 @@ export function buildKnowledgeBinder(input: KnowledgeBinderInput): KnowledgeBind
   const truthStructureVerdict = truthReasoningMixed.truthStructureVerdict;
   const digestLedgerPayload = getMaterialDigestLedgerPayloadV1();
   const selfLearningAutostudyV1 = getSelfLearningAutostudyBundleV1(String(message || ""));
+  const danshariLifeOrderKernelV1 = resolveDanshariLifeOrderKernelV1(String(message || ""), rr);
+  const irohaLifeCounselingKernelV1 = resolveIrohaLifeCounselingKernelV1(String(message || ""), rr);
+  const irohaDanshariCounselingBridgeV1 = buildIrohaDanshariCounselingBridgeV1(
+    String(message || ""),
+    rr,
+    irohaLifeCounselingKernelV1,
+    danshariLifeOrderKernelV1,
+  );
   const thoughtCoreSummaryPatch: Record<string, unknown> = {
     centerKey: centerKey ?? undefined,
     centerMeaning: centerKey ?? undefined,
@@ -251,6 +262,9 @@ export function buildKnowledgeBinder(input: KnowledgeBinderInput): KnowledgeBind
       : {}),
     ...(routeClass === "continuity" ? { intentKind: "continuation_summary" } : {}),
     selfLearningAutostudyV1,
+    ...(danshariLifeOrderKernelV1 ? { danshariLifeOrderKernelV1 } : {}),
+    ...(irohaLifeCounselingKernelV1 ? { irohaLifeCounselingKernelV1 } : {}),
+    ...(irohaDanshariCounselingBridgeV1 ? { irohaDanshariCounselingBridgeV1 } : {}),
   };
 
   const synapseTopPatch: Record<string, unknown> = {};
@@ -418,6 +432,15 @@ export function applyKnowledgeBinderToKu(ku: Record<string, unknown>, binder: Kn
   }
   if (patch.selfLearningAutostudyV1 != null) {
     (ku as any).selfLearningAutostudyV1 = patch.selfLearningAutostudyV1;
+  }
+  if (patch.danshariLifeOrderKernelV1 != null) {
+    (ku as any).danshariLifeOrderKernelV1 = patch.danshariLifeOrderKernelV1;
+  }
+  if (patch.irohaLifeCounselingKernelV1 != null) {
+    (ku as any).irohaLifeCounselingKernelV1 = patch.irohaLifeCounselingKernelV1;
+  }
+  if (patch.irohaDanshariCounselingBridgeV1 != null) {
+    (ku as any).irohaDanshariCounselingBridgeV1 = patch.irohaDanshariCounselingBridgeV1;
   }
 
   const st = (ku as any).synapseTop;

@@ -1,0 +1,33 @@
+{
+  "ok": false,
+  "card": "TENMON_PLANNER_AND_FRACTAL_TRUTH_REJUDGE_CURSOR_AUTO_V1",
+  "planner_ready": true,
+  "fractal_truth_worldclass_ready": false,
+  "axes_classification": {
+    "planner_ready": "REFRESHABLE",
+    "fractal_truth_worldclass_ready": "REAL_GAP"
+  },
+  "rejudge_reason": {
+    "planner_ready": "heuristic_prereq_met_excluding_orphan_cleanup",
+    "fractal_truth_worldclass_ready": "mixed_question_quality_not_ok"
+  },
+  "evidence_files": [
+    "/opt/tenmon-ark-repo/api/automation/remote_cursor_queue.json",
+    "/opt/tenmon-ark-repo/api/automation/tenmon_cursor_single_flight_queue_state.json",
+    "/opt/tenmon-ark-repo/api/automation/remote_cursor_result_bundle.json",
+    "/opt/tenmon-ark-repo/api/automation/tenmon_cursor_operator_autonomy_bridge_cursor_auto_v1.json",
+    "/opt/tenmon-ark-repo/api/automation/tenmon_autonomy_planner_and_queue_single_flight_cursor_auto_v1.py",
+    "/opt/tenmon-ark-repo/api/automation/tenmon_fractal_truth_worldclass_seal_cursor_auto_v1.json",
+    "/opt/tenmon-ark-repo/api/automation/tenmon_worldclass_acceptance_scorecard.json",
+    "/opt/tenmon-ark-repo/api/automation/tenmon_material_digest_ledger_v1.json",
+    "/opt/tenmon-ark-repo/api/automation/tenmon_autonomy_12h_fully_autonomous_failclosed_master_cursor_auto_v1.json"
+  ],
+  "remaining_gap_reason": {
+    "planner_ready": null,
+    "fractal_truth_worldclass_ready": "mixed_question_quality_not_ok"
+  },
+  "master_updated": true,
+  "master_json": "tenmon_autonomy_12h_fully_autonomous_failclosed_master_cursor_auto_v1.json",
+  "next_card_if_fail": "TENMON_PLANNER_AND_FRACTAL_TRUTH_REJUDGE_TRACE_CURSOR_AUTO_V1",
+  "generated_at": "2026-03-27T07:40:38Z"
+}

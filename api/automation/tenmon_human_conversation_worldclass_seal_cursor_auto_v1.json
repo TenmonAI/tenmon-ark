@@ -1,0 +1,51 @@
+{
+  "ok": true,
+  "card": "TENMON_HUMAN_CONVERSATION_WORLDCLASS_SEAL_CURSOR_AUTO_V1",
+  "iroha_life_kernel_ready": true,
+  "danshari_life_kernel_ready": true,
+  "human_counseling_bridge_ready": true,
+  "life_consulting_worldclass_ready": true,
+  "relationship_consulting_worldclass_ready": true,
+  "life_order_worldclass_ready": true,
+  "single_source_preserved": true,
+  "beautiful_output_preserved": true,
+  "rollback_used": false,
+  "next_card_if_fail": null,
+  "generated_at": "2026-03-27T05:38:58Z",
+  "case": "A",
+  "primary_gap": null,
+  "failed_axes": [],
+  "axes": {
+    "iroha_life_kernel_ready": true,
+    "danshari_life_kernel_ready": true,
+    "human_counseling_bridge_ready": true,
+    "life_consulting_density": true,
+    "relationship_consulting_quality": true,
+    "life_order_quality": true,
+    "center_claim_clarity": true,
+    "next_step_clarity": true,
+    "single_source_preserved": true,
+    "beautiful_output_preserved": true
+  },
+  "build_ok": true,
+  "stale_sources_present": false,
+  "steps": {
+    "npm_run_build": {
+      "exit_code": 0,
+      "stdout_tail": "\n> tenmon-ark-api@1.0.0 build\n> tsc && node scripts/copy-assets.mjs\n\n[copy-assets] copied /opt/tenmon-ark-repo/api/src/db/approval_schema.sql -> /opt/tenmon-ark-repo/api/dist/db/approval_schema.sql\n[copy-assets] copied /opt/tenmon-ark-repo/api/src/db/audit_schema.sql -> /opt/tenmon-ark-repo/api/dist/db/audit_schema.sql\n[copy-assets] copied /opt/tenmon-ark-repo/api/src/db/infra_asset_schema.sql -> /opt/tenmon-ark-repo/api/dist/db/infra_asset_schema.sql\n[copy-assets] copied /opt/tenmon-ark-repo/api/src/db/kokuzo_schema.sql -> /opt/tenmon-ark-repo/api/dist/db/kokuzo_schema.sql\n[copy-assets] copied /opt/tenmon-ark-repo/api/src/db/persona_state.sql -> /opt/tenmon-ark-repo/api/dist/db/persona_state.sql\n[copy-assets] copied /opt/tenmon-ark-repo/api/src/db/pwa_schema.sql -> /opt/tenmon-ark-repo/api/dist/db/pwa_schema.sql\n[copy-assets] copied /opt/tenmon-ark-repo/api/src/db/schema.sql -> /opt/tenmon-ark-repo/api/dist/db/schema.sql\n[copy-assets] copied /opt/tenmon-ark-repo/api/src/db/training_schema.sql -> /opt/tenmon-ark-repo/api/dist/db/training_schema.sql\n",
+      "stderr_tail": ""
+    }
+  },
+  "inputs": {
+    "final_operable_seal": "/opt/tenmon-ark-repo/api/automation/tenmon_final_operable_seal.json",
+    "rejudge_summary": "/opt/tenmon-ark-repo/api/automation/tenmon_latest_state_rejudge_summary.json",
+    "truth_reasoning_density_tune": "/opt/tenmon-ark-repo/api/automation/tenmon_truth_reasoning_density_tune_cursor_auto_v1.json",
+    "core": "/opt/tenmon-ark-repo/api/src/core"
+  },
+  "notes": [
+    "10 軸は src/core の静的検査 + final_operable_seal + truth_reasoning_density_tune（存在時）。",
+    "stale_sources_present 時は証拠を破棄し全軸 False。",
+    "CASE B は next_card のみ提示（コード自動改変なし）。",
+    "audit / restart / probe は運用スクリプト側で別途 PASS を確認すること。"
+  ]
+}

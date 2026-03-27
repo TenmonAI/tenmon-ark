@@ -1,7 +1,7 @@
 {
   "version": 1,
   "card": "TENMON_REMOTE_CURSOR_COMMAND_CENTER_CURSOR_AUTO_V1",
-  "updatedAt": "2026-03-27T01:00:41Z",
+  "updatedAt": "2026-03-27T06:15:47Z",
   "autonomy_single_flight_policy_v1": {
     "version": 1,
     "card": "TENMON_AUTONOMY_PLANNER_AND_QUEUE_SINGLE_FLIGHT_CURSOR_AUTO_V1",
@@ -27,83 +27,34 @@
   },
   "items": [
     {
-      "id": "213a8d5956980660",
-      "job_id": "213a8d5956980660",
-      "state": "ready",
-      "createdAt": "2026-03-26T11:48:21Z",
-      "source": "TENMON_AUTONOMY_PRIORITY_LOOP_TO_REMOTE_QUEUE_ENQUEUE_CURSOR_AUTO_V1",
-      "cursor_card": "TENMON_FINAL_OPERABLE_SEAL_CURSOR_AUTO_V1",
-      "objective": "auto-enqueue from single-source truth (safe gate)",
-      "job_file": null,
-      "fixture": false,
-      "dry_run_only": false,
-      "leased_until": null,
-      "enqueue_reason": "forensic.next_best_card",
-      "current_run": true
+      "queue_id": "pilot-worldclass-density",
+      "cursor_card": "TENMON_WORLDCLASS_FINAL_REASONING_DENSITY_CURSOR_AUTO_V1",
+      "status": "ready",
+      "current_run": true,
+      "created_at": "2026-03-27T06:15:47Z",
+      "updated_at": "2026-03-27T06:15:47Z",
+      "source": "manual_pilot_prepare"
     },
     {
-      "id": "16ccac096f24c96b",
-      "job_id": "16ccac096f24c96b",
-      "state": "ready",
-      "createdAt": "2026-03-26T10:36:48Z",
-      "source": "TENMON_AUTONOMY_PRIORITY_LOOP_TO_REMOTE_QUEUE_ENQUEUE_CURSOR_AUTO_V1",
-      "cursor_card": "TENMON_STALE_EVIDENCE_INVALIDATION_CURSOR_AUTO_V1",
-      "objective": "auto-enqueue from single-source truth (safe gate)",
-      "job_file": null,
-      "fixture": false,
-      "dry_run_only": false,
-      "leased_until": null,
-      "enqueue_reason": "forensic.next_best_card",
-      "current_run": false
-    },
-    {
-      "id": "2f06ff30a852e68f",
-      "job_id": "2f06ff30a852e68f",
-      "state": "executed",
-      "createdAt": "2026-03-25T20:27:46Z",
-      "source": "TENMON_HIGH_RISK_ESCROW_APPROVAL_BRIDGE_CURSOR_AUTO_V1",
-      "cursor_card": "TENMON_K1_TRACE_EMPTY_RESPONSE_DENSITY_REPAIR_CURSOR_AUTO_V1",
-      "objective": "high-risk escrow enqueue (human approved)",
-      "job_file": null,
-      "fixture": false,
-      "dry_run_only": false,
-      "leased_until": null,
-      "enqueue_reason": "escrow_human_approval",
+      "queue_id": "pilot-worktree-convergence",
+      "cursor_card": "TENMON_REFLECTION_STACK_WORKTREE_CONVERGENCE_CURSOR_AUTO_V1",
+      "status": "queued",
       "current_run": false,
-      "escrow_approved": true,
-      "escrow_package": "/opt/tenmon-ark-repo/api/automation/out/high_risk_escrow/2026-03-25T20-27-46Z__TENMON_K1_TRACE_EMPTY_RESPONSE_DENSITY_REPAIR_CURSOR_AUTO_V1/escrow_package.json",
-      "completed_at": "2026-03-25T20:27:54Z"
-    },
-    {
-      "job_id": "closed_loop_probe_1774379349",
-      "state": "released_fixture",
-      "createdAt": "2026-03-24T19:09:09Z",
-      "source": "TENMON_SELF_BUILD_CLOSED_LOOP_PROOF_V2",
-      "cursor_card": "TENMON_CLOSED_LOOP_FIXTURE_CURSOR_AUTO_V1",
-      "objective": "closed loop proof fixture",
-      "job_file": "/var/log/tenmon/card_TENMON_SELF_BUILD_CLOSED_LOOP_PROOF_V2/20260324T190908Z/closed_loop_probe_job.json",
-      "fixture": true,
-      "leased_until": null,
-      "dry_run_only": false,
-      "id": "6420def5267dc402",
-      "ignored_fixture": true,
-      "released_at": "2026-03-26T06:43:21Z",
-      "release_reason": "fixture_drain_canonicalize_closed_loop"
-    },
-    {
-      "job_id": "probe_job_20260324T193348Z",
-      "state": "executed",
-      "createdAt": "2026-03-24T19:34:00.902891Z",
-      "source": "TENMON_DEEP_COMPLETION_RESIDUAL_FORENSIC_V1",
-      "cursor_card": "TENMON_CLOSED_LOOP_REALITY_PROBE_CURSOR_AUTO_V1",
-      "objective": "closed loop current-run forensic probe",
-      "job_file": "/var/log/tenmon/card_TENMON_DEEP_COMPLETION_RESIDUAL_FORENSIC_V1/20260324T193348Z/closed_loop_probe_job.json",
-      "fixture": false,
-      "leased_until": null,
-      "dry_run_only": false,
-      "id": "2344ae644701487c",
-      "completed_at": "2026-03-25T04:22:35Z"
+      "created_at": "2026-03-27T06:15:47Z",
+      "updated_at": "2026-03-27T06:15:47Z",
+      "source": "manual_pilot_prepare"
     }
   ],
-  "state_schema": "approval_required|ready|rejected|delivered|executed|released_fixture"
+  "state_schema": "approval_required|ready|rejected|delivered|executed|released_fixture",
+  "pilot_prepare_v1": {
+    "card": "TENMON_CURSOR_PILOT_QUEUE_PREPARE_CURSOR_AUTO_V1",
+    "prepared_at": "2026-03-27T06:08:04Z",
+    "allowlist": [
+      "TENMON_REFLECTION_STACK_WORKTREE_CONVERGENCE_CURSOR_AUTO_V1",
+      "TENMON_WORLDCLASS_FINAL_REASONING_DENSITY_CURSOR_AUTO_V1"
+    ]
+  },
+  "generated_at": "2026-03-27T06:15:47Z",
+  "pilot_mode": true,
+  "allowlist_active": true
 }

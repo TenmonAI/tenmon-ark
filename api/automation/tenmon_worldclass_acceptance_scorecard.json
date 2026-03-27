@@ -1,12 +1,13 @@
 {
   "card": "TENMON_WORLDCLASS_ACCEPTANCE_SCORECARD_CURSOR_AUTO_V1",
-  "generated_at": "2026-03-27T03:03:08Z",
+  "generated_at": "2026-03-27T08:07:07Z",
   "score_total": 72.4,
   "score_max": 118,
   "score_percent": 61.36,
   "sealed_operable_ready": false,
   "worldclass_ready": false,
   "must_fix_before_claim": [
+    "current_run_nonfixture_executed_not_observed",
     "conversation_backend:conversation_runner_not_pass",
     "conversation_backend:chat_ts_overall_not_100",
     "self_audit_os:verdict_source_split_not_single",
@@ -37,35 +38,36 @@
     ],
     "fresh_probe_digest": {
       "continuity_followup_len": 116,
-      "continuity_probe_thread": "probe_rejudge_1774579926",
+      "continuity_probe_thread": "probe_rejudge_1774598168",
       "chat1_route": "DEF_FASTPATH_VERIFIED_V1",
       "chat2_route": "CONTINUITY_ROUTE_HOLD_V1",
       "k1_probe_hokke": {
         "route": "SCRIPTURE_LOCAL_RESOLVER_V4",
-        "len": 146,
+        "len": 243,
         "response_nonempty": true,
         "meta_leak_ok": true,
         "satisfied": false,
         "http_status": 200,
-        "thread_id": "probe_k1_hokke_1774579926"
+        "thread_id": "probe_k1_hokke_1774598169"
       },
       "k1_probe_kukai": {
         "route": "SCRIPTURE_LOCAL_RESOLVER_V4",
-        "len": 185,
+        "len": 260,
         "response_nonempty": true,
         "meta_leak_ok": true,
         "satisfied": false,
         "http_status": 200,
-        "thread_id": "probe_k1_kukai_1774579926"
+        "thread_id": "probe_k1_kukai_1774598169"
       },
       "general_probe": {
-        "route": "NATURAL_GENERAL_LLM_TOP",
-        "len": 240,
+        "route": "TENMON_SCRIPTURE_CANON_V1",
+        "len": 387,
         "response_nonempty": true,
         "meta_leak_ok": true,
-        "satisfied": false,
+        "satisfied": true,
         "http_status": 200,
-        "thread_id": "probe_general_1774579926"
+        "thread_id": "mixed_probe_refresh_1774598809_1",
+        "source": "TENMON_MIXED_QUESTION_PROBE_DIGEST_REFRESH_CURSOR_AUTO_V1"
       },
       "ai_consciousness_lock_probe": {
         "route": "R10_SELF_REFLECTION_ROUTE_V4_SAFE",
@@ -74,18 +76,75 @@
         "meta_leak_ok": true,
         "satisfied": false,
         "http_status": 200,
-        "thread_id": "probe_ai_1774579926"
+        "thread_id": "probe_ai_1774598169"
       },
       "subconcept_probe": {
         "route": "TRUTH_GATE_RETURN_V2",
-        "len": 133,
+        "len": 273,
         "response_nonempty": true,
         "meta_leak_ok": true,
         "satisfied": false,
         "http_status": 200,
-        "thread_id": "probe_subconcept_1774579926"
+        "thread_id": "probe_subconcept_1774598169"
       },
-      "continuity_density_unresolved": false
+      "continuity_density_unresolved": false,
+      "mixed_probe": {
+        "card": "TENMON_MIXED_QUESTION_PROBE_DIGEST_REFRESH_CURSOR_AUTO_V1",
+        "generated_at": "2026-03-27T08:07:03Z",
+        "all_satisfied": true,
+        "probes": [
+          {
+            "route": "TENMON_SCRIPTURE_CANON_V1",
+            "len": 387,
+            "response_nonempty": true,
+            "meta_leak_ok": true,
+            "satisfied": true,
+            "http_status": 200,
+            "thread_id": "mixed_probe_refresh_1774598809_1",
+            "message": "法華経の中心と水火の法則の接点を、一般知識ではなく天聞アークの理解として説明して"
+          },
+          {
+            "route": "TRUTH_GATE_RETURN_V2",
+            "len": 335,
+            "response_nonempty": true,
+            "meta_leak_ok": true,
+            "satisfied": true,
+            "http_status": 200,
+            "thread_id": "mixed_probe_refresh_1774598809_2",
+            "message": "古事記生成とカタカムナの接点を、言霊法則の根から説明して"
+          },
+          {
+            "route": "TRUTH_GATE_RETURN_V2",
+            "len": 353,
+            "response_nonempty": true,
+            "meta_leak_ok": true,
+            "satisfied": true,
+            "http_status": 200,
+            "thread_id": "mixed_probe_refresh_1774598813_3",
+            "message": "いろはと言霊秘書の違いを、root と mapping の関係で説明して"
+          },
+          {
+            "route": "KANAGI_CONVERSATION_V1",
+            "len": 253,
+            "response_nonempty": true,
+            "meta_leak_ok": true,
+            "satisfied": true,
+            "http_status": 200,
+            "thread_id": "mixed_probe_refresh_1774598816_4",
+            "message": "人生の迷いを、火水とテニヲハの法則でどう読むか"
+          },
+          {
+            "route": "GENERAL_KNOWLEDGE_EXPLAIN_ROUTE_V1",
+            "len": 596,
+            "response_nonempty": true,
+            "meta_leak_ok": true,
+            "satisfied": true,
+            "http_status": 200,
+            "thread_id": "mixed_probe_refresh_1774598816_5",
+            "message": "サンスクリットとKHSの共通構造を、root と comparative の違いを保って説明して"
+          }
+        ]
+      }
     },
     "stale_sources": [
       "pwa_final_completion_readiness.json",
@@ -118,7 +177,7 @@
     "critical_subsystems_accepted_count": 3,
     "critical_subsystems_all_accepted": false,
     "overall_band": "code_complete_lived_unproven",
-    "current_run_nonfixture_executed": true
+    "current_run_nonfixture_executed": false
   },
   "subsystems": {
     "infra_gate": {
