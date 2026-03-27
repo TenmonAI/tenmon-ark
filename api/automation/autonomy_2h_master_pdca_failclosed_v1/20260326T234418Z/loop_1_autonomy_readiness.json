@@ -1,0 +1,102 @@
+{
+  "loop": 1,
+  "generated_at": "2026-03-26T23:44:18Z",
+  "autonomy_readiness": {
+    "planner": "ready",
+    "queue": "ready",
+    "single_flight": "ready",
+    "queue_single_flight": "ready",
+    "execution_gate": "ready",
+    "result_return": "ready",
+    "rollback": "ready",
+    "forensic": "ready",
+    "cursor_operator": "ready",
+    "mac_operator": "ready",
+    "failclosed_supervisor": "ready"
+  },
+  "pwa_static_audit": {
+    "ok": true,
+    "files": [
+      {
+        "path": "/opt/tenmon-ark-repo/web/src/api/chat.ts",
+        "exists": true,
+        "has_api_chat": true,
+        "has_thread_id": true
+      },
+      {
+        "path": "/opt/tenmon-ark-repo/web/src/hooks/useChat.ts",
+        "exists": true,
+        "has_api_chat": true,
+        "has_thread_id": true
+      },
+      {
+        "path": "/opt/tenmon-ark-repo/web/src/pages/ChatPage.tsx",
+        "exists": true,
+        "has_api_chat": true,
+        "has_thread_id": true
+      }
+    ]
+  },
+  "next_card_if_fail": null,
+  "phase_scripts": {
+    "skip_probes": true,
+    "planner": {
+      "exit_code": 0,
+      "json": {
+        "ok": true,
+        "card": "TENMON_AUTONOMY_PLANNER_AND_QUEUE_SINGLE_FLIGHT_CURSOR_AUTO_V1",
+        "planner_ready": true,
+        "queue_ready": true,
+        "single_flight_ready": true,
+        "duplicate_reject_ok": true,
+        "stale_running_cleanup_ok": true,
+        "state_persistence_ok": true,
+        "rollback_used": false,
+        "next_card_if_fail": null
+      }
+    },
+    "execution_gate": {
+      "exit_code": 0,
+      "json": {
+        "ok": true,
+        "card": "TENMON_AUTONOMY_EXECUTION_GATE_AND_RESULT_RETURN_CURSOR_AUTO_V1",
+        "execution_gate_ready": true,
+        "result_return_ready": true,
+        "result_bundle_update_ok": true,
+        "safe_summary_write_ok": true,
+        "next_card_bridge_ok": true,
+        "rollback_used": false,
+        "next_card_if_fail": null
+      }
+    },
+    "supervisor": {
+      "exit_code": 0,
+      "json": {
+        "ok": true,
+        "card": "TENMON_AUTONOMY_FAILCLOSED_SUPERVISOR_AND_ROLLBACK_CURSOR_AUTO_V1",
+        "supervisor_ready": true,
+        "rollback_ready": true,
+        "forensic_bundle_ready": true,
+        "high_risk_trace_ready": true,
+        "next_card_generation_ok": true,
+        "rollback_used": false,
+        "next_card_if_fail": null
+      }
+    },
+    "mac_operator": {
+      "exit_code": 0,
+      "json": {
+        "ok": true,
+        "card": "TENMON_MAC_CURSOR_OPERATOR_READINESS_CURSOR_AUTO_V1",
+        "mac_operator_ready": true,
+        "cursor_operator_ready": true,
+        "safe_summary_path_ok": true,
+        "single_runtime_watch_loop_ok": true,
+        "heartbeat_ok": true,
+        "stuck_recovery_ok": true,
+        "rollback_used": false,
+        "next_card_if_fail": null
+      }
+    }
+  }
+}

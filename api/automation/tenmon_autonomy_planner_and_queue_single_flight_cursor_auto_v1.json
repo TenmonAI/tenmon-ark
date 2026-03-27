@@ -1,0 +1,12 @@
+{
+  "ok": true,
+  "card": "TENMON_AUTONOMY_PLANNER_AND_QUEUE_SINGLE_FLIGHT_CURSOR_AUTO_V1",
+  "planner_ready": true,
+  "queue_ready": true,
+  "single_flight_ready": true,
+  "duplicate_reject_ok": true,
+  "stale_running_cleanup_ok": true,
+  "state_persistence_ok": true,
+  "rollback_used": false,
+  "next_card_if_fail": null
+}

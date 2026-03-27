@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "card": "TENMON_AUTONOMY_FAILCLOSED_SUPERVISOR_AND_ROLLBACK_CURSOR_AUTO_V1",
+  "rollback_path_id": "tenmon_autonomy_failclosed_rollback_path_v1@1",
+  "rollback_git_restore_prefix": ["git", "restore", "--staged", "--worktree", "--"],
+  "evidence_bundle_root_env": "TENMON_AUTONOMY_FORENSIC_BUNDLE_ROOT",
+  "default_evidence_root": "/var/log/tenmon/autonomy_failclosed_bundles",
+  "require_env_to_execute_rollback": "TENMON_FAILCLOSED_ALLOW_ROLLBACK",
+  "rollback_paths_env": "TENMON_FAILCLOSED_ROLLBACK_PATHS"
+}

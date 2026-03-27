@@ -2990,6 +2990,297 @@
         "requiresAcceptancePass": true,
         "mixedCommitForbidden": true
       }
+    },
+    {
+      "cardName": "TENMON_AUTONOMY_PLANNER_AND_QUEUE_SINGLE_FLIGHT_CURSOR_AUTO_V1",
+      "class": "orchestration",
+      "objective": "planner / remote queue / single-flight を固定し、同時多発改変と重複投入を拒否する。",
+      "allowedPaths": [
+        "api/automation/card_catalog_v1.json",
+        "api/automation/card_dependency_graph_v1.json",
+        "api/automation/remote_cursor_queue.json",
+        "api/automation/tenmon_cursor_single_flight_queue_state.json",
+        "api/automation/tenmon_cursor_single_flight_mainline.lock",
+        "api/automation/tenmon_autonomy_queue_single_flight_helpers_v1.py",
+        "api/automation/tenmon_autonomy_planner_and_queue_single_flight_cursor_auto_v1.py",
+        "api/automation/tenmon_autonomy_planner_and_queue_single_flight_cursor_auto_v1.json",
+        "api/scripts/tenmon_autonomy_planner_and_queue_single_flight_cursor_auto_v1.sh"
+      ],
+      "forbiddenPaths": [
+        "api/src/routes/chat.ts",
+        "web/src/**",
+        "dist/**"
+      ],
+      "requiresHumanJudgement": false,
+      "prechecks": [
+        {
+          "id": "queue_json",
+          "kind": "file_exists",
+          "path": "api/automation/remote_cursor_queue.json"
+        }
+      ],
+      "patchStrategy": {
+        "mode": "min_diff",
+        "notes": "automation JSON + policy のみ"
+      },
+      "postchecks": [],
+      "acceptanceProfile": "build_only",
+      "nextOnPass": "TENMON_OS_OUTPUT_CONTRACT_NORMALIZE_CURSOR_AUTO_V1",
+      "nextOnFail": "TENMON_AUTONOMY_QUEUE_STATE_REPAIR_CURSOR_AUTO_V1",
+      "rollbackStrategy": {
+        "autoRollbackAllowed": false,
+        "scope": "automation_json"
+      },
+      "sealPolicy": {
+        "requiresAcceptancePass": true,
+        "mixedCommitForbidden": true
+      }
+    },
+    {
+      "cardName": "TENMON_AUTONOMY_QUEUE_STATE_REPAIR_CURSOR_AUTO_V1",
+      "class": "orchestration",
+      "objective": "queue / single-flight 状態修復のみ。stale running・重複・current_run 多重を単線化する。",
+      "allowedPaths": [
+        "api/automation/remote_cursor_queue.json",
+        "api/automation/tenmon_cursor_single_flight_queue_state.json",
+        "api/automation/tenmon_autonomy_queue_state_repair_cursor_auto_v1.py",
+        "api/automation/tenmon_autonomy_queue_state_repair_cursor_auto_v1.json"
+      ],
+      "forbiddenPaths": [
+        "api/src/routes/chat.ts",
+        "dist/**"
+      ],
+      "requiresHumanJudgement": false,
+      "prechecks": [
+        {
+          "id": "queue_json",
+          "kind": "file_exists",
+          "path": "api/automation/remote_cursor_queue.json"
+        }
+      ],
+      "patchStrategy": {
+        "mode": "min_diff",
+        "notes": "automation queue JSON + single-flight policy のみ"
+      },
+      "postchecks": [],
+      "acceptanceProfile": "build_only",
+      "nextOnPass": "TENMON_AUTONOMY_PLANNER_AND_QUEUE_SINGLE_FLIGHT_CURSOR_AUTO_V1",
+      "nextOnFail": "TENMON_AUTONOMY_EXECUTION_GATE_AND_RESULT_RETURN_CURSOR_AUTO_V1",
+      "rollbackStrategy": {
+        "autoRollbackAllowed": true,
+        "scope": "automation_json"
+      },
+      "sealPolicy": {
+        "requiresAcceptancePass": true,
+        "mixedCommitForbidden": true
+      }
+    },
+    {
+      "cardName": "TENMON_AUTONOMY_EXECUTION_GATE_AND_RESULT_RETURN_CURSOR_AUTO_V1",
+      "class": "orchestration",
+      "objective": "execution gate（build/audit/probe のみ success）と result return（repo 外安全パス要約）を固定する。",
+      "allowedPaths": [
+        "api/automation/remote_cursor_result_bundle.json",
+        "api/automation/next_queue_rearm.json",
+        "api/automation/tenmon_autonomy_execution_gate_summary_helpers_v1.py",
+        "api/automation/tenmon_autonomy_execution_gate_and_result_return_cursor_auto_v1.py",
+        "api/automation/tenmon_autonomy_execution_gate_and_result_return_cursor_auto_v1.json"
+      ],
+      "forbiddenPaths": [
+        "api/src/routes/chat.ts",
+        "web/src/**",
+        "dist/**"
+      ],
+      "requiresHumanJudgement": false,
+      "prechecks": [
+        {
+          "id": "result_bundle",
+          "kind": "file_exists",
+          "path": "api/automation/remote_cursor_result_bundle.json"
+        }
+      ],
+      "patchStrategy": {
+        "mode": "min_diff",
+        "notes": "result bundle + 安全パス要約のみ"
+      },
+      "postchecks": [],
+      "acceptanceProfile": "build_only",
+      "nextOnPass": "TENMON_OS_OUTPUT_CONTRACT_NORMALIZE_CURSOR_AUTO_V1",
+      "nextOnFail": "TENMON_AUTONOMY_RESULT_RETURN_PATH_REPAIR_CURSOR_AUTO_V1",
+      "rollbackStrategy": {
+        "autoRollbackAllowed": true,
+        "scope": "automation_json"
+      },
+      "sealPolicy": {
+        "requiresAcceptancePass": true,
+        "mixedCommitForbidden": true
+      }
+    },
+    {
+      "cardName": "TENMON_AUTONOMY_RESULT_RETURN_PATH_REPAIR_CURSOR_AUTO_V1",
+      "class": "orchestration",
+      "objective": "result return の summary パスを repo 外に固定し、権限・書込検証のみ行う。",
+      "allowedPaths": [
+        "api/automation/tenmon_autonomy_result_return_path_repair_cursor_auto_v1.py",
+        "api/automation/tenmon_autonomy_result_return_path_repair_cursor_auto_v1.json",
+        "api/automation/tenmon_autonomy_safe_summary_path_v1.json"
+      ],
+      "forbiddenPaths": [
+        "api/src/routes/chat.ts",
+        "dist/**"
+      ],
+      "requiresHumanJudgement": false,
+      "prechecks": [],
+      "patchStrategy": {
+        "mode": "min_diff",
+        "notes": "automation メタ JSON + repo 外 manifest のみ"
+      },
+      "postchecks": [],
+      "acceptanceProfile": "build_only",
+      "nextOnPass": "TENMON_AUTONOMY_EXECUTION_GATE_AND_RESULT_RETURN_CURSOR_AUTO_V1",
+      "nextOnFail": "TENMON_AUTONOMY_FAILCLOSED_SUPERVISOR_AND_ROLLBACK_CURSOR_AUTO_V1",
+      "rollbackStrategy": {
+        "autoRollbackAllowed": true,
+        "scope": "automation_json"
+      },
+      "sealPolicy": {
+        "requiresAcceptancePass": true,
+        "mixedCommitForbidden": true
+      }
+    },
+    {
+      "cardName": "TENMON_AUTONOMY_FAILCLOSED_SUPERVISOR_AND_ROLLBACK_CURSOR_AUTO_V1",
+      "class": "orchestration",
+      "objective": "失敗時停止・証拠束・rollback（明示時）・high-risk trace・次カード接続の fail-closed supervisor。",
+      "allowedPaths": [
+        "api/automation/tenmon_autonomy_failclosed_supervisor_rollback_forensic_cursor_auto_v1.py",
+        "api/automation/tenmon_autonomy_failclosed_supervisor_and_rollback_cursor_auto_v1.json",
+        "api/automation/tenmon_autonomy_failclosed_supervisor_failure_taxonomy_v1.json",
+        "api/automation/tenmon_autonomy_failclosed_rollback_path_v1.json",
+        "api/automation/tenmon_autonomy_failclosed_supervisor_next_card_v1.json",
+        "api/automation/tenmon_autonomy_failclosed_supervisor_state_v1.json",
+        "api/automation/tenmon_autonomy_failclosed_escrow_stub_v1.json",
+        "api/automation/tenmon_high_risk_approval_trace_v1.json"
+      ],
+      "forbiddenPaths": [
+        "api/src/routes/chat.ts",
+        "web/src/**",
+        "dist/**"
+      ],
+      "requiresHumanJudgement": false,
+      "prechecks": [],
+      "patchStrategy": {
+        "mode": "min_diff",
+        "notes": "taxonomy / rollback 定義 / trace / next_card JSON のみ（証拠束本体は TENMON_AUTONOMY_FORENSIC_BUNDLE_ROOT）"
+      },
+      "postchecks": [],
+      "acceptanceProfile": "build_only",
+      "nextOnPass": "TENMON_OS_OUTPUT_CONTRACT_NORMALIZE_CURSOR_AUTO_V1",
+      "nextOnFail": "TENMON_AUTONOMY_FORENSIC_BUNDLE_REPAIR_CURSOR_AUTO_V1",
+      "rollbackStrategy": {
+        "autoRollbackAllowed": true,
+        "scope": "automation_json"
+      },
+      "sealPolicy": {
+        "requiresAcceptancePass": true,
+        "mixedCommitForbidden": true
+      }
+    },
+    {
+      "cardName": "TENMON_AUTONOMY_FORENSIC_BUNDLE_REPAIR_CURSOR_AUTO_V1",
+      "class": "orchestration",
+      "objective": "欠損 forensic bundle を修復し、5 点束と evidence pointer（次カード接続）を固定する。",
+      "allowedPaths": [
+        "api/automation/tenmon_autonomy_forensic_bundle_repair_cursor_auto_v1.py",
+        "api/automation/tenmon_autonomy_forensic_bundle_repair_cursor_auto_v1.json",
+        "api/automation/tenmon_autonomy_forensic_bundle_repair_next_card_v1.json"
+      ],
+      "forbiddenPaths": [
+        "api/src/routes/chat.ts",
+        "dist/**",
+        "api/automation/tenmon_autonomy_failclosed_rollback_path_v1.json"
+      ],
+      "requiresHumanJudgement": false,
+      "prechecks": [],
+      "patchStrategy": {
+        "mode": "min_diff",
+        "notes": "証拠束は TENMON_AUTONOMY_FORENSIC_BUNDLE_ROOT 配下のみ。rollback_path は変更しない。"
+      },
+      "postchecks": [],
+      "acceptanceProfile": "build_only",
+      "nextOnPass": "TENMON_MAC_CURSOR_OPERATOR_READINESS_CURSOR_AUTO_V1",
+      "nextOnFail": "TENMON_MAC_CURSOR_OPERATOR_READINESS_CURSOR_AUTO_V1",
+      "rollbackStrategy": {
+        "autoRollbackAllowed": false,
+        "scope": "automation_json"
+      },
+      "sealPolicy": {
+        "requiresAcceptancePass": true,
+        "mixedCommitForbidden": true
+      }
+    },
+    {
+      "cardName": "TENMON_MAC_CURSOR_OPERATOR_READINESS_CURSOR_AUTO_V1",
+      "version": 1,
+      "description": "Mac ローカル executor / Cursor operator readiness（安全 summary パス、refresh-only 単一 watch ランタイム、heartbeat、stuck 判定）。repo 本幹は触らない。",
+      "allowedPaths": [
+        "api/automation/tenmon_mac_cursor_operator_readiness_cursor_auto_v1.py",
+        "api/automation/tenmon_mac_cursor_operator_readiness_cursor_auto_v1.json"
+      ],
+      "forbiddenPaths": [
+        "api/src/routes/chat.ts",
+        "web/src/**",
+        "dist/**"
+      ],
+      "requiresHumanJudgement": false,
+      "prechecks": [],
+      "patchStrategy": {
+        "mode": "min_diff",
+        "notes": "成果物は TENMON_MAC_OPERATOR_READINESS_ROOT 配下（既定 ~/tenmon-mac/operator_readiness）。stuck soft reset・operator_state_v1・heartbeat。repo 配下への summary は fail-closed。"
+      },
+      "postchecks": [],
+      "acceptanceProfile": "build_only",
+      "nextOnPass": null,
+      "nextOnFail": "TENMON_MAC_OPERATOR_PATH_AND_WATCH_REPAIR_CURSOR_AUTO_V1",
+      "rollbackStrategy": {
+        "autoRollbackAllowed": false,
+        "scope": "automation_json"
+      },
+      "sealPolicy": {
+        "requiresAcceptancePass": true,
+        "mixedCommitForbidden": true
+      }
+    },
+    {
+      "cardName": "TENMON_MAC_OPERATOR_PATH_AND_WATCH_REPAIR_CURSOR_AUTO_V1",
+      "version": 1,
+      "description": "Mac ローカル operator の unsafe summary 移行・watch ロック整流・stuck soft reset・heartbeat 回復・operator_state 正規化。repo 本幹は触らない。",
+      "allowedPaths": [
+        "api/automation/tenmon_mac_operator_path_and_watch_repair_cursor_auto_v1.py",
+        "api/automation/tenmon_mac_operator_path_and_watch_repair_cursor_auto_v1.json"
+      ],
+      "forbiddenPaths": [
+        "api/src/routes/chat.ts",
+        "dist/**"
+      ],
+      "requiresHumanJudgement": false,
+      "prechecks": [],
+      "patchStrategy": {
+        "mode": "min_diff",
+        "notes": "書き込みは TENMON_MAC_OPERATOR_READINESS_ROOT 配下と api/automation の OUT_JSON のみ。"
+      },
+      "postchecks": [],
+      "acceptanceProfile": "build_only",
+      "nextOnPass": null,
+      "nextOnFail": "TENMON_AUTONOMY_2H_MASTER_PDCA_FAILCLOSED_CURSOR_AUTO_V1",
+      "rollbackStrategy": {
+        "autoRollbackAllowed": false,
+        "scope": "automation_json"
+      },
+      "sealPolicy": {
+        "requiresAcceptancePass": true,
+        "mixedCommitForbidden": true
+      }
     }
   ],
   "queueSpineV1": {

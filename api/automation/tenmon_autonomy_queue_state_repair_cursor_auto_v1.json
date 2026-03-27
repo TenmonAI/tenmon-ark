@@ -1,0 +1,10 @@
+{
+  "ok": true,
+  "card": "TENMON_AUTONOMY_QUEUE_STATE_REPAIR_CURSOR_AUTO_V1",
+  "queue_state_repaired": false,
+  "single_flight_restored": true,
+  "rollback_used": false,
+  "next_card_if_fail": null,
+  "repair_actions": [],
+  "generated_at": "2026-03-26T23:18:04Z"
+}

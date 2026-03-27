@@ -109,6 +109,11 @@ sys_diag_short = rr == "SYSTEM_DIAGNOSIS_PREEMPT_V1" and len(text) < 900
 sys_diag_body = SYS_DIAG_SNIP in text and len(text) < 1200
 
 failures = []
+# TENMON_SURFACE_CONTRACT_V1_MIN_DIFF: ku に surfaceContractKey が載ること（観測）
+sc = ku.get("surfaceContractV1") if isinstance(ku, dict) else None
+if not isinstance(sc, dict) or not str(sc.get("surfaceContractKey") or "").strip():
+    failures.append("surface_contract_v1_missing_on_ku")
+
 min_len = 420
 if len(text) < min_len:
     failures.append(f"too_short:{len(text)}<{min_len}")

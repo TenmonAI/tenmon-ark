@@ -1,0 +1,8 @@
+{
+  "ok": true,
+  "card": "TENMON_AUTONOMY_RESULT_RETURN_PATH_REPAIR_CURSOR_AUTO_V1",
+  "safe_summary_path_ok": true,
+  "permission_safe_ok": true,
+  "rollback_used": false,
+  "next_card_if_fail": null
+}

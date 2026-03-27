@@ -53,6 +53,7 @@ import {
 import { appendConversationDensityLedgerRuntimeV1 } from "../../core/conversationDensityLedgerRuntimeV1.js";
 import { applyKokuzoSeedLearningBridgeV1 } from "../../core/kokuzoSeedLearningBridgeV1.js";
 import { tryAppendEvolutionLedgerSnapshotOnceV1 } from "../../core/evolutionLedgerV1.js";
+import { finalizeApplyTenmonSurfaceContractV1 } from "../../core/tenmonSurfaceContractV1.js";
 
 /** FINAL_DENSITY_CONTRACT_AND_GENERAL_SOURCEPACK_V1: 密度対象 route（routeReason 不変・PATCH29 期待と独立） */
 const DENSITY_CONTRACT_ROUTE_REASONS = new Set<string>([
@@ -1126,6 +1127,17 @@ export function applyFinalAnswerConstitutionAndWisdomReducerV1(payload: any): an
       out.response =
         "【天聞の所見】主題の語を一つに絞り、その語が成立する読解条件を先に置きます。次に、その語が具体場面でどう効くかを一段だけ追います。";
     }
+  }
+  /** TENMON_SURFACE_CONTRACT_MIN_DIFF_CURSOR_AUTO_V1: 最終本文確定後に 1 回だけ表面契約を適用（routeReason / decisionFrame 不変） */
+  try {
+    out.response = finalizeApplyTenmonSurfaceContractV1({
+      surface: String(out.response ?? ""),
+      routeReason: rr,
+      ku: ku as Record<string, unknown>,
+      responsePlan: responsePlan as { semanticBody?: string } | null,
+    });
+  } catch {
+    /* surface contract 適用はゲートを落とさない */
   }
   const stepForOmega =
     String(step || "").trim() || extractNextStepLineFromSurfaceV1(String(out.response));

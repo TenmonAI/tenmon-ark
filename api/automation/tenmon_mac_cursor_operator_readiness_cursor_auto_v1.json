@@ -1,0 +1,12 @@
+{
+  "ok": true,
+  "card": "TENMON_MAC_CURSOR_OPERATOR_READINESS_CURSOR_AUTO_V1",
+  "mac_operator_ready": true,
+  "cursor_operator_ready": true,
+  "safe_summary_path_ok": true,
+  "single_runtime_watch_loop_ok": true,
+  "heartbeat_ok": true,
+  "stuck_recovery_ok": true,
+  "rollback_used": false,
+  "next_card_if_fail": null
+}

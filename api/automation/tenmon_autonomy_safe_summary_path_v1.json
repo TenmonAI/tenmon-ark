@@ -1,0 +1,9 @@
+{
+  "card": "TENMON_AUTONOMY_RESULT_RETURN_PATH_REPAIR_CURSOR_AUTO_V1",
+  "version": 1,
+  "generated_at": "2026-03-26T23:21:19Z",
+  "safe_summary_root": "/var/log/tenmon/autonomy_summaries",
+  "resolution_source": "default:/var/log/tenmon/autonomy_summaries",
+  "env_override": "TENMON_AUTONOMY_SAFE_SUMMARY_ROOT",
+  "repo_relative_opt_in": "TENMON_AUTONOMY_ALLOW_REPO_RELATIVE_SUMMARY"
+}

@@ -1,0 +1,27 @@
+{
+  "card": "TENMON_WEAK_ROUTE_AUTOFINISH_PDCA_7H_CURSOR_AUTO_V1",
+  "started_at": "2026-03-26T11:37:31Z",
+  "current_loop": 1,
+  "elapsed_minutes": 0,
+  "last_card": "TENMON_WEAK_ROUTE_3LANE_REHYDRATION_CURSOR_AUTO_V1",
+  "last_result": {
+    "ok": true,
+    "mode": "rehydration_recheck_only"
+  },
+  "consecutive_passes": 0,
+  "consecutive_no_improve": 0,
+  "k1_status": {
+    "ok": false
+  },
+  "concept_status": {
+    "ok": false
+  },
+  "self_status": {
+    "ok": false
+  },
+  "infra_status": {
+    "ok": false
+  },
+  "stop_reason": "infra_failure",
+  "next_recommended_action": "TENMON_WEAK_ROUTE_3LANE_REHYDRATION_OBSERVE_V2"
+}

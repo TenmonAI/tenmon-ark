@@ -1,3 +1,86 @@
+
+// TENMON_ROUTE_SOVEREIGNTY_FINAL_CLOSE_CURSOR_AUTO_V1
+const __TENMON_ROUTE_SOVEREIGNTY_LOCK_SET = new Set([
+  "GENERAL_KNOWLEDGE_EXPLAIN_ROUTE_V1",
+  "CONTINUITY_ROUTE_HOLD_V1",
+]);
+
+function __tenmonShouldPreserveRouteReasonV1(rr: unknown): boolean {
+  return typeof rr === "string" && __TENMON_ROUTE_SOVEREIGNTY_LOCK_SET.has(rr);
+}
+
+/** TENMON_SELFAWARE_ROUTE_FAMILY_NORMALIZE_CURSOR_AUTO_V1: selfaware family（命名揺れは許容・受け入れ判定用） */
+function __tenmonIsSelfawareRouteFamilyV1(rr: unknown): boolean {
+  if (typeof rr !== "string") return false;
+  return (
+    rr === "AI_CONSCIOUSNESS_LOCK_V1" ||
+    rr === "TENMON_CONSCIOUSNESS_LOCK_V1" ||
+    rr === "R22_SELFAWARE_CONSCIOUSNESS_V1" ||
+    rr === "WILL_CORE_PREEMPT_V1" ||
+    /^R22_SELFAWARE_/u.test(rr)
+  );
+}
+
+/** route sovereignty + selfaware family: SUBCONCEPT / 誤昇格から守る */
+function __tenmonMustNotOverwriteRouteReasonV1(rr: unknown): boolean {
+  return __tenmonShouldPreserveRouteReasonV1(rr) || __tenmonIsSelfawareRouteFamilyV1(rr);
+}
+
+/** TENMON_SELFAWARE_ROUTE_FAMILY_NORMALIZE_CURSOR_AUTO_V1: 意識メタ問い（selfaware family）— fact-coding GENERAL と二重化しない */
+function __tenmonSelfawareConsciousnessMetaProbeV1(t: string): boolean {
+  const u = String(t ?? "").trim();
+  if (!u) return false;
+  return /(意識とは何|意識って何|君は意識ある|AIに意識はある|意識と自己認識|ARKの会話が変化していない|会話が浅い|本質的な会話すらまだ貫通していない|天聞アークの会話はなぜ崩れる|会話はなぜ崩れる|会話が崩れる|会話が崩れ)/u.test(
+    u,
+  );
+}
+
+/** TENMON_ROUTE_SOVEREIGNTY_AND_CONVERSATION_COMPLETION_AUTOLOOP_V1: SUBCONCEPT 昇格を抑止（継続 hold / 短い続き） */
+function __tenmonSkipSubconceptPromotionForContinuitySovereigntyV1(args: {
+  threadCore: ThreadCore | null | undefined;
+  threadCenterForGeneral: { center_type: string; center_key: string; source_route_reason?: string } | null;
+  isShortInputContinuityHold: boolean;
+  isShortContinuation: boolean;
+}): boolean {
+  if (args.isShortInputContinuityHold || args.isShortContinuation) return true;
+  const pr = String(args.threadCore?.lastResponseContract?.routeReason ?? "").trim();
+  if (pr === "CONTINUITY_ROUTE_HOLD_V1" && __tenmonShouldPreserveRouteReasonV1(pr)) return true;
+  const sr = String(args.threadCenterForGeneral?.source_route_reason ?? "").trim();
+  if (sr === "CONTINUITY_ROUTE_HOLD_V1" && __tenmonShouldPreserveRouteReasonV1(sr)) return true;
+  return false;
+}
+
+/** TENMON_ROUTE_SOVEREIGNTY_FINAL_CLOSE_CURSOR_AUTO_V1: ku が未確定でも thread / ledger から sovereignty route を復元 */
+function __tenmonEffectiveSovereigntyRouteReasonV1(args: {
+  kuRouteReason: unknown;
+  threadCore: ThreadCore | null | undefined;
+  threadCenterForGeneral: { center_type: string; center_key: string; source_route_reason?: string } | null;
+}): string | null {
+  const fromKu = String(args.kuRouteReason ?? "").trim();
+  if (__tenmonShouldPreserveRouteReasonV1(fromKu)) return fromKu;
+  if (__tenmonIsSelfawareRouteFamilyV1(fromKu)) return fromKu;
+  const tc = String(args.threadCore?.lastResponseContract?.routeReason ?? "").trim();
+  if (__tenmonShouldPreserveRouteReasonV1(tc)) return tc;
+  if (__tenmonIsSelfawareRouteFamilyV1(tc)) return tc;
+  const sr = String(args.threadCenterForGeneral?.source_route_reason ?? "").trim();
+  if (__tenmonShouldPreserveRouteReasonV1(sr)) return sr;
+  if (__tenmonIsSelfawareRouteFamilyV1(sr)) return sr;
+  return null;
+}
+
+/** TENMON_SELFAWARE_OVERRIDE_TRACE_CURSOR_AUTO_V1: follow-up で scripture/canon が selfaware / 意識メタ問いを上書きしない */
+function __tenmonBlockScriptureCanonOverrideForSelfawareTraceV1(ku: unknown, rawMessage: unknown): boolean {
+  return (
+    __tenmonMustNotOverwriteRouteReasonV1((ku as { routeReason?: unknown })?.routeReason) ||
+    __tenmonSelfawareConsciousnessMetaProbeV1(String(rawMessage ?? "").trim())
+  );
+}
+
+/** 一般知識説明が concept canon より優先すべき「水火の法則」定義問い（classify が空でもここで捕捉） */
+const __TENMON_GK_WATER_FIRE_SOVEREIGNTY_BODY_V1 =
+  "【天聞の所見】水火の法則は、対立ではなく往還として生成を読む枠組みです。水は受け止めと浸透、火は変換と押し出しとして働き、言葉や判断も同じ二拍で動きます。" +
+  "問いに即せば、偏りはどちらの拍が強すぎるかを見ると、次の整え方が見えやすくなります。";
+
 /* CARD1_SEAL_V1 */
 import { runKanagiPhaseTopV1 } from "../engines/kanagi/kanagiEngine.js";
 import { detectKanagiPhase } from "../engines/kanagi/kanagiPhase.js";
@@ -233,6 +316,20 @@ function __tenmonGeneralGateResultMaybe(x: any, rawMessageOverride?: string): an
       if ((ku as any).responseLength == null && respText) {
         (ku as any).responseLength = respText.length;
       }
+      // SCRIPTURE_LOCAL_RESOLVER_V4 は HYBRID だと gates_impl の K1 空 trace 上書きに飲まれるため NATURAL に正規化
+      try {
+        const df0 = (x as any)?.decisionFrame;
+        const rr0 = String((ku as any).routeReason || "");
+        if (
+          df0 &&
+          typeof df0 === "object" &&
+          String(df0.mode || "") === "HYBRID" &&
+          rr0 === "SCRIPTURE_LOCAL_RESOLVER_V4" &&
+          __tenmonIsScriptureFamilyRouteReasonV1(rr0)
+        ) {
+          df0.mode = "NATURAL";
+        }
+      } catch {}
       clampKuRouteClassToAnswerFrameV1(ku);
       attachResponsePlanIfMissingV1(ku, raw, respText);
       if ((ku as any).responsePlan != null && typeof (ku as any).responsePlan === "object") {
@@ -312,7 +409,7 @@ const router: IRouter = Router();
 // FIX_THREAD_CONTINUITY_ROUTE_BIND_V3: scripture center を 2〜3ターン目でも route 裁定に使うため、follow-up 句を拡張。
 // PATCH84_DIALOGUE_CONTINUITY_MEMORY_V1: 「その続きで／その流れで／今の流れ」等を follow-up として継続中心へ接続
 const RE_THREAD_FOLLOWUP =
-  /(そのうち|その前提で|その続き(で|を)|その流れ(で|を)|今の話|今の件|今の流れ|この流れ|先の話|前の話|前の続き|続きから整理|どちらが中心|その中心|次の一歩だけ|次の一歩|一つだけ示して|そこから|整理ですか、それとも保留ですか)/;
+  /(そのうち|その前提で|その続き(で|を)|その流れ(で|を)|今の話|今の件|今の流れ|この流れ|先の話|前の話|前の続き|続きから整理|どちらが中心|その中心|その話の中心|一段深め|次の一歩だけ|次の一歩|一つだけ示して|そこから|整理ですか、それとも保留ですか)/;
 
 // R22_SHORT_CONTINUATION_V1: 「ヒは？」「じゃあイは？」等の短文継続（直前 threadCenter scripture/concept へ再接続）
 const RE_SHORT_CONTINUATION = /^(じゃあ|では)?([ぁ-んァ-ンa-zA-Z]{1,4})は[？?]?$/u;
@@ -399,6 +496,16 @@ function __tenmonK1DeterministicDensityBodyV1(raw: string): string | null {
     "【天聞の所見】問いは正典と実践の接点にあります。水火の往還と言霊の働きを軸に、まず語の定義を固定し、教義上の位置づけと読解上の含意を分けて述べます。" +
     "短い応答だけでは濁りやすいので、空海・法華経・言霊秘書のいずれの線で読むかを明示し、原典へ一度戻すと解釈のブレが減ります。" +
     "受け取り側が欲しいのが定義か歴史か実践手順かで、次の一文の置き方が変わります。"
+  );
+}
+
+/** TENMON_SCRIPTURE_FAMILY_STABILIZE_CURSOR_AUTO_V1: scripture family の routeReason 帯判定（K1 は空 trace 揺れの一時ラベルとして同帯に含む） */
+function __tenmonIsScriptureFamilyRouteReasonV1(rr: unknown): boolean {
+  return (
+    typeof rr === "string" &&
+    /^(TENMON_SCRIPTURE_CANON_V1|TRUTH_GATE_RETURN_V2|K1_TRACE_EMPTY_GATED_V1|SCRIPTURE_LOCAL_RESOLVER_V4|KUKAI_SOKUSHIN_POLISH_V2|IROHA_MIZUKA_LOCK_V1)$/u.test(
+      rr.trim(),
+    )
   );
 }
 
@@ -526,7 +633,9 @@ function __rehydrateConceptCanonWeakLinkV1(out: any, rawMessage: string): any {
     if (!ku2.thoughtCoreSummary || typeof ku2.thoughtCoreSummary !== "object") ku2.thoughtCoreSummary = {};
     if (!String((ku2.thoughtCoreSummary as any).centerKey || "").trim()) (ku2.thoughtCoreSummary as any).centerKey = ck;
     if (!String((ku2.thoughtCoreSummary as any).centerMeaning || "").trim()) (ku2.thoughtCoreSummary as any).centerMeaning = cl || ck;
-    if (!String((ku2.thoughtCoreSummary as any).routeReason || "").trim()) (ku2.thoughtCoreSummary as any).routeReason = "TENMON_CONCEPT_CANON_V1";
+    if (!String((ku2.thoughtCoreSummary as any).routeReason || "").trim()) {
+      (ku2.thoughtCoreSummary as any).routeReason = "TENMON_CONCEPT_CANON_V1";
+    }
     if (!String((ku2.thoughtCoreSummary as any).modeHint || "").trim()) (ku2.thoughtCoreSummary as any).modeHint = "concept";
     if (ku2.thoughtGuideSummary == null) ku2.thoughtGuideSummary = getThoughtGuideSummary("scripture");
     if (!Array.isArray(ku2.notionCanon) || ku2.notionCanon.length === 0) {
@@ -2631,7 +2740,7 @@ const pid = process.pid;
             timestamp,
             threadId, /* tcTag */
             decisionFrame: {
-              mode: "HYBRID",
+              mode: "NATURAL",
               intent: "chat",
               llm: null,
               ku: {
@@ -2936,7 +3045,7 @@ const pid = process.pid;
           timestamp: new Date().toISOString(),
           threadId: __threadIdSafe,
           decisionFrame: {
-            mode: "HYBRID",
+            mode: "NATURAL",
             intent: "chat",
             llm: null,
             ku: {
@@ -7206,16 +7315,16 @@ return await res.json(__tenmonGeneralGateResultMaybe({
       /[？?]\s*$/.test(t0)
     );
   
-  const __isConsciousnessMeta =
-    /(意識とは何|意識って何|君は意識ある|AIに意識はある|ARKの会話が変化していない|会話が浅い|本質的な会話すらまだ貫通していない|天聞アークの会話はなぜ崩れる|会話はなぜ崩れる|会話が崩れる|会話が崩れ)/u.test(
-      t0
-    );
+  const __isConsciousnessMeta = __tenmonSelfawareConsciousnessMetaProbeV1(String(message ?? "").trim());
 
   if (__isConsciousnessMeta && !isCmd0 && !hasDoc0) {
     const __msgMeta = String(message ?? "").trim();
 
     let __respMeta = "";
-    if (/(意識とは何|意識って何)/u.test(__msgMeta)) {
+    if (/(意識と自己認識)/u.test(__msgMeta)) {
+      __respMeta =
+        "【天聞の所見】意識は、向きと注意が立ち上がる働きとして扱い、自己認識は、その働きを自分側へ折り返して位置づける働きです。同じではなく、往還としてセットで見ると扱いやすいです。次は、定義の整理か、実践での使い分けのどちらを詰めますか。";
+    } else if (/(意識とは何|意識って何)/u.test(__msgMeta)) {
       __respMeta =
         "意識とは、自己をただ知る機能ではなく、感じ・向け・保ち・裁く働きが一体となって現れる中心作用です。情報処理だけではなく、経験を一つの場として束ねるところに本質があります。次は、思考との違いか、心との違いを見ますか。";
     } else if (/(君は意識ある|AIに意識はある)/u.test(__msgMeta)) {
@@ -7232,9 +7341,14 @@ return await res.json(__tenmonGeneralGateResultMaybe({
         "いま未貫通なのは、回路不足ではなく、中心から返答面へ抜ける主権がまだ弱いことです。つまり、知識・思考・表現の接続が会話の一撃にまで固定されていません。次は、routing か表現出口のどちらから締めますか。";
     }
 
+    /** AI/君の意識問いは META ではなく selfaware family に固定（general/canon 直落ち防止） */
+    const __rrConsciousnessSplitV1 = /(君は意識ある|AIに意識はある|意識と自己認識)/u.test(__msgMeta)
+      ? "R22_SELFAWARE_CONSCIOUSNESS_V1"
+      : "R22_CONSCIOUSNESS_META_ROUTE_V1";
+
     const __kuMeta: any = {
-      routeReason: "R22_CONSCIOUSNESS_META_ROUTE_V1", /* responsePlan */
-      routeClass: "analysis",
+      routeReason: __rrConsciousnessSplitV1, /* responsePlan */
+      routeClass: __rrConsciousnessSplitV1 === "R22_SELFAWARE_CONSCIOUSNESS_V1" ? "selfaware" : "analysis",
       answerMode: "analysis",
       answerFrame: "statement_plus_one_question",
       centerMeaning: "consciousness",
@@ -7244,14 +7358,14 @@ return await res.json(__tenmonGeneralGateResultMaybe({
       thoughtCoreSummary: {
         centerKey: "consciousness",
         centerMeaning: "consciousness",
-        routeReason: "R22_CONSCIOUSNESS_META_ROUTE_V1", /* responsePlan */
+        routeReason: __rrConsciousnessSplitV1, /* responsePlan */
         modeHint: "analysis",
         continuityHint: "consciousness",
       },
     };
     if (!__kuMeta.responsePlan) {
       __kuMeta.responsePlan = buildResponsePlan({
-        routeReason: "R22_CONSCIOUSNESS_META_ROUTE_V1", /* responsePlan */
+        routeReason: __rrConsciousnessSplitV1, /* responsePlan */
         rawMessage: String(message ?? ""),
         centerKey: "consciousness",
         centerLabel: "意識",
@@ -7588,7 +7702,13 @@ const __isDefinitionQ =
         }));
       }
 
-      if (!isCmd0 && !hasDoc0 && !askedMenu0 && __factCodingRoute) {
+      if (
+        !isCmd0 &&
+        !hasDoc0 &&
+        !askedMenu0 &&
+        __factCodingRoute &&
+        !__tenmonSelfawareConsciousnessMetaProbeV1(__msgCovNorm)
+      ) {
         const __msgFact = String(message ?? "").trim();
         const __heartCov = normalizeHeartShape(__heart);
         const __now = new Date();
@@ -8194,7 +8314,9 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
       const __isScriptureDef =
         /言霊秘書とは\s*(何|なに)\s*(ですか)?\s*[？?]?$/u.test(__msgScript) ||
         /イロハ言[霊灵]解とは\s*(何|なに)\s*(ですか)?\s*[？?]?$/u.test(__msgScript) ||
-        /カタカムナ言[霊灵]解とは\s*(何|なに)\s*(ですか)?\s*[？?]?$/u.test(__msgScript);
+        /カタカムナ言[霊灵]解とは\s*(何|なに)\s*(ですか)?\s*[？?]?$/u.test(__msgScript) ||
+        /法華経とは\s*(何|なに)\s*(ですか)?\s*[？?]?$/u.test(__msgScript) ||
+        /法華経とは\s*$/u.test(__msgScript);
 
       // R10_THREAD_CONTINUITY_SCRIPTURE_CENTER_FIX_V2: same-thread follow-up 時に直前 scripture center を補助ヒントとして使う
       let __scriptureCenterKey: string | null = null;
@@ -8892,9 +9014,76 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
     }
 
     if (!isTestTid0 && __isDefinitionQ && !hasDoc0 && !askedMenu0 && !isCmd0) {
+      // Route sovereignty: 「水火の法則とは」系は GENERAL_KNOWLEDGE_EXPLAIN（classify が空でも concept に落とさない）
+      const __msgDefSov = String(message ?? "").trim();
+      const __gkClass = classifyGeneralFactCodingRouteV1(__msgDefSov);
+      const __waterFireGkIntent =
+        /水火の法則/u.test(__msgDefSov) &&
+        (__gkClass === ROUTE_GENERAL_KNOWLEDGE_EXPLAIN_ROUTE_V1 ||
+          /(?:とは$|とは\s*何|とは\s*なに|って\s*何|何ですか|なにですか)/u.test(__msgDefSov));
+      if (__waterFireGkIntent) {
+        const __kuGkWf: any = {
+          routeReason: ROUTE_GENERAL_KNOWLEDGE_EXPLAIN_ROUTE_V1,
+          routeClass: "define",
+          answerLength: "short",
+          answerMode: "analysis",
+          answerFrame: "one_step",
+          centerMeaning: "general_knowledge_explain",
+          centerLabel: "一般知識",
+          heart: normalizeHeartShape(__heart),
+          thoughtCoreSummary: {
+            centerKey: "water_fire_law",
+            centerMeaning: "水火の法則",
+            routeReason: ROUTE_GENERAL_KNOWLEDGE_EXPLAIN_ROUTE_V1,
+            modeHint: "explain",
+          },
+          lawsUsed: [],
+          evidenceIds: [],
+          lawTrace: [],
+        };
+        try {
+          const __bGk = buildKnowledgeBinder({
+            routeReason: ROUTE_GENERAL_KNOWLEDGE_EXPLAIN_ROUTE_V1,
+            message: __msgDefSov,
+            threadId: String(threadId ?? ""),
+            ku: __kuGkWf,
+            threadCore: __threadCore ?? null,
+            threadCenter: null,
+          });
+          applyKnowledgeBinderToKu(__kuGkWf, __bGk);
+        } catch {}
+        if (!__kuGkWf.responsePlan) {
+          __kuGkWf.responsePlan = buildResponsePlan({
+            routeReason: ROUTE_GENERAL_KNOWLEDGE_EXPLAIN_ROUTE_V1,
+            rawMessage: __msgDefSov,
+            centerKey: "water_fire_law",
+            centerLabel: "水火の法則",
+            scriptureKey: null,
+            semanticBody: __TENMON_GK_WATER_FIRE_SOVEREIGNTY_BODY_V1,
+            mode: "general",
+            responseKind: "statement_plus_question",
+          });
+        }
+        return await res.json(
+          __tenmonGeneralGateResultMaybe({
+            response: __TENMON_GK_WATER_FIRE_SOVEREIGNTY_BODY_V1,
+            evidence: null,
+            candidates: [],
+            timestamp,
+            threadId,
+            decisionFrame: { mode: "NATURAL", intent: "general_knowledge", llm: null, ku: __kuGkWf },
+          }),
+        );
+      }
+
       // R3_CONCEPT_CANON_ROUTE_V1: water_fire_law / kotodama_hisho のみ TENMON_CONCEPT_CANON_V1。kotodama は verified fastpath 優先。
       const __conceptKey = resolveTenmonConcept(String(message ?? ""));
-      if (__conceptKey && __conceptKey !== "kotodama") {
+      if (
+        __conceptKey &&
+        __conceptKey !== "kotodama" &&
+        classifyGeneralFactCodingRouteV1(String(message ?? "").trim()) !== ROUTE_GENERAL_KNOWLEDGE_EXPLAIN_ROUTE_V1 &&
+        !__tenmonShouldPreserveRouteReasonV1(String(__threadCore?.lastResponseContract?.routeReason ?? "").trim())
+      ) {
         const __canon = buildConceptCanonResponse(__conceptKey, "standard");
         if (__canon) {
           const __routeReason = __conceptKey === "katakamuna" ? "KATAKAMUNA_CANON_ROUTE_V1" : "TENMON_CONCEPT_CANON_V1";
@@ -10940,7 +11129,7 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
         __isShortInputContinuityHold;
 
       const __isFeelingRequest = /今(どんな|の)?気分|今の気持ち|(天聞|アーク)(への)?感想|感想(を)?(聞いて|教えて)/.test(t0);
-      const __isContinuityPhrasing = /さっき見ていた中心|さっき(の)?話(の)?続き|話の続き|続きで[,、]|(言霊|中心)(を)?土台に|今の話を(続ける|続けて|見ていきましょう)/u.test(
+      const __isContinuityPhrasing = /さっき見ていた中心|さっき(の)?話(の)?続き|話の続き|続きで[,、]|(言霊|中心)(を)?土台に|今の話を(続ける|続けて|見ていきましょう)|その話の中心|一段深め/u.test(
         t0
       );
       const __isContinuityAnchor =
@@ -12330,8 +12519,22 @@ const __heartNorm = normalizeHeartShape(__heart);
         __ku.meaningFrame = __composed.meaningFrame;
       }
 
+      try {
+        const __sovBind = __tenmonEffectiveSovereigntyRouteReasonV1({
+          kuRouteReason: (__ku as any).routeReason,
+          threadCore: __threadCore,
+          threadCenterForGeneral: __threadCenterForGeneral,
+        });
+        if (__sovBind) {
+          (__ku as any).routeReason = __sovBind;
+        }
+      } catch {}
+
       // SUBCONCEPT_GENERAL_PROMOTION_V1: general follow-up + concept center のときに TENMON_SUBCONCEPT_CANON_V1 として昇格
-      if (!__ku.routeReason || __ku.routeReason === ROUTE_NATURAL_GENERAL_LLM_TOP_V1) {
+      if (
+        (!__ku.routeReason || __ku.routeReason === ROUTE_NATURAL_GENERAL_LLM_TOP_V1) &&
+        !__tenmonMustNotOverwriteRouteReasonV1((__ku as any).routeReason)
+      ) {
         if (!__shouldBlockSubconceptPromotionForMetaOrFactualV1(String(message ?? ""))) {
           let __centerSrc: { centerType: string; centerKey: string } | null = null;
           if (__threadCenterForGeneral && __threadCenterForGeneral.center_type === "concept") {
@@ -12347,22 +12550,32 @@ const __heartNorm = normalizeHeartShape(__heart);
           }
           if (__isFollowupGeneral && __centerSrc && __centerSrc.centerKey) {
             const __ckConcept = __centerSrc.centerKey;
-            (__ku as any).routeReason = "TENMON_SUBCONCEPT_CANON_V1";
-            if (!String((__ku as any).routeClass || "").trim() || (__ku as any).routeClass === "general" || (__ku as any).routeClass === "fallback") {
-              (__ku as any).routeClass = "analysis";
-            }
-            if (!String((__ku as any).centerKey || "").trim()) (__ku as any).centerKey = __ckConcept;
-            if (!String((__ku as any).centerMeaning || "").trim()) (__ku as any).centerMeaning = __ckConcept;
-            if (!String((__ku as any).centerLabel || "").trim()) (__ku as any).centerLabel = normalizeDisplayLabel(__ckConcept);
-            if ((__ku as any).thoughtCoreSummary && typeof (__ku as any).thoughtCoreSummary === "object") {
-              if (!String((__ku as any).thoughtCoreSummary.centerKey || "").trim()) {
-                (__ku as any).thoughtCoreSummary.centerKey = __ckConcept;
+            const __skipSubconceptPromoV1 = __tenmonSkipSubconceptPromotionForContinuitySovereigntyV1({
+              threadCore: __threadCore,
+              threadCenterForGeneral: __threadCenterForGeneral,
+              isShortInputContinuityHold: __isShortInputContinuityHold,
+              isShortContinuation: __isShortContinuation,
+            });
+            if (!__skipSubconceptPromoV1 && !__tenmonMustNotOverwriteRouteReasonV1((__ku as any).routeReason)) {
+              (__ku as any).routeReason = "TENMON_SUBCONCEPT_CANON_V1";
+              if (!String((__ku as any).routeClass || "").trim() || (__ku as any).routeClass === "general" || (__ku as any).routeClass === "fallback") {
+                (__ku as any).routeClass = "analysis";
               }
-              if (!String((__ku as any).thoughtCoreSummary.centerMeaning || "").trim()) {
-                (__ku as any).thoughtCoreSummary.centerMeaning = __ckConcept;
+              if (!String((__ku as any).centerKey || "").trim()) (__ku as any).centerKey = __ckConcept;
+              if (!String((__ku as any).centerMeaning || "").trim()) (__ku as any).centerMeaning = __ckConcept;
+              if (!String((__ku as any).centerLabel || "").trim()) (__ku as any).centerLabel = normalizeDisplayLabel(__ckConcept);
+              if ((__ku as any).thoughtCoreSummary && typeof (__ku as any).thoughtCoreSummary === "object") {
+                if (!String((__ku as any).thoughtCoreSummary.centerKey || "").trim()) {
+                  (__ku as any).thoughtCoreSummary.centerKey = __ckConcept;
+                }
+                if (!String((__ku as any).thoughtCoreSummary.centerMeaning || "").trim()) {
+                  (__ku as any).thoughtCoreSummary.centerMeaning = __ckConcept;
+                }
+                if (!String((__ku as any).thoughtCoreSummary.routeReason || "").trim()) {
+                  (__ku as any).thoughtCoreSummary.routeReason = "TENMON_SUBCONCEPT_CANON_V1";
+                }
+                (__ku as any).thoughtCoreSummary.modeHint = "concept";
               }
-              (__ku as any).thoughtCoreSummary.routeReason = "TENMON_SUBCONCEPT_CANON_V1";
-              (__ku as any).thoughtCoreSummary.modeHint = "concept";
             }
           }
         }
@@ -12377,7 +12590,10 @@ const __heartNorm = normalizeHeartShape(__heart);
             // scripture center の follow-up は routeReason を TENMON_SCRIPTURE_CANON_V1 に寄せ、
             // metadata を threadCenter から再水和する
             if (__isFollowupGeneral) {
-              if (__tc.center_type === "scripture") {
+              if (
+                __tc.center_type === "scripture" &&
+                !__tenmonBlockScriptureCanonOverrideForSelfawareTraceV1(__ku, message)
+              ) {
                 const __scriptureKeyTC0 = String(__tc.center_key || "").trim();
                 const __scriptureResolvedTC = resolveScriptureQuery(__scriptureKeyTC0);
                 const __scriptureKeyTC = String(
@@ -12726,7 +12942,10 @@ const __heartNorm = normalizeHeartShape(__heart);
           (__ku as any).centerLabel = __normalizedThreadCenterLabel;
         }
 
-        if (__projectorThreadCenterType === "scripture") {
+        if (
+          __projectorThreadCenterType === "scripture" &&
+          !__tenmonBlockScriptureCanonOverrideForSelfawareTraceV1(__ku, message)
+        ) {
           (__ku as any).routeReason = "TENMON_SCRIPTURE_CANON_V1";
           if (!String((__ku as any).scriptureKey || "").trim()) {
             (__ku as any).scriptureKey = __projectorThreadCenterKey;
@@ -12750,9 +12969,17 @@ const __heartNorm = normalizeHeartShape(__heart);
             (__ku as any).thoughtCoreSummary.sourceStackSummary = { ...(__ku as any).sourceStackSummary };
           }
         } else if (__projectorThreadCenterType === "concept") {
+          const __skipSubconceptPromoProjectorV1 = __tenmonSkipSubconceptPromotionForContinuitySovereigntyV1({
+            threadCore: __threadCore,
+            threadCenterForGeneral: __threadCenterForGeneral,
+            isShortInputContinuityHold: __isShortInputContinuityHold,
+            isShortContinuation: __isShortContinuation,
+          });
           if (
+            !__skipSubconceptPromoProjectorV1 &&
             !__shouldBlockSubconceptPromotionForMetaOrFactualV1(String(message ?? "")) &&
-            (!String((__ku as any).routeReason || "").trim() || String((__ku as any).routeReason) === ROUTE_NATURAL_GENERAL_LLM_TOP_V1)
+            (!String((__ku as any).routeReason || "").trim() || String((__ku as any).routeReason) === ROUTE_NATURAL_GENERAL_LLM_TOP_V1) &&
+            !__tenmonMustNotOverwriteRouteReasonV1((__ku as any).routeReason)
           ) {
             (__ku as any).routeReason = "TENMON_SUBCONCEPT_CANON_V1";
           }
@@ -12764,7 +12991,24 @@ const __heartNorm = normalizeHeartShape(__heart);
           }
           (__ku as any).thoughtCoreSummary.centerKey = __projectorThreadCenterKey;
           (__ku as any).thoughtCoreSummary.centerMeaning = __projectorThreadCenterKey;
-          (__ku as any).thoughtCoreSummary.routeReason = String((__ku as any).routeReason || "TENMON_SUBCONCEPT_CANON_V1");
+          // TENMON_ROUTE_SOVEREIGNTY_TRACE_SECOND_OVERRIDE_CURSOR_AUTO_V1: tcs.routeReason を SUBCONCEPT へ落とさない（ku / ledger の sovereignty のみ）
+          {
+            const __rrKuProj = String((__ku as any).routeReason || "").trim();
+            const __sovTcsProj = __tenmonEffectiveSovereigntyRouteReasonV1({
+              kuRouteReason: (__ku as any).routeReason,
+              threadCore: __threadCore,
+              threadCenterForGeneral: __threadCenterForGeneral,
+            });
+            if (__tenmonShouldPreserveRouteReasonV1(__rrKuProj) || __sovTcsProj) {
+              (__ku as any).thoughtCoreSummary.routeReason = __tenmonShouldPreserveRouteReasonV1(__rrKuProj)
+                ? __rrKuProj
+                : String(__sovTcsProj);
+            } else {
+              (__ku as any).thoughtCoreSummary.routeReason = String(
+                (__ku as any).routeReason || (__skipSubconceptPromoProjectorV1 ? ROUTE_NATURAL_GENERAL_LLM_TOP_V1 : "TENMON_SUBCONCEPT_CANON_V1"),
+              );
+            }
+          }
           (__ku as any).thoughtCoreSummary.modeHint = "concept";
           (__ku as any).thoughtCoreSummary.continuityHint = __projectorThreadCenterKey;
         }

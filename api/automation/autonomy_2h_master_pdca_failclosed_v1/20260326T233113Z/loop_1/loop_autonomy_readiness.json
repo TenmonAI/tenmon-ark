@@ -1,0 +1,38 @@
+{
+  "loop": 1,
+  "generated_at": "2026-03-26T23:31:18Z",
+  "autonomy_readiness": {
+    "planner": "partial",
+    "execution_gate": "partial",
+    "rollback": "ready",
+    "queue_single_flight": "partial",
+    "cursor_operator": "observed",
+    "mac_operator": "partial",
+    "failclosed_supervisor": "partial"
+  },
+  "pwa_static_audit": {
+    "ok": true,
+    "files": [
+      {
+        "path": "/opt/tenmon-ark-repo/web/src/api/chat.ts",
+        "exists": true,
+        "has_api_chat": true,
+        "has_thread_id": true
+      },
+      {
+        "path": "/opt/tenmon-ark-repo/web/src/hooks/useChat.ts",
+        "exists": true,
+        "has_api_chat": true,
+        "has_thread_id": true
+      },
+      {
+        "path": "/opt/tenmon-ark-repo/web/src/pages/ChatPage.tsx",
+        "exists": true,
+        "has_api_chat": true,
+        "has_thread_id": true
+      }
+    ]
+  },
+  "next_card_if_fail": "TENMON_SELFAWARE_FAMILY_STABILIZE_CURSOR_AUTO_V1",
+  "phase_scripts": {}
+}

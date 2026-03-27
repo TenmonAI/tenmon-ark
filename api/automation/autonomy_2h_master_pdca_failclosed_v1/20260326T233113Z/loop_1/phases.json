@@ -1,0 +1,48 @@
+{
+  "route": {
+    "probes": [
+      {
+        "message": "水火の法則とは",
+        "expected": "GENERAL_KNOWLEDGE_EXPLAIN_ROUTE_V1",
+        "routeReason": "GENERAL_KNOWLEDGE_EXPLAIN_ROUTE_V1",
+        "ok": true
+      },
+      {
+        "message": "言霊とは何かを簡潔に答えて",
+        "expected": "DEF_FASTPATH_VERIFIED_V1",
+        "routeReason": "DEF_FASTPATH_VERIFIED_V1",
+        "ok": true
+      },
+      {
+        "message": "その話の中心だけ保ったまま、一段深めて",
+        "expected": "CONTINUITY_ROUTE_HOLD_V1",
+        "routeReason": "CONTINUITY_ROUTE_HOLD_V1",
+        "ok": true
+      }
+    ],
+    "pass": true
+  },
+  "selfaware": {
+    "probes": [
+      {
+        "message": "AIに意識はあるのか",
+        "kind": "selfaware",
+        "routeReason": "R22_SELFAWARE_CONSCIOUSNESS_V1",
+        "ok": true
+      },
+      {
+        "message": "意識と自己認識は同じか",
+        "kind": "selfaware",
+        "routeReason": "GENERAL_KNOWLEDGE_EXPLAIN_ROUTE_V1",
+        "ok": false
+      },
+      {
+        "message": "法華経とは",
+        "kind": "scripture",
+        "routeReason": "K1_TRACE_EMPTY_GATED_V1",
+        "ok": true
+      }
+    ],
+    "pass": false
+  }
+}

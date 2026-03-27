@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "per_cycle": [
+    {
+      "cycle": 1,
+      "active_stage_before_guard": 1,
+      "regressed": false,
+      "notes": []
+    }
+  ],
+  "events": []
+}

@@ -1,0 +1,23 @@
+{
+  "loop": 1,
+  "pass": true,
+  "generated_at": "2026-03-26T23:44:18Z",
+  "next_card_if_fail": null,
+  "primary_fail_phase": null,
+  "flags": {
+    "route_sovereignty_fixed": true,
+    "selfaware_family_ok": true,
+    "surface_contract_ok": true,
+    "worldclass_ready": true,
+    "single_source_sealed": true,
+    "planner_ready": true,
+    "queue_ready": true,
+    "execution_gate_ready": true,
+    "rollback_ready": true,
+    "cursor_operator_ready": true,
+    "mac_operator_ready": true
+  },
+  "rollback_used": false,
+  "probe_summary_ref": "/opt/tenmon-ark-repo/api/automation/autonomy_2h_master_pdca_failclosed_v1/20260326T234418Z/loop_1_probe_summary.json",
+  "autonomy_readiness_ref": "/opt/tenmon-ark-repo/api/automation/autonomy_2h_master_pdca_failclosed_v1/20260326T234418Z/loop_1_autonomy_readiness.json"
+}

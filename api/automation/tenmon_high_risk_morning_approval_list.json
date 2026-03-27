@@ -1,0 +1,30 @@
+{
+  "card": "TENMON_CONTINUOUS_ESCROW_HIGH_RISK_PREP_CURSOR_AUTO_V1",
+  "generated_at": "2026-03-26T18:56:04Z",
+  "items": [
+    {
+      "card_id": "TENMON_K1_TRACE_EMPTY_RESPONSE_DENSITY_REPAIR_CURSOR_AUTO_V1",
+      "approval_required": true,
+      "escrow_package": "/opt/tenmon-ark-repo/api/automation/out/high_risk_escrow/2026-03-26T18-56-04Z__TENMON_K1_TRACE_EMPTY_RESPONSE_DENSITY_REPAIR_CURSOR_AUTO_V1/escrow_package.json",
+      "escrow_report": "/opt/tenmon-ark-repo/api/automation/out/high_risk_escrow/2026-03-26T18-56-04Z__TENMON_K1_TRACE_EMPTY_RESPONSE_DENSITY_REPAIR_CURSOR_AUTO_V1/escrow_package.md",
+      "recommended_decision": "DO_NOT_APPROVE_YET",
+      "approve_command": "./scripts/high_risk_escrow_approval_bridge_v1.sh TENMON_K1_TRACE_EMPTY_RESPONSE_DENSITY_REPAIR_CURSOR_AUTO_V1 --approve --approve-by $(whoami)"
+    },
+    {
+      "card_id": "TENMON_SUBCONCEPT_CANON_SURFACE_CLEAN_AND_CONTEXT_CARRY_SKIP_CURSOR_AUTO_V1",
+      "approval_required": true,
+      "escrow_package": "/opt/tenmon-ark-repo/api/automation/out/high_risk_escrow/2026-03-26T18-56-04Z__TENMON_SUBCONCEPT_CANON_SURFACE_CLEAN_AND_CONTEXT_CARRY_SKIP_CURSOR_AUTO_V1/escrow_package.json",
+      "escrow_report": "/opt/tenmon-ark-repo/api/automation/out/high_risk_escrow/2026-03-26T18-56-04Z__TENMON_SUBCONCEPT_CANON_SURFACE_CLEAN_AND_CONTEXT_CARRY_SKIP_CURSOR_AUTO_V1/escrow_package.md",
+      "recommended_decision": "DO_NOT_APPROVE_YET",
+      "approve_command": "./scripts/high_risk_escrow_approval_bridge_v1.sh TENMON_SUBCONCEPT_CANON_SURFACE_CLEAN_AND_CONTEXT_CARRY_SKIP_CURSOR_AUTO_V1 --approve --approve-by $(whoami)"
+    },
+    {
+      "card_id": "TENMON_GENERAL_KNOWLEDGE_DENSITY_AND_SELF_VIEW_POLISH_CURSOR_AUTO_V1",
+      "approval_required": true,
+      "escrow_package": "/opt/tenmon-ark-repo/api/automation/out/high_risk_escrow/2026-03-26T18-56-04Z__TENMON_GENERAL_KNOWLEDGE_DENSITY_AND_SELF_VIEW_POLISH_CURSOR_AUTO_V1/escrow_package.json",
+      "escrow_report": "/opt/tenmon-ark-repo/api/automation/out/high_risk_escrow/2026-03-26T18-56-04Z__TENMON_GENERAL_KNOWLEDGE_DENSITY_AND_SELF_VIEW_POLISH_CURSOR_AUTO_V1/escrow_package.md",
+      "recommended_decision": "DO_NOT_APPROVE_YET",
+      "approve_command": "./scripts/high_risk_escrow_approval_bridge_v1.sh TENMON_GENERAL_KNOWLEDGE_DENSITY_AND_SELF_VIEW_POLISH_CURSOR_AUTO_V1 --approve --approve-by $(whoami)"
+    }
+  ]
+}

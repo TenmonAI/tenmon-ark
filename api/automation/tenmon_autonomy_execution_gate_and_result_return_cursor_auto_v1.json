@@ -1,0 +1,11 @@
+{
+  "ok": true,
+  "card": "TENMON_AUTONOMY_EXECUTION_GATE_AND_RESULT_RETURN_CURSOR_AUTO_V1",
+  "execution_gate_ready": true,
+  "result_return_ready": true,
+  "result_bundle_update_ok": true,
+  "safe_summary_write_ok": true,
+  "next_card_bridge_ok": true,
+  "rollback_used": false,
+  "next_card_if_fail": null
+}

@@ -1,0 +1,101 @@
+{
+  "loop": 1,
+  "generated_at": "2026-03-26T23:44:18Z",
+  "gates": {
+    "ok": true,
+    "skipped": true,
+    "note": "TENMON_PDCA_SKIP_PROBES"
+  },
+  "build": null,
+  "git_diff_stat": {
+    "rc": 0,
+    "stdout": " api/automation/card_catalog_v1.json                | 291 +++++++++++++++++++++\n api/automation/card_dependency_graph_v1.json       |  14 +-\n .../conversation_quality_generated_cards.json      | 126 ++++-----\n .../operations_level_autonomy_state_v1.json        |   6 +-\n api/automation/remote_cursor_queue.json            |  84 +++++-\n api/automation/remote_cursor_result_bundle.json    | 191 ++++++++++++--\n .../tenmon_high_risk_approval_trace_v1.json        |  38 ++-\n .../tenmon_worldclass_acceptance_scorecard.json    |  18 +-\n .../tenmon_worldclass_acceptance_scorecard.md      |  13 +-\n api/scripts/chat_ts_longform_quality_probe_v1.sh   |   5 +\n api/src/routes/chat.ts                             | 284 +++++++++++++++++---\n .../routes/chat_refactor/continuity_trunk_v1.ts    |   2 +-\n api/src/routes/chat_refactor/finalize.ts           |  12 +\n api/src/routes/chat_refactor/general_trunk_v1.ts   |   7 +\n 14 files changed, 932 insertions(+), 159 deletions(-)\n"
+  },
+  "conversation_phases": {
+    "route": {
+      "skipped": true,
+      "pass": true,
+      "note": "TENMON_PDCA_SKIP_PROBES"
+    },
+    "selfaware": {
+      "skipped": true,
+      "pass": true,
+      "note": "TENMON_PDCA_SKIP_PROBES"
+    },
+    "surface": {
+      "skipped": true,
+      "pass": true,
+      "note": "TENMON_PDCA_SKIP_PROBES"
+    },
+    "worldclass": {
+      "skipped": true,
+      "pass": true,
+      "note": "TENMON_PDCA_SKIP_PROBES"
+    },
+    "seal": {
+      "skipped": true,
+      "pass": true,
+      "note": "TENMON_PDCA_SKIP_PROBES"
+    }
+  },
+  "autonomy_scripts": {
+    "planner": {
+      "exit_code": 0,
+      "json": {
+        "ok": true,
+        "card": "TENMON_AUTONOMY_PLANNER_AND_QUEUE_SINGLE_FLIGHT_CURSOR_AUTO_V1",
+        "planner_ready": true,
+        "queue_ready": true,
+        "single_flight_ready": true,
+        "duplicate_reject_ok": true,
+        "stale_running_cleanup_ok": true,
+        "state_persistence_ok": true,
+        "rollback_used": false,
+        "next_card_if_fail": null
+      }
+    },
+    "execution_gate": {
+      "exit_code": 0,
+      "json": {
+        "ok": true,
+        "card": "TENMON_AUTONOMY_EXECUTION_GATE_AND_RESULT_RETURN_CURSOR_AUTO_V1",
+        "execution_gate_ready": true,
+        "result_return_ready": true,
+        "result_bundle_update_ok": true,
+        "safe_summary_write_ok": true,
+        "next_card_bridge_ok": true,
+        "rollback_used": false,
+        "next_card_if_fail": null
+      }
+    },
+    "supervisor": {
+      "exit_code": 0,
+      "json": {
+        "ok": true,
+        "card": "TENMON_AUTONOMY_FAILCLOSED_SUPERVISOR_AND_ROLLBACK_CURSOR_AUTO_V1",
+        "supervisor_ready": true,
+        "rollback_ready": true,
+        "forensic_bundle_ready": true,
+        "high_risk_trace_ready": true,
+        "next_card_generation_ok": true,
+        "rollback_used": false,
+        "next_card_if_fail": null
+      }
+    },
+    "mac_operator": {
+      "exit_code": 0,
+      "json": {
+        "ok": true,
+        "card": "TENMON_MAC_CURSOR_OPERATOR_READINESS_CURSOR_AUTO_V1",
+        "mac_operator_ready": true,
+        "cursor_operator_ready": true,
+        "safe_summary_path_ok": true,
+        "single_runtime_watch_loop_ok": true,
+        "heartbeat_ok": true,
+        "stuck_recovery_ok": true,
+        "rollback_used": false,
+        "next_card_if_fail": null
+      }
+    }
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "ok": true,
+  "card": "TENMON_AUTONOMY_FAILCLOSED_SUPERVISOR_AND_ROLLBACK_CURSOR_AUTO_V1",
+  "supervisor_ready": true,
+  "rollback_ready": true,
+  "forensic_bundle_ready": true,
+  "high_risk_trace_ready": true,
+  "next_card_generation_ok": true,
+  "rollback_used": false,
+  "next_card_if_fail": null
+}

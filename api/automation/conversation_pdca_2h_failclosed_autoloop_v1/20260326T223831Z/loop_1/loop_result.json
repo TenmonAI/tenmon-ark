@@ -1,0 +1,7 @@
+{
+  "loop": 1,
+  "pass": false,
+  "elapsed_sec": 0.0,
+  "gates_ok": true,
+  "probe_summary_ref": "/opt/tenmon-ark-repo/api/automation/conversation_pdca_2h_failclosed_autoloop_v1/20260326T223831Z/loop_1/loop_probe_summary.json"
+}

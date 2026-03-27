@@ -1,0 +1,81 @@
+{
+  "card": "TENMON_CURSOR_SINGLE_FLIGHT_QUEUE_AND_REVIEW_GATE_CURSOR_AUTO_V1",
+  "generated_at": "2026-03-27T01:00:41Z",
+  "single_flight_lock_v1": {
+    "relative_path": "api/automation/tenmon_cursor_single_flight_mainline.lock",
+    "exclusive_mainline": true
+  },
+  "next_on_pass": "TENMON_OS_OUTPUT_CONTRACT_NORMALIZE_CURSOR_AUTO_V1",
+  "autonomy_single_flight_policy_v1": {
+    "version": 1,
+    "card": "TENMON_AUTONOMY_PLANNER_AND_QUEUE_SINGLE_FLIGHT_CURSOR_AUTO_V1",
+    "nextOnPass": "TENMON_OS_OUTPUT_CONTRACT_NORMALIZE_CURSOR_AUTO_V1",
+    "nextOnFail": "TENMON_AUTONOMY_QUEUE_STATE_REPAIR_CURSOR_AUTO_V1",
+    "mainline_max_concurrent": 1,
+    "reject_duplicate_enqueue": true,
+    "reject_second_run_while_locked": true,
+    "high_risk_requires_approval_or_escrow": true,
+    "state_kinds": [
+      "failed",
+      "running",
+      "queued",
+      "blocked",
+      "ready",
+      "done",
+      "executed",
+      "released_fixture",
+      "rejected",
+      "delivered",
+      "approval_required"
+    ]
+  },
+  "next_on_fail_note": "停止。retry 1枚のみ生成。",
+  "retry_card": "TENMON_CURSOR_SINGLE_FLIGHT_QUEUE_AND_REVIEW_GATE_RETRY_CURSOR_AUTO_V1",
+  "current_card": "TENMON_STALE_EVIDENCE_INVALIDATION_CURSOR_AUTO_V1",
+  "queued_cards": [
+    "TENMON_FINAL_OPERABLE_SEAL_CURSOR_AUTO_V1",
+    "TENMON_STALE_EVIDENCE_INVALIDATION_CURSOR_AUTO_V1"
+  ],
+  "queue_pending_count": 2,
+  "blocked_reason": [],
+  "changed_file_count": 101,
+  "review_pressure": 0.8417,
+  "review_pressure_detail": {
+    "changed_files_ratio": 0.8417,
+    "high_risk_ratio": 0.08,
+    "queue_pending_ratio": 0.6667
+  },
+  "next_card_allowed": true,
+  "next_card": "TENMON_K1_TRACE_EMPTY_RESPONSE_DENSITY_REPAIR_CURSOR_AUTO_V1",
+  "candidates_ranked": [
+    "TENMON_K1_TRACE_EMPTY_RESPONSE_DENSITY_REPAIR_CURSOR_AUTO_V1",
+    "TENMON_GENERAL_KNOWLEDGE_DENSITY_AND_SELF_VIEW_POLISH_CURSOR_AUTO_V1",
+    "TENMON_FACTUAL_POLISH_AND_RESPONSE_NATURALIZATION_CURSOR_AUTO_V1",
+    "TENMON_FINAL_OPERABLE_SEAL_CURSOR_AUTO_V1",
+    "TENMON_PWA_DIALOGUE_SUPREMACY_CAMPAIGN_CURSOR_AUTO_V1"
+  ],
+  "gates": {
+    "git_status_ok": true,
+    "review_file_max": 120,
+    "high_risk_max": 25,
+    "queue_pending_max": 3,
+    "autocompact_present": true,
+    "autocompact_stale": false,
+    "autocompact_review_ok": true
+  },
+  "git_classification": {
+    "high_risk_count": 2,
+    "auto_accept_candidate": false
+  },
+  "manual_review_recommended": true,
+  "inputs": {
+    "autocompact_summary": "/opt/tenmon-ark-repo/api/automation/tenmon_cursor_worktree_autocompact_summary.json",
+    "remote_queue": "/opt/tenmon-ark-repo/api/automation/remote_cursor_queue.json",
+    "result_bundle": "/opt/tenmon-ark-repo/api/automation/remote_cursor_result_bundle.json",
+    "worldclass_loop": "/opt/tenmon-ark-repo/api/automation/tenmon_worldclass_dialogue_acceptance_priority_loop_v1.json",
+    "forensic": "/opt/tenmon-ark-repo/api/automation/tenmon_autonomy_current_state_forensic.json",
+    "conversation_quality": "/opt/tenmon-ark-repo/api/automation/tenmon_conversation_quality_priority_summary.json",
+    "state_convergence": "/opt/tenmon-ark-repo/api/automation/state_convergence_next_cards.json",
+    "worldclass_mainline_selector": "/opt/tenmon-ark-repo/api/automation/tenmon_conversation_worldclass_mainline_selector.json"
+  }
+}

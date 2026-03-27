@@ -1,0 +1,7 @@
+{
+  "version": 1,
+  "card": "TENMON_MAC_CURSOR_OPERATOR_READINESS_CURSOR_AUTO_V1",
+  "watch_loop_mode": "refresh_only",
+  "single_runtime_lock_relative": "operator_readiness/watch_loop_single_runtime.json",
+  "comment": "Mac ローカル ~/tenmon-mac 配下に単一 watch ランタイムを固定（重複起動は拒否）"
+}

@@ -1,0 +1,50 @@
+{
+  "version": 1,
+  "card": "TENMON_AUTONOMY_FAILCLOSED_SUPERVISOR_AND_ROLLBACK_CURSOR_AUTO_V1",
+  "failure_classes": [
+    {
+      "id": "build_fail",
+      "stop": true,
+      "collect_evidence": true,
+      "next_card_if_fail": "TENMON_AUTONOMY_FORENSIC_BUNDLE_REPAIR_CURSOR_AUTO_V1"
+    },
+    {
+      "id": "restart_fail",
+      "stop": true,
+      "collect_evidence": true,
+      "next_card_if_fail": "TENMON_AUTONOMY_FORENSIC_BUNDLE_REPAIR_CURSOR_AUTO_V1"
+    },
+    {
+      "id": "audit_fail",
+      "stop": true,
+      "collect_evidence": true,
+      "next_card_if_fail": "TENMON_AUTONOMY_FORENSIC_BUNDLE_REPAIR_CURSOR_AUTO_V1"
+    },
+    {
+      "id": "probe_regression",
+      "stop": true,
+      "collect_evidence": true,
+      "next_card_if_fail": "TENMON_AUTONOMY_FORENSIC_BUNDLE_REPAIR_CURSOR_AUTO_V1"
+    },
+    {
+      "id": "diff_expanded",
+      "stop": true,
+      "collect_evidence": true,
+      "next_card_if_fail": "TENMON_AUTONOMY_FORENSIC_BUNDLE_REPAIR_CURSOR_AUTO_V1"
+    },
+    {
+      "id": "unsafe_write",
+      "stop": true,
+      "collect_evidence": true,
+      "next_card_if_fail": "TENMON_AUTONOMY_FORENSIC_BUNDLE_REPAIR_CURSOR_AUTO_V1"
+    },
+    {
+      "id": "high_risk_escrow_required",
+      "stop": true,
+      "collect_evidence": true,
+      "trace": "escrow",
+      "next_card_if_fail": "TENMON_AUTONOMY_FORENSIC_BUNDLE_REPAIR_CURSOR_AUTO_V1"
+    }
+  ],
+  "comment": "build_fail / restart_fail / audit_fail / probe_regression / diff_expanded / unsafe_write は必ず停止し証拠採取へ。high_risk は escrow / approval trace へ。"
+}

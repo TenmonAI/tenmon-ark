@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "card": "TENMON_AUTONOMY_VERIFY_REJUDGE_ROLLBACK_LOOP_CURSOR_AUTO_V1",
+  "flow": [
+    "build",
+    "health",
+    "audit",
+    "rejudge",
+    "rollback_if_fail"
+  ]
+}

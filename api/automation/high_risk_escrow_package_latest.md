@@ -1,0 +1,6 @@
+# TENMON_HIGH_RISK_ESCROW_APPROVAL_BRIDGE_CURSOR_AUTO_V1 (latest)
+
+- generated_at: `2026-03-26T18:56:05Z`
+- target_card_id: `TENMON_GENERAL_KNOWLEDGE_DENSITY_AND_SELF_VIEW_POLISH_CURSOR_AUTO_V1`
+- package: `/opt/tenmon-ark-repo/api/automation/out/high_risk_escrow/2026-03-26T18-56-05Z__TENMON_GENERAL_KNOWLEDGE_DENSITY_AND_SELF_VIEW_POLISH_CURSOR_AUTO_V1/escrow_package.json`
+- report: `/opt/tenmon-ark-repo/api/automation/out/high_risk_escrow/2026-03-26T18-56-05Z__TENMON_GENERAL_KNOWLEDGE_DENSITY_AND_SELF_VIEW_POLISH_CURSOR_AUTO_V1/escrow_package.md`

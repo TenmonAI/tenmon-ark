@@ -1,12 +1,12 @@
 # TENMON_WORLDCLASS_ACCEPTANCE_SCORECARD_CURSOR_AUTO_V1
 
-- generated_at: `2026-03-24T19:47:56Z`
-- **score_total** / **score_max**: `66.4` / `118`
-- **score_percent**: `56.27`
+- generated_at: `2026-03-26T23:52:04Z`
+- **score_total** / **score_max**: `72.4` / `118`
+- **score_percent**: `61.36`
 - **sealed_operable_ready**: `False`
 - **worldclass_ready**: `False`
 - **primary_gap**: `conversation_backend`
-- **recommended_next_card**: `TENMON_PWA_RUNTIME_ENV_AND_PLAYWRIGHT_RESTORE_CURSOR_AUTO_V1`
+- **recommended_next_card**: `TENMON_FINAL_OPERABLE_SEAL_CURSOR_AUTO_V1`
 
 ## Subsystems
 
@@ -16,7 +16,7 @@
 | conversation_backend | 6.0 | 12 | yellow | False |
 | conversation_continuity | 6.0 | 12 | yellow | False |
 | pwa_code_constitution | 10.0 | 10 | green | True |
-| pwa_lived_proof | 6.0 | 12 | yellow | False |
+| pwa_lived_proof | 12.0 | 12 | green | True |
 | repo_hygiene | 12.0 | 12 | green | True |
 | self_audit_os | 1.8 | 10 | red_env | False |
 | self_repair_os | 1.8 | 10 | red_env | False |
@@ -27,8 +27,7 @@
 ### primary_blockers (non-complete)
 
 - **conversation_backend**: ['conversation_runner_not_pass', 'chat_ts_overall_not_100']
-- **conversation_continuity**: ['sessionId_reference_in_mainline_web_src', 'continuity_hold_not_observed']
-- **pwa_lived_proof**: ['chat:continuity_failed', 'chat:new_chat_failed', 'chat:refresh_empty_response', 'chat:refresh_second_request_failed', 'chat:threadId_missing_in_response', 'continuity_fail', 'duplicate_or_bleed_fail', 'gate:audit', 'gate:audit_build', 'gate:health', 'gate_audit_build_fail', 'meta_leak_none']
+- **conversation_continuity**: []
 - **self_audit_os**: ['verdict_source_split_not_single', 'orchestrator_integrated_verdict_exists', 'pwa_false_mostly_due_env_failure', 'pwa_blocker_json_present_and_may_be_stale_until_live_rerun', 'overall_band=code_complete_lived_unproven']
 - **self_repair_os**: ['self_repair: dangerous_patch_blocker_report.blocked=true', 'safe_patch_loop_not_pass', 'self_repair_acceptance_seal_not_pass']
 - **self_build_os**: ['self_build_os_final_seal_not_yet_evidenced']

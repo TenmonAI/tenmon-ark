@@ -1,0 +1,7 @@
+{
+  "card": "TENMON_AUTONOMY_FAILCLOSED_SUPERVISOR_AND_ROLLBACK_CURSOR_AUTO_V1",
+  "generated_at": "2026-03-26T23:39:54Z",
+  "next_card_if_fail": "TENMON_AUTONOMY_FORENSIC_BUNDLE_REPAIR_CURSOR_AUTO_V1",
+  "failure_loop": true,
+  "failure_taxonomy_ref": "tenmon_autonomy_failclosed_supervisor_failure_taxonomy_v1.json"
+}

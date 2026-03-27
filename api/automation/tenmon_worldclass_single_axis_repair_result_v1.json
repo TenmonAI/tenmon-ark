@@ -1,0 +1,11 @@
+{
+  "ok": true,
+  "card": "TENMON_WORLDCLASS_SINGLE_AXIS_REPAIR_CURSOR_AUTO_V1",
+  "generated_at": "2026-03-26T23:10:42.636Z",
+  "primary_gap_repaired": false,
+  "worldclass_ready": true,
+  "rollback_used": false,
+  "next_card_if_fail": null,
+  "patch": null,
+  "note": "no_single_axis_gap_seal_already_ready"
+}

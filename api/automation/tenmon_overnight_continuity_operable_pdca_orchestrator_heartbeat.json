@@ -1,0 +1,13 @@
+{
+  "card": "TENMON_OVERNIGHT_CONTINUITY_OPERABLE_PDCA_ORCHESTRATOR_CURSOR_AUTO_V1",
+  "updated_at": "2026-03-26T20:16:25Z",
+  "started_at": "2026-03-26T20:16:04Z",
+  "cycle": 1,
+  "selected_card": "TENMON_REAL_EXECUTION_RESULT_EVIDENCE_BIND_CURSOR_AUTO_V1",
+  "target_end_local": "2026-03-28 04:00:00+09:00",
+  "tz": "Asia/Tokyo",
+  "stop_file": "/opt/tenmon-ark-repo/api/automation/tenmon_overnight_continuity_operable_pdca_stop.signal",
+  "lock_file": "/opt/tenmon-ark-repo/api/automation/.tenmon_overnight_continuity_operable_pdca_orchestrator.lock",
+  "last_cycle_ok": false,
+  "last_workdir": "/opt/tenmon-ark-repo/api/automation/out/overnight_continuity_operable_runs/cycle_1_2026-03-26T20-16-04Z"
+}

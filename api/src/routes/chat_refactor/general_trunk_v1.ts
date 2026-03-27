@@ -25,6 +25,13 @@ export function classifyGeneralFactCodingRouteV1(rawMessage: string): GeneralFac
   if (/(水穂伝|法華経|即身成仏|稲荷古伝|言霊秘書|いろは言[霊灵靈]解|カタカムナ言[霊灵靈]解)/u.test(t)) {
     return "";
   }
+  /** TENMON_GENERAL_CONTINUITY_DECISION_TRUNK_TRACE_CURSOR_AUTO_V1: 水火の法則は trunk で GENERAL_KNOWLEDGE_EXPLAIN を固定（「とは」終端を含む・chat.ts sovereignty と同型） */
+  if (
+    /水火の法則/u.test(t) &&
+    /(?:とは$|とは\s*何|とは\s*なに|って\s*何|何ですか|なにですか|を教えて)/u.test(t)
+  ) {
+    return ROUTE_GENERAL_KNOWLEDGE_EXPLAIN_ROUTE_V1;
+  }
   /** TENMON_FACTUAL_WEATHER_ROUTE_CURSOR_AUTO_V1: 天気・気温・降水表現（正典委譲の後・日付より前） */
   if (/(天気|気温|降水|気象|予報)/u.test(t) || /(雨|晴れ|曇り)/u.test(t)) {
     return ROUTE_FACTUAL_WEATHER_V1;

@@ -1,0 +1,7 @@
+{
+  "version": 1,
+  "card": "TENMON_AUTONOMY_FAILCLOSED_SUPERVISOR_AND_ROLLBACK_CURSOR_AUTO_V1",
+  "approval_trace_file": "api/automation/tenmon_high_risk_approval_trace_v1.json",
+  "escrow_bridge_script": "api/scripts/high_risk_escrow_approval_bridge_v1.sh",
+  "note": "high-risk は escrow / approval trace にのみ残す（本スタブは参照用）"
+}

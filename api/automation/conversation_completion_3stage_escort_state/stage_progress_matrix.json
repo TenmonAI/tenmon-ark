@@ -1,0 +1,26 @@
+{
+  "rows": [
+    {
+      "cycle": 1,
+      "build_ok": true,
+      "restart_ok": true,
+      "health_ok": true,
+      "audit_ok": true,
+      "audit_build_ok": true,
+      "cycle_gate_ok": true,
+      "full_pdca_exit": 0,
+      "final_seal_exit": 1,
+      "workspace_observer_exit": 0,
+      "replay_audit_exit": 0,
+      "stage_ran": "S1",
+      "stage_runner_exit": 1,
+      "stage_pass": false,
+      "active_stage_after_cycle": 1,
+      "wo_readyForApply": false,
+      "wo_readyForApplyApplySafe": false,
+      "wo_apply_safe_normalized": false,
+      "replay_ok_normalized": false,
+      "latest_stage_report": "api/automation/reports/TENMON_CONVERSATION_COMPLETION_STAGE1_SURFACE_AND_BLEED_PDCA_V1/20260326T063653Z"
+    }
+  ]
+}

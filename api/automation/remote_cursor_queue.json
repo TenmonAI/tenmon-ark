@@ -1,20 +1,94 @@
 {
   "version": 1,
   "card": "TENMON_REMOTE_CURSOR_COMMAND_CENTER_CURSOR_AUTO_V1",
-  "updatedAt": "2026-03-25T04:33:55Z",
+  "updatedAt": "2026-03-27T01:00:41Z",
+  "autonomy_single_flight_policy_v1": {
+    "version": 1,
+    "card": "TENMON_AUTONOMY_PLANNER_AND_QUEUE_SINGLE_FLIGHT_CURSOR_AUTO_V1",
+    "nextOnPass": "TENMON_OS_OUTPUT_CONTRACT_NORMALIZE_CURSOR_AUTO_V1",
+    "nextOnFail": "TENMON_AUTONOMY_QUEUE_STATE_REPAIR_CURSOR_AUTO_V1",
+    "mainline_max_concurrent": 1,
+    "reject_duplicate_enqueue": true,
+    "reject_second_run_while_locked": true,
+    "high_risk_requires_approval_or_escrow": true,
+    "state_kinds": [
+      "failed",
+      "running",
+      "queued",
+      "blocked",
+      "ready",
+      "done",
+      "executed",
+      "released_fixture",
+      "rejected",
+      "delivered",
+      "approval_required"
+    ]
+  },
   "items": [
     {
+      "id": "213a8d5956980660",
+      "job_id": "213a8d5956980660",
+      "state": "ready",
+      "createdAt": "2026-03-26T11:48:21Z",
+      "source": "TENMON_AUTONOMY_PRIORITY_LOOP_TO_REMOTE_QUEUE_ENQUEUE_CURSOR_AUTO_V1",
+      "cursor_card": "TENMON_FINAL_OPERABLE_SEAL_CURSOR_AUTO_V1",
+      "objective": "auto-enqueue from single-source truth (safe gate)",
+      "job_file": null,
+      "fixture": false,
+      "dry_run_only": false,
+      "leased_until": null,
+      "enqueue_reason": "forensic.next_best_card",
+      "current_run": true
+    },
+    {
+      "id": "16ccac096f24c96b",
+      "job_id": "16ccac096f24c96b",
+      "state": "ready",
+      "createdAt": "2026-03-26T10:36:48Z",
+      "source": "TENMON_AUTONOMY_PRIORITY_LOOP_TO_REMOTE_QUEUE_ENQUEUE_CURSOR_AUTO_V1",
+      "cursor_card": "TENMON_STALE_EVIDENCE_INVALIDATION_CURSOR_AUTO_V1",
+      "objective": "auto-enqueue from single-source truth (safe gate)",
+      "job_file": null,
+      "fixture": false,
+      "dry_run_only": false,
+      "leased_until": null,
+      "enqueue_reason": "forensic.next_best_card",
+      "current_run": false
+    },
+    {
+      "id": "2f06ff30a852e68f",
+      "job_id": "2f06ff30a852e68f",
+      "state": "executed",
+      "createdAt": "2026-03-25T20:27:46Z",
+      "source": "TENMON_HIGH_RISK_ESCROW_APPROVAL_BRIDGE_CURSOR_AUTO_V1",
+      "cursor_card": "TENMON_K1_TRACE_EMPTY_RESPONSE_DENSITY_REPAIR_CURSOR_AUTO_V1",
+      "objective": "high-risk escrow enqueue (human approved)",
+      "job_file": null,
+      "fixture": false,
+      "dry_run_only": false,
+      "leased_until": null,
+      "enqueue_reason": "escrow_human_approval",
+      "current_run": false,
+      "escrow_approved": true,
+      "escrow_package": "/opt/tenmon-ark-repo/api/automation/out/high_risk_escrow/2026-03-25T20-27-46Z__TENMON_K1_TRACE_EMPTY_RESPONSE_DENSITY_REPAIR_CURSOR_AUTO_V1/escrow_package.json",
+      "completed_at": "2026-03-25T20:27:54Z"
+    },
+    {
       "job_id": "closed_loop_probe_1774379349",
-      "state": "delivered",
+      "state": "released_fixture",
       "createdAt": "2026-03-24T19:09:09Z",
       "source": "TENMON_SELF_BUILD_CLOSED_LOOP_PROOF_V2",
       "cursor_card": "TENMON_CLOSED_LOOP_FIXTURE_CURSOR_AUTO_V1",
       "objective": "closed loop proof fixture",
       "job_file": "/var/log/tenmon/card_TENMON_SELF_BUILD_CLOSED_LOOP_PROOF_V2/20260324T190908Z/closed_loop_probe_job.json",
       "fixture": true,
-      "leased_until": "2026-03-25T04:48:55Z",
+      "leased_until": null,
       "dry_run_only": false,
-      "id": "6420def5267dc402"
+      "id": "6420def5267dc402",
+      "ignored_fixture": true,
+      "released_at": "2026-03-26T06:43:21Z",
+      "release_reason": "fixture_drain_canonicalize_closed_loop"
     },
     {
       "job_id": "probe_job_20260324T193348Z",
@@ -31,5 +105,5 @@
       "completed_at": "2026-03-25T04:22:35Z"
     }
   ],
-  "state_schema": "approval_required|ready|rejected|delivered|executed"
+  "state_schema": "approval_required|ready|rejected|delivered|executed|released_fixture"
 }

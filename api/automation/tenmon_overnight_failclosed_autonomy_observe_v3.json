@@ -1,0 +1,29 @@
+{
+  "card": "TENMON_OVERNIGHT_FAILCLOSED_AUTONOMY_OBSERVE_V3",
+  "halt_axis": "infra_or_verify",
+  "halt_reason": "verify_chain_failed",
+  "latest_selected_card": "TENMON_REAL_EXECUTION_RESULT_EVIDENCE_BIND_CURSOR_AUTO_V1",
+  "recommended_retry_card": "TENMON_OVERNIGHT_INFRA_RESTORE_RETRY_V1",
+  "retry_priority_order": [
+    "TENMON_OVERNIGHT_INFRA_RESTORE_RETRY_V1"
+  ],
+  "proof_bundle": {
+    "overnight_summary_path": "/opt/tenmon-ark-repo/api/automation/tenmon_overnight_continuity_operable_pdca_orchestrator_summary.json",
+    "queue_path": "/opt/tenmon-ark-repo/api/automation/remote_cursor_queue.json",
+    "bundle_path": "/opt/tenmon-ark-repo/api/automation/remote_cursor_result_bundle.json",
+    "rejudge_summary_path": "/opt/tenmon-ark-repo/api/automation/tenmon_latest_state_rejudge_summary.json",
+    "scorecard_path": "/opt/tenmon-ark-repo/api/automation/tenmon_worldclass_acceptance_scorecard.json",
+    "health": {
+      "ok": true,
+      "status": 200
+    },
+    "audit": {
+      "ok": true,
+      "status": 200
+    },
+    "audit_build": {
+      "ok": true,
+      "status": 200
+    }
+  }
+}

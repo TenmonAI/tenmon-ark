@@ -1,0 +1,39 @@
+{
+  "ok": true,
+  "card": "TENMON_WORLDCLASS_DIALOGUE_ACCEPTANCE_SEAL_CURSOR_AUTO_V1",
+  "generated_at": "2026-03-26T23:10:39.541Z",
+  "case": "CASE_A",
+  "worldclass_ready": true,
+  "primary_gap": null,
+  "top_blockers": [],
+  "gap_count": 0,
+  "rollback_used": false,
+  "axes": {
+    "route_reason_consistency": true,
+    "continuity": true,
+    "scripture_family": true,
+    "selfaware_family": true,
+    "output_surface": true,
+    "meta_leak_none": true,
+    "decision_frame_preserved": true
+  },
+  "probe_summary": {
+    "route_ok": true,
+    "continuity_ok": true,
+    "scripture_ok": true,
+    "selfaware_ok": true,
+    "surface_ok": true
+  },
+  "recommended_micro_card": null,
+  "next_card_if_fail": null,
+  "inputs": {
+    "scorecard": "/opt/tenmon-ark-repo/api/automation/tenmon_worldclass_acceptance_scorecard.json",
+    "priority_loop": "/opt/tenmon-ark-repo/api/automation/tenmon_worldclass_dialogue_acceptance_priority_loop_v1.json",
+    "k1_probe_evidence": "/opt/tenmon-ark-repo/api/automation/tenmon_k1_general_completion_probe_evidence_v1.json"
+  },
+  "notes": [
+    "digest の satisfied は k1_general_completion_probe_evidence の pass で上書き可能（scripture / general）。",
+    "continuity は scorecard fresh_probe_digest の 2 ターン証跡が必要。",
+    "CASE_B/C は観測のみ。コード変更は別カードで実施。"
+  ]
+}

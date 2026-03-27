@@ -1,0 +1,13 @@
+{
+  "card": "TENMON_CONTINUOUS_SELF_IMPROVEMENT_OVERNIGHT_DAEMON_UNTIL_4AM_CURSOR_AUTO_V1",
+  "started_at": "2026-03-26T06:34:23Z",
+  "updated_at": "2026-03-26T18:56:06Z",
+  "cycle": 143,
+  "last_master_pass": false,
+  "last_nonfixture_executed_seen": true,
+  "last_scorecard_refresh": false,
+  "last_next_best_card": "TENMON_FINAL_OPERABLE_SEAL_CURSOR_AUTO_V1",
+  "last_morning_approval_count": 3,
+  "target_end_local": "2026-03-27 04:00:00+09:00",
+  "tz": "Asia/Tokyo"
+}

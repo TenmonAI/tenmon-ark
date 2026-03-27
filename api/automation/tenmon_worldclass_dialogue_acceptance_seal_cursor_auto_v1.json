@@ -1,0 +1,75 @@
+{
+  "ok": false,
+  "card": "TENMON_WORLDCLASS_DIALOGUE_ACCEPTANCE_SEAL_CURSOR_AUTO_V1",
+  "worldclass_ready": false,
+  "primary_gap": "multi_axis",
+  "top_blockers": [
+    "conversation_backend:conversation_runner_not_pass",
+    "conversation_backend:chat_ts_overall_not_100",
+    "self_audit_os:verdict_source_split_not_single",
+    "self_audit_os:orchestrator_integrated_verdict_exists",
+    "self_audit_os:pwa_false_mostly_due_env_failure",
+    "self_audit_os:pwa_blocker_json_present_and_may_be_stale_until_live_rerun",
+    "self_audit_os:overall_band=code_complete_lived_unproven",
+    "self_repair_os:self_repair: dangerous_patch_blocker_report.blocked=true",
+    "self_repair_os:safe_patch_loop_not_pass",
+    "self_repair_os:self_repair_acceptance_seal_not_pass",
+    "self_build_os:self_build_os_final_seal_not_yet_evidenced",
+    "remote_admin_cursor:remote_admin_runtime_proof_incomplete",
+    "learning_self_improvement:learning_integrated_verdict_not_ok",
+    "learning_self_improvement:learning_chain_not_ok",
+    "scorecard_worldclass_not_ready",
+    "scorecard_sealed_operable_not_ready",
+    "system_verdict_completion_gate_false",
+    "system_verdict_os_gate_false"
+  ],
+  "probe_summary": {
+    "route_ok": false,
+    "continuity_ok": true,
+    "scripture_ok": true,
+    "selfaware_ok": false,
+    "surface_ok": false
+  },
+  "rollback_used": false,
+  "next_card_if_fail": "TENMON_FINAL_OPERABLE_SEAL_CURSOR_AUTO_V1",
+  "generated_at": "2026-03-26T23:12:14Z",
+  "case": "C",
+  "failed_axes": [
+    "route",
+    "selfaware",
+    "surface"
+  ],
+  "pwa_connection_ok": true,
+  "stale_sources_present": false,
+  "scorecard_snapshot": {
+    "worldclass_ready": false,
+    "score_percent": 61.36,
+    "primary_gap": "conversation_backend",
+    "recommended_next_card": "TENMON_FINAL_OPERABLE_SEAL_CURSOR_AUTO_V1"
+  },
+  "steps": {
+    "tenmon_worldclass_acceptance_scorecard_v1": {
+      "script": "tenmon_worldclass_acceptance_scorecard_v1.py",
+      "exit_code": 0,
+      "stdout_tail": "{\n  \"ok\": true,\n  \"score_percent\": 61.36,\n  \"sealed_operable_ready\": false,\n  \"worldclass_ready\": false\n}\n",
+      "stderr_tail": ""
+    },
+    "tenmon_worldclass_dialogue_acceptance_priority_loop_v1": null
+  },
+  "inputs": {
+    "scorecard": "/opt/tenmon-ark-repo/api/automation/tenmon_worldclass_acceptance_scorecard.json",
+    "dialogue_priority_loop": "/opt/tenmon-ark-repo/api/automation/tenmon_worldclass_dialogue_acceptance_priority_loop_v1.json",
+    "rejudge_summary": "/opt/tenmon-ark-repo/api/automation/tenmon_latest_state_rejudge_summary.json",
+    "pwa_lived": "/opt/tenmon-ark-repo/api/automation/pwa_lived_completion_readiness.json"
+  },
+  "priority_loop_snapshot": {
+    "next_best_card": "TENMON_FINAL_OPERABLE_SEAL_CURSOR_AUTO_V1",
+    "acceptance_seal_allowed": false
+  },
+  "notes": [
+    "probe_summary は tenmon_latest_state_rejudge_summary.json の fresh_probe_digest を唯一のソースとする（無ければ fail-closed）。",
+    "stale_sources_present の場合は採点を信頼せず CASE C。",
+    "CASE B: 最小補修は next_card のカードを実行してから本スクリプトで再採点（本スクリプトはコード改変しない）。",
+    "CASE C: 2 軸以上は補修停止。TENMON_DIALOGUE_SEAL_RUN_PRIORITY_LOOP=1 で priority loop を先に実行可。"
+  ]
+}

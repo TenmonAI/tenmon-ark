@@ -1,0 +1,7 @@
+{
+  "card": "TENMON_FULL_AUTONOMY_OS_13PLUS4_MASTER_PARENT_CURSOR_AUTO_V1",
+  "updated_at": "2026-03-26T11:52:34Z",
+  "step": 10,
+  "status": "fail",
+  "lock_file": "/opt/tenmon-ark-repo/api/automation/.tenmon_full_autonomy_os_13plus4_master_parent.lock"
+}

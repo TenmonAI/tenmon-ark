@@ -1,0 +1,18 @@
+{
+  "safe_scope": [
+    "api/automation/**",
+    "api/scripts/**",
+    "api/docs/constitution/**"
+  ],
+  "medium_scope": [
+    "api/src/core/**",
+    "api/src/kokuzo/**",
+    "api/src/routes/chat_refactor/**"
+  ],
+  "high_risk_scope": [
+    "api/src/routes/chat.ts",
+    "api/src/routes/chat_refactor/finalize.ts",
+    "web/src/**"
+  ],
+  "high_risk_requires_green_gate": true
+}
