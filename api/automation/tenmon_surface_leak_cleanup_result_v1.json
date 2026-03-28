@@ -1,0 +1,45 @@
+{
+  "schema": "TENMON_SURFACE_LEAK_CLEANUP_RESULT_V1",
+  "card": "TENMON_SURFACE_LEAK_CLEANUP_CURSOR_AUTO_V1",
+  "generated_at": "2026-03-28T22:20:49Z",
+  "npm_run_check": "PASS",
+  "implementation": {
+    "surface_bundle_strip": "tenmonResponseProjector.ts — RE_INTERNAL_SURFACE_BUNDLE_IDS（routeEvidenceTraceV1, personaConstitutionRuntimeV1, verdictEngineV1, verdictSections, threadCoreLinkSurfaceV1, threadCore, thoughtCoreSummary, inputCognitionSplitV1, truthLayerArbitrationV1, answerProfileLayerV1, confidenceDisplayV1, omegaContract, seedKernel, expressionPlan, comfortTuning, providerPlan, brainstemDecision, selfLearningAutostudyV1）",
+    "inline_control_strip": "既存 meta 行 / インライン + stripInternalRouteTokens 拡張",
+    "final_text_extract": "extractTenmonUserFacingFinalTextV1 — reply→text→answer→message、ネスト response/content/finalText/output",
+    "extract_wiring": "surface_exit_trunk_v1 cleanLlmFrameV1、finalize body 初期化、responseComposer 入口",
+    "duplicate_surface": "suppressPrefaceDuplicateBeforeSeenmarkV1 + suppressRepetitiveTruthFrameV1",
+    "closing": "stripInternalHintTailLinesV1 + ONE_STEP 自然文",
+    "stripInternalRouteTokens": "tenmonConversationSurfaceV2.ts — 上記 bundle 識別子一括"
+  },
+  "synthetic_checks": [
+    {
+      "id": "json_reply_extract",
+      "note": "JSON 文字列に reply のみ → 本文のみ返却"
+    },
+    {
+      "id": "bundle_id_strip",
+      "note": "routeEvidenceTraceV1 + thoughtCoreSummary 混入 → strip 後 probe clean"
+    },
+    {
+      "id": "projector_meta_lines",
+      "note": "root_reasoning + threadCore + 所見本文 → leak false, ONE_STEP true"
+    }
+  ],
+  "manual_probe_prompts_v1": [
+    "今日は少し疲れています",
+    "この件をどう整理すればいい？",
+    "言霊とは何か",
+    "法華経とは何か",
+    "これはノアの方舟と重なるのでは",
+    "稗田阿礼を深層解読して"
+  ],
+  "live_route_probe_note": "HTTP 6 本は環境依存。合成経路で bundle 除去・抽出を確認。",
+  "constraints_observed": [
+    "routeReason / binder / threadCore 構造は未変更（表層のみ）",
+    "dist 未編集",
+    "commit 未実施"
+  ],
+  "nextOnPass": "TENMON_ROOT_ARBITRATION_KERNEL_RESTORE_CURSOR_AUTO_V1",
+  "nextOnFail": "TENMON_SURFACE_LEAK_CLEANUP_RETRY_CURSOR_AUTO_V1"
+}

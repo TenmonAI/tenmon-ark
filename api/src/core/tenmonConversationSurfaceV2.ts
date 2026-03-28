@@ -10,6 +10,7 @@ import { TENMON_CONVERSATION_BASELINE_V2 } from "./tenmonConstitutionV2.js";
 import { evaluateKokuzoBadHeuristicV1 } from "./kokuzoBadGuardV1.js";
 import { clampQuestionMarksKeepLastNV1 } from "../planning/responsePlanCore.js";
 import { dedupeNextStepAndQuestionSurfaceV1 } from "./tenmonConversationSurfaceV1.js";
+import { applyAnswerProfilePostComposeV1 } from "./answerProfileLayer.js";
 
 export type KhsFractalEvidenceSlotV1 = {
   doc?: string;
@@ -257,7 +258,57 @@ export function stripInternalRouteTokensFromSurfaceV1(text: string): string {
   t = t.replace(/^\s*R22_[A-Z0-9_]+_V1\s*$/gmu, "");
   t = t.replace(/^\s*CONTINUITY_ROUTE_HOLD_V1\s*$/gmu, "");
   t = t.replace(/^\s*priorRouteReasonEcho\s*[:：]\s*[A-Z0-9_]+\s*$/gmu, "");
+  t = t.replace(/^\s*priorRouteReason(?:Carry|Echo)?\s*[:：]\s*[^\n]+$/gimu, "");
+  t = t.replace(/^\s*root_reasoning\s*[:：]\s*[^\n]+$/gimu, "");
+  t = t.replace(/^\s*truth_structure\s*[:：]\s*[^\n]+$/gimu, "");
+  t = t.replace(/^\s*center\s*[:：]\s*[^\n]+$/gimu, "");
+  t = t.replace(/^\s*次軸\s*[:：]\s*[^\n]+$/gimu, "");
+  t = t.replace(/^\s*次観測\s*[:：]\s*[^\n]+$/gimu, "");
+  t = t.replace(/^\s*semanticNucleus\s*[:：]\s*[^\n]+$/gimu, "");
+  t = t.replace(/^\s*threadCore\s*[:：]\s*[^\n]+$/gimu, "");
+  t = t.replace(/^\s*["']?verdict["']?\s*[:：]\s*[^\n]+$/gimu, "");
+  t = t.replace(/^\s*["']?decisionFrame["']?\s*[:：]\s*[^\n]+$/gimu, "");
+  t = t.replace(/^\s*["']?thoughtCoreSummary["']?\s*[:：]\s*[^\n]+$/gimu, "");
+  t = t.replace(/^\s*["']?center(Key|Meaning|Label|Claim)["']?\s*[:：]\s*[^\n]+$/gimu, "");
+  t = t.replace(/\b(priorRouteReason|priorRouteReasonCarry|priorRouteReasonEcho|decisionFrame|thoughtCoreSummary|keep_center_one_step)\b/g, "");
+  t = t.replace(/\broot_reasoning\b/gi, "");
+  t = t.replace(/\bsemanticNucleus\b/gi, "");
+  t = t.replace(/\bcenterKey\b/gi, "");
+  t = t.replace(/\bcenterLabel\b/gi, "");
+  t = t.replace(/\bcenterClaim\b/gi, "");
+  t = t.replace(/\bcenterMeaning\b/gi, "");
+  t = t.replace(/\bthreadCore\b/gi, "");
+  t = t.replace(
+    /\b(?:routeEvidenceTraceV1|personaConstitutionRuntimeV1|verdictEngineV1|verdictSections|threadCoreLinkSurfaceV1|thoughtCoreSummary|inputCognitionSplitV1|truthLayerArbitrationV1|truthLayerArbitrationKernelV1|tenmonDiscernmentJudgementBundleV1|answerProfileLayerV1|confidenceDisplayV1|omegaContract|seedKernel|expressionPlan|comfortTuning|providerPlan|brainstemDecision|selfLearningAutostudyV1)\b/g,
+    "",
+  );
+  t = t.replace(/\b[A-Z][A-Z0-9_]{4,}_V1\b/g, "");
   t = t.replace(/\n{3,}/g, "\n\n").trim();
+  return t;
+}
+
+const TENMON_SURFACE_MIN_JP_CHARS_EXIT_V1 = 120;
+const TENMON_SURFACE_MIN_PAD_BRIDGE_EXIT_V1 =
+  "次に深めたいのは、前提の確認か具体例の提示か、どちらか一方に絞ると議論が安定しやすいです。";
+
+/**
+ * ゲート単一出口: 内部構造漏れの最終掃除＋短文への自然な橋渡し（プローブの meta_leak / 字数下限と整合）
+ */
+export function polishTenmonChatResponseSurfaceExitV1(text: string, routeReason: string): string {
+  const rr = String(routeReason || "").trim();
+  let t = stripInternalRouteTokensFromSurfaceV1(String(text ?? "").trim());
+  if (!t) return t;
+  const skipMin =
+    /^FACTUAL_CURRENT_(DATE|PERSON|WEATHER)_V1$/u.test(rr) ||
+    /^GROUNDING_SELECTOR_/u.test(rr) ||
+    rr === "TENMON_SUBCONCEPT_CANON_V1" ||
+    rr.startsWith("RELEASE_PREEMPT_");
+  if (!skipMin && t.length < TENMON_SURFACE_MIN_JP_CHARS_EXIT_V1) {
+    const pad = TENMON_SURFACE_MIN_PAD_BRIDGE_EXIT_V1;
+    if (!t.includes(pad.slice(0, 18))) {
+      t = `${t}\n\n${pad}`.trim();
+    }
+  }
   return t;
 }
 
@@ -503,3 +554,20 @@ export function applyExitContractLockV1(input: ExitContractLockInputV1): string 
   if (fallback) return fallback;
   return "前の流れを保ったまま、要点を一つだけ続けます。";
 }
+
+/** TENMON_SUPPORT_AND_FOUNDER_ANSWER_PROFILE_LAYER_V1: profileFrame に応じた composer / exit 共通の軽量整形 */
+export function applyAnswerProfileSurfaceContractV2(input: {
+  text: string;
+  profileFrame?: string | null;
+}): string {
+  return applyAnswerProfilePostComposeV1(String(input.text ?? ""), input.profileFrame ?? null);
+}
+
+/**
+ * TENMON_CONVERSATION_DISCERNMENT_PROJECTOR_BIND_CURSOR_AUTO_V1
+ * 投影は responseComposer 主経路。軟リードは D/ΔS・裁定の直後に入り、【次の一手】/ONE_STEP ブロックより前で切る（trimTenmonSurfaceNoiseV3 は系譜/構造リードを消さない）。
+ */
+export {
+  applyConversationDiscernmentSoftLeadV1,
+  buildConversationDiscernmentProjectionBundleV1,
+} from "./tenmonConversationDiscernmentProjectorV1.js";

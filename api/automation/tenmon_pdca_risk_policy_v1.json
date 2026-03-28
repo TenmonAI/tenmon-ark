@@ -1,0 +1,102 @@
+{
+  "schema": "TENMON_PDCA_RISK_POLICY_V1",
+  "version": 1,
+  "description": "PDCA 親OS: 次カード・編集対象のリスク分類。未一致は medium（自動適用しない）。",
+  "thresholds": {
+    "max_changed_files_stop": 120,
+    "max_changed_files_warn": 80
+  },
+  "pass_route_protection": {
+    "note": "PASS 済み route の再編集は自動禁止。カード名・ターゲット片に一致したら high_risk 扱いで auto_apply_allowed=false。",
+    "card_id_substrings_force_high": [
+      "CHAT_TS_",
+      "ROUTE_SOVEREIGN",
+      "MAINLINE_ROUTE",
+      "PASS_ROUTE",
+      "SEALED_MAINLINE",
+      "SCRIPTURE_ROUTE_REWRITE",
+      "RESPONSE_COMPOSER_WIDE",
+      "FINALIZE_TRUNK_WIDE"
+    ],
+    "path_substrings_force_high": [
+      "api/src/routes/chat.ts",
+      "api/src/core/responseComposer.ts",
+      "api/src/core/notionCanon.ts",
+      "api/src/core/scriptureCanon.ts",
+      "canon/"
+    ],
+    "path_substrings_usage": "手動レビュー・カード記述との突合せ用。親OSの auto risk 層には使わない（作業ツリー汚染で誤 high を避ける）。"
+  },
+  "risk_tiers": {
+    "low_risk": {
+      "description": "表層・レポート・queue 補助・単発 projector polish・probe 補助",
+      "card_id_regex": [
+        "(?i)SURFACE_LEAK_CLEANUP",
+        "(?i)AUTOCOMPACT",
+        "(?i)WORKTREE_AUTOCOMPACT",
+        "(?i)SINGLE_FLIGHT_QUEUE",
+        "(?i)PROBE_PACK",
+        "(?i)SAFE_PROBE",
+        "(?i)REPORT_BIND",
+        "(?i)CYCLE_STATE",
+        "(?i)FORENSIC_COLLECT(?!.*CHAT\\.TS)",
+        "(?i)SCORECARD.*RELOCK",
+        "(?i)OUTPUT_CONTRACT_NORMALIZE",
+        "(?i)PWA_.*SURFACE",
+        "(?i)POLISH.*NATURAL"
+      ]
+    },
+    "medium_risk": {
+      "description": "binder 補助・continuity 補助・define/general trunk 限定",
+      "card_id_regex": [
+        "(?i)BINDER",
+        "(?i)CONTINUITY_TRUNK",
+        "(?i)MEMORY_",
+        "(?i)DEFINE_",
+        "(?i)GENERAL_KNOWLEDGE",
+        "(?i)K1_TRACE",
+        "(?i)DENSITY_REPAIR",
+        "(?i)CONVERSATION_OS_",
+        "(?i)DISCERNMENT_PROJECTOR"
+      ]
+    },
+    "high_risk": {
+      "description": "chat 主権・doctrine・deploy・PASS route 再編集",
+      "card_id_regex": [
+        "(?i)CHAT\\.TS",
+        "(?i)ROUTES_CHAT",
+        "(?i)RESPONSE_COMPOSER",
+        "(?i)DOCTRINE",
+        "(?i)CANON_.*REWRITE",
+        "(?i)DEPLOY",
+        "(?i)RESTART_SERVICE",
+        "(?i)WORLDCLASS.*PARENT",
+        "(?i)NAS_.*PARENT",
+        "(?i)DEEPREAD_.*PARENT",
+        "(?i)AUTOBUILD.*PARENT",
+        "(?i)SELF_RUNNING_OS_PARENT"
+      ]
+    }
+  },
+  "auto_apply_whitelist": [
+    {
+      "id": "worktree_autocompact_v1",
+      "when_blocker_substrings": [
+        "autocompact_summary_stale",
+        "autocompact_summary_missing"
+      ],
+      "card_must_match_regex": "(?i)AUTOCOMPACT|WORKTREE_AUTOCOMPACT",
+      "argv": ["python3", "api/automation/tenmon_cursor_worktree_autocompact_v1.py"],
+      "cwd": "repo_root"
+    }
+  ],
+  "retry_card_if_fail": "TENMON_PDCA_SELF_RUNNING_OS_PARENT_RETRY_CURSOR_AUTO_V1",
+  "next_on_pass_card": "TENMON_SURFACE_LEAK_CLEANUP_CURSOR_AUTO_V1",
+  "inner_cards": [
+    "TENMON_PDCA_OBSERVE_AND_BLOCKER_PICK_CURSOR_AUTO_V1",
+    "TENMON_PDCA_RISK_CLASSIFIER_AND_GATE_CURSOR_AUTO_V1",
+    "TENMON_PDCA_LOW_RISK_AUTOFIX_EXECUTOR_CURSOR_AUTO_V1",
+    "TENMON_PDCA_CHECK_AND_RETRY_GENERATOR_CURSOR_AUTO_V1",
+    "TENMON_PDCA_CYCLE_STATE_AND_REPORT_BIND_CURSOR_AUTO_V1"
+  ]
+}

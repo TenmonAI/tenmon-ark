@@ -5,6 +5,12 @@
 import { MATERIAL_DIGEST_LEDGER_CATALOG_V1 } from "./tenmonMaterialDigestLedgerV1.js";
 import { evaluateDigestPromotionV1 } from "./tenmonMaterialDigestPromotionV1.js";
 import { buildDefaultStudyQueueV1 } from "./tenmonMaterialStudyPlannerV1.js";
+import {
+  buildTenmonNasAutostudyHandoffV1,
+  buildTenmonNasLocatorManifestV1,
+  type TenmonNasAutostudyHandoffV1,
+  type TenmonNasLocatorManifestV1,
+} from "./tenmonNasArchiveBridgeV1.js";
 import { resolveKhsGengoLawKernelV1 } from "./tenmonKhsGengoLawKernelV1.js";
 import { resolveSanskritComparativeKernelV1 } from "./tenmonSanskritComparativeKernelV1.js";
 import { buildComparativeMappingV1 } from "./tenmonComparativeMappingV1.js";
@@ -38,6 +44,8 @@ export type SelfLearningAutostudyBundleV1 = {
   fractal_physics_projection_ready: true;
   learning_conversation_bridge_ready: boolean;
   study_ledger_ready: boolean;
+  nas_locator_manifest: TenmonNasLocatorManifestV1;
+  nas_autostudy_handoff: TenmonNasAutostudyHandoffV1;
   gengoLawKernel: ReturnType<typeof resolveKhsGengoLawKernelV1>;
   sanskritComparative: ReturnType<typeof resolveSanskritComparativeKernelV1>;
   comparativeMapping: ReturnType<typeof buildComparativeMappingV1>;
@@ -51,7 +59,13 @@ export type SelfLearningAutostudyBundleV1 = {
 
 export type StudyLoopStepBundleV1 = {
   studyLoopState: "idle" | "digest_tick" | "ledger_sync";
-  currentMaterial: { materialId: string; studyPriority: number; studyReason: string };
+  currentMaterial: {
+    materialId: string;
+    studyPriority: number;
+    studyReason: string;
+    nasLocatorRef?: string | null;
+    nasRelativePath?: string | null;
+  };
   digestReady: boolean;
   promotionReady: boolean;
   nextStudyTarget: { materialId: string; studyPriority: number } | null;
@@ -95,6 +109,8 @@ export function runSelfLearningStudyLoopStepV1(loopIndex: number = 0): StudyLoop
       materialId: target.materialId,
       studyPriority: target.studyPriority,
       studyReason: target.studyReason,
+      nasLocatorRef: target.nasLocatorRef ?? null,
+      nasRelativePath: target.nasRelativePath ?? null,
     },
     digestReady,
     promotionReady,
@@ -120,6 +136,10 @@ export function getSelfLearningAutostudyBundleV1(message: string): SelfLearningA
   );
   const studyLedger = buildStudyLedgerEntriesV1();
   const studyLoopStep = runSelfLearningStudyLoopStepV1(0);
+  const nas_locator_manifest = buildTenmonNasLocatorManifestV1(
+    MATERIAL_DIGEST_LEDGER_CATALOG_V1.map((e) => ({ id: e.id, category: e.category })),
+  );
+  const nas_autostudy_handoff = buildTenmonNasAutostudyHandoffV1();
 
   return {
     card: CARD,
@@ -133,6 +153,8 @@ export function getSelfLearningAutostudyBundleV1(message: string): SelfLearningA
     fractal_physics_projection_ready: true,
     learning_conversation_bridge_ready: learningBridge.learningBridgeReady,
     study_ledger_ready: studyLedger.length >= 1,
+    nas_locator_manifest,
+    nas_autostudy_handoff,
     gengoLawKernel,
     sanskritComparative,
     comparativeMapping,

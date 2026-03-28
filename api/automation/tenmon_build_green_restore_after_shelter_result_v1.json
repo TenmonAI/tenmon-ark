@@ -1,0 +1,46 @@
+{
+  "card": "TENMON_BUILD_GREEN_RESTORE_AFTER_SHELTER_CURSOR_AUTO_V1",
+  "generated_at": "2026-03-28T15:10:00Z",
+  "acceptance": "PASS",
+  "npm_run_check": "PASS",
+  "restore_strategy": {
+    "git_checkout_HEAD": "不可（欠落ファイルはブランチ履歴に存在せず）",
+    "manual_shelter_selective_restore": "未使用（当該バッチに欠落 core の .ts が無し）",
+    "minimal_stub_modules": "tsc が要求する export / 型のみを満たす新規 .ts を api/src/core と api/src/deepread に追加"
+  },
+  "new_files": [
+    "api/src/core/answerProfileLayer.ts",
+    "api/src/core/confidenceDisplayLogic.ts",
+    "api/src/core/issueContinuityKernel.ts",
+    "api/src/core/katakamunaMisreadExpansionGuard.ts",
+    "api/src/core/misreadExpansionAndSpeculativeGuard.ts",
+    "api/src/core/structuralCompatibilityAndRootSeparation.ts",
+    "api/src/core/tenmonBookReadingKernelV1.ts",
+    "api/src/core/tenmonConversationDiscernmentProjectorV1.ts",
+    "api/src/core/tenmonLongformComposerV1.ts",
+    "api/src/core/tenmonMultipassAnsweringV1.ts",
+    "api/src/core/tenmonPersonaConstitutionRuntimeV1.ts",
+    "api/src/core/tenmonVerdictEngineV1.ts",
+    "api/src/core/threadCenterRecoveryV1.ts",
+    "api/src/core/userLexiconMemoryV1.ts",
+    "api/src/deepread/sanskritGodnameSchemaV1.ts",
+    "api/src/deepread/sanskritRootEngineV1.ts",
+    "api/src/deepread/tenmonGodnameMapperV1.ts",
+    "api/src/deepread/tenmonGodnameRelationsV1.ts"
+  ],
+  "touched_existing": [
+    "api/src/core/tenmonBookReadingToDeepreadBridgeV1.ts",
+    "api/src/deepread/sanskritAlignmentJudgeV1.ts"
+  ],
+  "k1_finalize_preserved": true,
+  "forbidden_paths_edited": [],
+  "queue_after": {
+    "ok": true,
+    "next_card_allowed": true,
+    "blocked_reason": [],
+    "next_card": "TENMON_K1_TRACE_EMPTY_RESPONSE_DENSITY_REPAIR_CURSOR_AUTO_V1"
+  },
+  "commit": false,
+  "nextOnPass": "TENMON_INPUT_COGNITION_SPLITTER_CURSOR_AUTO_V1",
+  "nextOnFail": "TENMON_BUILD_GREEN_RESTORE_AFTER_SHELTER_RETRY_CURSOR_AUTO_V1"
+}

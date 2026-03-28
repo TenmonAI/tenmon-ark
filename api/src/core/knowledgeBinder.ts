@@ -39,6 +39,10 @@ import { advanceThreadMeaningMemoryForRequestV1 } from "./threadMeaningMemory.js
 import { discernSourceLayerV1, type SourceLayerDiscernmentV1 } from "./sourceLayerDiscernmentKernel.js";
 import { judgeLineageAndTransformationV1, type LineageTransformationJudgementV1 } from "./lineageAndTransformationJudgementEngine.js";
 import { buildSpeculativeGuardV1, type SpeculativeGuardV1 } from "./misreadExpansionAndSpeculativeGuard.js";
+import {
+  buildRootTruthArbitrationKernelV1,
+  type TruthLayerArbitrationKernelResultV1,
+} from "./truthLayerArbitrationKernel.js";
 
 export type KnowledgeBinderInput = {
   routeReason: string;
@@ -95,6 +99,8 @@ export type KnowledgeBinderResult = {
   sourceLayerDiscernmentV1: SourceLayerDiscernmentV1 | null;
   lineageTransformationJudgementV1: LineageTransformationJudgementV1 | null;
   speculativeGuardV1: SpeculativeGuardV1 | null;
+  /** root 束（split+truth+discernment+guard 揃い時のみ） */
+  truthLayerArbitrationKernelV1: TruthLayerArbitrationKernelResultV1 | null;
 };
 
 /** TENMON_THREAD_MEANING_MEMORY: binder 直後に threadCore を渡したときのみ更新 */
@@ -296,6 +302,10 @@ export function buildKnowledgeBinder(input: KnowledgeBinderInput): KnowledgeBind
       digest_states_visible: digestLedgerPayload.digest_states_visible,
       circulating_ids: digestLedgerPayload.circulating.map((e) => e.id),
       undigested_ids: digestLedgerPayload.undigested.map((e) => e.id),
+      nas_canonical_root: digestLedgerPayload.nas_locator_manifest.canonical_root,
+      nas_locator_schema: digestLedgerPayload.nas_locator_manifest.schema,
+      nas_locator_entry_count: digestLedgerPayload.nas_locator_manifest.entries.length,
+      nas_sourcepack_handoff_schema: digestLedgerPayload.nas_sourcepack_handoff.schema,
     },
     sourceStackSummary,
     fractalLawAxisSummary: fractalLawAxisStr,
@@ -364,6 +374,11 @@ export function buildKnowledgeBinder(input: KnowledgeBinderInput): KnowledgeBind
       circulating_ids: digestLedgerPayload.circulating.map((e) => e.id),
       promotion_candidate_ids: digestLedgerPayload.promotion_candidates.map((e) => e.id),
       mixed_question_restored_ids: digestLedgerPayload.mixed_question_restored.map((e) => e.id),
+      nas_canonical_root: digestLedgerPayload.nas_locator_manifest.canonical_root,
+      nas_locator_schema: digestLedgerPayload.nas_locator_manifest.schema,
+      nas_locator_entry_count: digestLedgerPayload.nas_locator_manifest.entries.length,
+      nas_sourcepack_handoff_schema: digestLedgerPayload.nas_sourcepack_handoff.schema,
+      nas_ark_acceptance_relock_schema: digestLedgerPayload.nas_ark_acceptance_relock.schema,
     },
     ...(truthStructureVerdict ? { truthStructureVerdict } : {}),
     ...(truthStructureVerdict
@@ -439,6 +454,13 @@ export function buildKnowledgeBinder(input: KnowledgeBinderInput): KnowledgeBind
   let sourceLayerDiscernmentV1: SourceLayerDiscernmentV1 | null = null;
   let lineageTransformationJudgementV1: LineageTransformationJudgementV1 | null = null;
   let speculativeGuardV1: SpeculativeGuardV1 | null = null;
+  let truthLayerArbitrationKernelV1: TruthLayerArbitrationKernelResultV1 | null = null;
+  const structCompat =
+    ku.structuralCompatibilityAndRootSeparationV1 != null &&
+    typeof ku.structuralCompatibilityAndRootSeparationV1 === "object" &&
+    !Array.isArray(ku.structuralCompatibilityAndRootSeparationV1)
+      ? (ku.structuralCompatibilityAndRootSeparationV1 as Record<string, unknown>)
+      : null;
   const splitKu = ku.inputSemanticSplitResultV1;
   if (
     splitKu &&
@@ -478,10 +500,27 @@ export function buildKnowledgeBinder(input: KnowledgeBinderInput): KnowledgeBind
         lineageJudgement: lineageTransformationJudgementV1,
         rawMessage: message,
       });
+      if (truthLayerArbitrationV1 && sourceLayerDiscernmentV1 && lineageTransformationJudgementV1 && speculativeGuardV1) {
+        try {
+          truthLayerArbitrationKernelV1 = buildRootTruthArbitrationKernelV1({
+            inputCognitionSplitV1: splitTyped,
+            truthLayerArbitrationV1,
+            sourceLayerDiscernmentV1,
+            lineageTransformationJudgementV1,
+            misreadExpansionAndSpeculativeGuardV1: speculativeGuardV1,
+            structuralCompatibilityAndRootSeparationV1: structCompat,
+            threadMeaningMemoryV1: (ku as { threadMeaningMemoryV1?: unknown }).threadMeaningMemoryV1,
+            threadCore,
+          });
+        } catch {
+          truthLayerArbitrationKernelV1 = null;
+        }
+      }
     } catch {
       sourceLayerDiscernmentV1 = null;
       lineageTransformationJudgementV1 = null;
       speculativeGuardV1 = null;
+      truthLayerArbitrationKernelV1 = null;
     }
   }
 
@@ -513,6 +552,7 @@ export function buildKnowledgeBinder(input: KnowledgeBinderInput): KnowledgeBind
     sourceLayerDiscernmentV1,
     lineageTransformationJudgementV1,
     speculativeGuardV1,
+    truthLayerArbitrationKernelV1,
   };
 }
 
@@ -679,6 +719,9 @@ export function applyKnowledgeBinderToKu(
   }
   if (binder.speculativeGuardV1 != null) {
     (ku as any).speculativeGuardV1 = binder.speculativeGuardV1;
+  }
+  if (binder.truthLayerArbitrationKernelV1 != null) {
+    (ku as any).truthLayerArbitrationKernelV1 = binder.truthLayerArbitrationKernelV1;
   }
   try {
     const ltBinder = binder.multipassAnsweringV1?.evidence_pass?.lawTraceBinder;

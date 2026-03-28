@@ -1,0 +1,46 @@
+{
+  "schema": "TENMON_ROOT_ARBITRATION_KERNEL_RESTORE_RESULT_V1",
+  "card": "TENMON_ROOT_ARBITRATION_KERNEL_RESTORE_CURSOR_AUTO_V1",
+  "generated_at": "2026-03-28T22:25:36Z",
+  "npm_run_check": "PASS",
+  "artifacts": {
+    "kernel_module": "api/src/core/truthLayerArbitrationKernel.ts",
+    "binder_field": "truthLayerArbitrationKernelV1",
+    "ku_field": "ku.truthLayerArbitrationKernelV1（applyKnowledgeBinderToKu）",
+    "projector_field": "rootTruthArbitrationKernelV1 + pickRootTruthArbitrationKernelFromKuV1",
+    "chat_wiring": "api/src/routes/chat.ts — general_natural + define_fastpath ×2"
+  },
+  "kernel_schema": "TENMON_ROOT_TRUTH_ARBITRATION_KERNEL_V1",
+  "root_modes": [
+    "canon_centered",
+    "historical_guarded",
+    "symbolic_guarded",
+    "structural_mapping",
+    "general_centered"
+  ],
+  "separation_policies": [
+    "separate_history_and_mapping",
+    "separate_symbolic_and_fact",
+    "preserve_center_without_leak",
+    "allow_minimal_next_step"
+  ],
+  "display_constraints": [
+    "preserve_center_without_leak",
+    "separate_symbolic_and_fact",
+    "allow_minimal_next_step"
+  ],
+  "manual_probe_prompts": [
+    "言霊とは何か",
+    "法華経とは何か",
+    "これはノアの方舟と重なるのでは",
+    "カタカムナはいつ成立したのか",
+    "天聞としてどう再統合するか"
+  ],
+  "constraints": [
+    "meaningArbitrationKernel / arbitrateTruthLayerV1 未変更",
+    "routeReason 不変",
+    "commit なし"
+  ],
+  "nextOnPass": "TENMON_CONVERSATION_ACCEPTANCE_PROBE_RELOCK_CURSOR_AUTO_V1",
+  "nextOnFail": "TENMON_ROOT_ARBITRATION_KERNEL_RESTORE_RETRY_CURSOR_AUTO_V1"
+}

@@ -33,6 +33,7 @@ import {
   trimTenmonSurfaceNoiseV3,
   weaveKhsEvidenceIntoHybridSurfaceV1,
 } from "../../core/tenmonConversationSurfaceV2.js";
+import { extractTenmonUserFacingFinalTextV1 } from "../../core/tenmonResponseProjector.js";
 import {
   buildHumanReadableEvidenceFootingLineV1,
   buildMainlineTenmonHeadV1,
@@ -711,7 +712,7 @@ export function applyFinalAnswerConstitutionAndWisdomReducerV1(payload: any): an
   ).trim();
   const sourceFootingClause = buildSourcePackFootingClauseV1(ku as Record<string, unknown>);
 
-  let body = String(out.response || "").trim();
+  let body = extractTenmonUserFacingFinalTextV1(out.response ?? "");
 
   const __dfModeFractal = String(df?.mode ?? "").trim();
 

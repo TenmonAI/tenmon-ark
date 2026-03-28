@@ -1,0 +1,65 @@
+{
+  "schema": "TENMON_PDCA_CYCLE_STATE_V1",
+  "card": "TENMON_PDCA_SELF_RUNNING_OS_PARENT_CURSOR_AUTO_V1",
+  "cycle_id": "pdca_20260328T220617Z",
+  "started_at": "2026-03-28T22:06:06Z",
+  "updated_at": "2026-03-28T22:06:17Z",
+  "current_stage": "CHECK_PASS",
+  "inner_cards": [
+    "TENMON_PDCA_OBSERVE_AND_BLOCKER_PICK_CURSOR_AUTO_V1",
+    "TENMON_PDCA_RISK_CLASSIFIER_AND_GATE_CURSOR_AUTO_V1",
+    "TENMON_PDCA_LOW_RISK_AUTOFIX_EXECUTOR_CURSOR_AUTO_V1",
+    "TENMON_PDCA_CHECK_AND_RETRY_GENERATOR_CURSOR_AUTO_V1",
+    "TENMON_PDCA_CYCLE_STATE_AND_REPORT_BIND_CURSOR_AUTO_V1"
+  ],
+  "last_successful_card": null,
+  "last_failed_card": null,
+  "last_blocker": null,
+  "next_recommended_card": "TENMON_K1_TRACE_EMPTY_RESPONSE_DENSITY_REPAIR_CURSOR_AUTO_V1",
+  "risk_level": "medium_risk",
+  "risk_reason": "regex:(?i)K1_TRACE",
+  "auto_apply_allowed": false,
+  "auto_apply_executed": false,
+  "build_green": true,
+  "queue_open": true,
+  "route_probe_ok_count": 2,
+  "manual_review_required": true,
+  "check_pass": true,
+  "retry_card_if_fail": "TENMON_PDCA_SELF_RUNNING_OS_PARENT_RETRY_CURSOR_AUTO_V1",
+  "next_on_pass": "TENMON_SURFACE_LEAK_CLEANUP_CURSOR_AUTO_V1",
+  "evidence_bundle": {
+    "generated_at": "2026-03-28T22:06:06Z",
+    "queue_refresh_ok": true,
+    "queue_refresh_note": "{\"ok\": true, \"path\": \"/opt/tenmon-ark-repo/api/automation/tenmon_cursor_single_flight_queue_state.json\", \"next_card_allowed\": true, \"blocked_reason\": [], \"current_card\": null, \"queued_cards\": [], \"next_card\": \"TENMON_K1_TRACE_EMPTY_RESPONSE_DENSITY_REPAIR_CURSOR_AUTO_V1\", \"review_pressure\": 0.4167}\n",
+    "single_flight_state_path": "/opt/tenmon-ark-repo/api/automation/tenmon_cursor_single_flight_queue_state.json",
+    "next_card_allowed": true,
+    "blocked_reason": [],
+    "current_card": null,
+    "next_card_from_queue": "TENMON_K1_TRACE_EMPTY_RESPONSE_DENSITY_REPAIR_CURSOR_AUTO_V1",
+    "changed_file_count": 50,
+    "autocompact_generated_at": "2026-03-28T13:25:27Z",
+    "npm_run_check_ok": true,
+    "npm_run_check_tail": "> tenmon-ark-api@1.0.0 check\n> tsc --noEmit",
+    "route_probe_ok_count": 2,
+    "route_probe_notes": [
+      "ok_schema:conversation_quality_safe_probe_pack_v1.json",
+      "ok:tenmon_surface_leak_cleanup_result_v1.json"
+    ],
+    "audit": {
+      "skipped": false,
+      "ok": true,
+      "http_code": 200,
+      "error": null,
+      "url": "http://127.0.0.1:3000/api/audit"
+    },
+    "forensic_generated_at": "2026-03-26T18:56:06Z",
+    "stop_reasons": []
+  },
+  "check_tail": {
+    "npm_after_do": "> tenmon-ark-api@1.0.0 check\n> tsc --noEmit",
+    "route_probe_notes_after": [
+      "ok_schema:conversation_quality_safe_probe_pack_v1.json",
+      "ok:tenmon_surface_leak_cleanup_result_v1.json"
+    ]
+  }
+}

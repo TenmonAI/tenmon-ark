@@ -3,6 +3,15 @@
  * 資料ごとの state を unconnected / connected / digested / circulating（学習循環済み）で ledger 化（会話改変なし）。
  */
 
+import {
+  buildTenmonNasLocatorManifestV1,
+  buildTenmonNasSourcepackHandoffV1,
+  getTenmonNasArkAcceptanceRelockV1,
+  type TenmonNasArkAcceptanceRelockV1,
+  type TenmonNasLocatorManifestV1,
+  type TenmonNasSourcepackHandoffV1,
+} from "./tenmonNasArchiveBridgeV1.js";
+
 export type MaterialDigestStateV1 = "unconnected" | "connected" | "digested" | "circulating";
 
 export type MaterialDigestEntryV1 = {
@@ -168,9 +177,19 @@ export function getMaterialDigestLedgerPayloadV1(): {
   digest_states_visible: true;
   promotion_ready: boolean;
   digest_trace: MaterialDigestLedgerTraceV1;
+  nas_locator_manifest: TenmonNasLocatorManifestV1;
+  nas_sourcepack_handoff: TenmonNasSourcepackHandoffV1;
+  nas_ark_acceptance_relock: TenmonNasArkAcceptanceRelockV1;
   notes: readonly string[];
 } {
   const materials = MATERIAL_DIGEST_LEDGER_CATALOG_V1;
+  const nas_locator_manifest = buildTenmonNasLocatorManifestV1(
+    materials.map((e) => ({ id: e.id, category: e.category })),
+  );
+  const nas_sourcepack_handoff = buildTenmonNasSourcepackHandoffV1(
+    "TENMON_KHS_DIGEST_LEDGER_AND_PROMOTION_CURSOR_AUTO_V1",
+  );
+  const nas_ark_acceptance_relock = getTenmonNasArkAcceptanceRelockV1(nas_locator_manifest);
   const digest_conditions = [...DIGEST_PROMOTION_CRITERIA_V1];
   const promotion_ready = isPromotionReadyV1(materials, digest_conditions);
   const undigested = listUndigestedMaterialsV1(materials);
@@ -211,11 +230,15 @@ export function getMaterialDigestLedgerPayloadV1(): {
     digest_states_visible: true,
     promotion_ready,
     digest_trace,
+    nas_locator_manifest,
+    nas_sourcepack_handoff,
+    nas_ark_acceptance_relock,
     notes: [
       "state: unconnected < connected < digested < circulating（学習循環済み）",
       "undigested = unconnected | connected のみを列挙",
       "circulating / promotion_candidates は state で分類",
       "mixed_question_restored は promotionHints で識別",
+      "NAS canonical_root は論理パス（TENMON_NAS_CANONICAL_ROOT / TENMON_NAS_SSH_HOST）。本文は NAS、Ark は digest・ledger・locator。",
     ],
   };
 }

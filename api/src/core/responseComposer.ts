@@ -10,6 +10,30 @@ import {
   trimTenmonSurfaceNoiseV3,
 } from "./tenmonConversationSurfaceV2.js";
 import {
+  extractTenmonUserFacingFinalTextV1,
+  stripTenmonInternalSurfaceLeakV1,
+  suppressPrefaceDuplicateBeforeSeenmarkV1,
+} from "./tenmonResponseProjector.js";
+import type { AnswerProfileLayerV1 } from "./answerProfileLayer.js";
+import { applyAnswerProfilePostComposeV1 } from "./answerProfileLayer.js";
+import type { ConfidenceDisplayV1 } from "./confidenceDisplayLogic.js";
+import { applyConfidencePrefixToSurfaceV1 } from "./confidenceDisplayLogic.js";
+import {
+  applyKatakamunaMisreadGuardToSurfaceV1,
+  buildKatakamunaMisreadExpansionGuardV1,
+  isKatakamunaRouteForMisreadGuardV1,
+} from "./katakamunaMisreadExpansionGuard.js";
+import {
+  applyMisreadExpansionGuardToSurfaceV1,
+  buildMisreadExpansionAndSpeculativeGuardSnapshotV1,
+  shouldApplyMisreadExpansionGuardV1,
+} from "./misreadExpansionAndSpeculativeGuard.js";
+import {
+  applyConversationDiscernmentSoftLeadV1,
+  buildConversationDiscernmentProjectionBundleV1,
+  mergeConversationDiscernmentIntoThoughtCoreV1,
+} from "./tenmonConversationDiscernmentProjectorV1.js";
+import {
   applyLongformWorldclassThreeArcV1,
   inferImplicitLongformCharTargetFromUserMessageV1,
   isLongformTriArcIntentMessageV1,
@@ -39,6 +63,12 @@ export type ResponseComposerInput = {
   intentPhase?: string | null;
   shouldPersist?: boolean | number | null;
   shouldRecombine?: boolean | number | null;
+  /** TENMON_SUPPORT_AND_FOUNDER_ANSWER_PROFILE_LAYER_V1 */
+  answerProfileLayerV1?: AnswerProfileLayerV1 | null;
+  /** binder 後の ku を渡すと answerProfileLayerV1 を自動参照 */
+  ku?: Record<string, unknown> | null;
+  /** TENMON_CONFIDENCE_AND_UNCERTAINTY_DISPLAY_LOGIC_CURSOR_AUTO_V1 */
+  confidenceDisplayV1?: ConfidenceDisplayV1 | null;
 };
 
 export type MeaningFrame = {
@@ -431,7 +461,10 @@ function applyPersonaReduction(
 }
 
 export function responseComposer(input: ResponseComposerInput): ResponseComposerOutput {
-  let out = String(input?.response ?? "").replace(/\u3044\u307e\u306e\u8a00\u8449\u3092[\u201c\u201d""][^\n]*/gu, "").replace(/^\u3044\u307e\u306e\u8a00\u8449\u3092[^\n]*\n?/gm, "").trimStart();
+  let out = extractTenmonUserFacingFinalTextV1(input?.response ?? "").replace(
+    /\u3044\u307e\u306e\u8a00\u8449\u3092[\u201c\u201d""][^\n]*/gu,
+    "",
+  ).replace(/^\u3044\u307e\u306e\u8a00\u8449\u3092[^\n]*\n?/gm, "").trimStart();
   const style = getTenmonStyle();
   void style.voice;
 
@@ -540,6 +573,18 @@ export function responseComposer(input: ResponseComposerInput): ResponseComposer
       rawMessage: String(input?.rawMessage ?? ""),
     });
   }
+  try {
+    const __kuProj = input?.ku && typeof input.ku === "object" && !Array.isArray(input.ku) ? input.ku : null;
+    const __bundle = buildConversationDiscernmentProjectionBundleV1(__kuProj as Record<string, unknown> | null);
+    if (__bundle) {
+      mergeConversationDiscernmentIntoThoughtCoreV1(__kuProj as Record<string, unknown> | null, __bundle);
+      if (__bundle.softLead) {
+        out = applyConversationDiscernmentSoftLeadV1(out, __bundle.softLead);
+      }
+    }
+  } catch {
+    /* fail-open */
+  }
   const __expRepair =
     parseExplicitCharTargetFromUserMessageV1(String(input?.rawMessage ?? "")) || 0;
   out = applyRuntimeSurfaceRepairV1({
@@ -547,8 +592,48 @@ export function responseComposer(input: ResponseComposerInput): ResponseComposer
     routeReason: rr,
     explicitLengthRequested: __expRepair,
   });
+  try {
+    const __ap =
+      input?.answerProfileLayerV1 ??
+      (input?.ku && typeof input.ku === "object" && !Array.isArray(input.ku)
+        ? ((input.ku as { answerProfileLayerV1?: AnswerProfileLayerV1 }).answerProfileLayerV1 ?? null)
+        : null);
+    const __pf = __ap?.profileFrame;
+    if (__pf) out = applyAnswerProfilePostComposeV1(out, __pf);
+  } catch {
+    /* fail-open */
+  }
+  try {
+    const __cd =
+      input?.confidenceDisplayV1 ??
+      (input?.ku && typeof input.ku === "object" && !Array.isArray(input.ku)
+        ? ((input.ku as { confidenceDisplayV1?: ConfidenceDisplayV1 }).confidenceDisplayV1 ?? null)
+        : null);
+    if (__cd?.surfacePrefix) out = applyConfidencePrefixToSurfaceV1(out, __cd);
+  } catch {
+    /* fail-open */
+  }
   /** STAGE1: composer 出口でも generic preamble 等を一元除去（finalize と二重でも冪等） */
   out = trimTenmonSurfaceNoiseV3(out);
   out = stripInternalRouteTokensFromSurfaceV1(out);
+  try {
+    const _raw = String(input?.rawMessage ?? "");
+    const _ck =
+      input?.ku && typeof input.ku === "object" && !Array.isArray(input.ku)
+        ? String((input.ku as { centerKey?: unknown }).centerKey ?? "").trim() || null
+        : null;
+    if (shouldApplyMisreadExpansionGuardV1(rr, _ck, _raw)) {
+      const _mg = buildMisreadExpansionAndSpeculativeGuardSnapshotV1(_raw, out);
+      if (_mg) out = applyMisreadExpansionGuardToSurfaceV1(out, _mg, rr, _raw);
+    }
+    if (isKatakamunaRouteForMisreadGuardV1(rr, _raw)) {
+      const _g = buildKatakamunaMisreadExpansionGuardV1(_raw, out);
+      out = applyKatakamunaMisreadGuardToSurfaceV1(out, _g, rr, _raw);
+    }
+  } catch {
+    /* fail-open */
+  }
+  out = stripTenmonInternalSurfaceLeakV1(out);
+  out = suppressPrefaceDuplicateBeforeSeenmarkV1(out);
   return { response: out, meaningFrame };
 }

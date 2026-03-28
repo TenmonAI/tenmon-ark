@@ -200,7 +200,10 @@ import {
 import { getTenmonGateThreadContextV1, tenmonGateThreadContextV1 } from "../core/tenmonGateThreadContextV1.js";
 import { buildKnowledgeBinder, applyKnowledgeBinderToKu } from "../core/knowledgeBinder.js";
 import { splitInputSemanticsV1 } from "../core/inputSemanticSplitter.js";
-import { projectTenmonUserFacingResponseV1 } from "../core/tenmonResponseProjector.js";
+import {
+  pickRootTruthArbitrationKernelFromKuV1,
+  projectTenmonUserFacingResponseV1,
+} from "../core/tenmonResponseProjector.js";
 import { applyAnswerProfilePostComposeV1 } from "../core/answerProfileLayer.js";
 import { tenmonBrainstem, type BrainstemDecision } from "../core/tenmonBrainstem.js";
 import { upsertBookContinuation } from "../core/bookContinuationMemory.js";
@@ -13549,6 +13552,7 @@ const __heartNorm = normalizeHeartShape(__heart);
                 }
               : null,
           safeAnswerConstraint: (__ku as any).sourceLayerDiscernmentV1?.safeAnswerConstraint ?? null,
+          rootTruthArbitrationKernelV1: pickRootTruthArbitrationKernelFromKuV1(__ku as Record<string, unknown>),
         }).response;
       } catch {}
 
@@ -14453,6 +14457,7 @@ if (!outText) {
                   }
                 : null,
             safeAnswerConstraint: (__ku as any).sourceLayerDiscernmentV1?.safeAnswerConstraint ?? null,
+            rootTruthArbitrationKernelV1: pickRootTruthArbitrationKernelFromKuV1(__ku as Record<string, unknown>),
           }).response;
         } catch {}
         try {
@@ -14583,6 +14588,9 @@ if (!outText) {
                   }
                 : null,
             safeAnswerConstraint: (__kuProposed as any).sourceLayerDiscernmentV1?.safeAnswerConstraint ?? null,
+            rootTruthArbitrationKernelV1: pickRootTruthArbitrationKernelFromKuV1(
+              __kuProposed as Record<string, unknown>,
+            ),
           }).response;
         } catch {}
 
