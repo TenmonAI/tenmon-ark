@@ -9,9 +9,15 @@ import {
   type ThreadCore,
   type ThreadDialogueContract,
   type ThreadResponseContract,
+  type IssueContinuityStateV1,
   emptyThreadCore,
   centerLabelFromKey,
 } from "./threadCore.js";
+import {
+  type ThreadMeaningMemoryCoreV1,
+  parseThreadMeaningMemoryV1FromJson,
+  serializeThreadMeaningMemoryV1ForStore,
+} from "./threadMeaningMemory.js";
 
 type Row = {
   id?: number;
@@ -24,14 +30,43 @@ type Row = {
 };
 
 /** CARD_THREADCORE_MIN_V1B + EXPAND_V1: center_reason JSON から contract / openLoops / commitments を復元 */
+function parseIssueContinuityV1(raw: unknown): IssueContinuityStateV1 | null {
+  if (!raw || typeof raw !== "object") return null;
+  const o = raw as Record<string, unknown>;
+  if (String(o.schema || "") !== "TENMON_ISSUE_CONTINUITY_V1") return null;
+  const unresolvedItems = Array.isArray(o.unresolvedItems)
+    ? (o.unresolvedItems as unknown[]).map((x) => String(x || "").trim()).filter(Boolean)
+    : [];
+  return {
+    schema: "TENMON_ISSUE_CONTINUITY_V1",
+    card: "TENMON_FOLLOWUP_COMPRESSION_AND_ISSUE_CONTINUITY_CURSOR_AUTO_V1",
+    priorIssue: String(o.priorIssue ?? "").trim(),
+    unresolvedItems,
+    priorAnswerFrame: o.priorAnswerFrame != null ? String(o.priorAnswerFrame) : null,
+    priorVerdict: o.priorVerdict != null ? String(o.priorVerdict) : null,
+    compressedContext: String(o.compressedContext ?? "").trim(),
+    confirmNextOne: o.confirmNextOne != null ? String(o.confirmNextOne) : null,
+    sameIssueContinuation: o.sameIssueContinuation === true,
+  };
+}
+
 function parseCenterReason(row: Row): {
   contract: ThreadResponseContract | null;
   openLoops: string[];
   commitments: string[];
   dialogueContract: ThreadDialogueContract | null;
+  issueContinuityV1: IssueContinuityStateV1 | null;
+  threadMeaningMemoryV1: ThreadMeaningMemoryCoreV1 | null;
 } {
   const rr = row.source_route_reason;
-  const empty = { contract: rr ? { routeReason: rr } : null, openLoops: [] as string[], commitments: [] as string[], dialogueContract: null as ThreadDialogueContract | null };
+  const empty = {
+    contract: rr ? { routeReason: rr } : null,
+    openLoops: [] as string[],
+    commitments: [] as string[],
+    dialogueContract: null as ThreadDialogueContract | null,
+    issueContinuityV1: null as IssueContinuityStateV1 | null,
+    threadMeaningMemoryV1: null as ThreadMeaningMemoryCoreV1 | null,
+  };
   try {
     const s = row.center_reason;
     if (!s || typeof s !== "string") return empty;
@@ -61,7 +96,9 @@ function parseCenterReason(row: Row): {
             next_best_move: (dcRaw as any).next_best_move != null ? String((dcRaw as any).next_best_move) : null,
           }
         : null;
-    return { contract, openLoops, commitments, dialogueContract };
+    const issueContinuityV1 = parseIssueContinuityV1(parsed.issueContinuityV1);
+    const threadMeaningMemoryV1 = parseThreadMeaningMemoryV1FromJson(parsed.threadMeaningMemoryV1);
+    return { contract, openLoops, commitments, dialogueContract, issueContinuityV1, threadMeaningMemoryV1 };
   } catch {
     return empty;
   }
@@ -84,7 +121,8 @@ export async function loadThreadCore(threadId: string): Promise<ThreadCore> {
     if (!row) return emptyThreadCore(tid);
     const centerKey = row.center_key != null ? String(row.center_key) : null;
     const centerLabel = centerLabelFromKey(centerKey);
-    const { contract, openLoops, commitments, dialogueContract } = parseCenterReason(row);
+    const { contract, openLoops, commitments, dialogueContract, issueContinuityV1, threadMeaningMemoryV1 } =
+      parseCenterReason(row);
     return {
       threadId: tid,
       centerKey,
@@ -95,6 +133,8 @@ export async function loadThreadCore(threadId: string): Promise<ThreadCore> {
       dialogueContract,
       lastResponseContract: contract,
       updatedAt: String(row.updated_at || new Date().toISOString()),
+      issueContinuityV1,
+      threadMeaningMemoryV1,
     };
   } catch {
     return emptyThreadCore(tid);
@@ -164,6 +204,24 @@ export async function saveThreadCore(core: ThreadCore): Promise<void> {
                 continuity_goal: core.dialogueContract.continuity_goal ?? null,
                 next_best_move: core.dialogueContract.next_best_move ?? null,
               }
+            : null,
+        issueContinuityV1:
+          core.issueContinuityV1 && typeof core.issueContinuityV1 === "object"
+            ? {
+                schema: core.issueContinuityV1.schema,
+                card: core.issueContinuityV1.card,
+                priorIssue: core.issueContinuityV1.priorIssue,
+                unresolvedItems: [...core.issueContinuityV1.unresolvedItems],
+                priorAnswerFrame: core.issueContinuityV1.priorAnswerFrame,
+                priorVerdict: core.issueContinuityV1.priorVerdict,
+                compressedContext: core.issueContinuityV1.compressedContext,
+                confirmNextOne: core.issueContinuityV1.confirmNextOne,
+                sameIssueContinuation: core.issueContinuityV1.sameIssueContinuation === true,
+              }
+            : null,
+        threadMeaningMemoryV1:
+          core.threadMeaningMemoryV1 && typeof core.threadMeaningMemoryV1 === "object"
+            ? serializeThreadMeaningMemoryV1ForStore(core.threadMeaningMemoryV1)
             : null,
       });
     })();

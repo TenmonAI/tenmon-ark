@@ -4,10 +4,13 @@
  */
 import type { ThreadCore } from "../../core/threadCore.js";
 import { buildSoulDefineGatePayloadV1 } from "../../core/soulDefineDisambigV1.js";
+import { splitInputSemanticsV1 } from "../../core/inputSemanticSplitter.js";
 
 export type DefineDecisionKuInput = {
   routeReason: string;
   term: string;
+  /** TENMON_INPUT_COGNITION_SPLITTER: あるときだけ dry-run で ku に観測を載せる（routing は不変） */
+  userMessage?: string | null;
   lawsUsed: string[];
   evidenceIds: string[];
   lawTrace: Array<{ lawKey: string; unitId: string; op: string }>;
@@ -77,6 +80,10 @@ export function buildDefineDecisionKuV1(input: DefineDecisionKuInput, ctx: Defin
     };
   }
   if (input.meaningFrame != null) __kuDefine.meaningFrame = input.meaningFrame;
+  const __splitSrc = String(input.userMessage ?? input.term ?? "").trim();
+  if (__splitSrc) {
+    __kuDefine.inputSemanticSplitResultV1 = splitInputSemanticsV1(__splitSrc);
+  }
   return __kuDefine;
 }
 

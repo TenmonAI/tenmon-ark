@@ -1,5 +1,7 @@
 /** CHAT_TRUNK_GENERAL_SPLIT_V1_FINAL — NATURAL_GENERAL spine helpers */
 
+import { splitInputSemanticsV1 } from "../../core/inputSemanticSplitter.js";
+
 /** chat.ts への文字列散乱を減らすための単一正規 routeReason（静的観測の hit 集約用） */
 export const ROUTE_NATURAL_GENERAL_LLM_TOP_V1 = "NATURAL_GENERAL_LLM_TOP" as const;
 export const ROUTE_FACTUAL_CURRENT_DATE_V1 = "FACTUAL_CURRENT_DATE_V1" as const;
@@ -23,6 +25,14 @@ export function classifyGeneralFactCodingRouteV1(rawMessage: string): GeneralFac
   if (!t) return "";
   // scripture/canon 語彙は domain route（scripture/define）へ優先委譲する
   if (/(水穂伝|法華経|即身成仏|稲荷古伝|言霊秘書|いろは言[霊灵靈]解|カタカムナ言[霊灵靈]解)/u.test(t)) {
+    return "";
+  }
+  /** TENMON_SANSKRIT_AND_KUKAI_CONVERSATION_BIND_ACCEPTANCE_V1: 比較梵語・空海・神名語源は GK 固定から外し NATURAL_GENERAL＋sourcepack へ */
+  if (
+    /BHS|Buddhist\s+Hybrid|混和梵語|佛教混合|Hybrid\s+Sanskrit|サンスクリット|梵語|語根|悉曇|空海|声字実相|十住心論|吽字義|般若心経秘鍵|金毘羅|コンピラ|観自在|\bDharma\b|ダルマ/u.test(
+      t,
+    )
+  ) {
     return "";
   }
   /** TENMON_GENERAL_CONTINUITY_DECISION_TRUNK_TRACE_CURSOR_AUTO_V1: 水火の法則は trunk で GENERAL_KNOWLEDGE_EXPLAIN を固定（「とは」終端を含む・chat.ts sovereignty と同型） */
@@ -52,6 +62,10 @@ export function classifyGeneralFactCodingRouteV1(rawMessage: string): GeneralFac
     return ROUTE_GENERAL_KNOWLEDGE_EXPLAIN_ROUTE_V1;
   }
   if (/(意識|真理|人生|時間の概念|存在とは|自由意志|善悪)/u.test(t)) {
+    return ROUTE_GENERAL_KNOWLEDGE_EXPLAIN_ROUTE_V1;
+  }
+  /** rejudge general_probe: 「一般知識として〜説明」は NATURAL_GENERAL 直落ちさせない */
+  if (/(一般知識として|一般知識で)/u.test(t) && /説明|述べ|書いて|答え/u.test(t)) {
     return ROUTE_GENERAL_KNOWLEDGE_EXPLAIN_ROUTE_V1;
   }
   if (/(とは何|とはなに|を教えて|意味|違い|比較|何ですか|なにですか)/u.test(t)) {
@@ -282,4 +296,17 @@ export function applyGeneralKuGroundingScriptureBumpV1(
   ) {
     ku.routeReason = "TENMON_SCRIPTURE_CANON_V1";
   }
+}
+
+/**
+ * TENMON_INPUT_COGNITION_SPLITTER: NATURAL_GENERAL 主線 ku 生成直後の dry-run 観測（routeReason は変更しない）
+ */
+export function attachInputSemanticSplitDryRunNatGeneralV1(
+  ku: Record<string, unknown>,
+  rawMessage: string,
+): void {
+  if (!ku || typeof ku !== "object") return;
+  const rr = String(ku.routeReason ?? "").trim();
+  if (rr !== ROUTE_NATURAL_GENERAL_LLM_TOP_V1) return;
+  ku.inputSemanticSplitResultV1 = splitInputSemanticsV1(rawMessage);
 }

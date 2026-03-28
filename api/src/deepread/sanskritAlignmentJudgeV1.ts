@@ -40,7 +40,7 @@ export function judgeSanskritAlignmentV1(args: {
     pushOnce(uncertain, "unsupported_identity_claim");
   }
 
-  const tradition_evidence = strict.evidence_refs.map((r) => `${r.kind}:${r.ref}`);
+  const tradition_evidence = strict.evidence_refs.map((r: { kind: string; ref: string }) => `${r.kind}:${r.ref}`);
   const hasLowConfidence =
     uncertain.includes("strict_confidence_low") || uncertain.includes("mapping_confidence_low");
   let final_judgement: SanskritAlignmentJudgeOutputV1["final_judgement"] = "aligned";

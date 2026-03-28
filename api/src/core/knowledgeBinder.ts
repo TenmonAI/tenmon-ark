@@ -33,6 +33,12 @@ import { buildTenmonVerdictEngineV1 } from "./tenmonVerdictEngineV1.js";
 import { resolveTenmonBookReadingKernelV1 } from "./tenmonBookReadingKernelV1.js";
 import { buildTenmonBookReadingToDeepreadBridgeV1 } from "./tenmonBookReadingToDeepreadBridgeV1.js";
 import { updateUserLexiconMemoryV1 } from "./userLexiconMemoryV1.js";
+import { arbitrateTruthLayerV1, type TruthLayerArbitrationResultV1 } from "./meaningArbitrationKernel.js";
+import type { InputSemanticSplitResultV1 } from "./inputSemanticSplitter.js";
+import { advanceThreadMeaningMemoryForRequestV1 } from "./threadMeaningMemory.js";
+import { discernSourceLayerV1, type SourceLayerDiscernmentV1 } from "./sourceLayerDiscernmentKernel.js";
+import { judgeLineageAndTransformationV1, type LineageTransformationJudgementV1 } from "./lineageAndTransformationJudgementEngine.js";
+import { buildSpeculativeGuardV1, type SpeculativeGuardV1 } from "./misreadExpansionAndSpeculativeGuard.js";
 
 export type KnowledgeBinderInput = {
   routeReason: string;
@@ -83,6 +89,18 @@ export type KnowledgeBinderResult = {
   multipassAnsweringV1: TenmonMultipassAnsweringV1;
   evidenceRefs: string[];
   uncertaintyFlags: string[];
+  /** routeReason は変更せず、補助裁定（truth layer）のみ */
+  truthLayerArbitrationV1: TruthLayerArbitrationResultV1 | null;
+  /** 後段判断 OS（補助・routeReason 不変） */
+  sourceLayerDiscernmentV1: SourceLayerDiscernmentV1 | null;
+  lineageTransformationJudgementV1: LineageTransformationJudgementV1 | null;
+  speculativeGuardV1: SpeculativeGuardV1 | null;
+};
+
+/** TENMON_THREAD_MEANING_MEMORY: binder 直後に threadCore を渡したときのみ更新 */
+export type ApplyKnowledgeBinderThreadMeaningOptsV1 = {
+  threadCore?: ThreadCore | null;
+  rawMessage?: string;
 };
 
 function inferRouteClass(ku: Record<string, unknown>, routeReason: string): string {
@@ -417,6 +435,56 @@ export function buildKnowledgeBinder(input: KnowledgeBinderInput): KnowledgeBind
     (synapseTopPatch as any).sourceLedgerHint = "ledger:general";
   }
 
+  let truthLayerArbitrationV1: TruthLayerArbitrationResultV1 | null = null;
+  let sourceLayerDiscernmentV1: SourceLayerDiscernmentV1 | null = null;
+  let lineageTransformationJudgementV1: LineageTransformationJudgementV1 | null = null;
+  let speculativeGuardV1: SpeculativeGuardV1 | null = null;
+  const splitKu = ku.inputSemanticSplitResultV1;
+  if (
+    splitKu &&
+    typeof splitKu === "object" &&
+    !Array.isArray(splitKu) &&
+    (splitKu as { schema?: string }).schema === "TENMON_INPUT_SEMANTIC_SPLIT_V1"
+  ) {
+    const splitTyped = splitKu as InputSemanticSplitResultV1;
+    truthLayerArbitrationV1 = arbitrateTruthLayerV1({
+      split: splitTyped,
+      knowledge: {
+        routeReason: rr,
+        rawMessage: message,
+        sourcePack,
+        centerKey,
+        centerLabel,
+        evidenceRefs,
+        notionCanonCount: Array.isArray(notionCanon) ? notionCanon.length : 0,
+        uncertaintyFlagCount: uncertaintyFlags.length,
+        groundedRequired: groundingRule.groundedPriority === "required",
+      },
+      heartHint: splitTyped.heartHint,
+    });
+    try {
+      sourceLayerDiscernmentV1 = discernSourceLayerV1({
+        split: splitTyped,
+        truthLayerArbitrationV1,
+        rawMessage: message,
+      });
+      lineageTransformationJudgementV1 = judgeLineageAndTransformationV1({
+        discernment: sourceLayerDiscernmentV1,
+        split: splitTyped,
+        rawMessage: message,
+      });
+      speculativeGuardV1 = buildSpeculativeGuardV1({
+        discernment: sourceLayerDiscernmentV1,
+        lineageJudgement: lineageTransformationJudgementV1,
+        rawMessage: message,
+      });
+    } catch {
+      sourceLayerDiscernmentV1 = null;
+      lineageTransformationJudgementV1 = null;
+      speculativeGuardV1 = null;
+    }
+  }
+
   return {
     centerKey,
     centerLabel,
@@ -441,11 +509,19 @@ export function buildKnowledgeBinder(input: KnowledgeBinderInput): KnowledgeBind
     multipassAnsweringV1,
     evidenceRefs,
     uncertaintyFlags,
+    truthLayerArbitrationV1,
+    sourceLayerDiscernmentV1,
+    lineageTransformationJudgementV1,
+    speculativeGuardV1,
   };
 }
 
 /** CARD_KNOWLEDGE_BINDER_V1: binder 結果を ku に欠損補完・patch merge で適用 */
-export function applyKnowledgeBinderToKu(ku: Record<string, unknown>, binder: KnowledgeBinderResult): void {
+export function applyKnowledgeBinderToKu(
+  ku: Record<string, unknown>,
+  binder: KnowledgeBinderResult,
+  threadMeaningOpts?: ApplyKnowledgeBinderThreadMeaningOptsV1 | null,
+): void {
   if (ku == null || typeof ku !== "object") return;
 
   (ku as any).binderSummary = binder.binderSummary;
@@ -592,6 +668,18 @@ export function applyKnowledgeBinderToKu(ku: Record<string, unknown>, binder: Kn
 
   (ku as any).evidenceRefs = binder.evidenceRefs;
   (ku as any).uncertaintyFlags = binder.uncertaintyFlags;
+  if (binder.truthLayerArbitrationV1 != null) {
+    (ku as any).truthLayerArbitrationV1 = binder.truthLayerArbitrationV1;
+  }
+  if (binder.sourceLayerDiscernmentV1 != null) {
+    (ku as any).sourceLayerDiscernmentV1 = binder.sourceLayerDiscernmentV1;
+  }
+  if (binder.lineageTransformationJudgementV1 != null) {
+    (ku as any).lineageTransformationJudgementV1 = binder.lineageTransformationJudgementV1;
+  }
+  if (binder.speculativeGuardV1 != null) {
+    (ku as any).speculativeGuardV1 = binder.speculativeGuardV1;
+  }
   try {
     const ltBinder = binder.multipassAnsweringV1?.evidence_pass?.lawTraceBinder;
     if (Array.isArray(ltBinder) && ltBinder.length > 0) {
@@ -604,5 +692,20 @@ export function applyKnowledgeBinderToKu(ku: Record<string, unknown>, binder: Kn
     Object.assign(st, binder.synapseTopPatch);
   } else if (Object.keys(binder.synapseTopPatch).length > 0) {
     (ku as any).synapseTop = { ...binder.synapseTopPatch };
+  }
+
+  if (threadMeaningOpts?.threadCore != null) {
+    const raw = String(threadMeaningOpts.rawMessage ?? "").trim();
+    if (raw) {
+      try {
+        advanceThreadMeaningMemoryForRequestV1({
+          ku,
+          threadCore: threadMeaningOpts.threadCore,
+          rawMessage: raw,
+        });
+      } catch {
+        /* fail-closed */
+      }
+    }
   }
 }

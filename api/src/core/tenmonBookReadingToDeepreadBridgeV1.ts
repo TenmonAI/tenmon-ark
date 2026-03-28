@@ -1,4 +1,4 @@
-import type { TenmonBookReadingResultV1 } from "./tenmonBookReadingKernelV1.js";
+import type { TenmonBookReadingHandoffCandidateV1, TenmonBookReadingResultV1 } from "./tenmonBookReadingKernelV1.js";
 
 export type TenmonDeepreadHandoffV1 = {
   schema: "TENMON_BOOK_TO_DEEPREAD_BRIDGE_V1";
@@ -27,7 +27,7 @@ function mapTarget(
 export function buildTenmonBookReadingToDeepreadBridgeV1(
   reading: TenmonBookReadingResultV1,
 ): TenmonDeepreadHandoffV1 {
-  const handoff = reading.handoff_candidates.map((c) => ({
+  const handoff = reading.handoff_candidates.map((c: TenmonBookReadingHandoffCandidateV1) => ({
     target: mapTarget(c.type),
     payload: {
       title: reading.title,

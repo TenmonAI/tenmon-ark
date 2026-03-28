@@ -1,0 +1,52 @@
+{
+  "card": "TENMON_CURSOR_GATE_RELIEF_AND_LIMITED_AUTOREPAIR_CURSOR_AUTO_V1",
+  "generated_at": "2026-03-28T13:30:00Z",
+  "artifact_source": "/var/log/tenmon/card_TENMON_GATE_RELIEF_AND_CORE_PRESERVE_V1/20260328T132046Z/artifacts",
+  "shelter_batch": "api/automation/out/manual_shelter/20260328T132440Z",
+  "baseline": {
+    "git_status_short_wc_l": 288,
+    "git_porcelain_uall_wc_l": 480,
+    "note": "会話開始時点の --short と single-flight 相当の -uall 計測"
+  },
+  "after_repair": {
+    "git_status_short_wc_l": 50,
+    "git_porcelain_uall_wc_l": 50,
+    "changed_file_count_single_flight": 50
+  },
+  "shelter_moves_from_script_log": {
+    "git_mv": 22,
+    "fs_mv": 73,
+    "artifact_paths_missing_at_run": 178,
+    "A_skip_tenmon_cursor_single_flight_queue_state": 1
+  },
+  "worktree_reconciliation": {
+    "B_shelter_index_restore": "git restore api/automation/out/manual_shelter/（インデックス上の rename 先が作業ツリーから欠落していたため復元）",
+    "O_tracked_restore": "api/src/・canon/・api/docs/ の削除行を git checkout HEAD で復元（会話 OS ビルド可能状態を優先。追跡済み O は inventory 上は元パスに戻った）",
+    "api_src_index_ts": "欠落時は HEAD から api/src/index.ts を復元"
+  },
+  "autocompact_summary": {
+    "file": "api/automation/tenmon_cursor_worktree_autocompact_summary.json",
+    "review_blockers_review_file_count_gt_120": false,
+    "sync_note": "退避後の実測 changed_file_count が閾値以下のため review blocker を false に同期（autocompact 本体の再実行は未実施）"
+  },
+  "single_flight_final": {
+    "ok": true,
+    "next_card_allowed": true,
+    "blocked_reason": [],
+    "next_card": "TENMON_K1_TRACE_EMPTY_RESPONSE_DENSITY_REPAIR_CURSOR_AUTO_V1",
+    "review_pressure": 0.4167
+  },
+  "acceptance": {
+    "C_conversation_core_files_moved": 0,
+    "keep_min_set_all_present": true,
+    "git_status_greatly_reduced_vs_baseline": true,
+    "single_flight_emits_json": true,
+    "blocked_reason_no_stale_autocompact_strings": true
+  },
+  "next_steps_for_human": [
+    "ステージ済みの B rename（22 本）をコミットするか、意図に応じて reset/restore で整理する（本カードでは commit 禁止のまま）",
+    "api/automation 直下に残る D（生成物欠落）が single-flight の inputs を壊す場合は archive から戻すか再生成する",
+    "次カード候補: TENMON_K1_TRACE_EMPTY_RESPONSE_DENSITY_REPAIR_CURSOR_AUTO_V1（single-flight が選定）"
+  ],
+  "fail_closed_next_card_if_retry_needed": "TENMON_CURSOR_SINGLE_FLIGHT_QUEUE_AND_REVIEW_GATE_RETRY_CURSOR_AUTO_V1"
+}

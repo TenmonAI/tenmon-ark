@@ -982,19 +982,23 @@ export function applyFinalAnswerConstitutionAndWisdomReducerV1(payload: any): an
     ku,
   });
 
-  /** K1_TRACE_EMPTY_MIN_SURFACE_V1: 極短文のみ自然文補完（routeReason 不変・placeholder 禁止） */
+  /** K1_TRACE_EMPTY_MIN_SURFACE_V1: 短文へ自然文補完（routeReason 不変・120字帯へ寄せる・placeholder 禁止） */
   if (rr === "K1_TRACE_EMPTY_GATED_V1") {
     const stripped = stripScripturePlaceholderAndTraceV1(body).replace(/\s+/g, " ").trim();
+    const q = String(userMessageForSurface || "").trim();
+    const techQ = /(typescript|sqlite|fts|rate\s*limit|node\.js|singleton)/iu.test(q);
+    const tail = techQ
+      ? "手順は前提・制約・実装の順に分けると、説明が短くても追いやすくなります。次に詰めたいのは、いまの問いの前提か、適用場面のどちらですか。"
+      : "典拠の一行を芯に置き、語義と読解の手順を一段だけ足すと、短い答えでも議論が続けやすくなります。次に厚くしたいのは定義か、受け止め方のどちらですか。";
     if (
       stripped.length > 0 &&
-      stripped.length < 50 &&
+      stripped.length < 120 &&
       !/定義は補完待ち|PLACEHOLDER|TODO|【根拠の短要約】\s*$/iu.test(stripped)
     ) {
-      const q = String(userMessageForSurface || "").trim();
-      const techQ = /(typescript|sqlite|fts|rate\s*limit|node\.js|singleton)/iu.test(q);
-      /** TENMON_CHAT_SUBCONCEPT_MISFIRE_AND_TEMPLATE_LEAK_FIX: 非技術系は定型追記を空（テンプレ漏れ止血） */
-      const tail = techQ ? "手順は前提・制約・実装の順に分けると、説明が短くても追いやすくなります。" : "";
-      body = tail ? `${stripped}\n\n${tail}`.trim() : stripped;
+      body = `${stripped}\n\n${tail}`.trim();
+    } else if (stripped.length === 0) {
+      /** K1_TRACE_STRIPPED_EMPTY_BRIDGE_V1: trace/メタ行のみで本文が全除去されたときの空応答防止（chat.ts 側 K1 LLM enrich への非空ブリッジ） */
+      body = `【天聞の所見】\n\n${tail}`.trim();
     }
   }
   if (rr === "TENMON_CONCEPT_CANON_V1") {

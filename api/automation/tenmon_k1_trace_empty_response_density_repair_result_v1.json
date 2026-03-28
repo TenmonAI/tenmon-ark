@@ -1,0 +1,35 @@
+{
+  "card": "TENMON_K1_TRACE_EMPTY_RESPONSE_DENSITY_REPAIR_CURSOR_AUTO_V1",
+  "generated_at": "2026-03-28T14:05:00Z",
+  "acceptance": "PASS",
+  "single_fix": {
+    "file": "api/src/routes/chat_refactor/finalize.ts",
+    "symbol": "K1_TRACE_STRIPPED_EMPTY_BRIDGE_V1",
+    "root_cause_one_liner": "K1_TRACE_EMPTY_MIN_SURFACE_V1 が stripScripturePlaceholderAndTraceV1 後に stripped.length===0 のとき本文を更新せず、trace/メタのみの応答が空のまま finalize 出口へ残り得た",
+    "repair_one_liner": "stripped.length===0 のとき既存の tech/非 tech 用 tail を【天聞の所見】付きで body に載せ、chat.ts 側 __tenmonK1PostFinalizeLlmEnrichV1 への非空ブリッジを保証"
+  },
+  "git_diff_stat_finalize_only": "1 file changed, 11 insertions(+), 7 deletions(-)",
+  "edited_files_this_card": ["api/src/routes/chat_refactor/finalize.ts"],
+  "forbidden_paths_touched": [],
+  "queue_read": {
+    "ok": true,
+    "next_card_allowed": true,
+    "blocked_reason": [],
+    "next_card": "TENMON_K1_TRACE_EMPTY_RESPONSE_DENSITY_REPAIR_CURSOR_AUTO_V1",
+    "changed_file_count_observed": 52,
+    "note": "tenmon_cursor_single_flight_queue_v1.py 実行で JSON 取得確認"
+  },
+  "build": {
+    "ran": "npm run check (api/)",
+    "result": "FAIL",
+    "reason": "ワークツリー欠落モジュール（shelter 等で移動された core ファイル）による TS2307。本変更 finalize.ts 以外の要因"
+  },
+  "probe_evidence": {
+    "constitution": "api/docs/constitution/TENMON_K1_TRACE_EMPTY_RESPONSE_DENSITY_REPAIR_CURSOR_AUTO_V1.md",
+    "code_path": "applyFinalAnswerConstitutionAndWisdomReducerV1 → K1_TRACE_EMPTY_MIN_SURFACE_V1 → stripScripturePlaceholderAndTraceV1",
+    "before_behavior": "stripped.length===0 の分岐なし → body 未更新の可能性",
+    "after_behavior": "stripped.length===0 → body = 【天聞の所見】+ tail（techQ で分岐）"
+  },
+  "commit": false,
+  "fail_next_card_if_retry": "TENMON_CURSOR_SINGLE_FLIGHT_QUEUE_AND_REVIEW_GATE_RETRY_CURSOR_AUTO_V1"
+}

@@ -1,3 +1,5 @@
+import type { ThreadMeaningMemoryCoreV1 } from "./threadMeaningMemory.js";
+
 /**
  * CARD_THREADCORE_MIN_V1: thread ごとの最小 ThreadCore 型とヘルパー
  * THREADCORE_REQUIRED_COVERAGE_V1: 出口 JSON（ku.threadCore）にのみ載せる carry 拡張（DB 永続は store 側で無視）
@@ -30,6 +32,19 @@ export type ThreadDialogueContract = {
   grounding_policy?: string | null;
   continuity_goal?: string | null;
   next_best_move?: string | null;
+};
+
+/** TENMON_FOLLOWUP_COMPRESSION_AND_ISSUE_CONTINUITY_CURSOR_AUTO_V1（永続は threadCoreStore の center_reason JSON） */
+export type IssueContinuityStateV1 = {
+  schema: "TENMON_ISSUE_CONTINUITY_V1";
+  card: "TENMON_FOLLOWUP_COMPRESSION_AND_ISSUE_CONTINUITY_CURSOR_AUTO_V1";
+  priorIssue: string;
+  unresolvedItems: readonly string[];
+  priorAnswerFrame: string | null;
+  priorVerdict: string | null;
+  compressedContext: string;
+  confirmNextOne: string | null;
+  sameIssueContinuation?: boolean;
 };
 
 export type ThreadCore = {
@@ -106,6 +121,10 @@ export type ThreadCore = {
     drift_detected?: boolean;
     updated_at?: string;
   } | null;
+  /** 前提・未解決点の圧縮（継続相談・重複質問抑制） */
+  issueContinuityV1?: IssueContinuityStateV1 | null;
+  /** TENMON_THREAD_MEANING_MEMORY: 裁定中心の runtime 継承（表層非表示・center_reason JSON に同梱可） */
+  threadMeaningMemoryV1?: ThreadMeaningMemoryCoreV1 | null;
 };
 
 export function emptyThreadCore(threadId: string): ThreadCore {
