@@ -14381,6 +14381,11 @@ const __heartNorm = normalizeHeartShape(__heart);
 
       try {
         const __sgGen = (__ku as any).speculativeGuardV1;
+        const __tmmGen = (__ku as any).threadMeaningMemoryV1;
+        const __uidGen =
+          (__ku as any).userIntentDeepreadObserveOnlyV1 ??
+          (__ku as any).userIntentDeepreadV1 ??
+          (__ku as any).userIntentDeepread;
         finalResp = projectTenmonUserFacingResponseV1({
           routeKind: "general_natural",
           routeReason: String((__ku as any).routeReason || ""),
@@ -14398,6 +14403,14 @@ const __heartNorm = normalizeHeartShape(__heart);
               : null,
           safeAnswerConstraint: (__ku as any).sourceLayerDiscernmentV1?.safeAnswerConstraint ?? null,
           rootTruthArbitrationKernelV1: pickRootTruthArbitrationKernelFromKuV1(__ku as Record<string, unknown>),
+          answerMode: String((__ku as any).answerMode ?? ""),
+          userIntentDeepread:
+            __uidGen && typeof __uidGen === "object" && !Array.isArray(__uidGen) ? __uidGen : null,
+          threadMeaningEssentialGoal: __tmmGen?.essentialGoal != null ? String(__tmmGen.essentialGoal) : null,
+          threadMeaningConstraints: Array.isArray(__tmmGen?.constraints) ? __tmmGen.constraints : null,
+          threadMeaningSuccessCriteria: Array.isArray(__tmmGen?.successCriteria) ? __tmmGen.successCriteria : null,
+          stripFallbackKu: __ku as Record<string, unknown>,
+          stripFallbackRawMessage: String(message ?? ""),
         }).response;
       } catch {}
       try {

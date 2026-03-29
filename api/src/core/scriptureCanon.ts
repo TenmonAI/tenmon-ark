@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { KHS_ROOT_FRACTAL_CONSTITUTION_V1 } from "./khsRootFractalConstitutionV1.js";
+import { STRUCTURAL_COMPATIBILITY_AND_ROOT_SEPARATION_CARD_V1 } from "./structuralCompatibilityAndRootSeparation.js";
 
 export type ScriptureCanonItem = {
   scriptureKey: string;
@@ -29,6 +30,12 @@ function canonPath(): string {
   return path.resolve(process.cwd(), "../canon/tenmon_scripture_canon_v1.json");
 }
 
+/** scripture root 束と mapping / 楢崎物理 / 天聞再統合の境界（詳細は structuralCompatibilityAndRootSeparation） */
+export const SCRIPTURE_ROOT_VS_MAPPING_BRIDGE_CARD_V1 = STRUCTURAL_COMPATIBILITY_AND_ROOT_SEPARATION_CARD_V1;
+
+/** KHS / 水穂伝 / 稲荷古伝 — root 束（楢崎物理化・天聞再統合との境界は structuralCompatibilityAndRootSeparation + canon） */
+export const SCRIPTURE_ROOT_LANE_SCRIPTURE_KEYS_V1 = ["kotodama_hisho", "mizuho_den", "inari_koden"] as const;
+
 let __cache: ScriptureCanonFile | null = null;
 
 const SCRIPTURE_SHORT_COMPLETION_FALLBACKS_V1: Record<string, string> = {
@@ -52,6 +59,12 @@ const SCRIPTURE_SHORT_COMPLETION_FALLBACKS_V1: Record<string, string> = {
     "万葉集の言霊観は、言葉を単なる記述でなく、祈り・誓い・共同体秩序を担う力として扱う古層理解に立ちます。",
   kojiki_kotodama_relation:
     "古事記と言霊の関係は、神名・歌謡・語りの構文を通じ、言葉が生成秩序を担うという古代語りの原理にあります。",
+  bhs_buddhist_hybrid_sanskrit:
+    "佛教混合梵語（BHS）は、中期インド梵文と周辺言語接触の層を文献学として扱う軸であり、象徴写像や神名同一視とは lane を分けます。",
+  kukai_shoji_jissou_gi:
+    "声字実相義は、字・音と法の相即を説く空海の教義です。経疏（scripture）・写像（mapping）・比較サンスクリットを混同せずに読みます。",
+  kukai_unji_gi:
+    "吽字義は、種子字と曼荼羅の実相を論じる空海の著作で、教義 surface と梵字形態の比較は別軸として保持します。",
 };
 
 export function loadTenmonScriptureCanon(): ScriptureCanonFile {
@@ -123,7 +136,14 @@ export function buildScriptureCanonResponse(
 }
 
 export function getScriptureConceptEvidence(scriptureKey: string):
-  | { doc: string; pdfPage: number; lawKey: string; quoteHint: string; rootConstitutionCard?: string }
+  | {
+      doc: string;
+      pdfPage: number;
+      lawKey: string;
+      quoteHint: string;
+      rootConstitutionCard?: string;
+      structuralLawDiscernmentCard?: string;
+    }
   | null {
   switch (scriptureKey) {
     case "kotodama_hisho":
@@ -147,6 +167,7 @@ export function getScriptureConceptEvidence(scriptureKey: string):
         pdfPage: 1,
         lawKey: "TENMON:SCRIPTURE:KATAKAMUNA_KAI:TEXT:V1",
         quoteHint: "カタカムナを稲荷の言霊で読み解く",
+        structuralLawDiscernmentCard: "TENMON_KATAKAMUNA_STRUCTURAL_LAW_DISCERNMENT_CURSOR_AUTO_V1",
       };
     case "hokekyo":
       return {

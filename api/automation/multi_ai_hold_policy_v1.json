@@ -1,0 +1,37 @@
+{
+  "schema": "MULTI_AI_HOLD_POLICY_V1",
+  "version": 1,
+  "fail_closed": true,
+  "immediate_hold_triggers": [
+    "advance_before_gpt_arbitration",
+    "claude_or_gemini_theological_arbitration",
+    "unverified_browser_facts_adopted",
+    "acceptance_not_defined_for_cursor_card",
+    "broad_refactor_required",
+    "canon_persona_scripture_meaning_auto_change",
+    "large_chat_ts_change_without_gpt_authority",
+    "missing_result_return_from_cursor",
+    "pass_without_sufficient_evidence",
+    "external_ai_contradictions_unresolved"
+  ],
+  "path_patterns_hold": [
+    "api/src/core/scripture",
+    "api/src/core/notionCanon",
+    "api/src/core/persona",
+    "canon/",
+    "persona_state",
+    "api/src/routes/chat.ts"
+  ],
+  "path_patterns_warn": [
+    "api/src/routes/chat_refactor/finalize.ts",
+    "api/src/core/tenmonConversationSurfaceV2.ts"
+  ],
+  "forbidden_auto_execution": [
+    "destructive_db_production",
+    "unapproved_wide_refactor",
+    "canon_text_auto_rewrite",
+    "overnight_fully_autonomous_seal_without_gates"
+  ],
+  "verdicts": ["PASS", "FAIL", "HOLD"],
+  "initial_scope_note": "初回導入: Claude 監査 / Gemini 構造化 / Cursor 実装 / VPS acceptance のみ。persona/canon 自動変更と kokuzo 本番自動投入は範囲外。"
+}

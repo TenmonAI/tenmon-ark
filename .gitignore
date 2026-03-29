@@ -178,6 +178,42 @@ api/route_reason_extract.json
 api/surface_audit.json
 api/vps_acceptance_report.json
 # END TENMON_CURSOR_ONLY_REPO_HYGIENE_FINAL_SEAL_V1
+# TENMON_REPO_HYGIENE_FINAL_PRESEAL_CURSOR_AUTO_V1 — ランタイム状態・未追跡 seal / probe 生成物（カード定義・追跡済みスキーマは除外されない）
+api/automation/card_bodies/
+api/automation/autonomy_runtime_state.json
+api/automation/autonomy_mainline_queue.json
+api/automation/autonomy_manual_hold_points.json
+api/automation/autonomy_retry_policy_v1.json
+api/automation/autonomy_stop_conditions_v1.json
+api/automation/autonomy_triage.json
+api/automation/autonomy_triage_human.md
+api/automation/cursor_executor_last_result.json
+api/automation/cursor_executor_runtime_state.json
+api/automation/overnight_status.json
+api/automation/overnight_summary.md
+api/automation/schedule_last_failure_bundle.json
+api/automation/schedule_human_summary.md
+api/automation/schedule_runtime_state.json
+api/automation/tenmon_*_result_v*.json
+api/automation/tenmon_*_report_v*.md
+# 未コミットの schedule / autonomy ブリッジ（必要時は git add -f）
+api/automation/autonomy_mainline_orchestrator_v1.py
+api/automation/autonomy_morning_report_v1.py
+api/automation/autonomy_overnight_supervisor_v1.py
+api/automation/cursor_executor_bridge_v1.py
+api/automation/cursor_executor_result_schema_v1.json
+api/automation/cursor_runtime_bind_v1.py
+api/automation/schedule_acceptance_judge_v1.py
+api/automation/schedule_executor_config_v1.json
+api/automation/schedule_executor_orchestrator_v1.py
+api/automation/schedule_progress_store_v1.py
+api/automation/schedule_reader_v1.py
+api/automation/schedule_state_observer_v1.py
+api/automation/schedule_stop_conditions_v1.json
+api/automation/tenmon_autonomy_triage_generator_v1.py
+api/automation/tenmon_cursor_executor_bridge_runtime_bind_cursor_auto_v1.py
+api/automation/tenmon_schedule_executor_orchestrator_cursor_auto_v1.py
+api/automation/tenmon_schedule_executor_real_bind_cursor_auto_v1.py
 # TENMON_CURSOR_WORKTREE_AUTOCOMPACT_V1 — 退避バッチ（揮発・再生成可）
 api/automation/out/archive/
 **/watch_sessions/

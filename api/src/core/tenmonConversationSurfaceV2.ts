@@ -14,6 +14,7 @@ import { dedupeNextStepAndQuestionSurfaceV1 } from "./tenmonConversationSurfaceV
 import { applyAnswerProfilePostComposeV1 } from "./answerProfileLayer.js";
 import { stripTenmonInternalSurfaceLeakV1 } from "./tenmonResponseProjector.js";
 import { stripSurfaceLeakMetaChainsV2 } from "./tenmonSurfaceLeakStripV2.js";
+import { buildTenmonEmptyAfterStripFallbackProseV1 } from "./tenmonSurfaceEmptyAfterStripFallbackV1.js";
 
 export type KhsFractalEvidenceSlotV1 = {
   doc?: string;
@@ -304,12 +305,22 @@ const TENMON_SURFACE_MIN_PAD_BRIDGE_EXIT_V1 =
 /**
  * ゲート単一出口: 内部構造漏れの最終掃除＋短文への自然な橋渡し（プローブの meta_leak / 字数下限と整合）
  */
-export function polishTenmonChatResponseSurfaceExitV1(text: string, routeReason: string): string {
+export function polishTenmonChatResponseSurfaceExitV1(
+  text: string,
+  routeReason: string,
+  opts?: { ku?: Record<string, unknown> | null; userMessage?: string | null },
+): string {
   const rr = String(routeReason || "").trim();
   let t = stripInternalRouteTokensFromSurfaceV1(String(text ?? "").trim());
   t = stripTenmonInternalSurfaceLeakV1(t);
   t = stripSurfaceLeakMetaChainsV2(t);
-  if (!t) return t;
+  if (!String(t || "").trim()) {
+    return buildTenmonEmptyAfterStripFallbackProseV1({
+      routeReason: rr,
+      ku: opts?.ku ?? null,
+      userMessage: opts?.userMessage ?? null,
+    });
+  }
   const skipMin =
     /^FACTUAL_CURRENT_(DATE|PERSON|WEATHER)_V1$/u.test(rr) ||
     /^GROUNDING_SELECTOR_/u.test(rr) ||

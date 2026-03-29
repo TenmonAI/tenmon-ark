@@ -96,7 +96,7 @@ export const TENMON_SURFACE_LEAK_LEGACY_TEMPLATE_PATTERNS_V1: RegExp[] = [
 ];
 
 /**
- * メタ連鎖・行頭断片を反復除去。完全空のみ snapshot 復帰（V5: 短文でも漏れ復帰しない）。
+ * メタ連鎖・行頭断片を反復除去。除去後が空なら空のまま返す（snapshot 復帰で漏れを戻さない）。
  */
 export function stripSurfaceLeakMetaChainsV2(text: string): string {
   const snapshot = String(text ?? "").trim();
@@ -115,8 +115,7 @@ export function stripSurfaceLeakMetaChainsV2(text: string): string {
       .replace(/[ 　]{2,}/gu, " ")
       .trim();
   }
-  if (!t) return snapshot;
-  // V5: メタ除去を優先。短文でも漏れ全文を復帰しない（acceptance / surface clean 向け）
+  if (!t) return "";
   return t;
 }
 

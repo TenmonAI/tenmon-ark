@@ -1,0 +1,64 @@
+{
+  "schema": "MULTI_AI_ROLE_CONTRACT_V1",
+  "version": 1,
+  "card": "TENMON_MULTI_AI_ORCHESTRA_EXECUTOR_CURSOR_AUTO_V1",
+  "sovereignty": {
+    "primary_arbiter": ["gpt", "tenmon_ai"],
+    "note": "Claude / Gemini / browser AI は補助のみ。思想主権・正典/正文/persona/canon の意味確定は GPT/天聞AI のみ。"
+  },
+  "layers": [
+    {
+      "id": "observation",
+      "agents": ["vps_logs", "git", "runtime_state", "user_request", "browser_ai_optional"],
+      "role": "raw_input_collection",
+      "outputs_schema": ["observation_bundle.json"]
+    },
+    {
+      "id": "structure",
+      "agents": ["gemini"],
+      "role": "large_context_structure",
+      "outputs_schema": ["structured_summary.md", "comparison_table.json", "options.json", "risk_candidates.json"]
+    },
+    {
+      "id": "audit",
+      "agents": ["claude"],
+      "role": "design_audit_failure_language",
+      "outputs_schema": ["acceptance_refined.md", "design_risks.json", "failure_explanation.md", "patch_review.md"]
+    },
+    {
+      "id": "arbitration",
+      "agents": ["gpt", "tenmon_ai"],
+      "role": "adopt_reject_center_decision",
+      "outputs_schema": ["adopted_plan.json", "rejected_options.json", "center_decision.md", "execution_authority.json"]
+    },
+    {
+      "id": "card_synthesis",
+      "agents": ["gemini", "claude_assist"],
+      "role": "cursor_card_draft_and_audit",
+      "outputs_schema": ["card_draft.md", "card_audit_notes.md"]
+    },
+    {
+      "id": "execution",
+      "agents": ["cursor"],
+      "role": "minimal_diff_implementation",
+      "outputs_schema": ["changed_files.json", "result_bundle.json"]
+    },
+    {
+      "id": "reality",
+      "agents": ["vps"],
+      "role": "build_restart_audit_probe_acceptance",
+      "outputs_schema": ["build_result.json", "audit_result.json", "probe_result.json", "acceptance_verdict.json"]
+    },
+    {
+      "id": "feedback",
+      "agents": ["gemini", "claude", "gpt"],
+      "role": "postmortem_next_card",
+      "outputs_schema": ["structured_feedback.md", "failure_bundle.json", "next_card_candidate.json"]
+    }
+  ],
+  "flow_ids": {
+    "implementation_task": "FLOW_A",
+    "research_deepening": "FLOW_B"
+  },
+  "one_loop_one_card": true
+}

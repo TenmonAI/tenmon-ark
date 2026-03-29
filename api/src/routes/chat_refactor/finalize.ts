@@ -48,6 +48,7 @@ import {
   TENMON_SURFACE_LEAK_PATTERNS_V2,
   TENMON_SURFACE_LEAK_LEGACY_TEMPLATE_PATTERNS_V1,
 } from "../../core/tenmonSurfaceLeakStripV2.js";
+import { applyTenmonEmptyAfterStripFallbackIfBlankV1 } from "../../core/tenmonSurfaceEmptyAfterStripFallbackV1.js";
 import {
   buildHumanReadableEvidenceFootingLineV1,
   buildMainlineTenmonHeadV1,
@@ -204,23 +205,21 @@ function stripFinalizeLeakV6AnchorPassV1(text: string): string {
 
 /**
  * TENMON_SURFACE_LEAK_CLEANUP_CURSOR_AUTO_V2
- * user-facing 表層から内部断片を除去（ku / routeReason は不変・本文空化時は fail-open）。
+ * user-facing 表層から内部断片を除去（ku / routeReason は不変・本文空化時は snapshot 復帰しない）。
  */
 function stripSurfaceLeakFinalizeResponseV1(text: string): string {
   const snapshot = String(text ?? "").trim();
   if (!snapshot) return "";
   let t = stripSurfaceLeakMetaChainsV2(snapshot);
-  if (!t) t = snapshot;
+  if (!t) t = "";
   t = stripFinalizeLeakV6AnchorPassV1(t);
-  if (!t) t = snapshot;
+  if (!t) t = "";
   t = stripTenmonInternalSurfaceLeakV1(t);
   t = suppressRepetitiveTruthFrameV1(t);
   t = suppressPrefaceDuplicateBeforeSeenmarkV1(t);
   t = stripTenmonInternalHintTailLinesV1(t);
   t = stripTenmonInternalSurfaceLeakV1(t);
-  const out = String(t ?? "").trim();
-  if (!out) return snapshot;
-  return out;
+  return String(t ?? "").trim();
 }
 
 /** 本線 finalize が呼ぶ単一出口（stripSurfaceLeak と同等のパイプライン） */
@@ -1074,7 +1073,11 @@ export function applyFinalAnswerConstitutionAndWisdomReducerV1(payload: any): an
     if (!/^【天聞の所見】/u.test(b)) {
       b = `【天聞の所見】\n\n${b}`;
     }
-    out.response = stripSurfaceTemplateLeakFinalizeV1(b);
+    out.response = applyTenmonEmptyAfterStripFallbackIfBlankV1(stripSurfaceTemplateLeakFinalizeV1(b), {
+      routeReason: rr,
+      ku: ku as Record<string, unknown>,
+      userMessage: userMessageForSurface,
+    });
     attachOmegaContractToOutKuV1(
       out as Record<string, unknown>,
       ku,
@@ -1092,7 +1095,14 @@ export function applyFinalAnswerConstitutionAndWisdomReducerV1(payload: any): an
 
   /** PACK_D_V1: 短文・一文完結の grounding 出口は見出し二重と補助「次の一手」を付けない */
   if (/^GROUNDING_SELECTOR_/u.test(rr)) {
-    out.response = stripSurfaceTemplateLeakFinalizeV1(trimTenmonSurfaceNoiseV3(body.trim()));
+    out.response = applyTenmonEmptyAfterStripFallbackIfBlankV1(
+      stripSurfaceTemplateLeakFinalizeV1(trimTenmonSurfaceNoiseV3(body.trim())),
+      {
+        routeReason: rr,
+        ku: ku as Record<string, unknown>,
+        userMessage: userMessageForSurface,
+      },
+    );
     attachOmegaContractToOutKuV1(
       out as Record<string, unknown>,
       ku,
@@ -1110,8 +1120,15 @@ export function applyFinalAnswerConstitutionAndWisdomReducerV1(payload: any): an
 
   if (__beautyThin) {
     const __auxBeauty = "余韻で足りるなら、次に残すのは一行の芯だけでよい。";
-    out.response = stripSurfaceTemplateLeakFinalizeV1(
-      trimTenmonSurfaceNoiseV3(`【天聞の所見】\n\n${body}\n\n${__auxBeauty}`.trim()),
+    out.response = applyTenmonEmptyAfterStripFallbackIfBlankV1(
+      stripSurfaceTemplateLeakFinalizeV1(
+        trimTenmonSurfaceNoiseV3(`【天聞の所見】\n\n${body}\n\n${__auxBeauty}`.trim()),
+      ),
+      {
+        routeReason: rr,
+        ku: ku as Record<string, unknown>,
+        userMessage: userMessageForSurface,
+      },
     );
     attachOmegaContractToOutKuV1(
       out as Record<string, unknown>,
@@ -1228,6 +1245,11 @@ export function applyFinalAnswerConstitutionAndWisdomReducerV1(payload: any): an
     composed = surfaceContinuityHoldOneLineV1(composed);
   }
   out.response = stripSurfaceLeakFinalizeExplicitV1(composed);
+  out.response = applyTenmonEmptyAfterStripFallbackIfBlankV1(String(out.response ?? ""), {
+    routeReason: rr,
+    ku: ku as Record<string, unknown>,
+    userMessage: userMessageForSurface,
+  });
   if (rr === "TENMON_SUBCONCEPT_CANON_V1") {
     const s = String(out.response || "").replace(/\s+/g, " ").trim();
     if (s.length < 12) {
@@ -1248,7 +1270,18 @@ export function applyFinalAnswerConstitutionAndWisdomReducerV1(payload: any): an
   }
   /** TENMON_SURFACE_EXIT_CLEANUP_MASTER_CURSOR_AUTO_V6: contract 後の V2 leak strip → 連続同一文畳み（routeReason 不変） */
   out.response = applyTenmonSurfaceLeakStripV2(String(out.response ?? ""));
+  out.response = applyTenmonEmptyAfterStripFallbackIfBlankV1(String(out.response ?? ""), {
+    routeReason: rr,
+    ku: ku as Record<string, unknown>,
+    userMessage: userMessageForSurface,
+  });
   out.response = dedupeSequentialSentencesInSurfaceV1(String(out.response ?? ""));
+  /** strip / dedupe の後に空になった場合の最終フォールバック（katakamuna / 法華 等） */
+  out.response = applyTenmonEmptyAfterStripFallbackIfBlankV1(String(out.response ?? ""), {
+    routeReason: rr,
+    ku: ku as Record<string, unknown>,
+    userMessage: userMessageForSurface,
+  });
   const stepForOmega =
     String(step || "").trim() || extractNextStepLineFromSurfaceV1(String(out.response));
   attachOmegaContractToOutKuV1(

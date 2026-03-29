@@ -1909,9 +1909,12 @@ try {
     const __kuPolish: any =
       __dfPolish?.ku && typeof __dfPolish.ku === "object" ? __dfPolish.ku : null;
     const __rrPolish = String(__kuPolish?.routeReason || (x as any)?.routeReason || "");
+    const __msgPolish =
+      String((x as any)?.rawMessage || (x as any)?.message || "").trim() || null;
     (x as any).response = polishTenmonChatResponseSurfaceExitV1(
       String((x as any).response || ""),
       __rrPolish,
+      { ku: __kuPolish, userMessage: __msgPolish },
     );
   }
 } catch {}

@@ -1,0 +1,13 @@
+{
+  "schema": "MULTI_AI_RUNTIME_STATE_V1",
+  "last_loop_id": "20260329T234932Z",
+  "last_verdict": "PASS",
+  "last_card": "TENMON_MULTI_AI_ORCHESTRA_EXECUTOR_CURSOR_AUTO_V1",
+  "last_evidence_dir": "/var/log/tenmon/multi_ai_orchestra/20260329T234932Z",
+  "hold_active": false,
+  "hold_reason": null,
+  "gpt_arbitration_completed": true,
+  "cursor_card_ready": true,
+  "vps_acceptance_completed": true,
+  "updatedAt": "2026-03-29T23:49:32Z"
+}

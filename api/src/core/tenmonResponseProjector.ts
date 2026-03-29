@@ -14,6 +14,9 @@ import type { ThreadCore } from "./threadCore.js";
 import { stripSurfaceLeakMetaChainsV2 } from "./tenmonSurfaceLeakStripV2.js";
 import type { SafeAnswerConstraintV1 } from "./sourceLayerDiscernmentKernel.js";
 import type { TruthLayerArbitrationKernelResultV1 } from "./truthLayerArbitrationKernel.js";
+import type { UserIntentDeepreadV1 } from "./userIntentDeepreadSchema.js";
+import { decideUserIntentClarificationV1 } from "./userIntentClarificationPolicy.js";
+import { buildTenmonEmptyAfterStripFallbackProseV1 } from "./tenmonSurfaceEmptyAfterStripFallbackV1.js";
 
 export type TenmonResponseProjectorRouteKindV1 = "general_natural" | "define_fastpath" | "minimal_strip_only";
 
@@ -40,6 +43,16 @@ export type TenmonResponseProjectorInputV1 = {
   safeAnswerConstraint?: SafeAnswerConstraintV1 | null;
   /** binder 補助: root 表示制約（本文全面 rewrite はしない） */
   rootTruthArbitrationKernelV1?: TruthLayerArbitrationKernelResultV1 | null;
+  /** TENMON_USER_INTENT_CLARIFICATION_SURFACE: ku.answerMode など */
+  answerMode?: string | null;
+  /** observe-only deepread（general 主線・条件一致時のみ末尾 1 問） */
+  userIntentDeepread?: UserIntentDeepreadV1 | null;
+  threadMeaningEssentialGoal?: string | null;
+  threadMeaningConstraints?: readonly string[] | null;
+  threadMeaningSuccessCriteria?: readonly string[] | null;
+  /** strip 後に空になったときのフォールバック（snapshot 復帰なし） */
+  stripFallbackKu?: Record<string, unknown> | null;
+  stripFallbackRawMessage?: string | null;
 };
 
 export type TenmonResponseProjectorResultV1 = {
@@ -376,7 +389,7 @@ export function stripTenmonInternalSurfaceLeakV1(text: string): string {
   out = stripLeakTemplateProseV1(out);
   out = stripSurfaceLeakMetaChainsV2(out.trim());
   out = out.trim();
-  if (!out) return snapshot;
+  if (!out) return "";
   return out;
 }
 
@@ -585,8 +598,6 @@ export function projectTenmonUserFacingResponseV1(input: TenmonResponseProjector
   void input.heart;
   void input.heartPhase;
   void input.heartHint;
-  void input.routeReason;
-
   const rootK = input.rootTruthArbitrationKernelV1 ?? null;
   const allowMinimalNextStep = rootK?.displayConstraint?.allow_minimal_next_step !== false;
 
@@ -622,6 +633,38 @@ export function projectTenmonUserFacingResponseV1(input: TenmonResponseProjector
 
   text = allowMinimalNextStep ? synthesizeTenmonOneStepClosingV1(text, kind) : String(text || "").trim();
   text = stripTenmonInternalSurfaceLeakV1(text);
+
+  const hintForSpec = String(input.speculativeGuardV1?.safeRephraseHint || "").trim();
+  const speculativeClarificationConflict =
+    input.speculativeGuardV1?.forbidDefinitiveClaim === true &&
+    input.safeAnswerConstraint === "treat_as_speculative_only" &&
+    hintForSpec.length > 0;
+  const clarDecision = decideUserIntentClarificationV1({
+    routeKind: kind,
+    routeReason: input.routeReason,
+    answerMode: input.answerMode ?? null,
+    userIntentDeepread: input.userIntentDeepread ?? null,
+    threadEssentialGoal: input.threadMeaningEssentialGoal ?? null,
+    threadConstraints: input.threadMeaningConstraints ?? null,
+    threadSuccessCriteria: input.threadMeaningSuccessCriteria ?? null,
+    proseForRedundancyCheck: text,
+    speculativeGuardActive: speculativeClarificationConflict,
+  });
+  if (clarDecision.shouldAsk && clarDecision.question) {
+    let q = String(clarDecision.question).trim();
+    if (q && !/[？?]\s*$/u.test(q)) q = `${q}？`;
+    text = text.replace(/\n\n次の一手は、いまの見立てから一つに絞って進めます。\s*$/u, "").trim();
+    text = `${text}\n\n${q}`.trim();
+    text = stripTenmonInternalSurfaceLeakV1(text);
+  }
+
+  if (!String(text || "").trim()) {
+    text = buildTenmonEmptyAfterStripFallbackProseV1({
+      routeReason: String(input.routeReason || ""),
+      ku: input.stripFallbackKu ?? null,
+      userMessage: input.stripFallbackRawMessage ?? null,
+    });
+  }
 
   const probe = probeTenmonResponseProjectionV1(text);
   return {

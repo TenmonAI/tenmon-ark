@@ -1,4 +1,4 @@
-export type ScriptureFamilyKey = "IROHA" | "KATAKAMUNA" | "KHS" | "KUKAI" | "HOKEKYO" | "SOUJISHO";
+export type ScriptureFamilyKey = "IROHA" | "KATAKAMUNA" | "KHS" | "BHS" | "KUKAI" | "HOKEKYO" | "SOUJISHO";
 
 export type ScriptureFamilyInfo = {
   family: ScriptureFamilyKey;
@@ -26,6 +26,17 @@ const FAMILIES: Record<ScriptureFamilyKey, ScriptureFamilyInfo> = {
     familyDocs: ["言霊秘書.pdf", "言霊秘書", "KHS", "NAS:PDF:KOTODAMA_HISYO:0bae39bb538f"],
     aliases: ["言霊秘書", "KHS", "五十連", "言霊一言之法則"],
   },
+  /** TENMON_SANSKRIT_AND_KUKAI_SOURCEPACK_BIND — BHS は空海 family と分離（混線防止） */
+  BHS: {
+    family: "BHS",
+    primaryDoc: "BUDDHIST HYBRID SANSKRIT GRAMMAR AND DICTIONARY",
+    familyDocs: [
+      "BUDDHIST HYBRID SANSKRIT GRAMMAR AND DICTIONARY 1",
+      "BUDDHISTHYBRIDSANSKRITGRAMMARANDDICTIONARY",
+      "佛教混合梵語文法",
+    ],
+    aliases: ["BHS", "佛教混合梵語", "混和梵語", "BUDDHISTHYBRID", "BUDDHISTHYBRIDSANSKRIT", "混梵"],
+  },
   KUKAI: {
     family: "KUKAI",
     primaryDoc: "KUKAI_COLLECTION_0002",
@@ -37,13 +48,22 @@ const FAMILIES: Record<ScriptureFamilyKey, ScriptureFamilyInfo> = {
       "空海コレクション2",
       "空海コレクション3",
       "空海コレクション1",
-      "空海コレクション4"
+      "空海コレクション4",
+      "即身成仏義",
+      "声字実相義",
+      "吽字義",
+      "般若心経秘鍵",
+      "十住心論",
+      "般若心経原文解読",
+      "密教占星法",
     ],
     aliases: [
       "空海", "弘法大師",
       "即身成仏義", "即身成仏",
       "声字実相義", "声字実相",
-      "十住心論", "秘蔵宝鑰", "吽字義", "般若心経秘鍵"
+      "十住心論", "秘蔵宝鑰", "吽字義", "般若心経秘鍵",
+      "般若心経原文解読", "般若心経 原文解読",
+      "密教占星法",
     ],
   },
 
