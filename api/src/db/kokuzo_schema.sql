@@ -455,6 +455,10 @@ CREATE TABLE IF NOT EXISTS thread_center_memory (
   source_topic_class TEXT,
   source_self_phase TEXT,
   source_intent_phase TEXT,
+  essential_goal TEXT,
+  success_criteria_json TEXT,
+  constraints_json TEXT,
+  clarification_focus TEXT,
   confidence REAL NOT NULL DEFAULT 0.0,
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );

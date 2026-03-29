@@ -35,6 +35,7 @@ import {
   weaveKhsEvidenceIntoHybridSurfaceV1,
 } from "../../core/tenmonConversationSurfaceV2.js";
 import {
+  dedupeSequentialSentencesInSurfaceV1,
   extractTenmonUserFacingFinalTextV1,
   stripTenmonInternalSurfaceLeakV1,
   stripTenmonInternalHintTailLinesV1,
@@ -42,6 +43,7 @@ import {
   suppressRepetitiveTruthFrameV1,
 } from "../../core/tenmonResponseProjector.js";
 import {
+  applyTenmonSurfaceLeakStripV2,
   stripSurfaceLeakMetaChainsV2,
   TENMON_SURFACE_LEAK_PATTERNS_V2,
   TENMON_SURFACE_LEAK_LEGACY_TEMPLATE_PATTERNS_V1,
@@ -1244,6 +1246,9 @@ export function applyFinalAnswerConstitutionAndWisdomReducerV1(payload: any): an
   } catch {
     /* surface contract 適用はゲートを落とさない */
   }
+  /** TENMON_SURFACE_EXIT_CLEANUP_MASTER_CURSOR_AUTO_V6: contract 後の V2 leak strip → 連続同一文畳み（routeReason 不変） */
+  out.response = applyTenmonSurfaceLeakStripV2(String(out.response ?? ""));
+  out.response = dedupeSequentialSentencesInSurfaceV1(String(out.response ?? ""));
   const stepForOmega =
     String(step || "").trim() || extractNextStepLineFromSurfaceV1(String(out.response));
   attachOmegaContractToOutKuV1(

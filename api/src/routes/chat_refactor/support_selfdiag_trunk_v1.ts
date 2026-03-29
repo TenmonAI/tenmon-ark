@@ -306,7 +306,11 @@ export function trySelfDiagnosisRouteExitV1(p: {
       threadCore: p.threadCore,
       threadCenter: null,
     });
-    applyKnowledgeBinderToKu(__kuSelfDiag, __binderSelfDiag);
+    applyKnowledgeBinderToKu(__kuSelfDiag, __binderSelfDiag, {
+      threadCore: p.threadCore ?? null,
+      rawMessage: String(p.message ?? ""),
+      threadId: String(p.threadId ?? ""),
+    });
   } catch {}
   if (!(__kuSelfDiag as any).responsePlan) {
     (__kuSelfDiag as any).responsePlan = buildResponsePlan({

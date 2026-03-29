@@ -106,7 +106,11 @@ export function exitEssenceAskPreemptV1(args: {
       threadCore: __threadCore,
       threadCenter: null,
     });
-    applyKnowledgeBinderToKu(__kuEssenceAsk, __binderEA);
+    applyKnowledgeBinderToKu(__kuEssenceAsk, __binderEA, {
+      threadCore: __threadCore ?? null,
+      rawMessage: String(message ?? ""),
+      threadId: String(threadId ?? ""),
+    });
   } catch {}
 
   const __centerKeyEssAsk =
@@ -473,7 +477,11 @@ export function exitFutureOutlookPreemptV1(args: {
         threadCore,
         threadCenter: threadCenterForGeneral ?? null,
       });
-      applyKnowledgeBinderToKu(ku, binder);
+      applyKnowledgeBinderToKu(ku, binder, {
+        threadCore: threadCore ?? null,
+        rawMessage: __msg,
+        threadId: String(threadId ?? ""),
+      });
     } catch {}
   }
   return finalizeSingleExitV1(res, __tenmonGeneralGateResultMaybe, {
@@ -518,7 +526,11 @@ export function exitSystemDiagnosisRouteV1(args: {
       threadCore: threadCore ?? null,
       threadCenter: null,
     });
-    applyKnowledgeBinderToKu(ku, binder);
+    applyKnowledgeBinderToKu(ku, binder, {
+      threadCore: threadCore ?? null,
+      rawMessage: String(message ?? ""),
+      threadId: String(threadId ?? ""),
+    });
   } catch {}
 
   if (!(ku as any).responsePlan) {

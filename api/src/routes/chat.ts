@@ -210,6 +210,7 @@ import {
 import { getTenmonGateThreadContextV1, tenmonGateThreadContextV1 } from "../core/tenmonGateThreadContextV1.js";
 import { buildKnowledgeBinder, applyKnowledgeBinderToKu } from "../core/knowledgeBinder.js";
 import { splitInputSemanticsV1 } from "../core/inputSemanticSplitter.js";
+import { attachUserIntentDeepreadObserveOnlyToKuV1 } from "../core/userIntentDeepread.js";
 import { buildUncertaintyConfidenceDisplayV1 } from "../core/confidenceDisplayLogic.js";
 import { resolveTenmonBookReadingKernelV1 } from "../core/tenmonBookReadingKernelV1.js";
 import { buildTenmonBookReadingToDeepreadBridgeV1 } from "../core/tenmonBookReadingToDeepreadBridgeV1.js";
@@ -2558,7 +2559,11 @@ const pid = process.pid;
           threadCore: __threadCore ?? null,
           threadCenter: null,
         });
-        applyKnowledgeBinderToKu(__kuWcEarly, __binderWcEarly);
+        applyKnowledgeBinderToKu(__kuWcEarly, __binderWcEarly, {
+          threadCore: __threadCore ?? null,
+          rawMessage: __wcEarlyRaw,
+          threadId: String(threadId ?? ""),
+        });
       } catch {}
       __kuWcEarly.binderSummary = {
         ...(__kuWcEarly.binderSummary || {}),
@@ -2886,7 +2891,11 @@ const pid = process.pid;
               threadCore: __threadCore,
               threadCenter: null,
             });
-            applyKnowledgeBinderToKu(__kuSc, __binderSc);
+            applyKnowledgeBinderToKu(__kuSc, __binderSc, {
+              threadCore: __threadCore ?? null,
+              rawMessage: __wv,
+              threadId: String(threadId ?? ""),
+            });
           } catch {}
           if (!__kuSc.responsePlan) {
             __kuSc.responsePlan = buildResponsePlan({
@@ -3405,6 +3414,7 @@ const pid = process.pid;
           applyKnowledgeBinderToKu(__kuScriptureLocalV4, __binderSlV4, {
             threadCore: __threadCore ?? null,
             rawMessage: String(__msgDef || message || ""),
+            threadId: String(__threadIdSafe || ""),
           });
         } catch {}
         try {
@@ -4156,7 +4166,11 @@ ${String((gptDraft as any)?.text ?? "").trim()}
           threadCore: __threadCore ?? null,
           threadCenter: null,
         });
-        applyKnowledgeBinderToKu(__kuBridge, __binderTruth);
+        applyKnowledgeBinderToKu(__kuBridge, __binderTruth, {
+          threadCore: __threadCore ?? null,
+          rawMessage: String(message ?? ""),
+          threadId: String(threadId ?? ""),
+        });
         __kuBridge.responsePlan = buildResponsePlan({
           routeReason: "TRUTH_GATE_RETURN_V2", /* responsePlan */
           rawMessage: String(message ?? ""),
@@ -4792,7 +4806,11 @@ ${String((gptDraft as any)?.text ?? "").trim()}
           threadCore: __threadCore,
           threadCenter: null
         });
-        applyKnowledgeBinderToKu(__kuExplicitGlobal, __binderEx);
+        applyKnowledgeBinderToKu(__kuExplicitGlobal, __binderEx, {
+          threadCore: __threadCore ?? null,
+          rawMessage: String(message ?? ""),
+          threadId: String(threadId ?? ""),
+        });
       } catch {}
 
       if (!__kuExplicitGlobal.responsePlan) {
@@ -5015,7 +5033,11 @@ ${String((gptDraft as any)?.text ?? "").trim()}
             threadCore: __threadCore,
             threadCenter: null,
           });
-          applyKnowledgeBinderToKu(__kuOneSoundV3, __binderOneSoundV3);
+          applyKnowledgeBinderToKu(__kuOneSoundV3, __binderOneSoundV3, {
+            threadCore: __threadCore ?? null,
+            rawMessage: String(message ?? ""),
+            threadId: String(threadId ?? ""),
+          });
         } catch {}
 
         return await reply({
@@ -7735,7 +7757,11 @@ return await res.json(__tenmonGeneralGateResultMaybe({
             threadCore: __threadCore ?? null,
             threadCenter: null,
           });
-          applyKnowledgeBinderToKu(__kuWc, __binderWc);
+          applyKnowledgeBinderToKu(__kuWc, __binderWc, {
+            threadCore: __threadCore ?? null,
+            rawMessage: __wcRaw,
+            threadId: String(threadId ?? ""),
+          });
         } catch {}
         __kuWc.binderSummary = {
           ...(__kuWc.binderSummary || {}),
@@ -7893,7 +7919,11 @@ return await res.json(__tenmonGeneralGateResultMaybe({
           threadCore: __threadCore ?? null,
           threadCenter: null,
         });
-        applyKnowledgeBinderToKu(__ku, __bkKata);
+        applyKnowledgeBinderToKu(__ku, __bkKata, {
+          threadCore: __threadCore ?? null,
+          rawMessage: String(__msgKG),
+          threadId: String(threadId ?? ""),
+        });
       } catch {}
       if (__composed.meaningFrame != null) (__ku as any).meaningFrame = __composed.meaningFrame;
       if (!(__ku as any).responsePlan) {
@@ -8000,7 +8030,11 @@ return await res.json(__tenmonGeneralGateResultMaybe({
           threadCore: __threadCore ?? null,
           threadCenter: null,
         });
-        applyKnowledgeBinderToKu(__kuKd, __bkKd);
+        applyKnowledgeBinderToKu(__kuKd, __bkKd, {
+          threadCore: __threadCore ?? null,
+          rawMessage: String(__msgKD),
+          threadId: String(threadId ?? ""),
+        });
       } catch {}
 
       return await res.json(__tenmonGeneralGateResultMaybe({
@@ -10110,7 +10144,11 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
             threadCore: __threadCore ?? null,
             threadCenter: null,
           });
-          applyKnowledgeBinderToKu(__kuGkWf, __bGk);
+          applyKnowledgeBinderToKu(__kuGkWf, __bGk, {
+            threadCore: __threadCore ?? null,
+            rawMessage: __msgDefSov,
+            threadId: String(threadId ?? ""),
+          });
         } catch {}
         if (!__kuGkWf.responsePlan) {
           __kuGkWf.responsePlan = buildResponsePlan({
@@ -11427,7 +11465,11 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
             threadCore: __threadCore ?? null,
             threadCenter: null,
           });
-          applyKnowledgeBinderToKu(__kuBty, __binderBty);
+          applyKnowledgeBinderToKu(__kuBty, __binderBty, {
+            threadCore: __threadCore ?? null,
+            rawMessage: __btyRaw,
+            threadId: String(threadId ?? ""),
+          });
         } catch {}
         __kuBty.responsePlan = buildResponsePlan({
           routeReason: "BEAUTY_COMPILER_PREEMPT_V1", /* responsePlan */
@@ -11513,7 +11555,11 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
             threadCore: __threadCore ?? null,
             threadCenter: null,
           });
-          applyKnowledgeBinderToKu(__kuDfw, __binderDfw);
+          applyKnowledgeBinderToKu(__kuDfw, __binderDfw, {
+            threadCore: __threadCore ?? null,
+            rawMessage: __dfwRaw,
+            threadId: String(threadId ?? ""),
+          });
         } catch {}
         __kuDfw.responsePlan = buildResponsePlan({
           routeReason: "DRIFT_FIREWALL_PREEMPT_V1", /* responsePlan */
@@ -12027,7 +12073,7 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
           __ku.answerFrame = "statement_plus_one_question";
         }
         try { console.log("[BRAINSTEM_APPLY_EXPLICIT]", { rr: __ku.routeReason, rc: __ku.routeClass, len: __ku.answerLength, mode: __ku.answerMode, frame: __ku.answerFrame, centerKey: __ku.centerKey }); } catch {}
-        try { const __binderEx = buildKnowledgeBinder({ routeReason: "EXPLICIT_CHAR_PREEMPT_V1", /* responsePlan */ message: String(message ?? ""), threadId: String(threadId ?? ""), ku: __ku, threadCore: __threadCore, threadCenter: null }); applyKnowledgeBinderToKu(__ku, __binderEx); } catch {}
+        try { const __binderEx = buildKnowledgeBinder({ routeReason: "EXPLICIT_CHAR_PREEMPT_V1", /* responsePlan */ message: String(message ?? ""), threadId: String(threadId ?? ""), ku: __ku, threadCore: __threadCore, threadCenter: null }); applyKnowledgeBinderToKu(__ku, __binderEx, { threadCore: __threadCore ?? null, rawMessage: String(message ?? ""), threadId: String(threadId ?? "") }); } catch {}
 
         if (!__ku.responsePlan) {
           __ku.responsePlan = buildResponsePlan({
@@ -12336,7 +12382,7 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
           evidenceIds: [],
           lawTrace: [],
         };
-        try { const __binderNext = buildKnowledgeBinder({ routeReason: "R22_NEXTSTEP_FOLLOWUP_V1", /* responsePlan */ message: String(message ?? ""), threadId: String(threadId ?? ""), ku: __kuNext, threadCore: __threadCore, threadCenter: __threadCenterForGeneral ?? null }); applyKnowledgeBinderToKu(__kuNext, __binderNext, { threadCore: __threadCore, rawMessage: String(message ?? "") }); } catch {}
+        try { const __binderNext = buildKnowledgeBinder({ routeReason: "R22_NEXTSTEP_FOLLOWUP_V1", /* responsePlan */ message: String(message ?? ""), threadId: String(threadId ?? ""), ku: __kuNext, threadCore: __threadCore, threadCenter: __threadCenterForGeneral ?? null }); applyKnowledgeBinderToKu(__kuNext, __binderNext, { threadCore: __threadCore, rawMessage: String(message ?? ""), threadId: String(threadId ?? "") }); } catch {}
         return await res.json(__tenmonGeneralGateResultMaybe({
           response: __bodyNext,
           evidence: null,
@@ -12384,7 +12430,7 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
           evidenceIds: [],
           lawTrace: [],
         };
-        try { const __binderE = buildKnowledgeBinder({ routeReason: "R22_ESSENCE_FOLLOWUP_V1", /* responsePlan */ message: String(message ?? ""), threadId: String(threadId ?? ""), ku: __kuE, threadCore: __threadCore, threadCenter: __threadCenterForGeneral }); applyKnowledgeBinderToKu(__kuE, __binderE, { threadCore: __threadCore, rawMessage: String(message ?? "") }); } catch {}
+        try { const __binderE = buildKnowledgeBinder({ routeReason: "R22_ESSENCE_FOLLOWUP_V1", /* responsePlan */ message: String(message ?? ""), threadId: String(threadId ?? ""), ku: __kuE, threadCore: __threadCore, threadCenter: __threadCenterForGeneral }); applyKnowledgeBinderToKu(__kuE, __binderE, { threadCore: __threadCore, rawMessage: String(message ?? ""), threadId: String(threadId ?? "") }); } catch {}
         try {
           const { computeConsciousnessSignature } = await import("../core/consciousnessSignature.js");
           const __cs = computeConsciousnessSignature({
@@ -12446,7 +12492,7 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
                   evidenceIds: [],
                   lawTrace: [],
                 };
-                try { const __binderCmpE = buildKnowledgeBinder({ routeReason: "R22_COMPARE_FOLLOWUP_V1", /* responsePlan */ message: String(message ?? ""), threadId: String(threadId ?? ""), ku: __kuCmpEarly, threadCore: __threadCore, threadCenter: __threadCenterForGeneral }); applyKnowledgeBinderToKu(__kuCmpEarly, __binderCmpE, { threadCore: __threadCore, rawMessage: String(message ?? "") }); } catch {}
+                try { const __binderCmpE = buildKnowledgeBinder({ routeReason: "R22_COMPARE_FOLLOWUP_V1", /* responsePlan */ message: String(message ?? ""), threadId: String(threadId ?? ""), ku: __kuCmpEarly, threadCore: __threadCore, threadCenter: __threadCenterForGeneral }); applyKnowledgeBinderToKu(__kuCmpEarly, __binderCmpE, { threadCore: __threadCore, rawMessage: String(message ?? ""), threadId: String(threadId ?? "") }); } catch {}
                 const __cmpWrapped = formatStage2ConversationCarryBlockV1({
                   threadCore: __threadCore,
                   rawMessage: String(message ?? ""),
@@ -12497,7 +12543,7 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
           evidenceIds: [],
           lawTrace: [],
         };
-        try { const __binderCmp = buildKnowledgeBinder({ routeReason: "R22_COMPARE_FOLLOWUP_V1", /* responsePlan */ message: String(message ?? ""), threadId: String(threadId ?? ""), ku: __kuCmp, threadCore: __threadCore, threadCenter: __threadCenterForGeneral }); applyKnowledgeBinderToKu(__kuCmp, __binderCmp, { threadCore: __threadCore, rawMessage: String(message ?? "") }); } catch {}
+        try { const __binderCmp = buildKnowledgeBinder({ routeReason: "R22_COMPARE_FOLLOWUP_V1", /* responsePlan */ message: String(message ?? ""), threadId: String(threadId ?? ""), ku: __kuCmp, threadCore: __threadCore, threadCenter: __threadCenterForGeneral }); applyKnowledgeBinderToKu(__kuCmp, __binderCmp, { threadCore: __threadCore, rawMessage: String(message ?? ""), threadId: String(threadId ?? "") }); } catch {}
         if (!(__kuCmp as any).responsePlan) {
           (__kuCmp as any).responsePlan = buildResponsePlan({
             routeReason: String((__kuCmp as any).routeReason || "R22_COMPARE_FOLLOWUP_V1"),
@@ -12576,6 +12622,9 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
           try {
             __kuCont.inputSemanticSplitResultV1 = splitInputSemanticsV1(String(message ?? ""));
           } catch {}
+          try {
+            attachUserIntentDeepreadObserveOnlyToKuV1(__kuCont as Record<string, unknown>, String(message ?? ""));
+          } catch {}
           const __binderCont = buildKnowledgeBinder({
             routeReason: "CONTINUITY_ANCHOR_V1", /* responsePlan */
             message: String(message ?? ""),
@@ -12587,6 +12636,7 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
           applyKnowledgeBinderToKu(__kuCont, __binderCont, {
             threadCore: __threadCore,
             rawMessage: String(message ?? ""),
+            threadId: String(threadId ?? ""),
           });
         } catch {}
         return await res.json(__tenmonGeneralGateResultMaybe({
@@ -12639,7 +12689,7 @@ const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。
             answerFrame: "one_step",
             semanticBody: "【天聞の所見】比較の問いです。比べたい二つを一言ずつ置くと、答えが締まります。",
           }), lawsUsed: [], evidenceIds: [], lawTrace: [] };
-        try { const __binderCA = buildKnowledgeBinder({ routeReason: "R22_COMPARE_ASK_V1", /* responsePlan */ message: String(message ?? ""), threadId: String(threadId ?? ""), ku: __kuCompareAsk, threadCore: __threadCore, threadCenter: null }); applyKnowledgeBinderToKu(__kuCompareAsk, __binderCA); } catch {}
+        try { const __binderCA = buildKnowledgeBinder({ routeReason: "R22_COMPARE_ASK_V1", /* responsePlan */ message: String(message ?? ""), threadId: String(threadId ?? ""), ku: __kuCompareAsk, threadCore: __threadCore, threadCenter: null }); applyKnowledgeBinderToKu(__kuCompareAsk, __binderCA, { threadCore: __threadCore ?? null, rawMessage: String(message ?? ""), threadId: String(threadId ?? "") }); } catch {}
         
         if (!(__kuCompareAsk as any).responsePlan) {
           (__kuCompareAsk as any).responsePlan = buildResponsePlan({
@@ -12729,7 +12779,11 @@ try {
               threadCore: __threadCore,
               threadCenter: null,
             });
-            applyKnowledgeBinderToKu(__kuSelfDiag, __binderSelfDiag);
+            applyKnowledgeBinderToKu(__kuSelfDiag, __binderSelfDiag, {
+              threadCore: __threadCore ?? null,
+              rawMessage: String(message ?? ""),
+              threadId: String(threadId ?? ""),
+            });
           } catch {}
           if (!(__kuSelfDiag as any).responsePlan) {
             (__kuSelfDiag as any).responsePlan = buildResponsePlan({
@@ -14308,6 +14362,7 @@ const __heartNorm = normalizeHeartShape(__heart);
         applyKnowledgeBinderToKu(__ku, __binderConversationSourcepackV1, {
           threadCore: __threadCore ?? null,
           rawMessage: String(message ?? ""),
+          threadId: String(threadId ?? ""),
         });
         try {
           __tenmonChatTsCentralBindingObserveV1(__ku as Record<string, unknown>, {
@@ -15027,7 +15082,11 @@ if (!outText) {
             threadCore: __threadCore,
             threadCenter: null,
           });
-          applyKnowledgeBinderToKu(__kuSound, __binderSound);
+          applyKnowledgeBinderToKu(__kuSound, __binderSound, {
+            threadCore: __threadCore ?? null,
+            rawMessage: String(message ?? ""),
+            threadId: String(threadId ?? ""),
+          });
         } catch {}
 
         return await reply({
@@ -15261,7 +15320,7 @@ if (!outText) {
         });
         __applyBrainstemContractToKuV1(__ku, __brainstem, "define");
         try { console.log("[BRAINSTEM_APPLY_DEFINE]", { rr: (__ku as any).routeReason, rc: (__ku as any).routeClass, len: (__ku as any).answerLength, mode: (__ku as any).answerMode, frame: (__ku as any).answerFrame, centerKey: (__ku as any).centerKey }); } catch {}
-        try { const __binder = buildKnowledgeBinder({ routeReason: "DEF_FASTPATH_VERIFIED_V1", /* responsePlan */ message: String(message ?? ""), threadId: String(threadId ?? ""), ku: __ku, threadCore: __threadCore, threadCenter: null }); applyKnowledgeBinderToKu(__ku, __binder); } catch {}
+        try { const __binder = buildKnowledgeBinder({ routeReason: "DEF_FASTPATH_VERIFIED_V1", /* responsePlan */ message: String(message ?? ""), threadId: String(threadId ?? ""), ku: __ku, threadCore: __threadCore, threadCenter: null }); applyKnowledgeBinderToKu(__ku, __binder, { threadCore: __threadCore ?? null, rawMessage: String(message ?? ""), threadId: String(threadId ?? "") }); } catch {}
         try {
           const __apDef = (__ku as any).answerProfileLayerV1;
           if (__apDef?.profileFrame) {
@@ -15405,7 +15464,7 @@ if (!outText) {
         });
         __applyBrainstemContractToKuV1(__kuProposed, __brainstem, "define");
         try { console.log("[BRAINSTEM_APPLY_DEFINE]", { rr: (__kuProposed as any).routeReason, rc: (__kuProposed as any).routeClass, len: (__kuProposed as any).answerLength, mode: (__kuProposed as any).answerMode, frame: (__kuProposed as any).answerFrame, centerKey: (__kuProposed as any).centerKey }); } catch {}
-        try { const __binderP = buildKnowledgeBinder({ routeReason: "DEF_FASTPATH_PROPOSED_V1", /* responsePlan */ message: String(message ?? ""), threadId: String(threadId ?? ""), ku: __kuProposed, threadCore: __threadCore, threadCenter: null }); applyKnowledgeBinderToKu(__kuProposed, __binderP); } catch {}
+        try { const __binderP = buildKnowledgeBinder({ routeReason: "DEF_FASTPATH_PROPOSED_V1", /* responsePlan */ message: String(message ?? ""), threadId: String(threadId ?? ""), ku: __kuProposed, threadCore: __threadCore, threadCenter: null }); applyKnowledgeBinderToKu(__kuProposed, __binderP, { threadCore: __threadCore ?? null, rawMessage: String(message ?? ""), threadId: String(threadId ?? "") }); } catch {}
 
         let __respProposedOut = String(__resp ?? "");
         try {

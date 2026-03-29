@@ -1808,7 +1808,11 @@ try {
         threadCore: __threadCoreB as any,
         threadCenter: __threadCenterB as any,
       });
-      applyKnowledgeBinderToKu(__kuB, __binderB);
+      applyKnowledgeBinderToKu(__kuB, __binderB, {
+        threadCore: __threadCoreB as any,
+        rawMessage: __rawB,
+        threadId: __tidB,
+      });
 
       try {
         console.log("[BINDER_EXIT_APPLY]", {

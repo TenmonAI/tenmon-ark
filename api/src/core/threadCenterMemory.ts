@@ -1,4 +1,5 @@
 import { getDb } from "../db/index.js";
+import { extractUserIntentDeepreadForThreadMemoryPatchV1 } from "./userIntentDeepread.js";
 import type { ArkBookCanonConversationReuseV1 } from "./threadMeaningMemory.js";
 
 /**
@@ -35,9 +36,116 @@ export type ThreadCenterRow = {
   source_topic_class: string | null;
   source_self_phase: string | null;
   source_intent_phase: string | null;
+  /** TENMON_USER_INTENT_DEEPREAD_THREAD_MEMORY_BIND_V1 */
+  essential_goal?: string | null;
+  success_criteria_json?: string | null;
+  constraints_json?: string | null;
+  clarification_focus?: string | null;
   confidence: number;
   updated_at: string;
 };
+
+let _threadCenterIntentColsEnsured = false;
+
+/** 既存 DB へカラム追加（重複時は無視） */
+export function ensureThreadCenterIntentDeepreadBindColumnsV1(): void {
+  if (_threadCenterIntentColsEnsured) return;
+  _threadCenterIntentColsEnsured = true;
+  try {
+    const db = getDb("kokuzo");
+    for (const sql of [
+      "ALTER TABLE thread_center_memory ADD COLUMN essential_goal TEXT",
+      "ALTER TABLE thread_center_memory ADD COLUMN success_criteria_json TEXT",
+      "ALTER TABLE thread_center_memory ADD COLUMN constraints_json TEXT",
+      "ALTER TABLE thread_center_memory ADD COLUMN clarification_focus TEXT",
+    ]) {
+      try {
+        db.exec(sql);
+      } catch {
+        /* duplicate column */
+      }
+    }
+  } catch {
+    /* ignore */
+  }
+}
+
+function mergeJsonStringArrayFieldV1(
+  existingJson: string | null | undefined,
+  incoming: readonly string[] | undefined,
+): string | null {
+  let prev: string[] = [];
+  if (existingJson) {
+    try {
+      const p = JSON.parse(String(existingJson));
+      if (Array.isArray(p)) prev = p.map((x) => String(x || "").trim()).filter(Boolean);
+    } catch {
+      prev = [];
+    }
+  }
+  const inc = incoming?.length ? [...incoming].map((s) => String(s || "").trim()).filter(Boolean) : [];
+  const merged = [...new Set([...inc, ...prev])].slice(0, 24);
+  return merged.length ? JSON.stringify(merged) : existingJson ?? null;
+}
+
+/**
+ * ku の User Intent Deepread（observe）を thread_center_memory にマージ（表面応答・routeReason は不変）
+ */
+export function patchThreadCenterMemoryUserIntentDeepreadV1(args: {
+  threadId: string;
+  ku: Record<string, unknown>;
+}): void {
+  try {
+    ensureThreadCenterIntentDeepreadBindColumnsV1();
+    const patch = extractUserIntentDeepreadForThreadMemoryPatchV1(args.ku);
+    if (!patch) return;
+    const tid = String(args.threadId || "").trim();
+    if (!tid) return;
+    const db = getDb("kokuzo");
+    const latest = getLatestThreadCenter(tid);
+    const now = new Date().toISOString();
+    const eg =
+      patch.essentialGoal?.trim() ||
+      (latest?.essential_goal != null ? String(latest.essential_goal).trim() || null : null);
+    const sj = mergeJsonStringArrayFieldV1(latest?.success_criteria_json ?? null, patch.successCriteria);
+    const cj = mergeJsonStringArrayFieldV1(latest?.constraints_json ?? null, patch.constraints);
+    const cf = patch.clarificationFocus ?? latest?.clarification_focus ?? null;
+
+    if (latest && typeof latest.id === "number") {
+      db.prepare(
+        `UPDATE thread_center_memory
+         SET essential_goal = ?,
+             success_criteria_json = ?,
+             constraints_json = ?,
+             clarification_focus = ?,
+             updated_at = ?
+         WHERE id = ?`,
+      ).run(eg, sj, cj, cf, now, latest.id);
+      return;
+    }
+
+    upsertThreadCenter({
+      threadId: tid,
+      centerType: "general",
+      centerKey: args.ku.centerKey != null ? String(args.ku.centerKey).trim() || null : null,
+      sourceRouteReason: String(args.ku.routeReason ?? "").trim() || null,
+    });
+    const latest2 = getLatestThreadCenter(tid);
+    if (latest2 && typeof latest2.id === "number") {
+      db.prepare(
+        `UPDATE thread_center_memory
+         SET essential_goal = ?,
+             success_criteria_json = ?,
+             constraints_json = ?,
+             clarification_focus = ?,
+             updated_at = ?
+         WHERE id = ?`,
+      ).run(eg, sj, cj, cf, now, latest2.id);
+    }
+  } catch {
+    /* best-effort */
+  }
+}
 
 function normalizeInput(input: ThreadCenterInput): {
   threadId: string;
@@ -115,6 +223,7 @@ export function getLatestThreadCenter(threadId: string): ThreadCenterRow | null 
  * 失敗しても throw せず、会話を落とさない。
  */
 export function upsertThreadCenter(input: ThreadCenterInput): void {
+  ensureThreadCenterIntentDeepreadBindColumnsV1();
   const norm = normalizeInput(input);
   if (!norm.threadId) return;
 

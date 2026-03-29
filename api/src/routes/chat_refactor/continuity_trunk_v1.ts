@@ -4,6 +4,7 @@
  * TENMON_CHAT_CONTINUITY_ROUTE_HOLD_CURSOR_AUTO_V1: follow-up hold で NATURAL_GENERAL_LLM_TOP 直落ちを抑止
  */
 import type { ThreadCore } from "../../core/threadCore.js";
+import { attachUserIntentDeepreadObserveOnlyToKuV1 } from "../../core/userIntentDeepread.js";
 import { dedupeNextStepAndQuestionSurfaceV1 } from "../../core/tenmonConversationSurfaceV1.js";
 import { compressAdjacentDuplicateLinesV1, formatStage2ConversationCarryBlockV1 } from "../../core/threadCoreLinkSurfaceV1.js";
 
@@ -22,7 +23,7 @@ export type ContinuityTrunkContextV1 = {
   getCenterLabelForDisplay: (centerKey: string) => string;
   buildResponsePlan: (...args: any[]) => any;
   buildKnowledgeBinder: (...args: any[]) => any;
-  applyKnowledgeBinderToKu: (ku: any, b: any) => void;
+  applyKnowledgeBinderToKu: (ku: any, b: any, threadMeaningOpts?: any) => void;
   saveThreadCore: (c: ThreadCore) => Promise<void>;
   setResThreadCoreMirror: (c: ThreadCore) => void;
   memoryReadSession: (tid: string, n: number) => any[];
@@ -213,6 +214,13 @@ function __buildContinuityRouteHoldDenseBodyV1(
 
   body = compressAdjacentDuplicateLinesV1(body);
   body = dedupeNextStepAndQuestionSurfaceV1(body);
+  if (body.length < 120) {
+    const pad120 =
+      "前段の立脚を保ちつつ、次に詰める論点を一つに絞ると会話の芯が切れにくくなります。";
+    if (!body.includes(pad120.slice(0, 12))) {
+      body = `${body}${body && !/[。！？]$/u.test(body) ? "。" : ""}${pad120}`.replace(/。{2,}/g, "。").trim();
+    }
+  }
   if (body.length < 80) {
     const core =
       priorAnswerEssence ||
@@ -352,6 +360,11 @@ export async function tryContinuityRouteHoldPreemptGatePayloadV1(
     lawTrace: [],
   };
   try {
+    attachUserIntentDeepreadObserveOnlyToKuV1(__kuHold as Record<string, unknown>, String(ctx.message ?? ""));
+  } catch {
+    /* ignore */
+  }
+  try {
     const __binderH = ctx.buildKnowledgeBinder({
       routeReason: "CONTINUITY_ROUTE_HOLD_V1",
       message: String(ctx.message ?? ""),
@@ -360,7 +373,11 @@ export async function tryContinuityRouteHoldPreemptGatePayloadV1(
       threadCore: ctx.threadCore,
       threadCenter: ctx.threadCenterForGeneral ?? null,
     });
-    ctx.applyKnowledgeBinderToKu(__kuHold, __binderH);
+    ctx.applyKnowledgeBinderToKu(__kuHold, __binderH, {
+      threadCore: ctx.threadCore ?? null,
+      rawMessage: String(ctx.message ?? ""),
+      threadId: String(ctx.threadId ?? ""),
+    });
   } catch {
     /* ignore */
   }
@@ -442,6 +459,11 @@ export async function tryContinuityTrunkPreemptGatePayloadV1(
       lawTrace: [],
     };
     try {
+      attachUserIntentDeepreadObserveOnlyToKuV1(__kuNext as Record<string, unknown>, String(ctx.message ?? ""));
+    } catch {
+      /* ignore */
+    }
+    try {
       const __binderNext = ctx.buildKnowledgeBinder({
         routeReason: "R22_NEXTSTEP_FOLLOWUP_V1",
         message: String(ctx.message ?? ""),
@@ -450,7 +472,11 @@ export async function tryContinuityTrunkPreemptGatePayloadV1(
         threadCore: ctx.threadCore,
         threadCenter: ctx.threadCenterForGeneral ?? null,
       });
-      ctx.applyKnowledgeBinderToKu(__kuNext, __binderNext);
+      ctx.applyKnowledgeBinderToKu(__kuNext, __binderNext, {
+        threadCore: ctx.threadCore ?? null,
+        rawMessage: String(ctx.message ?? ""),
+        threadId: String(ctx.threadId ?? ""),
+      });
     } catch {
       /* ignore */
     }
@@ -521,6 +547,11 @@ export async function tryContinuityTrunkPreemptGatePayloadV1(
       lawTrace: [],
     };
     try {
+      attachUserIntentDeepreadObserveOnlyToKuV1(__kuE as Record<string, unknown>, String(ctx.message ?? ""));
+    } catch {
+      /* ignore */
+    }
+    try {
       const __binderE = ctx.buildKnowledgeBinder({
         routeReason: "R22_ESSENCE_FOLLOWUP_V1",
         message: String(ctx.message ?? ""),
@@ -529,7 +560,11 @@ export async function tryContinuityTrunkPreemptGatePayloadV1(
         threadCore: ctx.threadCore,
         threadCenter: ctx.threadCenterForGeneral,
       });
-      ctx.applyKnowledgeBinderToKu(__kuE, __binderE);
+      ctx.applyKnowledgeBinderToKu(__kuE, __binderE, {
+        threadCore: ctx.threadCore ?? null,
+        rawMessage: String(ctx.message ?? ""),
+        threadId: String(ctx.threadId ?? ""),
+      });
     } catch {
       /* ignore */
     }
@@ -596,6 +631,11 @@ export async function tryContinuityTrunkPreemptGatePayloadV1(
               lawTrace: [],
             };
             try {
+              attachUserIntentDeepreadObserveOnlyToKuV1(__kuCmpEarly as Record<string, unknown>, String(ctx.message ?? ""));
+            } catch {
+              /* ignore */
+            }
+            try {
               const __binderCmpE = ctx.buildKnowledgeBinder({
                 routeReason: "R22_COMPARE_FOLLOWUP_V1",
                 message: String(ctx.message ?? ""),
@@ -604,7 +644,11 @@ export async function tryContinuityTrunkPreemptGatePayloadV1(
                 threadCore: ctx.threadCore,
                 threadCenter: ctx.threadCenterForGeneral,
               });
-              ctx.applyKnowledgeBinderToKu(__kuCmpEarly, __binderCmpE);
+              ctx.applyKnowledgeBinderToKu(__kuCmpEarly, __binderCmpE, {
+                threadCore: ctx.threadCore ?? null,
+                rawMessage: String(ctx.message ?? ""),
+                threadId: String(ctx.threadId ?? ""),
+              });
             } catch {
               /* ignore */
             }
@@ -682,6 +726,11 @@ export async function tryContinuityTrunkPreemptGatePayloadV1(
       lawTrace: [],
     };
     try {
+      attachUserIntentDeepreadObserveOnlyToKuV1(__kuCmp as Record<string, unknown>, String(ctx.message ?? ""));
+    } catch {
+      /* ignore */
+    }
+    try {
       const __binderCmp = ctx.buildKnowledgeBinder({
         routeReason: "R22_COMPARE_FOLLOWUP_V1",
         message: String(ctx.message ?? ""),
@@ -690,7 +739,11 @@ export async function tryContinuityTrunkPreemptGatePayloadV1(
         threadCore: ctx.threadCore,
         threadCenter: ctx.threadCenterForGeneral,
       });
-      ctx.applyKnowledgeBinderToKu(__kuCmp, __binderCmp);
+      ctx.applyKnowledgeBinderToKu(__kuCmp, __binderCmp, {
+        threadCore: ctx.threadCore ?? null,
+        rawMessage: String(ctx.message ?? ""),
+        threadId: String(ctx.threadId ?? ""),
+      });
     } catch {
       /* ignore */
     }
@@ -776,6 +829,11 @@ export async function tryContinuityTrunkPreemptGatePayloadV1(
       lawTrace: [],
     };
     try {
+      attachUserIntentDeepreadObserveOnlyToKuV1(__kuCont as Record<string, unknown>, String(ctx.message ?? ""));
+    } catch {
+      /* ignore */
+    }
+    try {
       const __binderCont = ctx.buildKnowledgeBinder({
         routeReason: "CONTINUITY_ANCHOR_V1",
         message: String(ctx.message ?? ""),
@@ -784,7 +842,11 @@ export async function tryContinuityTrunkPreemptGatePayloadV1(
         threadCore: ctx.threadCore,
         threadCenter: ctx.threadCenterForGeneral,
       });
-      ctx.applyKnowledgeBinderToKu(__kuCont, __binderCont);
+      ctx.applyKnowledgeBinderToKu(__kuCont, __binderCont, {
+        threadCore: ctx.threadCore ?? null,
+        rawMessage: String(ctx.message ?? ""),
+        threadId: String(ctx.threadId ?? ""),
+      });
     } catch {
       /* ignore */
     }

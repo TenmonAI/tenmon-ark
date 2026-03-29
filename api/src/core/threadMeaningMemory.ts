@@ -6,6 +6,7 @@
 
 import type { TruthLayerArbitrationResultV1 } from "./meaningArbitrationKernel.js";
 import type { InputSemanticSplitResultV1 } from "./inputSemanticSplitter.js";
+import { extractUserIntentDeepreadForThreadMemoryPatchV1 } from "./userIntentDeepread.js";
 import type { TenmonVpsBookAnalysisNotionReflectionPayloadV1 } from "./notionCanon.js";
 import { buildVpsBookAnalysisNotionReflectionPayloadV1 } from "./notionCanon.js";
 import { BOOK_LEDGER_SETTLEMENT_CATALOG_V1 } from "./tenmonBookReadingKernelV1.js";
@@ -246,6 +247,10 @@ export type ThreadMeaningMemoryCoreV1 = {
   acceptedConcepts: readonly string[];
   unresolvedAxes: readonly string[];
   detach: boolean;
+  /** TENMON_USER_INTENT_DEEPREAD_THREAD_MEMORY_BIND_V1（表層非表示） */
+  essentialGoal?: string | null;
+  constraints?: readonly string[];
+  successCriteria?: readonly string[];
 };
 
 export function emptyThreadMeaningMemoryCoreV1(): ThreadMeaningMemoryCoreV1 {
@@ -259,6 +264,9 @@ export function emptyThreadMeaningMemoryCoreV1(): ThreadMeaningMemoryCoreV1 {
     acceptedConcepts: [],
     unresolvedAxes: [],
     detach: false,
+    essentialGoal: null,
+    constraints: [],
+    successCriteria: [],
   };
 }
 
@@ -430,6 +438,21 @@ export function advanceThreadMeaningMemoryForRequestV1(args: {
 
   const acceptedConcepts = mergeConcepts(detach, prior.acceptedConcepts, centerLabel, arbitration);
 
+  const drPatch = extractUserIntentDeepreadForThreadMemoryPatchV1(ku);
+  const newEg = drPatch?.essentialGoal ?? null;
+  const priorEg = prior.essentialGoal ?? null;
+  const essentialGoal = detach ? newEg : newEg || priorEg;
+  const newSc = drPatch?.successCriteria?.length ? [...drPatch.successCriteria] : [];
+  const priorSc = prior.successCriteria?.length ? [...prior.successCriteria] : [];
+  const successCriteria = detach
+    ? newSc
+    : [...new Set([...newSc, ...priorSc])].slice(0, 16);
+  const newCo = drPatch?.constraints?.length ? [...drPatch.constraints] : [];
+  const priorCo = prior.constraints?.length ? [...prior.constraints] : [];
+  const constraints = detach
+    ? newCo
+    : [...new Set([...newCo, ...priorCo])].slice(0, 16);
+
   const next: ThreadMeaningMemoryCoreV1 = {
     schema: "TENMON_THREAD_MEANING_MEMORY_V1",
     priorCenter,
@@ -440,6 +463,9 @@ export function advanceThreadMeaningMemoryForRequestV1(args: {
     acceptedConcepts,
     unresolvedAxes,
     detach,
+    essentialGoal,
+    constraints,
+    successCriteria,
   };
 
   (ku as Record<string, unknown>).threadMeaningMemoryV1 = next;
@@ -457,6 +483,12 @@ export function parseThreadMeaningMemoryV1FromJson(raw: unknown): ThreadMeaningM
   const unresolvedAxes = Array.isArray(o.unresolvedAxes)
     ? (o.unresolvedAxes as unknown[]).map((x) => String(x || "").trim()).filter(Boolean)
     : [];
+  const constraints = Array.isArray(o.constraints)
+    ? (o.constraints as unknown[]).map((x) => String(x || "").trim()).filter(Boolean)
+    : [];
+  const successCriteria = Array.isArray(o.successCriteria)
+    ? (o.successCriteria as unknown[]).map((x) => String(x || "").trim()).filter(Boolean)
+    : [];
   return {
     schema: "TENMON_THREAD_MEANING_MEMORY_V1",
     priorCenter: o.priorCenter != null ? String(o.priorCenter).trim() || null : null,
@@ -467,12 +499,15 @@ export function parseThreadMeaningMemoryV1FromJson(raw: unknown): ThreadMeaningM
     acceptedConcepts: acceptedConcepts.slice(0, MAX_CONCEPTS),
     unresolvedAxes: unresolvedAxes.slice(0, 24),
     detach: o.detach === true,
+    essentialGoal: o.essentialGoal != null ? String(o.essentialGoal).trim() || null : null,
+    constraints: constraints.slice(0, 16),
+    successCriteria: successCriteria.slice(0, 16),
   };
 }
 
 /** saveThreadCore 用に JSON へ載せるプレーンオブジェクト */
 export function serializeThreadMeaningMemoryV1ForStore(m: ThreadMeaningMemoryCoreV1): Record<string, unknown> {
-  return {
+  const o: Record<string, unknown> = {
     schema: m.schema,
     priorCenter: m.priorCenter,
     currentCenter: m.currentCenter,
@@ -483,4 +518,8 @@ export function serializeThreadMeaningMemoryV1ForStore(m: ThreadMeaningMemoryCor
     unresolvedAxes: [...m.unresolvedAxes],
     detach: m.detach,
   };
+  if (m.essentialGoal != null) o.essentialGoal = m.essentialGoal;
+  if (m.constraints?.length) o.constraints = [...m.constraints];
+  if (m.successCriteria?.length) o.successCriteria = [...m.successCriteria];
+  return o;
 }

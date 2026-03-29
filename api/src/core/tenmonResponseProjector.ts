@@ -265,7 +265,7 @@ function stripLeakTemplateProseV1(text: string): string {
 }
 
 /** 連続する同一文（正規化一致）を 1 つに畳む（段落境界は維持） */
-function dedupeSequentialSentencesInSurfaceV1(text: string): string {
+export function dedupeSequentialSentencesInSurfaceV1(text: string): string {
   const paras = String(text || "").split(/\n\n+/u);
   const outParas = paras.map((para) => {
     const rawChunks = para.split(/(?<=[。！？])/u);

@@ -5,6 +5,7 @@
 import type { ThreadCore } from "../../core/threadCore.js";
 import { buildSoulDefineGatePayloadV1 } from "../../core/soulDefineDisambigV1.js";
 import { splitInputSemanticsV1 } from "../../core/inputSemanticSplitter.js";
+import { attachUserIntentDeepreadObserveOnlyToKuV1 } from "../../core/userIntentDeepread.js";
 
 export type DefineDecisionKuInput = {
   routeReason: string;
@@ -83,6 +84,7 @@ export function buildDefineDecisionKuV1(input: DefineDecisionKuInput, ctx: Defin
   const __splitSrc = String(input.userMessage ?? input.term ?? "").trim();
   if (__splitSrc) {
     __kuDefine.inputSemanticSplitResultV1 = splitInputSemanticsV1(__splitSrc);
+    attachUserIntentDeepreadObserveOnlyToKuV1(__kuDefine, __splitSrc);
   }
   return __kuDefine;
 }
@@ -211,7 +213,11 @@ export function tryKotodamaOneSoundGroundedV4Reply(params: any):
         threadCore: params.threadCore,
         threadCenter: null,
       });
-      params.applyKnowledgeBinderToKu(__kuOneSoundV3, __binderOneSoundV3);
+      params.applyKnowledgeBinderToKu(__kuOneSoundV3, __binderOneSoundV3, {
+        threadCore: params.threadCore ?? null,
+        rawMessage: String(params.message ?? ""),
+        threadId: String(params.threadId ?? ""),
+      });
     } catch {}
 
     return {
@@ -307,7 +313,11 @@ export function tryKotodamaOneSoundGroundedV2Reply(params: any):
         threadCore: params.threadCore,
         threadCenter: null,
       });
-      params.applyKnowledgeBinderToKu(__kuSound, __binderSound);
+      params.applyKnowledgeBinderToKu(__kuSound, __binderSound, {
+        threadCore: params.threadCore ?? null,
+        rawMessage: String(params.message ?? ""),
+        threadId: String(params.threadId ?? ""),
+      });
     } catch {}
 
     return {

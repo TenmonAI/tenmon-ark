@@ -1,6 +1,7 @@
 /** CHAT_TRUNK_GENERAL_SPLIT_V1_FINAL — NATURAL_GENERAL spine helpers */
 
 import { splitInputSemanticsV1 } from "../../core/inputSemanticSplitter.js";
+import { attachUserIntentDeepreadObserveOnlyToKuV1 } from "../../core/userIntentDeepread.js";
 import { classifyTenmonSupportEarlyTriageV1 } from "../chat_parts/gates_impl.js";
 
 /** chat.ts への文字列散乱を減らすための単一正規 routeReason（静的観測の hit 集約用） */
@@ -312,4 +313,6 @@ export function attachInputSemanticSplitDryRunNatGeneralV1(
   const rr = String(ku.routeReason ?? "").trim();
   if (rr !== ROUTE_NATURAL_GENERAL_LLM_TOP_V1) return;
   ku.inputSemanticSplitResultV1 = splitInputSemanticsV1(rawMessage);
+  /** TENMON_USER_INTENT_DEEPREAD_OBSERVE_ONLY: split 直後・binder 前 */
+  attachUserIntentDeepreadObserveOnlyToKuV1(ku, rawMessage);
 }

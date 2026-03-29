@@ -43,6 +43,7 @@ import {
   advanceThreadMeaningMemoryForRequestV1,
   buildArkBookCanonConversationReuseV1FromJudgeV1,
 } from "./threadMeaningMemory.js";
+import { patchThreadCenterMemoryUserIntentDeepreadV1 } from "./threadCenterMemory.js";
 import { discernSourceLayerV1, type SourceLayerDiscernmentV1 } from "./sourceLayerDiscernmentKernel.js";
 import { judgeLineageAndTransformationV1, type LineageTransformationJudgementV1 } from "./lineageAndTransformationJudgementEngine.js";
 import { mergeStructuralCompatibilityWithKatakamunaReintegrationV1 } from "./structuralCompatibilityAndRootSeparation.js";
@@ -118,6 +119,8 @@ export type KnowledgeBinderResult = {
 export type ApplyKnowledgeBinderThreadMeaningOptsV1 = {
   threadCore?: ThreadCore | null;
   rawMessage?: string;
+  /** TENMON_USER_INTENT_DEEPREAD_THREAD_MEMORY_BIND_V1: thread_center_memory パッチ用 */
+  threadId?: string | null;
 };
 
 function inferRouteClass(ku: Record<string, unknown>, routeReason: string): string {
@@ -861,6 +864,14 @@ export function applyKnowledgeBinderToKu(
           threadCore: threadMeaningOpts.threadCore,
           rawMessage: raw,
         });
+      } catch {
+        /* fail-closed */
+      }
+    }
+    const tid = String(threadMeaningOpts.threadId ?? "").trim();
+    if (tid) {
+      try {
+        patchThreadCenterMemoryUserIntentDeepreadV1({ threadId: tid, ku });
       } catch {
         /* fail-closed */
       }
