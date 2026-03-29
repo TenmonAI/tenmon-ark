@@ -1,12 +1,19 @@
 /** TENMON_BUILD_GREEN_RESTORE_AFTER_SHELTER_V1 */
-import { applyConfidencePrefixToSurfaceV1, type ConfidenceDisplayV1 } from "./confidenceDisplayLogic.js";
+import {
+  applyConfidencePrefixToSurfaceV1,
+  type ConfidenceDisplayV1,
+  type UncertaintyConfidenceSurfaceLevelV1,
+} from "./confidenceDisplayLogic.js";
+
+export type { UncertaintyConfidenceSurfaceLevelV1 };
+export { surfacePrefixForUncertaintyLevelV6 } from "./confidenceDisplayLogic.js";
 
 /** TENMON_FOUNDER_UPDATE_MODE_AND_ANSWER_FRAME_CURSOR_AUTO_V1: 新人格ではなく profileFrame のみ。本文は gates_impl.classifyTenmonFounderUpdateFrameTriageV1（受理→現状→更新候補→次確認→承認→確定） */
 export const TENMON_FOUNDER_UPDATE_PROFILE_FRAME_V1 = "founder_update_frame_v1";
 
-/** TENMON_UNCERTAINTY_AND_CONFIDENCE_SURFACE_LOGIC: ku.confidenceDisplayV1 + responseComposer が apply。本文後処理での明示付与はこの関数のみ */
+/** TENMON_UNCERTAINTY_CONFIDENCE_SURFACE_MASTER_V6: ku.confidenceDisplayV1.surfacePrefix（gates_impl polish 後・冪等1回） */
 export const TENMON_UNCERTAINTY_SURFACE_LOGIC_CARD_V1 =
-  "TENMON_UNCERTAINTY_AND_CONFIDENCE_SURFACE_LOGIC_CURSOR_AUTO_V1";
+  "TENMON_UNCERTAINTY_CONFIDENCE_SURFACE_MASTER_CURSOR_AUTO_V6";
 
 /** 表層のみ。high は surfacePrefix 空で compose 側はスキップ */
 export function applyUncertaintySurfacePrefixIfAnyV1(text: string, cd: ConfidenceDisplayV1 | null | undefined): string {

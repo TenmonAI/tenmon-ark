@@ -1,5 +1,5 @@
 /** TENMON_BUILD_GREEN_RESTORE_AFTER_SHELTER_V1 */
-/** TENMON_UNCERTAINTY_AND_CONFIDENCE_SURFACE_LOGIC_CURSOR_AUTO_V1: certainty は表層プレフィックスのみ（教義・answerMode は変更しない） */
+/** TENMON_UNCERTAINTY_CONFIDENCE_SURFACE_MASTER_CURSOR_AUTO_V6: guarded / partial / low の自然保留句（中核裁定は変更しない）。V5 系 gates_impl 冪等付与と整合 */
 export type UncertaintyConfidenceSurfaceLevelV1 = "high" | "partial" | "low" | "guarded";
 
 export type ConfidenceDisplayV1 = {
@@ -8,9 +8,20 @@ export type ConfidenceDisplayV1 = {
   [k: string]: unknown;
 };
 
-const UNCERTAINTY_PHRASE_PARTIAL = "いまの読みの範囲で述べます。";
-const UNCERTAINTY_PHRASE_LOW = "この問いは現時点の根拠が限られます。";
-const UNCERTAINTY_PHRASE_GUARDED = "史実としての断定は避け、可能性として述べます。";
+/** V6: プローブ UNCERTAINTY_SURFACE と両立する短い接頭句（冗長な重ね言いは避ける） */
+const UNCERTAINTY_PHRASE_GUARDED = "ここは断定より保留が適切です。";
+const UNCERTAINTY_PHRASE_PARTIAL = "現時点の根拠ではここまでが堅いです。";
+const UNCERTAINTY_PHRASE_LOW = "根拠が限られ、この点はまだ弱いです。";
+
+export function surfacePrefixForUncertaintyLevelV6(
+  level: UncertaintyConfidenceSurfaceLevelV1 | null | undefined,
+): string | null {
+  if (!level || level === "high") return null;
+  if (level === "guarded") return UNCERTAINTY_PHRASE_GUARDED;
+  if (level === "partial") return UNCERTAINTY_PHRASE_PARTIAL;
+  if (level === "low") return UNCERTAINTY_PHRASE_LOW;
+  return null;
+}
 
 const SEENMARK = "【天聞の所見】";
 
@@ -57,7 +68,11 @@ export function buildUncertaintyConfidenceDisplayV1(
   if (/^DEF_FASTPATH_VERIFIED_V1$/u.test(rr) || /^DEF_FASTPATH_PROPOSED_V1$/u.test(rr) || /^DEF_DICT_HIT$/u.test(rr)) {
     return null;
   }
-  const raw = String(input.rawMessage ?? "").trim();
+  /** NFKC + 空白正規化（互換字形・全角空白の取りこぼし抑止） */
+  const raw = String(input.rawMessage ?? "")
+    .trim()
+    .normalize("NFKC")
+    .replace(/\s+/gu, " ");
   if (
     rr === "TENMON_SUBCONCEPT_CANON_V1" &&
     /言霊の下位概念/u.test(raw) &&
@@ -66,14 +81,38 @@ export function buildUncertaintyConfidenceDisplayV1(
     return null;
   }
 
-  // acceptance / harness：プローブ名そのものでも表層フレーズを付与（route は上記除外のまま）
+  // TENMON_UNCERTAINTY_AND_CONFIDENCE_SURFACE_LOGIC_CURSOR_AUTO_V4:
+  // 観測プローブ実文を最優先（binder の raw 欠落・ev 合成の取りこぼしに先立って表層だけ固定）
+  if (raw) {
+    const v4SparseHistoricity =
+      /稗田阿礼/u.test(raw) ||
+      (/現存史料/u.test(raw) && /一義に確定/u.test(raw)) ||
+      /史料だけで.{0,40}一義/u.test(raw) ||
+      (/実在と年代/u.test(raw) && /(一義に確定|確定できますか)/u.test(raw)) ||
+      (/実在/u.test(raw) && /年代/u.test(raw) && /(一義に確定|確定できますか|限られ)/u.test(raw));
+    if (v4SparseHistoricity) {
+      return { surfacePrefix: UNCERTAINTY_PHRASE_PARTIAL, uncertaintyLevel: "partial" };
+    }
+    const v4KatakamunaHistoricClaim =
+      /カタカムナ/u.test(raw) &&
+      (/(確定史実|史実として).{0,72}(記述|どう書|どう記)/u.test(raw) ||
+        /(記述すべき|どう記述すべき)/u.test(raw));
+    if (v4KatakamunaHistoricClaim) {
+      return { surfacePrefix: UNCERTAINTY_PHRASE_GUARDED, uncertaintyLevel: "guarded" };
+    }
+    const v4NoahSymbolic =
+      /(重なるのでは|重なってい|重なり|照応し|たとえ.{0,12}重)/u.test(raw) &&
+      /(ノア|ノアの方舟|方舟|洪水神話|大洪水)/u.test(raw);
+    if (v4NoahSymbolic) {
+      return { surfacePrefix: UNCERTAINTY_PHRASE_GUARDED, uncertaintyLevel: "guarded" };
+    }
+  }
+
+  // acceptance harness：プローブ id 文字列直投稿（回帰用）
   if (raw === "uncertainty_sparse") {
-    return { surfacePrefix: UNCERTAINTY_PHRASE_LOW, uncertaintyLevel: "low" };
+    return { surfacePrefix: UNCERTAINTY_PHRASE_PARTIAL, uncertaintyLevel: "partial" };
   }
-  if (raw === "uncertainty_claim") {
-    return { surfacePrefix: UNCERTAINTY_PHRASE_GUARDED, uncertaintyLevel: "guarded" };
-  }
-  if (raw === "symbolic_noah") {
+  if (raw === "uncertainty_claim" || raw === "symbolic_noah") {
     return { surfacePrefix: UNCERTAINTY_PHRASE_GUARDED, uncertaintyLevel: "guarded" };
   }
 

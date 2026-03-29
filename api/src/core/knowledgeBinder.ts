@@ -110,6 +110,8 @@ export type KnowledgeBinderResult = {
   speculativeGuardV1: SpeculativeGuardV1 | null;
   /** root 束（split+truth+discernment+guard 揃い時のみ） */
   truthLayerArbitrationKernelV1: TruthLayerArbitrationKernelResultV1 | null;
+  /** TENMON_UNCERTAINTY_AND_CONFIDENCE_SURFACE_LOGIC_CURSOR_AUTO_V2: apply 時に rawMessage 欠損を埋める */
+  binderRawMessageV1: string;
 };
 
 /** TENMON_THREAD_MEANING_MEMORY: binder 直後に threadCore を渡したときのみ更新 */
@@ -255,7 +257,6 @@ export function buildKnowledgeBinder(input: KnowledgeBinderInput): KnowledgeBind
   const truthReasoningMixed = resolveTruthReasoningAndMixedQuestionV1(String(message || ""), rr);
   const truthStructureVerdict = truthReasoningMixed.truthStructureVerdict;
   const digestLedgerPayload = getMaterialDigestLedgerPayloadV1();
-  const selfLearningAutostudyV1 = getSelfLearningAutostudyBundleV1(String(message || ""));
   const danshariLifeOrderKernelV1 = resolveDanshariLifeOrderKernelV1(String(message || ""), rr);
   const irohaLifeCounselingKernelV1 = resolveIrohaLifeCounselingKernelV1(String(message || ""), rr);
   const irohaDanshariCounselingBridgeV1 = buildIrohaDanshariCounselingBridgeV1(
@@ -392,6 +393,9 @@ export function buildKnowledgeBinder(input: KnowledgeBinderInput): KnowledgeBind
           opposition_pairs: bookReadingKernelV1.contrast_terms,
         })
       : null;
+  const selfLearningAutostudyV1 = getSelfLearningAutostudyBundleV1(String(message || ""), {
+    arkBookCanonConversationReuseV1,
+  });
   const userLexiconMemoryV1 = updateUserLexiconMemoryV1({
     prev:
       threadCore && typeof threadCore === "object"
@@ -624,6 +628,7 @@ export function buildKnowledgeBinder(input: KnowledgeBinderInput): KnowledgeBind
     lineageTransformationJudgementV1,
     speculativeGuardV1,
     truthLayerArbitrationKernelV1,
+    binderRawMessageV1: String(message || ""),
   };
 }
 
@@ -802,8 +807,13 @@ export function applyKnowledgeBinderToKu(
   }
   try {
     const curCd = (ku as any).confidenceDisplayV1;
-    if (!curCd?.surfacePrefix) {
+    /** 空・空白のみは未設定扱い（V3: rawMessage フォールバックで再合成） */
+    if (!String(curCd?.surfacePrefix ?? "").trim()) {
       const rrKu = String((ku as any).routeReason ?? binder.binderSummary.routeReason ?? "");
+      const rmOpt = String(threadMeaningOpts?.rawMessage ?? "").trim();
+      const rmKu = String((ku as any).inputText ?? "").trim();
+      const rmBinder = String(binder.binderRawMessageV1 ?? "").trim();
+      const rawForCd = rmOpt || rmKu || rmBinder;
       const cd = buildUncertaintyConfidenceDisplayV1({
         routeReason: rrKu,
         evidenceRefCount: Array.isArray(binder.evidenceRefs) ? binder.evidenceRefs.length : 0,
@@ -820,7 +830,7 @@ export function applyKnowledgeBinderToKu(
         sourceMode: binder.sourceLayerDiscernmentV1?.sourceMode ?? null,
         safeAnswerConstraint: binder.sourceLayerDiscernmentV1?.safeAnswerConstraint ?? null,
         historicalCertainty: binder.lineageTransformationJudgementV1?.historicalCertainty ?? null,
-        rawMessage: String(threadMeaningOpts?.rawMessage ?? (ku as any).inputText ?? "").trim(),
+        rawMessage: rawForCd,
         uncertaintyFlagCount: Array.isArray(binder.uncertaintyFlags) ? binder.uncertaintyFlags.length : 0,
       });
       if (cd) (ku as any).confidenceDisplayV1 = cd;

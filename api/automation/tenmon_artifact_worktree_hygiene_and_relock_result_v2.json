@@ -1,0 +1,983 @@
+{
+  "schema": "TENMON_ARTIFACT_WORKTREE_HYGIENE_RELOCK_V2",
+  "card": "TENMON_ARTIFACT_WORKTREE_HYGIENE_AND_RELOCK_CURSOR_AUTO_V2",
+  "generated_at": "2026-03-29T08:44:53Z",
+  "apply_fixes_ran": false,
+  "apply_log": null,
+  "git_status_short_count_before_apply": 132,
+  "git_status_short_count": 132,
+  "npm_run_check_ok": true,
+  "npm_run_check_tail": "\n> tenmon-ark-api@1.0.0 check\n> tsc --noEmit\n\n",
+  "audit": {
+    "ok": true,
+    "http": 200
+  },
+  "audit_note": "ok",
+  "manual_shelter_note": "out/manual_shelter 下は autocompact により api/automation/out/archive/*/manual_shelter に複製済み。D 行は重複退避の削除で、index からの除去を推奨。",
+  "relock": {
+    "staged_deletion_lines_total": 25,
+    "staged_manual_shelter_lines": 22,
+    "unstaged_archive_delete_paths": []
+  },
+  "classified_lines": [
+    {
+      "line": "M  .gitignore",
+      "xy": "M ",
+      "path": ".gitignore",
+      "bucket": "keep"
+    },
+    {
+      "line": " M api/automation/operations_level_autonomy_state_v1.json",
+      "xy": " M",
+      "path": "api/automation/operations_level_autonomy_state_v1.json",
+      "bucket": "keep"
+    },
+    {
+      "line": "D  api/automation/out/manual_shelter/20260328T132440Z/B_automation_impl/api/automation/learning_quality_bridge.json",
+      "xy": "D ",
+      "path": "api/automation/out/manual_shelter/20260328T132440Z/B_automation_impl/api/automation/learning_quality_bridge.json",
+      "bucket": "archive"
+    },
+    {
+      "line": "D  api/automation/out/manual_shelter/20260328T132440Z/B_automation_impl/api/automation/next_queue_rearm.json",
+      "xy": "D ",
+      "path": "api/automation/out/manual_shelter/20260328T132440Z/B_automation_impl/api/automation/next_queue_rearm.json",
+      "bucket": "archive"
+    },
+    {
+      "line": "D  api/automation/out/manual_shelter/20260328T132440Z/B_automation_impl/api/automation/tenmon_autonomy_12h_fully_autonomous_failclosed_master_cursor_auto_v1.json",
+      "xy": "D ",
+      "path": "api/automation/out/manual_shelter/20260328T132440Z/B_automation_impl/api/automation/tenmon_autonomy_12h_fully_autonomous_failclosed_master_cursor_auto_v1.json",
+      "bucket": "archive"
+    },
+    {
+      "line": "D  api/automation/out/manual_shelter/20260328T132440Z/B_automation_impl/api/automation/tenmon_autonomy_result_bind_to_rejudge_and_acceptance_v1.py",
+      "xy": "D ",
+      "path": "api/automation/out/manual_shelter/20260328T132440Z/B_automation_impl/api/automation/tenmon_autonomy_result_bind_to_rejudge_and_acceptance_v1.py",
+      "bucket": "archive"
+    },
+    {
+      "line": "D  api/automation/out/manual_shelter/20260328T132440Z/B_automation_impl/api/automation/tenmon_continuous_self_improvement_os_master_bundle_v1.py",
+      "xy": "D ",
+      "path": "api/automation/out/manual_shelter/20260328T132440Z/B_automation_impl/api/automation/tenmon_continuous_self_improvement_os_master_bundle_v1.py",
+      "bucket": "archive"
+    },
+    {
+      "line": "D  api/automation/out/manual_shelter/20260328T132440Z/B_automation_impl/api/automation/tenmon_continuous_self_improvement_overnight_daemon_v1.py",
+      "xy": "D ",
+      "path": "api/automation/out/manual_shelter/20260328T132440Z/B_automation_impl/api/automation/tenmon_continuous_self_improvement_overnight_daemon_v1.py",
+      "bucket": "archive"
+    },
+    {
+      "line": "D  api/automation/out/manual_shelter/20260328T132440Z/B_automation_impl/api/automation/tenmon_conversation_worldclass_mainline_selector_v1.py",
+      "xy": "D ",
+      "path": "api/automation/out/manual_shelter/20260328T132440Z/B_automation_impl/api/automation/tenmon_conversation_worldclass_mainline_selector_v1.py",
+      "bucket": "archive"
+    },
+    {
+      "line": "D  api/automation/out/manual_shelter/20260328T132440Z/B_automation_impl/api/automation/tenmon_cursor_operator_autonomy_bridge_cursor_auto_v1.json",
+      "xy": "D ",
+      "path": "api/automation/out/manual_shelter/20260328T132440Z/B_automation_impl/api/automation/tenmon_cursor_operator_autonomy_bridge_cursor_auto_v1.json",
+      "bucket": "archive"
+    },
+    {
+      "line": "D  api/automation/out/manual_shelter/20260328T132440Z/B_automation_impl/api/automation/tenmon_final_conversation_completion_single_source_seal_cursor_auto_v1.json",
+      "xy": "D ",
+      "path": "api/automation/out/manual_shelter/20260328T132440Z/B_automation_impl/api/automation/tenmon_final_conversation_completion_single_source_seal_cursor_auto_v1.json",
+      "bucket": "archive"
+    },
+    {
+      "line": "D  api/automation/out/manual_shelter/20260328T132440Z/B_automation_impl/api/automation/tenmon_final_conversation_completion_single_source_seal_cursor_auto_v1.md",
+      "xy": "D ",
+      "path": "api/automation/out/manual_shelter/20260328T132440Z/B_automation_impl/api/automation/tenmon_final_conversation_completion_single_source_seal_cursor_auto_v1.md",
+      "bucket": "archive"
+    },
+    {
+      "line": "D  api/automation/out/manual_shelter/20260328T132440Z/B_automation_impl/api/automation/tenmon_final_conversation_completion_single_source_seal_manifest_v1.json",
+      "xy": "D ",
+      "path": "api/automation/out/manual_shelter/20260328T132440Z/B_automation_impl/api/automation/tenmon_final_conversation_completion_single_source_seal_manifest_v1.json",
+      "bucket": "archive"
+    },
+    {
+      "line": "D  api/automation/out/manual_shelter/20260328T132440Z/B_automation_impl/api/automation/tenmon_final_operable_seal.json",
+      "xy": "D ",
+      "path": "api/automation/out/manual_shelter/20260328T132440Z/B_automation_impl/api/automation/tenmon_final_operable_seal.json",
+      "bucket": "archive"
+    },
+    {
+      "line": "D  api/automation/out/manual_shelter/20260328T132440Z/B_automation_impl/api/automation/tenmon_final_operable_seal_v1.py",
+      "xy": "D ",
+      "path": "api/automation/out/manual_shelter/20260328T132440Z/B_automation_impl/api/automation/tenmon_final_operable_seal_v1.py",
+      "bucket": "archive"
+    },
+    {
+      "line": "D  api/automation/out/manual_shelter/20260328T132440Z/B_automation_impl/api/automation/tenmon_fractal_truth_worldclass_seal_cursor_auto_v1.json",
+      "xy": "D ",
+      "path": "api/automation/out/manual_shelter/20260328T132440Z/B_automation_impl/api/automation/tenmon_fractal_truth_worldclass_seal_cursor_auto_v1.json",
+      "bucket": "archive"
+    },
+    {
+      "line": "D  api/automation/out/manual_shelter/20260328T132440Z/B_automation_impl/api/automation/tenmon_fractal_truth_worldclass_seal_cursor_auto_v1.md",
+      "xy": "D ",
+      "path": "api/automation/out/manual_shelter/20260328T132440Z/B_automation_impl/api/automation/tenmon_fractal_truth_worldclass_seal_cursor_auto_v1.md",
+      "bucket": "archive"
+    },
+    {
+      "line": "D  api/automation/out/manual_shelter/20260328T132440Z/B_automation_impl/api/automation/tenmon_worldclass_acceptance_scorecard_v1.py",
+      "xy": "D ",
+      "path": "api/automation/out/manual_shelter/20260328T132440Z/B_automation_impl/api/automation/tenmon_worldclass_acceptance_scorecard_v1.py",
+      "bucket": "archive"
+    },
+    {
+      "line": "D  api/automation/out/manual_shelter/20260328T132440Z/B_automation_impl/api/automation/tenmon_worldclass_dialogue_acceptance_priority_loop_v1.json",
+      "xy": "D ",
+      "path": "api/automation/out/manual_shelter/20260328T132440Z/B_automation_impl/api/automation/tenmon_worldclass_dialogue_acceptance_priority_loop_v1.json",
+      "bucket": "archive"
+    },
+    {
+      "line": "D  api/automation/out/manual_shelter/20260328T132440Z/B_automation_impl/api/automation/tenmon_worldclass_dialogue_acceptance_priority_loop_v1.md",
+      "xy": "D ",
+      "path": "api/automation/out/manual_shelter/20260328T132440Z/B_automation_impl/api/automation/tenmon_worldclass_dialogue_acceptance_priority_loop_v1.md",
+      "bucket": "archive"
+    },
+    {
+      "line": "D  api/automation/out/manual_shelter/20260328T132440Z/B_automation_impl/api/automation/tenmon_worldclass_dialogue_acceptance_priority_loop_v1.py",
+      "xy": "D ",
+      "path": "api/automation/out/manual_shelter/20260328T132440Z/B_automation_impl/api/automation/tenmon_worldclass_dialogue_acceptance_priority_loop_v1.py",
+      "bucket": "archive"
+    },
+    {
+      "line": "D  api/automation/out/manual_shelter/20260328T132440Z/B_automation_impl/api/automation/tenmon_worldclass_dialogue_acceptance_seal_cursor_auto_v1.json",
+      "xy": "D ",
+      "path": "api/automation/out/manual_shelter/20260328T132440Z/B_automation_impl/api/automation/tenmon_worldclass_dialogue_acceptance_seal_cursor_auto_v1.json",
+      "bucket": "archive"
+    },
+    {
+      "line": "D  api/automation/out/manual_shelter/20260328T132440Z/B_automation_impl/api/automation/tenmon_worldclass_dialogue_acceptance_seal_cursor_auto_v1.md",
+      "xy": "D ",
+      "path": "api/automation/out/manual_shelter/20260328T132440Z/B_automation_impl/api/automation/tenmon_worldclass_dialogue_acceptance_seal_cursor_auto_v1.md",
+      "bucket": "archive"
+    },
+    {
+      "line": "D  api/automation/out/manual_shelter/20260328T132440Z/B_automation_impl/api/scripts/tenmon_continuous_self_improvement_overnight_daemon_v1.sh",
+      "xy": "D ",
+      "path": "api/automation/out/manual_shelter/20260328T132440Z/B_automation_impl/api/scripts/tenmon_continuous_self_improvement_overnight_daemon_v1.sh",
+      "bucket": "archive"
+    },
+    {
+      "line": " M api/automation/tenmon_ark_book_canon_ledger_and_conversation_reuse_report_v1.md",
+      "xy": " M",
+      "path": "api/automation/tenmon_ark_book_canon_ledger_and_conversation_reuse_report_v1.md",
+      "bucket": "keep"
+    },
+    {
+      "line": "AM api/automation/tenmon_artifact_worktree_hygiene_and_relock_cursor_auto_v2.py",
+      "xy": "AM",
+      "path": "api/automation/tenmon_artifact_worktree_hygiene_and_relock_cursor_auto_v2.py",
+      "bucket": "keep"
+    },
+    {
+      "line": "AM api/automation/tenmon_artifact_worktree_hygiene_and_relock_report_v2.md",
+      "xy": "AM",
+      "path": "api/automation/tenmon_artifact_worktree_hygiene_and_relock_report_v2.md",
+      "bucket": "keep"
+    },
+    {
+      "line": "AM api/automation/tenmon_artifact_worktree_hygiene_and_relock_result_v2.json",
+      "xy": "AM",
+      "path": "api/automation/tenmon_artifact_worktree_hygiene_and_relock_result_v2.json",
+      "bucket": "keep"
+    },
+    {
+      "line": "D  api/automation/tenmon_autonomy_current_state_forensic.md",
+      "xy": "D ",
+      "path": "api/automation/tenmon_autonomy_current_state_forensic.md",
+      "bucket": "archive"
+    },
+    {
+      "line": "D  api/automation/tenmon_autonomy_forensic_bundle_repair_cursor_auto_v1.json",
+      "xy": "D ",
+      "path": "api/automation/tenmon_autonomy_forensic_bundle_repair_cursor_auto_v1.json",
+      "bucket": "archive"
+    },
+    {
+      "line": "D  api/automation/tenmon_autonomy_forensic_bundle_repair_next_card_v1.json",
+      "xy": "D ",
+      "path": "api/automation/tenmon_autonomy_forensic_bundle_repair_next_card_v1.json",
+      "bucket": "archive"
+    },
+    {
+      "line": " M api/automation/tenmon_conversation_acceptance_probe_relock_cursor_auto_v1.py",
+      "xy": " M",
+      "path": "api/automation/tenmon_conversation_acceptance_probe_relock_cursor_auto_v1.py",
+      "bucket": "keep"
+    },
+    {
+      "line": " M api/automation/tenmon_conversation_acceptance_probe_relock_report_v1.md",
+      "xy": " M",
+      "path": "api/automation/tenmon_conversation_acceptance_probe_relock_report_v1.md",
+      "bucket": "keep"
+    },
+    {
+      "line": " M api/automation/tenmon_cursor_single_flight_queue_state.json",
+      "xy": " M",
+      "path": "api/automation/tenmon_cursor_single_flight_queue_state.json",
+      "bucket": "keep"
+    },
+    {
+      "line": " M api/automation/tenmon_katakamuna_source_audit_and_classification_report_v1.md",
+      "xy": " M",
+      "path": "api/automation/tenmon_katakamuna_source_audit_and_classification_report_v1.md",
+      "bucket": "keep"
+    },
+    {
+      "line": " M api/automation/tenmon_pdca_risk_policy_v1.json",
+      "xy": " M",
+      "path": "api/automation/tenmon_pdca_risk_policy_v1.json",
+      "bucket": "keep"
+    },
+    {
+      "line": " M api/automation/tenmon_pdca_self_running_os_parent_v1.py",
+      "xy": " M",
+      "path": "api/automation/tenmon_pdca_self_running_os_parent_v1.py",
+      "bucket": "keep"
+    },
+    {
+      "line": " M api/src/core/answerProfileLayer.ts",
+      "xy": " M",
+      "path": "api/src/core/answerProfileLayer.ts",
+      "bucket": "keep"
+    },
+    {
+      "line": " M api/src/core/confidenceDisplayLogic.ts",
+      "xy": " M",
+      "path": "api/src/core/confidenceDisplayLogic.ts",
+      "bucket": "keep"
+    },
+    {
+      "line": " M api/src/core/katakamunaSourceAuditClassificationV1.ts",
+      "xy": " M",
+      "path": "api/src/core/katakamunaSourceAuditClassificationV1.ts",
+      "bucket": "keep"
+    },
+    {
+      "line": " M api/src/core/knowledgeBinder.ts",
+      "xy": " M",
+      "path": "api/src/core/knowledgeBinder.ts",
+      "bucket": "keep"
+    },
+    {
+      "line": " M api/src/core/meaningArbitrationKernel.ts",
+      "xy": " M",
+      "path": "api/src/core/meaningArbitrationKernel.ts",
+      "bucket": "keep"
+    },
+    {
+      "line": " M api/src/core/notionCanon.ts",
+      "xy": " M",
+      "path": "api/src/core/notionCanon.ts",
+      "bucket": "keep"
+    },
+    {
+      "line": " M api/src/core/scriptureCanon.ts",
+      "xy": " M",
+      "path": "api/src/core/scriptureCanon.ts",
+      "bucket": "keep"
+    },
+    {
+      "line": " M api/src/core/scriptureFamily.ts",
+      "xy": " M",
+      "path": "api/src/core/scriptureFamily.ts",
+      "bucket": "keep"
+    },
+    {
+      "line": " M api/src/core/scriptureLineageEngine.ts",
+      "xy": " M",
+      "path": "api/src/core/scriptureLineageEngine.ts",
+      "bucket": "keep"
+    },
+    {
+      "line": " M api/src/core/tenmonBookReadingKernelV1.ts",
+      "xy": " M",
+      "path": "api/src/core/tenmonBookReadingKernelV1.ts",
+      "bucket": "keep"
+    },
+    {
+      "line": " M api/src/core/tenmonBookReadingToDeepreadBridgeV1.ts",
+      "xy": " M",
+      "path": "api/src/core/tenmonBookReadingToDeepreadBridgeV1.ts",
+      "bucket": "keep"
+    },
+    {
+      "line": " M api/src/core/tenmonBrainstem.ts",
+      "xy": " M",
+      "path": "api/src/core/tenmonBrainstem.ts",
+      "bucket": "keep"
+    },
+    {
+      "line": " M api/src/core/tenmonComparativeMappingV1.ts",
+      "xy": " M",
+      "path": "api/src/core/tenmonComparativeMappingV1.ts",
+      "bucket": "keep"
+    },
+    {
+      "line": " M api/src/core/tenmonConversationSurfaceV2.ts",
+      "xy": " M",
+      "path": "api/src/core/tenmonConversationSurfaceV2.ts",
+      "bucket": "keep"
+    },
+    {
+      "line": " M api/src/core/tenmonMaterialDigestLedgerV1.ts",
+      "xy": " M",
+      "path": "api/src/core/tenmonMaterialDigestLedgerV1.ts",
+      "bucket": "keep"
+    },
+    {
+      "line": " M api/src/core/tenmonMaterialStudyPlannerV1.ts",
+      "xy": " M",
+      "path": "api/src/core/tenmonMaterialStudyPlannerV1.ts",
+      "bucket": "keep"
+    },
+    {
+      "line": " M api/src/core/tenmonResponseProjector.ts",
+      "xy": " M",
+      "path": "api/src/core/tenmonResponseProjector.ts",
+      "bucket": "keep"
+    },
+    {
+      "line": " M api/src/core/tenmonSanskritComparativeKernelV1.ts",
+      "xy": " M",
+      "path": "api/src/core/tenmonSanskritComparativeKernelV1.ts",
+      "bucket": "keep"
+    },
+    {
+      "line": " M api/src/core/tenmonSelfLearningStudyLoopV1.ts",
+      "xy": " M",
+      "path": "api/src/core/tenmonSelfLearningStudyLoopV1.ts",
+      "bucket": "keep"
+    },
+    {
+      "line": " M api/src/core/threadCenterMemory.ts",
+      "xy": " M",
+      "path": "api/src/core/threadCenterMemory.ts",
+      "bucket": "keep"
+    },
+    {
+      "line": " M api/src/core/threadMeaningMemory.ts",
+      "xy": " M",
+      "path": "api/src/core/threadMeaningMemory.ts",
+      "bucket": "keep"
+    },
+    {
+      "line": " M api/src/core/truthLayerArbitrationKernel.ts",
+      "xy": " M",
+      "path": "api/src/core/truthLayerArbitrationKernel.ts",
+      "bucket": "keep"
+    },
+    {
+      "line": " M api/src/index.ts",
+      "xy": " M",
+      "path": "api/src/index.ts",
+      "bucket": "keep"
+    },
+    {
+      "line": " M api/src/routes/adminCursorCommand.ts",
+      "xy": " M",
+      "path": "api/src/routes/adminCursorCommand.ts",
+      "bucket": "keep"
+    },
+    {
+      "line": " M api/src/routes/adminCursorResult.ts",
+      "xy": " M",
+      "path": "api/src/routes/adminCursorResult.ts",
+      "bucket": "keep"
+    },
+    {
+      "line": " M api/src/routes/billing.ts",
+      "xy": " M",
+      "path": "api/src/routes/billing.ts",
+      "bucket": "keep"
+    },
+    {
+      "line": " M api/src/routes/chat.ts",
+      "xy": " M",
+      "path": "api/src/routes/chat.ts",
+      "bucket": "keep"
+    },
+    {
+      "line": " M api/src/routes/chat_parts/gates_impl.ts",
+      "xy": " M",
+      "path": "api/src/routes/chat_parts/gates_impl.ts",
+      "bucket": "keep"
+    },
+    {
+      "line": " M api/src/routes/chat_refactor/continuity_trunk_v1.ts",
+      "xy": " M",
+      "path": "api/src/routes/chat_refactor/continuity_trunk_v1.ts",
+      "bucket": "keep"
+    },
+    {
+      "line": " M api/src/routes/chat_refactor/entry.ts",
+      "xy": " M",
+      "path": "api/src/routes/chat_refactor/entry.ts",
+      "bucket": "keep"
+    },
+    {
+      "line": " M api/src/routes/chat_refactor/finalize.ts",
+      "xy": " M",
+      "path": "api/src/routes/chat_refactor/finalize.ts",
+      "bucket": "keep"
+    },
+    {
+      "line": " M api/src/routes/chat_refactor/general_trunk_v1.ts",
+      "xy": " M",
+      "path": "api/src/routes/chat_refactor/general_trunk_v1.ts",
+      "bucket": "keep"
+    },
+    {
+      "line": " M server/_core/index.ts",
+      "xy": " M",
+      "path": "server/_core/index.ts",
+      "bucket": "keep"
+    },
+    {
+      "line": "?? api/automation/tenmon_ark_book_canon_ledger_and_conversation_reuse_cursor_auto_v1.py",
+      "xy": "??",
+      "path": "api/automation/tenmon_ark_book_canon_ledger_and_conversation_reuse_cursor_auto_v1.py",
+      "bucket": "keep_add_candidate"
+    },
+    {
+      "line": "?? api/automation/tenmon_ark_book_canon_ledger_and_conversation_reuse_result_v1.json",
+      "xy": "??",
+      "path": "api/automation/tenmon_ark_book_canon_ledger_and_conversation_reuse_result_v1.json",
+      "bucket": "keep_add_candidate"
+    },
+    {
+      "line": "?? api/automation/tenmon_artifact_and_worktree_hygiene_cursor_auto_v1.py",
+      "xy": "??",
+      "path": "api/automation/tenmon_artifact_and_worktree_hygiene_cursor_auto_v1.py",
+      "bucket": "keep_add_candidate"
+    },
+    {
+      "line": "?? api/automation/tenmon_artifact_and_worktree_hygiene_report_v1.md",
+      "xy": "??",
+      "path": "api/automation/tenmon_artifact_and_worktree_hygiene_report_v1.md",
+      "bucket": "keep_add_candidate"
+    },
+    {
+      "line": "?? api/automation/tenmon_artifact_and_worktree_hygiene_result_v1.json",
+      "xy": "??",
+      "path": "api/automation/tenmon_artifact_and_worktree_hygiene_result_v1.json",
+      "bucket": "keep_add_candidate"
+    },
+    {
+      "line": "?? api/automation/tenmon_book_learning_acceptance_and_reuse_bench_cursor_auto_v1.py",
+      "xy": "??",
+      "path": "api/automation/tenmon_book_learning_acceptance_and_reuse_bench_cursor_auto_v1.py",
+      "bucket": "keep_add_candidate"
+    },
+    {
+      "line": "?? api/automation/tenmon_book_learning_acceptance_and_reuse_bench_report_v1.md",
+      "xy": "??",
+      "path": "api/automation/tenmon_book_learning_acceptance_and_reuse_bench_report_v1.md",
+      "bucket": "keep_add_candidate"
+    },
+    {
+      "line": "?? api/automation/tenmon_book_learning_acceptance_and_reuse_bench_result_v1.json",
+      "xy": "??",
+      "path": "api/automation/tenmon_book_learning_acceptance_and_reuse_bench_result_v1.json",
+      "bucket": "keep_add_candidate"
+    },
+    {
+      "line": "?? api/automation/tenmon_book_learning_deep_xray_and_quality_forensic_cursor_auto_v1.py",
+      "xy": "??",
+      "path": "api/automation/tenmon_book_learning_deep_xray_and_quality_forensic_cursor_auto_v1.py",
+      "bucket": "keep_add_candidate"
+    },
+    {
+      "line": "?? api/automation/tenmon_book_learning_mainline_seal_cursor_auto_v1.py",
+      "xy": "??",
+      "path": "api/automation/tenmon_book_learning_mainline_seal_cursor_auto_v1.py",
+      "bucket": "keep_add_candidate"
+    },
+    {
+      "line": "?? api/automation/tenmon_book_learning_mainline_seal_report_v1.md",
+      "xy": "??",
+      "path": "api/automation/tenmon_book_learning_mainline_seal_report_v1.md",
+      "bucket": "keep_add_candidate"
+    },
+    {
+      "line": "?? api/automation/tenmon_book_learning_mainline_seal_result_v1.json",
+      "xy": "??",
+      "path": "api/automation/tenmon_book_learning_mainline_seal_result_v1.json",
+      "bucket": "keep_add_candidate"
+    },
+    {
+      "line": "?? api/automation/tenmon_conversation_acceptance_probe_relock_result_v1.json",
+      "xy": "??",
+      "path": "api/automation/tenmon_conversation_acceptance_probe_relock_result_v1.json",
+      "bucket": "keep_add_candidate"
+    },
+    {
+      "line": "?? api/automation/tenmon_final_acceptance_probe_and_autonomy_relock_cursor_auto_v2.py",
+      "xy": "??",
+      "path": "api/automation/tenmon_final_acceptance_probe_and_autonomy_relock_cursor_auto_v2.py",
+      "bucket": "keep_add_candidate"
+    },
+    {
+      "line": "?? api/automation/tenmon_final_acceptance_probe_and_autonomy_relock_cursor_auto_v3.py",
+      "xy": "??",
+      "path": "api/automation/tenmon_final_acceptance_probe_and_autonomy_relock_cursor_auto_v3.py",
+      "bucket": "keep_add_candidate"
+    },
+    {
+      "line": "?? api/automation/tenmon_final_acceptance_probe_relock_report_v2.md",
+      "xy": "??",
+      "path": "api/automation/tenmon_final_acceptance_probe_relock_report_v2.md",
+      "bucket": "keep_add_candidate"
+    },
+    {
+      "line": "?? api/automation/tenmon_final_acceptance_probe_relock_report_v3.md",
+      "xy": "??",
+      "path": "api/automation/tenmon_final_acceptance_probe_relock_report_v3.md",
+      "bucket": "keep_add_candidate"
+    },
+    {
+      "line": "?? api/automation/tenmon_final_acceptance_probe_relock_result_v2.json",
+      "xy": "??",
+      "path": "api/automation/tenmon_final_acceptance_probe_relock_result_v2.json",
+      "bucket": "keep_add_candidate"
+    },
+    {
+      "line": "?? api/automation/tenmon_final_acceptance_probe_relock_result_v3.json",
+      "xy": "??",
+      "path": "api/automation/tenmon_final_acceptance_probe_relock_result_v3.json",
+      "bucket": "keep_add_candidate"
+    },
+    {
+      "line": "?? api/automation/tenmon_full_autonomy_acceptance_and_seal_cursor_auto_v1.py",
+      "xy": "??",
+      "path": "api/automation/tenmon_full_autonomy_acceptance_and_seal_cursor_auto_v1.py",
+      "bucket": "keep_add_candidate"
+    },
+    {
+      "line": "?? api/automation/tenmon_full_autonomy_acceptance_and_seal_report_v1.md",
+      "xy": "??",
+      "path": "api/automation/tenmon_full_autonomy_acceptance_and_seal_report_v1.md",
+      "bucket": "keep_add_candidate"
+    },
+    {
+      "line": "?? api/automation/tenmon_full_autonomy_acceptance_and_seal_result_v1.json",
+      "xy": "??",
+      "path": "api/automation/tenmon_full_autonomy_acceptance_and_seal_result_v1.json",
+      "bucket": "keep_add_candidate"
+    },
+    {
+      "line": "?? api/automation/tenmon_katakamuna_source_audit_and_classification_cursor_auto_v1.py",
+      "xy": "??",
+      "path": "api/automation/tenmon_katakamuna_source_audit_and_classification_cursor_auto_v1.py",
+      "bucket": "keep_add_candidate"
+    },
+    {
+      "line": "?? api/automation/tenmon_katakamuna_source_audit_and_classification_result_v1.json",
+      "xy": "??",
+      "path": "api/automation/tenmon_katakamuna_source_audit_and_classification_result_v1.json",
+      "bucket": "keep_add_candidate"
+    },
+    {
+      "line": "?? api/automation/tenmon_kokuzo_core_tenmon_reading_insert_v1.py",
+      "xy": "??",
+      "path": "api/automation/tenmon_kokuzo_core_tenmon_reading_insert_v1.py",
+      "bucket": "keep_add_candidate_other"
+    },
+    {
+      "line": "?? api/automation/tenmon_kokuzo_core_tenmon_reading_insert_v2.py",
+      "xy": "??",
+      "path": "api/automation/tenmon_kokuzo_core_tenmon_reading_insert_v2.py",
+      "bucket": "keep_add_candidate_other"
+    },
+    {
+      "line": "?? api/automation/tenmon_ocr_runtime_wake_and_binary_verify_cursor_auto_v1.py",
+      "xy": "??",
+      "path": "api/automation/tenmon_ocr_runtime_wake_and_binary_verify_cursor_auto_v1.py",
+      "bucket": "keep_add_candidate"
+    },
+    {
+      "line": "?? api/automation/tenmon_ocr_runtime_wake_and_binary_verify_report_v1.md",
+      "xy": "??",
+      "path": "api/automation/tenmon_ocr_runtime_wake_and_binary_verify_report_v1.md",
+      "bucket": "keep_add_candidate"
+    },
+    {
+      "line": "?? api/automation/tenmon_ocr_runtime_wake_and_binary_verify_result_v1.json",
+      "xy": "??",
+      "path": "api/automation/tenmon_ocr_runtime_wake_and_binary_verify_result_v1.json",
+      "bucket": "keep_add_candidate"
+    },
+    {
+      "line": "?? api/automation/tenmon_ocr_to_book_settlement_bind_cursor_auto_v1.py",
+      "xy": "??",
+      "path": "api/automation/tenmon_ocr_to_book_settlement_bind_cursor_auto_v1.py",
+      "bucket": "keep_add_candidate"
+    },
+    {
+      "line": "?? api/automation/tenmon_ocr_to_book_settlement_bind_report_v1.md",
+      "xy": "??",
+      "path": "api/automation/tenmon_ocr_to_book_settlement_bind_report_v1.md",
+      "bucket": "keep_add_candidate"
+    },
+    {
+      "line": "?? api/automation/tenmon_ocr_to_book_settlement_bind_result_v1.json",
+      "xy": "??",
+      "path": "api/automation/tenmon_ocr_to_book_settlement_bind_result_v1.json",
+      "bucket": "keep_add_candidate"
+    },
+    {
+      "line": "?? api/automation/tenmon_real_chat_ux_acceptance_cursor_auto_v2.py",
+      "xy": "??",
+      "path": "api/automation/tenmon_real_chat_ux_acceptance_cursor_auto_v2.py",
+      "bucket": "keep_add_candidate"
+    },
+    {
+      "line": "?? api/automation/tenmon_real_chat_ux_acceptance_report_v2.md",
+      "xy": "??",
+      "path": "api/automation/tenmon_real_chat_ux_acceptance_report_v2.md",
+      "bucket": "keep_add_candidate"
+    },
+    {
+      "line": "?? api/automation/tenmon_real_chat_ux_acceptance_result_v2.json",
+      "xy": "??",
+      "path": "api/automation/tenmon_real_chat_ux_acceptance_result_v2.json",
+      "bucket": "keep_add_candidate"
+    },
+    {
+      "line": "?? api/automation/tenmon_reuse_bench_and_conversation_uplift_acceptance_cursor_auto_v1.py",
+      "xy": "??",
+      "path": "api/automation/tenmon_reuse_bench_and_conversation_uplift_acceptance_cursor_auto_v1.py",
+      "bucket": "keep_add_candidate"
+    },
+    {
+      "line": "?? api/automation/tenmon_reuse_bench_and_conversation_uplift_acceptance_report_v1.md",
+      "xy": "??",
+      "path": "api/automation/tenmon_reuse_bench_and_conversation_uplift_acceptance_report_v1.md",
+      "bucket": "keep_add_candidate"
+    },
+    {
+      "line": "?? api/automation/tenmon_reuse_bench_and_conversation_uplift_acceptance_result_v1.json",
+      "xy": "??",
+      "path": "api/automation/tenmon_reuse_bench_and_conversation_uplift_acceptance_result_v1.json",
+      "bucket": "keep_add_candidate"
+    },
+    {
+      "line": "?? api/scripts/tenmon_ark_book_canon_ledger_emit_v1.ts",
+      "xy": "??",
+      "path": "api/scripts/tenmon_ark_book_canon_ledger_emit_v1.ts",
+      "bucket": "keep_add_candidate"
+    },
+    {
+      "line": "?? api/scripts/tenmon_ark_book_canon_ledger_v1.sh",
+      "xy": "??",
+      "path": "api/scripts/tenmon_ark_book_canon_ledger_v1.sh",
+      "bucket": "keep_add_candidate"
+    },
+    {
+      "line": "?? api/scripts/tenmon_artifact_and_worktree_hygiene_v1.sh",
+      "xy": "??",
+      "path": "api/scripts/tenmon_artifact_and_worktree_hygiene_v1.sh",
+      "bucket": "keep_add_candidate"
+    },
+    {
+      "line": "?? api/scripts/tenmon_book_learning_bench_emit_v1.ts",
+      "xy": "??",
+      "path": "api/scripts/tenmon_book_learning_bench_emit_v1.ts",
+      "bucket": "keep_add_candidate"
+    },
+    {
+      "line": "?? api/scripts/tenmon_book_learning_bench_v1.sh",
+      "xy": "??",
+      "path": "api/scripts/tenmon_book_learning_bench_v1.sh",
+      "bucket": "keep_add_candidate"
+    },
+    {
+      "line": "?? api/scripts/tenmon_book_learning_deep_xray_emit_v1.ts",
+      "xy": "??",
+      "path": "api/scripts/tenmon_book_learning_deep_xray_emit_v1.ts",
+      "bucket": "keep_add_candidate"
+    },
+    {
+      "line": "?? api/scripts/tenmon_book_learning_deep_xray_v1.sh",
+      "xy": "??",
+      "path": "api/scripts/tenmon_book_learning_deep_xray_v1.sh",
+      "bucket": "keep_add_candidate"
+    },
+    {
+      "line": "?? api/scripts/tenmon_book_learning_mainline_seal_emit_v1.ts",
+      "xy": "??",
+      "path": "api/scripts/tenmon_book_learning_mainline_seal_emit_v1.ts",
+      "bucket": "keep_add_candidate"
+    },
+    {
+      "line": "?? api/scripts/tenmon_book_learning_mainline_seal_v1.sh",
+      "xy": "??",
+      "path": "api/scripts/tenmon_book_learning_mainline_seal_v1.sh",
+      "bucket": "keep_add_candidate"
+    },
+    {
+      "line": "?? api/scripts/tenmon_final_acceptance_probe_relock_v2.sh",
+      "xy": "??",
+      "path": "api/scripts/tenmon_final_acceptance_probe_relock_v2.sh",
+      "bucket": "keep_add_candidate"
+    },
+    {
+      "line": "?? api/scripts/tenmon_final_acceptance_probe_relock_v3.sh",
+      "xy": "??",
+      "path": "api/scripts/tenmon_final_acceptance_probe_relock_v3.sh",
+      "bucket": "keep_add_candidate"
+    },
+    {
+      "line": "?? api/scripts/tenmon_katakamuna_source_audit_emit_v1.ts",
+      "xy": "??",
+      "path": "api/scripts/tenmon_katakamuna_source_audit_emit_v1.ts",
+      "bucket": "keep_add_candidate"
+    },
+    {
+      "line": "?? api/scripts/tenmon_katakamuna_source_audit_v1.sh",
+      "xy": "??",
+      "path": "api/scripts/tenmon_katakamuna_source_audit_v1.sh",
+      "bucket": "keep_add_candidate"
+    },
+    {
+      "line": "?? api/scripts/tenmon_kokuzo_core_tenmon_reading_insert_v1.sh",
+      "xy": "??",
+      "path": "api/scripts/tenmon_kokuzo_core_tenmon_reading_insert_v1.sh",
+      "bucket": "keep_add_candidate"
+    },
+    {
+      "line": "?? api/scripts/tenmon_ocr_runtime_wake_and_binary_verify_v1.sh",
+      "xy": "??",
+      "path": "api/scripts/tenmon_ocr_runtime_wake_and_binary_verify_v1.sh",
+      "bucket": "keep_add_candidate"
+    },
+    {
+      "line": "?? api/scripts/tenmon_ocr_to_book_settlement_bind_emit_v1.ts",
+      "xy": "??",
+      "path": "api/scripts/tenmon_ocr_to_book_settlement_bind_emit_v1.ts",
+      "bucket": "keep_add_candidate"
+    },
+    {
+      "line": "?? api/scripts/tenmon_ocr_to_book_settlement_bind_v1.sh",
+      "xy": "??",
+      "path": "api/scripts/tenmon_ocr_to_book_settlement_bind_v1.sh",
+      "bucket": "keep_add_candidate"
+    },
+    {
+      "line": "?? api/scripts/tenmon_reuse_bench_conversation_uplift_emit_v1.ts",
+      "xy": "??",
+      "path": "api/scripts/tenmon_reuse_bench_conversation_uplift_emit_v1.ts",
+      "bucket": "keep_add_candidate"
+    },
+    {
+      "line": "?? api/scripts/tenmon_reuse_bench_conversation_uplift_v1.sh",
+      "xy": "??",
+      "path": "api/scripts/tenmon_reuse_bench_conversation_uplift_v1.sh",
+      "bucket": "keep_add_candidate"
+    },
+    {
+      "line": "?? api/src/core/tenmonBookLearningAcceptanceReuseBenchV1.ts",
+      "xy": "??",
+      "path": "api/src/core/tenmonBookLearningAcceptanceReuseBenchV1.ts",
+      "bucket": "keep_add_candidate"
+    },
+    {
+      "line": "?? api/src/core/tenmonBookLearningDeepXrayQualityForensicV1.ts",
+      "xy": "??",
+      "path": "api/src/core/tenmonBookLearningDeepXrayQualityForensicV1.ts",
+      "bucket": "keep_add_candidate"
+    },
+    {
+      "line": "?? api/src/core/tenmonBookLearningMainlineSealV1.ts",
+      "xy": "??",
+      "path": "api/src/core/tenmonBookLearningMainlineSealV1.ts",
+      "bucket": "keep_add_candidate"
+    },
+    {
+      "line": "?? api/src/core/tenmonReuseBenchAndConversationUpliftAcceptanceV1.ts",
+      "xy": "??",
+      "path": "api/src/core/tenmonReuseBenchAndConversationUpliftAcceptanceV1.ts",
+      "bucket": "keep_add_candidate"
+    },
+    {
+      "line": "?? api/src/core/tenmonSurfaceLeakStripV2.ts",
+      "xy": "??",
+      "path": "api/src/core/tenmonSurfaceLeakStripV2.ts",
+      "bucket": "keep_add_candidate"
+    }
+  ],
+  "buckets_summary": {
+    "keep": 45,
+    "archive": 25,
+    "delete_candidate": 0,
+    "keep_add_candidate": 60,
+    "keep_add_candidate_other": 2
+  },
+  "buckets_paths": {
+    "keep": [
+      ".gitignore",
+      "api/automation/operations_level_autonomy_state_v1.json",
+      "api/automation/tenmon_ark_book_canon_ledger_and_conversation_reuse_report_v1.md",
+      "api/automation/tenmon_artifact_worktree_hygiene_and_relock_cursor_auto_v2.py",
+      "api/automation/tenmon_artifact_worktree_hygiene_and_relock_report_v2.md",
+      "api/automation/tenmon_artifact_worktree_hygiene_and_relock_result_v2.json",
+      "api/automation/tenmon_conversation_acceptance_probe_relock_cursor_auto_v1.py",
+      "api/automation/tenmon_conversation_acceptance_probe_relock_report_v1.md",
+      "api/automation/tenmon_cursor_single_flight_queue_state.json",
+      "api/automation/tenmon_katakamuna_source_audit_and_classification_report_v1.md",
+      "api/automation/tenmon_pdca_risk_policy_v1.json",
+      "api/automation/tenmon_pdca_self_running_os_parent_v1.py",
+      "api/src/core/answerProfileLayer.ts",
+      "api/src/core/confidenceDisplayLogic.ts",
+      "api/src/core/katakamunaSourceAuditClassificationV1.ts",
+      "api/src/core/knowledgeBinder.ts",
+      "api/src/core/meaningArbitrationKernel.ts",
+      "api/src/core/notionCanon.ts",
+      "api/src/core/scriptureCanon.ts",
+      "api/src/core/scriptureFamily.ts",
+      "api/src/core/scriptureLineageEngine.ts",
+      "api/src/core/tenmonBookReadingKernelV1.ts",
+      "api/src/core/tenmonBookReadingToDeepreadBridgeV1.ts",
+      "api/src/core/tenmonBrainstem.ts",
+      "api/src/core/tenmonComparativeMappingV1.ts",
+      "api/src/core/tenmonConversationSurfaceV2.ts",
+      "api/src/core/tenmonMaterialDigestLedgerV1.ts",
+      "api/src/core/tenmonMaterialStudyPlannerV1.ts",
+      "api/src/core/tenmonResponseProjector.ts",
+      "api/src/core/tenmonSanskritComparativeKernelV1.ts",
+      "api/src/core/tenmonSelfLearningStudyLoopV1.ts",
+      "api/src/core/threadCenterMemory.ts",
+      "api/src/core/threadMeaningMemory.ts",
+      "api/src/core/truthLayerArbitrationKernel.ts",
+      "api/src/index.ts",
+      "api/src/routes/adminCursorCommand.ts",
+      "api/src/routes/adminCursorResult.ts",
+      "api/src/routes/billing.ts",
+      "api/src/routes/chat.ts",
+      "api/src/routes/chat_parts/gates_impl.ts",
+      "api/src/routes/chat_refactor/continuity_trunk_v1.ts",
+      "api/src/routes/chat_refactor/entry.ts",
+      "api/src/routes/chat_refactor/finalize.ts",
+      "api/src/routes/chat_refactor/general_trunk_v1.ts",
+      "server/_core/index.ts"
+    ],
+    "archive": [
+      "api/automation/out/manual_shelter/20260328T132440Z/B_automation_impl/api/automation/learning_quality_bridge.json",
+      "api/automation/out/manual_shelter/20260328T132440Z/B_automation_impl/api/automation/next_queue_rearm.json",
+      "api/automation/out/manual_shelter/20260328T132440Z/B_automation_impl/api/automation/tenmon_autonomy_12h_fully_autonomous_failclosed_master_cursor_auto_v1.json",
+      "api/automation/out/manual_shelter/20260328T132440Z/B_automation_impl/api/automation/tenmon_autonomy_result_bind_to_rejudge_and_acceptance_v1.py",
+      "api/automation/out/manual_shelter/20260328T132440Z/B_automation_impl/api/automation/tenmon_continuous_self_improvement_os_master_bundle_v1.py",
+      "api/automation/out/manual_shelter/20260328T132440Z/B_automation_impl/api/automation/tenmon_continuous_self_improvement_overnight_daemon_v1.py",
+      "api/automation/out/manual_shelter/20260328T132440Z/B_automation_impl/api/automation/tenmon_conversation_worldclass_mainline_selector_v1.py",
+      "api/automation/out/manual_shelter/20260328T132440Z/B_automation_impl/api/automation/tenmon_cursor_operator_autonomy_bridge_cursor_auto_v1.json",
+      "api/automation/out/manual_shelter/20260328T132440Z/B_automation_impl/api/automation/tenmon_final_conversation_completion_single_source_seal_cursor_auto_v1.json",
+      "api/automation/out/manual_shelter/20260328T132440Z/B_automation_impl/api/automation/tenmon_final_conversation_completion_single_source_seal_cursor_auto_v1.md",
+      "api/automation/out/manual_shelter/20260328T132440Z/B_automation_impl/api/automation/tenmon_final_conversation_completion_single_source_seal_manifest_v1.json",
+      "api/automation/out/manual_shelter/20260328T132440Z/B_automation_impl/api/automation/tenmon_final_operable_seal.json",
+      "api/automation/out/manual_shelter/20260328T132440Z/B_automation_impl/api/automation/tenmon_final_operable_seal_v1.py",
+      "api/automation/out/manual_shelter/20260328T132440Z/B_automation_impl/api/automation/tenmon_fractal_truth_worldclass_seal_cursor_auto_v1.json",
+      "api/automation/out/manual_shelter/20260328T132440Z/B_automation_impl/api/automation/tenmon_fractal_truth_worldclass_seal_cursor_auto_v1.md",
+      "api/automation/out/manual_shelter/20260328T132440Z/B_automation_impl/api/automation/tenmon_worldclass_acceptance_scorecard_v1.py",
+      "api/automation/out/manual_shelter/20260328T132440Z/B_automation_impl/api/automation/tenmon_worldclass_dialogue_acceptance_priority_loop_v1.json",
+      "api/automation/out/manual_shelter/20260328T132440Z/B_automation_impl/api/automation/tenmon_worldclass_dialogue_acceptance_priority_loop_v1.md",
+      "api/automation/out/manual_shelter/20260328T132440Z/B_automation_impl/api/automation/tenmon_worldclass_dialogue_acceptance_priority_loop_v1.py",
+      "api/automation/out/manual_shelter/20260328T132440Z/B_automation_impl/api/automation/tenmon_worldclass_dialogue_acceptance_seal_cursor_auto_v1.json",
+      "api/automation/out/manual_shelter/20260328T132440Z/B_automation_impl/api/automation/tenmon_worldclass_dialogue_acceptance_seal_cursor_auto_v1.md",
+      "api/automation/out/manual_shelter/20260328T132440Z/B_automation_impl/api/scripts/tenmon_continuous_self_improvement_overnight_daemon_v1.sh",
+      "api/automation/tenmon_autonomy_current_state_forensic.md",
+      "api/automation/tenmon_autonomy_forensic_bundle_repair_cursor_auto_v1.json",
+      "api/automation/tenmon_autonomy_forensic_bundle_repair_next_card_v1.json"
+    ],
+    "delete_candidate": [],
+    "keep_add_candidate": [
+      "api/automation/tenmon_ark_book_canon_ledger_and_conversation_reuse_cursor_auto_v1.py",
+      "api/automation/tenmon_ark_book_canon_ledger_and_conversation_reuse_result_v1.json",
+      "api/automation/tenmon_artifact_and_worktree_hygiene_cursor_auto_v1.py",
+      "api/automation/tenmon_artifact_and_worktree_hygiene_report_v1.md",
+      "api/automation/tenmon_artifact_and_worktree_hygiene_result_v1.json",
+      "api/automation/tenmon_book_learning_acceptance_and_reuse_bench_cursor_auto_v1.py",
+      "api/automation/tenmon_book_learning_acceptance_and_reuse_bench_report_v1.md",
+      "api/automation/tenmon_book_learning_acceptance_and_reuse_bench_result_v1.json",
+      "api/automation/tenmon_book_learning_deep_xray_and_quality_forensic_cursor_auto_v1.py",
+      "api/automation/tenmon_book_learning_mainline_seal_cursor_auto_v1.py",
+      "api/automation/tenmon_book_learning_mainline_seal_report_v1.md",
+      "api/automation/tenmon_book_learning_mainline_seal_result_v1.json",
+      "api/automation/tenmon_conversation_acceptance_probe_relock_result_v1.json",
+      "api/automation/tenmon_final_acceptance_probe_and_autonomy_relock_cursor_auto_v2.py",
+      "api/automation/tenmon_final_acceptance_probe_and_autonomy_relock_cursor_auto_v3.py",
+      "api/automation/tenmon_final_acceptance_probe_relock_report_v2.md",
+      "api/automation/tenmon_final_acceptance_probe_relock_report_v3.md",
+      "api/automation/tenmon_final_acceptance_probe_relock_result_v2.json",
+      "api/automation/tenmon_final_acceptance_probe_relock_result_v3.json",
+      "api/automation/tenmon_full_autonomy_acceptance_and_seal_cursor_auto_v1.py",
+      "api/automation/tenmon_full_autonomy_acceptance_and_seal_report_v1.md",
+      "api/automation/tenmon_full_autonomy_acceptance_and_seal_result_v1.json",
+      "api/automation/tenmon_katakamuna_source_audit_and_classification_cursor_auto_v1.py",
+      "api/automation/tenmon_katakamuna_source_audit_and_classification_result_v1.json",
+      "api/automation/tenmon_ocr_runtime_wake_and_binary_verify_cursor_auto_v1.py",
+      "api/automation/tenmon_ocr_runtime_wake_and_binary_verify_report_v1.md",
+      "api/automation/tenmon_ocr_runtime_wake_and_binary_verify_result_v1.json",
+      "api/automation/tenmon_ocr_to_book_settlement_bind_cursor_auto_v1.py",
+      "api/automation/tenmon_ocr_to_book_settlement_bind_report_v1.md",
+      "api/automation/tenmon_ocr_to_book_settlement_bind_result_v1.json",
+      "api/automation/tenmon_real_chat_ux_acceptance_cursor_auto_v2.py",
+      "api/automation/tenmon_real_chat_ux_acceptance_report_v2.md",
+      "api/automation/tenmon_real_chat_ux_acceptance_result_v2.json",
+      "api/automation/tenmon_reuse_bench_and_conversation_uplift_acceptance_cursor_auto_v1.py",
+      "api/automation/tenmon_reuse_bench_and_conversation_uplift_acceptance_report_v1.md",
+      "api/automation/tenmon_reuse_bench_and_conversation_uplift_acceptance_result_v1.json",
+      "api/scripts/tenmon_ark_book_canon_ledger_emit_v1.ts",
+      "api/scripts/tenmon_ark_book_canon_ledger_v1.sh",
+      "api/scripts/tenmon_artifact_and_worktree_hygiene_v1.sh",
+      "api/scripts/tenmon_book_learning_bench_emit_v1.ts",
+      "api/scripts/tenmon_book_learning_bench_v1.sh",
+      "api/scripts/tenmon_book_learning_deep_xray_emit_v1.ts",
+      "api/scripts/tenmon_book_learning_deep_xray_v1.sh",
+      "api/scripts/tenmon_book_learning_mainline_seal_emit_v1.ts",
+      "api/scripts/tenmon_book_learning_mainline_seal_v1.sh",
+      "api/scripts/tenmon_final_acceptance_probe_relock_v2.sh",
+      "api/scripts/tenmon_final_acceptance_probe_relock_v3.sh",
+      "api/scripts/tenmon_katakamuna_source_audit_emit_v1.ts",
+      "api/scripts/tenmon_katakamuna_source_audit_v1.sh",
+      "api/scripts/tenmon_kokuzo_core_tenmon_reading_insert_v1.sh",
+      "api/scripts/tenmon_ocr_runtime_wake_and_binary_verify_v1.sh",
+      "api/scripts/tenmon_ocr_to_book_settlement_bind_emit_v1.ts",
+      "api/scripts/tenmon_ocr_to_book_settlement_bind_v1.sh",
+      "api/scripts/tenmon_reuse_bench_conversation_uplift_emit_v1.ts",
+      "api/scripts/tenmon_reuse_bench_conversation_uplift_v1.sh",
+      "api/src/core/tenmonBookLearningAcceptanceReuseBenchV1.ts",
+      "api/src/core/tenmonBookLearningDeepXrayQualityForensicV1.ts",
+      "api/src/core/tenmonBookLearningMainlineSealV1.ts",
+      "api/src/core/tenmonReuseBenchAndConversationUpliftAcceptanceV1.ts",
+      "api/src/core/tenmonSurfaceLeakStripV2.ts"
+    ],
+    "keep_add_candidate_other": [
+      "api/automation/tenmon_kokuzo_core_tenmon_reading_insert_v1.py",
+      "api/automation/tenmon_kokuzo_core_tenmon_reading_insert_v2.py"
+    ]
+  },
+  "keep_required": [
+    "api/automation/tenmon_cursor_single_flight_queue_state.json",
+    "api/automation/tenmon_conversation_acceptance_probe_relock_cursor_auto_v1.py",
+    "api/automation/tenmon_real_chat_ux_acceptance_cursor_auto_v2.py"
+  ],
+  "archive_aligned_stage_deletes": [
+    "api/automation/out/manual_shelter",
+    "api/automation/tenmon_autonomy_current_state_forensic.md",
+    "api/automation/tenmon_autonomy_forensic_bundle_repair_cursor_auto_v1.json",
+    "api/automation/tenmon_autonomy_forensic_bundle_repair_next_card_v1.json"
+  ],
+  "failure_reasons": [],
+  "explainable_worktree": true,
+  "acceptance_pass": true,
+  "nextOnPass": "TENMON_FINAL_ACCEPTANCE_FREEZE_AND_SEAL_CURSOR_AUTO_V4",
+  "nextOnFail": "keep/archive/delete candidate 分類のやり直し、誤削除があれば archive から復旧",
+  "observation_only": true
+}

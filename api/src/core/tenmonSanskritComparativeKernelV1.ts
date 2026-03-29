@@ -1,5 +1,6 @@
 /**
  * サンスクリット資料は comparative（root を上書きしない）。
+ * ARK `uncertainty_registry.flags` は getSelfLearningAutostudyBundleV1 からオプション注入可。
  */
 
 export type SanskritComparativeKernelBundleV1 = {

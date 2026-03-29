@@ -14,7 +14,10 @@ import { inferExpressionPlan, inferComfortTuning } from "../../expression/expres
 import { buildBrainstemDecisionFromKu } from "../../chat/brainstem/brainstem.js";
 import { upsertThreadCenter } from "../../core/threadCenterMemory.js";
 import { buildKnowledgeBinder, applyKnowledgeBinderToKu } from "../../core/knowledgeBinder.js";
-import { TENMON_FOUNDER_UPDATE_PROFILE_FRAME_V1 } from "../../core/answerProfileLayer.js";
+import {
+  applyUncertaintySurfacePrefixIfAnyV1,
+  TENMON_FOUNDER_UPDATE_PROFILE_FRAME_V1,
+} from "../../core/answerProfileLayer.js";
 import { polishTenmonChatResponseSurfaceExitV1 } from "../../core/tenmonConversationSurfaceV2.js";
 
 type GeneralFrontKind = "greeting" | "meta_conversation" | "present_state" | "none";
@@ -88,27 +91,21 @@ export function classifyTenmonSupportEarlyTriageV1(raw: string): TenmonSupportEa
 
   const RE_UI =
     /(改行|enterで送信|shift\+enter|shift enter|送信|改行できない|入力できない|送信される|改行できません|入力できません)/iu;
+  /** TENMON_SUPPORT_AND_FOUNDER_ROUTE_FIX_CURSOR_AUTO_V5: 料金/PWA を BUG/GK/subconcept より優先（できません形・billing 語の補強） */
   const RE_BILLING =
-    /(課金|billing|\bcharge\b|\bpayment\b|\binvoice\b|\brefund\b|\bpricing\b|\bsubscription\b|請求|支払い|支払|お支払い|決済|料金|プラン変更|プランの状態|課金表示|請求とプラン|サブスク|解約|返金|領収|領収書|インボイス|引き落とし|カード決済|クレジット|振込)/iu;
+    /(課金|billing|\bcharge\b|\bpayment\b|\bprice\b|\binvoice\b|\brefund\b|\bpricing\b|\bsubscription\b|\bstripe\b|請求書|請求|支払い|支払|お支払い|決済|料金プラン|料金|プラン変更|プランの状態|プラン.?確認|支払.?確認|課金.?確認|課金表示|請求とプラン|サブスク|解約|返金|領収|領収書|インボイス|引き落とし|カード決済|クレジット|振込|価格|値段|お金|未払い|支払状況|支払い状況|プラン料金|利用料|年会費|月額|無料期間|トライアル)/iu;
   const RE_PWA =
-    /(\bPWA\b|PWA.{0,24}入れ|入れ.{0,24}PWA|ホーム画面|アプリ化|ショートカット|add\s*to\s*home|インストールできない|インストール|アプリが入れない|アプリが入らない|アプリとして追加|ホームに追加|ホーム画面に追加)/iu;
+    /(\bPWA\b|PWA.{0,24}入れ|入れ.{0,24}PWA|ホーム追加|ホーム画面|アプリ化|ショートカット|add\s*to\s*home|インストールできない|インストールできません|インストール|追加できない|追加できません|アプリが入れない|アプリが入らない|アプリが開かない|アプリが開けません|アプリが起動しない|(?:画面|ページ|サイト|チャット|アプリ)が開かない|(?:画面|ページ|サイト|チャット|アプリ)が開けない|(?:画面|ページ|アプリ)が開けません|サイトが開かない|ページが開けない|チャットが開かない|アプリとして追加|ホームに追加|ホーム画面に追加|立ち上がらない|白画面|白い画面|真っ白|表示されない|スプラッシュ|キャッシュ)/iu;
   const RE_BUG = /(バグ|不具合|おかしくなった|おかしい|動かなくなった|真っ白|エラーが出る|エラーになる)/iu;
   const RE_BUG_CTX =
-    /(天聞|アーク|画面|サイト|ログイン|PWA|チャット|入れない|入れません|会員|アプリ|エラー|表示|読み込み|接続|更新できない|動かない)/iu;
+    /(天聞|アーク|画面|サイト|ログイン|PWA|チャット|入れない|入れません|会員|アプリ|エラー|表示|読み込み|接続|更新できない|動かない|真っ白|白画面|白い画面)/iu;
   const RE_AUTH =
-    /(ログイン|パスワード|パスワードを忘|再発行|合言葉|認証メール|認証が来ない|メール登録|アクセスできない|アカウントに入れない|アカウントで入れない|founder\s*会員|founder会員|ログインできない|ログインできません|(?:天聞|アーク|サイト|会員|アカウント).{0,24}(入れない|入れません)|(?:入れない|入れません).{0,24}(天聞|アーク|サイト|ログイン|アカウント|会員))/iu;
+    /(ログイン|\bauth\b|サインイン|sign\s*in|パスワード|パスワードを忘|再発行|合言葉|認証メール|認証が来ない|メール登録|セッション切れ|セッション切断|アクセスできない|アカウントに入れない|アカウントで入れない|アカウント.{0,24}(凍結|停止|ロック|解除|復旧)|^アカウント[については]?[。！!？?\s]*$|アカウントが使えない|founder\s*会員|founder会員|ログインできない|ログインできません|(?:天聞|アーク|サイト|会員|アカウント).{0,24}(入れない|入れません)|(?:入れない|入れません).{0,24}(天聞|アーク|サイト|ログイン|アカウント|会員))/iu;
   const RE_REG =
-    /(登録できない|登録方法|登録の仕方|登録って|新規登録|会員登録|登録したい|メールが届かない|届きません|迷惑フォルダ|招待コード|招待リンク|\binvite\b|アカウント作成|アカウントが作れ|メールアドレス|確認メール|リセットメール|仮登録|verify|verification)/iu;
+    /(登録できない|登録方法|登録の仕方|登録って|新規登録|会員登録|登録したい|登録手順|本登録|メールが届かない|届きません|迷惑フォルダ|招待コード|招待リンク|招待メール|\binvite\b|アカウント作成|アカウントが作れ|メールアドレス|確認メール|リセットメール|仮登録|verify|verification|メール認証|認証コード|ワンタイム)/iu;
   const RE_PROD =
     /(天聞アークはどう使えば|どう使えばいいか|何から始めるか|どこから入るか|どう使うのか|使い方|どこで(使う|入る)|何を押せば|どう使う|どこを押す)/iu;
 
-  if (RE_UI.test(m)) {
-    return {
-      routeReason: "SUPPORT_UI_INPUT_V1",
-      response:
-        "【天聞の所見】Enter で送信、Shift+Enter で改行です。反応しない場合はページを再読み込みするか、別のブラウザで試してください。",
-    };
-  }
   if (/^(入れない|入れません)(ですか)?[。！!？?]*$/iu.test(m)) {
     return {
       routeReason: "SUPPORT_AUTH_ACCESS_V1",
@@ -123,7 +120,7 @@ export function classifyTenmonSupportEarlyTriageV1(raw: string): TenmonSupportEa
     return {
       routeReason: "SUPPORT_BILLING_V1",
       response:
-        "【天聞の所見】支払い・請求まわりでつまずいている、と受け取りました。\n\n" +
+        "【天聞の所見】受け取りました。料金・請求・支払いまわりで止まっている前提で進めます。\n\n" +
         "まず確認する一点：設定（画面右上付近）で、プラン名と次回更新・支払い状態が表示されているかだけ見てください。\n\n" +
         "対処の一手：表示が古い・更新されないときは、一度ログアウトして同じアカウントで入り直し、別ブラウザやシークレット窓でも同じか切り分けてください。\n\n" +
         "次に確認一点：解消しない場合は、いつから・どの画面の文言か（可能なら一言で）教えてください。手順を絞ります。",
@@ -133,13 +130,13 @@ export function classifyTenmonSupportEarlyTriageV1(raw: string): TenmonSupportEa
     return {
       routeReason: "SUPPORT_PWA_V1",
       response:
-        "【天聞の所見】PWA（ホーム画面への追加・アプリ化）でつまずいている、と受け取りました。\n\n" +
-        "まず確認する一点：ブラウザのメニューに「ホーム画面に追加」「アプリをインストール」「ショートカット」に近い項目が出るかだけ確認してください（端末・ブラウザで名称が違います）。\n\n" +
+        "【天聞の所見】受け取りました。PWA（ホーム画面への追加・アプリ化）で止まっている前提で進めます。\n\n" +
+        "まず確認する一点：ブラウザのメニューに「ホーム画面に追加」「アプリをインストール」「ショートカット」に近い項目が出るかだけ見てください（端末・ブラウザで名称が違います）。\n\n" +
         "対処の一手：項目が出ないときは OS とブラウザを最新にし、タブを閉じて URL から開き直してから、もう一度だけ試してください。\n\n" +
         "次に確認一点：端末名とブラウザ名を一言で教えてください。手順を合わせます。",
     };
   }
-  if (RE_BUG.test(m) && RE_BUG_CTX.test(m)) {
+  if (RE_BUG.test(m) && RE_BUG_CTX.test(m) && !RE_BILLING.test(m) && !RE_PWA.test(m)) {
     return {
       routeReason: "SUPPORT_BUG_REPORT_V1",
       response:
@@ -176,6 +173,13 @@ export function classifyTenmonSupportEarlyTriageV1(raw: string): TenmonSupportEa
         "【天聞の所見】この欄に質問を1つ入力して Enter で送信すると会話が始まります。「メニュー」と送ると選択肢が出ます。設定・登録は画面右上のアイコンから。",
     };
   }
+  if (RE_UI.test(m)) {
+    return {
+      routeReason: "SUPPORT_UI_INPUT_V1",
+      response:
+        "【天聞の所見】Enter で送信、Shift+Enter で改行です。反応しない場合はページを再読み込みするか、別のブラウザで試してください。",
+    };
+  }
   return null;
 }
 
@@ -191,10 +195,9 @@ export function classifyTenmonFounderUpdateFrameTriageV1(raw: string): TenmonFou
   if (!m) return null;
   if (m.startsWith("#") || m.startsWith("/")) return null;
   if (/\bdoc\b/i.test(m) || /pdfPage\s*=\s*\d+/i.test(m) || /#詳細/.test(m)) return null;
-  if (classifyTenmonSupportEarlyTriageV1(m)) return null;
 
   const RE_F_STRONG =
-    /(この読みを更新|この読みを.{0,32}runtime|この内容で反映|裁定カードを追加|runtime\s*に反映|Cursor\s*カードを書き出し(?:て)?|書き出して|更新指示|更新依頼|指示確認|現状報告(?:.{0,20}(?:と|も)?\s*更新|$)|^現状報告\s*$)/iu;
+    /(この読みを更新|この読みを.{0,32}runtime|この内容で反映|この内容で進める|裁定カードを追加|裁定カードの更新|構築班向け|runtime\s*に反映|runtimeに反映|運用に反映|本番に反映|Cursor\s*カード|Cursor\s*カードを書き出し(?:て)?|書き出して|更新指示|更新依頼|指示確認|反映指示|反映依頼|現状報告(?:.{0,20}(?:と|も)?\s*更新|$)|^現状報告\s*$|Founder向け.{0,96}(現状報告|更新指示|まとめ)|更新指示.{0,40}まとめ)/iu;
   const RE_F_CTX =
     /(Founder向け|ファウンダー向け|構築者向け|構築班向け|founder_update|founder_change|founder_card|\bFounder\b)/iu;
   const RE_F_ACT =
@@ -206,6 +209,14 @@ export function classifyTenmonFounderUpdateFrameTriageV1(raw: string): TenmonFou
     RE_F_TOKEN.test(m) ||
     (RE_F_CTX.test(m) && RE_F_ACT.test(m));
   if (!hit) return null;
+  /** support と両立する場合は「構築者チャネル／強い構築フレーズ」があるときだけ founder（課金＋更新指示だけ等は support へ） */
+  if (classifyTenmonSupportEarlyTriageV1(m)) {
+    const founderOverridesSupport =
+      RE_F_CTX.test(m) ||
+      RE_F_TOKEN.test(m) ||
+      /(裁定カード|runtimeに反映|runtime\s*に反映|運用に反映|本番に反映|Cursor\s*カード|この読みを|この内容で反映|この内容で進める|構築班向け|更新指示|反映指示|^現状報告|Founder向け|ファウンダー向け)/u.test(m);
+    if (!founderOverridesSupport) return null;
+  }
 
   const body =
     "受け取りました。構築・運用まわりの依頼・報告として扱います。\n\n" +
@@ -1366,10 +1377,13 @@ function __tenmonGeneralGateResultMaybe(x: any, rawMessageOverride?: string): an
       tryAppendThreadSeedFromPayload(x);
     } catch {}
       // R13_RESPONSE_PROJECTOR_REINTRO_SAFE_V1
+      // TENMON_SUPPORT_AND_FOUNDER_ROUTE_FIX_CURSOR_AUTO_V4: 専用短文は projector 経由で汚染させない（threadCenter / semantic 前置の誤適用抑止）
       try {
         const __dfP: any = (x as any)?.decisionFrame;
         const __kuP: any = (__dfP && __dfP.ku && typeof __dfP.ku === "object") ? __dfP.ku : null;
-        if (__kuP && typeof (x as any).response === "string") {
+        const __rrP = String(__kuP?.routeReason || "");
+        const __skipProj = /^SUPPORT_/u.test(__rrP) || /^FOUNDER_/u.test(__rrP);
+        if (__kuP && typeof (x as any).response === "string" && !__skipProj) {
           const projected = projectResponseSurface({
             routeReason: __kuP.routeReason,
             centerMeaning: __kuP.centerMeaning,
@@ -1709,19 +1723,34 @@ try {
     if (!__dfB.ku || typeof __dfB.ku !== "object" || Array.isArray(__dfB.ku)) __dfB.ku = {};
     const __kuB: any = __dfB.ku;
 
+    const __rrB0 = String(__kuB.routeReason || (x as any)?.routeReason || "").trim();
+    const __tidB0 = String((x as any)?.threadId || "").trim();
+    const __rawB0 =
+      String((x as any)?.rawMessage || "") ||
+      String((x as any)?.message || "") ||
+      String(__kuB.inputText || "") ||
+      "";
+
+    /** TENMON_UNCERTAINTY_AND_CONFIDENCE_SURFACE_LOGIC_V5: 本線 binder 失敗時でも ku に confidence が載らない取りこぼしを出口で補う */
+    const __confidenceSurfaceMissing =
+      String(__rawB0 || "").trim().length > 0 &&
+      !/^SUPPORT_/u.test(__rrB0) &&
+      !/^FOUNDER_/u.test(__rrB0) &&
+      !/^DEF_FASTPATH_VERIFIED_V1$/u.test(__rrB0) &&
+      !/^DEF_FASTPATH_PROPOSED_V1$/u.test(__rrB0) &&
+      !/^DEF_DICT_HIT$/u.test(__rrB0) &&
+      !String(__kuB.confidenceDisplayV1?.surfacePrefix ?? "").trim();
+
     const __needBinder =
       __kuB.binderSummary == null ||
       __kuB.sourcePack == null ||
-      String(__kuB.sourcePack || "").trim() === "";
+      String(__kuB.sourcePack || "").trim() === "" ||
+      __confidenceSurfaceMissing;
 
     if (__needBinder) {
-      const __rrB = String(__kuB.routeReason || (x as any)?.routeReason || "").trim();
-      const __tidB = String((x as any)?.threadId || "").trim();
-      const __rawB =
-        String((x as any)?.rawMessage || "") ||
-        String((x as any)?.message || "") ||
-        String(__kuB.inputText || "") ||
-        "";
+      const __rrB = __rrB0;
+      const __tidB = __tidB0;
+      const __rawB = __rawB0;
 
       const __centerKeyB = String(
         __kuB.centerKey ||
@@ -1883,6 +1912,23 @@ try {
   }
 } catch {}
 
+  // TENMON_UNCERTAINTY_AND_CONFIDENCE_SURFACE_LOGIC_V5: polish 後に ku.confidenceDisplayV1 を本文へ冪等付与（二重付与のみ抑止）
+  try {
+    const __dfUnc: any = (x as any)?.decisionFrame;
+    const __kuUnc: any =
+      __dfUnc?.ku && typeof __dfUnc.ku === "object" && !Array.isArray(__dfUnc.ku) ? __dfUnc.ku : null;
+    const __cdUnc = __kuUnc?.confidenceDisplayV1;
+    const __pfx = String(__cdUnc?.surfacePrefix ?? "").trim();
+    if (__pfx && typeof (x as any).response === "string") {
+      const __rs0 = String((x as any).response || "");
+      if (!__rs0.includes(__pfx)) {
+        (x as any).response = applyUncertaintySurfacePrefixIfAnyV1(__rs0, __cdUnc);
+      }
+    }
+  } catch {
+    /* fail-closed */
+  }
+
 return __thinReleasePayloadV2(x);
   } catch { return __thinReleasePayloadV2(x); }
 
@@ -1932,6 +1978,10 @@ function __tenmonCompassionWrapV2(out: string, heart: any): string {
 function __tenmonSupportUserFacingPolishV1(out: string): string {
   let t = String(out || "").replace(/\r/g, "").trim();
   if (!t) return t;
+  t = t.replace(/^\s*中心命題\s*[:：]\s*[^\n]+\n?/gimu, "");
+  t = t.replace(/^\s*root_reasoning\s*[:：]\s*[^\n]+\n?/gimu, "");
+  t = t.replace(/^\s*次軸\s*[:：]\s*[^\n]+\n?/gu, "");
+  t = t.replace(/^\s*次観測\s*[:：]\s*[^\n]+\n?/gu, "");
   t = t.replace(/KHSL:LAW:[A-Za-z0-9_:._-]+/g, "");
   t = t.replace(/\bOP_DEFINE\b/g, "");
   t = t.replace(/lawKey\s*[:=]\s*["'][^"']+["']/gi, "");

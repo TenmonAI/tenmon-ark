@@ -4,6 +4,7 @@ import type { ArkBookCanonConversationReuseV1 } from "./threadMeaningMemory.js";
 /**
  * TENMON_THREAD_MEANING_MEMORY_CURSOR_AUTO_V1
  * 同一 thread の center を `thread_center_memory` に保持し、継続ターンで意味を落とさない。
+ * `mergeNextAxesJsonWithArkBookCanonReuseV1`: Notion 生ではなく judge 済み ARK 束（notionCanon.ARK_BOOK_CANON_LEDGER_STRUCTURES_V1 と対応）を next_axes に同梱。
  */
 
 export type ThreadCenterType = "scripture" | "subconcept" | "concept" | "general" | "unresolved";

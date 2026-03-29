@@ -4,8 +4,15 @@
  */
 
 import { MATERIAL_DIGEST_LEDGER_CATALOG_V1 } from "./tenmonMaterialDigestLedgerV1.js";
-import { BOOK_LEDGER_SETTLEMENT_CATALOG_V1, type TenmonBookClassV1 } from "./tenmonBookReadingKernelV1.js";
+import {
+  BOOK_LEDGER_SETTLEMENT_CATALOG_V1,
+  TENMON_OCR_TO_BOOK_SETTLEMENT_BIND_PIPELINE_NOTE_V1,
+  type TenmonBookClassV1,
+} from "./tenmonBookReadingKernelV1.js";
 import { buildTenmonNasLocatorManifestV1 } from "./tenmonNasArchiveBridgeV1.js";
+
+/** OCR→書籍 settlement パイプライン注記（kernel と同一ソース） */
+export { TENMON_OCR_TO_BOOK_SETTLEMENT_BIND_PIPELINE_NOTE_V1 };
 
 export type StudyMaterialKindV1 =
   | "root_khs"

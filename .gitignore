@@ -112,6 +112,7 @@ api/GROUNDED
 api/answer
 api/out/
 api/scripts/__pycache__/
+api/tools/__pycache__/
 api/src/routes/30,
 api/src/routes/=
 
@@ -152,6 +153,8 @@ api/probe.*.json
 api/automation/generated_cursor_apply/
 api/automation/generated_vps_cards/
 api/automation/out/
+# P5 TENMON_ARTIFACT_AND_WORKTREE_HYGIENE: 退避した生成物・スナップショット（揮発可）
+api/automation/_archive/
 api/automation/TENMON_*
 api/TENMON_*
 api/automation/*_report.json

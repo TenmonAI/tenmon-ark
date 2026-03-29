@@ -29,6 +29,16 @@ export const NOTION_VPS_BOOK_ANALYSIS_SETTLEMENT_TARGETS_V1 = [
   "uncertainty_issue_card",
 ] as const;
 
+/** Notion 定着 → ARK 会話再利用層（judge 済みのみ・原文非返却） */
+export const ARK_BOOK_CANON_LEDGER_STRUCTURES_V1 = [
+  "book_canon_ledger",
+  "evidence_binder",
+  "lawgraph_candidate_store",
+  "terminology_memory",
+  "thread_reentry_memory",
+  "uncertainty_registry",
+] as const;
+
 export type TenmonVpsBookAnalysisNotionReflectionInputV1 = {
   book_id: string;
   source_class: string;

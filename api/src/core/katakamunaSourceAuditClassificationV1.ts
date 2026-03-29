@@ -53,7 +53,8 @@ export type KatakamunaSourceAuditBundleV1 = {
 };
 
 const PLACEHOLDER_NAS = "nas:/tenmon/katakamuna_library/{slug}/";
-const PLACEHOLDER_REF = "vps:/extracted/katakamuna/{id}.md";
+/** 末尾スラッシュでエントリ id と連結（`.md` 直結でファイル名が壊れないようにする） */
+const PLACEHOLDER_REF = "vps:/extracted/katakamuna/{id}/";
 
 /**
  * 分類対象の代表コーパス（書名は代表ラベル。実ファイルは NAS locator で束ねる想定）。
@@ -203,7 +204,7 @@ export const KATAKAMUNA_SOURCE_AUDIT_ENTRIES_V1: readonly KatakamunaSourceAuditE
     certainty_band: "low",
     nas_locator: `${PLACEHOLDER_NAS}misc_popular/`,
     content_hash: null,
-    extracted_ref: null,
+    extracted_ref: `${PLACEHOLDER_REF}modern_katakamuna_books_bucket`,
     audit_note: "未細分化タイトルは unknown→逐次エントリ追加。一括で本流認定しない。",
   },
   {
@@ -219,8 +220,24 @@ export const KATAKAMUNA_SOURCE_AUDIT_ENTRIES_V1: readonly KatakamunaSourceAuditE
     certainty_band: "low",
     nas_locator: `${PLACEHOLDER_NAS}mystified_misc/`,
     content_hash: null,
-    extracted_ref: null,
+    extracted_ref: `${PLACEHOLDER_REF}katakamuna_mystified_misc`,
     audit_note: "神秘化マーケ層。史実・原資料と混線させない。",
+  },
+  {
+    schema: "TENMON_KATAKAMUNA_SOURCE_AUDIT_ENTRY_V1",
+    id: "single_title_pending_audit_unknown",
+    title: "単タイトル・未監査スロット（source_class=unknown）",
+    author: null,
+    source_origin: "pending_per_title_audit",
+    medium_type: "unknown",
+    source_class: "unknown",
+    lineage_anchor: null,
+    transformation_tags: ["requires_audit_before_learning_bind"],
+    certainty_band: "placeholder",
+    nas_locator: `${PLACEHOLDER_NAS}pending_title_audit/`,
+    content_hash: null,
+    extracted_ref: `${PLACEHOLDER_REF}single_title_pending_audit_unknown`,
+    audit_note: "分類前の一時スロット。確定まで canon / 学習ループに載せない。",
   },
   {
     schema: "TENMON_KATAKAMUNA_SOURCE_AUDIT_ENTRY_V1",
@@ -235,7 +252,7 @@ export const KATAKAMUNA_SOURCE_AUDIT_ENTRIES_V1: readonly KatakamunaSourceAuditE
     certainty_band: "placeholder",
     nas_locator: `${PLACEHOLDER_NAS}primary_manuscripts/`,
     content_hash: null,
-    extracted_ref: null,
+    extracted_ref: `${PLACEHOLDER_REF}primary_manuscript_placeholder`,
     audit_note:
       "「原資料」スロット。実パス・hash は NAS 取り込み時に必ず埋める。commentary / OCR を分離。",
   },
@@ -248,8 +265,73 @@ export function getKatakamunaSourceAuditBundleV1(): KatakamunaSourceAuditBundleV
     version: 1,
     generated_purpose: "katakamuna_corpus_classification_for_reading_dialogue_learning",
     entries: KATAKAMUNA_SOURCE_AUDIT_ENTRIES_V1,
-    nextOnPass: "TENMON_KATAKAMUNA_LINEAGE_AND_TRANSFORMATION_ENGINE_CURSOR_AUTO_V1",
+    nextOnPass: "TENMON_ARK_BOOK_CANON_LEDGER_AND_CONVERSATION_REUSE_CURSOR_AUTO_V1",
     nextOnFail: "TENMON_KATAKAMUNA_SOURCE_AUDIT_AND_CLASSIFICATION_RETRY_CURSOR_AUTO_V1",
+  };
+}
+
+const ALL_SOURCE_CLASSES: readonly KatakamunaSourceClassV1[] = [
+  "primary_root",
+  "lineage_transmission",
+  "commentary",
+  "popularized",
+  "psychologized",
+  "mystified",
+  "tenmon_reintegration",
+  "unknown",
+];
+
+/** fail-closed: 分類束の整合（自動化・封印前ゲート） */
+export function validateKatakamunaSourceAuditAcceptanceV1(
+  entries: readonly KatakamunaSourceAuditEntryV1[],
+): { pass: boolean; reasons: string[] } {
+  const reasons: string[] = [];
+  const byId = new Map(entries.map((e) => [e.id, e]));
+
+  const uno = byId.get("uno_tamie_popular");
+  if (!uno) reasons.push("missing_entry:uno_tamie_popular");
+  else if (uno.source_class !== "popularized") {
+    reasons.push("uno_tamie_must_be_popularized_not_conflated_with_primary");
+  }
+
+  const nar = byId.get("narazaki_satsuki_lineage_core");
+  if (nar?.source_class === "primary_root") {
+    reasons.push("narazaki_must_not_be_classified_primary_root");
+  }
+
+  const present = new Set(entries.map((e) => e.source_class));
+  for (const c of ALL_SOURCE_CLASSES) {
+    if (!present.has(c)) reasons.push(`missing_source_class:${c}`);
+  }
+
+  for (const e of entries) {
+    if (!String(e.nas_locator || "").trim()) reasons.push(`missing_nas_locator:${e.id}`);
+    if (!String(e.extracted_ref || "").trim()) reasons.push(`missing_extracted_ref:${e.id}`);
+    if (e.schema !== "TENMON_KATAKAMUNA_SOURCE_AUDIT_ENTRY_V1") reasons.push(`bad_schema:${e.id}`);
+  }
+
+  return { pass: reasons.length === 0, reasons };
+}
+
+export function getKatakamunaSourceAuditAutomationPayloadV1(): {
+  schema: "TENMON_KATAKAMUNA_SOURCE_AUDIT_AUTOMATION_PAYLOAD_V1";
+  card: "TENMON_KATAKAMUNA_SOURCE_AUDIT_AND_CLASSIFICATION_CURSOR_AUTO_V1";
+  generated_at: string;
+  bundle: KatakamunaSourceAuditBundleV1;
+  acceptance_pass: boolean;
+  failure_reasons: string[];
+  observation_only: true;
+} {
+  const bundle = getKatakamunaSourceAuditBundleV1();
+  const v = validateKatakamunaSourceAuditAcceptanceV1(bundle.entries);
+  return {
+    schema: "TENMON_KATAKAMUNA_SOURCE_AUDIT_AUTOMATION_PAYLOAD_V1",
+    card: "TENMON_KATAKAMUNA_SOURCE_AUDIT_AND_CLASSIFICATION_CURSOR_AUTO_V1",
+    generated_at: new Date().toISOString(),
+    bundle,
+    acceptance_pass: v.pass,
+    failure_reasons: v.pass ? [] : v.reasons,
+    observation_only: true,
   };
 }
 
@@ -284,6 +366,13 @@ export function matchKatakamunaSourceAuditEntriesV1(raw: string): KatakamunaSour
       e.id === "tenmon_ark_reintegration_corpus" &&
       /(カタカムナ|かたかむな)/iu.test(t) &&
       /天聞|ＴＥＮＭＯＮ|TENMON|アーク/u.test(t)
+    ) {
+      hit = true;
+    }
+    if (
+      e.id === "katakamuna_mystified_misc" &&
+      /(カタカムナ|かたかむな)/iu.test(t) &&
+      /(神秘化|スピリチュアル|オカルト|マーケ)/u.test(t)
     ) {
       hit = true;
     }

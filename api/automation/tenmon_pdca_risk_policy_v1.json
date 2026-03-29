@@ -1,7 +1,96 @@
 {
   "schema": "TENMON_PDCA_RISK_POLICY_V1",
-  "version": 1,
-  "description": "PDCA 親OS: 次カード・編集対象のリスク分類。未一致は medium（自動適用しない）。",
+  "version": 2,
+  "description": "PDCA 親OS: 次カード・編集対象のリスク分類。未一致は medium（自動適用しない）。v2: canonical ティア + 承認境界 + forbidden。",
+  "approval_boundary_v1": {
+    "schema": "TENMON_APPROVAL_BOUNDARY_V1",
+    "risk_tiers_canonical": ["low", "medium", "high", "forbidden"],
+    "tier_alias": {
+      "low_risk": "low",
+      "medium_risk": "medium",
+      "high_risk": "high",
+      "forbidden_risk": "forbidden"
+    },
+    "destructive_whitelist_note": "ファイル削除・大規模 archive・git push 等は policy.auto_apply_whitelist に明示された argv のみ。それ以外の destructive は forbidden。",
+    "service_deploy_commit_note": "service / deploy / restart / commit は本ポリシーでは forbidden 扱い（人手・approval gate のみ）。"
+  },
+  "auto_apply_whitelist_categories_v1": [
+    {
+      "id": "surface_leak_cleanup",
+      "summary": "表層リーク除去・表層 projector 系（SURFACE_LEAK / OUTPUT_CONTRACT 等の low カード）"
+    },
+    {
+      "id": "report_state_repair",
+      "summary": "report / cycle state / forensic 収集のみ（コード主権に触れない）"
+    },
+    {
+      "id": "queue_autocompact_freshness",
+      "summary": "single_flight queue 更新・worktree autocompact 要約の鮮度修復（whitelist argv のみ実行）"
+    },
+    {
+      "id": "probe_only_cards",
+      "summary": "probe 専用カード・SAFE_PROBE / PROBE_PACK（読み取り中心）"
+    },
+    {
+      "id": "low_risk_projector_polish",
+      "summary": "POLISH / NATURALIZATION 等、会話中枢・PASS route を広域に書き換えない low ティア"
+    }
+  ],
+  "approval_required_operations_v1": [
+    {
+      "id": "chat_ts_wide_change",
+      "requires_human_approval": true,
+      "summary": "api/src/routes/chat.ts の広域変更"
+    },
+    {
+      "id": "response_composer_wide",
+      "requires_human_approval": true,
+      "summary": "api/src/core/responseComposer.ts の広域変更"
+    },
+    {
+      "id": "doctrine_canon_core",
+      "requires_human_approval": true,
+      "summary": "doctrine / canon 中枢（notionCanon / scriptureCanon / canon/ 等）"
+    },
+    {
+      "id": "billing_auth",
+      "requires_human_approval": true,
+      "summary": "billing / auth まわりの挙動変更"
+    },
+    {
+      "id": "deploy_restart_service",
+      "requires_human_approval": true,
+      "summary": "deploy / service restart / 本番プロセス操作"
+    },
+    {
+      "id": "pass_route_reedit",
+      "requires_human_approval": true,
+      "summary": "PASS 済み route の再編集（pass_route_protection 参照）"
+    },
+    {
+      "id": "large_file_move_delete_archive",
+      "requires_human_approval": true,
+      "summary": "大規模な file move / delete / archive（作業ツリー衛生を除く一括操作）"
+    },
+    {
+      "id": "git_commit",
+      "requires_human_approval": true,
+      "summary": "git commit（approval gate 経由のみ）"
+    }
+  ],
+  "stop_conditions_v1": {
+    "evaluate": true,
+    "treat_manual_review_recommended_as_stop": true,
+    "conditions": [
+      "blocked_reason_non_empty",
+      "changed_file_count_over_threshold",
+      "current_card_non_null",
+      "npm_run_check_failed",
+      "audit_not_ready_when_configured",
+      "manual_review_flag_true"
+    ],
+    "notes": "いずれかで auto_apply_allowed=false（fail-closed）。audit は URL 設定時のみ評価。"
+  },
   "thresholds": {
     "max_changed_files_stop": 120,
     "max_changed_files_warn": 80
@@ -76,6 +165,20 @@
         "(?i)AUTOBUILD.*PARENT",
         "(?i)SELF_RUNNING_OS_PARENT"
       ]
+    },
+    "forbidden": {
+      "description": "commit / deploy / restart / 破壊的操作 — 機械的自動実行禁止（approval gate のみ）",
+      "card_id_regex": [
+        "(?i)_COMMIT_",
+        "(?i)GIT_COMMIT",
+        "(?i)PRODUCTION_DEPLOY",
+        "(?i)KUBECTL",
+        "(?i)SYSTEMD_(START|STOP|RESTART)",
+        "(?i)RM_RF",
+        "(?i)DROP_?DATABASE",
+        "(?i)STRIPE_LIVE_",
+        "(?i)FORCE_PUSH"
+      ]
     }
   },
   "auto_apply_whitelist": [
@@ -91,6 +194,32 @@
     }
   ],
   "retry_card_if_fail": "TENMON_PDCA_SELF_RUNNING_OS_PARENT_RETRY_CURSOR_AUTO_V1",
+  "fail_closed_retry_card_v1": "TENMON_FAIL_CLOSED_RECOVERY_AND_RETRY_POLICY_RETRY_CURSOR_AUTO_V1",
+  "fail_closed_recovery_policy_v1": {
+    "schema": "TENMON_FAIL_CLOSED_RECOVERY_POLICY_V1",
+    "next_on_pass": "TENMON_FULL_AUTONOMY_ACCEPTANCE_AND_SEAL_CURSOR_AUTO_V1",
+    "next_on_fail": "TENMON_FAIL_CLOSED_RECOVERY_AND_RETRY_POLICY_RETRY_CURSOR_AUTO_V1",
+    "failure_class_enum": [
+      "build_fail",
+      "audit_fail",
+      "queue_block",
+      "surface_regression",
+      "support_regression",
+      "founder_regression",
+      "uncertainty_regression",
+      "artifact_pressure",
+      "syntax_or_parser_fail",
+      "none"
+    ],
+    "recovery_sequence": [
+      "stop",
+      "evidence_collect",
+      "failure_classify",
+      "retry_card_generate",
+      "approval_required",
+      "low_risk_retry_only"
+    ]
+  },
   "next_on_pass_card": "TENMON_SURFACE_LEAK_CLEANUP_CURSOR_AUTO_V1",
   "inner_cards": [
     "TENMON_PDCA_OBSERVE_AND_BLOCKER_PICK_CURSOR_AUTO_V1",

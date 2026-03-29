@@ -1,45 +1,33 @@
-# TENMON_ARK_BOOK_CANON_LEDGER_AND_CONVERSATION_REUSE_CURSOR_AUTO_V1
+# TENMON_ARK_BOOK_CANON_LEDGER_AND_CONVERSATION_REUSE_REPORT_V1
 
-## 目的
+- **card**: `TENMON_ARK_BOOK_CANON_LEDGER_AND_CONVERSATION_REUSE_CURSOR_AUTO_V1`
+- **型・束**: `api/src/core/threadMeaningMemory.ts`（`ArkBookCanonConversationReuseV1`）
+- **Notion 橋**: `api/src/core/notionCanon.ts` の `ARK_BOOK_CANON_LEDGER_STRUCTURES_V1`
+- **binder 同梱**: `api/src/core/knowledgeBinder.ts` → `ku.arkBookCanonConversationReuseV1`（judge 済みのみ）
+- **thread 再利用**: `advanceThreadMeaningMemoryForRequestV1` が `unresolvedAxes` に uncertainty / open / provisional を合流
+- **比較写像**: `getSelfLearningAutostudyBundleV1` が ARK reuse を `buildComparativeMappingV1` / `resolveSanskritComparativeKernelV1` に渡す
 
-Notion に定着した **judge 済み** 書籍解析（VPS reflection 束）を、ARK 側の再利用構造に載せ、**次ターンの thread 意味記憶・比較写像・（任意で）thread_center の next_axes** から参照できるようにする。Notion 原文は載せない。
+## ARK 知識構造（6 + reuse 束）
 
-## ARK 知識構造（論理）
+1. **book_canon_ledger** — 優先順（先頭: カタカムナ言霊解）
+2. **evidence_binder** — 参照子（Notion 原文は載せない）
+3. **lawgraph_candidate_store** — law グラフ候補
+4. **terminology_memory** — 用語×書籍
+5. **thread_reentry_memory** — 再入要約・hash echo
+6. **uncertainty_registry** — 未決着の保持（消去禁止）
 
-`ArkBookCanonConversationReuseV1`（`threadMeaningMemory.ts`）に集約:
+`reuse_for_routes` に既解析範囲・書籍軸・定義差分・比較要約・未決・provisional verdict。
 
-| 論理名 | フィールド |
-|--------|------------|
-| Book Canon Ledger | `book_canon_ledger`（優先順つき行） |
-| Evidence Binder | `evidence_binder.ref_slugs` |
-| Lawgraph Candidate Store | `lawgraph_candidate_store` |
-| Terminology Memory | `terminology_memory.entries` |
-| Thread Re-entry Memory | `thread_reentry_memory`（summary / hash_echo） |
-| Uncertainty Registry | `uncertainty_registry` |
+## 次カード
 
-`not_raw_notion` / `judge_layer_only` で生返却禁止を型レベルで固定。
+- **nextOnPass**: `TENMON_BOOK_LEARNING_ACCEPTANCE_AND_REUSE_BENCH_CURSOR_AUTO_V1`
+- **nextOnFail**: `TENMON_ARK_BOOK_CANON_LEDGER_AND_CONVERSATION_REUSE_RETRY_CURSOR_AUTO_V1`
 
-## 優先順（書籍）
+<!-- ARK_BOOK_CANON_AUTO_BEGIN -->
 
-`ARK_BOOK_CANON_PRIORITY_BOOK_IDS_V1`: カタカムナ言霊解 → 言霊秘書 → 水穂伝 → 稲荷古伝 → 空海 → 法華 → 悉曇束。`tenmonComparativeMappingV1` から再 export。
+- **acceptance_pass**: `True`
+- **npm_run_check_ok**: `True`
+- **probe_acceptance_pass**: `True`
+- **route_carry_note**: 'compare/define/historical(FACTUAL_*)/mapping/世界観/概念 canon で threadMeaningMemory が ark 束を unresolvedAxes に合流（uncertainty 消去禁止）。'
 
-## 会話再利用
-
-- **binder**: `vpsBookAnalysisNotionReflectionV1` があるときだけ `arkBookCanonConversationReuseV1` を生成し、`thoughtCoreSummary` / `ku` に載せる。
-- **threadMeaningMemory**: `advanceThreadMeaningMemoryForRequestV1` が `ku.arkBookCanonConversationReuseV1` を読み、`uncertainty` / 未決着 / 暫定裁定を `unresolvedAxes`（`ark|*` 接頭辞）に合流。`nextStepBias` に `ark_book:<id>`。
-- **threadCenterMemory**: `mergeNextAxesJsonWithArkBookCanonReuseV1` / `parseArkBookCanonReuseFromNextAxesJson`（upsert 側が任意採用）。
-- **tenmonComparativeMappingV1**: `buildComparativeMappingV1({ bookCanonReuse })` で比較 hint に `comparison_digest` と uncertainty を追記。
-- **tenmonSanskritComparativeKernelV1**: `resolveSanskritComparativeKernelV1(msg, { uncertainty_registry_flags })` で未決着束を insight に反映可能。
-
-## ルート拡張
-
-`threadMeaningMemoryRouteAllowedV1` に KATAKAMUNA / DEF_FASTPATH / TRUTH_GATE を追加し、上記メモリ合流が効くようにした。
-
-## 成果物
-
-- `api/automation/tenmon_ark_book_canon_ledger_and_conversation_reuse_result_v1.json` — `buildArkBookCanonConversationReuseAutomationBundleV1()`
-
-## nextOnPass / nextOnFail
-
-- **PASS**: `TENMON_BOOK_LEARNING_ACCEPTANCE_AND_REUSE_BENCH_CURSOR_AUTO_V1`
-- **FAIL**: `TENMON_ARK_BOOK_CANON_LEDGER_AND_CONVERSATION_REUSE_RETRY_CURSOR_AUTO_V1`
+<!-- ARK_BOOK_CANON_AUTO_END -->

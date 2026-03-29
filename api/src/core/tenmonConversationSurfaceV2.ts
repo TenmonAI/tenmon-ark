@@ -1,6 +1,7 @@
 /**
  * 美しい日本語 + ノイズ行削減（TPO字数は answerLength と TENMON_CONVERSATION_BASELINE_V2.writing で拡張）
  * CHAT_TS_STAGE1_SURFACE_POLISH: surface_bleed_zero
+ * TENMON_SURFACE_LEAK_CLEANUP_CURSOR_AUTO_V5: polishTenmonChatResponseSurfaceExitV1 は projector + stripSurfaceLeakMetaChainsV2 で出口二重掃除
  * CHAT_TS_STAGE5: TENMON_CONVERSATION_BASELINE_V2.sealPillars（主命題先行・美しい日本語・TPO）と整合
  *
  * TENMON_KG2B_FRACTAL_LANGUAGE_RENDERER_V1: HYBRID の detailPlan.evidence（KHS スロット）を
@@ -12,6 +13,7 @@ import { clampQuestionMarksKeepLastNV1 } from "../planning/responsePlanCore.js";
 import { dedupeNextStepAndQuestionSurfaceV1 } from "./tenmonConversationSurfaceV1.js";
 import { applyAnswerProfilePostComposeV1 } from "./answerProfileLayer.js";
 import { stripTenmonInternalSurfaceLeakV1 } from "./tenmonResponseProjector.js";
+import { stripSurfaceLeakMetaChainsV2 } from "./tenmonSurfaceLeakStripV2.js";
 
 export type KhsFractalEvidenceSlotV1 = {
   doc?: string;
@@ -268,7 +270,7 @@ export function stripInternalRouteTokensFromSurfaceV1(text: string): string {
   t = t.replace(/^\s*次軸\s*[:：]\s*[^\n]+$/gimu, "");
   t = t.replace(/^\s*次観測\s*[:：]\s*[^\n]+$/gimu, "");
   t = t.replace(/^\s*中心命題\s*[:：]\s*[^\n]+$/gimu, "");
-  t = t.replace(/^\s*立脚の中心は「[^」\n]+」です。[^\n]*$/gimu, "");
+  t = t.replace(/^\s*立脚の中心は「[^」\n]+」です。\s*$/gimu, "");
   t = t.replace(/\btruth_structure:相=[^。\n]*/giu, "");
   t = t.replace(/\bverdict=center_loss[^。\n]*/giu, "");
   t = t.replace(/^\s*semanticNucleus\s*[:：]\s*[^\n]+$/gimu, "");
@@ -306,6 +308,7 @@ export function polishTenmonChatResponseSurfaceExitV1(text: string, routeReason:
   const rr = String(routeReason || "").trim();
   let t = stripInternalRouteTokensFromSurfaceV1(String(text ?? "").trim());
   t = stripTenmonInternalSurfaceLeakV1(t);
+  t = stripSurfaceLeakMetaChainsV2(t);
   if (!t) return t;
   const skipMin =
     /^FACTUAL_CURRENT_(DATE|PERSON|WEATHER)_V1$/u.test(rr) ||

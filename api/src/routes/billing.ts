@@ -1,6 +1,7 @@
 /**
- * TENMON_PWA_BILLING_LINK_AND_CHAT_UI_RUNTIME_FIX_V1
- * PWA: AppGate POST /billing/link, PricingPage POST /billing/checkout, SuccessPage GET /billing/session/verify
+ * TENMON_PWA_BILLING_LINK_RUNTIME_FIX_CURSOR_AUTO_V6
+ * マウント: app.use("/api/billing", billingRouter) を index.ts で cookie 直後（汎用 /api より先）
+ * — GET /api/billing/link（生存確認）, POST /api/billing/link, POST /api/billing/checkout, GET /api/billing/session/verify
  */
 import { Router } from "express";
 import { getDb } from "../db/index.js";
@@ -16,8 +17,28 @@ function cookieOpts() {
   };
 }
 
-function getUserIdFromAuthCookie(req: { cookies?: Record<string, string> }): string | null {
-  const sessionId = String(req.cookies?.auth_session ?? "").trim();
+function authSessionFromRequest(req: { cookies?: Record<string, string>; headers?: { cookie?: string } }): string {
+  const fromParser = String(req.cookies?.auth_session ?? "").trim();
+  if (fromParser) return fromParser;
+  const raw = req.headers?.cookie;
+  if (!raw) return "";
+  for (const part of raw.split(";")) {
+    const idx = part.indexOf("=");
+    if (idx === -1) continue;
+    const name = part.slice(0, idx).trim();
+    if (name === "auth_session") {
+      try {
+        return decodeURIComponent(part.slice(idx + 1).trim());
+      } catch {
+        return part.slice(idx + 1).trim();
+      }
+    }
+  }
+  return "";
+}
+
+function getUserIdFromAuthCookie(req: { cookies?: Record<string, string>; headers?: { cookie?: string } }): string | null {
+  const sessionId = authSessionFromRequest(req);
   if (!sessionId) return null;
   try {
     const db = getDb("kokuzo");
@@ -94,7 +115,26 @@ function isPaidStripeSession(sess: Record<string, unknown>): boolean {
 
 const router = Router();
 
-router.post("/billing/link", async (req, res) => {
+router.options("/link", (_req, res) => {
+  res.setHeader("Allow", "POST, OPTIONS");
+  return res.status(204).end();
+});
+
+router.get("/link", (_req, res) => {
+  res.setHeader("Allow", "POST, OPTIONS");
+  /** GET はルート生存確認用（curl / ロードバランサ）。課金処理は POST のみ。 */
+  return res.status(200).json({
+    ok: true,
+    endpoint: "billing_link",
+    method: "POST",
+    contentType: "application/json",
+    bodyShape: { sessionId: "stripe_checkout_session_id" },
+    auth: "auth_session_cookie_required",
+    unauthenticatedPost: { http: 401, shape: { ok: false, error: "UNAUTHORIZED" } },
+  });
+});
+
+router.post("/link", async (req, res) => {
   try {
     const userId = getUserIdFromAuthCookie(req as { cookies?: Record<string, string> });
     if (!userId) return res.status(401).json({ ok: false, error: "UNAUTHORIZED" });
@@ -128,7 +168,12 @@ router.post("/billing/link", async (req, res) => {
   }
 });
 
-router.post("/billing/checkout", async (req, res) => {
+router.options("/checkout", (_req, res) => {
+  res.setHeader("Allow", "POST, OPTIONS");
+  return res.status(204).end();
+});
+
+router.post("/checkout", async (req, res) => {
   try {
     const userId = getUserIdFromAuthCookie(req as { cookies?: Record<string, string> });
     if (!userId) return res.status(401).json({ ok: false, error: "UNAUTHORIZED" });
@@ -162,7 +207,7 @@ router.post("/billing/checkout", async (req, res) => {
   }
 });
 
-router.get("/billing/session/verify", async (req, res) => {
+router.get("/session/verify", async (req, res) => {
   try {
     const sessionId = String(req.query.session_id ?? "").trim();
     if (!sessionId) return res.status(400).json({ ok: false, error: "BAD_REQUEST" });

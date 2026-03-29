@@ -69,10 +69,13 @@ export function buildArkBookCanonConversationReuseV1FromJudgeV1(
     priority_rank: i + 1,
     analytical_scope_label: LEDGER_LABEL.get(id) ?? id,
   }));
-  const ref_slugs = [
+  let ref_slugs = [
     ...vps.center_terms.map((t) => `ct:${String(t).slice(0, 64)}`),
     ...vps.tradition_evidence.map((t) => `tr:${String(t).slice(0, 64)}`),
   ].slice(0, 48);
+  if (ref_slugs.length === 0 && bid) {
+    ref_slugs = [`book:${bid.slice(0, 64)}`];
+  }
   const lawCandidates = [
     ...vps.tradition_evidence,
     ...vps.tenmon_mapping,
@@ -125,6 +128,62 @@ export function buildArkBookCanonConversationReuseV1FromJudgeV1(
     route_echo: { routeReason: String(input.routeReason || "").trim(), routeClass: String(input.routeClass || "").trim() },
     not_raw_notion: true,
     judge_layer_only: true,
+  };
+}
+
+/** fail-closed: judge 束の形（自動化・Notion 生返却禁止の確認） */
+export function validateArkBookCanonConversationReuseShapeV1(
+  r: ArkBookCanonConversationReuseV1,
+): { pass: boolean; reasons: string[] } {
+  const reasons: string[] = [];
+  if (r.schema !== "TENMON_ARK_BOOK_CANON_CONVERSATION_REUSE_V1") reasons.push("bad_schema");
+  if (r.not_raw_notion !== true) reasons.push("not_raw_notion_must_be_true");
+  if (r.judge_layer_only !== true) reasons.push("judge_layer_only_must_be_true");
+  if (r.book_canon_ledger.length !== ARK_BOOK_CANON_PRIORITY_BOOK_IDS_V1.length) {
+    reasons.push("book_canon_ledger_length_mismatch");
+  }
+  if (r.book_canon_ledger[0]?.book_id !== "katakamuna_kotodama_kai") {
+    reasons.push("priority1_must_be_katakamuna_kotodama_kai");
+  }
+  const slotChecks: [keyof ArkBookCanonConversationReuseV1, string][] = [
+    ["evidence_binder", "evidence_binder"],
+    ["lawgraph_candidate_store", "lawgraph_candidate_store"],
+    ["terminology_memory", "terminology_memory"],
+    ["thread_reentry_memory", "thread_reentry_memory"],
+    ["uncertainty_registry", "uncertainty_registry"],
+    ["reuse_for_routes", "reuse_for_routes"],
+  ];
+  for (const [key, label] of slotChecks) {
+    const v = r[key];
+    if (v == null || typeof v !== "object") reasons.push(`missing_slot:${label}`);
+  }
+  if (!Array.isArray(r.uncertainty_registry.flags)) reasons.push("uncertainty_flags_not_array");
+  if (!Array.isArray(r.uncertainty_registry.open_issues)) reasons.push("open_issues_not_array");
+  return { pass: reasons.length === 0, reasons };
+}
+
+export function getTenmonArkBookCanonLedgerAutomationPayloadV1(): {
+  schema: "TENMON_ARK_BOOK_CANON_LEDGER_AUTOMATION_PAYLOAD_V1";
+  card: "TENMON_ARK_BOOK_CANON_LEDGER_AND_CONVERSATION_REUSE_CURSOR_AUTO_V1";
+  generated_at: string;
+  automation_bundle: ReturnType<typeof buildArkBookCanonConversationReuseAutomationBundleV1>;
+  acceptance_pass: boolean;
+  failure_reasons: string[];
+  route_carry_note: string;
+  observation_only: true;
+} {
+  const automation_bundle = buildArkBookCanonConversationReuseAutomationBundleV1();
+  const v = validateArkBookCanonConversationReuseShapeV1(automation_bundle.example_reuse);
+  return {
+    schema: "TENMON_ARK_BOOK_CANON_LEDGER_AUTOMATION_PAYLOAD_V1",
+    card: "TENMON_ARK_BOOK_CANON_LEDGER_AND_CONVERSATION_REUSE_CURSOR_AUTO_V1",
+    generated_at: new Date().toISOString(),
+    automation_bundle,
+    acceptance_pass: v.pass,
+    failure_reasons: v.pass ? [] : v.reasons,
+    route_carry_note:
+      "compare/define/historical(FACTUAL_*)/mapping/世界観/概念 canon で threadMeaningMemory が ark 束を unresolvedAxes に合流（uncertainty 消去禁止）。",
+    observation_only: true,
   };
 }
 
@@ -206,7 +265,10 @@ export function emptyThreadMeaningMemoryCoreV1(): ThreadMeaningMemoryCoreV1 {
 /** general / continuity / scripture follow-up など（特殊系 DEF/EXPLICIT/SYSTEM_DIAG は除外） */
 export function threadMeaningMemoryRouteAllowedV1(routeReason: string): boolean {
   const rr = String(routeReason || "").trim();
-  if (rr === "NATURAL_GENERAL_LLM_TOP_V1") return true;
+  if (rr === "NATURAL_GENERAL_LLM_TOP" || rr === "NATURAL_GENERAL_LLM_TOP_V1") return true;
+  if (rr === "SCRIPTURE_LOCAL_RESOLVER_V4") return true;
+  if (rr === "GENERAL_KNOWLEDGE_EXPLAIN_ROUTE_V1") return true;
+  if (rr === "K1_TRACE_EMPTY_GATED_V1") return true;
   if (rr === "TENMON_SCRIPTURE_CANON_V1") return true;
   if (rr === "TENMON_SUBCONCEPT_CANON_V1") return true;
   if (rr.startsWith("CONTINUITY_")) return true;
@@ -214,6 +276,10 @@ export function threadMeaningMemoryRouteAllowedV1(routeReason: string): boolean 
   if (rr === "KATAKAMUNA_CANON_ROUTE_V1" || rr === "KATAKAMUNA_DETAIL_FASTPATH_V1") return true;
   if (rr === "DEF_FASTPATH_VERIFIED_V1" || rr === "DEF_FASTPATH_PROPOSED_V1") return true;
   if (rr === "TRUTH_GATE_RETURN_V2") return true;
+  if (rr === "TENMON_CONCEPT_CANON_V1") return true;
+  if (rr === "WORLDVIEW_ROUTE_V1") return true;
+  if (rr === "R22_COMPARE_ASK_V1") return true;
+  if (/^FACTUAL_/u.test(rr)) return true;
   return false;
 }
 

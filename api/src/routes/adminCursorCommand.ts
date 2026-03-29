@@ -14,6 +14,30 @@ export const adminCursorCommandRouter = Router();
 const AUTOMATION_DIR = path.join(__dirname, "..", "..", "automation");
 const QUEUE_PATH = process.env.TENMON_REMOTE_CURSOR_QUEUE_PATH || path.join(AUTOMATION_DIR, "remote_cursor_queue.json");
 
+/** TENMON_CURSOR_EXECUTION_CONTRACT_V1 — next manifest / result で追跡可能にする最小契約 */
+export type CursorExecutionContractV1 = {
+  schema: "TENMON_CURSOR_EXECUTION_CONTRACT_V1";
+  command_id: string;
+  card_id: string;
+  risk_level: string;
+  apply_mode: "dry_run" | "patch_apply" | "observe_only";
+  expected_files: string[];
+  expected_acceptance: {
+    npm_run_check?: boolean;
+    probe_ok?: boolean;
+    notes?: string;
+  };
+};
+
+/** 役割分離（orchestration 憲法・machine-readable） */
+export const CURSOR_ORCHESTRATION_ROLES_V1 = {
+  gpt_ai: "next_card_reasoning_patch_plan_generation",
+  browser: "external_ui_observe_and_submit_execution_result_only",
+  cursor: "code_apply_file_edits_single_card",
+  vps: "build_check_audit_probe",
+  pdca_parent: "flow_control_next_card_only_after_result_ingested",
+} as const;
+
 export type QueueItem = {
   id: string;
   card_name: string;
@@ -135,6 +159,50 @@ export function writeQueue(q: QueueFile) {
 function leaseExpired(it: QueueItem, nowMs: number): boolean {
   const lease = it.leased_until ? Date.parse(it.leased_until) : 0;
   return lease <= nowMs;
+}
+
+/** delivered かつリース有効中（またはリース欠落）→ 別 command を出さない（single-flight・fail-closed） */
+function hasActiveDeliveredSingleFlight(q: QueueFile, nowMs: number): { active: boolean; command_id: string | null } {
+  for (const it of q.items) {
+    if (it.state !== "delivered") continue;
+    const lu = String(it.leased_until ?? "").trim();
+    if (!lu) {
+      return { active: true, command_id: String(it.id ?? "").trim() || null };
+    }
+    if (leaseExpired(it, nowMs)) continue;
+    return { active: true, command_id: String(it.id ?? "").trim() || null };
+  }
+  return { active: false, command_id: null };
+}
+
+function extractExpectedFilesFromCardMd(md: string): string[] {
+  const out: string[] = [];
+  for (const line of String(md || "").split(/\r?\n/)) {
+    const m = line.match(/^\s*EXPECTED_FILES\s*[=:]\s*(.+)\s*$/i);
+    if (!m) continue;
+    for (const part of m[1].split(/[,;]/)) {
+      const s = part.trim();
+      if (s) out.push(s.slice(0, 512));
+    }
+  }
+  return out.slice(0, 64);
+}
+
+function buildExecutionContractV1(it: QueueItem, qid: string, cardNameResolved: string, riskTier: string): CursorExecutionContractV1 {
+  const fixture = isFixtureItem(it);
+  const apply_mode: CursorExecutionContractV1["apply_mode"] = it.dry_run_only || fixture ? "dry_run" : "patch_apply";
+  return {
+    schema: "TENMON_CURSOR_EXECUTION_CONTRACT_V1",
+    command_id: qid,
+    card_id: cardNameResolved || String(it.card_name ?? "").trim(),
+    risk_level: riskTier || "unknown",
+    apply_mode,
+    expected_files: extractExpectedFilesFromCardMd(it.card_body_md),
+    expected_acceptance: {
+      npm_run_check: true,
+      notes: "Result must be POSTed to /api/admin/cursor/result before next GET /api/admin/cursor/next (single-flight).",
+    },
+  };
 }
 
 /** delivered かつリース期限切れ → ready（leased_until あり・期限切れのみ） */
@@ -313,6 +381,7 @@ function buildNextManifestPayload(it: QueueItem): Record<string, unknown> {
     riskTier === "high" ||
     enqueueReason === "escrow_human_approval";
   const cardNameResolved = String(it.cursor_card ?? it.card_name ?? ext.cursor_card ?? "").trim();
+  const execution_contract = buildExecutionContractV1(it, qid, cardNameResolved, riskTier);
   return {
     id: qid,
     queue_id: qid,
@@ -334,6 +403,8 @@ function buildNextManifestPayload(it: QueueItem): Record<string, unknown> {
     risk_tier: riskTier,
     high_risk: highRisk,
     enqueue_reason: enqueueReason,
+    execution_contract,
+    role_separation: CURSOR_ORCHESTRATION_ROLES_V1,
   };
 }
 
@@ -478,6 +549,22 @@ adminCursorCommandRouter.get("/admin/cursor/next", requireFounderOrExecutorBeare
   const q = readQueue();
   const now = Date.now();
   const lease_reconciled = reconcileExpiredDeliveredLeases(q, now);
+  const sf = hasActiveDeliveredSingleFlight(q, now);
+  if (sf.active) {
+    if (lease_reconciled > 0) writeQueue(q);
+    return res.json({
+      ok: true,
+      item: null,
+      message: "single_flight_active_await_result",
+      lease_reconciled,
+      orchestration_v1: {
+        single_flight_blocked: true,
+        active_command_id: sf.command_id,
+        hint: "POST /api/admin/cursor/result for the delivered command before issuing another next.",
+        roles: CURSOR_ORCHESTRATION_ROLES_V1,
+      },
+    });
+  }
   const it = pickNextReadyItem(q, dryOnly, now);
   if (!it) {
     if (lease_reconciled > 0) writeQueue(q);
@@ -486,6 +573,7 @@ adminCursorCommandRouter.get("/admin/cursor/next", requireFounderOrExecutorBeare
       item: null,
       message: "no ready items",
       lease_reconciled,
+      orchestration_v1: { single_flight_blocked: false, roles: CURSOR_ORCHESTRATION_ROLES_V1 },
     });
   }
   it.state = "delivered";
@@ -495,6 +583,7 @@ adminCursorCommandRouter.get("/admin/cursor/next", requireFounderOrExecutorBeare
     ok: true,
     item: buildNextManifestPayload(it),
     lease_reconciled,
+    orchestration_v1: { single_flight_blocked: false, roles: CURSOR_ORCHESTRATION_ROLES_V1 },
   });
 });
 

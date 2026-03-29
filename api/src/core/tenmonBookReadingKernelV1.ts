@@ -24,6 +24,50 @@ export type TenmonBookJudgeSplitV1 = {
   provisional_verdict: string;
 };
 
+/** VPS 抽出の出自（canon 化せず judge 束へ分離する） */
+export type TenmonBookExtractSourceClassV1 =
+  | "ocr_engine"
+  | "pdf_text_layer"
+  | "pypdf_builtin"
+  | "hybrid"
+  | "unknown";
+
+export type TenmonBookExtractNasLocatorV1 = {
+  locator_ref?: string | null;
+  nas_relative_path?: string | null;
+  canonical_root?: string | null;
+};
+
+/** OCR/PDF extract 行の必須メタ（Notion / ARK 手前のゲート） */
+export type TenmonBookExtractMetadataV1 = {
+  schema: "TENMON_BOOK_EXTRACT_METADATA_V1";
+  source_hash: string;
+  page_range: string;
+  engine: string;
+  nas_locator: TenmonBookExtractNasLocatorV1;
+  extracted_ref: string;
+  book_id: string;
+  source_class: TenmonBookExtractSourceClassV1;
+};
+
+/** NAS→VPS 抽出→judge 分離→定着入口の保存単位（OCR を学習と見なさない） */
+export type TenmonOcrBookSettlementUnitV1 = {
+  schema: "TENMON_OCR_BOOK_SETTLEMENT_UNIT_V1";
+  card: "TENMON_OCR_TO_BOOK_SETTLEMENT_BIND_CURSOR_AUTO_V1";
+  extract_metadata: TenmonBookExtractMetadataV1;
+  judge_split: TenmonBookJudgeSplitV1;
+  reuse_safety: {
+    ocr_not_verified_truth: true;
+    raw_fragments_not_law_card_source: true;
+    law_card_requires_judge_pass: true;
+  };
+  pipeline: {
+    nas_original_to_vps_extract_to_judge_split_to_notion_ark_gate: true;
+  };
+};
+
+export type TenmonExtractQualityHintV1 = "clean" | "ocr_suspect" | "text_layer_incomplete";
+
 export type TenmonBookLedgerEntryV1 = {
   material_id: string;
   label: string;
@@ -122,6 +166,152 @@ export function emptyTenmonBookJudgeSplitV1(): TenmonBookJudgeSplitV1 {
 /**
  * 保存時: 6 束を常に分離したオブジェクトに正規化（欠落は空、束間マージはしない）。
  */
+export function normalizeTenmonBookExtractMetadataV1(
+  partial: Partial<TenmonBookExtractMetadataV1> & Pick<TenmonBookExtractMetadataV1, "book_id" | "source_hash">,
+): TenmonBookExtractMetadataV1 {
+  const rawNas = partial.nas_locator;
+  const nas: TenmonBookExtractNasLocatorV1 =
+    rawNas && typeof rawNas === "object"
+      ? {
+          locator_ref: rawNas.locator_ref ?? null,
+          nas_relative_path: rawNas.nas_relative_path ?? null,
+          canonical_root: rawNas.canonical_root ?? null,
+        }
+      : {};
+  const sc = partial.source_class;
+  const source_class: TenmonBookExtractSourceClassV1 =
+    sc === "ocr_engine" ||
+    sc === "pdf_text_layer" ||
+    sc === "pypdf_builtin" ||
+    sc === "hybrid" ||
+    sc === "unknown"
+      ? sc
+      : "unknown";
+  return {
+    schema: "TENMON_BOOK_EXTRACT_METADATA_V1",
+    source_hash: String(partial.source_hash),
+    page_range: String(partial.page_range ?? ""),
+    engine: String(partial.engine ?? "unknown"),
+    nas_locator: nas,
+    extracted_ref: String(partial.extracted_ref ?? ""),
+    book_id: partial.book_id,
+    source_class,
+  };
+}
+
+/**
+ * 抽出結果を settlement unit に載せる。生本文は verified 扱いにせず、OCR/不全は uncertainty へ寄せる。
+ */
+export function buildTenmonOcrBookSettlementUnitFromExtractV1(
+  meta: TenmonBookExtractMetadataV1,
+  partialSplit: Partial<TenmonBookJudgeSplitV1> | null | undefined,
+  quality: TenmonExtractQualityHintV1,
+): TenmonOcrBookSettlementUnitV1 {
+  const split = normalizeTenmonBookJudgeSplitForSaveV1(partialSplit);
+  const flags = [...split.uncertainty_flags];
+  if (quality === "ocr_suspect") {
+    flags.push("ocr_contamination_or_engine_noise_suspected");
+  }
+  if (quality === "text_layer_incomplete") {
+    flags.push("pdf_text_layer_missing_or_partial");
+  }
+  if (meta.source_class === "ocr_engine") {
+    flags.push("extract_class_ocr_engine_not_canon_without_judge");
+  }
+  return {
+    schema: "TENMON_OCR_BOOK_SETTLEMENT_UNIT_V1",
+    card: "TENMON_OCR_TO_BOOK_SETTLEMENT_BIND_CURSOR_AUTO_V1",
+    extract_metadata: meta,
+    judge_split: { ...split, uncertainty_flags: flags },
+    reuse_safety: {
+      ocr_not_verified_truth: true,
+      raw_fragments_not_law_card_source: true,
+      law_card_requires_judge_pass: true,
+    },
+    pipeline: {
+      nas_original_to_vps_extract_to_judge_split_to_notion_ark_gate: true,
+    },
+  };
+}
+
+/** study planner / 自動化が同じ文言を参照するための単一ソース */
+export const TENMON_OCR_TO_BOOK_SETTLEMENT_BIND_PIPELINE_NOTE_V1 =
+  "NAS 原本 → VPS 抽出 → judge 6 束分離 → law/comparison/uncertainty は judge 通過後のみ。OCR は truth としない。" as const;
+
+/** fail-closed: メタ必須・judge schema 整合 */
+export function settlementUnitJudgeSeparationOkV1(unit: TenmonOcrBookSettlementUnitV1): boolean {
+  if (unit.schema !== "TENMON_OCR_BOOK_SETTLEMENT_UNIT_V1") return false;
+  if (unit.judge_split.schema !== "TENMON_BOOK_JUDGE_SPLIT_V1") return false;
+  const m = unit.extract_metadata;
+  if (m.schema !== "TENMON_BOOK_EXTRACT_METADATA_V1") return false;
+  if (!m.source_hash.trim()) return false;
+  if (!m.book_id.trim()) return false;
+  if (!m.extracted_ref.trim()) return false;
+  return true;
+}
+
+export function getTenmonOcrToBookSettlementBindProbePayloadV1(): {
+  schema: "TENMON_OCR_TO_BOOK_SETTLEMENT_BIND_PROBE_V1";
+  card: "TENMON_OCR_TO_BOOK_SETTLEMENT_BIND_CURSOR_AUTO_V1";
+  generated_at: string;
+  example_unit: TenmonOcrBookSettlementUnitV1;
+  analysis_log_from_example: TenmonBookAnalysisLogEntryV1;
+  law_card_blocked_until_judge: true;
+  bridge_ingest_note: string;
+  digest_ledger_note: string;
+  study_planner_note: string;
+  acceptance_pass: boolean;
+  failure_reasons: string[];
+  nextOnPass: string;
+  nextOnFail: string;
+} {
+  const meta = normalizeTenmonBookExtractMetadataV1({
+    book_id: "books_superpack",
+    source_hash: "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+    page_range: "1-2",
+    engine: "pdftotext",
+    extracted_ref: "kokuzo_pages:books_superpack:pdfPage=1",
+    source_class: "pdf_text_layer",
+    nas_locator: {
+      locator_ref: "nas+path:/example/ledger",
+      nas_relative_path: "materials/books/example.pdf",
+    },
+  });
+  const unit = buildTenmonOcrBookSettlementUnitFromExtractV1(
+    meta,
+    {
+      source_facts: ["extracted_ref=kokuzo_pages:books_superpack:pdfPage=1（参照子のみ・本文 verified 化禁止）"],
+      text_summary: "要約は text_summary のみ。抽出断片を tradition / mapping に昇格させない。",
+      tradition_evidence: [],
+      tenmon_mapping: [],
+      uncertainty_flags: [],
+      provisional_verdict: "unsettled_pending_judge",
+    },
+    "clean",
+  );
+  const separation_ok = settlementUnitJudgeSeparationOkV1(unit);
+  const analysis_log = buildTenmonBookAnalysisLogEntryV1(meta.book_id, unit.judge_split, "bal:ocr_settlement_bind:probe");
+  const failure_reasons: string[] = [];
+  if (!separation_ok) failure_reasons.push("settlement_unit_judge_separation_failed");
+  return {
+    schema: "TENMON_OCR_TO_BOOK_SETTLEMENT_BIND_PROBE_V1",
+    card: "TENMON_OCR_TO_BOOK_SETTLEMENT_BIND_CURSOR_AUTO_V1",
+    generated_at: new Date().toISOString(),
+    example_unit: unit,
+    analysis_log_from_example: analysis_log,
+    law_card_blocked_until_judge: true,
+    bridge_ingest_note:
+      "TenmonDeepreadHandoffV1.book_extract_settlement_unit: judge 6 束＋extract メタを Notion/ARK 前ゲートに同梱（null は未バインド）。",
+    digest_ledger_note:
+      "getMaterialDigestLedgerPayloadV1: book_ledger_settlement と OCR settlement 経路を併記（本文は NAS・抽出は参照子）。",
+    study_planner_note: `${TENMON_OCR_TO_BOOK_SETTLEMENT_BIND_PIPELINE_NOTE_V1} queue は NAS locator のみ同梱。`,
+    acceptance_pass: separation_ok,
+    failure_reasons,
+    nextOnPass: "TENMON_KATAKAMUNA_SOURCE_AUDIT_AND_CLASSIFICATION_CURSOR_AUTO_V1",
+    nextOnFail: "TENMON_OCR_TO_BOOK_SETTLEMENT_BIND_RETRY_CURSOR_AUTO_V1",
+  };
+}
+
 export function normalizeTenmonBookJudgeSplitForSaveV1(
   partial: Partial<TenmonBookJudgeSplitV1> | null | undefined,
 ): TenmonBookJudgeSplitV1 {
@@ -210,6 +400,7 @@ export function buildBookLedgerSettlementLayerSliceV1(): {
     settlement_notes: [
       "全文投入を学習と見なさない。継承知識化は judge_split のカード束への正規化後のみ。",
       "source_facts / text_summary / tradition_evidence / tenmon_mapping / uncertainty_flags / provisional_verdict を混線させない。",
+      "OCR/PDF extract は TenmonOcrBookSettlementUnitV1（extract メタ＋judge 6 束）で保存し、Notion/ARK 前ゲートを経由する。",
     ],
   };
 }

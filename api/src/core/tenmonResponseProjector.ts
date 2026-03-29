@@ -2,15 +2,16 @@
  * TENMON_RESPONSE_PROJECTOR_DEEPREAD_BIND_CURSOR_AUTO_V1
  * 出口整形・漏れ止め・ONE_STEP 収束（prompt 全再設計はしない）
  *
- * TENMON_SURFACE_LEAK_CLEANUP_CURSOR_AUTO_V1:
+ * TENMON_SURFACE_LEAK_CLEANUP_CURSOR_AUTO_V5（共有 strip 層と整合）:
  * center:/root_reasoning:/truth_structure:/verdict:/中心命題:/立脚の中心は…/次軸:/次観測/truth_structure:相=/verdict=center_loss の表層除去、
  * 【天聞の所見】前後行エコー抑制、
  * routeEvidenceTraceV1 等 internal bundle 識別子の除去、reply/text/answer/message 抽出（ku・routeReason は触らない）
  *
- * 不確実性表層フレーズは confidenceDisplayLogic（composer 先頭付与）を優先し、ここでは削除しない。
+ * 不確実性表層フレーズ（V6 guarded/partial/low）は confidenceDisplayLogic／applyConfidencePrefix を優先し、strip で落とさない。
  */
 
 import type { ThreadCore } from "./threadCore.js";
+import { stripSurfaceLeakMetaChainsV2 } from "./tenmonSurfaceLeakStripV2.js";
 import type { SafeAnswerConstraintV1 } from "./sourceLayerDiscernmentKernel.js";
 import type { TruthLayerArbitrationKernelResultV1 } from "./truthLayerArbitrationKernel.js";
 
@@ -149,6 +150,8 @@ function isTenmonInternalMetaSurfaceLineV1(line: string): boolean {
   if (/^verdict\s*:\s*\S/u.test(t)) return true;
   if (/^truth_structure\s*[:：]?\s*相\s*=/u.test(t)) return true;
   if (/^verdict\s*=\s*center_loss\b/u.test(t)) return true;
+  if (/^verdict\s*=\s*\S/u.test(t)) return true;
+  if (/^center\s*[:：]\s*いまの中心一句を固定。?$/u.test(t)) return true;
   if (/^立脚の中心は「[^」\n]*」です。[^\n]*$/u.test(t)) return true;
   if (/^立脚の中心は[^。\n]+$/u.test(t)) return true;
   return false;
@@ -159,6 +162,44 @@ const MAX_DEFINE = 7200;
 
 function s(v: unknown): string {
   return String(v ?? "").trim();
+}
+
+/**
+ * 日本語本文と同一行に連結した root_reasoning / center: / 次軸 等を反復で剥がす（表層のみ・本文空化は最終 fail-open）。
+ */
+function stripMidParagraphForensicJoinsV1(text: string): string {
+  let t = String(text || "");
+  let prev = "";
+  while (prev !== t) {
+    prev = t;
+    t = t.replace(/^\s*root_reasoning\s*:\s*[^\n]+\n?/gimu, "");
+    t = t.replace(/^\s*truth_structure\s*:\s*[^\n]+\n?/gimu, "");
+    t = t.replace(/^\s*verdict\s*=\s*[^\n]+\n?/gimu, "");
+    t = t.replace(/^\s*verdict\s*:\s*[^\n]+\n?/gimu, "");
+    t = t.replace(/^\s*center\s*[:：]\s*いまの中心一句を固定。?\s*\n?/gimu, "");
+    t = t.replace(/^\s*次軸\s*[:：]\s*[^\n]+\n?/gu, "");
+    t = t.replace(/^\s*次観測\s*[:：]\s*[^\n]+\n?/gu, "");
+    t = t.replace(/^\s*中心命題\s*[:：]\s*\(pri:[^\)]+\)\s*\n?/gu, "");
+    t = t.replace(/^\s*立脚の中心は「[^」\n]+」です。\s*/gu, "");
+    t = t.replace(/\s+center\s*[:：]\s*いまの中心一句を固定。?\s*/giu, " ");
+    t = t.replace(/[。．]\s*center\s*[:：]\s*いまの中心一句を固定。?\s*/gu, "。");
+    t = t.replace(/\s+root_reasoning\s*:\s*[^\n]+/giu, "");
+    t = t.replace(/\s+truth_structure\s*:\s*[^\n]+/giu, "");
+    t = t.replace(/\s+verdict\s*=\s*[^\n]+/giu, "");
+    t = t.replace(/\s+verdict\s*:\s*[^\n]+/giu, "");
+    t = t.replace(/\s+次軸\s*[:：]\s*[^\n]+/gu, "");
+    t = t.replace(/\s+次観測\s*[:：]\s*[^\n]+/gu, "");
+    t = t.replace(/\s+中心命題\s*[:：]\s*\(pri:[^\)]+\)\s*/gu, "");
+    t = t.replace(/\s+立脚の中心は「[^」\n]+」です。\s*/gu, " ");
+    t = t.replace(/[。．]\s*verdict\s*=\s*[^。\n]+/gu, "。");
+    t = t.replace(/[。．]\s*truth_structure\s*[:：]\s*[^。\n]+/giu, "。");
+    t = t.replace(/[。．]\s*center\s*[:：]\s*いまの中心一句を固定[。]?/giu, "。");
+    t = t.replace(/[。．]\s*verdict\s*[:：]\s*[^。\n]+/giu, "。");
+    t = t.replace(/root_reasoning\s*[:：]\s*truth_structure\s*[:：][^\n]+/giu, "");
+    t = t.replace(/[ \t]{2,}/g, " ");
+    t = t.replace(/[ \t]+\n/g, "\n");
+  }
+  return t.replace(/\n{3,}/g, "\n\n").trim();
 }
 
 function stripInternalMetaLinesFailOpenV1(text: string): string {
@@ -175,18 +216,31 @@ function stripInternalMetaLinesFailOpenV1(text: string): string {
   }
   const result = cur;
   if (!result) return raw;
-  if (result.length < 28 && trimmedOrig.length > 72) return raw;
-  if (trimmedOrig.length > 120 && result.length < trimmedOrig.length * 0.14) return raw;
+  // V5: メタ行除去を優先し、短文でも漏れ全文を復帰しない
   return result;
 }
 
 /** 同一行・段落内に混入した短いメタ断片（日本語本文は食わないよう値は主に内部トークン幅に制限） */
 function stripInlineInternalMetaFragmentsV1(text: string): string {
   let out = String(text || "");
+  out = out.replace(/root_reasoning\s*[:：]\s*truth_structure\s*[:：][^\n]+/giu, "");
+  /** V6: 句読点直後・空白直後に連結した内部メタ（行頭のみ除去の取りこぼし） */
+  out = out.replace(/[。．、，]\s*root_reasoning\s*[:：][^\n]+/giu, "。");
+  out = out.replace(/[。．、，]\s*truth_structure\s*[:：][^\n]+/giu, "。");
+  out = out.replace(/[。．、，]\s*verdict\s*=\s*[^\n]+/giu, "。");
+  out = out.replace(/[。．、，]\s*verdict\s*[:：][^\n]+/giu, "。");
+  out = out.replace(/[。．、，]\s*次軸\s*[:：][^\n]+/gu, "。");
+  out = out.replace(/[。．、，]\s*次観測\s*[:：][^\n]+/gu, "。");
+  out = out.replace(/\s+root_reasoning\s*[:：][^\n]+/giu, " ");
+  out = out.replace(/\s+truth_structure\s*[:：][^\n]+/giu, " ");
+  out = out.replace(/\s+verdict\s*=\s*[^\n]+/giu, " ");
+  out = out.replace(/\s+次軸\s*[:：][^\n]+/gu, " ");
+  out = out.replace(/\s+次観測\s*[:：][^\n]+/gu, " ");
   out = out.replace(
     /(?:^|\n)\s*(?:center|root_reasoning|truth_structure|verdict|次軸|次観測|中心命題)\s*[:：]\s*[^\n]+/gimu,
     "\n",
   );
+  out = out.replace(/(?:^|\n)\s*verdict\s*=\s*[^\n]+/gimu, "\n");
   out = out.replace(/\btruth_structure:相=[^。\n]*/giu, "");
   out = out.replace(/\bverdict=center_loss[^。\n]*/giu, "");
   out = out.replace(
@@ -206,8 +260,8 @@ function stripInlineInternalMetaFragmentsV1(text: string): string {
 /** 内部メタに紛れた定型フレーズ（ユーザー表層では不要） */
 function stripLeakTemplateProseV1(text: string): string {
   return String(text || "")
-    .replace(/いまの読み方は正典と会話の往還[^。\n]{0,400}[。．]?/gu, "")
-    .replace(/いまの答えは、意味の芯は[^。\n]{0,400}[。．]?/gu, "");
+    .replace(/いまの読み方は正典と会話の往還[^\n]*/gu, "")
+    .replace(/いまの答えは、意味の芯は[^\n]*/gu, "");
 }
 
 /** 連続する同一文（正規化一致）を 1 つに畳む（段落境界は維持） */
@@ -227,7 +281,22 @@ function dedupeSequentialSentencesInSurfaceV1(text: string): string {
       prevNorm = norm;
       kept.push(ch);
     }
-    return kept.join("");
+    const joined = kept.join("");
+    const lines = joined.split(/\n/);
+    const ld: string[] = [];
+    let prevLineNorm = "";
+    for (const ln of lines) {
+      const lnorm = ln.trim().replace(/\s+/g, " ");
+      if (!lnorm) {
+        ld.push(ln);
+        prevLineNorm = "";
+        continue;
+      }
+      if (lnorm === prevLineNorm) continue;
+      prevLineNorm = lnorm;
+      ld.push(ln);
+    }
+    return ld.join("\n");
   });
   return outParas.join("\n\n").replace(/\n{3,}/g, "\n\n").trim();
 }
@@ -262,16 +331,16 @@ function suppressDuplicateSeenmarkParagraphsV1(text: string): string {
 }
 
 /** closing 直前に付いた内部ヒント行を落とす（ONE_STEP 自然文は後段で付与） */
-function stripInternalHintTailLinesV1(text: string): string {
+export function stripTenmonInternalHintTailLinesV1(text: string): string {
   let t = String(text || "").trim();
   const tailPat =
     /(?:\n|^)\s*(?:次軸|次観測|center|root_reasoning|truth_structure|verdict|中心命題)\s*[:：]\s*[^\n]+$/gimu;
-  const tailFoot =
-    /(?:\n|^)\s*立脚の中心は「[^」\n]+」です。[^\n]*$/gimu;
+  const tailVerdictEq = /(?:\n|^)\s*verdict\s*=\s*[^\n]+$/gimu;
+  const tailFoot = /(?:\n|^)\s*立脚の中心は「[^」\n]+」です。\s*$/gimu;
   let prev = "";
   while (prev !== t) {
     prev = t;
-    t = t.replace(tailPat, "").replace(tailFoot, "").trim();
+    t = t.replace(tailPat, "").replace(tailVerdictEq, "").replace(tailFoot, "").trim();
   }
   return t;
 }
@@ -280,7 +349,8 @@ function stripInternalHintTailLinesV1(text: string): string {
 export function stripTenmonInternalSurfaceLeakV1(text: string): string {
   const snapshot = String(text ?? "").trim();
   if (!snapshot) return "";
-  let out = snapshot;
+  let out = stripSurfaceLeakMetaChainsV2(snapshot);
+  out = stripMidParagraphForensicJoinsV1(out);
   out = stripInternalMetaLinesFailOpenV1(out);
   out = stripInlineInternalMetaFragmentsV1(out);
   out = out.replace(RE_INTERNAL_SURFACE_BUNDLE_IDS, "");
@@ -304,6 +374,7 @@ export function stripTenmonInternalSurfaceLeakV1(text: string): string {
   out = suppressDuplicateSeenmarkParagraphsV1(out);
   out = dedupeSequentialSentencesInSurfaceV1(out);
   out = stripLeakTemplateProseV1(out);
+  out = stripSurfaceLeakMetaChainsV2(out.trim());
   out = out.trim();
   if (!out) return snapshot;
   return out;
@@ -393,7 +464,7 @@ export function clampTenmonResponseDensityV1(text: string, maxChars: number): st
  */
 export function synthesizeTenmonOneStepClosingV1(text: string, routeKind: TenmonResponseProjectorRouteKindV1): string {
   if (routeKind === "minimal_strip_only") return String(text || "").trim();
-  let t = stripInternalHintTailLinesV1(String(text || "").trim());
+  let t = stripTenmonInternalHintTailLinesV1(String(text || "").trim());
   if (!t) return t;
   const hasOneStepJa = /次の一手|次の一歩|いま詰める一点|一点に絞|一つだけ選び|一手は一つ/u.test(t);
   if (hasOneStepJa) return t;

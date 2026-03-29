@@ -1,6 +1,7 @@
 /**
  * CHAT_SAFE_REFACTOR_PATCH6_FINALIZE_SINGLE_EXIT_V1
  * 主要出口を single-exit 化する最小ヘルパ。
+ * P3_CHAT_BINDING_V1: threadMeaningMemory / bookReading は chat 本線（binder threadMeaningOpts + __tenmonChatTsCentralBindingObserveV1）で ku に載る。
  */
 
 import {
@@ -36,9 +37,15 @@ import {
 import {
   extractTenmonUserFacingFinalTextV1,
   stripTenmonInternalSurfaceLeakV1,
+  stripTenmonInternalHintTailLinesV1,
   suppressPrefaceDuplicateBeforeSeenmarkV1,
   suppressRepetitiveTruthFrameV1,
 } from "../../core/tenmonResponseProjector.js";
+import {
+  stripSurfaceLeakMetaChainsV2,
+  TENMON_SURFACE_LEAK_PATTERNS_V2,
+  TENMON_SURFACE_LEAK_LEGACY_TEMPLATE_PATTERNS_V1,
+} from "../../core/tenmonSurfaceLeakStripV2.js";
 import {
   buildHumanReadableEvidenceFootingLineV1,
   buildMainlineTenmonHeadV1,
@@ -157,40 +164,66 @@ function stripScripturePlaceholderAndTraceV1(text: string): string {
   return out.join("\n").replace(/\n{3,}/g, "\n\n").trim();
 }
 
-/**
- * TENMON_SURFACE_TEMPLATE_CLEAN_FINALIZE_CURSOR_AUTO_V1
- * 会話表面に漏れる定型テンプレを最終段で除去（routeReason / 意味生成は不変）。
- */
-function stripSurfaceTemplateLeakFinalizeV1(text: string): string {
-  let t = String(text || "");
-  const removals: RegExp[] = [
-    /いまの読み方は正典と会話の往還[^。\n]{0,400}[。．]?/gu,
-    /いまの答えは、意味の芯は[^。\n]{0,400}[。．]?/gu,
-    /(?:^|\n)\s*(?:center|root_reasoning|truth_structure|verdict)\s*:\s*[^\n]+/gimu,
-    /さっき見ていた中心（[^）\n]{0,120}）を土台に、いまの話を見ていきましょう。\s*/gu,
-    /さっき見ていた中心[^\n]*/gu,
-    /^（[^）\n]{0,120}）を土台に、いまの話を見ていきましょう。\s*\n?/gmu,
-    /（[^）\n]{0,120}）を土台に、いまの話を見ていきましょう。\s*/gu,
-    /【天聞の所見】いまは中心を保持したまま考えられています。[^\n]*\n?/gu,
-    /語義・作用・読解の軸を分けて読むと、要点が崩れにくいです。\s*/gu,
-    /語義・作用・読解の軸を分けると、主張の射程が崩れにくくなります。\s*/gu,
-    /語義・作用・読解[^\n]{0,240}/gu,
-    /現代では、概念を押さえたうえで判断や実装に一段だけ落とすと使えます。\s*/gu,
-    /現代では、概念を押さえたうえで[^\n]{0,240}/gu,
-    /について、今回は[^。\n]{0,40}の立場で答えます。?\n?/gu,
-    /判断軸（内部参照は要約表示）について[^。\n]{0,50}。?\n?/gu,
-  ];
-  for (const re of removals) {
-    t = t.replace(re, "");
+/** TENMON_SURFACE_EXIT_CLEANUP_MASTER_CURSOR_AUTO_V6: finalize 出口の行頭アンカー（projector 経由でも再掃除） */
+const TENMON_SURFACE_LEAK_FINALIZE_V6_ANCHOR_PATTERNS: ReadonlyArray<RegExp> = [
+  /^root_reasoning:[^\n]*\n?/gm,
+  /^truth_structure:[^\n]*\n?/gm,
+  /^verdict=[^\n]*\n?/gm,
+  /^center:\s*いまの中心一句を固定[。]?\n?/gm,
+  /^立脚の中心は「[^」]+」です。[^\n]*\n?/gm,
+  /^次軸:\s*次観測:[^\n]*\n?/gm,
+  /^中心命題:\s*\(pri:[^\)]+\)\n?/gm,
+  /^この点では、/gm,
+];
+
+/** TENMON_SURFACE_LEAK_CLEANUP_CURSOR_AUTO_V5: finalize / 静的スキャン用の明示パターン集合（共有 strip 層 + V6） */
+export const LEAK_PATTERNS: ReadonlyArray<RegExp> = [
+  ...TENMON_SURFACE_LEAK_PATTERNS_V2,
+  ...TENMON_SURFACE_LEAK_LEGACY_TEMPLATE_PATTERNS_V1,
+  ...TENMON_SURFACE_LEAK_FINALIZE_V6_ANCHOR_PATTERNS,
+];
+
+function stripFinalizeLeakV6AnchorPassV1(text: string): string {
+  let t = String(text ?? "");
+  let prev = "";
+  while (prev !== t) {
+    prev = t;
+    for (const re of TENMON_SURFACE_LEAK_FINALIZE_V6_ANCHOR_PATTERNS) {
+      t = t.replace(re, "");
+    }
+    t = t
+      .replace(/\n{3,}/g, "\n\n")
+      .replace(/[ \t]{2,}/g, " ")
+      .replace(/[ 　]{2,}/gu, " ")
+      .trim();
   }
-  t = t
-    .replace(/\n{3,}/g, "\n\n")
-    .replace(/[ 　]{2,}/gu, " ")
-    .trim();
+  return t;
+}
+
+/**
+ * TENMON_SURFACE_LEAK_CLEANUP_CURSOR_AUTO_V2
+ * user-facing 表層から内部断片を除去（ku / routeReason は不変・本文空化時は fail-open）。
+ */
+function stripSurfaceLeakFinalizeResponseV1(text: string): string {
+  const snapshot = String(text ?? "").trim();
+  if (!snapshot) return "";
+  let t = stripSurfaceLeakMetaChainsV2(snapshot);
+  if (!t) t = snapshot;
+  t = stripFinalizeLeakV6AnchorPassV1(t);
+  if (!t) t = snapshot;
   t = stripTenmonInternalSurfaceLeakV1(t);
   t = suppressRepetitiveTruthFrameV1(t);
   t = suppressPrefaceDuplicateBeforeSeenmarkV1(t);
-  return stripTenmonInternalSurfaceLeakV1(t);
+  t = stripTenmonInternalHintTailLinesV1(t);
+  t = stripTenmonInternalSurfaceLeakV1(t);
+  const out = String(t ?? "").trim();
+  if (!out) return snapshot;
+  return out;
+}
+
+/** 本線 finalize が呼ぶ単一出口（stripSurfaceLeak と同等のパイプライン） */
+function stripSurfaceTemplateLeakFinalizeV1(text: string): string {
+  return stripSurfaceLeakFinalizeResponseV1(text);
 }
 
 /** surface_leak_strip: finalize 本線の明示名（TENMON_CHAT_TS_BINDING_AND_SURFACE_EXIT_REWIRE_V1 / static scan） */

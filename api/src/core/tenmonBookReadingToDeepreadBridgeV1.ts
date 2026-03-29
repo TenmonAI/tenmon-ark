@@ -4,6 +4,7 @@ import {
   type TenmonBookJudgeSplitV1,
   type TenmonBookReadingHandoffCandidateV1,
   type TenmonBookReadingResultV1,
+  type TenmonOcrBookSettlementUnitV1,
 } from "./tenmonBookReadingKernelV1.js";
 
 export type TenmonDeepreadHandoffV1 = {
@@ -15,6 +16,11 @@ export type TenmonDeepreadHandoffV1 = {
     book_class: TenmonBookClassV1 | null;
     judge_split_template: TenmonBookJudgeSplitV1;
   };
+  /**
+   * OCR/PDF 抽出→judge 分離済み単位（Notion/ARK 前）。未バインドは null。
+   * 本文 verified 化・law card 単独昇格は禁止（reuse_safety 参照）。
+   */
+  book_extract_settlement_unit: TenmonOcrBookSettlementUnitV1 | null;
   handoff: Array<{
     target: "sanskrit_deepread" | "godname_deepread" | "scripture_comparison_deepread";
     payload: {
@@ -67,6 +73,7 @@ export function buildTenmonBookReadingToDeepreadBridgeV1(
     schema: "TENMON_BOOK_TO_DEEPREAD_BRIDGE_V1",
     source_schema: "TENMON_BOOK_READING_KERNEL_V1",
     book_settlement,
+    book_extract_settlement_unit: null,
     handoff,
   };
 }

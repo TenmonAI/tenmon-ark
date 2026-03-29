@@ -3,7 +3,7 @@
  * SplitResult × binder/notion/scripture 観測を単一の回答レーンに収束（補助裁定・routeReason は変更しない）
  *
  * TENMON_UNCERTAINTY_AND_CONFIDENCE_SURFACE_LOGIC: answerMode / coreTruth は不変。
- * 表層の不確実性フレーズは confidenceDisplayLogic（symbolic・史実問い・根拠薄・guard 観測）が付与。
+ * 表層の high/partial/low/guarded は confidenceDisplayLogic.buildUncertaintyConfidenceDisplayV1（raw・ev・guard・canon 強度の合成）。
  */
 
 import type { InputSemanticHeartHintV1, InputSemanticSplitResultV1 } from "./inputSemanticSplitter.js";

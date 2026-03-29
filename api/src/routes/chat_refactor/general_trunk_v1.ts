@@ -1,6 +1,7 @@
 /** CHAT_TRUNK_GENERAL_SPLIT_V1_FINAL — NATURAL_GENERAL spine helpers */
 
 import { splitInputSemanticsV1 } from "../../core/inputSemanticSplitter.js";
+import { classifyTenmonSupportEarlyTriageV1 } from "../chat_parts/gates_impl.js";
 
 /** chat.ts への文字列散乱を減らすための単一正規 routeReason（静的観測の hit 集約用） */
 export const ROUTE_NATURAL_GENERAL_LLM_TOP_V1 = "NATURAL_GENERAL_LLM_TOP" as const;
@@ -23,6 +24,8 @@ export type GeneralFactCodingRouteV1 =
 export function classifyGeneralFactCodingRouteV1(rawMessage: string): GeneralFactCodingRouteV1 {
   const t = String(rawMessage || "").trim();
   if (!t) return "";
+  /** TENMON_SUPPORT_ROUTE_SHAPE_AND_TRIAGE_STABILIZATION: 「手順を教えて」等の緩いGKトリガで課金/PWA/登録を一般知識へ吸わせない */
+  if (classifyTenmonSupportEarlyTriageV1(t)) return "";
   // scripture/canon 語彙は domain route（scripture/define）へ優先委譲する
   if (/(水穂伝|法華経|即身成仏|稲荷古伝|言霊秘書|いろは言[霊灵靈]解|カタカムナ言[霊灵靈]解)/u.test(t)) {
     return "";

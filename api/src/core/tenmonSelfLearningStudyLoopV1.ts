@@ -14,6 +14,7 @@ import {
 import { resolveKhsGengoLawKernelV1 } from "./tenmonKhsGengoLawKernelV1.js";
 import { resolveSanskritComparativeKernelV1 } from "./tenmonSanskritComparativeKernelV1.js";
 import { buildComparativeMappingV1 } from "./tenmonComparativeMappingV1.js";
+import type { ArkBookCanonConversationReuseV1 } from "./threadMeaningMemory.js";
 import { projectFractalPhysicsV1 } from "./tenmonFractalPhysicsProjectionV1.js";
 import { resolveLawPromotionGateV1 } from "./tenmonLawPromotionGateV1.js";
 import { buildLearningConversationBridgeV1 } from "./tenmonLearningConversationBridgeV1.js";
@@ -119,11 +120,17 @@ export function runSelfLearningStudyLoopStepV1(loopIndex: number = 0): StudyLoop
   };
 }
 
-export function getSelfLearningAutostudyBundleV1(message: string): SelfLearningAutostudyBundleV1 {
+export function getSelfLearningAutostudyBundleV1(
+  message: string,
+  opts?: { arkBookCanonConversationReuseV1?: ArkBookCanonConversationReuseV1 | null },
+): SelfLearningAutostudyBundleV1 {
   const msg = String(message || "");
+  const ark = opts?.arkBookCanonConversationReuseV1 ?? null;
   const gengoLawKernel = resolveKhsGengoLawKernelV1(msg);
-  const sanskritComparative = resolveSanskritComparativeKernelV1(msg);
-  const comparativeMapping = buildComparativeMappingV1();
+  const sanskritComparative = resolveSanskritComparativeKernelV1(msg, {
+    uncertainty_registry_flags: ark?.uncertainty_registry.flags ?? null,
+  });
+  const comparativeMapping = buildComparativeMappingV1({ bookCanonReuse: ark });
   const digestPromotions = MATERIAL_DIGEST_LEDGER_CATALOG_V1.map((e) => evaluateDigestPromotionV1(e));
   const lawPromotionGate = resolveLawPromotionGateV1(digestPromotions);
   const fractalPhysics = projectFractalPhysicsV1(msg);

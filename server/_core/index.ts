@@ -10,6 +10,8 @@ import { handleStripeWebhook } from "../webhook";
 import { serveStatic, setupVite } from "./vite";
 import { startScheduler } from "../jobs/scheduler";
 import { initializeWebSocket } from "./websocket";
+/** PWA / Stripe: api パッケージのルーター（src に .js が無いため .ts を静的 import — dynamic の billing.js は実行時に必ず失敗していた） */
+import tenmonBillingRouter from "../../api/src/routes/billing.ts";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -65,14 +67,17 @@ async function startServer() {
   // セキュリティのため明示的に認証を強制する
   app.use("/api", async (req, res, next) => {
     // PUBLIC ENDPOINT チェック: 特定のパスは認証不要
+    // app.use("/api", …) 配下では req.path がマウント除去後（例: /billing/link）になるため originalUrl で判定する
+    const urlPath = String(req.originalUrl ?? req.url ?? "").split("?")[0];
     const publicPaths = [
       "/api/stripe/webhook", // Stripe webhook（署名検証で保護）
       "/api/oauth/callback", // OAuth callback（OAuthフローで保護）
       "/api/docs", // API Docs（公開情報）
       "/api/docs/markdown", // API Docs Markdown（公開情報）
+      "/api/billing", // PWA Stripe: ルート内で auth_session / Stripe を検証（OPTIONS・401/403 を返す）
     ];
 
-    if (publicPaths.some(path => req.path.startsWith(path))) {
+    if (publicPaths.some((path) => urlPath.startsWith(path))) {
       // PUBLIC ENDPOINT: 認証不要
       (req as any).isPublicEndpoint = true;
     }
@@ -112,6 +117,8 @@ async function startServer() {
   // Feedback endpoint
   const feedbackRouter = await import("../api/feedback");
   app.use("/api", feedbackRouter.default);
+  // PWA billing (api パッケージと同一ルーター — /api/billing/*)
+  app.use("/api/billing", tenmonBillingRouter);
   // Self-Review endpoint
   const selfReviewRouter = await import("../api/self-review");
   app.use("/api/self-review", selfReviewRouter.default);

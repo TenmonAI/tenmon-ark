@@ -11,7 +11,10 @@ import {
   type TenmonNasLocatorManifestV1,
   type TenmonNasSourcepackHandoffV1,
 } from "./tenmonNasArchiveBridgeV1.js";
-import { buildBookLedgerSettlementLayerSliceV1 } from "./tenmonBookReadingKernelV1.js";
+import {
+  buildBookLedgerSettlementLayerSliceV1,
+  TENMON_OCR_TO_BOOK_SETTLEMENT_BIND_PIPELINE_NOTE_V1,
+} from "./tenmonBookReadingKernelV1.js";
 
 export type MaterialDigestStateV1 = "unconnected" | "connected" | "digested" | "circulating";
 
@@ -251,6 +254,7 @@ export function getMaterialDigestLedgerPayloadV1(): {
       "mixed_question_restored は promotionHints で識別",
       "NAS canonical_root は論理パス（TENMON_NAS_CANONICAL_ROOT / TENMON_NAS_SSH_HOST）。本文は NAS、Ark は digest・ledger・locator。",
       "book_ledger_settlement: 書籍台帳・judge 6 束・law/comparison/uncertainty カード（TENMON_BOOK_LEDGER_AND_SETTLEMENT_LAYER）。",
+      `ocr_to_book_settlement_bind: ${TENMON_OCR_TO_BOOK_SETTLEMENT_BIND_PIPELINE_NOTE_V1}`,
     ],
     book_ledger_settlement,
   };

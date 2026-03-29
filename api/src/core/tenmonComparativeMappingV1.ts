@@ -1,6 +1,7 @@
 /**
  * KHS ↔ いろは ↔ カタカムナ ↔ サンスクリット ↔ 法華 ↔ 空海 の写像（root と混同禁止）。
  * TENMON_ARK_BOOK_CANON_LEDGER_AND_CONVERSATION_REUSE: judge 済み比較束を hint に合流（Notion 原文は載せない）。
+ * knowledgeBinder → getSelfLearningAutostudyBundleV1(..., { arkBookCanonConversationReuseV1 }) 経由で注入。
  */
 
 import type { ArkBookCanonConversationReuseV1 } from "./threadMeaningMemory.js";

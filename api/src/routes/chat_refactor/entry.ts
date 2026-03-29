@@ -40,7 +40,8 @@ export function parseAnswerProfileFromBody(body: any): AnswerProfile {
  */
 export function normalizeChatEntryFromBody(body: any): { message: string; threadId: string } {
   const b = body || {};
-  const messageRaw = b.input ?? b.message;
+  /** HEART と同順（message / text / input）で本文を解決 — TENMON_SUPPORT_AND_FOUNDER_ROUTE_FIX_CURSOR_AUTO_V2 */
+  const messageRaw = b.input ?? b.message ?? b.text;
   const message = String(messageRaw ?? "").trim();
   const threadId = String(b.threadId ?? b.sessionId ?? "default").trim();
   return { message, threadId };

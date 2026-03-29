@@ -1,8 +1,0 @@
-{
-  "card": "TENMON_AUTONOMY_FORENSIC_BUNDLE_REPAIR_CURSOR_AUTO_V1",
-  "generated_at": "2026-03-26T23:24:50Z",
-  "evidence_bundle_path": "/var/log/tenmon/autonomy_failclosed_bundles/forensic_bundle_repair_v1/20260326T232450Z_d0c5cbdf/repaired_bundle.json",
-  "evidence_root": "/var/log/tenmon/autonomy_failclosed_bundles",
-  "next_on_pass_suggested": "TENMON_MAC_CURSOR_OPERATOR_READINESS_CURSOR_AUTO_V1",
-  "next_card_if_fail": "TENMON_MAC_CURSOR_OPERATOR_READINESS_CURSOR_AUTO_V1"
-}

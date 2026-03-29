@@ -35,6 +35,14 @@ import { adminRemoteIntakeRouter } from "./routes/adminRemoteIntake.js";
 import { adminRemoteBuildRouter } from "./routes/adminRemoteBuild.js";
 import { adminMacDecisionRouter } from "./routes/adminMacDecision.js";
 import healthRouter from "./routes/health.js";
+import { writerRouter } from "./routes/writer.js";
+import { writerVerifyRouter } from "./routes/writerVerify.js";
+import { writerDraftRouter } from "./routes/writerDraft.js";
+import { infraAssetsRouter } from "./routes/infraAssets.js";
+import chatFrontRouter from "./routes/chat_front.js";
+import meRouter from "./routes/me.js";
+import billingRouter from "./routes/billing.js";
+import { authLocalRouter } from "./routes/auth_local.js";
 
 // Debug: 未処理例外のハンドリング
 const pid = process.pid;
@@ -110,6 +118,9 @@ app.use("/api/infra", infraAssetsRouter);
 
 app.use(cookieParser());
 
+/** PWA billing: /api/billing/* を汎用 app.use("/api", …) より先に固定（先取りで 404 にならないようにする） */
+app.use("/api/billing", billingRouter);
+
 app.use("/api", kamuRouter);
 // Founder auth endpoints (additive)
 registerFounderAuth(app);
@@ -120,7 +131,6 @@ app.use("/api", adminRemoteIntakeRouter);
 app.use("/api", adminRemoteBuildRouter);
 app.use("/api", adminMacDecisionRouter);
 app.use("/api", meRouter);
-app.use("/api", billingRouter);
 app.use("/api", authLocalRouter);
 
 app.use("/api", authRouter);
@@ -167,11 +177,3 @@ app.listen(PORT, "0.0.0.0", () => {
   markListenReady();
   console.log(`[READY] listenReady=true`);
 });
-import { writerRouter } from "./routes/writer.js";
-import { writerVerifyRouter } from "./routes/writerVerify.js";
-import { writerDraftRouter } from "./routes/writerDraft.js";
-import { infraAssetsRouter } from "./routes/infraAssets.js";
-import chatFrontRouter from "./routes/chat_front.js";
-import meRouter from "./routes/me.js";
-import billingRouter from "./routes/billing.js";
-import { authLocalRouter } from "./routes/auth_local.js";

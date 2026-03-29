@@ -11,6 +11,8 @@ import {
   isFixtureItem,
   type QueueFile,
   type QueueItem,
+  type CursorExecutionContractV1,
+  CURSOR_ORCHESTRATION_ROLES_V1,
 } from "./adminCursorCommand.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -53,6 +55,45 @@ function writeBundle(b: BundleFile) {
 
 function strPath(v: unknown, max = 4096): string {
   return String(v ?? "").trim().slice(0, max);
+}
+
+function mapTransitionToResultStatus(transition: string, fileGuardOk: boolean): string {
+  if (!fileGuardOk) return "blocked_paths";
+  if (transition === "current_run_executed" || transition === "legacy_executed" || transition === "current_run_high_risk_acceptance_pass")
+    return "accepted";
+  if (transition === "fixture_released_ready") return "ingested_fixture";
+  if (transition === "high_risk_acceptance_fail_ready") return "high_risk_retry_ready";
+  if (transition === "executor_session_missing_current_run") return "executor_session_incomplete";
+  if (transition === "legacy_ready") return "retry_ready";
+  if (transition === "none") return "no_matching_delivered_item";
+  return "processed";
+}
+
+function normalizeResultPayload(body: Record<string, unknown>): Record<string, unknown> {
+  const rp = body.result_payload;
+  if (rp != null && typeof rp === "object" && !Array.isArray(rp)) return rp as Record<string, unknown>;
+  return {};
+}
+
+function mirrorExecutionContract(
+  it: QueueItem | undefined,
+  queueId: string,
+  cardName: string,
+  riskTier: string,
+): CursorExecutionContractV1 {
+  const qid = String(queueId || "").trim();
+  const cid = String(cardName || "").trim();
+  const fixture = it ? isFixtureItem(it) : false;
+  const dry = it?.dry_run_only === true || fixture;
+  return {
+    schema: "TENMON_CURSOR_EXECUTION_CONTRACT_V1",
+    command_id: qid,
+    card_id: cid || String(it?.card_name ?? "").trim(),
+    risk_level: riskTier || "unknown",
+    apply_mode: dry ? "dry_run" : "patch_apply",
+    expected_files: [],
+    expected_acceptance: { npm_run_check: true },
+  };
 }
 
 function queueItemHighRisk(it: QueueItem | undefined): boolean {
@@ -146,9 +187,16 @@ adminCursorResultRouter.post("/admin/cursor/result", requireFounderOrExecutorBea
   const touched_files = Array.isArray(body.touched_files) ? body.touched_files.map((x) => String(x)) : [];
   const fileGuard = guardTouchedFiles(touched_files);
 
+  const cardNameForContract = String(it?.cursor_card ?? it?.card_name ?? body.card_id ?? "").trim();
+  const riskForContract = String(
+    (it as unknown as Record<string, unknown>)?.risk_tier ?? it?.risk_tier ?? body.risk_level ?? "",
+  ).trim();
+
   const entry: Record<string, unknown> = {
-    schema_version: 2,
+    schema_version: 3,
     queue_id,
+    command_id: strPath(body.command_id, 128) || queue_id,
+    card_id: strPath(body.card_id, 240) || cardNameForContract || null,
     ingested_at: utcIso(),
     touched_files,
     file_guard_ok: fileGuard.ok,
@@ -174,14 +222,29 @@ adminCursorResultRouter.post("/admin/cursor/result", requireFounderOrExecutorBea
     dangerous_patch_block_report: strPath(body.dangerous_patch_block_report) || null,
     log_path: strPath(body.log_path) || null,
     current_run: body.current_run === true,
+    role_separation: CURSOR_ORCHESTRATION_ROLES_V1,
+    execution_contract: mirrorExecutionContract(it, queue_id, cardNameForContract, riskForContract),
   };
+
+  const { transition } = applyQueueAfterResult(q, it, entry, fileGuard.ok);
+
+  const explicitRs = strPath(body.result_status, 64) || null;
+  entry.result_status = explicitRs || mapTransitionToResultStatus(transition, fileGuard.ok);
+  const extraPayload = normalizeResultPayload(body);
+  entry.result_payload =
+    Object.keys(extraPayload).length > 0
+      ? extraPayload
+      : {
+          build_rc: entry.build_rc,
+          acceptance_ok: entry.acceptance_ok,
+          touched_files_count: touched_files.length,
+          transition,
+        };
 
   const bundle = readBundle();
   bundle.entries.push(entry);
   if (bundle.entries.length > 200) bundle.entries = bundle.entries.slice(-200);
   writeBundle(bundle);
-
-  const { transition } = applyQueueAfterResult(q, it, entry, fileGuard.ok);
 
   let statusLabel = fileGuard.ok ? "accepted" : "blocked_paths";
   if (transition === "fixture_released_ready") statusLabel = "ingested_fixture_not_completed";
@@ -195,8 +258,15 @@ adminCursorResultRouter.post("/admin/cursor/result", requireFounderOrExecutorBea
     ok: fileGuard.ok,
     status: statusLabel,
     transition,
+    result_status: entry.result_status,
     entry,
     queue_item: it ?? null,
+    orchestration_v1: {
+      roles: CURSOR_ORCHESTRATION_ROLES_V1,
+      queue_item_state_after: it?.state ?? null,
+      transition,
+      note: "delivered を result で executed/ready に戻した後にのみ GET /admin/cursor/next で次 command を発行（single-flight）。",
+    },
   });
 });
 

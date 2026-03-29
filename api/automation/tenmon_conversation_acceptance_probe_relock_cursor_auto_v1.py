@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-TENMON_CONVERSATION_ACCEPTANCE_PROBE_RELOCK_CURSOR_AUTO_V1
-surface / root kernel 後の manual + continuity 再観測（コード改変なし・記録のみ）。
+TENMON_FINAL_ACCEPTANCE_PROBE_AND_AUTONOMY_RELOCK_CURSOR_AUTO_V1（P4）
+P0〜P3 後の会話品質 / support・founder・uncertainty / billing / autonomy readiness 再観測（記録専用）。
 """
 from __future__ import annotations
 
@@ -18,7 +18,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
 
-CARD = "TENMON_CONVERSATION_ACCEPTANCE_PROBE_RELOCK_CURSOR_AUTO_V1"
+CARD = "TENMON_FINAL_ACCEPTANCE_PROBE_AND_AUTONOMY_RELOCK_CURSOR_AUTO_V1"
 OUT_JSON = "tenmon_conversation_acceptance_probe_relock_result_v1.json"
 OUT_MD = "tenmon_conversation_acceptance_probe_relock_report_v1.md"
 
@@ -27,6 +27,11 @@ UX_PROBES: list[tuple[str, str, str]] = [
     ("general_tired", "今日は少し疲れています", "general"),
     ("general_organize", "この件をどう整理すればいい？", "general"),
     ("support_bug", "天聞アークのチャット画面の挙動がおかしい。バグのように見えます", "support"),
+    (
+        "support_login",
+        "ログインできません。天聞アークのサイトにアカウントで入れません",
+        "support",
+    ),
     ("support_billing", "課金表示がおかしい。請求とプランの状態を確認したい", "support"),
     ("support_register", "会員登録の確認メールが届きません。迷惑フォルダも見ました", "support"),
     ("support_pwa", "PWA をホーム画面に追加できません。手順を教えてください", "support"),
@@ -74,6 +79,30 @@ UX_PROBES: list[tuple[str, str, str]] = [
 ]
 
 CONTINUITY_PAIRS: list[tuple[str, str, list[str]]] = [
+    (
+        "continuity_1",
+        "thread-relock-c1-",
+        [
+            "天聞アークの会話入口で迷っています",
+            "その前提で、いま一段だけ整えたい点を一つ挙げてください",
+        ],
+    ),
+    (
+        "continuity_2",
+        "thread-relock-c2-",
+        [
+            "水火の往還について一言で要点を教えてください",
+            "その続きで、実務に落とすならどこから手を付けますか",
+        ],
+    ),
+    (
+        "continuity_3",
+        "thread-relock-c3-",
+        [
+            "いまの中心を一行にまとめるコツは何ですか",
+            "その一行を土台に、次の一歩だけ具体的に示してください",
+        ],
+    ),
     (
         "pair_lotus_waterfire",
         "thread-relock-lotus-",
@@ -130,6 +159,7 @@ ONE_STEP_SUBSET_IDS = frozenset(
         "define_hokekyo",
         "symbolic_noah",
         "support_bug",
+        "support_login",
         "support_billing",
         "support_register",
         "support_pwa",
@@ -260,6 +290,12 @@ def _mean(xs: Iterable[float]) -> float:
 
 def _carried_topic(pair_id: str, second_text: str) -> bool:
     t = second_text
+    if pair_id == "continuity_1":
+        return bool(re.search(r"前提|一段|整え|入口|迷い|一点|一手|次の", t, re.U))
+    if pair_id == "continuity_2":
+        return bool(re.search(r"続き|水火|往還|実務|手を付け|一段|要点", t, re.U))
+    if pair_id == "continuity_3":
+        return bool(re.search(r"一行|土台|次の一歩|中心|具体|一手", t, re.U))
     if pair_id == "pair_lotus_waterfire":
         return bool(
             re.search(r"一仏乗|法華|水火|往還|踏まえ|その話|莲花|蓮華", t, re.I | re.U),
@@ -429,6 +465,8 @@ def main() -> int:
 
     n_ux = len(UX_PROBES)
     leak_probe_count = sum(1 for r in manual_rows if r.get("internal_leaks"))
+    surface_cleanliness = (1.0 - (leak_probe_count / n_ux)) if n_ux else 1.0
+    surface_cleanliness_ok = surface_cleanliness + 1e-9 >= 0.85
 
     def _no_leak_len(r: dict[str, Any], m: int = 24) -> bool:
         return len(r.get("internal_leaks") or []) == 0 and int(r.get("response_length") or 0) >= m
@@ -470,9 +508,33 @@ def main() -> int:
 
     continuity_obs_ok = continuity_bonus >= 5 and carried_true_n >= 1
 
+    _autonomy_bits = [
+        bool(billing_link.get("not_404")),
+        bool(audit.get("ok")),
+        build_ok,
+        bool(chat_url),
+        surface_cleanliness_ok,
+        support_operability + 1e-9 >= 0.9,
+        founder_operability + 1e-9 >= 0.8,
+        uncertainty_maturity + 1e-9 >= 0.7,
+    ]
+    full_autonomy_system_ready = {
+        "score": round(sum(1 for x in _autonomy_bits if x) / len(_autonomy_bits), 4),
+        "billing_not_404": billing_link.get("not_404"),
+        "audit_ok": audit.get("ok"),
+        "npm_run_check_ok": build_ok,
+        "chat_url_ok": bool(chat_url),
+        "surface_cleanliness_ok": surface_cleanliness_ok,
+        "support_operability_ok": support_operability + 1e-9 >= 0.9,
+        "founder_operability_ok": founder_operability + 1e-9 >= 0.8,
+        "uncertainty_maturity_ok": uncertainty_maturity + 1e-9 >= 0.7,
+    }
+
     ux_metrics = {
         "surface_leak_probe_count": leak_probe_count,
         "surface_leak_probe_cap": leak_probe_cap,
+        "surface_cleanliness": round(surface_cleanliness, 4),
+        "surface_cleanliness_ok": surface_cleanliness_ok,
         "support_operability": round(support_operability, 4),
         "founder_operability": round(founder_operability, 4),
         "uncertainty_maturity": round(uncertainty_maturity, 4),
@@ -481,6 +543,7 @@ def main() -> int:
         "carried_topic_true_count": carried_true_n,
         "probe_ok_count_all": probe_ok_count,
         "continuity_obs_ok": continuity_obs_ok,
+        "full_autonomy_system_ready": full_autonomy_system_ready,
     }
 
     failure_reasons: list[str] = []
@@ -492,6 +555,8 @@ def main() -> int:
         failure_reasons.append(
             f"surface_leak_probe_count={leak_probe_count}>cap_{leak_probe_cap}",
         )
+    if not surface_cleanliness_ok:
+        failure_reasons.append(f"surface_cleanliness={surface_cleanliness:.3f}<0.85")
     if support_operability + 1e-9 < 0.9:
         failure_reasons.append(f"support_operability={support_operability:.3f}<0.9")
     if founder_operability + 1e-9 < 0.8:
@@ -509,9 +574,22 @@ def main() -> int:
             f"billing_link_not_404_failed:{billing_link}",
         )
 
-    if leak_probe_count == 0 and support_operability >= 0.99 and founder_operability >= 0.99:
+    if (
+        leak_probe_count == 0
+        and support_operability >= 0.99
+        and founder_operability >= 0.99
+        and surface_cleanliness_ok
+        and full_autonomy_system_ready["score"] >= 0.95
+    ):
+        overall_verdict = "ux_strong_autonomy_ready_lane"
+    elif leak_probe_count == 0 and support_operability >= 0.99 and founder_operability >= 0.99:
         overall_verdict = "ux_strong_custom_gpt_surpass_lane"
-    elif surface_leak_probe_ok and support_operability >= 0.9 and founder_operability >= 0.8:
+    elif (
+        surface_leak_probe_ok
+        and surface_cleanliness_ok
+        and support_operability >= 0.9
+        and founder_operability >= 0.8
+    ):
         overall_verdict = "ux_improved_hold"
     else:
         overall_verdict = "ux_needs_surface_or_route_repair"
@@ -521,6 +599,7 @@ def main() -> int:
         and audit.get("ok") is True
         and billing_link.get("not_404") is True
         and surface_leak_probe_ok
+        and surface_cleanliness_ok
         and support_operability + 1e-9 >= 0.9
         and founder_operability + 1e-9 >= 0.8
         and uncertainty_maturity + 1e-9 >= 0.7
@@ -529,7 +608,7 @@ def main() -> int:
     )
 
     result: dict[str, Any] = {
-        "schema": "TENMON_CONVERSATION_ACCEPTANCE_PROBE_RELOCK_V1",
+        "schema": "TENMON_FINAL_ACCEPTANCE_PROBE_AND_AUTONOMY_RELOCK_V1",
         "card": CARD,
         "generated_at": _utc_iso(),
         "base_url": base,
@@ -551,6 +630,7 @@ def main() -> int:
         "acceptance_pass": acceptance_pass,
         "thresholds": {
             "surface_leak_probe_max": leak_probe_cap,
+            "surface_cleanliness_min": 0.85,
             "support_operability_min": 0.9,
             "founder_operability_min": 0.8,
             "uncertainty_maturity_min": 0.7,
@@ -558,14 +638,14 @@ def main() -> int:
             "continuity_bonus_min": 5,
             "carried_topic_min": 1,
         },
-        "nextOnPass": "TENMON_POST_ALL_MAINLINES_DEEP_FORENSIC_RELOCK_CURSOR_AUTO_V1",
-        "nextOnFail": "TENMON_SURFACE_LEAK_CLEANUP_RETRY_CURSOR_AUTO_V1",
+        "nextOnPass": "TENMON_ARTIFACT_AND_WORKTREE_HYGIENE_CURSOR_AUTO_V1",
+        "nextOnFail": "TENMON_SURFACE_LEAK_CLEANUP_RETRY_CURSOR_AUTO_V3",
     }
 
     (auto / OUT_JSON).write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
     md = [
-        f"# TENMON_CONVERSATION_ACCEPTANCE_PROBE_RELOCK_REPORT_V1",
+        f"# TENMON_FINAL_ACCEPTANCE_PROBE_AND_AUTONOMY_RELOCK_REPORT_V1 (P4)",
         "",
         f"- **generated_at**: `{result['generated_at']}`",
         f"- **acceptance_pass**: `{acceptance_pass}`",
@@ -587,6 +667,8 @@ def main() -> int:
             "## UX 指標（再ロック）",
             "",
             f"- **surface_leak_probe_count**: {leak_probe_count} (cap {leak_probe_cap})",
+            f"- **surface_cleanliness**: {surface_cleanliness:.3f} (min 0.85)",
+            f"- **full_autonomy_system_ready**: `{full_autonomy_system_ready}`",
             f"- **support_operability**: {support_operability:.3f} (min 0.9)",
             f"- **founder_operability**: {founder_operability:.3f} (min 0.8)",
             f"- **uncertainty_maturity**: {uncertainty_maturity:.3f} (min 0.7)",
@@ -643,6 +725,8 @@ def main() -> int:
                 "ux_metrics": result["ux_metrics"],
                 "chat_url": result["chat_url"],
                 "billing_link_probe": result["billing_link_probe"],
+                "surface_cleanliness": result["ux_metrics"].get("surface_cleanliness"),
+                "full_autonomy_system_ready": result["ux_metrics"].get("full_autonomy_system_ready"),
             },
             ensure_ascii=False,
             indent=2,

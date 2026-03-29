@@ -3,8 +3,8 @@
  * split / truthLayerArbitrationV1 / discernment / lineage / speculative guard を
  * 一段の root decision に束ねる（meaningArbitrationKernel の裁定式は変更しない）。
  *
- * TENMON_UNCERTAINTY_AND_CONFIDENCE_SURFACE_LOGIC: rootMode / displayConstraint は不変。
- * ユーザー向け不確実性文言は confidenceDisplayLogic が rootMode / guard / evidence / raw を参照して付与。
+ * TENMON_UNCERTAINTY_AND_CONFIDENCE_SURFACE_LOGIC_V4: rootMode / displayConstraint は不変。
+ * ユーザー向け保留句は confidenceDisplayLogic（binder→ku.confidenceDisplayV1）と chat 本線の apply、および gates_impl 出口の冪等付与が表層へ反映。
  */
 
 import type { ThreadCore } from "./threadCore.js";
