@@ -1,10 +1,179 @@
 /**
  * TENMON_THREAD_MEANING_MEMORY_CURSOR_AUTO_V1
+ * TENMON_ARK_BOOK_CANON_LEDGER_AND_CONVERSATION_REUSE_CURSOR_AUTO_V1
  * 裁定 coreTruth をスレッド単位の意味中心として runtime 保持（表層には出さない）
  */
 
 import type { TruthLayerArbitrationResultV1 } from "./meaningArbitrationKernel.js";
 import type { InputSemanticSplitResultV1 } from "./inputSemanticSplitter.js";
+import type { TenmonVpsBookAnalysisNotionReflectionPayloadV1 } from "./notionCanon.js";
+import { buildVpsBookAnalysisNotionReflectionPayloadV1 } from "./notionCanon.js";
+import { BOOK_LEDGER_SETTLEMENT_CATALOG_V1 } from "./tenmonBookReadingKernelV1.js";
+
+/** カタカムナ系譜を最優先し、KHS・水穂・稲荷・空海・法華・サンスクリット束へ拡張 */
+export const ARK_BOOK_CANON_PRIORITY_BOOK_IDS_V1 = [
+  "katakamuna_kotodama_kai",
+  "kotodama_hisho_khs",
+  "mizuho_den",
+  "inari_koden",
+  "kukai_lineage",
+  "hokekyo",
+  "siddham_sandoku",
+] as const;
+
+const LEDGER_LABEL = new Map(BOOK_LEDGER_SETTLEMENT_CATALOG_V1.map((e) => [e.material_id, e.label]));
+
+export type ArkBookCanonLedgerRowV1 = {
+  book_id: string;
+  priority_rank: number;
+  analytical_scope_label: string;
+};
+
+/** Notion 生テキストは載せず、judge / settlement 済みスロットのみ */
+export type ArkBookCanonConversationReuseV1 = {
+  schema: "TENMON_ARK_BOOK_CANON_CONVERSATION_REUSE_V1";
+  card: "TENMON_ARK_BOOK_CANON_LEDGER_AND_CONVERSATION_REUSE_CURSOR_AUTO_V1";
+  book_canon_ledger: ArkBookCanonLedgerRowV1[];
+  evidence_binder: { ref_slugs: string[]; note: string };
+  lawgraph_candidate_store: { candidates: string[]; book_id: string | null };
+  terminology_memory: { entries: Array<{ term: string; book_id: string }> };
+  thread_reentry_memory: { summary_lines: string[]; book_id: string | null; hash_echo: string | null };
+  uncertainty_registry: { flags: string[]; open_issues: string[] };
+  reuse_for_routes: {
+    analyzed_scope: string[];
+    book_axis_by_id: Record<string, string>;
+    definition_delta: string[];
+    comparison_digest: string[];
+    open_points: string[];
+    provisional_verdict: string;
+  };
+  route_echo: { routeReason: string; routeClass: string };
+  not_raw_notion: true;
+  judge_layer_only: true;
+};
+
+export type BuildArkBookCanonReuseInputV1 = {
+  vps: TenmonVpsBookAnalysisNotionReflectionPayloadV1;
+  routeReason: string;
+  routeClass: string;
+  opposition_pairs: readonly { left: string; right: string }[];
+};
+
+export function buildArkBookCanonConversationReuseV1FromJudgeV1(
+  input: BuildArkBookCanonReuseInputV1,
+): ArkBookCanonConversationReuseV1 {
+  const vps = input.vps;
+  const bid = String(vps.book_id || "").trim();
+  const book_canon_ledger: ArkBookCanonLedgerRowV1[] = ARK_BOOK_CANON_PRIORITY_BOOK_IDS_V1.map((id, i) => ({
+    book_id: id,
+    priority_rank: i + 1,
+    analytical_scope_label: LEDGER_LABEL.get(id) ?? id,
+  }));
+  const ref_slugs = [
+    ...vps.center_terms.map((t) => `ct:${String(t).slice(0, 64)}`),
+    ...vps.tradition_evidence.map((t) => `tr:${String(t).slice(0, 64)}`),
+  ].slice(0, 48);
+  const lawCandidates = [
+    ...vps.tradition_evidence,
+    ...vps.tenmon_mapping,
+    vps.provisional_verdict ? `pv:${vps.provisional_verdict.slice(0, 160)}` : "",
+  ]
+    .map((s) => String(s).trim())
+    .filter(Boolean)
+    .slice(0, 24);
+  const terminology_memory = {
+    entries: vps.center_terms.map((term) => ({ term: String(term).slice(0, 120), book_id: bid })).slice(0, 32),
+  };
+  const summary_lines = String(vps.conversation_reuse_summary || "")
+    .split(/\s*\/\s*/u)
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .slice(0, 24);
+  const openFromPairs = input.opposition_pairs
+    .map((p) => `opp:${String(p.left).slice(0, 48)}↔${String(p.right).slice(0, 48)}`)
+    .slice(0, 12);
+  const reuse_for_routes = {
+    analyzed_scope: [bid, ...vps.repeated_terms.map(String), "judge_bound_only"].filter(Boolean).slice(0, 16),
+    book_axis_by_id: {
+      [bid]: vps.center_terms.length ? vps.center_terms.join("・").slice(0, 400) : bid,
+    },
+    definition_delta: openFromPairs,
+    comparison_digest: [...vps.tenmon_mapping.map(String)].slice(0, 24),
+    open_points: [...vps.uncertainty.map(String), ...openFromPairs].slice(0, 24),
+    provisional_verdict: String(vps.provisional_verdict || "").trim(),
+  };
+  return {
+    schema: "TENMON_ARK_BOOK_CANON_CONVERSATION_REUSE_V1",
+    card: "TENMON_ARK_BOOK_CANON_LEDGER_AND_CONVERSATION_REUSE_CURSOR_AUTO_V1",
+    book_canon_ledger,
+    evidence_binder: {
+      ref_slugs,
+      note: "Notion 原文は載せない。ref_slugs は judge 済み束からの参照子。",
+    },
+    lawgraph_candidate_store: { candidates: lawCandidates, book_id: bid || null },
+    terminology_memory,
+    thread_reentry_memory: {
+      summary_lines: summary_lines.length ? summary_lines : [vps.conversation_reuse_summary.slice(0, 400)],
+      book_id: bid || null,
+      hash_echo: vps.hash || null,
+    },
+    uncertainty_registry: {
+      flags: [...vps.uncertainty.map(String)].slice(0, 32),
+      open_issues: reuse_for_routes.open_points.slice(0, 16),
+    },
+    reuse_for_routes,
+    route_echo: { routeReason: String(input.routeReason || "").trim(), routeClass: String(input.routeClass || "").trim() },
+    not_raw_notion: true,
+    judge_layer_only: true,
+  };
+}
+
+export function buildArkBookCanonConversationReuseAutomationBundleV1(): {
+  schema: "TENMON_ARK_BOOK_CANON_REUSE_AUTOMATION_BUNDLE_V1";
+  card: "TENMON_ARK_BOOK_CANON_LEDGER_AND_CONVERSATION_REUSE_CURSOR_AUTO_V1";
+  example_reuse: ArkBookCanonConversationReuseV1;
+  nextOnPass: string;
+  nextOnFail: string;
+} {
+  const vps = buildVpsBookAnalysisNotionReflectionPayloadV1({
+    book_id: "katakamuna_kotodama_kai",
+    source_class: "mapping",
+    center_terms: ["カタカムナ", "写像"],
+    repeated_terms: ["カタカムナ"],
+    opposition_pairs: [{ left: "普及本流", right: "天聞再統合" }],
+    tradition_evidence: ["trad_ref:1"],
+    tenmon_mapping: ["mapping_lane_only"],
+    uncertainty: ["lineage_uncertain"],
+    provisional_verdict: "暫定: 比較カード束へ投影後に確定",
+    nas_locator: {
+      materialId: "katakamuna_kotodama_kai",
+      locator_ref: "nas+path:/volume1/tenmon_ark/materials/practice/katakamuna_kotodama_kai",
+      nas_relative_path: "materials/practice/katakamuna_kotodama_kai",
+      canonical_root: "/volume1/tenmon_ark",
+    },
+  });
+  return {
+    schema: "TENMON_ARK_BOOK_CANON_REUSE_AUTOMATION_BUNDLE_V1",
+    card: "TENMON_ARK_BOOK_CANON_LEDGER_AND_CONVERSATION_REUSE_CURSOR_AUTO_V1",
+    example_reuse: buildArkBookCanonConversationReuseV1FromJudgeV1({
+      vps,
+      routeReason: "KATAKAMUNA_CANON_ROUTE_V1",
+      routeClass: "analysis",
+      opposition_pairs: [{ left: "普及本流", right: "天聞再統合" }],
+    }),
+    nextOnPass: "TENMON_BOOK_LEARNING_ACCEPTANCE_AND_REUSE_BENCH_CURSOR_AUTO_V1",
+    nextOnFail: "TENMON_ARK_BOOK_CANON_LEDGER_AND_CONVERSATION_REUSE_RETRY_CURSOR_AUTO_V1",
+  };
+}
+
+function isArkBookCanonReuseV1(x: unknown): x is ArkBookCanonConversationReuseV1 {
+  return (
+    !!x &&
+    typeof x === "object" &&
+    !Array.isArray(x) &&
+    (x as ArkBookCanonConversationReuseV1).schema === "TENMON_ARK_BOOK_CANON_CONVERSATION_REUSE_V1"
+  );
+}
 
 /** スレッド意味中心（既存 ThreadCore 型名と衝突させない strict 契約） */
 export type ThreadMeaningMemoryCoreV1 = {
@@ -42,6 +211,9 @@ export function threadMeaningMemoryRouteAllowedV1(routeReason: string): boolean 
   if (rr === "TENMON_SUBCONCEPT_CANON_V1") return true;
   if (rr.startsWith("CONTINUITY_")) return true;
   if (/^R22_(ESSENCE|NEXTSTEP|COMPARE)_FOLLOWUP_V1$/.test(rr)) return true;
+  if (rr === "KATAKAMUNA_CANON_ROUTE_V1" || rr === "KATAKAMUNA_DETAIL_FASTPATH_V1") return true;
+  if (rr === "DEF_FASTPATH_VERIFIED_V1" || rr === "DEF_FASTPATH_PROPOSED_V1") return true;
+  if (rr === "TRUTH_GATE_RETURN_V2") return true;
   return false;
 }
 
@@ -168,9 +340,27 @@ export function advanceThreadMeaningMemoryForRequestV1(args: {
       ? `centerKey:${centerKey}`
       : "open";
 
-  const unresolvedAxes = arbitration
+  let unresolvedAxes = arbitration
     ? [...arbitration.forbidFlags, ...arbitration.droppedCandidates].slice(0, 8)
     : [];
+
+  const arkRaw = (ku as Record<string, unknown>).arkBookCanonConversationReuseV1;
+  let nextStepBiasArk = nextStepBias;
+  if (isArkBookCanonReuseV1(arkRaw)) {
+    const ark = arkRaw;
+    const inject = [
+      ...ark.uncertainty_registry.flags.map((f) => `ark|unc|${String(f).slice(0, 80)}`),
+      ...ark.uncertainty_registry.open_issues.slice(0, 6).map((x) => `ark|issue|${String(x).slice(0, 100)}`),
+      ...ark.reuse_for_routes.open_points.slice(0, 6).map((x) => `ark|open|${String(x).slice(0, 100)}`),
+    ];
+    if (ark.reuse_for_routes.provisional_verdict.trim()) {
+      inject.push(`ark|pv|${ark.reuse_for_routes.provisional_verdict.slice(0, 140)}`);
+    }
+    unresolvedAxes = [...new Set([...unresolvedAxes, ...inject])].slice(0, 24);
+    if (ark.thread_reentry_memory.book_id) {
+      nextStepBiasArk = `${nextStepBias}|ark_book:${ark.thread_reentry_memory.book_id}`;
+    }
+  }
 
   const acceptedConcepts = mergeConcepts(detach, prior.acceptedConcepts, centerLabel, arbitration);
 
@@ -180,7 +370,7 @@ export function advanceThreadMeaningMemoryForRequestV1(args: {
     currentCenter,
     lastCenterKey: centerKey,
     delta,
-    nextStepBias,
+    nextStepBias: nextStepBiasArk,
     acceptedConcepts,
     unresolvedAxes,
     detach,
@@ -209,7 +399,7 @@ export function parseThreadMeaningMemoryV1FromJson(raw: unknown): ThreadMeaningM
     delta: o.delta != null ? String(o.delta).trim() || null : null,
     nextStepBias: o.nextStepBias != null ? String(o.nextStepBias).trim() || null : null,
     acceptedConcepts: acceptedConcepts.slice(0, MAX_CONCEPTS),
-    unresolvedAxes: unresolvedAxes.slice(0, 16),
+    unresolvedAxes: unresolvedAxes.slice(0, 24),
     detach: o.detach === true,
   };
 }

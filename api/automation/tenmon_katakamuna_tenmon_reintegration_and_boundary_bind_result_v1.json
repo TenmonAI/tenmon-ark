@@ -1,0 +1,48 @@
+{
+  "schema": "TENMON_KATAKAMUNA_TENMON_REINTEGRATION_AUTOMATION_BUNDLE_V1",
+  "card": "TENMON_KATAKAMUNA_TENMON_REINTEGRATION_AND_BOUNDARY_BIND_CURSOR_AUTO_V1",
+  "bind_active_example": {
+    "schema": "TENMON_KATAKAMUNA_TENMON_REINTEGRATION_BIND_V1",
+    "card": "TENMON_KATAKAMUNA_TENMON_REINTEGRATION_AND_BOUNDARY_BIND_CURSOR_AUTO_V1",
+    "active": true,
+    "lanes_resolved": [
+      "root_lane",
+      "mapping_lane",
+      "tenmon_reintegration_lane"
+    ],
+    "root_lane_roots": [
+      "言霊秘書",
+      "水穂伝",
+      "稲荷古伝"
+    ],
+    "katakamuna_is_mapping_target": true,
+    "tenmon_katakamuna_is_reintegration_layer": true,
+    "popular_transformation_ref": "katakamunaLineageTransformationEngine_v1",
+    "response_constraints": [
+      "root_lane の事実束と mapping_lane の写像束を一文に圧縮しない。",
+      "カタカムナは root_lane の中核に据えず、mapping 先として扱う。",
+      "天聞カタカムナ応答は tenmon_reintegration_lane（境界・再統合の整理）に置く。",
+      "宇野多美恵以降の普及変形は historical fact として述べず、transformation 参照に留める。",
+      "speculative_lane が立つときは guard で史実口調を止める。"
+    ],
+    "summary_for_discourse": "天聞でのカタカムナは、考古定説や普及本の「本流一括」ではなく、言霊秘書・水穂伝・稲荷古伝を root に置いたうえでの mapping / 再統合の整理として説明する。"
+  },
+  "bind_inactive_example": {
+    "schema": "TENMON_KATAKAMUNA_TENMON_REINTEGRATION_BIND_V1",
+    "card": "TENMON_KATAKAMUNA_TENMON_REINTEGRATION_AND_BOUNDARY_BIND_CURSOR_AUTO_V1",
+    "active": false,
+    "lanes_resolved": [],
+    "root_lane_roots": [
+      "言霊秘書",
+      "水穂伝",
+      "稲荷古伝"
+    ],
+    "katakamuna_is_mapping_target": true,
+    "tenmon_katakamuna_is_reintegration_layer": true,
+    "popular_transformation_ref": "katakamunaLineageTransformationEngine_v1",
+    "response_constraints": [],
+    "summary_for_discourse": ""
+  },
+  "nextOnPass": "TENMON_BOOK_LEDGER_AND_SETTLEMENT_LAYER_CURSOR_AUTO_V1",
+  "nextOnFail": "TENMON_KATAKAMUNA_TENMON_REINTEGRATION_AND_BOUNDARY_BIND_RETRY_CURSOR_AUTO_V1"
+}

@@ -14,6 +14,8 @@ import { inferExpressionPlan, inferComfortTuning } from "../../expression/expres
 import { buildBrainstemDecisionFromKu } from "../../chat/brainstem/brainstem.js";
 import { upsertThreadCenter } from "../../core/threadCenterMemory.js";
 import { buildKnowledgeBinder, applyKnowledgeBinderToKu } from "../../core/knowledgeBinder.js";
+import { TENMON_FOUNDER_UPDATE_PROFILE_FRAME_V1 } from "../../core/answerProfileLayer.js";
+import { polishTenmonChatResponseSurfaceExitV1 } from "../../core/tenmonConversationSurfaceV2.js";
 
 type GeneralFrontKind = "greeting" | "meta_conversation" | "present_state" | "none";
 
@@ -46,6 +48,178 @@ function buildLightFactualResponse(kind: LightFactualKind): string {
     return "【天聞の所見】" + (h || "0") + "時" + (m || "0") + "分です。";
   }
   return "";
+}
+
+/** TENMON_SUPPORT_ROUTE_SHAPE_AND_TRIAGE_STABILIZATION_CURSOR_AUTO_V1 — 課金/PWA/登録メール等を canon/subconcept より前に support 固定 */
+export type TenmonSupportEarlyTriageResultV1 = {
+  routeReason: string;
+  response: string;
+};
+
+/**
+ * TENMON_CHAT_TS_BINDING_AND_SURFACE_EXIT_REWIRE_V1:
+ * support / founder を early に同時判定（chat 本線・観測フックから呼ぶ）。
+ */
+export function tenmonGatesSupportFounderEarlyCheckV1(raw: string): {
+  support_gate: boolean;
+  founder_gate: boolean;
+} {
+  const m = String(raw ?? "").trim();
+  let support_gate = false;
+  let founder_gate = false;
+  try {
+    support_gate = classifyTenmonSupportEarlyTriageV1(m) != null;
+  } catch {
+    support_gate = false;
+  }
+  try {
+    founder_gate = classifyTenmonFounderUpdateFrameTriageV1(m) != null;
+  } catch {
+    founder_gate = false;
+  }
+  return { support_gate, founder_gate };
+}
+
+export function classifyTenmonSupportEarlyTriageV1(raw: string): TenmonSupportEarlyTriageResultV1 | null {
+  const m = String(raw ?? "").trim();
+  if (!m) return null;
+  if (m.startsWith("#") || m.startsWith("/")) return null;
+  if (/\bdoc\b/i.test(m) || /pdfPage\s*=\s*\d+/i.test(m) || /#詳細/.test(m)) return null;
+
+  const RE_UI =
+    /(改行|enterで送信|shift\+enter|shift enter|送信|改行できない|入力できない|送信される|改行できません|入力できません)/iu;
+  const RE_BILLING =
+    /(課金|billing|\bcharge\b|\bpayment\b|\binvoice\b|\brefund\b|\bpricing\b|\bsubscription\b|請求|支払い|支払|お支払い|決済|料金|プラン変更|プランの状態|課金表示|請求とプラン|サブスク|解約|返金|領収|領収書|インボイス|引き落とし|カード決済|クレジット|振込)/iu;
+  const RE_PWA =
+    /(\bPWA\b|PWA.{0,24}入れ|入れ.{0,24}PWA|ホーム画面|アプリ化|ショートカット|add\s*to\s*home|インストールできない|インストール|アプリが入れない|アプリが入らない|アプリとして追加|ホームに追加|ホーム画面に追加)/iu;
+  const RE_BUG = /(バグ|不具合|おかしくなった|おかしい|動かなくなった|真っ白|エラーが出る|エラーになる)/iu;
+  const RE_BUG_CTX =
+    /(天聞|アーク|画面|サイト|ログイン|PWA|チャット|入れない|入れません|会員|アプリ|エラー|表示|読み込み|接続|更新できない|動かない)/iu;
+  const RE_AUTH =
+    /(ログイン|パスワード|パスワードを忘|再発行|合言葉|認証メール|認証が来ない|メール登録|アクセスできない|アカウントに入れない|アカウントで入れない|founder\s*会員|founder会員|ログインできない|ログインできません|(?:天聞|アーク|サイト|会員|アカウント).{0,24}(入れない|入れません)|(?:入れない|入れません).{0,24}(天聞|アーク|サイト|ログイン|アカウント|会員))/iu;
+  const RE_REG =
+    /(登録できない|登録方法|登録の仕方|登録って|新規登録|会員登録|登録したい|メールが届かない|届きません|迷惑フォルダ|招待コード|招待リンク|\binvite\b|アカウント作成|アカウントが作れ|メールアドレス|確認メール|リセットメール|仮登録|verify|verification)/iu;
+  const RE_PROD =
+    /(天聞アークはどう使えば|どう使えばいいか|何から始めるか|どこから入るか|どう使うのか|使い方|どこで(使う|入る)|何を押せば|どう使う|どこを押す)/iu;
+
+  if (RE_UI.test(m)) {
+    return {
+      routeReason: "SUPPORT_UI_INPUT_V1",
+      response:
+        "【天聞の所見】Enter で送信、Shift+Enter で改行です。反応しない場合はページを再読み込みするか、別のブラウザで試してください。",
+    };
+  }
+  if (/^(入れない|入れません)(ですか)?[。！!？?]*$/iu.test(m)) {
+    return {
+      routeReason: "SUPPORT_AUTH_ACCESS_V1",
+      response:
+        "【天聞の所見】ログイン・入場まわりで止まっている、と受け取りました。\n\n" +
+        "まず確認する一点：合言葉かメール登録のどちらで入会したかだけ思い出してください。\n\n" +
+        "対処の一手：合言葉はログイン画面の該当欄から。メール登録は届いたメールのリンクから。届かない場合は迷惑フォルダとフィルタを確認してください。\n\n" +
+        "次に確認一点：パスワード再発行が必要ならその旨を一言添えてください。",
+    };
+  }
+  if (RE_BILLING.test(m)) {
+    return {
+      routeReason: "SUPPORT_BILLING_V1",
+      response:
+        "【天聞の所見】支払い・請求まわりでつまずいている、と受け取りました。\n\n" +
+        "まず確認する一点：設定（画面右上付近）で、プラン名と次回更新・支払い状態が表示されているかだけ見てください。\n\n" +
+        "対処の一手：表示が古い・更新されないときは、一度ログアウトして同じアカウントで入り直し、別ブラウザやシークレット窓でも同じか切り分けてください。\n\n" +
+        "次に確認一点：解消しない場合は、いつから・どの画面の文言か（可能なら一言で）教えてください。手順を絞ります。",
+    };
+  }
+  if (RE_PWA.test(m)) {
+    return {
+      routeReason: "SUPPORT_PWA_V1",
+      response:
+        "【天聞の所見】PWA（ホーム画面への追加・アプリ化）でつまずいている、と受け取りました。\n\n" +
+        "まず確認する一点：ブラウザのメニューに「ホーム画面に追加」「アプリをインストール」「ショートカット」に近い項目が出るかだけ確認してください（端末・ブラウザで名称が違います）。\n\n" +
+        "対処の一手：項目が出ないときは OS とブラウザを最新にし、タブを閉じて URL から開き直してから、もう一度だけ試してください。\n\n" +
+        "次に確認一点：端末名とブラウザ名を一言で教えてください。手順を合わせます。",
+    };
+  }
+  if (RE_BUG.test(m) && RE_BUG_CTX.test(m)) {
+    return {
+      routeReason: "SUPPORT_BUG_REPORT_V1",
+      response:
+        "【天聞の所見】不具合っぽい挙動で止まっている、と受け取りました。\n\n" +
+        "まず確認する一点：再読み込み直後も同じか、別ブラウザでも再現するかだけ切り分けてください。\n\n" +
+        "対処の一手：再現するならキャッシュ削除かシークレット窓での再試行を一度だけ試してください。\n\n" +
+        "次に確認一点：画面に出る文言か行った操作を一言で教えてください。次の一手に絞ります。",
+    };
+  }
+  if (RE_REG.test(m)) {
+    return {
+      routeReason: "SUPPORT_REGISTER_V1",
+      response:
+        "【天聞の所見】登録・メールまわりで止まっている、と受け取りました。\n\n" +
+        "まず確認する一点：入力したメールの受信箱と迷惑メールフォルダの両方を見てください。\n\n" +
+        "対処の一手：届かない場合はアドレスの打ち間違いを直し、画面の案内どおりに再送を試してください。\n\n" +
+        "次に確認一点：招待制ならリンクの期限切れがないか。解消しない場合は、いつ・どの画面かを一言で教えてください。",
+    };
+  }
+  if (RE_AUTH.test(m)) {
+    return {
+      routeReason: "SUPPORT_AUTH_ACCESS_V1",
+      response:
+        "【天聞の所見】ログイン・入場まわりで止まっている、と受け取りました。\n\n" +
+        "まず確認する一点：合言葉かメール登録のどちらで入会したかだけ思い出してください。\n\n" +
+        "対処の一手：合言葉はログイン画面の該当欄から。メール登録は届いたメールのリンクから。届かない場合は迷惑フォルダとフィルタを確認してください。\n\n" +
+        "次に確認一点：パスワード再発行が必要ならその旨を一言添えてください。",
+    };
+  }
+  if (RE_PROD.test(m)) {
+    return {
+      routeReason: "SUPPORT_PRODUCT_USAGE_V1",
+      response:
+        "【天聞の所見】この欄に質問を1つ入力して Enter で送信すると会話が始まります。「メニュー」と送ると選択肢が出ます。設定・登録は画面右上のアイコンから。",
+    };
+  }
+  return null;
+}
+
+/** TENMON_FOUNDER_UPDATE_MODE_AND_ANSWER_FRAME_CURSOR_AUTO_V1 — 構築者向けを SUBCONCEPT / canon 短答へ落とさない */
+export type TenmonFounderUpdateFrameTriageV1 = {
+  routeReason: "FOUNDER_UPDATE_FRAME_V1";
+  response: string;
+  profileFrame: string;
+};
+
+export function classifyTenmonFounderUpdateFrameTriageV1(raw: string): TenmonFounderUpdateFrameTriageV1 | null {
+  const m = String(raw ?? "").trim();
+  if (!m) return null;
+  if (m.startsWith("#") || m.startsWith("/")) return null;
+  if (/\bdoc\b/i.test(m) || /pdfPage\s*=\s*\d+/i.test(m) || /#詳細/.test(m)) return null;
+  if (classifyTenmonSupportEarlyTriageV1(m)) return null;
+
+  const RE_F_STRONG =
+    /(この読みを更新|この読みを.{0,32}runtime|この内容で反映|裁定カードを追加|runtime\s*に反映|Cursor\s*カードを書き出し(?:て)?|書き出して|更新指示|更新依頼|指示確認|現状報告(?:.{0,20}(?:と|も)?\s*更新|$)|^現状報告\s*$)/iu;
+  const RE_F_CTX =
+    /(Founder向け|ファウンダー向け|構築者向け|構築班向け|founder_update|founder_change|founder_card|\bFounder\b)/iu;
+  const RE_F_ACT =
+    /(現状報告|更新|反映|指示|カード|runtime|Cursor|裁定|運用に載せ|読みを)/iu;
+  const RE_F_TOKEN = /(founder_update|founder_change|founder_card)/iu;
+
+  const hit =
+    RE_F_STRONG.test(m) ||
+    RE_F_TOKEN.test(m) ||
+    (RE_F_CTX.test(m) && RE_F_ACT.test(m));
+  if (!hit) return null;
+
+  const body =
+    "受け取りました。構築・運用まわりの依頼・報告として扱います。\n\n" +
+    "現状は、このチャットからリポジトリや実行環境を直接変更できません。本番反映や自動マージは別経路の作業です。\n\n" +
+    "この内容で更新候補は、いまのメッセージをたたき台に置きます。実行に落とすには、対象（ファイル・画面・ルート）・期待する挙動・確認手順を、それぞれ一行ずつで送ってください。\n\n" +
+    "次の確認として、いま最優先は表層の文言・ルート分岐・データや設定のどれか。一つに絞ってください。\n\n" +
+    "本番や契約に触れる変更なら、あなた側の明示承認を一文添えてください。\n\n" +
+    "確定してよいかの判断は、上記が揃ってからにしてください。いまはドラフトとして受け取りました。";
+
+  return {
+    routeReason: "FOUNDER_UPDATE_FRAME_V1",
+    response: "【天聞の所見】" + body,
+    profileFrame: TENMON_FOUNDER_UPDATE_PROFILE_FRAME_V1,
+  };
 }
 
 type TenmonIntentKind =
@@ -604,10 +778,15 @@ function __tenmonGeneralGateResultMaybe(x: any, rawMessageOverride?: string): an
         };
       }
     } catch {}
-    // H2: compassion wrap for SUPPORT only (routeReason from ku)
+    // H2: SUPPORT_* は内部断片を除去。KANAGI は compassion + 短文 sanitize。
     try {
-      const rr2 = (ku as any).routeReason || "";
-      if (rr2 === "N2_KANAGI_PHASE_TOP") {
+      const rr2 = String((ku as any).routeReason || "");
+      if (
+        (rr2.startsWith("SUPPORT_") || rr2.startsWith("FOUNDER_")) &&
+        typeof (x as any).response === "string"
+      ) {
+        (x as any).response = __tenmonSupportUserFacingPolishV1(String((x as any).response || ""));
+      } else if (rr2 === "N2_KANAGI_PHASE_TOP") {
         const h = (ku as any).heart || __tenmonLastHeart || {};
         (x as any).response = __tenmonCompassionWrapV2((x as any).response, h);
         (x as any).response = __tenmonSupportSanitizeV1((x as any).response);
@@ -1690,9 +1869,19 @@ try {
 /** NOTE: responsePlan.semanticBody での無条件上書きは削除（CONTINUITY_ROUTE_HOLD_V1 等で binder 短文が本文を潰すため）。
  * 単一ソース化は上の __singleSourceRoutes ブロックのみで行う。 */
 
-
-
-
+// TENMON_CONVERSATION_BACKEND_SURFACE_EXIT_V1: 内部構造漏れ除去＋表層最低字数（サブ概念・事実一行・RELEASE は除外）
+try {
+  if (typeof (x as any)?.response === "string") {
+    const __dfPolish: any = (x as any)?.decisionFrame;
+    const __kuPolish: any =
+      __dfPolish?.ku && typeof __dfPolish.ku === "object" ? __dfPolish.ku : null;
+    const __rrPolish = String(__kuPolish?.routeReason || (x as any)?.routeReason || "");
+    (x as any).response = polishTenmonChatResponseSurfaceExitV1(
+      String((x as any).response || ""),
+      __rrPolish,
+    );
+  }
+} catch {}
 
 return __thinReleasePayloadV2(x);
   } catch { return __thinReleasePayloadV2(x); }
@@ -1738,6 +1927,20 @@ function __tenmonCompassionWrapV2(out: string, heart: any): string {
 // --- /H2 ---
 
 // CARD_H2_BUDDHA_SYNAPSE_SAFE_V2
+
+// --- H2B1: SUPPORT_INTERNAL_STRIP_V1（応答本文に lawKey / ledger 等が混ざった場合のみ除去・長さは維持） ---
+function __tenmonSupportUserFacingPolishV1(out: string): string {
+  let t = String(out || "").replace(/\r/g, "").trim();
+  if (!t) return t;
+  t = t.replace(/KHSL:LAW:[A-Za-z0-9_:._-]+/g, "");
+  t = t.replace(/\bOP_DEFINE\b/g, "");
+  t = t.replace(/lawKey\s*[:=]\s*["'][^"']+["']/gi, "");
+  t = t.replace(/unitId\s*[:=]\s*["'][^"']*["']/gi, "");
+  t = t.replace(/sourceMemoryHint\s*[:=]\s*[^\n]+/gi, "");
+  t = t.replace(/ledger:(?:scripture_continuity|define|general|continuity)/gi, "");
+  t = t.replace(/thread:\S+\s+centerKey:\S+/gi, "");
+  return t.replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
+}
 
 // --- H2B: SUPPORT_SANITIZE_V1 ---
 function __tenmonSupportSanitizeV1(out: string): string {

@@ -1,4 +1,10 @@
 import { getDb } from "../db/index.js";
+import type { ArkBookCanonConversationReuseV1 } from "./threadMeaningMemory.js";
+
+/**
+ * TENMON_THREAD_MEANING_MEMORY_CURSOR_AUTO_V1
+ * 同一 thread の center を `thread_center_memory` に保持し、継続ターンで意味を落とさない。
+ */
 
 export type ThreadCenterType = "scripture" | "subconcept" | "concept" | "general" | "unresolved";
 
@@ -181,6 +187,42 @@ export function upsertThreadCenter(input: ThreadCenterInput): void {
     }
   } catch {
     // best-effort: do not break chat
+  }
+}
+
+/**
+ * TENMON_ARK_BOOK_CANON_LEDGER_AND_CONVERSATION_REUSE: next_axes_json に judge 済み ARK 束を同梱（upsert 呼び出し側が任意で利用）。
+ */
+export function mergeNextAxesJsonWithArkBookCanonReuseV1(
+  existingJson: string | null | undefined,
+  reuse: ArkBookCanonConversationReuseV1,
+): string {
+  let base: Record<string, unknown> = {};
+  try {
+    if (existingJson) {
+      const p = JSON.parse(String(existingJson));
+      if (p && typeof p === "object" && !Array.isArray(p)) base = p as Record<string, unknown>;
+    }
+  } catch {
+    base = {};
+  }
+  base.arkBookCanonConversationReuseV1 = reuse;
+  base.arkBookCanonReuseCardV1 = reuse.card;
+  return JSON.stringify(base);
+}
+
+export function parseArkBookCanonReuseFromNextAxesJson(
+  nextAxesJson: string | null | undefined,
+): ArkBookCanonConversationReuseV1 | null {
+  try {
+    const p = JSON.parse(String(nextAxesJson || "{}"));
+    if (!p || typeof p !== "object" || Array.isArray(p)) return null;
+    const r = (p as Record<string, unknown>).arkBookCanonConversationReuseV1;
+    if (!r || typeof r !== "object" || Array.isArray(r)) return null;
+    if (String((r as { schema?: string }).schema || "") !== "TENMON_ARK_BOOK_CANON_CONVERSATION_REUSE_V1") return null;
+    return r as ArkBookCanonConversationReuseV1;
+  } catch {
+    return null;
   }
 }
 

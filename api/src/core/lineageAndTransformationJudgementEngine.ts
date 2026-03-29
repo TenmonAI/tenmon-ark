@@ -1,5 +1,7 @@
 /**
  * TENMON_DISCERNMENT_PARENT: 系譜・変容・史実層と写像層の分離判断
+ *
+ * カタカムナ専用の系譜束・変形束は `katakamunaLineageTransformationEngine`（継承軸と意味変形軸の分離）。
  */
 
 import type { SourceLayerDiscernmentV1 } from "./sourceLayerDiscernmentKernel.js";
@@ -69,3 +71,11 @@ export function judgeLineageAndTransformationV1(input: LineageTransformationInpu
     displayPolicy,
   };
 }
+
+export {
+  buildKatakamunaLineageTransformationBundleV1,
+  type KatakamunaDivergenceTagV1,
+  type KatakamunaLineageEdgeV1,
+  type KatakamunaLineageTransformationBundleV1,
+  type KatakamunaTransformationLayerV1,
+} from "./katakamunaLineageTransformationEngine.js";

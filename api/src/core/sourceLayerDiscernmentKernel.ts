@@ -2,6 +2,7 @@
  * TENMON_DISCERNMENT_PARENT: ソース層の区別（routeReason は変更しない）
  */
 
+import { katakamunaRawTouchesAuditedSecondaryCorpusV1 } from "./katakamunaSourceAuditClassificationV1.js";
 import type { TruthLayerArbitrationResultV1 } from "./meaningArbitrationKernel.js";
 import type { InputSemanticSplitResultV1 } from "./inputSemanticSplitter.js";
 
@@ -59,6 +60,9 @@ export function discernSourceLayerV1(input: SourceLayerDiscernmentInputV1): Sour
   if (h && sp) riskFlags.push("historical_speculative_mix");
   if (truth?.answerMode === "historical_etymology" && sp) riskFlags.push("etymology_vs_analogy_tension");
   if (truth?.answerMode === "symbolic_mapping") riskFlags.push("truth_layer_symbolic");
+  if (katakamunaRawTouchesAuditedSecondaryCorpusV1(raw)) {
+    riskFlags.push("katakamuna_secondary_or_popular_corpus_named");
+  }
 
   let sourceMode: SourceLayerModeV1 = "structural_mapping";
   let discernmentReason = "default_structural";

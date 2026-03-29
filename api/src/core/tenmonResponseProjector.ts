@@ -3,8 +3,11 @@
  * 出口整形・漏れ止め・ONE_STEP 収束（prompt 全再設計はしない）
  *
  * TENMON_SURFACE_LEAK_CLEANUP_CURSOR_AUTO_V1:
- * center:/root_reasoning:/truth_structure:/verdict:/次軸:/次観測/相=/center_loss の表層除去、
+ * center:/root_reasoning:/truth_structure:/verdict:/中心命題:/立脚の中心は…/次軸:/次観測/truth_structure:相=/verdict=center_loss の表層除去、
+ * 【天聞の所見】前後行エコー抑制、
  * routeEvidenceTraceV1 等 internal bundle 識別子の除去、reply/text/answer/message 抽出（ku・routeReason は触らない）
+ *
+ * 不確実性表層フレーズは confidenceDisplayLogic（composer 先頭付与）を優先し、ここでは削除しない。
  */
 
 import type { ThreadCore } from "./threadCore.js";
@@ -137,7 +140,19 @@ export function extractTenmonUserFacingFinalTextV1(raw: unknown): string {
 }
 
 /** 行単位の内部裁定メタ（本文が消えそうなときは fail-open で残す） */
-const RE_INTERNAL_META_LINE_FULL = /^(?:center|root_reasoning|truth_structure|verdict|次軸|次観測)\s*[:：]\s*.*$/u;
+function isTenmonInternalMetaSurfaceLineV1(line: string): boolean {
+  const t = line.trim();
+  if (!t) return false;
+  if (/次に深めたい/u.test(t)) return false;
+  if (/^(?:center|root_reasoning|truth_structure|verdict|次軸|次観測|中心命題)\s*[:：]\s*$/u.test(t)) return true;
+  if (/^(?:center|root_reasoning|truth_structure|verdict|次軸|次観測|中心命題)\s*[:：]\s*\S/u.test(t)) return true;
+  if (/^verdict\s*:\s*\S/u.test(t)) return true;
+  if (/^truth_structure\s*[:：]?\s*相\s*=/u.test(t)) return true;
+  if (/^verdict\s*=\s*center_loss\b/u.test(t)) return true;
+  if (/^立脚の中心は「[^」\n]*」です。[^\n]*$/u.test(t)) return true;
+  if (/^立脚の中心は[^。\n]+$/u.test(t)) return true;
+  return false;
+}
 
 const MAX_GENERAL = 5600;
 const MAX_DEFINE = 7200;
@@ -150,9 +165,15 @@ function stripInternalMetaLinesFailOpenV1(text: string): string {
   const raw = String(text || "");
   const trimmedOrig = raw.trim();
   if (!trimmedOrig) return "";
-  const lines = raw.split("\n");
-  const kept = lines.filter((ln) => !RE_INTERNAL_META_LINE_FULL.test(ln.trim()));
-  const result = kept.join("\n").replace(/\n{3,}/g, "\n\n").trim();
+  let cur = raw;
+  let prev = "";
+  while (prev !== cur) {
+    prev = cur;
+    const lines = cur.split("\n");
+    const kept = lines.filter((ln) => /次に深めたい/u.test(ln) || !isTenmonInternalMetaSurfaceLineV1(ln));
+    cur = kept.join("\n").replace(/\n{3,}/g, "\n\n").trim();
+  }
+  const result = cur;
   if (!result) return raw;
   if (result.length < 28 && trimmedOrig.length > 72) return raw;
   if (trimmedOrig.length > 120 && result.length < trimmedOrig.length * 0.14) return raw;
@@ -163,10 +184,17 @@ function stripInternalMetaLinesFailOpenV1(text: string): string {
 function stripInlineInternalMetaFragmentsV1(text: string): string {
   let out = String(text || "");
   out = out.replace(
+    /(?:^|\n)\s*(?:center|root_reasoning|truth_structure|verdict|次軸|次観測|中心命題)\s*[:：]\s*[^\n]+/gimu,
+    "\n",
+  );
+  out = out.replace(/\btruth_structure:相=[^。\n]*/giu, "");
+  out = out.replace(/\bverdict=center_loss[^。\n]*/giu, "");
+  out = out.replace(
     /\s+(?:center|root_reasoning|truth_structure)\s*[:：]\s*[A-Za-z0-9_=|,.<>/-]{1,200}(?:\s+[A-Za-z0-9_=|,.<>/-]{1,120})*\s*/giu,
     " ",
   );
   out = out.replace(/\s+verdict\s*[:：]\s*[^\n]{0,120}/giu, " ");
+  out = out.replace(/\s+中心命題\s*[:：]\s*[^\n]{0,200}/giu, " ");
   out = out.replace(/\s+次軸\s*[:：]\s*[^\n]{0,120}/giu, " ");
   out = out.replace(/\s+次観測\s*[:：]\s*[^\n]{0,120}/giu, " ");
   out = out.replace(/相=[^。,\n，]+/gu, "");
@@ -175,22 +203,84 @@ function stripInlineInternalMetaFragmentsV1(text: string): string {
   return out;
 }
 
+/** 内部メタに紛れた定型フレーズ（ユーザー表層では不要） */
+function stripLeakTemplateProseV1(text: string): string {
+  return String(text || "")
+    .replace(/いまの読み方は正典と会話の往還[^。\n]{0,400}[。．]?/gu, "")
+    .replace(/いまの答えは、意味の芯は[^。\n]{0,400}[。．]?/gu, "");
+}
+
+/** 連続する同一文（正規化一致）を 1 つに畳む（段落境界は維持） */
+function dedupeSequentialSentencesInSurfaceV1(text: string): string {
+  const paras = String(text || "").split(/\n\n+/u);
+  const outParas = paras.map((para) => {
+    const rawChunks = para.split(/(?<=[。！？])/u);
+    const kept: string[] = [];
+    let prevNorm = "";
+    for (const ch of rawChunks) {
+      const norm = ch.replace(/\s+/g, " ").trim();
+      if (!norm) {
+        if (ch) kept.push(ch);
+        continue;
+      }
+      if (norm === prevNorm) continue;
+      prevNorm = norm;
+      kept.push(ch);
+    }
+    return kept.join("");
+  });
+  return outParas.join("\n\n").replace(/\n{3,}/g, "\n\n").trim();
+}
+
+/** 【天聞の所見】ブロック同士で先頭一致が長い場合は重複ブロックを落とす */
+function suppressDuplicateSeenmarkParagraphsV1(text: string): string {
+  const t = String(text || "");
+  const idxs: number[] = [];
+  const mark = "【天聞の所見】";
+  let p = 0;
+  while (p < t.length) {
+    const i = t.indexOf(mark, p);
+    if (i < 0) break;
+    idxs.push(i);
+    p = i + mark.length;
+  }
+  if (idxs.length <= 1) return t;
+  const seen = new Set<string>();
+  let out = t.slice(0, idxs[0]);
+  for (let k = 0; k < idxs.length; k++) {
+    const start = idxs[k]!;
+    const end = k + 1 < idxs.length ? idxs[k + 1]! : t.length;
+    const block = t.slice(start, end);
+    const inner = block.slice(mark.length).trim().replace(/\s+/g, " ").slice(0, 200);
+    if (inner.length >= 14 && seen.has(inner)) continue;
+    if (inner.length >= 14) seen.add(inner);
+    out += block;
+  }
+  const result = out.replace(/\n{3,}/g, "\n\n").trim();
+  if (result.length < 32 && t.replace(/\s+/g, " ").trim().length > 120) return t;
+  return result;
+}
+
 /** closing 直前に付いた内部ヒント行を落とす（ONE_STEP 自然文は後段で付与） */
 function stripInternalHintTailLinesV1(text: string): string {
   let t = String(text || "").trim();
   const tailPat =
-    /(?:\n|^)\s*(?:次軸|次観測|center|root_reasoning|truth_structure|verdict)\s*[:：]\s*[^\n]+$/gimu;
+    /(?:\n|^)\s*(?:次軸|次観測|center|root_reasoning|truth_structure|verdict|中心命題)\s*[:：]\s*[^\n]+$/gimu;
+  const tailFoot =
+    /(?:\n|^)\s*立脚の中心は「[^」\n]+」です。[^\n]*$/gimu;
   let prev = "";
   while (prev !== t) {
     prev = t;
-    t = t.replace(tailPat, "").trim();
+    t = t.replace(tailPat, "").replace(tailFoot, "").trim();
   }
   return t;
 }
 
 /** 内部契約・ルート名・デバッグ語の表層漏洩を剥がす */
 export function stripTenmonInternalSurfaceLeakV1(text: string): string {
-  let out = String(text || "");
+  const snapshot = String(text ?? "").trim();
+  if (!snapshot) return "";
+  let out = snapshot;
   out = stripInternalMetaLinesFailOpenV1(out);
   out = stripInlineInternalMetaFragmentsV1(out);
   out = out.replace(RE_INTERNAL_SURFACE_BUNDLE_IDS, "");
@@ -205,7 +295,42 @@ export function stripTenmonInternalSurfaceLeakV1(text: string): string {
   out = out.replace(/[ \t]+\n/g, "\n");
   out = out.replace(/\n{3,}/g, "\n\n");
   out = out.replace(/\s{2,}/g, " ");
-  return out.trim();
+  let seenDup = "";
+  while (seenDup !== out) {
+    seenDup = out;
+    out = out.replace(/【天聞の所見】\s*\n*\s*【天聞の所見】/gu, "【天聞の所見】\n");
+  }
+  out = suppressSeenmarkForeAftDuplicateV1(out);
+  out = suppressDuplicateSeenmarkParagraphsV1(out);
+  out = dedupeSequentialSentencesInSurfaceV1(out);
+  out = stripLeakTemplateProseV1(out);
+  out = out.trim();
+  if (!out) return snapshot;
+  return out;
+}
+
+/** 【天聞の所見】直前の行と、直後の先頭行が同一なら後ろ側を落とす（前後エコー抑制） */
+function suppressSeenmarkForeAftDuplicateV1(text: string): string {
+  const marker = "【天聞の所見】";
+  const t = String(text || "");
+  const idx = t.indexOf(marker);
+  if (idx < 0) return t;
+  const before = t.slice(0, idx).trimEnd();
+  const afterMarker = t.slice(idx + marker.length);
+  const afterTrim = afterMarker.replace(/^\s*\n?/u, "");
+  const prevLines = before.split(/\n/).map((x) => x.trim()).filter(Boolean);
+  const lastBefore = prevLines.length ? prevLines[prevLines.length - 1]! : "";
+  if (!lastBefore || lastBefore.length < 6) return t;
+  const firstLineMatch = afterTrim.match(/^([^\n]+)/u);
+  const firstAfter = firstLineMatch ? firstLineMatch[1]!.trim() : "";
+  if (!firstAfter || firstAfter !== lastBefore) return t;
+  const rest = afterTrim.slice(firstLineMatch![0]!.length).replace(/^\s*\n?/u, "");
+  const beforeBody =
+    prevLines.length > 1 ? prevLines.slice(0, -1).join("\n").trimEnd() : "";
+  const rebuilt = beforeBody
+    ? `${beforeBody}\n\n${marker}\n${rest}`
+    : `${marker}\n${rest}`;
+  return rebuilt.replace(/\n{3,}/g, "\n\n").trim();
 }
 
 /** 【天聞の所見】の多重化を抑える */
@@ -356,7 +481,13 @@ export function probeTenmonResponseProjectionV1(text: string): {
   RE_JSONISH.lastIndex = 0;
   RE_INTERNAL_SURFACE_BUNDLE_IDS.lastIndex = 0;
   const metaSurfaceLeak =
-    /(?:^|\n)\s*(?:center|root_reasoning|truth_structure|verdict|次軸|次観測)\s*[:：]/mu.test(t) ||
+    /(?:^|\n)\s*(?:center|root_reasoning|truth_structure|verdict|次軸|次観測|中心命題)\s*[:：]/mu.test(t) ||
+    /(?:^|\n)\s*verdict\s*:\s*\S/mu.test(t) ||
+    /(?:^|\n)\s*立脚の中心は「/mu.test(t) ||
+    /\btruth_structure:相=/iu.test(t) ||
+    /\bverdict=center_loss/iu.test(t) ||
+    /いまの読み方は正典と会話の往還/u.test(t) ||
+    /いまの答えは、意味の芯は/u.test(t) ||
     /相=[^。,\n，]/u.test(t) ||
     /\bcenter_loss\b/iu.test(t) ||
     RE_INTERNAL_SURFACE_BUNDLE_IDS.test(t);

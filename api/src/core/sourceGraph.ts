@@ -85,6 +85,7 @@ export function resolveGroundingRule(routeReason: string): GroundingRule {
   const rr = String(routeReason || "").trim();
   if (__GROUNDING_RULESET_V1[rr]) return __GROUNDING_RULESET_V1[rr];
   if (/^SUPPORT_/.test(rr)) return { groundedPriority: "none", groundingMode: "none", unresolvedPolicy: "fallback" };
+  if (/^FOUNDER_/.test(rr)) return { groundedPriority: "none", groundingMode: "none", unresolvedPolicy: "fallback" };
   if (/FOLLOWUP/.test(rr) || rr === "CONTINUITY_ANCHOR_V1") return { groundedPriority: "preferred", groundingMode: "thread", unresolvedPolicy: "ask" };
   if (rr === "KATAKAMUNA_CANON_ROUTE_V1") return { groundedPriority: "required", groundingMode: "canon", unresolvedPolicy: "ask" };
   if (/^DEF_/.test(rr)) return { groundedPriority: "preferred", groundingMode: "canon", unresolvedPolicy: "ask" };

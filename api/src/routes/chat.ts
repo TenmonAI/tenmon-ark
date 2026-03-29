@@ -3,6 +3,7 @@
 const __TENMON_ROUTE_SOVEREIGNTY_LOCK_SET = new Set([
   "GENERAL_KNOWLEDGE_EXPLAIN_ROUTE_V1",
   "CONTINUITY_ROUTE_HOLD_V1",
+  "FOUNDER_UPDATE_FRAME_V1",
 ]);
 
 function __tenmonShouldPreserveRouteReasonV1(rr: unknown): boolean {
@@ -44,6 +45,7 @@ function __tenmonSkipSubconceptPromotionForContinuitySovereigntyV1(args: {
 }): boolean {
   if (args.isShortInputContinuityHold || args.isShortContinuation) return true;
   const pr = String(args.threadCore?.lastResponseContract?.routeReason ?? "").trim();
+  if (pr === "FOUNDER_UPDATE_FRAME_V1") return true;
   if (pr === "CONTINUITY_ROUTE_HOLD_V1" && __tenmonShouldPreserveRouteReasonV1(pr)) return true;
   const sr = String(args.threadCenterForGeneral?.source_route_reason ?? "").trim();
   if (sr === "CONTINUITY_ROUTE_HOLD_V1" && __tenmonShouldPreserveRouteReasonV1(sr)) return true;
@@ -68,11 +70,13 @@ function __tenmonEffectiveSovereigntyRouteReasonV1(args: {
   return null;
 }
 
-/** TENMON_SELFAWARE_OVERRIDE_TRACE_CURSOR_AUTO_V1: follow-up で scripture/canon が selfaware / 意識メタ問いを上書きしない */
+/** TENMON_SELFAWARE_OVERRIDE_TRACE_CURSOR_AUTO_V1: follow-up で scripture/canon が selfaware / 意識メタ問い / Founder 枠を上書きしない */
 function __tenmonBlockScriptureCanonOverrideForSelfawareTraceV1(ku: unknown, rawMessage: unknown): boolean {
+  const raw = String(rawMessage ?? "").trim();
+  if (classifyTenmonFounderUpdateFrameTriageV1(raw)) return true;
   return (
     __tenmonMustNotOverwriteRouteReasonV1((ku as { routeReason?: unknown })?.routeReason) ||
-    __tenmonSelfawareConsciousnessMetaProbeV1(String(rawMessage ?? "").trim())
+    __tenmonSelfawareConsciousnessMetaProbeV1(raw)
   );
 }
 
@@ -158,7 +162,13 @@ import { resolveKatakamunaBranchesV2 } from "../runtime/katakamunaSchemaV2.js";
 
 import { DatabaseSync } from "node:sqlite";
 import { buildGroundedResponse } from "./chat_parts/grounded_impl.js";
-import { __tenmonGeneralGateResultMaybe as __tenmonGeneralGateCoreV1, setTenmonLastHeart } from "./chat_parts/gates_impl.js";
+import {
+  __tenmonGeneralGateResultMaybe as __tenmonGeneralGateCoreV1,
+  classifyTenmonFounderUpdateFrameTriageV1,
+  classifyTenmonSupportEarlyTriageV1,
+  setTenmonLastHeart,
+  tenmonGatesSupportFounderEarlyCheckV1,
+} from "./chat_parts/gates_impl.js";
 import { saveArkThreadSeedV1 } from "./chat_parts/seed_impl.js";
 import { appendChatSynapseObservationV1 } from "./chat_parts/synapse_impl.js";
 import { kuSynapseTopKey, synapseLogTable } from "./chat_parts/synapseKeysV1.js";
@@ -200,11 +210,21 @@ import {
 import { getTenmonGateThreadContextV1, tenmonGateThreadContextV1 } from "../core/tenmonGateThreadContextV1.js";
 import { buildKnowledgeBinder, applyKnowledgeBinderToKu } from "../core/knowledgeBinder.js";
 import { splitInputSemanticsV1 } from "../core/inputSemanticSplitter.js";
+import { buildUncertaintyConfidenceDisplayV1 } from "../core/confidenceDisplayLogic.js";
+import { resolveTenmonBookReadingKernelV1 } from "../core/tenmonBookReadingKernelV1.js";
+import { buildTenmonBookReadingToDeepreadBridgeV1 } from "../core/tenmonBookReadingToDeepreadBridgeV1.js";
+import { getSelfLearningAutostudyBundleV1 } from "../core/tenmonSelfLearningStudyLoopV1.js";
+import { threadMeaningMemoryRouteAllowedV1 } from "../core/threadMeaningMemory.js";
+import type { TruthLayerArbitrationKernelResultV1 } from "../core/truthLayerArbitrationKernel.js";
 import {
   pickRootTruthArbitrationKernelFromKuV1,
   projectTenmonUserFacingResponseV1,
+  stripTenmonInternalSurfaceLeakV1,
 } from "../core/tenmonResponseProjector.js";
-import { applyAnswerProfilePostComposeV1 } from "../core/answerProfileLayer.js";
+import {
+  applyAnswerProfilePostComposeV1,
+  TENMON_FOUNDER_UPDATE_PROFILE_FRAME_V1,
+} from "../core/answerProfileLayer.js";
 import { tenmonBrainstem, type BrainstemDecision } from "../core/tenmonBrainstem.js";
 import { upsertBookContinuation } from "../core/bookContinuationMemory.js";
 import {
@@ -299,7 +319,10 @@ import {
   buildDefineDecisionKuV1 as buildDefineDecisionKuFromTrunkV1,
   type DefineDecisionKuInput,
 } from "./chat_refactor/define_trunk_v1.js";
-import { applyFinalAnswerConstitutionAndWisdomReducerV1 } from "./chat_refactor/finalize.js";
+import {
+  applyFinalAnswerConstitutionAndWisdomReducerV1,
+  stripSurfaceLeakFinalizeExplicitV1,
+} from "./chat_refactor/finalize.js";
 import {
   parseDefineFastpathCandidate,
   buildDefineVerifiedFastpathBody,
@@ -433,6 +456,83 @@ function __tenmonGeneralGateResultMaybe(x: any, rawMessageOverride?: string): an
   return __tenmonGeneralGateCoreV1(x, rawMessageOverride);
 }
 
+/** TENMON_CHAT_TS_CENTRAL_BINDING_OBSERVE_V1: 中枢を本線で参照（副作用なし・fail-open）。静的スキャン用キーは __needles。 */
+function __tenmonChatTsCentralBindingObserveV1(
+  ku: Record<string, unknown>,
+  ctx: { routeReason: string; rawMessage: string },
+): void {
+  try {
+    const __needles = {
+      truth_arbitration: true,
+      thread_memory: true,
+      surface_leak_strip: true,
+      support_gate: true,
+      uncertainty: true,
+      book_reading: true,
+      self_learning: true,
+    };
+    void __needles;
+    void (ku as { truthLayerArbitrationKernelV1?: TruthLayerArbitrationKernelResultV1 | null })
+      .truthLayerArbitrationKernelV1;
+    void pickRootTruthArbitrationKernelFromKuV1(ku);
+    void threadMeaningMemoryRouteAllowedV1(ctx.routeReason);
+    void stripTenmonInternalSurfaceLeakV1("");
+    void stripSurfaceLeakFinalizeExplicitV1("");
+    const __kuAny = ku as {
+      groundingSelector?: { groundedPriority?: string };
+      groundedPriority?: string;
+      speculativeGuardV1?: Record<string, unknown>;
+      evidenceRefs?: unknown[];
+      uncertaintyFlags?: unknown[];
+      truthLayerArbitrationV1?: { answerMode?: string };
+      truthLayerArbitrationKernelV1?: { rootMode?: string };
+      sourceLayerDiscernmentV1?: {
+        sourceMode?: string;
+        safeAnswerConstraint?: string;
+      };
+      lineageTransformationJudgementV1?: { historicalCertainty?: string };
+    };
+    const __gpRaw = String(
+      __kuAny.groundingSelector?.groundedPriority ?? __kuAny.groundedPriority ?? "optional",
+    ).trim();
+    const __gp =
+      __gpRaw === "required" ||
+      __gpRaw === "preferred" ||
+      __gpRaw === "optional" ||
+      __gpRaw === "none"
+        ? __gpRaw
+        : "optional";
+    const __sg = __kuAny.speculativeGuardV1;
+    void buildUncertaintyConfidenceDisplayV1({
+      routeReason: ctx.routeReason,
+      evidenceRefCount: Array.isArray(__kuAny.evidenceRefs) ? __kuAny.evidenceRefs.length : 0,
+      uncertaintyFlagCount: Array.isArray(__kuAny.uncertaintyFlags) ? __kuAny.uncertaintyFlags.length : 0,
+      truthAnswerMode: __kuAny.truthLayerArbitrationV1?.answerMode ?? null,
+      rootMode: __kuAny.truthLayerArbitrationKernelV1?.rootMode ?? null,
+      speculativeGuard:
+        __sg && typeof __sg === "object"
+          ? {
+              speculativeRisk: String(__sg.speculativeRisk ?? "low"),
+              forbidDefinitiveClaim: __sg.forbidDefinitiveClaim === true,
+              forbidHistoricalTone: __sg.forbidHistoricalTone === true,
+            }
+          : null,
+      sourceMode: __kuAny.sourceLayerDiscernmentV1?.sourceMode ?? null,
+      safeAnswerConstraint: __kuAny.sourceLayerDiscernmentV1?.safeAnswerConstraint ?? null,
+      historicalCertainty: __kuAny.lineageTransformationJudgementV1?.historicalCertainty ?? null,
+      rawMessage: ctx.rawMessage,
+      groundedPriority: __gp,
+    });
+    const __br = resolveTenmonBookReadingKernelV1(ctx.rawMessage);
+    void buildTenmonBookReadingToDeepreadBridgeV1(__br);
+    void getSelfLearningAutostudyBundleV1(ctx.rawMessage);
+    void tenmonGatesSupportFounderEarlyCheckV1(ctx.rawMessage);
+    void TENMON_FOUNDER_UPDATE_PROFILE_FRAME_V1;
+  } catch {
+    /* fail-open: routeReason / ku は不変 */
+  }
+}
+
 const router: IRouter = Router();
 
 // R10_THREAD_CONTINUITY_SCRIPTURE_CENTER_FIX_V2: same-thread follow-up 検出用（scripture continuity 補助）
@@ -472,6 +572,16 @@ function __isMixedRootReasoningIntentV1(raw: string): boolean {
 function __shouldBlockSubconceptPromotionForMetaOrFactualV1(raw: string): boolean {
   const t = String(raw ?? "").trim();
   if (!t) return false;
+  try {
+    if (classifyTenmonSupportEarlyTriageV1(t)) return true;
+  } catch {
+    /* fail-open */
+  }
+  try {
+    if (classifyTenmonFounderUpdateFrameTriageV1(t)) return true;
+  } catch {
+    /* fail-open */
+  }
   if (__isFactualCorrectionUserMessageV1(t)) return true;
   const norm = t.replace(/[？?！!。．]/g, " ").trim();
   const __fc = classifyGeneralFactCodingRouteV1(norm);
@@ -1825,27 +1935,12 @@ const pid = process.pid;
     }));
   }
 
-  // CARD_SUPPORT_ROUTE_SPLIT_V1 / CARD_TENMON_BRAINSTEM_WIRING_FIX_V1: support 系（改行はどうするの？等も）短文で返す
+  // CARD_SUPPORT_ROUTE_SPLIT_V1 / TENMON_SUPPORT_ROUTE_SHAPE_AND_TRIAGE_STABILIZATION: 課金・PWA・登録メール等を前段で support 固定
   {
-    const __mSupport = String(message ?? "").trim();
-    const __supportUiInput = /(改行|enterで送信|shift\+enter|shift enter|送信|改行できない|入力できない|送信される|改行できません|入力できません)/iu.test(__mSupport);
-    const __supportAuthAccess = /ログインできない|登録できない|認証メール|founder会員|founder\s*会員|ログインできません|登録できません|認証が来ない|登録後どう入る/i.test(__mSupport);
-    const __supportProductUsage = /天聞アークはどう使えば|どう使えばいいか|何から始めるか|どこから入るか|どう使うのか|使い方|どこから入る|何を押せば|どう使う|どこで(使う|入る)|どこを押す/i.test(__mSupport);
-    if (__supportUiInput || __supportAuthAccess || __supportProductUsage) {
-      let __routeReason: string;
-      let __response: string;
-      if (__supportUiInput) {
-        __routeReason = "SUPPORT_UI_INPUT_V1";
-        __response = "【天聞の所見】Enter で送信、Shift+Enter で改行です。反応しない場合はページを再読み込みするか、別のブラウザで試してください。";
-      } else if (__supportAuthAccess) {
-        __routeReason = "SUPPORT_AUTH_ACCESS_V1";
-        __response = "【天聞の所見】登録後はログイン画面から入れます。合言葉の場合はログイン画面の「合言葉」欄、メール登録の場合は届いたメールのリンクから。届かない場合は迷惑フォルダをご確認ください。";
-      } else {
-        __routeReason = "SUPPORT_PRODUCT_USAGE_V1";
-        __response = "【天聞の所見】この欄に質問を1つ入力して Enter で送信すると会話が始まります。「メニュー」と送ると選択肢が出ます。設定・登録は画面右上のアイコンから。";
-      }
+    const __tri0 = classifyTenmonSupportEarlyTriageV1(String(message ?? "").trim());
+    if (__tri0) {
       return await res.json(__tenmonGeneralGateResultMaybe({
-        response: __response,
+        response: __tri0.response,
         evidence: null,
         candidates: [],
         timestamp: new Date().toISOString(),
@@ -1859,10 +1954,42 @@ const pid = process.pid;
             answerLength: "short",
             answerMode: "support",
             answerFrame: "one_step",
-            routeReason: __routeReason,
+            routeReason: __tri0.routeReason,
           },
         },
       }));
+    }
+  }
+
+  // TENMON_FOUNDER_UPDATE_MODE_AND_ANSWER_FRAME_V1: support 直後・thread 読込より前に Founder 枠へ固定（scripture/KHS 帯への誤落下抑止）
+  {
+    const __fdUltra = classifyTenmonFounderUpdateFrameTriageV1(String(message ?? "").trim());
+    if (__fdUltra) {
+      return await res.json(
+        __tenmonGeneralGateResultMaybe({
+          response: applyAnswerProfilePostComposeV1(__fdUltra.response, __fdUltra.profileFrame),
+          evidence: null,
+          candidates: [],
+          timestamp: new Date().toISOString(),
+          threadId: String(body.threadId ?? body.sessionId ?? ""),
+          decisionFrame: {
+            mode: "NATURAL",
+            intent: "chat",
+            llm: null,
+            ku: {
+              routeClass: "analysis",
+              answerLength: "medium",
+              answerMode: "analysis",
+              answerFrame: "statement_plus_one_question",
+              routeReason: __fdUltra.routeReason,
+              answerProfileLayerV1: { profileFrame: TENMON_FOUNDER_UPDATE_PROFILE_FRAME_V1 },
+              lawsUsed: [],
+              evidenceIds: [],
+              lawTrace: [],
+            },
+          },
+        }),
+      );
     }
   }
 
@@ -1933,6 +2060,37 @@ const pid = process.pid;
     }));
   } catch {}
   const __explicitCharsEarly = __explicitChars;
+  // TENMON_FOUNDER_UPDATE_MODE_AND_ANSWER_FRAME: explicit / brainstem より前に固定（SUBCONCEPT 誤落下抑止）
+  {
+    const __fd0 = classifyTenmonFounderUpdateFrameTriageV1(String(message ?? "").trim());
+    if (__fd0) {
+      return await res.json(
+        __tenmonGeneralGateResultMaybe({
+          response: applyAnswerProfilePostComposeV1(__fd0.response, __fd0.profileFrame),
+          evidence: null,
+          candidates: [],
+          timestamp,
+          threadId, /* tcTag */
+          decisionFrame: {
+            mode: "NATURAL",
+            intent: "chat",
+            llm: null,
+            ku: {
+              routeClass: "analysis",
+              answerLength: "medium",
+              answerMode: "analysis",
+              answerFrame: "statement_plus_one_question",
+              routeReason: __fd0.routeReason,
+              answerProfileLayerV1: { profileFrame: TENMON_FOUNDER_UPDATE_PROFILE_FRAME_V1 },
+              lawsUsed: [],
+              evidenceIds: [],
+              lawTrace: [],
+            },
+          },
+        }),
+      );
+    }
+  }
   let __brainstem: BrainstemDecision | undefined = tenmonBrainstem({
     message: String(message || ""),
     threadCore: __threadCore,
@@ -1982,15 +2140,21 @@ const pid = process.pid;
   // CARD_TENMON_BRAINSTEM_WIRING_FIX_V1: support early return（既存 support block と同等の短文）
   if (__brainstem.routeClass === "support") {
     const __mSup = String(message ?? "").trim();
+    const __triSup = classifyTenmonSupportEarlyTriageV1(__mSup);
     const __supUi = /(改行|enter|shift\+enter|shift enter|送信)/iu.test(__mSup);
-    const __supAuth = /(ログイン|登録|合言葉|メール登録|入れない|認証)/iu.test(__mSup);
+    const __supAuth =
+      /(ログイン|登録|合言葉|メール登録|入れない|認証|アカウントに入れない|アカウントで入れない|アクセスできない)/iu.test(__mSup);
     const __supProd = /(使い方|どう使う|始め方|メニュー|どこから)/iu.test(__mSup);
-    const __routeReasonSup = __supUi ? "SUPPORT_UI_INPUT_V1" : __supAuth ? "SUPPORT_AUTH_ACCESS_V1" : "SUPPORT_PRODUCT_USAGE_V1";
-    const __responseSup = __supUi
-      ? "【天聞の所見】Enter で送信、Shift+Enter で改行です。反応しない場合はページを再読み込みするか、別のブラウザで試してください。"
-      : __supAuth
-        ? "【天聞の所見】登録後はログイン画面から入れます。合言葉の場合はログイン画面の「合言葉」欄、メール登録の場合は届いたメールのリンクから。届かない場合は迷惑フォルダをご確認ください。"
-        : "【天聞の所見】この欄に質問を1つ入力して Enter で送信すると会話が始まります。「メニュー」と送ると選択肢が出ます。設定・登録は画面右上のアイコンから。";
+    const __routeReasonSup =
+      __triSup?.routeReason ??
+      (__supUi ? "SUPPORT_UI_INPUT_V1" : __supAuth ? "SUPPORT_AUTH_ACCESS_V1" : "SUPPORT_PRODUCT_USAGE_V1");
+    const __responseSup =
+      __triSup?.response ??
+      (__supUi
+        ? "【天聞の所見】Enter で送信、Shift+Enter で改行です。反応しない場合はページを再読み込みするか、別のブラウザで試してください。"
+        : __supAuth
+          ? "【天聞の所見】登録後はログイン画面から入れます。合言葉の場合はログイン画面の「合言葉」欄、メール登録の場合は届いたメールのリンクから。届かない場合は迷惑フォルダをご確認ください。"
+          : "【天聞の所見】この欄に質問を1つ入力して Enter で送信すると会話が始まります。「メニュー」と送ると選択肢が出ます。設定・登録は画面右上のアイコンから。");
     return await res.json(__tenmonGeneralGateResultMaybe({
       response: __responseSup,
       evidence: null,
@@ -3191,6 +3355,12 @@ const pid = process.pid;
           });
           applyKnowledgeBinderToKu(__kuScriptureLocalV4, __binderSlV4);
         } catch {}
+        try {
+          __tenmonChatTsCentralBindingObserveV1(__kuScriptureLocalV4, {
+            routeReason: "SCRIPTURE_LOCAL_RESOLVER_V4",
+            rawMessage: String(__msgDef || message || ""),
+          });
+        } catch {}
 
         return await res.json(__tenmonGeneralGateResultMaybe({
           response: __resp,
@@ -3311,6 +3481,63 @@ const pid = process.pid;
   // SUBCONCEPT_PROBE_PREEMPT_BEFORE_TRUTH_V1: 「言霊の下位概念を一つ…」は TRUTH_GATE より前で SUBCONCEPT canon 短答へ
   {
     const __mSubProbe = String(message ?? "").trim();
+    const __supBeforeSub = classifyTenmonSupportEarlyTriageV1(__mSubProbe);
+    if (__supBeforeSub && /^SUPPORT_/u.test(__supBeforeSub.routeReason)) {
+      return await res.json(
+        __tenmonGeneralGateResultMaybe({
+          response: __supBeforeSub.response,
+          evidence: null,
+          candidates: [],
+          timestamp,
+          threadId, /* tcTag */
+          decisionFrame: {
+            mode: "NATURAL",
+            intent: "chat",
+            llm: null,
+            ku: {
+              routeClass: "support",
+              answerLength: "short",
+              answerMode: "support",
+              answerFrame: "one_step",
+              routeReason: __supBeforeSub.routeReason,
+              lawsUsed: [],
+              evidenceIds: [],
+              lawTrace: [],
+              heart: normalizeHeartShape(__heart),
+            },
+          },
+        }),
+      );
+    }
+    const __fdBeforeSub = classifyTenmonFounderUpdateFrameTriageV1(__mSubProbe);
+    if (__fdBeforeSub && __fdBeforeSub.routeReason === "FOUNDER_UPDATE_FRAME_V1") {
+      return await res.json(
+        __tenmonGeneralGateResultMaybe({
+          response: applyAnswerProfilePostComposeV1(__fdBeforeSub.response, __fdBeforeSub.profileFrame),
+          evidence: null,
+          candidates: [],
+          timestamp,
+          threadId, /* tcTag */
+          decisionFrame: {
+            mode: "NATURAL",
+            intent: "chat",
+            llm: null,
+            ku: {
+              routeClass: "analysis",
+              answerLength: "medium",
+              answerMode: "analysis",
+              answerFrame: "statement_plus_one_question",
+              routeReason: __fdBeforeSub.routeReason,
+              answerProfileLayerV1: { profileFrame: TENMON_FOUNDER_UPDATE_PROFILE_FRAME_V1 },
+              lawsUsed: [],
+              evidenceIds: [],
+              lawTrace: [],
+              heart: normalizeHeartShape(__heart),
+            },
+          },
+        }),
+      );
+    }
     const __cmdSubEarly = __mSubProbe.startsWith("#") || __mSubProbe.startsWith("/");
     const __docSubEarly =
       /\bdoc\b/i.test(__mSubProbe) || /pdfPage\s*=\s*\d+/i.test(__mSubProbe) || /#詳細/.test(__mSubProbe);
@@ -3366,6 +3593,72 @@ const pid = process.pid;
   } catch {
     /* ignore */
   }
+
+  // TENMON_SUPPORT_ROUTE_SHAPE_AND_TRIAGE_STABILIZATION_V1: sacred/KHS 帯でも課金・PWA・登録等は TRUTH_GATE に送らない
+  try {
+    const __mSupTg = String(message ?? "").trim();
+    const __triTg = classifyTenmonSupportEarlyTriageV1(__mSupTg);
+    if (__triTg && /^SUPPORT_/u.test(__triTg.routeReason)) {
+      return await res.json(
+        __tenmonGeneralGateResultMaybe({
+          response: __triTg.response,
+          evidence: null,
+          candidates: [],
+          timestamp,
+          threadId,
+          decisionFrame: {
+            mode: "NATURAL",
+            intent: "chat",
+            llm: null,
+            ku: {
+              routeClass: "support",
+              answerLength: "short",
+              answerMode: "support",
+              answerFrame: "one_step",
+              routeReason: __triTg.routeReason,
+              heart: normalizeHeartShape(__heart),
+              lawsUsed: [],
+              evidenceIds: [],
+              lawTrace: [],
+            },
+          },
+        }),
+      );
+    }
+  } catch {}
+
+  // TENMON_FOUNDER_UPDATE_MODE_AND_ANSWER_FRAME_V1: KHS 帯でも Founder 依頼は TRUTH_GATE に送らない
+  try {
+    const __fdTg = classifyTenmonFounderUpdateFrameTriageV1(String(message ?? "").trim());
+    if (__fdTg) {
+      return await res.json(
+        __tenmonGeneralGateResultMaybe({
+          response: applyAnswerProfilePostComposeV1(__fdTg.response, __fdTg.profileFrame),
+          evidence: null,
+          candidates: [],
+          timestamp,
+          threadId,
+          decisionFrame: {
+            mode: "NATURAL",
+            intent: "chat",
+            llm: null,
+            ku: {
+              routeClass: "analysis",
+              answerLength: "medium",
+              answerMode: "analysis",
+              answerFrame: "statement_plus_one_question",
+              routeReason: __fdTg.routeReason,
+              answerProfileLayerV1: { profileFrame: TENMON_FOUNDER_UPDATE_PROFILE_FRAME_V1 },
+              heart: normalizeHeartShape(__heart),
+              lawsUsed: [],
+              evidenceIds: [],
+              lawTrace: [],
+            },
+          },
+        }),
+      );
+    }
+  } catch {}
 
   // TRUTH_GATE_RETURN_V2 (hard preempt) — definition Q のときはスキップし、後段の DEF ブロックで処理
   // TENMON_CONVERSATION_100_SEAL_PDCA_V1: 明示字数（中帯以上）は 140〜220 字の truth 短答に吸わせず EXPLICIT_CHAR_PREEMPT へ委譲
@@ -8593,6 +8886,71 @@ if (!isCmd0 && !hasDoc0 && !askedMenu0 && __isKotodamaCoverage) {
         }
       } catch {}
 
+      // TENMON_SUPPORT_ROUTE_SHAPE_AND_TRIAGE_STABILIZATION_V1: scripture ゲートより前に support を固定（誤落下抑止）
+      {
+        const __triScr = classifyTenmonSupportEarlyTriageV1(__msgScriptRaw);
+        if (__triScr && /^SUPPORT_/u.test(__triScr.routeReason)) {
+          return await res.json(
+            __tenmonGeneralGateResultMaybe({
+              response: __triScr.response,
+              evidence: null,
+              candidates: [],
+              timestamp,
+              threadId,
+              decisionFrame: {
+                mode: "NATURAL",
+                intent: "chat",
+                llm: null,
+                ku: {
+                  routeClass: "support",
+                  answerLength: "short",
+                  answerMode: "support",
+                  answerFrame: "one_step",
+                  routeReason: __triScr.routeReason,
+                  heart: normalizeHeartShape(__heart),
+                  lawsUsed: [],
+                  evidenceIds: [],
+                  lawTrace: [],
+                },
+              },
+            }),
+          );
+        }
+      }
+
+      // TENMON_FOUNDER_UPDATE_MODE_AND_ANSWER_FRAME_V1: scripture ゲートより前に Founder 枠を固定
+      {
+        const __fdScr = classifyTenmonFounderUpdateFrameTriageV1(__msgScriptRaw);
+        if (__fdScr) {
+          return await res.json(
+            __tenmonGeneralGateResultMaybe({
+              response: applyAnswerProfilePostComposeV1(__fdScr.response, __fdScr.profileFrame),
+              evidence: null,
+              candidates: [],
+              timestamp,
+              threadId,
+              decisionFrame: {
+                mode: "NATURAL",
+                intent: "chat",
+                llm: null,
+                ku: {
+                  routeClass: "analysis",
+                  answerLength: "medium",
+                  answerMode: "analysis",
+                  answerFrame: "statement_plus_one_question",
+                  routeReason: __fdScr.routeReason,
+                  answerProfileLayerV1: { profileFrame: TENMON_FOUNDER_UPDATE_PROFILE_FRAME_V1 },
+                  heart: normalizeHeartShape(__heart),
+                  lawsUsed: [],
+                  evidenceIds: [],
+                  lawTrace: [],
+                },
+              },
+            }),
+          );
+        }
+      }
+
       if (
         shouldEnterScriptureBoundaryGate({
           isTestTid: isTestTid0,
@@ -13526,6 +13884,12 @@ const __heartNorm = normalizeHeartShape(__heart);
           threadCore: __threadCore ?? null,
           rawMessage: String(message ?? ""),
         });
+        try {
+          __tenmonChatTsCentralBindingObserveV1(__ku as Record<string, unknown>, {
+            routeReason: String((__ku as any).routeReason || ROUTE_NATURAL_GENERAL_LLM_TOP_V1),
+            rawMessage: String(message ?? ""),
+          });
+        } catch {}
         try {
           const __apGen = (__ku as any).answerProfileLayerV1;
           if (__apGen?.profileFrame) {

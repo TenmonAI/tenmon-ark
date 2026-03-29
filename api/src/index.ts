@@ -120,6 +120,7 @@ app.use("/api", adminRemoteIntakeRouter);
 app.use("/api", adminRemoteBuildRouter);
 app.use("/api", adminMacDecisionRouter);
 app.use("/api", meRouter);
+app.use("/api", billingRouter);
 app.use("/api", authLocalRouter);
 
 app.use("/api", authRouter);
@@ -172,4 +173,5 @@ import { writerDraftRouter } from "./routes/writerDraft.js";
 import { infraAssetsRouter } from "./routes/infraAssets.js";
 import chatFrontRouter from "./routes/chat_front.js";
 import meRouter from "./routes/me.js";
+import billingRouter from "./routes/billing.js";
 import { authLocalRouter } from "./routes/auth_local.js";

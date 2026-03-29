@@ -12,6 +12,7 @@ import {
   extractTenmonUserFacingFinalTextV1,
   stripTenmonInternalSurfaceLeakV1,
   suppressPrefaceDuplicateBeforeSeenmarkV1,
+  suppressRepetitiveTruthFrameV1,
 } from "../../core/tenmonResponseProjector.js";
 import { applyAnswerProfilePostComposeV1 } from "../../core/answerProfileLayer.js";
 
@@ -62,6 +63,7 @@ export function cleanLlmFrameV1(r: string, ctx?: CleanLlmFrameContextV1): string
     }
   }
   __stripped = stripTenmonInternalSurfaceLeakV1(__stripped);
+  __stripped = suppressRepetitiveTruthFrameV1(__stripped);
   __stripped = suppressPrefaceDuplicateBeforeSeenmarkV1(__stripped);
   if (__in !== __out || __out !== __stripped) console.log("[CLEAN_LLM_FRAME] stripped");
   else if (__in.includes("いまの言葉を")) console.log("[CLEAN_LLM_FRAME] MISS pattern=", JSON.stringify(__in.slice(0, 40)));

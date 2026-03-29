@@ -33,7 +33,12 @@ import {
   trimTenmonSurfaceNoiseV3,
   weaveKhsEvidenceIntoHybridSurfaceV1,
 } from "../../core/tenmonConversationSurfaceV2.js";
-import { extractTenmonUserFacingFinalTextV1 } from "../../core/tenmonResponseProjector.js";
+import {
+  extractTenmonUserFacingFinalTextV1,
+  stripTenmonInternalSurfaceLeakV1,
+  suppressPrefaceDuplicateBeforeSeenmarkV1,
+  suppressRepetitiveTruthFrameV1,
+} from "../../core/tenmonResponseProjector.js";
 import {
   buildHumanReadableEvidenceFootingLineV1,
   buildMainlineTenmonHeadV1,
@@ -159,6 +164,9 @@ function stripScripturePlaceholderAndTraceV1(text: string): string {
 function stripSurfaceTemplateLeakFinalizeV1(text: string): string {
   let t = String(text || "");
   const removals: RegExp[] = [
+    /いまの読み方は正典と会話の往還[^。\n]{0,400}[。．]?/gu,
+    /いまの答えは、意味の芯は[^。\n]{0,400}[。．]?/gu,
+    /(?:^|\n)\s*(?:center|root_reasoning|truth_structure|verdict)\s*:\s*[^\n]+/gimu,
     /さっき見ていた中心（[^）\n]{0,120}）を土台に、いまの話を見ていきましょう。\s*/gu,
     /さっき見ていた中心[^\n]*/gu,
     /^（[^）\n]{0,120}）を土台に、いまの話を見ていきましょう。\s*\n?/gmu,
@@ -175,10 +183,19 @@ function stripSurfaceTemplateLeakFinalizeV1(text: string): string {
   for (const re of removals) {
     t = t.replace(re, "");
   }
-  return t
+  t = t
     .replace(/\n{3,}/g, "\n\n")
     .replace(/[ 　]{2,}/gu, " ")
     .trim();
+  t = stripTenmonInternalSurfaceLeakV1(t);
+  t = suppressRepetitiveTruthFrameV1(t);
+  t = suppressPrefaceDuplicateBeforeSeenmarkV1(t);
+  return stripTenmonInternalSurfaceLeakV1(t);
+}
+
+/** surface_leak_strip: finalize 本線の明示名（TENMON_CHAT_TS_BINDING_AND_SURFACE_EXIT_REWIRE_V1 / static scan） */
+export function stripSurfaceLeakFinalizeExplicitV1(body: string): string {
+  return stripSurfaceTemplateLeakFinalizeV1(String(body ?? ""));
 }
 
 function advanceScriptureFollowupIfLoopV1(args: {
@@ -1090,7 +1107,7 @@ export function applyFinalAnswerConstitutionAndWisdomReducerV1(payload: any): an
     rr === "NATURAL_GENERAL_LLM_TOP" &&
     /(相談|迷い|気分|感想|困って|しんど|辛い|つらい|焦り|不安|話を聞いて)/u.test(String(userMessageForSurface || ""));
   if (
-    /^(R22_NEXTSTEP_FOLLOWUP_V1|CONTINUITY_ANCHOR_V1|R22_ESSENCE_FOLLOWUP_V1|R22_COMPARE_ASK_V1|R22_COMPARE_FOLLOWUP_V1|RELEASE_PREEMPT_STRICT_COMPARE_BEFORE_TRUTH_V1|SUPPORT_.*|R22_SELFAWARE_.*)$/u.test(
+    /^(R22_NEXTSTEP_FOLLOWUP_V1|CONTINUITY_ANCHOR_V1|R22_ESSENCE_FOLLOWUP_V1|R22_COMPARE_ASK_V1|R22_COMPARE_FOLLOWUP_V1|RELEASE_PREEMPT_STRICT_COMPARE_BEFORE_TRUTH_V1|SUPPORT_.*|FOUNDER_.*|R22_SELFAWARE_.*)$/u.test(
       rr,
     ) ||
     __isNaturalGeneralConversational
@@ -1175,7 +1192,7 @@ export function applyFinalAnswerConstitutionAndWisdomReducerV1(payload: any): an
   if (rr === "CONTINUITY_ROUTE_HOLD_V1") {
     composed = surfaceContinuityHoldOneLineV1(composed);
   }
-  out.response = stripSurfaceTemplateLeakFinalizeV1(composed);
+  out.response = stripSurfaceLeakFinalizeExplicitV1(composed);
   if (rr === "TENMON_SUBCONCEPT_CANON_V1") {
     const s = String(out.response || "").replace(/\s+/g, " ").trim();
     if (s.length < 12) {

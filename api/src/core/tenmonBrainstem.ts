@@ -65,8 +65,18 @@ export type BrainstemInput = {
   } | null;
 };
 
-const RE_SUPPORT_UI = /(改行|enter|shift\+enter|shift enter|送信)/iu;
-const RE_SUPPORT_AUTH = /(ログイン|登録|合言葉|メール登録|入れない|認証)/iu;
+const RE_SUPPORT_UI = /(改行|enter|shift\+enter|shift enter|送信|改行できない|入力できない)/iu;
+const RE_SUPPORT_BILLING =
+  /(課金|billing|\bcharge\b|\bpayment\b|\binvoice\b|\brefund\b|\bpricing\b|\bsubscription\b|請求|支払い|支払|お支払い|決済|料金|プラン変更|プランの状態|課金表示|請求とプラン|サブスク|解約|返金|領収|領収書|インボイス|引き落とし|カード決済|クレジット|振込)/iu;
+const RE_SUPPORT_PWA =
+  /(\bPWA\b|PWA.{0,24}入れ|入れ.{0,24}PWA|ホーム画面|アプリ化|ショートカット|add\s*to\s*home|インストールできない|インストール|アプリが入れない|アプリが入らない|アプリとして追加|ホームに追加|ホーム画面に追加)/iu;
+const RE_SUPPORT_REG =
+  /(登録できない|登録方法|登録の仕方|登録って|新規登録|会員登録|登録したい|メールが届かない|届きません|迷惑フォルダ|招待コード|招待リンク|\binvite\b|アカウント作成|アカウントが作れ|メールアドレス|確認メール|リセットメール|仮登録|verify|verification)/iu;
+const RE_SUPPORT_AUTH =
+  /(ログイン|パスワード|パスワードを忘|再発行|合言葉|メール登録|認証メール|認証が来ない|アクセスできない|アカウントに入れない|アカウントで入れない|founder\s*会員|founder会員|ログインできない|ログインできません|(?:天聞|アーク|サイト|会員|アカウント).{0,24}(入れない|入れません)|(?:入れない|入れません).{0,24}(天聞|アーク|サイト|ログイン|アカウント|会員))/iu;
+const RE_SUPPORT_BUG = /(バグ|不具合|おかしくなった|おかしい|動かなくなった|真っ白|エラーが出る|エラーになる)/iu;
+const RE_SUPPORT_BUG_CTX =
+  /(天聞|アーク|画面|サイト|ログイン|PWA|チャット|入れない|入れません|会員|アプリ|エラー|表示|読み込み|接続|更新できない|動かない)/iu;
 const RE_SUPPORT_PRODUCT = /(使い方|利用方法|利用手順|使う流れ|どう使う|どう利用|使えば|始め方|どう始め|最初に何|まず何|何を入力|何ができる|操作方法|質問方法|どうやって質問|この欄|この画面の使い方|ここでの質問|手順を|使う方法|使い始め)/iu;
 const RE_JUDGEMENT =
   /(良い|悪い|正しい|間違い|べき|どっちが|どちらが|した方が|整理すれば|どう整理|優先すべき|何を優先|何から手をつけ|次に何を直|未接続)/u;
@@ -87,7 +97,16 @@ const RE_CONTINUITY_BACKGROUND = /(背景は|もう少し|法則で見ると)/u;
 const RE_DEFINE = /(とは(何|どういう|どのような)|って(何|どういう)|とは\s*[？?]?\s*$)/u;
 
 function isSupport(msg: string): boolean {
-  return RE_SUPPORT_UI.test(msg) || RE_SUPPORT_AUTH.test(msg) || RE_SUPPORT_PRODUCT.test(msg);
+  const m = String(msg ?? "").trim();
+  if (/^(入れない|入れません)(ですか)?[。！!？?]*$/iu.test(m)) return true;
+  if (RE_SUPPORT_UI.test(m)) return true;
+  if (RE_SUPPORT_BILLING.test(m)) return true;
+  if (RE_SUPPORT_PWA.test(m)) return true;
+  if (RE_SUPPORT_REG.test(m)) return true;
+  if (RE_SUPPORT_AUTH.test(m)) return true;
+  if (RE_SUPPORT_BUG.test(m) && RE_SUPPORT_BUG_CTX.test(m)) return true;
+  if (RE_SUPPORT_PRODUCT.test(m)) return true;
+  return false;
 }
 
 function isContinuity(msg: string, centerKey: string | null | undefined): boolean {
@@ -103,24 +122,7 @@ export function tenmonBrainstem(input: BrainstemInput): BrainstemDecision {
   const centerLabel = threadCore?.centerLabel ?? null;
   const explicitLen = input.explicitLengthRequested != null && Number(input.explicitLengthRequested) > 0 ? Number(input.explicitLengthRequested) : null;
 
-  // 1. explicit length 最優先
-  if (explicitLen != null) {
-    return {
-      routeClass: "analysis",
-      centerKey,
-      centerLabel,
-      answerLength: "long",
-      answerMode: "analysis",
-      answerFrame: "one_step",
-      responsePolicy: "answer_first",
-      explicitLengthRequested: explicitLen,
-      forbiddenMoves: ["feeling_preempt", "future_preempt"],
-      nextTurnSeed: null,
-      fallthroughAllowed: false,
-    };
-  }
-
-  // 2. support
+  // 1. support（明示字数より優先：課金/PWA/登録を subconcept・長文帯へ誤落下させない）
   if (isSupport(msg)) {
     return {
       routeClass: "support",
@@ -132,6 +134,23 @@ export function tenmonBrainstem(input: BrainstemInput): BrainstemDecision {
       responsePolicy: "answer_first",
       explicitLengthRequested: null,
       forbiddenMoves: [],
+      nextTurnSeed: null,
+      fallthroughAllowed: false,
+    };
+  }
+
+  // 2. explicit length
+  if (explicitLen != null) {
+    return {
+      routeClass: "analysis",
+      centerKey,
+      centerLabel,
+      answerLength: "long",
+      answerMode: "analysis",
+      answerFrame: "one_step",
+      responsePolicy: "answer_first",
+      explicitLengthRequested: explicitLen,
+      forbiddenMoves: ["feeling_preempt", "future_preempt"],
       nextTurnSeed: null,
       fallthroughAllowed: false,
     };

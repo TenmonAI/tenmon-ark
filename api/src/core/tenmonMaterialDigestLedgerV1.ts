@@ -11,6 +11,7 @@ import {
   type TenmonNasLocatorManifestV1,
   type TenmonNasSourcepackHandoffV1,
 } from "./tenmonNasArchiveBridgeV1.js";
+import { buildBookLedgerSettlementLayerSliceV1 } from "./tenmonBookReadingKernelV1.js";
 
 export type MaterialDigestStateV1 = "unconnected" | "connected" | "digested" | "circulating";
 
@@ -110,6 +111,13 @@ export const MATERIAL_DIGEST_LEDGER_CATALOG_V1: MaterialDigestEntryV1[] = [
     promotionHints: ["scripture_canon_edge"],
   },
   {
+    id: "kojiki_lineage",
+    label: "古事記系",
+    category: "scripture",
+    state: "connected",
+    promotionHints: ["mapping_layer", "generation_axis"],
+  },
+  {
     id: "manyoshu_kotodama",
     label: "万葉集・言霊観（参照層）",
     category: "other",
@@ -181,6 +189,7 @@ export function getMaterialDigestLedgerPayloadV1(): {
   nas_sourcepack_handoff: TenmonNasSourcepackHandoffV1;
   nas_ark_acceptance_relock: TenmonNasArkAcceptanceRelockV1;
   notes: readonly string[];
+  book_ledger_settlement: ReturnType<typeof buildBookLedgerSettlementLayerSliceV1>;
 } {
   const materials = MATERIAL_DIGEST_LEDGER_CATALOG_V1;
   const nas_locator_manifest = buildTenmonNasLocatorManifestV1(
@@ -216,6 +225,8 @@ export function getMaterialDigestLedgerPayloadV1(): {
     digestStateVisibleTuneCard: digestStateVisibleTuneNeeded ? "TENMON_DIGEST_STATE_VISIBLE_TUNE_CURSOR_AUTO_V1" : null,
   };
 
+  const book_ledger_settlement = buildBookLedgerSettlementLayerSliceV1();
+
   return {
     card: "TENMON_KHS_DIGEST_LEDGER_AND_PROMOTION_CURSOR_AUTO_V1",
     version: 1,
@@ -239,7 +250,9 @@ export function getMaterialDigestLedgerPayloadV1(): {
       "circulating / promotion_candidates は state で分類",
       "mixed_question_restored は promotionHints で識別",
       "NAS canonical_root は論理パス（TENMON_NAS_CANONICAL_ROOT / TENMON_NAS_SSH_HOST）。本文は NAS、Ark は digest・ledger・locator。",
+      "book_ledger_settlement: 書籍台帳・judge 6 束・law/comparison/uncertainty カード（TENMON_BOOK_LEDGER_AND_SETTLEMENT_LAYER）。",
     ],
+    book_ledger_settlement,
   };
 }
 

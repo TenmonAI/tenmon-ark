@@ -11,6 +11,7 @@ import { evaluateKokuzoBadHeuristicV1 } from "./kokuzoBadGuardV1.js";
 import { clampQuestionMarksKeepLastNV1 } from "../planning/responsePlanCore.js";
 import { dedupeNextStepAndQuestionSurfaceV1 } from "./tenmonConversationSurfaceV1.js";
 import { applyAnswerProfilePostComposeV1 } from "./answerProfileLayer.js";
+import { stripTenmonInternalSurfaceLeakV1 } from "./tenmonResponseProjector.js";
 
 export type KhsFractalEvidenceSlotV1 = {
   doc?: string;
@@ -179,6 +180,8 @@ const TENMON_SURFACE_NOISE_FLEX_PATTERNS_V3: RegExp[] = [
   /還元として、いまの主題を一句に圧し、説明と判断を分けずに一段で言い切る。/gu,
   /この問いについて、今回は分析の立場で答えます。/gu,
   /[^。\n]{1,48}について、今回は(?:分析|定義|説明)の立場で答えます。/gu,
+  /いまの読み方は正典と会話の往還[^。\n]{0,400}[。．]?/gu,
+  /いまの答えは、意味の芯は[^。\n]{0,400}[。．]?/gu,
   /定義は補完待ちです。?/gu,
   /経典に根ざす法則（呼称は人間向けに要約）について、今回は分析の立場で答えます。?/gu,
   /判断軸（内部参照は要約表示）について、今回は分析の立場で答えます。?/gu,
@@ -264,8 +267,13 @@ export function stripInternalRouteTokensFromSurfaceV1(text: string): string {
   t = t.replace(/^\s*center\s*[:：]\s*[^\n]+$/gimu, "");
   t = t.replace(/^\s*次軸\s*[:：]\s*[^\n]+$/gimu, "");
   t = t.replace(/^\s*次観測\s*[:：]\s*[^\n]+$/gimu, "");
+  t = t.replace(/^\s*中心命題\s*[:：]\s*[^\n]+$/gimu, "");
+  t = t.replace(/^\s*立脚の中心は「[^」\n]+」です。[^\n]*$/gimu, "");
+  t = t.replace(/\btruth_structure:相=[^。\n]*/giu, "");
+  t = t.replace(/\bverdict=center_loss[^。\n]*/giu, "");
   t = t.replace(/^\s*semanticNucleus\s*[:：]\s*[^\n]+$/gimu, "");
   t = t.replace(/^\s*threadCore\s*[:：]\s*[^\n]+$/gimu, "");
+  t = t.replace(/^\s*verdict\s*[:：]\s*[^\n]+$/gimu, "");
   t = t.replace(/^\s*["']?verdict["']?\s*[:：]\s*[^\n]+$/gimu, "");
   t = t.replace(/^\s*["']?decisionFrame["']?\s*[:：]\s*[^\n]+$/gimu, "");
   t = t.replace(/^\s*["']?thoughtCoreSummary["']?\s*[:：]\s*[^\n]+$/gimu, "");
@@ -297,6 +305,7 @@ const TENMON_SURFACE_MIN_PAD_BRIDGE_EXIT_V1 =
 export function polishTenmonChatResponseSurfaceExitV1(text: string, routeReason: string): string {
   const rr = String(routeReason || "").trim();
   let t = stripInternalRouteTokensFromSurfaceV1(String(text ?? "").trim());
+  t = stripTenmonInternalSurfaceLeakV1(t);
   if (!t) return t;
   const skipMin =
     /^FACTUAL_CURRENT_(DATE|PERSON|WEATHER)_V1$/u.test(rr) ||

@@ -20,6 +20,27 @@ CARD = "TENMON_COMPLETION_AND_ARCHITECTURE_FULL_REPORT_CURSOR_AUTO_V1"
 OUT_JSON = "tenmon_completion_and_architecture_full_report_v1.json"
 OUT_MD = "tenmon_completion_and_architecture_full_report_v1.md"
 
+# FINAL conversation upgrade mainline（実装カード）+ 後段検証（acceptance probe は主線に含めない）
+CONVERSATION_UPGRADE_MAINLINE_V1: list[tuple[str, str | None]] = [
+    (
+        "TENMON_SURFACE_LEAK_CLEANUP_CURSOR_AUTO_V1",
+        "api/automation/tenmon_surface_leak_cleanup_result_v1.json",
+    ),
+    (
+        "TENMON_SUPPORT_ROUTE_SHAPE_AND_TRIAGE_STABILIZATION_CURSOR_AUTO_V1",
+        "api/automation/tenmon_support_route_shape_and_triage_stabilization_result_v1.json",
+    ),
+    (
+        "TENMON_FOUNDER_UPDATE_MODE_AND_ANSWER_FRAME_CURSOR_AUTO_V1",
+        "api/automation/tenmon_founder_update_mode_and_answer_frame_result_v1.json",
+    ),
+    (
+        "TENMON_UNCERTAINTY_AND_CONFIDENCE_SURFACE_LOGIC_CURSOR_AUTO_V1",
+        "api/automation/tenmon_uncertainty_and_confidence_surface_logic_result_v1.json",
+    ),
+]
+ACCEPTANCE_VERIFICATION_CARD_V1 = "TENMON_CONVERSATION_ACCEPTANCE_PROBE_RELOCK_CURSOR_AUTO_V1"
+
 SCAN_ROOTS_REL = ("api/src", "api/automation", "site/src")
 SKIP_DIR_NAMES = frozenset(
     {"node_modules", "dist", ".git", "__pycache__", ".venv", "venv", "out", "archive"}
@@ -108,12 +129,12 @@ LEARNING_PATHS = [
 ]
 
 PROBE_MAP = [
-    ("define_kotodama", "manual_0", "言霊とは何か"),
-    ("define_hokekyo", "manual_1", "法華経とは何か"),
-    ("general_tired", "manual_2", "今日は少し疲れています"),
-    ("general_organize", "manual_3", "この件をどう整理すればいい？"),
-    ("symbolic_noah", "manual_4", "これはノアの方舟と重なるのでは"),
-    ("subconcept", "manual_5", "稗田阿礼を深層解読して"),
+    ("define_kotodama", "define_kotodama", "言霊とは何か"),
+    ("define_hokekyo", "define_hokekyo", "法華経とは何か"),
+    ("general_tired", "general_tired", "今日は少し疲れています"),
+    ("general_organize", "general_organize", "この件をどう整理すればいい？"),
+    ("symbolic_noah", "symbolic_noah", "これはノアの方舟と重なるのでは"),
+    ("subconcept", "uncertainty_sparse", "稗田阿礼系・不確実性プロキシ"),
 ]
 
 
@@ -320,6 +341,8 @@ def _probe_summary(repo: Path, auto: Path) -> dict[str, Any]:
         "loaded": True,
         "acceptance_pass": data.get("acceptance_pass"),
         "probe_ok_count": data.get("probe_ok_count"),
+        "ux_metrics": data.get("ux_metrics"),
+        "overall_verdict": data.get("overall_verdict"),
         "rows": rows,
     }
 
@@ -351,28 +374,36 @@ def _file_state(repo: Path, paths: list[str], label: str) -> dict[str, Any]:
     }
 
 
-def _now_needed_cards(
-    surface_leak_focus: int,
-    root_kernel_exists: bool,
-    probe_acceptance_pass: bool | None,
-) -> list[str]:
-    """優先順固定。surface 解消 / kernel 存在 / probe PASS なら各カードを順に除外。最大 3 枚。"""
-    ordered = [
-        "TENMON_SURFACE_LEAK_CLEANUP_CURSOR_AUTO_V1",
-        "TENMON_ROOT_ARBITRATION_KERNEL_RESTORE_CURSOR_AUTO_V1",
-        "TENMON_CONVERSATION_ACCEPTANCE_PROBE_RELOCK_CURSOR_AUTO_V1",
-    ]
-    surface_resolved = surface_leak_focus < 25
+def _artifact_mainline_done(repo: Path, rel: str | None, surface_leak_focus: int, card: str) -> bool:
+    """主線完了: surface は leak または result の acceptance_pass のみ（npm PASS だけでは締めない）。"""
+    if card == "TENMON_SURFACE_LEAK_CLEANUP_CURSOR_AUTO_V1":
+        if surface_leak_focus < 25:
+            return True
+        if rel and (repo / rel).is_file():
+            d = _safe_read_json(repo / rel)
+            if isinstance(d, dict) and not d.get("error") and d.get("acceptance_pass") is True:
+                return True
+        return False
+    if not rel or not (repo / rel).is_file():
+        return False
+    d = _safe_read_json(repo / rel)
+    if not isinstance(d, dict) or d.get("error"):
+        return False
+    if d.get("acceptance_pass") is True:
+        return True
+    if str(d.get("npm_run_check") or "").strip().upper() == "PASS":
+        return True
+    return False
+
+
+def _mainline_backlog(repo: Path, surface_leak_focus: int) -> list[str]:
+    """主線 4 枚のうち未完了のみ、順序固定・最大 4 枚。"""
     out: list[str] = []
-    for c in ordered:
-        if c == "TENMON_SURFACE_LEAK_CLEANUP_CURSOR_AUTO_V1" and surface_resolved:
+    for card, artifact_rel in CONVERSATION_UPGRADE_MAINLINE_V1:
+        if _artifact_mainline_done(repo, artifact_rel, surface_leak_focus, card):
             continue
-        if "ROOT_ARBITRATION_KERNEL_RESTORE" in c and root_kernel_exists:
-            continue
-        if "CONVERSATION_ACCEPTANCE_PROBE_RELOCK" in c and probe_acceptance_pass is True:
-            continue
-        out.append(c)
-    return out[:3]
+        out.append(card)
+    return out[:4]
 
 
 def main() -> int:
@@ -431,7 +462,8 @@ def main() -> int:
     elif "CORE_CONNECTED_BUT_SURFACE_OPEN" in completion_bands:
         primary_band = "CORE_CONNECTED_BUT_SURFACE_OPEN"
 
-    now_cards = _now_needed_cards(leak_focus, root_kernel_exists, probe_pass)
+    now_cards = _mainline_backlog(repo, leak_focus)
+    next_on_pass = now_cards[0] if now_cards else ACCEPTANCE_VERIFICATION_CARD_V1
 
     assessment = {
         "platform_state": "TENMON_ARK_V1_OPERATIONAL_WITH_GAPS",
@@ -441,10 +473,13 @@ def main() -> int:
         "root_state": "KERNEL_PRESENT" if root_kernel_exists else "KERNEL_MISSING",
         "continuity_state": "PROBE_DATA_AVAILABLE" if probe.get("loaded") else "UNKNOWN",
         "worktree_hygiene_state": "PRESSURED" if n_changed > 90 else "NORMAL",
+        "conversation_upgrade_mainline": [c for c, _ in CONVERSATION_UPGRADE_MAINLINE_V1],
+        "acceptance_verification_card": ACCEPTANCE_VERIFICATION_CARD_V1,
         "custom_gpt_surpass_blockers": [
-            "user_facing_internal_meta_lines_until_surface_exit_tightened",
-            "acceptance_probe_relock_until_pass",
-            "longform_persona_depth_vs_latency_tradeoff",
+            "surface_exit_and_user_facing_meta_tightening",
+            "support_route_shape_and_triage_stabilization",
+            "founder_update_mode_and_answer_frame",
+            "uncertainty_and_confidence_surface_logic",
         ],
     }
 
@@ -479,8 +514,14 @@ def main() -> int:
             "single_flight_queue_json": _exists(repo, "api/automation/tenmon_cursor_single_flight_queue_state.json"),
         },
         "assessment_summary": assessment,
+        "conversation_upgrade_mainline_v1": [c for c, _ in CONVERSATION_UPGRADE_MAINLINE_V1],
+        "acceptance_verification": {
+            "card": ACCEPTANCE_VERIFICATION_CARD_V1,
+            "role": "post_mainline_verification_not_implementation_card",
+            "acceptance_pass": probe_pass,
+        },
         "now_needed_cards": now_cards,
-        "nextOnPass": "TENMON_SURFACE_LEAK_CLEANUP_CURSOR_AUTO_V1",
+        "nextOnPass": next_on_pass,
         "nextOnFail": "TENMON_COMPLETION_AND_ARCHITECTURE_FULL_REPORT_RETRY_CURSOR_AUTO_V1",
     }
 
@@ -530,12 +571,30 @@ def main() -> int:
     md_lines.extend(["", "## 7. custom GPT 超えに対する残差", ""])
     for b in assessment["custom_gpt_surpass_blockers"]:
         md_lines.append(f"- {b}")
-    md_lines.extend(["", "## 8. 今必要なカード（最大 3）", ""])
+    md_lines.extend(
+        [
+            "",
+            "## 8. conversation upgrade 主線（最大 4）",
+            "",
+            "採用順（実装カード）:",
+        ],
+    )
+    for c in assessment["conversation_upgrade_mainline"]:
+        md_lines.append(f"- `{c}`")
+    md_lines.extend(["", "**未完了バックログ（now_needed_cards）:**", ""])
     for c in now_cards:
         md_lines.append(f"- `{c}`")
     md_lines.extend(
         [
             "",
+            "## 9. 検証カード（主線の後段）",
+            "",
+            f"- `{ACCEPTANCE_VERIFICATION_CARD_V1}`（acceptance_pass=`{probe_pass}`）",
+            "",
+        ],
+    )
+    md_lines.extend(
+        [
             "## layer coverage（要約）",
             "",
         ],
@@ -557,7 +616,19 @@ def main() -> int:
     md_lines.extend(["", "---", "", f"- nextOnPass: `{result['nextOnPass']}`", f"- nextOnFail: `{result['nextOnFail']}`", ""])
 
     (auto / OUT_MD).write_text("\n".join(md_lines), encoding="utf-8")
-    print(json.dumps({"wrote": str(auto / OUT_JSON), "completion_band": primary_band, "now_needed_cards": now_cards}, ensure_ascii=False, indent=2))
+    print(
+        json.dumps(
+            {
+                "wrote": str(auto / OUT_JSON),
+                "completion_band": primary_band,
+                "nextOnPass": next_on_pass,
+                "now_needed_cards": now_cards,
+                "acceptance_verification_card": ACCEPTANCE_VERIFICATION_CARD_V1,
+            },
+            ensure_ascii=False,
+            indent=2,
+        ),
+    )
     return 0
 
 

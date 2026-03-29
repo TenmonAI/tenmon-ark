@@ -465,6 +465,7 @@ export function responseComposer(input: ResponseComposerInput): ResponseComposer
     /\u3044\u307e\u306e\u8a00\u8449\u3092[\u201c\u201d""][^\n]*/gu,
     "",
   ).replace(/^\u3044\u307e\u306e\u8a00\u8449\u3092[^\n]*\n?/gm, "").trimStart();
+  out = stripTenmonInternalSurfaceLeakV1(out);
   const style = getTenmonStyle();
   void style.voice;
 

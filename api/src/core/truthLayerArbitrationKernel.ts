@@ -2,6 +2,9 @@
  * TENMON_ROOT_ARBITRATION_KERNEL_RESTORE_CURSOR_AUTO_V1
  * split / truthLayerArbitrationV1 / discernment / lineage / speculative guard を
  * 一段の root decision に束ねる（meaningArbitrationKernel の裁定式は変更しない）。
+ *
+ * TENMON_UNCERTAINTY_AND_CONFIDENCE_SURFACE_LOGIC: rootMode / displayConstraint は不変。
+ * ユーザー向け不確実性文言は confidenceDisplayLogic が rootMode / guard / evidence / raw を参照して付与。
  */
 
 import type { ThreadCore } from "./threadCore.js";

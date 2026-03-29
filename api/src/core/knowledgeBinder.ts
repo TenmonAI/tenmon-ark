@@ -5,7 +5,11 @@
 
 import { centerLabelFromKey } from "./threadCore.js";
 import { getThoughtGuideSummary } from "./thoughtGuide.js";
-import { getNotionCanonForRoute } from "./notionCanon.js";
+import {
+  buildVpsBookAnalysisNotionReflectionPayloadV1,
+  getNotionCanonForRoute,
+  splitVerdictTextToReflectionLinesV1,
+} from "./notionCanon.js";
 import { getPersonaConstitutionSummary } from "./personaConstitution.js";
 import { resolveGroundingRule } from "./sourceGraph.js";
 import { buildScriptureLineageSummary } from "./scriptureLineageEngine.js";
@@ -30,19 +34,24 @@ import {
   resolveTenmonPersonaConstitutionRuntimeV1,
 } from "./tenmonPersonaConstitutionRuntimeV1.js";
 import { buildTenmonVerdictEngineV1 } from "./tenmonVerdictEngineV1.js";
-import { resolveTenmonBookReadingKernelV1 } from "./tenmonBookReadingKernelV1.js";
+import { BOOK_LEDGER_SETTLEMENT_CATALOG_V1, resolveTenmonBookReadingKernelV1 } from "./tenmonBookReadingKernelV1.js";
 import { buildTenmonBookReadingToDeepreadBridgeV1 } from "./tenmonBookReadingToDeepreadBridgeV1.js";
 import { updateUserLexiconMemoryV1 } from "./userLexiconMemoryV1.js";
 import { arbitrateTruthLayerV1, type TruthLayerArbitrationResultV1 } from "./meaningArbitrationKernel.js";
 import type { InputSemanticSplitResultV1 } from "./inputSemanticSplitter.js";
-import { advanceThreadMeaningMemoryForRequestV1 } from "./threadMeaningMemory.js";
+import {
+  advanceThreadMeaningMemoryForRequestV1,
+  buildArkBookCanonConversationReuseV1FromJudgeV1,
+} from "./threadMeaningMemory.js";
 import { discernSourceLayerV1, type SourceLayerDiscernmentV1 } from "./sourceLayerDiscernmentKernel.js";
 import { judgeLineageAndTransformationV1, type LineageTransformationJudgementV1 } from "./lineageAndTransformationJudgementEngine.js";
+import { mergeStructuralCompatibilityWithKatakamunaReintegrationV1 } from "./structuralCompatibilityAndRootSeparation.js";
 import { buildSpeculativeGuardV1, type SpeculativeGuardV1 } from "./misreadExpansionAndSpeculativeGuard.js";
 import {
   buildRootTruthArbitrationKernelV1,
   type TruthLayerArbitrationKernelResultV1,
 } from "./truthLayerArbitrationKernel.js";
+import { buildUncertaintyConfidenceDisplayV1 } from "./confidenceDisplayLogic.js";
 
 export type KnowledgeBinderInput = {
   routeReason: string;
@@ -330,6 +339,59 @@ export function buildKnowledgeBinder(input: KnowledgeBinderInput): KnowledgeBind
   });
   const bookReadingKernelV1 = resolveTenmonBookReadingKernelV1(String(message || ""));
   const bookToDeepreadBridgeV1 = buildTenmonBookReadingToDeepreadBridgeV1(bookReadingKernelV1);
+  const ledgerBookIds = new Set(BOOK_LEDGER_SETTLEMENT_CATALOG_V1.map((e) => e.material_id));
+  const vpsReflectionBookId = (() => {
+    const p = bookReadingKernelV1.primary_book_material_id;
+    if (p && String(p).trim() && ledgerBookIds.has(String(p).trim())) return String(p).trim();
+    const ck = centerKey && String(centerKey).trim();
+    if (ck && ledgerBookIds.has(ck)) return ck;
+    return null;
+  })();
+  const nasRowForVpsReflection =
+    vpsReflectionBookId != null
+      ? digestLedgerPayload.nas_locator_manifest.entries.find((e) => e.materialId === vpsReflectionBookId) ?? null
+      : null;
+  const vpsBookAnalysisNotionReflectionV1 =
+    vpsReflectionBookId != null
+      ? buildVpsBookAnalysisNotionReflectionPayloadV1({
+          book_id: vpsReflectionBookId,
+          source_class: String(bookReadingKernelV1.book_class ?? "auxiliary"),
+          center_terms:
+            bookReadingKernelV1.center_terms.length > 0
+              ? bookReadingKernelV1.center_terms
+              : centerLabel
+                ? [centerLabel]
+                : [],
+          repeated_terms: [],
+          opposition_pairs: bookReadingKernelV1.contrast_terms,
+          tradition_evidence: splitVerdictTextToReflectionLinesV1(verdictEngineV1.tradition),
+          tenmon_mapping: splitVerdictTextToReflectionLinesV1(verdictEngineV1.tenmon_mapping),
+          uncertainty: [
+            ...new Set([
+              ...splitVerdictTextToReflectionLinesV1(verdictEngineV1.uncertainty),
+              ...uncertaintyFlags.map(String),
+            ]),
+          ],
+          provisional_verdict: String(verdictEngineV1.verdict || "").trim(),
+          nas_locator: nasRowForVpsReflection
+            ? {
+                materialId: nasRowForVpsReflection.materialId,
+                locator_ref: nasRowForVpsReflection.locator_ref,
+                nas_relative_path: nasRowForVpsReflection.nas_relative_path,
+                canonical_root: digestLedgerPayload.nas_locator_manifest.canonical_root,
+              }
+            : null,
+        })
+      : null;
+  const arkBookCanonConversationReuseV1 =
+    vpsBookAnalysisNotionReflectionV1 != null
+      ? buildArkBookCanonConversationReuseV1FromJudgeV1({
+          vps: vpsBookAnalysisNotionReflectionV1,
+          routeReason: rr,
+          routeClass,
+          opposition_pairs: bookReadingKernelV1.contrast_terms,
+        })
+      : null;
   const userLexiconMemoryV1 = updateUserLexiconMemoryV1({
     prev:
       threadCore && typeof threadCore === "object"
@@ -399,6 +461,8 @@ export function buildKnowledgeBinder(input: KnowledgeBinderInput): KnowledgeBind
     verdictEngineV1,
     bookReadingKernelV1,
     bookToDeepreadBridgeV1,
+    ...(vpsBookAnalysisNotionReflectionV1 ? { vpsBookAnalysisNotionReflectionV1 } : {}),
+    ...(arkBookCanonConversationReuseV1 ? { arkBookCanonConversationReuseV1 } : {}),
     userLexiconMemoryV1,
     verdictSections: {
       facts: verdictEngineV1.facts,
@@ -455,12 +519,17 @@ export function buildKnowledgeBinder(input: KnowledgeBinderInput): KnowledgeBind
   let lineageTransformationJudgementV1: LineageTransformationJudgementV1 | null = null;
   let speculativeGuardV1: SpeculativeGuardV1 | null = null;
   let truthLayerArbitrationKernelV1: TruthLayerArbitrationKernelResultV1 | null = null;
-  const structCompat =
+  const structCompatRaw =
     ku.structuralCompatibilityAndRootSeparationV1 != null &&
     typeof ku.structuralCompatibilityAndRootSeparationV1 === "object" &&
     !Array.isArray(ku.structuralCompatibilityAndRootSeparationV1)
       ? (ku.structuralCompatibilityAndRootSeparationV1 as Record<string, unknown>)
       : null;
+  const structCompat = mergeStructuralCompatibilityWithKatakamunaReintegrationV1(structCompatRaw, {
+    rawMessage: message,
+    routeReason: rr,
+    centerKey,
+  });
   const splitKu = ku.inputSemanticSplitResultV1;
   if (
     splitKu &&
@@ -499,6 +568,8 @@ export function buildKnowledgeBinder(input: KnowledgeBinderInput): KnowledgeBind
         discernment: sourceLayerDiscernmentV1,
         lineageJudgement: lineageTransformationJudgementV1,
         rawMessage: message,
+        routeReason: rr,
+        centerKey,
       });
       if (truthLayerArbitrationV1 && sourceLayerDiscernmentV1 && lineageTransformationJudgementV1 && speculativeGuardV1) {
         try {
@@ -702,6 +773,12 @@ export function applyKnowledgeBinderToKu(
   if (patch.bookToDeepreadBridgeV1 != null) {
     (ku as any).bookToDeepreadBridgeV1 = patch.bookToDeepreadBridgeV1;
   }
+  if (patch.vpsBookAnalysisNotionReflectionV1 != null) {
+    (ku as any).vpsBookAnalysisNotionReflectionV1 = patch.vpsBookAnalysisNotionReflectionV1;
+  }
+  if (patch.arkBookCanonConversationReuseV1 != null) {
+    (ku as any).arkBookCanonConversationReuseV1 = patch.arkBookCanonConversationReuseV1;
+  }
   if (patch.userLexiconMemoryV1 != null) {
     (ku as any).userLexiconMemoryV1 = patch.userLexiconMemoryV1;
   }
@@ -722,6 +799,34 @@ export function applyKnowledgeBinderToKu(
   }
   if (binder.truthLayerArbitrationKernelV1 != null) {
     (ku as any).truthLayerArbitrationKernelV1 = binder.truthLayerArbitrationKernelV1;
+  }
+  try {
+    const curCd = (ku as any).confidenceDisplayV1;
+    if (!curCd?.surfacePrefix) {
+      const rrKu = String((ku as any).routeReason ?? binder.binderSummary.routeReason ?? "");
+      const cd = buildUncertaintyConfidenceDisplayV1({
+        routeReason: rrKu,
+        evidenceRefCount: Array.isArray(binder.evidenceRefs) ? binder.evidenceRefs.length : 0,
+        groundedPriority: binder.groundingSelector.groundedPriority,
+        truthAnswerMode: binder.truthLayerArbitrationV1?.answerMode ?? null,
+        rootMode: binder.truthLayerArbitrationKernelV1?.rootMode ?? null,
+        speculativeGuard: binder.speculativeGuardV1
+          ? {
+              speculativeRisk: binder.speculativeGuardV1.speculativeRisk,
+              forbidDefinitiveClaim: binder.speculativeGuardV1.forbidDefinitiveClaim,
+              forbidHistoricalTone: binder.speculativeGuardV1.forbidHistoricalTone,
+            }
+          : null,
+        sourceMode: binder.sourceLayerDiscernmentV1?.sourceMode ?? null,
+        safeAnswerConstraint: binder.sourceLayerDiscernmentV1?.safeAnswerConstraint ?? null,
+        historicalCertainty: binder.lineageTransformationJudgementV1?.historicalCertainty ?? null,
+        rawMessage: String(threadMeaningOpts?.rawMessage ?? (ku as any).inputText ?? "").trim(),
+        uncertaintyFlagCount: Array.isArray(binder.uncertaintyFlags) ? binder.uncertaintyFlags.length : 0,
+      });
+      if (cd) (ku as any).confidenceDisplayV1 = cd;
+    }
+  } catch {
+    /* fail-closed */
   }
   try {
     const ltBinder = binder.multipassAnsweringV1?.evidence_pass?.lawTraceBinder;
