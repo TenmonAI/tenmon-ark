@@ -2,5 +2,5 @@
   "schema": "MULTI_AI_AUTONOMY_FAILURE_BUNDLE_V1",
   "verdict": "HOLD",
   "reason": "dryrun_gate_not_ready_run_harness_strict_preflight",
-  "generated_at": "2026-03-30T00:39:01Z"
+  "generated_at": "2026-03-30T00:40:43Z"
 }
