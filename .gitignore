@@ -226,3 +226,4 @@ api/automation/multi_ai_autonomy_*_report*.json
 api/automation/multi_ai_autonomy_runtime_state.json
 api/automation/multi_ai_autonomy_last_*.json
 api/automation/multi_ai_autonomy_execution_history.json
+api/automation/multi_ai_autonomy_preflight_result_v1.json
