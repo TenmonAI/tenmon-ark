@@ -234,3 +234,5 @@ api/automation/infinite_growth_generation_history.json
 api/automation/infinite_growth_learning_ledger*.json
 api/automation/infinite_growth_last_generated_card.md
 api/automation/infinite_growth_last_generated_card.json
+api/automation/multi_ai_autonomy_*.json
+api/automation/infinite_growth_*.json
