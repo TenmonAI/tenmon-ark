@@ -227,3 +227,10 @@ api/automation/multi_ai_autonomy_runtime_state.json
 api/automation/multi_ai_autonomy_last_*.json
 api/automation/multi_ai_autonomy_execution_history.json
 api/automation/multi_ai_autonomy_preflight_result_v1.json
+# TENMON_INFINITE_GROWTH — 揮発ランタイム（雛形は repo にあってもローカル上書きは無視可）
+api/automation/infinite_growth_runtime_state.json
+api/automation/infinite_growth_*_report*.json
+api/automation/infinite_growth_generation_history.json
+api/automation/infinite_growth_learning_ledger*.json
+api/automation/infinite_growth_last_generated_card.md
+api/automation/infinite_growth_last_generated_card.json

@@ -163,6 +163,7 @@ def run_preflight(
     allow_dirty_repo: bool,
     allow_no_audit: bool,
     write_result: bool,
+    allow_empty_queue: bool = False,
 ) -> tuple[dict[str, Any], int]:
     repo = _repo_root(auto_dir)
     checks: list[dict[str, Any]] = []
@@ -219,7 +220,10 @@ def run_preflight(
     q = _read_json(auto_dir / QUEUE_FN)
     qcards = _queue_cards(q)
     if not qcards:
-        add("queue_card_order_nonempty", False, "card_order empty or missing")
+        if allow_empty_queue:
+            add("queue_card_order_nonempty", True, "allow_empty_queue:infinite_growth_or_equiv")
+        else:
+            add("queue_card_order_nonempty", False, "card_order empty or missing")
     else:
         bad: list[str] = []
         for c in qcards:
@@ -330,6 +334,11 @@ def main() -> None:
     )
     ap.add_argument("--allow-dirty-repo", action="store_true")
     ap.add_argument("--allow-no-audit", action="store_true", help="base URL なしでも PASS 扱い（開発用）")
+    ap.add_argument(
+        "--allow-empty-queue",
+        action="store_true",
+        help="card_order 空でも PASS（infinite growth 生成レーン等）",
+    )
     ap.add_argument("--no-write-result", action="store_true")
     args = ap.parse_args()
 
@@ -352,6 +361,7 @@ def main() -> None:
         allow_dirty_repo=allow_dirty,
         allow_no_audit=allow_no_audit,
         write_result=not args.no_write_result,
+        allow_empty_queue=bool(args.allow_empty_queue),
     )
     print(json.dumps({"verdict": res.get("verdict"), "exit_code": code, "result_path": str(auto_dir / RESULT_FN)}, ensure_ascii=False))
     sys.exit(code)

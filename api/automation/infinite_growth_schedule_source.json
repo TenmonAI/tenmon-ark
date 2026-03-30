@@ -1,0 +1,60 @@
+{
+  "schema": "INFINITE_GROWTH_SCHEDULE_SOURCE_V2",
+  "version": 1,
+  "generated_by": "TENMON_INFINITE_GROWTH_SCHEDULE_SOURCE_BIND_CURSOR_AUTO_V1",
+  "generated_at": "2026-03-30T01:18:04Z",
+  "notes": "このファイルは infinite_growth_schedule_source_bind_cursor_auto_v1.py のみが生成する。手編集禁止。",
+  "phases": [
+    {
+      "name": "Phase1",
+      "lane": "intent",
+      "cards": [
+        {
+          "card_id": "TENMON_ARTIFACT_AND_WORKTREE_HYGIENE_CURSOR_AUTO_V1",
+          "tier": "A_full_auto_safe",
+          "prerequisites": [],
+          "acceptance": [
+            "npm run check が成功する",
+            "GET /api/audit が ok",
+            "artifact / worktree 衛生 probe が緑"
+          ],
+          "manual_only": false,
+          "repeatable": true,
+          "completion_signal": "{\"type\":\"probe_json\",\"path\":\"tenmon_artifact_and_worktree_hygiene_result_v1.json\",\"field\":\"ok\"}"
+        },
+        {
+          "card_id": "TENMON_ARTIFACT_WORKTREE_HYGIENE_AND_RELOCK_CURSOR_AUTO_V2",
+          "tier": "A_full_auto_safe",
+          "prerequisites": [
+            "TENMON_ARTIFACT_AND_WORKTREE_HYGIENE_CURSOR_AUTO_V1"
+          ],
+          "acceptance": [
+            "Phase1 衛生カードと同等の観測が維持される",
+            "worktree relock 証跡が結果 JSON に残る"
+          ],
+          "manual_only": false,
+          "repeatable": false,
+          "completion_signal": "{\"type\":\"always_pending\",\"path\":\"\",\"field\":\"\"}"
+        }
+      ]
+    },
+    {
+      "name": "Phase5_ops",
+      "lane": "orchestrator",
+      "cards": [
+        {
+          "card_id": "TENMON_MULTI_AI_ORCHESTRA_FULL_AUTONOMY_SUPERVISOR_CURSOR_AUTO_V1",
+          "tier": "A_full_auto_safe",
+          "prerequisites": [],
+          "acceptance": [
+            "multi_ai autonomy 契約 JSON が揃っている",
+            "dryrun gate / preflight が定義どおり評価される"
+          ],
+          "manual_only": true,
+          "repeatable": false,
+          "completion_signal": ""
+        }
+      ]
+    }
+  ]
+}

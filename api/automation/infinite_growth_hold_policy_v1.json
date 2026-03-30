@@ -1,0 +1,19 @@
+{
+  "schema": "INFINITE_GROWTH_HOLD_POLICY_V1",
+  "version": 1,
+  "fail_closed": true,
+  "hold_codes": {
+    "empty_queue_no_generatable_next": "スケジュール上、生成可能な次カードがない",
+    "manual_only_frontier": "先頭が manual_only のみ",
+    "unresolved_blocker": "blocker 未解消",
+    "repeated_hold_reason": "同一 hold_reason が閾値連続",
+    "repeated_same_card": "同一 card が HOLD 閾値連続",
+    "acceptance_not_clear": "acceptance 文字列が空または曖昧",
+    "authority_missing": "GPT / 天聞 execution authority 不在（multi_ai 経路）",
+    "dangerous_scope": "canon/chat/persona 等の禁止パスが生成物に含まれる",
+    "queue_not_allowlisted": "投入候補が allowlist / tier で拒否",
+    "strict_preflight_failed": "preflight 不通過",
+    "audit_failed": "/api/audit 異常",
+    "runtime_contract_missing": "前提 autonomy / infinite_growth 契約欠落"
+  }
+}
