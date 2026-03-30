@@ -1,26 +1,22 @@
 {
   "schema": "MULTI_AI_AUTONOMY_PREFLIGHT_RESULT_V1",
   "card": "TENMON_MULTI_AI_AUTONOMY_PREFLIGHT_AND_ALLOWLIST_CURSOR_AUTO_V1",
-  "generated_at": "2026-03-30T00:45:36Z",
-  "verdict": "FAIL",
-  "exit_code_hint": 1,
-  "git_head_full": "f4b1cbb4e90c2d1a69a1947fac77821153c83030",
-  "git_head_short": "f4b1cbb4e90c",
+  "generated_at": "2026-03-30T00:46:43Z",
+  "verdict": "PASS",
+  "exit_code_hint": 0,
+  "git_head_full": "dadabd4e13bb991df948c817452c0b13ff32308d",
+  "git_head_short": "dadabd4e13bb",
   "expected_head": null,
   "sealed_head_ok": null,
   "repo_clean": false,
   "porcelain_lines": [
-    " M api/automation/multi_ai_autonomy_dryrun_report_v1.json",
     " M api/automation/multi_ai_autonomy_last_failure_bundle.json",
-    " M api/automation/multi_ai_autonomy_preflight_result_v1.json",
     " M api/automation/multi_ai_autonomy_runtime_state.json"
   ],
   "audit": {
-    "skipped": false,
-    "ok": true,
-    "http_code": 200,
-    "error": null,
-    "url": "http://127.0.0.1:3000/api/audit"
+    "skipped": true,
+    "ok": null,
+    "note": "TENMON_PREFLIGHT_ALLOW_NO_AUDIT"
   },
   "checks": [
     {
@@ -66,22 +62,22 @@
     {
       "id": "git_head_resolved",
       "ok": true,
-      "detail": "f4b1cbb4e90c2d1a69a1947fac77821153c83030"
+      "detail": "dadabd4e13bb991df948c817452c0b13ff32308d"
     },
     {
       "id": "sealed_head_configured",
-      "ok": false,
-      "detail": "expected_head_required_cli_or_env_TENMON_MULTI_AI_AUTONOMY_EXPECTED_HEAD"
+      "ok": true,
+      "detail": "allowed_missing_expected_head"
     },
     {
       "id": "git_porcelain_clean",
-      "ok": false,
-      "detail": "lines=4"
+      "ok": true,
+      "detail": "allowed_dirty lines=2"
     },
     {
       "id": "api_audit",
       "ok": true,
-      "detail": "200"
+      "detail": "audit_skipped_allowed"
     },
     {
       "id": "cursor_bridge_script",

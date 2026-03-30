@@ -1,7 +1,7 @@
 {
   "schema": "MULTI_AI_AUTONOMY_DRYRUN_REPORT_V1",
   "card": "TENMON_MULTI_AI_AUTONOMY_DRYRUN_HARNESS_CURSOR_AUTO_V1",
-  "generated_at": "2026-03-30T00:45:18Z",
+  "generated_at": "2026-03-30T00:46:43Z",
   "harness_verdict": "PASS",
   "full_autonomy_supervisor_ready": false,
   "strict_preflight_passed": false,
@@ -50,7 +50,7 @@
     "preflight_relaxed_allowances_active"
   ],
   "next_action": "run_again_with_strict_preflight_and_live_audit_for_production_gate",
-  "evidence_dir": "/var/log/tenmon/multi_ai_autonomy_dryrun/20260330T0045",
+  "evidence_dir": "/var/log/tenmon/multi_ai_autonomy_dryrun/20260330T0046",
   "preflight_verdict": "PASS",
   "preflight_exit": 0,
   "suggested_next_card": "TENMON_MULTI_AI_AUTONOMY_FULL_SUPERVISOR_BIND_CURSOR_AUTO_V1"

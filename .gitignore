@@ -219,3 +219,6 @@ api/automation/out/archive/
 **/watch_sessions/
 run.log
 nohup.log
+api/automation/multi_ai_autonomy_*_report*.json
+api/automation/multi_ai_autonomy_runtime_state.json
+api/automation/multi_ai_autonomy_last_*.json
