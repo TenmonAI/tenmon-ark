@@ -1,0 +1,61 @@
+{
+  "schema": "MULTI_AI_AUTONOMY_STOP_CONDITIONS_V1",
+  "max_supervisor_loops": 8,
+  "max_wall_clock_seconds": 0,
+  "dirty_cumulative_abort_threshold": 80,
+  "dirty_per_loop_abort_threshold": 40,
+  "pre_flight_audit_if_configured": true,
+  "audit_fail_aborts_supervisor": true,
+  "post_phase_audit_fail_aborts": true,
+  "enable_cursor_bridge_phase": false,
+  "enable_schedule_executor_step": false,
+  "orchestra_probe_vps_default": false,
+  "enforce_ai_layer_consistency": true,
+  "sensitive_path_prefixes": [
+    "api/src/routes/chat.ts",
+    "api/src/routes/chat_refactor/",
+    "api/src/core/notionCanon.ts",
+    "api/src/core/scriptureCanon.ts",
+    "api/src/core/knowledgeBinder.ts",
+    "canon/"
+  ],
+  "route_contract_watch_prefixes": [
+    "api/src/routes/"
+  ],
+  "route_contract_max_new_dirty_per_loop": 6,
+  "broad_change_path_substrings": [
+    "/persona",
+    "persona",
+    "Persona",
+    "/scripture",
+    "notionCanon",
+    "scriptureCanon"
+  ],
+  "broad_change_max_new_matches_per_loop": 3,
+  "forbidden_path_substrings_auto_abort": [
+    "api/src/routes/chat.ts",
+    "canon/",
+    "api/src/core/scriptureCanon",
+    "api/src/core/notionCanon"
+  ],
+  "strict_preflight_each_loop": false,
+  "hold_reason_codes": [
+    "manual_judgement_required",
+    "preflight_failed",
+    "guardrail_missing",
+    "allowlist_miss",
+    "cursor_result_missing",
+    "acceptance_ambiguous",
+    "build_failed",
+    "restart_failed",
+    "audit_abnormal",
+    "probe_failed",
+    "repo_dirty_expanded",
+    "unresolved_conflict",
+    "external_dependency_uncertain",
+    "claude_severity_high",
+    "contradiction_unresolved",
+    "state_write_failed"
+  ],
+  "notes": "fail-closed: chat/canon/正文広域・persona・正典は自動停止。strict_preflight_each_loop で各ループ先頭に厳格 preflight。cursor 既定オフ。overnight は段階投入。"
+}

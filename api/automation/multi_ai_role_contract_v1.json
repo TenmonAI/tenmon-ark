@@ -4,7 +4,8 @@
   "card": "TENMON_MULTI_AI_ORCHESTRA_EXECUTOR_CURSOR_AUTO_V1",
   "sovereignty": {
     "primary_arbiter": ["gpt", "tenmon_ai"],
-    "note": "Claude / Gemini / browser AI は補助のみ。思想主権・正典/正文/persona/canon の意味確定は GPT/天聞AI のみ。"
+    "note": "Claude / Gemini / browser AI は補助のみ。思想主権・正典/正文/persona/canon の意味確定は GPT/天聞AI のみ。",
+    "autonomy_guardrail_contract_ref": "multi_ai_autonomy_guardrail_contract_v1.json"
   },
   "layers": [
     {

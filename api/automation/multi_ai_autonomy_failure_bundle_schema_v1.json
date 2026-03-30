@@ -1,0 +1,48 @@
+{
+  "schema": "MULTI_AI_AUTONOMY_FAILURE_BUNDLE_SCHEMA_V1",
+  "version": 1,
+  "description": "多AI自動運転監督系が保存する failure_bundle の契約。fail-closed: 必須フィールド欠落は読み手が FAIL 扱いにできること。",
+  "bundle_type_id": "MULTI_AI_AUTONOMY_FAILURE_BUNDLE_V1",
+  "required_string_fields": [
+    "schema",
+    "verdict",
+    "reason"
+  ],
+  "recommended_fields": [
+    "generated_at",
+    "hold_reason",
+    "evidence",
+    "current_card",
+    "phase",
+    "upstream_exit_code"
+  ],
+  "verdict_enum": [
+    "HOLD",
+    "FAIL"
+  ],
+  "verdict_meanings": {
+    "HOLD": "手動裁定・追加観測・ゲート解除まで自動で次に進まない",
+    "FAIL": "検証・ビルド・状態書き込み等の硬い失敗。修正またはロールバック後に再開"
+  },
+  "storage_contract": {
+    "primary_path_relative_automation_dir": "multi_ai_autonomy_last_failure_bundle.json",
+    "supervisor_log_mirror_subpath": "evidence_last_failure_bundle.json",
+    "must_persist_on_terminal_fail": true,
+    "must_include_reason_or_hold_reason": true
+  },
+  "evidence_bundle_contract": {
+    "orchestra_root_default": "/var/log/tenmon/multi_ai_orchestra/",
+    "autonomy_orchestra_root_default": "/var/log/tenmon/multi_ai_autonomy/",
+    "supervisor_log_root_default": "/var/log/tenmon/multi_ai_autonomy_supervisor/",
+    "minimum_artifacts_per_orchestra_loop": [
+      "observation_bundle.json",
+      "task_router_result.json",
+      "adopted_plan.json",
+      "normalized_results.json"
+    ],
+    "on_hold_additional": [
+      "failure_bundle.json"
+    ]
+  },
+  "notes": "multi_ai_orchestra_executor が出力する failure_bundle（MULTI_AI_FAILURE_BUNDLE_V1）は別スキーマだが、監督が集約する際は reason / evidence を本契約に合わせてコピーまたは参照すること。"
+}

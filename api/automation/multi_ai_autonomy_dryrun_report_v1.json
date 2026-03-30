@@ -1,0 +1,22 @@
+{
+  "schema": "MULTI_AI_AUTONOMY_DRYRUN_REPORT_V1",
+  "card": "TENMON_MULTI_AI_AUTONOMY_DRYRUN_HARNESS_CURSOR_AUTO_V1",
+  "generated_at": "",
+  "harness_verdict": "PENDING",
+  "full_autonomy_supervisor_ready": false,
+  "strict_preflight_passed": null,
+  "relaxed_preflight_used": null,
+  "entered_phases": [],
+  "loops": [],
+  "allowlist_deny_smoke": null,
+  "contract_files_ok": null,
+  "blocked_reason": null,
+  "hold_reason": null,
+  "state_updates": {
+    "runtime_state_written": false,
+    "progress_report_written": false
+  },
+  "disconnected_or_unverified": [],
+  "next_action": "",
+  "notes": "`multi_ai_autonomy_dryrun_harness_v1.py` 実行で上書き。"
+}

@@ -1,0 +1,54 @@
+{
+  "schema": "MULTI_AI_AUTONOMY_GUARDRAIL_CONTRACT_V1",
+  "version": 1,
+  "card": "TENMON_MULTI_AI_AUTONOMY_GUARDRAIL_CONTRACT_CURSOR_AUTO_V1",
+  "final_authority": "GPT",
+  "final_authority_note": "主裁定は GPT / 天聞AI のみ。Claude / Gemini / browser その他外部AIの出力は候補・監査入力であり、単体では採用・実行権限を持たない。未観測推測の採用禁止。",
+  "external_ai_role": "candidate_only_not_final_arbitration",
+  "modes": {
+    "allowed": [
+      "observe",
+      "triage",
+      "draft_card",
+      "low_risk_impl",
+      "verify"
+    ],
+    "forbidden": [
+      "broad_refactor_chat_ts",
+      "canon_semantics_change",
+      "scripture_semantics_change",
+      "persona_semantics_change",
+      "intention_semantics_change",
+      "dist_edit",
+      "unverified_external_adoption"
+    ]
+  },
+  "hold_on": [
+    "manual_judgement_required",
+    "acceptance_ambiguous",
+    "cursor_result_missing",
+    "audit_abnormal",
+    "repo_dirty_expanded",
+    "conflict_unresolved",
+    "external_dependency_uncertain",
+    "high_severity_risk"
+  ],
+  "fail_on": [
+    "build_failed",
+    "restart_failed",
+    "probe_failed",
+    "state_write_failed"
+  ],
+  "acceptance_gate": {
+    "rule": "acceptance PASS 以外は次フェーズ・次カードに進まない",
+    "fail_closed": true
+  },
+  "evidence_contract_refs": {
+    "failure_bundle_schema": "multi_ai_autonomy_failure_bundle_schema_v1.json",
+    "hold_policy": "multi_ai_autonomy_hold_policy_v1.json",
+    "verdict_schema": "multi_ai_autonomy_verdict_schema_v1.json",
+    "orchestra_role_contract": "multi_ai_role_contract_v1.json",
+    "orchestra_hold_policy": "multi_ai_hold_policy_v1.json"
+  },
+  "notes": "supervisor 本体は本契約および参照 JSON を読み、未固定の独自判断で自動前進しない。dist 直編集禁止。正典・正文の意味改変は自動不可。"
+}

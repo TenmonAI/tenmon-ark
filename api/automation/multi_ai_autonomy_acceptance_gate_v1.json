@@ -1,0 +1,36 @@
+{
+  "schema": "MULTI_AI_AUTONOMY_ACCEPTANCE_GATE_V1",
+  "version": 1,
+  "card": "TENMON_MULTI_AI_AUTONOMY_RESULT_RETURN_AND_ACCEPTANCE_LOCK_CURSOR_AUTO_V1",
+  "pass_requires_all": [
+    "result_return_contract_satisfied",
+    "mechanical_status_allows_pass",
+    "build_ok_when_check_ran",
+    "audit_ok_when_required",
+    "no_parse_error_on_result_return"
+  ],
+  "mechanical_status_allow_pass": ["PASS"],
+  "mechanical_status_hold": ["HOLD", "NOOP", "TIMEOUT"],
+  "mechanical_status_fail": ["FAIL"],
+  "observer_rules": {
+    "build_ok_when_check_ran": {
+      "description": "npm run check が ran_check=true のときのみ ok=true が必要"
+    },
+    "audit_ok_when_required": {
+      "description": "base_url があり require_audit=true のとき audit ok が必要（skipped は不可）"
+    },
+    "probe_ok_when_required": {
+      "description": "require_probe_aggregate=true のとき last_probe_status.aggregate_ok_signal が true"
+    },
+    "restart_ok_when_required": {
+      "description": "require_restart_ok=true のとき restart_status.ok（bridge は多く skipped）"
+    }
+  },
+  "defaults": {
+    "require_audit": true,
+    "require_probe_aggregate": false,
+    "require_restart_ok": false
+  },
+  "verdict_priority": "FAIL > HOLD > PASS（いずれかで確定したら短絡）",
+  "notes": "PASS は build / restart（要求時）/ audit / probe（要求時）を満たし、かつ result return が契約通りで status=PASS のときのみ。"
+}

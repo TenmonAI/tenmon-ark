@@ -33,5 +33,6 @@
     "overnight_fully_autonomous_seal_without_gates"
   ],
   "verdicts": ["PASS", "FAIL", "HOLD"],
+  "autonomy_hold_policy_ref": "multi_ai_autonomy_hold_policy_v1.json",
   "initial_scope_note": "初回導入: Claude 監査 / Gemini 構造化 / Cursor 実装 / VPS acceptance のみ。persona/canon 自動変更と kokuzo 本番自動投入は範囲外。"
 }

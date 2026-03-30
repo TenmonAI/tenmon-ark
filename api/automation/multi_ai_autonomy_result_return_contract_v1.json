@@ -1,0 +1,31 @@
+{
+  "schema": "MULTI_AI_AUTONOMY_RESULT_RETURN_CONTRACT_V1",
+  "version": 1,
+  "card": "TENMON_MULTI_AI_AUTONOMY_RESULT_RETURN_AND_ACCEPTANCE_LOCK_CURSOR_AUTO_V1",
+  "required": [
+    "card",
+    "status",
+    "files_changed",
+    "summary",
+    "diff_stat",
+    "result_log_path",
+    "updated_at"
+  ],
+  "allowed_status": ["PASS", "FAIL", "HOLD", "NOOP", "TIMEOUT"],
+  "status_semantics": {
+    "PASS": "実装・検証の機械条件を満たし次工程へ進める",
+    "FAIL": "ビルド失敗・明示拒否・ガード阻害など硬い失敗",
+    "HOLD": "結果束欠落・acceptance 不明確・要人手（result return 不在もここ）",
+    "NOOP": "dry-run 等、送信・パッチなしの意図的未実行",
+    "TIMEOUT": "キュー待ち・実行待ちが時間切れ"
+  },
+  "bundle_type_id": "MULTI_AI_AUTONOMY_RESULT_RETURN_V1",
+  "mapping_from_cursor_bridge": {
+    "card": "card_id",
+    "files_changed": "changed_files / touched_files",
+    "summary": "final summary line",
+    "result_log_path": "log_dir/run.log",
+    "diff_stat": "bundle entry のメトリクスがあれば格納、無ければ {}"
+  },
+  "fail_closed_notes": "必須キー欠落・JSON 破損・status 不在は parse error 扱いで HOLD。PASS は acceptance gate と併用。"
+}

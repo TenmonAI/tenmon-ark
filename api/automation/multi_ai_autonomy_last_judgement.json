@@ -1,0 +1,43 @@
+{
+  "schema": "MULTI_AI_AUTONOMY_LAST_JUDGEMENT_V1",
+  "generated_at": "2026-03-30T00:31:20Z",
+  "verdict": "PASS",
+  "reason": "observer_acceptance_ok",
+  "result_return_path": null,
+  "result_return_valid": null,
+  "mechanical_status": null,
+  "acceptance_gate_profile": "observer_only",
+  "observer_snapshot": {
+    "build_ok": true,
+    "audit": {
+      "skipped": true,
+      "ok": null,
+      "http_code": null,
+      "error": null
+    },
+    "probe": {
+      "entries": [
+        {
+          "path": "tenmon_final_acceptance_probe_relock_result_v3.json",
+          "present": true,
+          "ok": null,
+          "sealed_operable_ready": null
+        },
+        {
+          "path": "tenmon_conversation_acceptance_probe_relock_result_v1.json",
+          "present": true,
+          "ok": null,
+          "sealed_operable_ready": null
+        }
+      ],
+      "aggregate_ok_signal": false
+    }
+  },
+  "checks": [
+    {
+      "id": "observer_acceptance",
+      "ok": true,
+      "detail": "observer_acceptance_ok"
+    }
+  ]
+}

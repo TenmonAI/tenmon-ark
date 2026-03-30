@@ -1,0 +1,35 @@
+{
+  "schema": "MULTI_AI_AUTONOMY_VERDICT_SCHEMA_V1",
+  "version": 1,
+  "guardrail_contract_ref": "multi_ai_autonomy_guardrail_contract_v1.json",
+  "runtime_state_status_enum": [
+    "IDLE",
+    "RUNNING",
+    "PASS",
+    "FAIL",
+    "HOLD"
+  ],
+  "terminal_supervisor_outcomes": {
+    "PASS": "当該ループの acceptance（build / audit / probe 等）が契約どおり成功し、キュー前進が許可された状態",
+    "PASS_queue_exhausted": "実行対象キュー枯渇による正常終了（次キュー投入まで自動で新規作業なし）",
+    "FAIL": "fail_on に相当する硬い失敗（ビルド・probe・状態書き込み等）",
+    "HOLD": "hold_on に相当する停止（手動裁定・観測不足・矛盾・高リスク等）"
+  },
+  "non_terminal": {
+    "RUNNING": "監督ループ実行中",
+    "IDLE": "未開始または明示初期化後"
+  },
+  "loop_progress_verdicts": [
+    "PASS",
+    "FAIL",
+    "HOLD",
+    "DRY_RUN"
+  ],
+  "loop_progress_note": "DRY_RUN は本番前検証用。本番自動運転では acceptance PASS まで DRY_RUN だけでは次カードに進まない運用とする。",
+  "orchestra_exit_code_hints": {
+    "0": "executor 正常終了（内容は acceptance_bundle / failure_bundle で再判定）",
+    "1": "FAIL 系（例: VPS audit 不合格）",
+    "2": "HOLD 系（例: GPT 未承認・パターン HOLD）"
+  },
+  "notes": "最終判定は常に GPT 主裁定＋観測証拠に従う。外部AIの raw 出力だけでは PASS にできない。"
+}

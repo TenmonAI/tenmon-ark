@@ -1,0 +1,16 @@
+{
+  "schema": "MULTI_AI_AUTONOMY_RETRY_POLICY_V1",
+  "max_retries_same_card": 1,
+  "same_card_retry_max": 1,
+  "same_error_consecutive_max": 1,
+  "abort_on_consecutive_identical_error": true,
+  "preflight_failure_no_retry": true,
+  "allowlist_miss_no_retry": true,
+  "semantic_forbidden_no_retry": true,
+  "timeout_orchestra_seconds": 7200,
+  "timeout_cursor_bridge_seconds": 3600,
+  "timeout_schedule_executor_seconds": 7200,
+  "external_api_failure_is_hold": true,
+  "unexecuted_timeout_verdict": "HOLD",
+  "notes": "preflight 失敗・allowlist 外・意味禁止領域は再試行なし。timeout / 外部API失敗は HOLD。"
+}

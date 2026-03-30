@@ -1,0 +1,20 @@
+{
+  "schema": "MULTI_AI_AUTONOMY_DRYRUN_QUEUE_V1",
+  "version": 1,
+  "notes": "乾式ハーネス用。実 API / deploy / restart は行わない。kind は harness 内分岐。",
+  "max_loops": 2,
+  "scenarios": [
+    {
+      "scenario_id": "DRYRUN_L1_happy_judge",
+      "card_id": "TENMON_ARTIFACT_AND_WORKTREE_HYGIENE_CURSOR_AUTO_V1",
+      "kind": "happy_judge",
+      "description": "合成 result return + 最小 observer で judge PASS"
+    },
+    {
+      "scenario_id": "DRYRUN_L2_missing_result_return",
+      "card_id": "TENMON_ARTIFACT_AND_WORKTREE_HYGIENE_CURSOR_AUTO_V1",
+      "kind": "missing_result_return",
+      "description": "result return 欠落で judge HOLD"
+    }
+  ]
+}

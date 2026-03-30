@@ -1,0 +1,145 @@
+{
+  "schema": "MULTI_AI_AUTONOMY_PREFLIGHT_RESULT_V1",
+  "card": "TENMON_MULTI_AI_AUTONOMY_PREFLIGHT_AND_ALLOWLIST_CURSOR_AUTO_V1",
+  "generated_at": "2026-03-30T00:37:21Z",
+  "verdict": "FAIL",
+  "exit_code_hint": 1,
+  "git_head_full": "b6d1ab4f6ea2aef4e125bf913ab3f5df82fb2cc5",
+  "git_head_short": "b6d1ab4f6ea2",
+  "expected_head": "b6d1ab4",
+  "sealed_head_ok": true,
+  "repo_clean": false,
+  "porcelain_lines": [
+    " M api/automation/multi_ai_hold_policy_v1.json",
+    " M api/automation/multi_ai_role_contract_v1.json",
+    "?? api/automation/multi_ai_autonomy_acceptance_gate_v1.json",
+    "?? api/automation/multi_ai_autonomy_allowlist_v1.json",
+    "?? api/automation/multi_ai_autonomy_denylist_v1.json",
+    "?? api/automation/multi_ai_autonomy_dryrun_harness_v1.py",
+    "?? api/automation/multi_ai_autonomy_dryrun_queue.json",
+    "?? api/automation/multi_ai_autonomy_dryrun_report_v1.json",
+    "?? api/automation/multi_ai_autonomy_execution_history.json",
+    "?? api/automation/multi_ai_autonomy_failure_bundle_schema_v1.json",
+    "?? api/automation/multi_ai_autonomy_guardrail_contract_v1.json",
+    "?? api/automation/multi_ai_autonomy_hold_policy_v1.json",
+    "?? api/automation/multi_ai_autonomy_judge_v1.py",
+    "?? api/automation/multi_ai_autonomy_last_failure_bundle.json",
+    "?? api/automation/multi_ai_autonomy_last_judgement.json",
+    "?? api/automation/multi_ai_autonomy_preflight_result_v1.json",
+    "?? api/automation/multi_ai_autonomy_preflight_v1.py",
+    "?? api/automation/multi_ai_autonomy_queue.json",
+    "?? api/automation/multi_ai_autonomy_result_return_contract_v1.json",
+    "?? api/automation/multi_ai_autonomy_retry_policy_v1.json",
+    "?? api/automation/multi_ai_autonomy_runtime_state.json",
+    "?? api/automation/multi_ai_autonomy_stop_conditions_v1.json",
+    "?? api/automation/multi_ai_autonomy_supervisor_v1.py",
+    "?? api/automation/multi_ai_autonomy_verdict_schema_v1.json"
+  ],
+  "audit": {
+    "skipped": false,
+    "ok": true,
+    "http_code": 200,
+    "error": null,
+    "url": "http://127.0.0.1:3000/api/audit"
+  },
+  "checks": [
+    {
+      "id": "guardrail_contract_present",
+      "ok": true,
+      "detail": "api/automation/multi_ai_autonomy_guardrail_contract_v1.json"
+    },
+    {
+      "id": "verdict_schema_present",
+      "ok": true,
+      "detail": "api/automation/multi_ai_autonomy_verdict_schema_v1.json"
+    },
+    {
+      "id": "allowlist_parse",
+      "ok": true,
+      "detail": "api/automation/multi_ai_autonomy_allowlist_v1.json"
+    },
+    {
+      "id": "denylist_parse",
+      "ok": true,
+      "detail": "api/automation/multi_ai_autonomy_denylist_v1.json"
+    },
+    {
+      "id": "json_multi_ai_autonomy_runtime_state.json",
+      "ok": true,
+      "detail": "api/automation/multi_ai_autonomy_runtime_state.json"
+    },
+    {
+      "id": "json_multi_ai_autonomy_progress_report.json",
+      "ok": true,
+      "detail": "api/automation/multi_ai_autonomy_progress_report.json"
+    },
+    {
+      "id": "json_multi_ai_autonomy_queue.json",
+      "ok": true,
+      "detail": "api/automation/multi_ai_autonomy_queue.json"
+    },
+    {
+      "id": "queue_cards_allowlisted",
+      "ok": true,
+      "detail": "ok"
+    },
+    {
+      "id": "git_head_resolved",
+      "ok": true,
+      "detail": "b6d1ab4f6ea2aef4e125bf913ab3f5df82fb2cc5"
+    },
+    {
+      "id": "sealed_head_matches",
+      "ok": true,
+      "detail": "expected=b6d1ab4 current=b6d1ab4f6ea2"
+    },
+    {
+      "id": "git_porcelain_clean",
+      "ok": false,
+      "detail": "lines=24"
+    },
+    {
+      "id": "api_audit",
+      "ok": true,
+      "detail": "200"
+    },
+    {
+      "id": "cursor_bridge_script",
+      "ok": true,
+      "detail": "api/automation/cursor_executor_bridge_v1.py"
+    },
+    {
+      "id": "schedule_orchestrator_script",
+      "ok": true,
+      "detail": "api/automation/schedule_executor_orchestrator_v1.py"
+    },
+    {
+      "id": "multi_ai_supervisor_script",
+      "ok": true,
+      "detail": "api/automation/multi_ai_autonomy_supervisor_v1.py"
+    }
+  ],
+  "queue_allowlist_ok": true,
+  "suggested_next_card": "TENMON_MULTI_AI_AUTONOMY_PREFLIGHT_STAMP_BIND_CURSOR_AUTO_V1",
+  "preflight_checklist": [
+    "git_head_current",
+    "expected_sealed_head",
+    "git_status_porcelain",
+    "api_audit",
+    "runtime_progress_queue_json_schema",
+    "cursor_bridge_schedule_supervisor_scripts",
+    "guardrail_contract_verdict_schema",
+    "queue_vs_allowlist_denylist"
+  ],
+  "start_allowed_when": [
+    "verdict=PASS",
+    "sealed_head_matches または明示的に missing head 許可",
+    "repo_clean または dirty 許可",
+    "audit ok または no-audit 許可",
+    "queue 内カードが allowlist かつ deny 非該当"
+  ],
+  "start_blocked_when": [
+    "いずれかの checks[].ok が false",
+    "未登録カードが queue に含まれる"
+  ]
+}

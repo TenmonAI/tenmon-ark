@@ -1,0 +1,51 @@
+{
+  "schema": "MULTI_AI_AUTONOMY_HOLD_POLICY_V1",
+  "version": 1,
+  "fail_closed": true,
+  "guardrail_contract_ref": "multi_ai_autonomy_guardrail_contract_v1.json",
+  "maps_guardrail_hold_on": {
+    "manual_judgement_required": [
+      "triage_tier_C_manual_required",
+      "explicit_human_gate",
+      "seal_or_canon_manual_only"
+    ],
+    "acceptance_ambiguous": [
+      "acceptance_criteria_missing",
+      "acceptance_ok_not_true",
+      "execution_authority_not_authorized"
+    ],
+    "cursor_result_missing": [
+      "result_return_missing",
+      "timeout_waiting_executed",
+      "submit_ok_but_missing_queue_id"
+    ],
+    "audit_abnormal": [
+      "preflight_audit",
+      "post_loop_audit_not_ok",
+      "vps_audit_not_ok"
+    ],
+    "repo_dirty_expanded": [
+      "dirty_cumulative",
+      "dirty_per_loop",
+      "sensitive_new",
+      "route_contract_suspect",
+      "broad_change_suspect"
+    ],
+    "conflict_unresolved": [
+      "gpt_contradictions_unresolved",
+      "claude_contradiction_unresolved",
+      "external_ai_contradictions_unresolved"
+    ],
+    "external_dependency_uncertain": [
+      "browser_or_network_fact_unverified",
+      "third_party_version_unknown"
+    ],
+    "high_severity_risk": [
+      "claude_high_severity_risk",
+      "design_risk_severity_high"
+    ]
+  },
+  "supervisor_must_not_advance_while_hold": true,
+  "orchestra_hold_policy_ref": "multi_ai_hold_policy_v1.json",
+  "notes": "HOLD は停止・待機。PASS と混同しない。guardrail の hold_on と整合すること。"
+}

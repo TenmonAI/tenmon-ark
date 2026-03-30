@@ -1,0 +1,45 @@
+{
+  "schema": "MULTI_AI_AUTONOMY_DENYLIST_V1",
+  "version": 1,
+  "notes": "手動裁定・意味変更・広域リファクタ・未知カードを既定 deny。exact / substring いずれかに該当でブロック。",
+  "exact_card_ids": [],
+  "card_id_substrings": [
+    "_KOKUZO_",
+    "_CANON_LEDGER_SEMANTIC",
+    "BOOK_CANON",
+    "SCRIPTURE_INJECT",
+    "CHAT_MAINLINE_WIDE",
+    "SCHEMA_MIGRATION_SEMANTIC",
+    "DEPLOY_CONTRACT",
+    "PRODUCTION_DB"
+  ],
+  "semantic_change_paths_hint": [
+    "api/src/routes/chat.ts",
+    "api/src/core/notionCanon.ts",
+    "api/src/core/scriptureCanon.ts",
+    "canon/",
+    "api/src/core/persona"
+  ],
+  "rules": [
+    {
+      "id": "deny_chat_ts_broad",
+      "description": "chat.ts 広域変更カードは自動不可"
+    },
+    {
+      "id": "deny_canon_scripture_persona_intention",
+      "description": "canon / scripture / persona / intention / 正文の意味改変は自動不可"
+    },
+    {
+      "id": "deny_broad_refactor",
+      "description": "broad refactor・契約変更は手動裁定"
+    },
+    {
+      "id": "deny_unknown_card",
+      "description": "allowlist に無いカード ID は実行不可（未登録 deny）"
+    },
+    {
+      "id": "deny_missing_acceptance",
+      "description": "acceptance 未定義・曖昧カードは supervisor が HOLD するまで実行不可"
+    }
+  ]
+}
