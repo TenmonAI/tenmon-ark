@@ -1,22 +1,21 @@
 {
   "schema": "MULTI_AI_AUTONOMY_PREFLIGHT_RESULT_V1",
   "card": "TENMON_MULTI_AI_AUTONOMY_PREFLIGHT_AND_ALLOWLIST_CURSOR_AUTO_V1",
-  "generated_at": "2026-03-30T00:46:43Z",
-  "verdict": "PASS",
-  "exit_code_hint": 0,
-  "git_head_full": "dadabd4e13bb991df948c817452c0b13ff32308d",
-  "git_head_short": "dadabd4e13bb",
-  "expected_head": null,
-  "sealed_head_ok": null,
-  "repo_clean": false,
-  "porcelain_lines": [
-    " M api/automation/multi_ai_autonomy_last_failure_bundle.json",
-    " M api/automation/multi_ai_autonomy_runtime_state.json"
-  ],
+  "generated_at": "2026-03-30T00:47:03Z",
+  "verdict": "FAIL",
+  "exit_code_hint": 1,
+  "git_head_full": "8c588b453c93a2bba5c8cc477d30473b6ad1ea3a",
+  "git_head_short": "8c588b453c93",
+  "expected_head": "f4b1cbb",
+  "sealed_head_ok": false,
+  "repo_clean": true,
+  "porcelain_lines": [],
   "audit": {
-    "skipped": true,
-    "ok": null,
-    "note": "TENMON_PREFLIGHT_ALLOW_NO_AUDIT"
+    "skipped": false,
+    "ok": true,
+    "http_code": 200,
+    "error": null,
+    "url": "http://127.0.0.1:3000/api/audit"
   },
   "checks": [
     {
@@ -62,22 +61,22 @@
     {
       "id": "git_head_resolved",
       "ok": true,
-      "detail": "dadabd4e13bb991df948c817452c0b13ff32308d"
+      "detail": "8c588b453c93a2bba5c8cc477d30473b6ad1ea3a"
     },
     {
-      "id": "sealed_head_configured",
-      "ok": true,
-      "detail": "allowed_missing_expected_head"
+      "id": "sealed_head_matches",
+      "ok": false,
+      "detail": "expected=f4b1cbb current=8c588b453c93"
     },
     {
       "id": "git_porcelain_clean",
       "ok": true,
-      "detail": "allowed_dirty lines=2"
+      "detail": "lines=0"
     },
     {
       "id": "api_audit",
       "ok": true,
-      "detail": "audit_skipped_allowed"
+      "detail": "200"
     },
     {
       "id": "cursor_bridge_script",
