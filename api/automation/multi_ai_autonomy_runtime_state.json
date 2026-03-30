@@ -1,12 +1,10 @@
 {
   "schema": "MULTI_AI_AUTONOMY_RUNTIME_STATE_V1",
-  "status": "HOLD",
-  "current_card": "",
-  "current_phase": "dryrun_gate",
-  "loop_count": 0,
-  "last_result": "HOLD",
-  "last_evidence_dir": "/var/log/tenmon/multi_ai_autonomy_supervisor/20260330T0040",
-  "last_failure_bundle": "",
-  "last_hold_reason": "dryrun_gate_not_ready_run_harness_strict_preflight",
-  "updated_at": "2026-03-30T00:40:43Z"
+  "status": "PASS",
+  "current_card": "TENMON_MULTI_AI_AUTONOMY_DRYRUN_HARNESS_CURSOR_AUTO_V1",
+  "current_phase": "dryrun_harness_complete",
+  "loop_count": 2,
+  "last_result": "DRYRUN_PASS",
+  "last_evidence_dir": "/var/log/tenmon/multi_ai_autonomy_dryrun/20260330T0045",
+  "updated_at": "2026-03-30T00:45:18Z"
 }

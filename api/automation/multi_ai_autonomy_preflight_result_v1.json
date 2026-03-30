@@ -1,39 +1,19 @@
 {
   "schema": "MULTI_AI_AUTONOMY_PREFLIGHT_RESULT_V1",
   "card": "TENMON_MULTI_AI_AUTONOMY_PREFLIGHT_AND_ALLOWLIST_CURSOR_AUTO_V1",
-  "generated_at": "2026-03-30T00:37:21Z",
+  "generated_at": "2026-03-30T00:45:36Z",
   "verdict": "FAIL",
   "exit_code_hint": 1,
-  "git_head_full": "b6d1ab4f6ea2aef4e125bf913ab3f5df82fb2cc5",
-  "git_head_short": "b6d1ab4f6ea2",
-  "expected_head": "b6d1ab4",
-  "sealed_head_ok": true,
+  "git_head_full": "f4b1cbb4e90c2d1a69a1947fac77821153c83030",
+  "git_head_short": "f4b1cbb4e90c",
+  "expected_head": null,
+  "sealed_head_ok": null,
   "repo_clean": false,
   "porcelain_lines": [
-    " M api/automation/multi_ai_hold_policy_v1.json",
-    " M api/automation/multi_ai_role_contract_v1.json",
-    "?? api/automation/multi_ai_autonomy_acceptance_gate_v1.json",
-    "?? api/automation/multi_ai_autonomy_allowlist_v1.json",
-    "?? api/automation/multi_ai_autonomy_denylist_v1.json",
-    "?? api/automation/multi_ai_autonomy_dryrun_harness_v1.py",
-    "?? api/automation/multi_ai_autonomy_dryrun_queue.json",
-    "?? api/automation/multi_ai_autonomy_dryrun_report_v1.json",
-    "?? api/automation/multi_ai_autonomy_execution_history.json",
-    "?? api/automation/multi_ai_autonomy_failure_bundle_schema_v1.json",
-    "?? api/automation/multi_ai_autonomy_guardrail_contract_v1.json",
-    "?? api/automation/multi_ai_autonomy_hold_policy_v1.json",
-    "?? api/automation/multi_ai_autonomy_judge_v1.py",
-    "?? api/automation/multi_ai_autonomy_last_failure_bundle.json",
-    "?? api/automation/multi_ai_autonomy_last_judgement.json",
-    "?? api/automation/multi_ai_autonomy_preflight_result_v1.json",
-    "?? api/automation/multi_ai_autonomy_preflight_v1.py",
-    "?? api/automation/multi_ai_autonomy_queue.json",
-    "?? api/automation/multi_ai_autonomy_result_return_contract_v1.json",
-    "?? api/automation/multi_ai_autonomy_retry_policy_v1.json",
-    "?? api/automation/multi_ai_autonomy_runtime_state.json",
-    "?? api/automation/multi_ai_autonomy_stop_conditions_v1.json",
-    "?? api/automation/multi_ai_autonomy_supervisor_v1.py",
-    "?? api/automation/multi_ai_autonomy_verdict_schema_v1.json"
+    " M api/automation/multi_ai_autonomy_dryrun_report_v1.json",
+    " M api/automation/multi_ai_autonomy_last_failure_bundle.json",
+    " M api/automation/multi_ai_autonomy_preflight_result_v1.json",
+    " M api/automation/multi_ai_autonomy_runtime_state.json"
   ],
   "audit": {
     "skipped": false,
@@ -86,17 +66,17 @@
     {
       "id": "git_head_resolved",
       "ok": true,
-      "detail": "b6d1ab4f6ea2aef4e125bf913ab3f5df82fb2cc5"
+      "detail": "f4b1cbb4e90c2d1a69a1947fac77821153c83030"
     },
     {
-      "id": "sealed_head_matches",
-      "ok": true,
-      "detail": "expected=b6d1ab4 current=b6d1ab4f6ea2"
+      "id": "sealed_head_configured",
+      "ok": false,
+      "detail": "expected_head_required_cli_or_env_TENMON_MULTI_AI_AUTONOMY_EXPECTED_HEAD"
     },
     {
       "id": "git_porcelain_clean",
       "ok": false,
-      "detail": "lines=24"
+      "detail": "lines=4"
     },
     {
       "id": "api_audit",
