@@ -1,0 +1,7 @@
+{
+  "schema": "tenmon_placeholder_route_inventory_v1",
+  "version": 1,
+  "cardName": "TENMON_PLACEHOLDER_ROUTE_INVENTORY_V1",
+  "instruction": "最新 inventory はスクリプト生成物。例: python3 tenmon_placeholder_route_inventory_v1.py --stdout-json --write tenmon_placeholder_route_inventory_v1.json",
+  "last_generated": null
+}

@@ -2,8 +2,10 @@
 # -*- coding: utf-8 -*-
 """
 TENMON_CHAT_TS_WORLDCLASS_COMPLETION_REPORT_V1
-静的観測中心の完成判定レポート（chat.ts）。runtime は CHAT_TS_PROBE_BASE_URL があるときのみ実行。
-未設定時は blocker に runtime_probes:not_executed を付与（外部ランタイムへ handoff）。
+TENMON_CONVERSATION_RUNTIME_PROBE_BOOTSTRAP_CURSOR_AUTO_V1
+
+静的観測 + runtime probe 行列（canon 10 本）。CHAT_TS_PROBE_BASE_URL 未設定時は
+既定 http://127.0.0.1:3000 に bootstrap し黙殺しない（report に resolved base を記録）。
 """
 from __future__ import annotations
 
@@ -29,6 +31,7 @@ from chat_ts_probe_canon_v1 import runtime_probe_full_10
 CARD = "TENMON_CHAT_TS_WORLDCLASS_COMPLETION_REPORT_V1"
 VERSION = 1
 DEFAULT_CHAT = "api/src/routes/chat.ts"
+DEFAULT_CHAT_TS_PROBE_BASE_URL = "http://127.0.0.1:3000"
 
 
 def _utc_now_iso() -> str:
@@ -37,6 +40,33 @@ def _utc_now_iso() -> str:
 
 def _repo_root() -> Path:
     return Path(__file__).resolve().parents[2]
+
+
+def _safe_card_log_segment(name: str) -> str:
+    s = re.sub(r"[^A-Za-z0-9._-]+", "_", (name or "CARD").strip())
+    return s[:160] or "CARD"
+
+
+def resolve_chat_ts_probe_base_url() -> tuple[str, Dict[str, Any]]:
+    """
+    CHAT_TS_PROBE_BASE_URL が空なら既定を採用。resolved URL とメタを返す（黙殺禁止）。
+    """
+    raw = (os.environ.get("CHAT_TS_PROBE_BASE_URL") or "").strip()
+    default_applied = not bool(raw)
+    resolved = (raw.rstrip("/") if raw else DEFAULT_CHAT_TS_PROBE_BASE_URL.rstrip("/"))
+    meta: Dict[str, Any] = {
+        "CHAT_TS_PROBE_BASE_URL_env_set": bool(raw),
+        "default_base_url_applied": default_applied,
+        "resolved_base_url": resolved,
+        "default_base_url": DEFAULT_CHAT_TS_PROBE_BASE_URL,
+    }
+    return resolved, meta
+
+
+def card_report_log_dir(ts: str | None = None) -> Path:
+    """証跡: /var/log/tenmon/card_<CARD>/<TS>/"""
+    t = ts or datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    return Path("/var/log/tenmon") / f"card_{_safe_card_log_segment(CARD)}" / t
 
 
 def _read_chat(rel: str) -> str:
@@ -278,24 +308,17 @@ def build_report(chat_rel: str) -> Dict[str, Any]:
     if seed_hits > 40:
         advisory.append("learning_sideeffects_still_inline_seed_density")
 
-    base = os.environ.get("CHAT_TS_PROBE_BASE_URL", "").rstrip("/")
+    base, probe_bootstrap = resolve_chat_ts_probe_base_url()
     chat_url_override = os.environ.get("CHAT_TS_PROBE_CHAT_URL", "").strip()
 
-    runtime_matrix: Dict[str, Any] = {}
-    runtime_probe_blockers: List[str] = []
-    if base:
-        runtime_matrix, runtime_probe_blockers = _run_runtime_probe_matrix(base, chat_url_override)
-    else:
-        runtime_matrix["note"] = (
-            "CHAT_TS_PROBE_BASE_URL unset — runtime probe matrix not executed (external handoff / CI で BASE を渡す)"
-        )
-        runtime_probe_blockers.append("runtime_probes:not_executed")
+    runtime_matrix, runtime_probe_blockers = _run_runtime_probe_matrix(base, chat_url_override)
+    runtime_matrix["_probe_bootstrap"] = probe_bootstrap
 
     chat_ts_runtime_100 = len(runtime_probe_blockers) == 0
 
     # STAGE1 surface_bleed: 10 本すべて ok かつ generic_preamble / helper_tail なし
     surface_clean = False
-    if base and "chat_url:undiscovered" not in runtime_probe_blockers:
+    if "chat_url:undiscovered" not in runtime_probe_blockers:
         _bad = False
         for _name in _RUNTIME_PROBE_MESSAGES:
             _r = runtime_matrix.get(_name)
@@ -347,6 +370,7 @@ def build_report(chat_rel: str) -> Dict[str, Any]:
         "cardName": CARD,
         "generatedAt": _utc_now_iso(),
         "chatRelative": chat_rel,
+        "runtime_probe_bootstrap": probe_bootstrap,
         "static": {
             "line_count": n,
             "natural_general_hit_count": natural_general_hit_count,
@@ -382,7 +406,12 @@ def build_report(chat_rel: str) -> Dict[str, Any]:
             "runtime_probe_blockers": runtime_probe_blockers,
             "advisory_warnings": advisory,
             # CHAT_TS_COMPLETION_SUPPLEMENT: seal 併用時は runtime / surface の正は merge 側（runtime_matrix / surface_audit）
-            "runtime_observation_mode": "live" if base else "handoff_not_executed",
+            "runtime_observation_mode": (
+                "live"
+                if probe_bootstrap.get("CHAT_TS_PROBE_BASE_URL_env_set")
+                else "live_default_base"
+            ),
+            "resolved_chat_ts_probe_base_url": probe_bootstrap.get("resolved_base_url"),
             "completion_criteria_ref": "STAGE5_merge_V1+CHAT_TS_COMPLETION_SUPPLEMENT_V1",
         },
     }
@@ -497,9 +526,36 @@ def main() -> int:
         default="",
         help="POSTLOCK: report 観測片のみ JSON 出力（パスは repo 相対可）",
     )
+    ap.add_argument(
+        "--no-card-log-dir",
+        action="store_true",
+        help="skip writing /var/log/tenmon/card_<CARD>/<TS>/ (tests / read-only env)",
+    )
     args = ap.parse_args()
 
     rep = build_report(args.chat_rel)
+    v = rep.setdefault("verdict", {})
+    if args.no_card_log_dir:
+        v["card_artifact_log"] = {"skipped": True, "reason": "--no-card-log-dir"}
+    else:
+        log_dir = card_report_log_dir()
+        try:
+            log_dir.mkdir(parents=True, exist_ok=True)
+            v["card_artifact_log"] = {"card_log_dir": str(log_dir), "card_log_ok": True}
+            (log_dir / "worldclass_completion_report.json").write_text(
+                json.dumps(rep, ensure_ascii=False, indent=2),
+                encoding="utf-8",
+            )
+            (log_dir / "worldclass_completion_report.md").write_text(
+                emit_markdown(rep),
+                encoding="utf-8",
+            )
+        except OSError as e:
+            v["card_artifact_log"] = {
+                "card_log_dir": str(log_dir),
+                "card_log_ok": False,
+                "card_log_error": str(e),
+            }
     if args.write_next_pdca:
         write_runtime_next_pdca(_repo_root(), rep.get("verdict") or {})
     if args.stdout_json:

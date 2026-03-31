@@ -1,0 +1,233 @@
+{
+  "schema": "tenmon_conversation_regression_ledger_v1",
+  "version": 1,
+  "target_file_default": "api/src/routes/chat.ts",
+  "runs": [
+    {
+      "recorded_at": "2026-03-31T06:06:00Z",
+      "ingested_at": "2026-03-31T06:06:00Z",
+      "source_card": "TENMON_CONVERSATION_ACCEPTANCE_PROBE_V2",
+      "probe_set_version": 1,
+      "target_file": "api/src/routes/chat.ts",
+      "ledger_note": "lane:29a8920196c94f03",
+      "bootstrap": {
+        "CHAT_TS_PROBE_BASE_URL_env_set": false,
+        "resolved_base_url": "http://127.0.0.1:3000",
+        "default_base_url_applied": true
+      },
+      "chat_url_used": "http://127.0.0.1:3000/api/chat",
+      "discovery_error": null,
+      "thread_id": "cap-v2-1115b32ae39d",
+      "probes": [
+        {
+          "probe_id": "p1_lotus_what",
+          "message": "法華経とは",
+          "probe_pass": false,
+          "runner_ok": true,
+          "runner_error": "",
+          "route_reason_detail": "SCRIPTURE_LOCAL_RESOLVER_V4",
+          "center_label_detail": "centerLabel",
+          "continuity_detail": "default_min_body",
+          "grounding_mode_ok": true,
+          "grounding_detail": "top_level_evidence",
+          "surface_score": 0,
+          "surface_detail": "score=0,len=71",
+          "response_len": 71,
+          "generic_hits": 0,
+          "generic_strong": false,
+          "not_generic_drift": true,
+          "reasons_fail": [
+            "surface_min_density_ok",
+            "one_step_present",
+            "over_short_forbidden"
+          ]
+        },
+        {
+          "probe_id": "p2_kotodama_what",
+          "message": "言霊とは何か",
+          "probe_pass": false,
+          "runner_ok": true,
+          "runner_error": "",
+          "route_reason_detail": "DEF_FASTPATH_VERIFIED_V1",
+          "center_label_detail": "centerLabel",
+          "continuity_detail": "default_min_body",
+          "grounding_mode_ok": true,
+          "grounding_detail": "groundingSelector",
+          "surface_score": 6,
+          "surface_detail": "score=6,len=184",
+          "response_len": 184,
+          "generic_hits": 0,
+          "generic_strong": false,
+          "not_generic_drift": true,
+          "reasons_fail": [
+            "one_step_present"
+          ]
+        },
+        {
+          "probe_id": "p3_continuity_one_point",
+          "message": "前の返答を受けて要点を一つだけ継続して",
+          "probe_pass": false,
+          "runner_ok": true,
+          "runner_error": "",
+          "route_reason_detail": "CONTINUITY_ROUTE_HOLD_V1",
+          "center_label_detail": "centerLabel",
+          "continuity_detail": "route_continuity_hold",
+          "grounding_mode_ok": true,
+          "grounding_detail": "groundingSelector",
+          "surface_score": 0,
+          "surface_detail": "score=0,len=104",
+          "response_len": 104,
+          "generic_hits": 0,
+          "generic_strong": false,
+          "not_generic_drift": true,
+          "reasons_fail": [
+            "surface_min_density_ok",
+            "one_step_present"
+          ]
+        },
+        {
+          "probe_id": "p4_kukai_vs_secretary",
+          "message": "空海と言霊秘書はどう違うか",
+          "probe_pass": false,
+          "runner_ok": true,
+          "runner_error": "",
+          "route_reason_detail": "TRUTH_GATE_RETURN_V2",
+          "center_label_detail": "centerLabel",
+          "continuity_detail": "default_min_body",
+          "grounding_mode_ok": true,
+          "grounding_detail": "groundingSelector",
+          "surface_score": 0,
+          "surface_detail": "score=0,len=85",
+          "response_len": 85,
+          "generic_hits": 0,
+          "generic_strong": false,
+          "not_generic_drift": true,
+          "reasons_fail": [
+            "surface_min_density_ok"
+          ]
+        },
+        {
+          "probe_id": "p5_grounded_concise",
+          "message": "根拠つきで簡潔に",
+          "probe_pass": false,
+          "runner_ok": true,
+          "runner_error": "",
+          "route_reason_detail": "CONTINUITY_ROUTE_HOLD_V1",
+          "center_label_detail": "centerLabel",
+          "continuity_detail": "default_min_body",
+          "grounding_mode_ok": true,
+          "grounding_detail": "groundingSelector",
+          "surface_score": 0,
+          "surface_detail": "score=0,len=180",
+          "response_len": 180,
+          "generic_hits": 0,
+          "generic_strong": false,
+          "not_generic_drift": true,
+          "reasons_fail": [
+            "surface_min_density_ok",
+            "one_step_present"
+          ]
+        },
+        {
+          "probe_id": "p6_progress_check",
+          "message": "今の進め方は正しいか",
+          "probe_pass": true,
+          "runner_ok": true,
+          "runner_error": "",
+          "route_reason_detail": "R10_IROHA_COUNSEL_ROUTE_V1",
+          "center_label_detail": "centerLabel",
+          "continuity_detail": "default_min_body",
+          "grounding_mode_ok": true,
+          "grounding_detail": "groundingSelector",
+          "surface_score": 5,
+          "surface_detail": "score=5,len=262",
+          "response_len": 262,
+          "generic_hits": 0,
+          "generic_strong": false,
+          "not_generic_drift": true,
+          "reasons_fail": []
+        },
+        {
+          "probe_id": "p7_lotus_core_one_tier",
+          "message": "法華経の核心を一段で",
+          "probe_pass": false,
+          "runner_ok": true,
+          "runner_error": "",
+          "route_reason_detail": "SCRIPTURE_LOCAL_RESOLVER_V4",
+          "center_label_detail": "centerLabel",
+          "continuity_detail": "default_min_body",
+          "grounding_mode_ok": true,
+          "grounding_detail": "top_level_evidence",
+          "surface_score": 0,
+          "surface_detail": "score=0,len=71",
+          "response_len": 71,
+          "generic_hits": 0,
+          "generic_strong": false,
+          "not_generic_drift": true,
+          "reasons_fail": [
+            "surface_min_density_ok",
+            "one_step_present",
+            "over_short_forbidden"
+          ]
+        }
+      ],
+      "aggregate_verdict": {
+        "pass": false,
+        "probes_passing": 1,
+        "probes_total": 7,
+        "surface_density_pass_count": 2,
+        "any_strong_generic_drift": false,
+        "fail_codes": [
+          "surface_min_density_ok_count_lt_5",
+          "probe_pass_count_lt_6"
+        ]
+      },
+      "fail_codes": [
+        "surface_min_density_ok_count_lt_5",
+        "probe_pass_count_lt_6"
+      ]
+    }
+  ],
+  "latest_summary": {
+    "compared_to_recorded_at": null,
+    "trend": "baseline",
+    "prev_aggregate_pass": null,
+    "current_aggregate_pass": false,
+    "delta_probes_passing": 1,
+    "delta_surface_density_pass_count": 2,
+    "any_strong_generic_drift_new": false,
+    "per_probe_delta": [
+      {
+        "probe_id": "p1_lotus_what",
+        "baseline_probe": true
+      },
+      {
+        "probe_id": "p2_kotodama_what",
+        "baseline_probe": true
+      },
+      {
+        "probe_id": "p3_continuity_one_point",
+        "baseline_probe": true
+      },
+      {
+        "probe_id": "p4_kukai_vs_secretary",
+        "baseline_probe": true
+      },
+      {
+        "probe_id": "p5_grounded_concise",
+        "baseline_probe": true
+      },
+      {
+        "probe_id": "p6_progress_check",
+        "baseline_probe": true
+      },
+      {
+        "probe_id": "p7_lotus_core_one_tier",
+        "baseline_probe": true
+      }
+    ],
+    "rollback_needed": false
+  },
+  "corrupt_recovery": null,
+  "ledger_path": "/opt/tenmon-ark-repo/api/automation/tenmon_conversation_regression_ledger_v1.json"
+}

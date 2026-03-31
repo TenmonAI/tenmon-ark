@@ -11,7 +11,14 @@ import sys
 from pathlib import Path
 from typing import Any, Dict, List
 
-from remote_cursor_common_v1 import CARD, VERSION, api_automation, read_json, utc_now_iso
+from remote_cursor_common_v1 import (
+    CARD,
+    VERSION,
+    api_automation,
+    read_json,
+    utc_now_iso,
+    validate_real_result_ingest_payload,
+)
 
 
 ALLOWED_REAL_STATUSES = {"started", "executor_failed", "completed_no_diff", "build_ok", "acceptance_ok"}
@@ -40,6 +47,14 @@ def normalize_entry_v1(entry: Dict[str, Any]) -> Dict[str, Any]:
             e["no_diff_reason"] = "executor_opened_but_no_change"
 
     e["status"] = status
+    if e.get("build_rc") is not None:
+        try:
+            e["build_rc"] = int(e["build_rc"])
+        except (TypeError, ValueError):
+            pass
+    ao = e.get("acceptance_ok")
+    if ao is not None:
+        e["acceptance_ok"] = bool(ao)
     e.setdefault("build_result", {"rc": e.get("build_rc")})
     e.setdefault("acceptance_result", {"ok": e.get("acceptance_ok")})
     e.setdefault("log_path", "")
@@ -85,6 +100,9 @@ def main() -> int:
             entry["run_id"] = str(entry.get("run_id") or "").strip()
         if args.require_queue_id and not str(entry.get("queue_id") or entry.get("id") or "").strip():
             raise ValueError("queue_id_required")
+        vok, vwhy = validate_real_result_ingest_payload(entry)
+        if not vok:
+            raise ValueError(vwhy)
     except Exception as e:
         msg = json.dumps({"ok": False, "error": str(e)}, ensure_ascii=False)
         print(msg)

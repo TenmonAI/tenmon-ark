@@ -543,10 +543,11 @@ tick() {
       executor_mode:$emode,
       escrow_approved:$item_escrow_approved,
       high_risk_acceptance_chain_attempted:($hrc == "true"),
-      acceptance_ok:(if ($dry_run_bool==1) then null elif ($acv=="true") then true elif ($acv=="false") then false else null end),
+      result_status:(if ($dry_run_bool==1) then null else $fst end),
+      acceptance_ok:(if ($dry_run_bool==1) then null elif ($acv=="true") then true elif ($acv=="false") then false else false end),
       rollback_executed:(if ($hrc == "true") then ($rb == "true") else false end),
       commit_ready:(if ($hrc == "true") then ($cr == "true") else false end),
-      build_rc:(if ($dry_run_bool==1) then null elif ($brv|length)>0 and ($brv!="null") then ($brv|tonumber) else null end)
+      build_rc:(if ($dry_run_bool==1) then null elif ($brv|length)>0 and ($brv!="null") then (try ($brv|tonumber) catch 1) else 1 end)
     }' >"$body_file"
 
   http_out="$LOG_DIR/result_${exec_mode}_${ts}_${qid}.json"

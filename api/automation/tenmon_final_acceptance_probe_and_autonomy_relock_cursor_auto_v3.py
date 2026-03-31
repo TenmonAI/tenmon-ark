@@ -18,6 +18,12 @@ import sys
 from pathlib import Path
 from typing import Any
 
+_AUTOMATION_DIR = Path(__file__).resolve().parent
+if str(_AUTOMATION_DIR) not in sys.path:
+    sys.path.insert(0, str(_AUTOMATION_DIR))
+
+import tenmon_probe_relock_ok_bind_v1 as probe_ok_bind
+
 CARD = "TENMON_FINAL_ACCEPTANCE_PROBE_AND_AUTONOMY_RELOCK_CURSOR_AUTO_V3"
 OUT_JSON = "tenmon_final_acceptance_probe_relock_result_v3.json"
 OUT_MD = "tenmon_final_acceptance_probe_relock_report_v3.md"
@@ -208,6 +214,7 @@ def _patch_result_json(
     data["acceptance_pass"] = final_pass
     data["failure_reasons"] = [] if final_pass else fr
 
+    probe_ok_bind.apply_relock_probe_ok_fields(data)
     path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     return data
 

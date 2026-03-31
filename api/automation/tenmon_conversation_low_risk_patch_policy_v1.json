@@ -1,0 +1,36 @@
+{
+  "schema": "tenmon_conversation_low_risk_patch_policy_v1",
+  "version": 1,
+  "card": "TENMON_CONVERSATION_LOW_RISK_PATCH_POLICY_LOCK_V1",
+  "description": "会話品質 lane の auto-fix 許容範囲。manual-only に該当するパスが patch plan に含まれる場合は計画全体を抑止（fail-closed・安全側）。",
+  "manual_only_exact_paths": [
+    "api/src/routes/chat.ts",
+    "api/src/core/scriptureCanon.ts",
+    "api/src/core/personaConstitution.ts",
+    "api/src/core/intentionConstitution.ts",
+    "api/automation/chat_ts_probe_canon_v1.json",
+    "api/automation/chat_ts_probe_canon_v1.py"
+  ],
+  "manual_only_path_prefixes": [
+    "api/automation/generated_",
+    "api/docs/constitution/"
+  ],
+  "manual_only_substrings": [
+    "kokuzo_pages.text",
+    "scripture_canon",
+    "personaConstitution",
+    "intentionConstitution"
+  ],
+  "auto_fixable_prefixes": [
+    "api/automation/",
+    "api/scripts/",
+    "api/tools/",
+    "api/src/routes/chat_refactor/",
+    "api/src/routes/chat_parts/",
+    "api/src/core/tenmonSurfaceEmptyAfterStripFallbackV1.ts",
+    "api/src/core/responseComposer.ts",
+    "api/src/kanagi/engine/responseComposer.ts",
+    "api/src/planning/detailPlanContractP20.ts"
+  ],
+  "evaluation_order_note": "manual（exact → prefix → substring）のあと auto_fixable_prefix を試す。いずれにも合致しないパスは auto-fix 不可（未知は deny）。"
+}

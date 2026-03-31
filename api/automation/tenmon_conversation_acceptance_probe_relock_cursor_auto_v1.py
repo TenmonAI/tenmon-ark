@@ -18,6 +18,12 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
 
+_AUTOMATION_DIR = Path(__file__).resolve().parent
+if str(_AUTOMATION_DIR) not in sys.path:
+    sys.path.insert(0, str(_AUTOMATION_DIR))
+
+import tenmon_probe_relock_ok_bind_v1 as probe_ok_bind
+
 CARD = "TENMON_FINAL_ACCEPTANCE_PROBE_AND_AUTONOMY_RELOCK_CURSOR_AUTO_V1"
 OUT_JSON = "tenmon_conversation_acceptance_probe_relock_result_v1.json"
 OUT_MD = "tenmon_conversation_acceptance_probe_relock_report_v1.md"
@@ -642,6 +648,7 @@ def main() -> int:
         "nextOnFail": "TENMON_SURFACE_LEAK_CLEANUP_RETRY_CURSOR_AUTO_V3",
     }
 
+    probe_ok_bind.apply_relock_probe_ok_fields(result)
     (auto / OUT_JSON).write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
     md = [
