@@ -6,7 +6,7 @@
 import express from "express";
 import { z } from "zod";
 import { sdk } from "../../../_core/sdk";
-import type { SemanticUnit } from "../../../kokuzo/semantic/engine";
+import type { SemanticUnit } from "../../../../kokuzo/semantic/engine";
 
 const router = express.Router();
 

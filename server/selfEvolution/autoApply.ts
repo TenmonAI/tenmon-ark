@@ -293,9 +293,6 @@ export async function applyPatch(patch: AutoFixPatch): Promise<ApplyResult> {
 
     const filePath = patch.filePath;
     const patchContent = patch.patch;
-  try {
-    const filePath = patch.filePath;
-    const patchContent = patch.patch;
 
     // ファイルが存在するか確認
     if (!existsSync(filePath)) {

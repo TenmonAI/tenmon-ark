@@ -7,30 +7,27 @@
  * ============================================================
  */
 
-import { IndexedDBEventLogStore } from "../../../server/kokuzo/offline/eventLogStore";
-import { LocalKokuzoKernel } from "../../../server/kokuzo/offline/localKokuzoKernel";
+// Temporarily stub server imports for client-only build
+// import { IndexedDBEventLogStore } from "../../../server/kokuzo/offline/eventLogStore";
+// import { LocalKokuzoKernel } from "../../../server/kokuzo/offline/localKokuzoKernel";
 
-let eventLogStore: IndexedDBEventLogStore | null = null;
-let localKokuzo: LocalKokuzoKernel | null = null;
+let eventLogStore: any | null = null;
+let localKokuzo: any | null = null;
 
 /**
  * Event Log Store を取得（シングルトン）
  */
 function getEventLogStore() {
-  if (!eventLogStore) {
-    eventLogStore = new IndexedDBEventLogStore();
-  }
-  return eventLogStore;
+  console.warn("[EventLog] Stubbed - offline functionality disabled");
+  return null;
 }
 
 /**
  * Local Kokūzō Kernel を取得（シングルトン）
  */
-function getLocalKokuzo(): LocalKokuzoKernel {
-  if (!localKokuzo) {
-    localKokuzo = new LocalKokuzoKernel();
-  }
-  return localKokuzo;
+function getLocalKokuzo(): any {
+  console.warn("[EventLog] Stubbed - offline functionality disabled");
+  return null;
 }
 
 /**
@@ -43,20 +40,8 @@ export async function logChatMessageAdded(payload: {
   content: string;
   projectId?: number | null; // プロジェクトID（メタデータ）
 }): Promise<void> {
-  try {
-    const kokuzo = getLocalKokuzo();
-    await kokuzo.appendEvent({
-      type: "CHAT_MESSAGE_ADDED",
-      conversationId: payload.roomId,
-      payload: {
-        ...payload,
-        projectId: payload.projectId || null,
-      },
-    });
-  } catch (error) {
-    console.warn("[EventLog] Failed to log chat message:", error);
-    // エラーは無視（オフラインでも動作を継続）
-  }
+  // Stubbed - offline functionality disabled
+  console.log("[EventLog] Stubbed logChatMessageAdded");
 }
 
 /**
@@ -67,18 +52,8 @@ export async function logFileUploaded(payload: {
   conversationId?: number;
   fileName: string;
 }): Promise<void> {
-  try {
-    const kokuzo = getLocalKokuzo();
-    await kokuzo.appendEvent({
-      type: "FILE_UPLOADED",
-      conversationId: payload.conversationId,
-      fileId: payload.fileId,
-      payload,
-    });
-  } catch (error) {
-    console.warn("[EventLog] Failed to log file upload:", error);
-    // エラーは無視（オフラインでも動作を継続）
-  }
+  // Stubbed - offline functionality disabled
+  console.log("[EventLog] Stubbed logFileUploaded");
 }
 
 /**
@@ -89,20 +64,8 @@ export async function logLearningToggled(payload: {
   enabled: boolean;
   projectId?: number | null; // プロジェクトID（メタデータ）
 }): Promise<void> {
-  try {
-    const kokuzo = getLocalKokuzo();
-    await kokuzo.appendEvent({
-      type: "LEARNING_TOGGLED",
-      fileId: payload.fileId,
-      enabled: payload.enabled,
-      payload: {
-        projectId: payload.projectId || null,
-      },
-    });
-  } catch (error) {
-    console.warn("[EventLog] Failed to log learning toggle:", error);
-    // エラーは無視（オフラインでも動作を継続）
-  }
+  // Stubbed - offline functionality disabled
+  console.log("[EventLog] Stubbed logLearningToggled");
 }
 
 export default {

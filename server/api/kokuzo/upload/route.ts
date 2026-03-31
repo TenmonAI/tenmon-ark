@@ -7,8 +7,8 @@ import express from "express";
 import multer from "multer";
 import { z } from "zod";
 import { sdk } from "../../../_core/sdk";
-import { savePhysicalFile } from "../../../kokuzo/storage/osCore";
-import type { KZFile } from "../../../kokuzo/storage/osCore";
+import { savePhysicalFile } from "../../../../kokuzo/storage/osCore";
+import type { KZFile } from "../../../../kokuzo/storage/osCore";
 
 const router = express.Router();
 

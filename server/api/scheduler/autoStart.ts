@@ -55,7 +55,7 @@ export function setAutoStartRunning(running: boolean): void {
  * Auto-Start API エンドポイント
  * GET /api/scheduler/autostart/status
  */
-export async function getAutoStartStatus(req: Request, res: Response) {
+export async function getAutoStartStatusEndpoint(req: Request, res: Response) {
   try {
     res.json({
       success: true,

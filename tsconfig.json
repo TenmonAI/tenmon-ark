@@ -1,5 +1,19 @@
 {
-  "files": [],
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "esModuleInterop": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "baseUrl": ".",
+    "paths": {
+      "@shared/*": ["shared/*"],
+      "@/*": ["client/src/*"]
+    }
+  },
+  "include": ["server/**/*", "shared/**/*", "client/**/*", "drizzle/**/*"],
   "references": [
     { "path": "./web" },
     { "path": "./api" }

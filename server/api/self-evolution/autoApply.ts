@@ -4,9 +4,9 @@
  */
 
 import express from 'express';
-import { sdk } from '../../../_core/sdk';
-import { runAutoApplyPipeline, type AutoApplyResult } from '../../../selfEvolution/autoApply';
-import type { AutoFixPatch } from '../../../selfEvolution/autoFix';
+import { sdk } from '../../_core/sdk';
+import { runAutoApplyPipeline, type AutoApplyResult } from '../../selfEvolution/autoApply';
+import type { AutoFixPatch } from '../../selfEvolution/autoFix';
 
 const router = express.Router();
 

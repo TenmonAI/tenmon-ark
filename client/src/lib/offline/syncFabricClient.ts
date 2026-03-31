@@ -7,55 +7,27 @@
  * ============================================================
  */
 
-import { createEventLogStore } from "../../../server/kokuzo/offline/eventLogStore";
-import { SyncFabricImpl } from "../../../server/kokuzo/offline/syncFabric";
-import { OfflineStateMachineImpl } from "../../../server/kokuzo/offline/offlineStateMachine";
+// Temporarily stub server imports for client-only build
+// import { createEventLogStore } from "../../../server/kokuzo/offline/eventLogStore";
+// import { SyncFabricImpl } from "../../../server/kokuzo/offline/syncFabric";
+// import { OfflineStateMachineImpl } from "../../../server/kokuzo/offline/offlineStateMachine";
 
-let syncFabric: SyncFabricImpl | null = null;
-let stateMachine: OfflineStateMachineImpl | null = null;
+let syncFabric: any | null = null;
+let stateMachine: any | null = null;
 
 /**
  * Sync Fabric を初期化
  */
 function initSyncFabric() {
-  if (syncFabric) {
-    return syncFabric;
-  }
-
-  const eventLogStore = createEventLogStore();
-  
-  // OfflineStateMachine を初期化
-  stateMachine = new OfflineStateMachineImpl();
-  
-  // ネットワーク状態を監視
-  if (typeof window !== "undefined") {
-    window.addEventListener("offline", () => {
-      stateMachine?.setOffline();
-    });
-    
-    window.addEventListener("online", () => {
-      stateMachine?.setOnline();
-    });
-  }
-
-  syncFabric = new SyncFabricImpl(eventLogStore, stateMachine);
-
-  return syncFabric;
+  console.warn("[SyncFabric] Stubbed - offline functionality disabled");
+  return null;
 }
 
 /**
  * 再接続時に黙って同期（UIブロック・トースト禁止）
  */
 export async function syncOnReconnect(): Promise<void> {
-  try {
-    const fabric = initSyncFabric();
-    
-    // 黙って同期（成功・失敗ともにUIに表示しない）
-    await fabric.onReconnect();
-  } catch (error) {
-    // エラーは無視（ユーザーに知らせない）
-    console.warn("[SyncFabric] Sync failed silently:", error);
-  }
+  console.log("[SyncFabric] Stubbed - offline functionality disabled");
 }
 
 /**
