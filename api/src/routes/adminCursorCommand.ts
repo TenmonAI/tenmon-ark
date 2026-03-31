@@ -1,3 +1,11 @@
+/**
+ * Admin Cursor command routes — execution trace (audit):
+ * - POST /api/admin/cursor/submit: validates payload (guardRemoteCursorPayload), appends to remote_cursor_queue.json on this host.
+ *   Does not spawn Cursor or SSH to Mac; no IDE automation in-process.
+ * - GET /api/admin/cursor/next: Mac/agent pulls next ready item and marks delivered (lease). Execution happens on the agent after pull.
+ * - Downstream “実 Cursor” requires a separate Mac-side consumer of /next + POST /result.
+ * Canonical audit bundle: api/automation/execution_capability_audit_report_v1.json
+ */
 import { Router, type Request, type Response } from "express";
 import fs from "fs";
 import path from "path";
@@ -73,8 +81,11 @@ export type QueueItem = {
 };
 
 function normalizeQueueState(raw: string): QueueItem["state"] {
-  if (raw === "in_progress") return "delivered";
-  if (raw === "done") return "executed";
+  const s = String(raw ?? "").trim();
+  const low = s.toLowerCase();
+  if (low === "queued" || low === "pending") return "approval_required";
+  if (s === "in_progress") return "delivered";
+  if (s === "done") return "executed";
   const ok = new Set([
     "approval_required",
     "ready",
@@ -82,7 +93,7 @@ function normalizeQueueState(raw: string): QueueItem["state"] {
     "delivered",
     "executed",
   ]);
-  return ok.has(raw as QueueItem["state"]) ? (raw as QueueItem["state"]) : "ready";
+  return ok.has(s as QueueItem["state"]) ? (s as QueueItem["state"]) : "ready";
 }
 
 export type QueueFile = {
@@ -132,13 +143,16 @@ export function readQueue(): QueueFile {
     const raw = fs.readFileSync(QUEUE_PATH, "utf-8");
     const j = JSON.parse(raw) as QueueFile;
     if (!Array.isArray(j.items)) j.items = [];
-    let idsRepaired = false;
+    let persistRepairs = false;
     for (const it of j.items) {
-      it.state = normalizeQueueState(String(it.state ?? "ready"));
+      const ext = it as unknown as Record<string, unknown>;
+      const rawState = ext.state ?? ext.status;
+      if (ext.state == null && ext.status != null) persistRepairs = true;
+      it.state = normalizeQueueState(String(rawState ?? "ready"));
       it.dry_run_only = normalizeDryRunOnly(it.dry_run_only);
-      if (repairQueueItemSurfaceId(it)) idsRepaired = true;
+      if (repairQueueItemSurfaceId(it)) persistRepairs = true;
     }
-    if (idsRepaired) writeQueue(j);
+    if (persistRepairs) writeQueue(j);
     return j;
   } catch {
     return {

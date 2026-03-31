@@ -1,0 +1,102 @@
+{
+  "schema": "TENMON_FULL_AUTONOMY_CURSOR_OPERATOR_GATED_RELEASE_REPORT_V1",
+  "card": "TENMON_FULL_AUTONOMY_CURSOR_OPERATOR_GATED_RELEASE_CURSOR_AUTO_V1",
+  "generated_at": "2026-03-30T09:34:28Z",
+  "auto_dir": "/opt/tenmon-ark-repo/api/automation",
+  "repo_root": "/opt/tenmon-ark-repo",
+  "high_risk_policy": {
+    "note": "high-risk / central / scripture / persona / intention 系は cursor_operator blocklist。カード id allowlist 外は bridge が送信しない。",
+    "operator_bind_card": "TENMON_CURSOR_AUTOBUILD_OPERATOR_BIND_CURSOR_AUTO_V1"
+  },
+  "release_checks": {
+    "three_hour_pass_equivalent": false,
+    "eight_hour_pass_equivalent": false,
+    "writeback_pass": false,
+    "writeback_reason": "writeback_ok_not_true",
+    "same_card_loop_clear": true,
+    "audit_stable": true,
+    "audit_detail": "ok",
+    "dirty_threshold_stable": true,
+    "dirty_detail": "ok",
+    "last_parent_stopped_by": "notion_hold",
+    "vps_last_judgement_pass": true,
+    "vps_last_judgement_reason": "last_judgement_pass"
+  },
+  "stages": [
+    {
+      "id": 1,
+      "name": "observe_queue_supervisor",
+      "summary": "Notion intake（空キュー時）→ queue 反映 → supervisor 1 周（親ループは real_3h / 手動サイクル）",
+      "allowed": true,
+      "notes": "stop_conditions と queue 契約 JSON が揃っているときのみ段階 1 を許可（fail-closed）。"
+    },
+    {
+      "id": 2,
+      "name": "writeback",
+      "summary": "notion_autobuild_writeback_v1 による Task Queue row 更新",
+      "allowed": false,
+      "requires": [
+        "three_hour_pass_equivalent",
+        "same_card_loop_clear",
+        "audit_stable",
+        "dirty_threshold_stable"
+      ]
+    },
+    {
+      "id": 3,
+      "name": "low_risk_cursor_execution",
+      "summary": "cursor_executor_bridge_v1（allowlist + VPS PASS + blocklist）",
+      "allowed": false,
+      "requires": [
+        "three_hour_pass_equivalent",
+        "same_card_loop_clear",
+        "audit_stable",
+        "dirty_threshold_stable",
+        "writeback_pass",
+        "multi_ai_autonomy_last_judgement_PASS",
+        "cursor_operator_gate"
+      ]
+    },
+    {
+      "id": 4,
+      "name": "longer_run",
+      "summary": "8 時間親ループ（real_8h）および段階的 max_seconds 拡張",
+      "allowed": false,
+      "requires": [
+        "three_hour_pass_equivalent",
+        "same_card_loop_clear",
+        "audit_stable",
+        "dirty_threshold_stable",
+        "writeback_pass",
+        "multi_ai_autonomy_last_judgement_PASS",
+        "cursor_operator_gate",
+        "eight_hour_pass_equivalent"
+      ]
+    }
+  ],
+  "full_auto_eligible": false,
+  "full_auto_requires_all_of": [
+    "three_hour_pass_equivalent",
+    "eight_hour_pass_equivalent",
+    "writeback_pass",
+    "same_card_loop_clear",
+    "audit_stable",
+    "dirty_threshold_stable",
+    "vps_last_judgement_pass"
+  ],
+  "truth_source_paths": [
+    "real_3h_autobuild_parent_guarded_loop_report_v1.json",
+    "real_8h_autobuild_parent_guarded_loop_report_v1.json",
+    "notion_autobuild_last_writeback_result_v1.json",
+    "multi_ai_autonomy_last_judgement.json",
+    "multi_ai_autonomy_stop_conditions_v1.json",
+    "multi_ai_autonomy_result_return_contract_v1.json",
+    "cursor_executor_bridge_v1.py"
+  ],
+  "recommended_commands": {
+    "parent_3h": "python3 /opt/tenmon-ark-repo/api/automation/real_3h_autobuild_parent_guarded_loop_v1.py --auto-dir /opt/tenmon-ark-repo/api/automation",
+    "parent_8h": "python3 /opt/tenmon-ark-repo/api/automation/real_8h_autobuild_parent_guarded_loop_v1.py --auto-dir /opt/tenmon-ark-repo/api/automation",
+    "writeback": "python3 /opt/tenmon-ark-repo/api/automation/notion_autobuild_writeback_v1.py --auto-dir /opt/tenmon-ark-repo/api/automation",
+    "cursor_bridge_dry": "python3 /opt/tenmon-ark-repo/api/automation/cursor_executor_bridge_v1.py --auto-dir /opt/tenmon-ark-repo/api/automation --dry-run"
+  }
+}

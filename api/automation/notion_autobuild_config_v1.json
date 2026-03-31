@@ -1,0 +1,33 @@
+{
+  "schema": "TENMON_NOTION_AUTOBUILD_CONFIG_V1",
+  "version": 2,
+  "notion_version": "2022-06-28",
+  "machine_execution_database_id": "0bbfb0ed8159417ea1170caa9943a155",
+  "human_plan_page_id": "",
+  "task_queue_database_title": "TENMON Autobuild Task Queue",
+  "property_map": {
+    "name": "Name",
+    "status": "Status",
+    "priority": "Priority",
+    "queue": "Queue",
+    "card_name": "CardName",
+    "card_body": "CardBody",
+    "target_scope": "TargetScope",
+    "approval_gate": "ApprovalGate",
+    "auto_run_enabled": "AutoRunEnabled",
+    "run_state": "RunState",
+    "acceptance_summary": "AcceptanceSummary",
+    "writeback_page_id": "WritebackPageId",
+    "result_summary": "ResultSummary",
+    "evidence_path": "EvidencePath",
+    "head_sha": "HeadSha",
+    "last_run_at": "LastRunAt",
+    "locked_by": "LockedBy",
+    "retry_count": "RetryCount",
+    "retry_requested": "RetryRequested",
+    "next_action": "NextAction",
+    "source_schedule_page_id": "SourceSchedulePageId",
+    "source_cursor_page_id": "SourceCursorPageId"
+  },
+  "notes": "property_map は notion_autobuild_schema_v1.json の task_queue_canonical_property_map と厳密一致。DB は TENMON Autobuild Task Queue（task_queue_database_title）。"
+}

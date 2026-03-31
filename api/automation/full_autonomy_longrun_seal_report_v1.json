@@ -1,0 +1,109 @@
+{
+  "schema": "TENMON_FULL_AUTONOMY_LONGRUN_SEAL_REPORT_V1",
+  "card": "TENMON_FULL_AUTONOMY_LONGRUN_SEAL_CURSOR_AUTO_V1",
+  "generated_at": "2026-03-30T21:01:51Z",
+  "auto_dir": "/opt/tenmon-ark-repo/api/automation",
+  "repo_root": "/opt/tenmon-ark-repo",
+  "overall_verdict": "NOT_SEALED",
+  "sealed": false,
+  "longrun_hours": 0.1667,
+  "longrun_reference_report": "8h",
+  "distinct_cards_completed": [
+    "TENMON_INFINITE_GROWTH_NEXT_CARD_GENERATION_BIND_CURSOR_AUTO_V1",
+    "TENMON_NOTION_TASK_QUEUE_SCHEMA_BIND_CURSOR_AUTO_V1"
+  ],
+  "distinct_cards_completed_count": 2,
+  "writeback_success_count": 0,
+  "cursor_low_risk_success_count": 0,
+  "final_frontier": {
+    "multi_ai_autonomy_status": "PASS",
+    "multi_ai_last_result": "PASS",
+    "notion_last_hold_reason": "notion_token_missing",
+    "notion_last_cycle_verdict": "HOLD",
+    "audit_skipped": false,
+    "audit_ok": true,
+    "dirty_files_count": 38,
+    "queue_len": 0
+  },
+  "remaining_manual_cards": [
+    {
+      "card_id": "TENMON_INFINITE_GROWTH_NEXT_CARD_GENERATION_BIND_CURSOR_AUTO_V1",
+      "source": "parent_loop_distinct_seen",
+      "manual_reasons": [
+        "not_cursor_operator_allowlist_low_risk_lane"
+      ]
+    },
+    {
+      "card_id": "(policy_scope)",
+      "source": "denylist_rules",
+      "manual_reasons": [
+        "canon_scripture_persona_intention_semantic_change_paths_per_multi_ai_autonomy_denylist_v1"
+      ],
+      "reference": "multi_ai_autonomy_denylist_v1.json / rules"
+    }
+  ],
+  "remaining_manual_cards_summary": {
+    "total_entries": 2,
+    "from_queue": 0,
+    "from_parent_loop_distinct_seen": 1,
+    "policy_scope_rows": 1
+  },
+  "seal_checks": {
+    "guarded_release_full_auto_eligible": false,
+    "three_hour_pass_equivalent": false,
+    "eight_hour_pass_equivalent": false,
+    "writeback_pass": false,
+    "writeback_patch_applied_observed": false,
+    "same_card_loop_clear": true,
+    "audit_stable": true,
+    "dirty_threshold_stable": true,
+    "vps_last_judgement_pass": true,
+    "low_risk_cursor_execution_pass": false,
+    "low_risk_cursor_detail": "cursor_bridge_not_pass:HOLD",
+    "stopped_by_acceptable_for_seal": false,
+    "stopped_by": "notion_hold",
+    "last_parent_stopped_by": "notion_hold"
+  },
+  "seal_conditions_all_met": false,
+  "pass_fail_readable": {
+    "overall_verdict": "NOT_SEALED",
+    "sealed": false,
+    "fail_reasons": [
+      "guarded_release_full_auto_eligible_false",
+      "three_hour_not_pass_equivalent",
+      "eight_hour_not_pass_equivalent",
+      "writeback_not_pass",
+      "cursor_low_risk_not_pass:cursor_bridge_not_pass:HOLD",
+      "stopped_by_not_acceptable:notion_hold"
+    ],
+    "one_line": "NOT_SEALED (6 checks failed)"
+  },
+  "guarded_release_snapshot": {
+    "full_auto_eligible": false,
+    "release_checks": {
+      "three_hour_pass_equivalent": false,
+      "eight_hour_pass_equivalent": false,
+      "writeback_pass": false,
+      "writeback_reason": "writeback_ok_not_true",
+      "same_card_loop_clear": true,
+      "audit_stable": true,
+      "audit_detail": "ok",
+      "dirty_threshold_stable": true,
+      "dirty_detail": "ok",
+      "last_parent_stopped_by": "notion_hold",
+      "vps_last_judgement_pass": true,
+      "vps_last_judgement_reason": "last_judgement_pass"
+    }
+  },
+  "truth_source_paths": [
+    "full_autonomy_cursor_operator_gated_release_report_v1.json",
+    "real_3h_autobuild_parent_guarded_loop_report_v1.json",
+    "real_8h_autobuild_parent_guarded_loop_report_v1.json",
+    "notion_autobuild_last_writeback_result_v1.json",
+    "cursor_executor_last_result.json",
+    "multi_ai_autonomy_last_judgement.json",
+    "multi_ai_autonomy_queue.json",
+    "multi_ai_autonomy_denylist_v1.json"
+  ],
+  "notes": "seal は gated release（full_auto_eligible）の全 release_checks に加え、直近 Cursor bridge final_verdict=PASS かつ親ループ stopped_by が max_seconds または空のときのみ SEALED。high-risk / central 等は remaining_manual_cards を参照。"
+}

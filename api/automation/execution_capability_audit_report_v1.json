@@ -1,0 +1,64 @@
+{
+  "schema": "TENMON_EXECUTION_CAPABILITY_AUDIT_REPORT_V1",
+  "card": "TENMON_MULTI_AI_CURSOR_EXECUTION_CAPABILITY_AUDIT_CURSOR_AUTO_V1",
+  "version": 1,
+  "generated_at_note": "Update this file when wiring changes; CI may diff against repo truth.",
+  "acceptance_minimal_real_connection": {
+    "orchestra": [
+      "Evidence dir に orchestra_dry_run=false が progress / run.log に残る",
+      "証拠ディレクトリに gpt_real_response.json が存在する（実 HTTP 成功時）",
+      "OPENAI_API_KEY も /etc/tenmon/llm.env も供給されない場合は openai_real_failed:... で orchestra exit 2"
+    ],
+    "cursor_bridge": [
+      "cursor_bridge_submit_audit.json に submit_http_attempted=true と submit_http_status=200",
+      "gate_ok=true のときのみ HTTP POST が発火（blocklist 時は submit_http_attempted=false）"
+    ],
+    "admin_submit_route": [
+      "POST /api/admin/cursor/submit は VPS 上で remote_cursor_queue.json へ追記のみ",
+      "本リポの api/src/routes/adminCursorCommand.ts 内に Cursor IDE / Mac への subprocess は無い",
+      "実編集は Mac エージェントが GET /api/admin/cursor/next で manifest 取得後に別プロセスで実施"
+    ],
+    "forbidden_without_evidence": [
+      "上記 JSON 監査束が無いのに「実接続済み」「完全自動化」と記述すること"
+    ]
+  },
+  "orchestra": {
+    "module": "api/automation/multi_ai_orchestra_executor_v1.py",
+    "dry_run_default": true,
+    "cli_real_gpt": "--no-dry-run（--dry-run 既定 True と排他）",
+    "openai_real": "call_openai_real() in api/automation/multi_ai_orchestra_executor_v1.py",
+    "openai_env_loader": "import tenmon_env_loader_v1（/etc/tenmon/llm.env を os.environ に注入）",
+    "gpt_real_response_artifact": "gpt_real_response.json",
+    "openai_api_key_env": "OPENAI_API_KEY",
+    "openai_model_env": "OPENAI_MODEL（省略時 gpt-4o-mini）",
+    "anthropic_http_in_orchestra": false,
+    "gemini_http_in_orchestra": false,
+    "claude_gemini_note": "スタブ raw のまま normalize のみ。実 HTTP は未接続（別カード）",
+    "audit_artifacts": ["gpt_real_response.json", "gpt_real_http_error.txt（失敗時）"]
+  },
+  "cursor_bridge": {
+    "module": "api/automation/cursor_executor_bridge_v1.py",
+    "submit_paths": [
+      "HTTP: POST {TENMON_API_BASE}/api/admin/cursor/submit（bearer）",
+      "File: TENMON_CURSOR_BRIDGE_FILE_ENQUEUE=1 時 local remote_cursor_queue.json 追記"
+    ],
+    "queue_poll": "GET /api/admin/cursor/queue（観測のみ）",
+    "bundle_ingest": "remote_cursor_result_bundle.json の queue_id 照合",
+    "gate_structured": "cursor_operator_text_blocked_detail → blocklist_hits（category に canon_jp_literal 等）",
+    "verify_card_id": "TENMON_CURSOR_OPERATOR_VERIFY_HYGIENE_SCHEMA_OBSERVABILITY_ONLY_CURSOR_AUTO_V1",
+    "audit_artifact": "cursor_bridge_submit_audit.json under /var/log/tenmon/cursor_executor/<ts>/"
+  },
+  "admin_route": {
+    "file": "api/src/routes/adminCursorCommand.ts",
+    "submit_handler": "adminCursorCommandRouter.post(\"/admin/cursor/submit\", ...)",
+    "implementation_summary": "readQueue/writeQueue JSON on disk; guardRemoteCursorPayload; いかなる Cursor バイナリも起動しない",
+    "mac_cursor_execution": "別ホスト上のエージェントが /admin/cursor/next をポーリングした後に発生（本ファイル外）"
+  },
+  "systemd_env": {
+    "api_service_examples": [
+      "server/systemd/tenmon-ark-api.service → EnvironmentFile=.env",
+      "infra/systemd/tenmon-ark-api.service → EnvironmentFile=/opt/tenmon-ark/api/.env"
+    ],
+    "orchestra_openai_note": "multi_ai_orchestra は子プロセスで OPENAI_API_KEY を継承。API サーバ .env と同じホストで実行するか、unit に明示すること"
+  }
+}
