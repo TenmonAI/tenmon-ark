@@ -21,8 +21,8 @@ import { generatePhaseState, convertPersonaToPhase, convertPhaseToPersona } from
 import { executeReishoPipeline } from "../reishoPipeline";
 import { createConsciousMesh, routeTaskInConsciousMesh, syncConsciousMesh } from "../consciousMesh";
 import { generateUniversalMemoryContext } from "../universalMemoryLayer";
-import type { UniversalStructuralSeed } from "../../../kokuzo/fractal/seedV2";
-import type { DeviceNode } from "../../../kokuzo/device/fusion";
+import type { UniversalStructuralSeed } from "../../kokuzo/fractal/seedV2";
+import type { DeviceNode } from "../../kokuzo/device/fusion";
 
 /* ============================================================
  * 1. OS Core Test
