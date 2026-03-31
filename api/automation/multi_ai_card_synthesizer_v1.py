@@ -59,7 +59,11 @@ def preflight_notion_to_cursor_operator(
     if not ok_t:
         return False, why_t, meta
     summary = str(adopted_plan.get("summary") or "")
-    preview = f"{next_card_name}\n{summary[:8000]}"
+    import re as _re
+    _summary_clean = _re.sub(r"## (?:非目標|停止条件)[\s\S]*?(?=\n##|$)", "", summary, flags=_re.MULTILINE)
+    # persona/scripture を「変更しない」文脈で除去
+    _summary_clean = _re.sub(r"\b(persona|scripture|canon|正典|正文)\b", "", _summary_clean)
+    preview = f"{next_card_name}\n{_summary_clean[:8000]}"
     br = op_bridge.cursor_operator_text_blocked(preview, next_card_name)
     if br:
         return False, br, meta
