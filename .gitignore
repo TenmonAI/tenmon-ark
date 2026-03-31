@@ -236,3 +236,24 @@ api/automation/infinite_growth_last_generated_card.md
 api/automation/infinite_growth_last_generated_card.json
 api/automation/multi_ai_autonomy_*.json
 api/automation/infinite_growth_*.json
+
+# tenmon runtime JSONs (auto-generated, do not track)
+api/automation/infinite_growth_*.json
+api/automation/multi_ai_autonomy_last_judgement.json
+api/automation/multi_ai_autonomy_queue.json
+api/automation/multi_ai_card_synthesizer_v1.py
+api/automation/multi_ai_orchestra_executor_v1.py
+api/automation/multi_ai_autonomy_supervisor_v1.py
+api/automation/multi_ai_task_router_v1.py
+api/automation/operations_level_autonomy_state_v1.json
+api/automation/remote_cursor_mac_agent_manifest.json
+api/automation/remote_cursor_queue.json
+api/automation/remote_cursor_result_bundle.json
+api/automation/infinite_growth_hold_policy_v1.json
+api/automation/infinite_growth_stop_conditions_v1.json
+api/automation/multi_ai_autonomy_last_judgement.json
+api/automation/multi_ai_autonomy_queue.json
+api/automation/operations_level_autonomy_state_v1.json
+api/automation/remote_cursor_mac_agent_manifest.json
+api/automation/remote_cursor_queue.json
+api/automation/remote_cursor_result_bundle.json
