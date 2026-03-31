@@ -10,6 +10,8 @@ result return 検証 → multi_ai_autonomy_judge → VPS 観測までを fail-cl
 - 前提 JSON/PY 欠落・dryrun 本番ゲート未達は即 HOLD（--bypass-dryrun-gate / SKIP で緩和可）。
 - Claude/Gemini の raw 採用はせず、execution_authority（GPT/天聞）が無い限り Cursor に進まない。
 - overnight 本番は段階投入（手動監視 → dry-run → 半日）。未登録カードは allowlist で deny。
+- 実行能力の真偽は api/automation/execution_capability_audit_report_v1.json / .md を正とする（憶測禁止）。
+- --orchestra-no-dry-run 時は GPT のみ OpenAI 実 HTTP（OPENAI_API_KEY 必須）。Claude/Gemini 実装は別カード。
 """
 from __future__ import annotations
 
@@ -194,6 +196,39 @@ def _eligible_cards(queue: dict[str, Any], triage: dict[str, Any]) -> list[str]:
         if tm.get(c) == require:
             out.append(c)
     return out
+
+
+def _dequeue_eligible_slot(
+    queue: dict[str, Any],
+    triage: dict[str, Any],
+    qc: int,
+    executed_card: str,
+) -> tuple[dict[str, Any], bool]:
+    """
+    card_order から、eligible 上の qc 番目（tier 整合）のスロットを 1 枚除去する。
+    PASS 後に cursor を進めるだけだと card_order 残存で exhausted 誤判定になるため。
+    """
+    require = str(queue.get("require_tier") or "A_full_auto_safe")
+    order = list(queue.get("card_order") if isinstance(queue.get("card_order"), list) else [])
+    tm = _triage_tier_map(triage)
+    target_j: int | None = None
+    elig_i = 0
+    for j, c in enumerate(order):
+        if not isinstance(c, str) or not c.startswith("TENMON_"):
+            continue
+        if tm.get(c) != require:
+            continue
+        if elig_i == qc:
+            target_j = j
+            break
+        elig_i += 1
+    if target_j is None or order[target_j] != executed_card:
+        return dict(queue), False
+    new_order = order[:target_j] + order[target_j + 1 :]
+    q = dict(queue)
+    q["card_order"] = new_order
+    q["updated_at"] = _utc_iso()
+    return q, True
 
 
 def _forbidden_targets(adopted: dict[str, Any], forbidden: list[str]) -> tuple[bool, str]:
@@ -492,7 +527,6 @@ def run_supervisor(
         progress["retry_count_by_card"] = {}
 
     initial_dirty = _dirty_count(repo)
-    eligible = _eligible_cards(queue, triage)
 
     def _fail_bundle(obj: dict[str, Any]) -> None:
         obj["generated_at"] = _utc_iso()
@@ -563,7 +597,36 @@ def run_supervisor(
             return 0
 
         loop_n = i + 1
+        queue = _read_json(auto_dir / QUEUE_FN)
+        eligible = _eligible_cards(queue, triage)
         qc = int(progress.get("queue_cursor") or 0)
+        raw_co = queue.get("card_order") if isinstance(queue.get("card_order"), list) else []
+        queue_len = len([x for x in raw_co if isinstance(x, str) and str(x).strip()])
+        exhausted_reason = ""
+        residual_queue_detected = False
+        if qc >= len(eligible) and eligible:
+            residual_queue_detected = True
+            exhausted_reason = "stale_queue_cursor_residual_eligible"
+            progress["queue_cursor"] = 0
+            qc = 0
+        selected_for_diag = eligible[qc] if (eligible and qc < len(eligible)) else ""
+        progress["supervisor_queue_diag"] = {
+            "queue_len": queue_len,
+            "queue_cursor": qc,
+            "eligible_len": len(eligible),
+            "selected_card": selected_for_diag,
+            "exhausted_reason": exhausted_reason,
+            "residual_queue_detected": residual_queue_detected,
+        }
+        progress["updated_at"] = _utc_iso()
+        progress["supervisor_log_dir"] = str(sup_log)
+        _write_json(auto_dir / PROGRESS_FN, progress)
+        _log(
+            sup_log,
+            f"queue_diag queue_len={queue_len} queue_cursor={qc} eligible_len={len(eligible)} "
+            f"selected_card={selected_for_diag} residual_queue_detected={1 if residual_queue_detected else 0} "
+            f"exhausted_reason={exhausted_reason or 'none'}",
+        )
 
         _write_runtime(
             auto_dir / RUNTIME_FN,
@@ -576,6 +639,29 @@ def run_supervisor(
         )
 
         if not eligible:
+            has_tenmon_in_order = any(
+                isinstance(c, str) and c.strip().startswith("TENMON_") for c in raw_co
+            )
+            if not has_tenmon_in_order:
+                _write_runtime(
+                    auto_dir / RUNTIME_FN,
+                    status="PASS",
+                    current_card="",
+                    current_phase="queue_exhausted",
+                    loop_count=loop_n,
+                    last_result="PASS_queue_exhausted",
+                    last_evidence_dir=str(sup_log),
+                )
+                progress["hold_reason"] = None
+                progress["last_result"] = "PASS_queue_exhausted"
+                progress["updated_at"] = _utc_iso()
+                progress["supervisor_log_dir"] = str(sup_log)
+                _write_json(auto_dir / PROGRESS_FN, progress)
+                _log(
+                    sup_log,
+                    "PASS queue exhausted (no_TENMON_cards_in_order) queue_len=0 eligible_len=0",
+                )
+                return 0
             _write_runtime(
                 auto_dir / RUNTIME_FN,
                 status="HOLD",
@@ -586,6 +672,7 @@ def run_supervisor(
                 last_evidence_dir=str(sup_log),
             )
             progress["hold_reason"] = "no_eligible_A_tier_cards_in_queue"
+            progress["last_result"] = "HOLD"
             progress["updated_at"] = _utc_iso()
             progress["supervisor_log_dir"] = str(sup_log)
             _write_json(auto_dir / PROGRESS_FN, progress)
@@ -597,25 +684,7 @@ def run_supervisor(
                     "queue": queue,
                 },
             )
-            _log(sup_log, "HOLD no eligible")
-            return 0
-
-        if qc >= len(eligible):
-            _write_runtime(
-                auto_dir / RUNTIME_FN,
-                status="PASS",
-                current_card="",
-                current_phase="queue_exhausted",
-                loop_count=loop_n,
-                last_result="PASS_queue_exhausted",
-                last_evidence_dir=str(sup_log),
-            )
-            progress["last_result"] = "PASS_queue_exhausted"
-            progress["hold_reason"] = None
-            progress["updated_at"] = _utc_iso()
-            progress["supervisor_log_dir"] = str(sup_log)
-            _write_json(auto_dir / PROGRESS_FN, progress)
-            _log(sup_log, "PASS queue exhausted")
+            _log(sup_log, "HOLD no eligible (tier_mismatch_or_triage)")
             return 0
 
         if strict_loop_pf and not skip_preflight:
@@ -1394,7 +1463,30 @@ def run_supervisor(
             )
             return 0
 
-        progress["queue_cursor"] = qc + 1
+        new_q, dq_ok = _dequeue_eligible_slot(queue, triage, qc, card_id)
+        if not dq_ok:
+            hr = "queue_dequeue_post_pass_invariant_failed"
+            _write_runtime(
+                auto_dir / RUNTIME_FN,
+                status="HOLD",
+                current_card=card_id,
+                current_phase="queue_post_pass_dequeue",
+                loop_count=loop_n,
+                last_result="HOLD",
+                last_evidence_dir=str(evidence_dir),
+                last_hold_reason=hr,
+            )
+            progress["hold_reason"] = hr
+            progress["last_result"] = "HOLD"
+            progress["updated_at"] = _utc_iso()
+            progress["supervisor_log_dir"] = str(sup_log)
+            _write_json(auto_dir / PROGRESS_FN, progress)
+            _fail_bundle({"schema": "MULTI_AI_AUTONOMY_FAILURE_BUNDLE_V1", "verdict": "HOLD", "reason": hr})
+            _log(sup_log, hr)
+            return 0
+        queue = new_q
+        _write_json(auto_dir / QUEUE_FN, queue)
+        progress["queue_cursor"] = 0
         progress["loops_completed"] = int(progress.get("loops_completed") or 0) + 1
         progress["last_card"] = card_id
         progress["last_result"] = "PASS"
@@ -1422,7 +1514,14 @@ def run_supervisor(
         _log(sup_log, f"PASS card={card_id}")
         _append_execution_history(
             auto_dir,
-            {"loop": loop_n, "card_id": card_id, "verdict": "PASS", "reason": "loop_ok", "evidence_dir": str(evidence_dir)},
+            {
+                "loop": loop_n,
+                "card_id": card_id,
+                "verdict": "PASS",
+                "reason": "loop_ok",
+                "evidence_dir": str(evidence_dir),
+                "queue_dequeued": True,
+            },
         )
 
         if loop_n >= max_loops:

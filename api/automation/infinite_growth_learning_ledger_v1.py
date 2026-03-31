@@ -124,3 +124,63 @@ def recent_same_card_hold_count(ledger: dict[str, Any], card_id: str, n: int = 1
     return c
 
 
+def quality_guard_reject_count(
+    ledger: dict[str, Any],
+    *,
+    card_id: str,
+    lookback: int = 12,
+) -> int:
+    cid = (card_id or "").strip()
+    if not cid:
+        return 0
+    tail = entries_list(ledger)[-lookback:]
+    n = 0
+    for e in tail:
+        if not isinstance(e, dict):
+            continue
+        if str(e.get("event") or "") != "quality_guard":
+            continue
+        if str(e.get("card_id") or "") != cid:
+            continue
+        if str(e.get("verdict") or "").upper() == "HOLD":
+            n += 1
+    return n
+
+
+def append_drain_bind_ledger(
+    auto_dir: Path,
+    *,
+    last_executed_card: str,
+    bind_ok: bool,
+    bind_result: dict[str, Any],
+    supervisor_cycle_verdict: str,
+) -> None:
+    blocked = bind_result.get("blocked_candidates") or []
+    if not isinstance(blocked, list):
+        blocked = []
+    blocked_dicts = [b for b in blocked if isinstance(b, dict)]
+    repeated_loop_avoided = any(
+        str(b.get("reason") or "") in ("same_card_loop_prevented", "repeated_hold_reason_blocked")
+        for b in blocked_dicts
+    )
+    append_ledger_entry(
+        auto_dir,
+        {
+            "event": "drain_bind",
+            "card_id": last_executed_card,
+            "issue_signature": "",
+            "verdict": "PASS" if bind_ok else "HOLD",
+            "hold_reason": "" if bind_ok else str(bind_result.get("hold_reason") or ""),
+            "next_selected_card": str(bind_result.get("selected_card_id") or ""),
+            "why_selected": str(bind_result.get("selection_reason") or ""),
+            "why_skipped": blocked_dicts,
+            "blocked_candidates": blocked_dicts,
+            "repeated_loop_avoided": repeated_loop_avoided,
+            "selection_basis": str(bind_result.get("selection_basis") or ""),
+            "frontier_shift": str(bind_result.get("frontier_shift") or ""),
+            "supervisor_cycle_verdict": supervisor_cycle_verdict,
+            "fix_type": "drain_next_card_bind",
+        },
+    )
+
+

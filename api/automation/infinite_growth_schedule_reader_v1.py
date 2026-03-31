@@ -2,6 +2,8 @@
 # -*- coding: utf-8 -*-
 """
 TENMON_INFINITE_GROWTH — schedule source 読取（phases/cards スキーマ厳格）。
+Notion 経由の次カード供給は notion_autobuild_watch_loop が multi_ai キューへ直接投入し、
+本 reader の JSON 正典を置き換えない。
 """
 from __future__ import annotations
 

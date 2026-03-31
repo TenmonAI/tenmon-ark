@@ -103,3 +103,39 @@ def write_queue(auto_dir: Path, queue: dict[str, Any]) -> None:
     queue = dict(queue)
     queue["updated_at"] = _utc_iso()
     _write_json(auto_dir / QUEUE_FN, queue)
+
+
+def reset_queue_card_order_and_multi_ai_cursor(auto_dir: Path) -> None:
+    """
+    QUEUE_DRAINED 後の次カード投入用: card_order を空にし multi_ai の queue_cursor を 0 に戻す。
+    MULTI_AI_AUTONOMY_QUEUE_V1 / PROGRESS の契約は維持する。
+    """
+    q = load_queue(auto_dir)
+    q = dict(q)
+    q["card_order"] = []
+    q["updated_at"] = _utc_iso()
+    _write_json(auto_dir / QUEUE_FN, q)
+
+    prog = load_progress(auto_dir)
+    prog = dict(prog)
+    prog["queue_cursor"] = 0
+    prog["updated_at"] = _utc_iso()
+    if "hold_reason" in prog and prog.get("hold_reason"):
+        prog["hold_reason"] = None
+    _write_json(auto_dir / PROGRESS_FN, prog)
+
+
+def enqueue_single_card_front(auto_dir: Path, card_id: str) -> dict[str, Any]:
+    """空キュー想定で 1 枚だけ投入（先頭 = 唯一の要素）。"""
+    q = load_queue(auto_dir)
+    co = q.get("card_order")
+    if isinstance(co, list) and len([x for x in co if isinstance(x, str) and x.strip()]) > 0:
+        return q
+    cid = (card_id or "").strip()
+    if not cid:
+        return q
+    q = dict(q)
+    q["card_order"] = [cid]
+    q["updated_at"] = _utc_iso()
+    _write_json(auto_dir / QUEUE_FN, q)
+    return q

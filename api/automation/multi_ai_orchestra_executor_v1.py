@@ -2,18 +2,20 @@
 # -*- coding: utf-8 -*-
 """
 TENMON_MULTI_AI_ORCHESTRA_EXECUTOR_CURSOR_AUTO_V1
+TENMON_OPENAI_REAL_CALL_BIND_CURSOR_AUTO_V1
 
 多AIオーケストラの fail-closed 実行殻（初回: dry-run 決定的スタブ）。
 - 主裁定層は GPT/天聞AI スロット（本番では外部に委譲; 未接続時は契約どおりのスタブのみ）
 - Claude/Gemini/browser は補助スロット（スタブ出力は候補・監査表現に留める）
 
-証拠束: /var/log/tenmon/multi_ai_orchestra/<TS>/
+証拠束: /var/log/tenmon/multi_ai_autonomy/<TS>/（--evidence-base で変更可）
 """
 from __future__ import annotations
 
 import argparse
 import json
 import os
+import re
 import subprocess
 import sys
 import urllib.error
@@ -26,12 +28,17 @@ _AUTO = Path(__file__).resolve().parent
 if str(_AUTO) not in sys.path:
     sys.path.insert(0, str(_AUTO))
 
+try:
+    import tenmon_env_loader_v1  # /etc/tenmon/llm.env を読む
+except ImportError:
+    pass
+
 import multi_ai_card_synthesizer_v1 as synth_mod
 import multi_ai_result_normalizer_v1 as norm_mod
 import multi_ai_task_router_v1 as router_mod
 
 CARD = "TENMON_MULTI_AI_ORCHESTRA_EXECUTOR_CURSOR_AUTO_V1"
-NEXT_CARD = "TENMON_MULTI_AI_ORCHESTRA_DRYRUN_ACCEPTANCE_CURSOR_AUTO_V1"
+NEXT_CARD = "TENMON_MULTI_AI_ORCHESTRA_DRYRUN_REPORT_ACCEPTANCE_CURSOR_AUTO_V1"
 ROLE_FN = "multi_ai_role_contract_v1.json"
 HOLD_FN = "multi_ai_hold_policy_v1.json"
 RUNTIME_FN = "multi_ai_runtime_state.json"
@@ -120,6 +127,59 @@ def evaluate_hold(
     return False, "ok"
 
 
+def call_openai_real(prompt: str, evidence_dir: Path | str) -> dict[str, Any]:
+    import os, json, urllib.request, pathlib
+
+    api_key = os.environ.get("OPENAI_API_KEY")
+    if not api_key:
+        raise RuntimeError("OPENAI_API_KEY not set — fail-closed")
+    data = json.dumps(
+        {
+            "model": os.environ.get("OPENAI_MODEL", "gpt-4o-mini"),
+            "messages": [{"role": "user", "content": prompt}],
+            "max_tokens": 1000,
+        }
+    ).encode()
+    req = urllib.request.Request(
+        "https://api.openai.com/v1/chat/completions",
+        data=data,
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {api_key}",
+        },
+        method="POST",
+    )
+    with urllib.request.urlopen(req, timeout=30) as res:
+        body = json.loads(res.read())
+    pathlib.Path(evidence_dir, "gpt_real_response.json").write_text(
+        json.dumps(body, ensure_ascii=False, indent=2)
+    )
+    return {
+        "agent": "gpt_openai_real",
+        "content": body["choices"][0]["message"]["content"],
+    }
+
+
+def _gpt_arbitration_dict_from_openai_content(content: str) -> dict[str, Any]:
+    """モデル応答から adopted_plan 等を抽出（normalize_gpt_arbitration 用）。パース不能時は空 dict。"""
+    s = (content or "").strip()
+    try:
+        j = json.loads(s)
+        if isinstance(j, dict):
+            return j
+    except json.JSONDecodeError:
+        pass
+    m = re.search(r"\{[\s\S]*\}", s)
+    if m:
+        try:
+            j = json.loads(m.group(0))
+            if isinstance(j, dict):
+                return j
+        except json.JSONDecodeError:
+            pass
+    return {}
+
+
 def _optional_vps_audit(base: str, evidence: Path) -> dict[str, Any]:
     url = base.rstrip("/") + "/api/audit"
     out: dict[str, Any] = {"url": url, "ok": None, "error": None}
@@ -195,14 +255,69 @@ def run_loop(
         "api/automation/multi_ai_role_contract_v1.json",
         "api/automation/multi_ai_hold_policy_v1.json",
     ]
-    gpt_raw = {
-        "gpt_stub": True,
-        "gemini_options": g_norm.get("options"),
-        "claude_risks": c_norm.get("design_risks"),
-    }
+    observation_prompt = (
+        "TENMON multi-ai orchestrator: arbitrate the following observation and issue.\n"
+        "Return ONLY a valid JSON object with keys:\n"
+        "adopted_plan: {option_id, summary, target_paths[], non_goals[]},\n"
+        "rejected_options: [], center_decision: string,\n"
+        "execution_authority: {authorized: bool, arbiter: string, constraints: []}.\n"
+        "Scope: prefer api/automation. Do not propose changing 正典/正文/persona automatically.\n\n"
+        + json.dumps(
+            {
+                "issue_text": issue[:8000],
+                "git_porcelain_lines": n_git,
+                "git_porcelain_sample": porcelain_lines[:40],
+                "repo_root": str(repo),
+            },
+            ensure_ascii=False,
+        )
+    )
+
+    if not dry_run:
+        _log(evidence, "openai_real_call_attempt dry_run=False")
+        try:
+            _real = call_openai_real(observation_prompt, evidence)
+        except RuntimeError as e:
+            fb = {
+                "schema": "MULTI_AI_FAILURE_BUNDLE_V1",
+                "generatedAt": _utc_iso(),
+                "verdict": "HOLD",
+                "hold_reason": f"openai_real_failed:{e}",
+            }
+            _write_json(evidence / "failure_bundle.json", fb)
+            _write_json(
+                evidence / "multi_ai_runtime_state.json",
+                {
+                    "schema": "MULTI_AI_RUNTIME_STATE_V1",
+                    "last_loop_id": evidence.name,
+                    "last_verdict": "HOLD",
+                    "hold_active": True,
+                    "hold_reason": fb["hold_reason"],
+                    "gpt_arbitration_completed": False,
+                    "openai_http_attempted": True,
+                    "last_evidence_dir": str(evidence),
+                    "updatedAt": _utc_iso(),
+                },
+            )
+            _log(evidence, f"HOLD {fb['hold_reason']}")
+            if sync_automation_state:
+                _write_json(auto_dir / RUNTIME_FN, _read_json(evidence / "multi_ai_runtime_state.json"))
+            return 2
+        _parsed = _gpt_arbitration_dict_from_openai_content(_real.get("content") or "")
+        gpt_raw = {
+            **_parsed,
+            **_real,
+            "gemini_options": g_norm.get("options"),
+            "claude_risks": c_norm.get("design_risks"),
+        }
+        gpt_dry_flag = False
+    else:
+        gpt_raw = {"agent": "gpt_tenmon_stub"}
+        gpt_dry_flag = True
+
     p_norm = norm_mod.normalize_gpt_arbitration(
         gpt_raw,
-        dry_run=dry_run,
+        dry_run=gpt_dry_flag,
         default_targets=default_targets,
     )
     _write_json(evidence / "gpt_arbitration_normalized.json", p_norm)
@@ -270,6 +385,7 @@ def run_loop(
         claude_audit=c_norm,
         gemini_norm=g_norm,
         next_card_name=NEXT_CARD,
+        auto_dir=auto_dir,
     )
     synth_mod.write_synthesized(evidence, md, acc)
     _log(evidence, "synthesized cursor card")
@@ -297,7 +413,12 @@ def run_loop(
         "last_verdict": verdict,
         "last_next_card": NEXT_CARD,
         "evidence_dir": str(evidence),
-        "notes": "dry-run スタブ経路。本番は各 AI 接続後に normalized 層を置換。",
+        "notes": (
+            "dry-run スタブ経路（--dry-run 既定）。"
+            "--no-dry-run 時は GPT のみ call_openai_real → gpt_real_response.json。Claude/Gemini は未接続スタブのまま。"
+        ),
+        "orchestra_dry_run": dry_run,
+        "gpt_slot_openai_real_http": not dry_run,
     }
     _write_json(evidence / "multi_ai_progress_report.json", progress)
 
@@ -357,11 +478,20 @@ def main() -> int:
     ap.add_argument("--issue", default="multi_ai オーケストラ骨格を automation に追加し、証拠束を保存する（正典・正文・persona は不変更）")
     ap.add_argument(
         "--evidence-base",
-        default="/var/log/tenmon/multi_ai_orchestra",
-        help="証拠ルート（其の下に TS ディレクトリ）",
+        default="/var/log/tenmon/multi_ai_autonomy",
+        help="証拠ルート（其の下に TS ディレクトリ）。--no-dry-run 時 gpt_real_response.json をここに保存",
     )
-    ap.add_argument("--dry-run", action="store_true", default=True, help="決定的スタブ（既定 True）")
-    ap.add_argument("--no-dry-run", action="store_true", help="外部 AI 生出力を期待（未接続時は失敗しうる）")
+    ap.add_argument(
+        "--dry-run",
+        action="store_true",
+        default=True,
+        help="決定的スタブ（既定 True）。GPT/Claude/Gemini いずれも実 HTTP なし。",
+    )
+    ap.add_argument(
+        "--no-dry-run",
+        action="store_true",
+        help="GPT スロットのみ OpenAI 実呼び出し（OPENAI_API_KEY 必須・fail-closed）。Claude/Gemini は未着手のまま。",
+    )
     ap.add_argument("--probe-vps", action="store_true", help="GET /api/audit を実行")
     ap.add_argument("--vps-base", default=os.environ.get("TENMON_API_BASE", "http://127.0.0.1:3000"))
     ap.add_argument("--sync-automation-state", action="store_true", help="api/automation の runtime/progress を更新")

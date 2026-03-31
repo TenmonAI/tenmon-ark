@@ -149,10 +149,12 @@ def synthesize_acceptance_bundle_stub(row: dict[str, Any]) -> dict[str, Any]:
         ),
     }
     gemini_norm = {"structured_summary": f"phase={row.get('phase')} lane={row.get('lane')}"}
+    auto_here = Path(__file__).resolve().parent
     md, bundle = synth_mod.synthesize_cursor_card(
         adopted_plan=adopted,
         claude_audit=claude_audit,
         gemini_norm=gemini_norm,
         next_card_name=str(row.get("card_id") or ""),
+        auto_dir=auto_here,
     )
     return {"markdown_alt": md, "acceptance_bundle": bundle}
