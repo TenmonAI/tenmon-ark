@@ -6,6 +6,7 @@ import type { KokuzoChunk, KokuzoSeed } from "./indexer.js";
 import { extractKotodamaTags, type KotodamaTag } from "../kotodama/tagger.js";
 import { getPageText } from "./pages.js";
 import { getCaps } from "./capsQueue.js";
+import { getSourcePriority, type KokuzoRecallResult } from "./recall.js";
 
 /**
  * Phase31: snippet を正規化（\f 除去、空白圧縮、trim）
@@ -68,6 +69,7 @@ export type KokuzoCandidate = {
   snippet: string;
   score: number;
   tags: KotodamaTag[];
+  source_priority?: KokuzoRecallResult["source_priority"];
 };
 
 /**
@@ -130,6 +132,7 @@ export function searchPagesForHybrid(docOrNull: string | null, query: string, li
           snippet: snippet || "(pin) page indexed",
           score: 1000, // ピン指定は最高スコア
           tags,
+          source_priority: getSourcePriority(pinDoc),
         }];
       }
       // 見つからない場合のみ、従来検索へフォールバック
@@ -203,7 +206,7 @@ export function searchPagesForHybrid(docOrNull: string | null, query: string, li
           cand.push(pageOne.shift()!);
         }
         
-        return cand;
+        return cand.map((c) => ({ ...c, source_priority: getSourcePriority(c.doc) }));
       }
     }
     return [];
@@ -590,7 +593,7 @@ export function searchPagesForHybrid(docOrNull: string | null, query: string, li
     } catch (e) { console.warn("[S3_12] fallback failed", e); }
   }
   // --- /S3_12_FINAL_NONEMPTY_V1 ---
-    return final;
+    return final.map((c) => ({ ...c, source_priority: getSourcePriority(c.doc) }));
   }
 
   // 2) フォールバック：FTS検索が0件の場合も fallback を返す（導線成立が目的）
@@ -644,7 +647,7 @@ export function searchPagesForHybrid(docOrNull: string | null, query: string, li
         
         // Phase25: 候補が1件以上あれば返す
         if (cand.length > 0) {
-          return cand;
+          return cand.map((c) => ({ ...c, source_priority: getSourcePriority(c.doc) }));
         }
       }
     } catch (e) {
@@ -719,7 +722,7 @@ function getSafeFallbackCandidates(docOrNull: string | null, limit: number): Kok
   const rawCandidates = Array.isArray(candidates) ? candidates : [];
   const cleaned = rawCandidates.filter((c: any) => !isGarbageSnippet(String((c as any)?.snippet ?? "")));
   const finalCandidates = cleaned.length ? cleaned : rawCandidates;
-  return finalCandidates;
+  return finalCandidates.map((c) => ({ ...c, source_priority: getSourcePriority(c.doc) }));
 
 }
 

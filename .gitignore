@@ -5,6 +5,8 @@
 # Build outputs
 dist/
 build/
+!api/src/build/
+!api/src/build/buildInfo.ts
 *.dist
 
 # Environment variables
