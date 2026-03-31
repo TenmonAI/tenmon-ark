@@ -1,0 +1,10 @@
+{
+  "schema": "MULTI_AI_AUTONOMY_QUEUE_V1",
+  "updated_at": "2026-03-31T11:12:33Z",
+  "triage_file": "autonomy_triage.json",
+  "require_tier": "A_full_auto_safe",
+  "card_order": [
+    "TENMON_NOTION_TASK_QUEUE_SCHEMA_BIND_CURSOR_AUTO_V1"
+  ],
+  "notes": "card_order は triage で A_full_auto_safe のみ実行対象。それ以外はスキップされループは次候補へ進まない（HOLD: tier_mismatch）。キューを空にすると HOLD: empty_queue。"
+}
