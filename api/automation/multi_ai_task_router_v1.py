@@ -51,6 +51,7 @@ def route_task(
 
     vps_ok, vps_why = op_bridge.truth_vps_acceptance_pass_for_cursor(auto_dir)
     _text_for_block = re.sub(r"## (?:非目標|停止条件)[\s\S]*?(?=\n##|\Z)", "", text, flags=re.MULTILINE)
+    _text_for_block = re.sub(r"\b(persona|scripture|canon|正典|正文)\b", "", _text_for_block)
     issue_blocked = op_bridge.cursor_operator_text_blocked(_text_for_block[:12000]) is not None
 
     cand = (candidate_card_id or "").strip()
