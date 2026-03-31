@@ -1,0 +1,174 @@
+{
+  "schema": "TENMON_REAL_8H_AUTOBUILD_PARENT_GUARDED_LOOP_REPORT_V1",
+  "card": "TENMON_REAL_8H_AUTOBUILD_PARENT_GUARDED_LOOP_CURSOR_AUTO_V1",
+  "official_retest_procedure": {
+    "description": "段階運転: 10分 → 30分 → 3時間。各段階で本 report を保存し frontier を確認する。 前提: api/automation/real_3h_autobuild_parent_guarded_loop_report_v1.json の retest_verdict.three_hour_pass_equivalent が True のあとにのみ本スクリプトを本番運用すること。",
+    "tiers": [
+      {
+        "id": "10min_smoke",
+        "max_seconds": 600,
+        "label": "10分スモーク"
+      },
+      {
+        "id": "30min_stress",
+        "max_seconds": 1800,
+        "label": "30分ストレス"
+      },
+      {
+        "id": "3h_production",
+        "max_seconds": 10800,
+        "label": "3時間本番相当"
+      },
+      {
+        "id": "8h_extended",
+        "max_seconds": 28800,
+        "label": "8時間長時間"
+      }
+    ],
+    "retest_spec_card": "TENMON_REAL_3H_AUTOBUILD_PARENT_GUARDED_LOOP_RETEST_CURSOR_AUTO_V1",
+    "report_filename": "real_8h_autobuild_parent_guarded_loop_report_v1.json",
+    "steps": [
+      {
+        "order": 1,
+        "tier_id": "10min_smoke",
+        "label": "10分スモーク",
+        "max_seconds": 600,
+        "suggested_command": "python3 api/automation/real_3h_autobuild_parent_guarded_loop_v1.py --auto-dir /opt/tenmon-ark-repo/api/automation --max-seconds 600"
+      },
+      {
+        "order": 2,
+        "tier_id": "30min_stress",
+        "label": "30分ストレス",
+        "max_seconds": 1800,
+        "suggested_command": "python3 api/automation/real_3h_autobuild_parent_guarded_loop_v1.py --auto-dir /opt/tenmon-ark-repo/api/automation --max-seconds 1800"
+      },
+      {
+        "order": 3,
+        "tier_id": "3h_production",
+        "label": "3時間本番相当",
+        "max_seconds": 10800,
+        "suggested_command": "python3 api/automation/real_3h_autobuild_parent_guarded_loop_v1.py --auto-dir /opt/tenmon-ark-repo/api/automation --max-seconds 10800"
+      },
+      {
+        "order": 4,
+        "tier_id": "8h_extended",
+        "label": "8時間長時間",
+        "max_seconds": 28800,
+        "suggested_command": "python3 api/automation/real_8h_autobuild_parent_guarded_loop_v1.py --auto-dir /opt/tenmon-ark-repo/api/automation --max-seconds 28800"
+      }
+    ]
+  },
+  "scheduled_max_seconds": 600,
+  "started_at": "2026-03-30T20:53:19Z",
+  "finished_at": "2026-03-30T20:54:02Z",
+  "total_cycles": 2,
+  "last_card": "TENMON_INFINITE_GROWTH_NEXT_CARD_GENERATION_BIND_CURSOR_AUTO_V1",
+  "same_card_streak": 2,
+  "distinct_cards_seen": [
+    "TENMON_INFINITE_GROWTH_NEXT_CARD_GENERATION_BIND_CURSOR_AUTO_V1"
+  ],
+  "queue_moved": true,
+  "intake_pass_count": 0,
+  "queue_refill_count": 0,
+  "supervisor_pass_count": 1,
+  "same_card_streak_max_seen": 2,
+  "final_queue_len": 0,
+  "final_autonomy_status": "PASS",
+  "final_notion_hold_reason": "notion_token_missing",
+  "final_frontier_state": {
+    "multi_ai_autonomy_status": "PASS",
+    "multi_ai_last_result": "PASS",
+    "notion_last_hold_reason": "notion_token_missing",
+    "notion_last_cycle_verdict": "HOLD",
+    "audit_skipped": false,
+    "audit_ok": true,
+    "dirty_files_count": 38,
+    "queue_len": 0
+  },
+  "retest_verdict": {
+    "overall": "FAIL",
+    "three_hour_pass_equivalent": false,
+    "retest_core_pass": false,
+    "smoke_frontier_pass": false,
+    "completed_full_planned_duration": false,
+    "scheduled_max_seconds": 600,
+    "tier_id": "10min_smoke",
+    "fail_reasons": [
+      "hold_reason_empty"
+    ],
+    "checks": {
+      "no_same_card_infinite_loop": true,
+      "queue_forward_progress_once": true,
+      "hold_reason_empty": false,
+      "audit_normal": true,
+      "autonomy_not_fail": true,
+      "notion_hold_clear": false
+    },
+    "retest_criteria_observed": {
+      "description": "再試験カード記載の観測 5 条件（hold_reason 空・queue 前進・same-card・audit・autonomy）",
+      "all_five": false,
+      "all_five_plus_notion_verdict_pass": false
+    },
+    "pass_fail_readable": {
+      "three_hour_pass_equivalent": false,
+      "retest_core_pass": false,
+      "overall": "FAIL",
+      "stopped_by": "notion_hold"
+    },
+    "notes": "three_hour_pass_equivalent は max_seconds>=10800 かつ stopped_by=max_seconds かつ retest_core_pass（5軸）のとき True。notion last_cycle_verdict は checks.notion_hold_clear で追跡。10/30/3h は official_retest_procedure.steps を参照。"
+  },
+  "stopped_by": "notion_hold",
+  "last_cycle": {
+    "cycle": 2,
+    "queue_len_before_intake": 0,
+    "queue_before": [],
+    "queue_after": [],
+    "queue_head_before": "",
+    "queue_head_after": "",
+    "execution_history_len_before": 11,
+    "execution_history_len_after": 11,
+    "forward_progress_detected_by": [],
+    "notion_enqueued_card": "",
+    "notion_watch_rc": 2,
+    "notion_watch_stdout_tail": "{\"ok\": false, \"message\": \"notion_token_missing\", \"enqueued\": \"\"}",
+    "supervisor_rc": null,
+    "supervisor_exception": "",
+    "last_card": "TENMON_INFINITE_GROWTH_NEXT_CARD_GENERATION_BIND_CURSOR_AUTO_V1",
+    "last_result": "PASS",
+    "hold_reason": "notion_token_missing",
+    "same_card_streak": 2,
+    "empty_queue_streak": 2
+  },
+  "prerequisite_note": "前提: api/automation/real_3h_autobuild_parent_guarded_loop_report_v1.json の retest_verdict.three_hour_pass_equivalent が True のあとにのみ本スクリプトを本番運用すること。",
+  "report_summary": {
+    "total_cycles": 2,
+    "distinct_cards_seen": [
+      "TENMON_INFINITE_GROWTH_NEXT_CARD_GENERATION_BIND_CURSOR_AUTO_V1"
+    ],
+    "queue_refill_count": 0,
+    "supervisor_pass_count": 1,
+    "stopped_by": "notion_hold",
+    "final_queue_len": 0,
+    "final_autonomy_status": "PASS",
+    "final_notion_hold_reason": "notion_token_missing"
+  },
+  "stopped_by_catalog": {
+    "max_seconds": "計画した --max-seconds に達し、時間切れで正常終了",
+    "notion_hold": "Notion hold_reason 非空、または last_cycle_verdict が PASS 以外",
+    "notion_watch_exception": "Notion watch 子プロセスがタイムアウトまたは例外",
+    "supervisor_timeout": "supervisor 子プロセスがタイムアウト",
+    "supervisor_exception": "supervisor 子プロセスが例外",
+    "supervisor_nonzero_exit": "supervisor の終了コードが非ゼロ",
+    "autonomy_fail": "multi_ai autonomy status が FAIL",
+    "audit_abnormal": "audit が skipped 以外で ok でない",
+    "dirty_threshold": "dirty_files_count が閾値以上",
+    "empty_queue_streak": "空キューが連続し過ぎ（empty_queue_streak_max）",
+    "same_card_streak": "前進なしの同一カード連続が閾値（same_card_streak_max）"
+  },
+  "three_hour_prerequisite": {
+    "required_for_production": true,
+    "report_path": "api/automation/real_3h_autobuild_parent_guarded_loop_report_v1.json",
+    "field": "retest_verdict.three_hour_pass_equivalent",
+    "enforce_flag": "--enforce-3h-prerequisite"
+  }
+}

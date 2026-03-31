@@ -1,0 +1,66 @@
+{
+  "schema": "TENMON_NOTION_AUTOBUILD_PROGRESS_REPORT_V1",
+  "updated_at": "2026-03-31T00:43:45Z",
+  "last_cycle_verdict": "PASS",
+  "last_hold_reason": "",
+  "manifests_compiled_ok": 3,
+  "manifests_rejected": 0,
+  "last_enqueued_card_id": "TENMON_ARTIFACT_AND_WORKTREE_HYGIENE_CURSOR_AUTO_V1",
+  "last_intake_page_count": 3,
+  "compiled_manifest_card_ids": [
+    "TENMON_ARTIFACT_AND_WORKTREE_HYGIENE_CURSOR_AUTO_V1",
+    "TENMON_NOTION_TASK_QUEUE_SCHEMA_BIND_CURSOR_AUTO_V1"
+  ],
+  "rejected_manifest_reasons": [],
+  "selected_manifest_card_id": "TENMON_NOTION_TASK_QUEUE_SCHEMA_BIND_CURSOR_AUTO_V1",
+  "selection_block_reason": "queue_not_empty",
+  "candidate_selection_trace": [
+    {
+      "notion_page_id": "33365146-58e6-81ad-8dc1-d33e9c49aa02",
+      "card_name": "TENMON_ARTIFACT_AND_WORKTREE_HYGIENE_CURSOR_AUTO_V1",
+      "compile_ok": true,
+      "compile_reason": "ok",
+      "acceptance_summary_rule": "hygiene_observability_relaxed",
+      "acceptance_summary_min_len": 12,
+      "allowlist_ok": true,
+      "allowlist_reason": "ok",
+      "enqueue_selected": false,
+      "enqueue_reason": "skipped_same_as_last_enqueued",
+      "tier_ok": true,
+      "tier_reason": "ok",
+      "allowlist_evaluated": true
+    },
+    {
+      "notion_page_id": "33365146-58e6-81b9-bf7a-ca0d86923b11",
+      "card_name": "TENMON_NOTION_TASK_QUEUE_SCHEMA_BIND_CURSOR_AUTO_V1",
+      "compile_ok": true,
+      "compile_reason": "ok",
+      "acceptance_summary_rule": "standard_strict",
+      "acceptance_summary_min_len": 24,
+      "allowlist_ok": true,
+      "allowlist_reason": "ok",
+      "enqueue_selected": true,
+      "enqueue_reason": "selected_first_in_priority_order",
+      "tier_ok": true,
+      "tier_reason": "ok",
+      "allowlist_evaluated": true
+    },
+    {
+      "notion_page_id": "33365146-58e6-81ee-a32e-cba97a755f3f",
+      "card_name": "TENMON_ARTIFACT_AND_WORKTREE_HYGIENE_CURSOR_AUTO_V1",
+      "compile_ok": true,
+      "compile_reason": "ok",
+      "acceptance_summary_rule": "hygiene_observability_relaxed",
+      "acceptance_summary_min_len": 12,
+      "allowlist_ok": false,
+      "allowlist_reason": "skipped_duplicate_notion_row",
+      "enqueue_selected": false,
+      "enqueue_reason": "duplicate_notion_row_skipped",
+      "tier_ok": false,
+      "tier_reason": "skipped_duplicate_notion_row",
+      "allowlist_evaluated": false
+    }
+  ],
+  "forensic_truth_source": "vps_acceptance_and_repo_probes",
+  "notes": "Notion は成功根拠にしない。enqueue は allowlist + 本スキーマ + 空キューのみ。"
+}

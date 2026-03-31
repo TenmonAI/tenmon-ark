@@ -1,0 +1,81 @@
+{
+  "schema": "TENMON_NOTION_AUTOBUILD_SCHEMA_V1",
+  "version": 2,
+  "task_queue_bind": "TENMON_NOTION_TASK_QUEUE_SCHEMA_BIND_CURSOR_AUTO_V1",
+  "task_queue_database_title_recommended": "TENMON Autobuild Task Queue",
+  "required": [
+    "name",
+    "card_name",
+    "card_body",
+    "status",
+    "priority",
+    "queue",
+    "approval_gate",
+    "auto_run_enabled",
+    "target_scope",
+    "acceptance_summary"
+  ],
+  "manifest_pass_through_fields": [
+    "run_state",
+    "result_summary",
+    "evidence_path",
+    "head_sha",
+    "last_run_at",
+    "locked_by",
+    "retry_count",
+    "retry_requested",
+    "next_action",
+    "source_schedule_page_id",
+    "source_cursor_page_id"
+  ],
+  "task_queue_canonical_property_map": {
+    "name": "Name",
+    "status": "Status",
+    "priority": "Priority",
+    "queue": "Queue",
+    "card_name": "CardName",
+    "card_body": "CardBody",
+    "target_scope": "TargetScope",
+    "approval_gate": "ApprovalGate",
+    "auto_run_enabled": "AutoRunEnabled",
+    "run_state": "RunState",
+    "acceptance_summary": "AcceptanceSummary",
+    "writeback_page_id": "WritebackPageId",
+    "result_summary": "ResultSummary",
+    "evidence_path": "EvidencePath",
+    "head_sha": "HeadSha",
+    "last_run_at": "LastRunAt",
+    "locked_by": "LockedBy",
+    "retry_count": "RetryCount",
+    "retry_requested": "RetryRequested",
+    "next_action": "NextAction",
+    "source_schedule_page_id": "SourceSchedulePageId",
+    "source_cursor_page_id": "SourceCursorPageId"
+  },
+  "allowed_status": [
+    "Ready",
+    "In Progress",
+    "Passed",
+    "Failed",
+    "Hold"
+  ],
+  "allowed_queue_for_autobuild_enqueue": [
+    "autobuild"
+  ],
+  "allowed_run_state_for_enqueue": [
+    "",
+    "pending"
+  ],
+  "allowed_run_state_values": [
+    "pending",
+    "running",
+    "passed",
+    "failed",
+    "hold"
+  ],
+  "approval_gate_required": "__YES__",
+  "auto_run_enabled_required": "__YES__",
+  "acceptance_summary_min_len_standard": 24,
+  "acceptance_summary_min_len_hygiene_observability": 12,
+  "notes": "Task Queue DB 列名は task_queue_canonical_property_map と config property_map を一致させる。CardBody と上位スケジュール本文は別プロパティ。VPS acceptance / forensic を真実源とする。acceptance_summary 最小長: hygiene/観測系のみ hygiene_observability 閾値（manifest_compiler 参照）。"
+}

@@ -1,0 +1,133 @@
+{
+  "schema": "TENMON_REAL_3H_AUTOBUILD_PARENT_GUARDED_LOOP_REPORT_V1",
+  "card": "TENMON_REAL_3H_AUTOBUILD_PARENT_GUARDED_LOOP_CURSOR_AUTO_V1",
+  "official_retest_procedure": {
+    "description": "段階運転: 10分 → 30分 → 3時間。各段階で本 report を保存し frontier を確認する。",
+    "tiers": [
+      {
+        "id": "10min_smoke",
+        "max_seconds": 600,
+        "label": "10分スモーク"
+      },
+      {
+        "id": "30min_stress",
+        "max_seconds": 1800,
+        "label": "30分ストレス"
+      },
+      {
+        "id": "3h_production",
+        "max_seconds": 10800,
+        "label": "3時間本番相当"
+      }
+    ],
+    "retest_spec_card": "TENMON_REAL_3H_AUTOBUILD_PARENT_GUARDED_LOOP_RETEST_CURSOR_AUTO_V1",
+    "report_filename": "real_3h_autobuild_parent_guarded_loop_report_v1.json",
+    "steps": [
+      {
+        "order": 1,
+        "tier_id": "10min_smoke",
+        "label": "10分スモーク",
+        "max_seconds": 600,
+        "suggested_command": "python3 api/automation/real_3h_autobuild_parent_guarded_loop_v1.py --auto-dir /opt/tenmon-ark-repo/api/automation --max-seconds 600"
+      },
+      {
+        "order": 2,
+        "tier_id": "30min_stress",
+        "label": "30分ストレス",
+        "max_seconds": 1800,
+        "suggested_command": "python3 api/automation/real_3h_autobuild_parent_guarded_loop_v1.py --auto-dir /opt/tenmon-ark-repo/api/automation --max-seconds 1800"
+      },
+      {
+        "order": 3,
+        "tier_id": "3h_production",
+        "label": "3時間本番相当",
+        "max_seconds": 10800,
+        "suggested_command": "python3 api/automation/real_3h_autobuild_parent_guarded_loop_v1.py --auto-dir /opt/tenmon-ark-repo/api/automation --max-seconds 10800"
+      }
+    ]
+  },
+  "scheduled_max_seconds": 10800,
+  "started_at": "2026-03-30T22:25:53Z",
+  "finished_at": "2026-03-30T22:29:47Z",
+  "total_cycles": 6,
+  "last_card": "TENMON_NOTION_TASK_QUEUE_SCHEMA_BIND_CURSOR_AUTO_V1",
+  "same_card_streak": 1,
+  "distinct_cards_seen": [
+    "TENMON_ARTIFACT_AND_WORKTREE_HYGIENE_CURSOR_AUTO_V1",
+    "TENMON_NOTION_TASK_QUEUE_SCHEMA_BIND_CURSOR_AUTO_V1"
+  ],
+  "queue_moved": true,
+  "intake_pass_count": 5,
+  "queue_refill_count": 5,
+  "supervisor_pass_count": 6,
+  "same_card_streak_max_seen": 1,
+  "final_queue_len": 0,
+  "final_autonomy_status": "PASS",
+  "final_notion_hold_reason": "",
+  "final_frontier_state": {
+    "multi_ai_autonomy_status": "PASS",
+    "multi_ai_last_result": "PASS",
+    "notion_last_hold_reason": "",
+    "notion_last_cycle_verdict": "PASS",
+    "audit_skipped": false,
+    "audit_ok": true,
+    "dirty_files_count": 37,
+    "queue_len": 0
+  },
+  "retest_verdict": {
+    "overall": "INCONCLUSIVE_GUARD_STOP",
+    "three_hour_pass_equivalent": false,
+    "retest_core_pass": true,
+    "smoke_frontier_pass": true,
+    "completed_full_planned_duration": false,
+    "scheduled_max_seconds": 10800,
+    "tier_id": "3h_production",
+    "fail_reasons": [],
+    "checks": {
+      "no_same_card_infinite_loop": true,
+      "queue_forward_progress_once": true,
+      "hold_reason_empty": true,
+      "audit_normal": true,
+      "autonomy_not_fail": true,
+      "notion_hold_clear": true
+    },
+    "retest_criteria_observed": {
+      "description": "再試験カード記載の観測 5 条件（hold_reason 空・queue 前進・same-card・audit・autonomy）",
+      "all_five": true,
+      "all_five_plus_notion_verdict_pass": true
+    },
+    "pass_fail_readable": {
+      "three_hour_pass_equivalent": false,
+      "retest_core_pass": true,
+      "overall": "INCONCLUSIVE_GUARD_STOP",
+      "stopped_by": "empty_queue_streak"
+    },
+    "notes": "three_hour_pass_equivalent は max_seconds>=10800 かつ stopped_by=max_seconds かつ retest_core_pass（5軸）のとき True。notion last_cycle_verdict は checks.notion_hold_clear で追跡。10/30/3h は official_retest_procedure.steps を参照。"
+  },
+  "stopped_by": "empty_queue_streak",
+  "last_cycle": {
+    "cycle": 6,
+    "queue_len_before_intake": 0,
+    "queue_before": [],
+    "queue_after": [],
+    "queue_head_before": "",
+    "queue_head_after": "",
+    "execution_history_len_before": 17,
+    "execution_history_len_after": 18,
+    "forward_progress_detected_by": [
+      "last_card_changed_vs_prev_cycle_end",
+      "execution_history_appended",
+      "notion_enqueue_card_vs_prev_cycle"
+    ],
+    "notion_enqueued_card": "TENMON_NOTION_TASK_QUEUE_SCHEMA_BIND_CURSOR_AUTO_V1",
+    "notion_watch_rc": 0,
+    "notion_watch_stdout_tail": "{\"ok\": true, \"message\": \"enqueued_one\", \"enqueued\": \"TENMON_NOTION_TASK_QUEUE_SCHEMA_BIND_CURSOR_AUTO_V1\"}",
+    "supervisor_rc": 0,
+    "supervisor_exception": "",
+    "last_card": "TENMON_NOTION_TASK_QUEUE_SCHEMA_BIND_CURSOR_AUTO_V1",
+    "last_result": "PASS",
+    "hold_reason": "",
+    "same_card_streak": 1,
+    "empty_queue_streak": 6
+  }
+}

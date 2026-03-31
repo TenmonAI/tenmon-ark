@@ -1,0 +1,8 @@
+{
+  "schema": "TENMON_NOTION_AUTOBUILD_LOCK_V1",
+  "held": false,
+  "holder": "",
+  "pid": null,
+  "since": "",
+  "notes": "single-flight。notion_autobuild_watch_loop_v1 が取得・解放する。"
+}

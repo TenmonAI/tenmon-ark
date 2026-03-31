@@ -1,0 +1,13 @@
+{
+  "schema": "TENMON_NOTION_TASK_QUEUE_SCHEMA_BIND_REPORT_V1",
+  "at": "2026-03-30T07:26:43Z",
+  "ok": false,
+  "config_property_map_matches_canonical": true,
+  "notion_database_checked": true,
+  "notion_properties_ok": false,
+  "missing_notion_properties": [
+    "database_retrieve_failed:404:{\"object\":\"error\",\"status\":404,\"code\":\"object_not_found\",\"message\":\"Could not find database with ID: 0bbfb0ed-8159-417e-a117-0caa9943a155. Make sure the relevant pages and databases are shared with your integration \\\"TENMON-ARK\\\".\",\"additional_data\":{\"integration_id\":\"30f65146-58e6-810b-aff6-0027d5bede77\"},\"request_id\":\"b274abad-3f7a-4691-b374-70b29f0e3e0d\"}"
+  ],
+  "property_map_drift": [],
+  "hold_reason": "notion_database_missing_properties"
+}
