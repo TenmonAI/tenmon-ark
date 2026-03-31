@@ -261,3 +261,6 @@ api/automation/notion_autobuild_last_intake_result_v1.json
 api/automation/notion_autobuild_progress_report_v1.json
 api/automation/notion_autobuild_runtime_state_v1.json
 api/automation/multi_ai_autonomy_progress_report.json
+api/automation/multi_ai_autonomy_runtime_state_v1.json
+api/automation/multi_ai_autonomy_last_failure_bundle.json
+api/automation/cursor_executor_runtime_state_v1.json
