@@ -138,3 +138,7 @@ api/answer
 # local reports (do not track)
 reports/
 api/web/
+
+# Track automation queue configuration
+!api/automation/
+!api/automation/multi_ai_autonomy_queue.json
