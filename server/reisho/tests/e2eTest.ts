@@ -18,8 +18,8 @@ import { finalizeUniverseOS, updateUniverseOS } from "../universeOS";
 import { routeRequestThroughReishoPipeline } from "../universeOSIntegration";
 import { setReishoMemoryAsPrimaryKernel, storeSeedInPrimaryKernel } from "../primaryMemoryKernel";
 import { enableConsciousMeshForAllDevices } from "../consciousMeshIntegration";
-import type { UniversalStructuralSeed } from "../../../kokuzo/fractal/seedV2";
-import type { DeviceNode } from "../../../kokuzo/device/fusion";
+import type { UniversalStructuralSeed } from "../../kokuzo/fractal/seedV2";
+import type { DeviceNode } from "../../kokuzo/device/fusion";
 
 /**
  * Universe OS E2E テスト実行

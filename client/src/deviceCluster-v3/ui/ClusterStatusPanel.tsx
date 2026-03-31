@@ -15,7 +15,6 @@ import { Badge } from "@/components/ui/badge";
 import { megaSchedulerClient, type SchedulerTask, type SchedulerState } from "@/lib/scheduler/megaSchedulerClient";
 import { getAllLatencies } from "../sync/latencyMap";
 import { Activity, CheckCircle2, Clock, Loader2 } from "lucide-react";
-import { useEffect } from "react";
 import { watchAnimationState, updateAnimationCSS } from "./animations";
 import "@/styles/deviceCluster.css";
 

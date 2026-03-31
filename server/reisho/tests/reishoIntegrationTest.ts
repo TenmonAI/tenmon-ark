@@ -15,10 +15,10 @@
 
 import { computeReishoSignature, applyReishoToReasoning } from "../reishoKernel";
 import { storeReishoMemory, getReishoMemoryContext } from "../../synapticMemory";
-import type { UniversalStructuralSeed } from "../../../kokuzo/fractal/seedV2";
-import { routeTaskUsingReishoAffinity } from "../../../kokuzo/fractal/deviceClusterIntegration";
-import { detectPersonaByReisho } from "../../../../client/src/lib/atlas/personaDetector";
-import type { DeviceNode } from "../../../kokuzo/device/fusion";
+import type { UniversalStructuralSeed } from "../../kokuzo/fractal/seedV2";
+import { routeTaskUsingReishoAffinity } from "../../kokuzo/fractal/deviceClusterIntegration";
+import { detectPersonaByReisho } from "../../../client/src/lib/atlas/personaDetector";
+import type { DeviceNode } from "../../kokuzo/device/fusion";
 
 /* ============================================================
  * 1. Reasoning Coherence Test

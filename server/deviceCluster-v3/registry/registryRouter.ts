@@ -4,7 +4,7 @@
  */
 
 import express from 'express';
-import { sdk } from '../../../_core/sdk';
+import { sdk } from '../../_core/sdk';
 import * as deviceRegistry from './deviceRegistry';
 
 const router = express.Router();

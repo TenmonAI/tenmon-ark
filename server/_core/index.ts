@@ -139,13 +139,13 @@ async function startServer() {
   app.use("/api/deviceCluster-v3/fastlane", deviceClusterChunkRouter.default);
   // MegaScheduler Auto-Start API endpoints
   const {
-    getAutoStartStatus,
+    getAutoStartStatusEndpoint,
     enableAutoStartEndpoint,
     disableAutoStartEndpoint,
     enableAutoStart,
     runAutoStart,
   } = await import("../api/scheduler/autoStart");
-  app.get("/api/scheduler/autostart/status", getAutoStartStatus);
+  app.get("/api/scheduler/autostart/status", getAutoStartStatusEndpoint);
   app.post("/api/scheduler/autostart/enable", enableAutoStartEndpoint);
   app.post("/api/scheduler/autostart/disable", disableAutoStartEndpoint);
   // Widget API endpoint

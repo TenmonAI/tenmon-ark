@@ -4,7 +4,7 @@
  */
 
 import express from 'express';
-import { sdk } from '../../../_core/sdk';
+import { sdk } from '../../_core/sdk';
 
 const router = express.Router();
 

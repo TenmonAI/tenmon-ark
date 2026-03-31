@@ -14,7 +14,7 @@
  */
 
 import { createReishoMemoryKernel, storeSeedInMemoryKernel, retrieveSeedsFromMemoryKernel, integrateMemoryKernel } from "../memoryKernelV2";
-import type { UniversalStructuralSeed } from "../../../kokuzo/fractal/seedV2";
+import type { UniversalStructuralSeed } from "../../kokuzo/fractal/seedV2";
 
 /**
  * シードメモリ統合テスト

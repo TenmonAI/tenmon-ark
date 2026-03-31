@@ -20,8 +20,8 @@ import { routeRequestThroughReishoPipeline } from "../universeOSIntegration";
 import { setReishoMemoryAsPrimaryKernel, storeSeedInPrimaryKernel } from "../primaryMemoryKernel";
 import { promoteFractalEngineAsSystemSeedGenerator } from "../systemSeedGenerator";
 import { enableConsciousMeshForAllDevices } from "../consciousMeshIntegration";
-import type { UniversalStructuralSeed } from "../../../kokuzo/fractal/seedV2";
-import type { DeviceNode } from "../../../kokuzo/device/fusion";
+import type { UniversalStructuralSeed } from "../../kokuzo/fractal/seedV2";
+import type { DeviceNode } from "../../kokuzo/device/fusion";
 
 /* ============================================================
  * 1. Universe OS 初期化テスト

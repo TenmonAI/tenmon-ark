@@ -15,8 +15,8 @@
 
 import { createConsciousMesh, syncConsciousMesh, routeTaskInConsciousMesh } from "../consciousMesh";
 import { enableConsciousMeshForAllDevices, addDeviceToConsciousMesh, removeDeviceFromConsciousMesh } from "../consciousMeshIntegration";
-import type { DeviceNode } from "../../../kokuzo/device/fusion";
-import type { UniversalStructuralSeed } from "../../../kokuzo/fractal/seedV2";
+import type { DeviceNode } from "../../kokuzo/device/fusion";
+import type { UniversalStructuralSeed } from "../../kokuzo/fractal/seedV2";
 
 /**
  * デバイスメッシュ安定性テスト
