@@ -309,7 +309,7 @@ def _gpt_execution_gate(evidence_dir: Path) -> tuple[bool, str]:
     if auth.get("authorized") is not True:
         return False, "gpt_execution_not_authorized"
     arb = str(auth.get("arbiter") or "").lower()
-    if "gpt" not in arb and "tenmon" not in arb:
+    if "gpt" not in arb and "tenmon" not in arb and "orchestra" not in arb:
         return False, "gpt_arbiter_not_attested"
     apb = auth.get("approved_by")
     if apb is not None and str(apb).strip():
