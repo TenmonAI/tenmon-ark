@@ -1,10 +1,14 @@
 {
   "schema": "MULTI_AI_AUTONOMY_QUEUE_V1",
-  "updated_at": "2026-03-31T11:12:33Z",
+  "updated_at": "2026-03-31T20:32:35Z",
   "triage_file": "autonomy_triage.json",
   "require_tier": "A_full_auto_safe",
   "card_order": [
-    "TENMON_NOTION_TASK_QUEUE_SCHEMA_BIND_CURSOR_AUTO_V1"
+    "TENMON_ARTIFACT_AND_WORKTREE_HYGIENE_CURSOR_AUTO_V1",
+    "TENMON_ARTIFACT_WORKTREE_HYGIENE_AND_RELOCK_CURSOR_AUTO_V2",
+    "TENMON_BUILD_GREEN_RESTORE_AFTER_SHELTER_CURSOR_AUTO_V1",
+    "TENMON_CONVERSATION_ACCEPTANCE_PROBE_RELOCK_CURSOR_AUTO_V1",
+    "TENMON_CONVERSATION_QUALITY_AUTO_PRIORITY_CARD_GENERATOR_CURSOR_AUTO_V1"
   ],
   "notes": "card_order は triage で A_full_auto_safe のみ実行対象。それ以外はスキップされループは次候補へ進まない（HOLD: tier_mismatch）。キューを空にすると HOLD: empty_queue。"
 }
