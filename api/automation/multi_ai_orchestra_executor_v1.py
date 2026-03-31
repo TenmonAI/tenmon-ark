@@ -238,7 +238,52 @@ def run_loop(
     _write_json(evidence / "comparison_table.json", {"rows": g_norm.get("comparison_table") or []})
     _write_json(evidence / "options.json", {"options": g_norm.get("options") or []})
 
-    claude_raw = {"claude_stub": True, "gemini_options": g_norm.get("options")}
+    # Claude API 実呼び出し
+    try:
+        import json as _json, urllib.request as _ureq
+        from tenmon_env_loader_v1 import load_llm_env as _load_env
+        _env = _load_env()
+        _claude_key = _env.get("ANTHROPIC_API_KEY", "")
+        _claude_prompt = f"""あなたは天聞アーク構築監査AIです。以下の構築計画を監査してください。
+
+## 構築計画
+{_json.dumps(adopted_plan, ensure_ascii=False, indent=2)[:3000]}
+
+## GPT裁定結果
+{_json.dumps(gpt_norm.get("center_decision") or "", ensure_ascii=False)[:1000]}
+
+## 監査項目
+1. design_risks: 重大リスクのリスト（severity: high/medium/low, description）
+2. acceptance_refined: 受け入れ条件の改善案（markdown）
+3. audit_verdict: PASS / HOLD / FAIL
+
+JSON形式で返してください。"""
+
+        _req = _ureq.Request(
+            "https://api.anthropic.com/v1/messages",
+            data=_json.dumps({
+                "model": "claude-sonnet-4-6",
+                "max_tokens": 1000,
+                "messages": [{"role": "user", "content": _claude_prompt}]
+            }).encode(),
+            headers={
+                "x-api-key": _claude_key,
+                "anthropic-version": "2023-06-01",
+                "content-type": "application/json"
+            },
+            method="POST"
+        )
+        _resp = _json.loads(_ureq.urlopen(_req, timeout=30).read())
+        _claude_text = _resp["content"][0]["text"]
+        try:
+            import re as _re
+            _m = _re.search(r"\{.*\}", _claude_text, _re.DOTALL)
+            claude_raw = _json.loads(_m.group()) if _m else {"claude_api": True, "raw": _claude_text}
+        except Exception:
+            claude_raw = {"claude_api": True, "raw": _claude_text}
+        claude_raw["claude_real_call"] = True
+    except Exception as _ce:
+        claude_raw = {"claude_stub": True, "claude_error": str(_ce), "gemini_options": g_norm.get("options")}
     c_norm = norm_mod.normalize_claude_audit(claude_raw, dry_run=dry_run)
     _write_json(evidence / "claude_audit_normalized.json", c_norm)
     (evidence / "acceptance_refined.md").write_text(
