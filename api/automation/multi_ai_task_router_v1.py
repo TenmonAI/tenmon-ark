@@ -50,12 +50,13 @@ def route_task(
     vague = len(text) < 8
 
     vps_ok, vps_why = op_bridge.truth_vps_acceptance_pass_for_cursor(auto_dir)
-    issue_blocked = op_bridge.cursor_operator_text_blocked(text[:12000]) is not None
+    _text_for_block = re.sub(r"## (?:非目標|停止条件)[\s\S]*?(?=\n##|$)", "", text, flags=re.MULTILINE)
+    issue_blocked = op_bridge.cursor_operator_text_blocked(_text_for_block[:12000]) is not None
 
     cand = (candidate_card_id or "").strip()
     card_gate: dict[str, Any] | None = None
     if cand:
-        gok, gwhy, gate_hits = op_bridge.evaluate_cursor_operator_execution_gate(auto_dir, cand, text[:12000])
+        gok, gwhy, gate_hits = op_bridge.evaluate_cursor_operator_execution_gate(auto_dir, cand, _text_for_block[:12000])
         card_gate = {
             "ok": gok,
             "reason": gwhy,
