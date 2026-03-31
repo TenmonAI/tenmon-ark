@@ -24,6 +24,7 @@ import { selfImproveRouter } from "./routes/selfImprove.js";
 import { councilRouter } from "./routes/council.js";
 import { authRouter } from "./routes/auth.js";
 import { meRouter } from "./routes/me.js";
+import personaMemoryRouter from "./routes/personaMemory.js";
 import { registerFounderAuth } from "./routes/auth_founder.js";
 import { markListenReady } from "./health/readiness.js";
 import { getDb } from "./db/index.js";
@@ -100,6 +101,7 @@ registerFounderAuth(app);
 
 app.use("/api", authRouter);
 app.use("/api", meRouter);
+app.use("/api", personaMemoryRouter);
 app.use("/api", auditRouter);
 app.use("/api", chatRouter);
 app.use("/api", lawRouter);

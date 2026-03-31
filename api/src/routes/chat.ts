@@ -13,7 +13,7 @@ import { naturalRouter } from "../persona/naturalRouter.js";
 import { emptyCorePlan } from "../kanagi/core/corePlan.js";
 import { applyTruthCore } from "../kanagi/core/truthCore.js";
 import { applyVerifier } from "../kanagi/core/verifier.js";
-import { kokuzoRecall, kokuzoRemember } from "../kokuzo/recall.js";
+import { kokuzoRecall, kokuzoRemember, getSourcePriority } from "../kokuzo/recall.js";
 import { getPageText } from "../kokuzo/pages.js";
 import { searchPagesForHybrid } from "../kokuzo/search.js";
 import { getCaps, debugCapsPath, debugCapsQueue } from "../kokuzo/capsQueue.js";
@@ -38,6 +38,8 @@ import { applyKanaPhysicsToCell } from "../koshiki/kanaPhysicsMap.js";
 import { localSurfaceize } from "../tenmon/surface/localSurfaceize.js";
 import { llmChat } from "../core/llmWrapper.js";
 import { rewriteOnlyTenmon } from "../core/rewriteOnly.js";
+import { detectLongFormRequestV1 } from "../core/tenmonBrainstem.js";
+import { composeLongFormResponseV2 } from "../core/tenmonLongformComposerV1.js";
 
 import { memoryPersistMessage, memoryReadSession } from "../memory/index.js";
 import { listRules } from "../training/storage.js";
@@ -45,6 +47,162 @@ import { listRules } from "../training/storage.js";
 import { getDbPath } from "../db/index.js";
 
 import { DatabaseSync } from "node:sqlite";
+
+const SCRIPTURE_CENTER_MAP: Record<string, string> = {
+  空海: "KUKAI", 真言: "KUKAI", 即身成仏: "KUKAI",
+  声字実相: "KUKAI", 吽字義: "KUKAI",
+  法華経: "HOKEKYO", 一仏乗: "HOKEKYO", 方便: "HOKEKYO",
+  言霊秘書: "kotodama_hisho", 言霊: "kotodama_hisho",
+  五十連: "kotodama_hisho",
+  カタカムナ: "katakamuna", 楢崎皐月: "katakamuna",
+  いろは: "iroha_kotodama_kai",
+  水穂伝: "mizuho_den", 山口志道: "mizuho_den",
+};
+
+const CONTINUITY_PHRASES = ["それについて", "続きを", "続き", "その続き", "同じ話", "前の話"];
+const __threadCenterKeyV1 = new Map<string, string>();
+
+function detectNewScriptureCenterV1(
+  msg: string,
+  currentCenterKey: string | null
+): string | null {
+  const text = String(msg || "");
+  for (const [keyword, centerKey] of Object.entries(SCRIPTURE_CENTER_MAP)) {
+    if (text.includes(keyword)) {
+      if (centerKey !== currentCenterKey) return centerKey;
+    }
+  }
+  return null;
+}
+
+function isContinuityMessageV1(msg: string): boolean {
+  const text = String(msg || "");
+  return CONTINUITY_PHRASES.some((p) => text.includes(p));
+}
+function resolveCenterKeyV1(threadId: string, msg: string): string | null {
+  const tid = String(threadId || "");
+  const prev = __threadCenterKeyV1.get(tid) ?? null;
+  const continuity = isContinuityMessageV1(msg);
+  const rebinding = detectNewScriptureCenterV1(msg, prev);
+  const next = rebinding ?? (continuity ? prev : prev);
+  if (next) __threadCenterKeyV1.set(tid, next);
+  return next ?? null;
+}
+
+function applyPhaseMetaV1(payload: any, message: string, threadId: string): any {
+  try {
+    const out = payload && typeof payload === "object" ? payload : {};
+    const df = out.decisionFrame && typeof out.decisionFrame === "object" ? out.decisionFrame : (out.decisionFrame = { mode: "NATURAL", intent: "chat", llm: null, ku: {} });
+    df.ku = df.ku && typeof df.ku === "object" ? df.ku : {};
+    const ku = df.ku as any;
+
+    if (detectLongFormRequestV1(message)) {
+      ku.answerLength = "long";
+    } else if (ku.answerLength == null) {
+      ku.answerLength = "short";
+    }
+
+    const centerKey = resolveCenterKeyV1(threadId, message);
+    if (centerKey) ku.centerKey = centerKey;
+
+    const sourceDoc = String(out?.evidence?.doc ?? out?.candidates?.[0]?.doc ?? "");
+    ku.source_priority = getSourcePriority(sourceDoc);
+    if (!Array.isArray(ku.provenance) || ku.provenance.length === 0) {
+      ku.provenance = [{
+        doc: sourceDoc || "unknown",
+        page: typeof out?.evidence?.pdfPage === "number" ? out.evidence.pdfPage : undefined,
+        source_kind: ku.source_priority,
+        confidence: sourceDoc ? "probable" : "inferred",
+      }];
+    }
+
+    const lawNames = Array.isArray(ku.kokuzoLaws)
+      ? ku.kokuzoLaws.map((x: any) => String(x?.name ?? "")).filter(Boolean)
+      : [];
+    ku.usedLawNames = lawNames;
+    ku.evolution_ledger_v1 = {
+      ...(ku.evolution_ledger_v1 && typeof ku.evolution_ledger_v1 === "object" ? ku.evolution_ledger_v1 : {}),
+      usedLawNames: lawNames,
+    };
+
+    if (ku.answerLength === "long" && df.mode !== "LLM_CHAT") {
+      const currentText = String(out.response ?? "");
+      const evidenceTexts: string[] = [];
+      if (typeof out?.evidence?.quote === "string" && out.evidence.quote.trim()) evidenceTexts.push(out.evidence.quote.trim());
+      if (Array.isArray(out?.candidates)) {
+        for (const c of out.candidates.slice(0, 3)) {
+          const s = String(c?.snippet ?? "").trim();
+          if (s) evidenceTexts.push(s);
+        }
+      }
+      const longText = composeLongFormResponseV2({
+        centerKey: String(ku.centerKey ?? "general"),
+        mainProposition: currentText || "この主題は、定義と運用を切り分けてから再統合すると理解しやすくなります。",
+        evidence: evidenceTexts,
+      });
+      out.response = longText.length >= 500 ? longText : (longText + "\n\n" + longText);
+    }
+
+    return out;
+  } catch {
+    return payload;
+  }
+}
+
+function applyPhaseMetaInPlaceV1(ku: any, payload: any, message: string, threadId: string): void {
+  try {
+    if (!ku || typeof ku !== "object") return;
+
+    if (detectLongFormRequestV1(message)) {
+      ku.answerLength = "long";
+    } else if (ku.answerLength == null) {
+      ku.answerLength = "short";
+    }
+
+    const centerKey = resolveCenterKeyV1(threadId, message);
+    if (centerKey) ku.centerKey = centerKey;
+
+    const sourceDoc = String(payload?.evidence?.doc ?? payload?.candidates?.[0]?.doc ?? "");
+    ku.source_priority = getSourcePriority(sourceDoc);
+    if (!Array.isArray(ku.provenance) || ku.provenance.length === 0) {
+      ku.provenance = [{
+        doc: sourceDoc || "unknown",
+        page: typeof payload?.evidence?.pdfPage === "number" ? payload.evidence.pdfPage : undefined,
+        source_kind: ku.source_priority,
+        confidence: sourceDoc ? "probable" : "inferred",
+      }];
+    }
+
+    const lawNames = Array.isArray(ku.kokuzoLaws)
+      ? ku.kokuzoLaws.map((x: any) => String(x?.name ?? "")).filter(Boolean)
+      : [];
+    ku.usedLawNames = lawNames;
+    ku.evolution_ledger_v1 = {
+      ...(ku.evolution_ledger_v1 && typeof ku.evolution_ledger_v1 === "object" ? ku.evolution_ledger_v1 : {}),
+      usedLawNames: lawNames,
+    };
+
+    if (ku.answerLength === "long" && payload && typeof payload === "object") {
+      const currentText = String(payload.response ?? "");
+      const evidenceTexts: string[] = [];
+      if (typeof payload?.evidence?.quote === "string" && payload.evidence.quote.trim()) evidenceTexts.push(payload.evidence.quote.trim());
+      if (Array.isArray(payload?.candidates)) {
+        for (const c of payload.candidates.slice(0, 3)) {
+          const s = String(c?.snippet ?? "").trim();
+          if (s) evidenceTexts.push(s);
+        }
+      }
+      const longText = composeLongFormResponseV2({
+        centerKey: String(ku.centerKey ?? "general"),
+        mainProposition: currentText || "この主題は、定義と運用を切り分けてから再統合すると理解しやすくなります。",
+        evidence: evidenceTexts,
+      });
+      payload.response = longText.length >= 500 ? longText : (longText + "\n\n" + longText);
+    }
+  } catch {
+    // no-op
+  }
+}
 const router: IRouter = Router();
 // __KANAGI_PHASE_MEM_V2: module-scope phase tracker (per threadId) for NATURAL 4-phase state machine.
 const __kanagiPhaseMemV2 = new Map<string, number>();
@@ -64,7 +222,6 @@ function scrubEvidenceLike(text: string): string {
   if (!t) t = "了解しました。もう少し状況を教えてください。";
   return t;
 }
-
 
 // --- DET_PASSPHRASE_HELPERS_V1 (required by DET_PASSPHRASE_V2) ---
 function extractPassphrase(text: string): string | null {
@@ -321,6 +478,7 @@ router.post("/chat", async (req: Request, res: Response<ChatResponseBody>) => {
       (res as any).json = (obj: any) => {
         try {
           if (obj && typeof obj === "object") {
+            obj = applyPhaseMetaV1(obj, message, threadId);
             if (obj.rewriteUsed === undefined) obj.rewriteUsed = false;
             if (obj.rewriteDelta === undefined) obj.rewriteDelta = 0;
             // also ensure decisionFrame.ku is object when decisionFrame exists (non-breaking)
@@ -408,7 +566,7 @@ const pid = process.pid;
           const db = getDb("kokuzo");
           const row: any = dbPrepare(
             "kokuzo",
-            "SELECT content FROM conversation_log WHERE threadId = ? AND role = 'user' ORDER BY id DESC LIMIT 50"
+            "SELECT content FROM conversation_log WHERE session_id = ? AND role = 'user' ORDER BY id DESC LIMIT 50"
           ).all(String(threadId||"")) as any;
 
           let found: string | null = null;

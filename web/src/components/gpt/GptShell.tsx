@@ -4,6 +4,7 @@ import { Topbar } from "./Topbar";
 import { ChatRoute } from "../../pages/ChatRoute";
 import { DashboardPage } from "../../pages/DashboardPage";
 import { ProfilePage } from "../../pages/ProfilePage";
+import { PersonaAuditPage } from "../../pages/PersonaAuditPage";
 import { SettingsModal } from "./SettingsModal";
 import { APP_TITLE } from "../../config/app";
 
@@ -65,7 +66,9 @@ const title =
       ? APP_TITLE
       : view === "dashboard"
         ? "Dashboard"
-        : "Profile";
+        : view === "profile"
+          ? "Profile"
+          : "Persona / Audit";
   return (
     <div className={`gpt-shell ${isOverlayNav ? "gpt-shell--overlay" : ""} ${sidebarOpen ? "gpt-shell--open" : ""}`}>
       <div className="gpt-overlay" onClick={() => setSidebarOpen(false)} />
@@ -81,6 +84,7 @@ const title =
           {view === "chat" && <ChatRoute />}
           {view === "dashboard" && <DashboardPage />}
           {view === "profile" && <ProfilePage />}
+          {view === "persona_audit" && <PersonaAuditPage />}
         </div>
       </main>
       <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />

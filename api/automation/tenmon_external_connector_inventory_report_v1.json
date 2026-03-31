@@ -1,0 +1,72 @@
+{
+  "generated_at": "2026-03-31T23:26:59.571246+00:00",
+  "policy": "observation_only_no_connector_implementation",
+  "connectors": [
+    {
+      "name": "Notion",
+      "current_state": "not_implemented",
+      "requirements": [
+        "Notion integration token",
+        "database/page IDs",
+        "permission scope review"
+      ],
+      "impact_scope": [
+        "sync worker",
+        "secrets management",
+        "chat retrieval routing",
+        "audit logging"
+      ]
+    },
+    {
+      "name": "Google Drive",
+      "current_state": "not_implemented",
+      "requirements": [
+        "OAuth client credentials",
+        "refresh-token storage",
+        "Drive API enablement"
+      ],
+      "impact_scope": [
+        "ingest pipeline",
+        "file index metadata",
+        "rate-limit handling",
+        "access control"
+      ]
+    },
+    {
+      "name": "Dropbox",
+      "current_state": "not_implemented",
+      "requirements": [
+        "Dropbox app key/secret",
+        "OAuth flow",
+        "webhook or polling design"
+      ],
+      "impact_scope": [
+        "file ingestion",
+        "delta sync",
+        "token lifecycle",
+        "error observability"
+      ]
+    },
+    {
+      "name": "NotebookLM",
+      "current_state": "not_implemented",
+      "requirements": [
+        "official API availability check",
+        "auth method confirmation",
+        "usage policy validation"
+      ],
+      "impact_scope": [
+        "knowledge synchronization",
+        "context adapter",
+        "response provenance",
+        "quotas"
+      ]
+    }
+  ],
+  "recommended_connection_order": [
+    "Notion",
+    "Google Drive",
+    "Dropbox",
+    "NotebookLM"
+  ]
+}
