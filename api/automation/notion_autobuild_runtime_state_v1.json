@@ -1,9 +1,0 @@
-{
-  "schema": "TENMON_NOTION_AUTOBUILD_RUNTIME_STATE_V1",
-  "status": "PASS",
-  "current_phase": "queue_busy",
-  "last_watch_at": "",
-  "last_error": "",
-  "pid": null,
-  "updated_at": "2026-03-31T00:43:45Z"
-}
