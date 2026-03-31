@@ -7,7 +7,7 @@
   "pre_flight_audit_if_configured": true,
   "audit_fail_aborts_supervisor": true,
   "post_phase_audit_fail_aborts": true,
-  "enable_cursor_bridge_phase": false,
+  "enable_cursor_bridge_phase": true,
   "enable_schedule_executor_step": false,
   "orchestra_probe_vps_default": false,
   "enforce_ai_layer_consistency": true,
