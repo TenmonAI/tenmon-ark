@@ -1,4 +1,5 @@
 import { Router, type Request, type Response } from "express";
+import { llmChat } from "../core/llmWrapper.js";
 
 export const writerDraftRouter = Router();
 
@@ -188,6 +189,29 @@ let draft = `# ${title}\nmode: ${mode}\n`;
       stats: { targetChars, actualChars, tolerancePct, lo, hi },
       budgetsUsed: perTargets,
         sectionStats: normalizeSectionStats(sectionStats),
+    });
+  } catch (e: any) {
+    return res.status(500).json({ ok: false, error: String(e?.message ?? e) });
+  }
+});
+
+// WRITER_DRAFT_LLM_V1: GPT 接続の薄い補助エンドポイント（既存det経路は変更しない）
+writerDraftRouter.post("/writer/draft/llm", async (req: Request, res: Response) => {
+  try {
+    const body = (req.body ?? {}) as any;
+    const prompt = s(body.prompt).trim();
+    if (!prompt) return res.status(400).json({ ok: false, error: "prompt required" });
+
+    const out = await llmChat({
+      system: "You are a concise Japanese drafting assistant. Keep structure clear and avoid fabricated citations.",
+      history: [],
+      user: prompt,
+    });
+
+    return res.json({
+      ok: true,
+      text: String(out?.text ?? "").trim(),
+      provider: String(out?.provider ?? "llm"),
     });
   } catch (e: any) {
     return res.status(500).json({ ok: false, error: String(e?.message ?? e) });

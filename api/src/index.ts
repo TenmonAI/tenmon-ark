@@ -23,26 +23,16 @@ import { seedRouter } from "./routes/seed.js";
 import { selfImproveRouter } from "./routes/selfImprove.js";
 import { councilRouter } from "./routes/council.js";
 import { authRouter } from "./routes/auth.js";
+import meRouter from "./routes/me.js";
 import { registerFounderAuth } from "./routes/auth_founder.js";
 import { markListenReady } from "./health/readiness.js";
 import { getDb } from "./db/index.js";
 import koshikiConsoleRouter from "./routes/koshikiConsole.js";
-import { debugKanagiRouter } from "./routes/debugKanagi.js";
-import { adminFounderExecutorTokenRouter } from "./routes/adminFounderExecutorToken.js";
-import { adminCursorCommandRouter } from "./routes/adminCursorCommand.js";
-import { adminCursorResultRouter } from "./routes/adminCursorResult.js";
-import { adminRemoteIntakeRouter } from "./routes/adminRemoteIntake.js";
-import { adminRemoteBuildRouter } from "./routes/adminRemoteBuild.js";
-import { adminMacDecisionRouter } from "./routes/adminMacDecision.js";
-import healthRouter from "./routes/health.js";
 import { writerRouter } from "./routes/writer.js";
 import { writerVerifyRouter } from "./routes/writerVerify.js";
 import { writerDraftRouter } from "./routes/writerDraft.js";
-import { infraAssetsRouter } from "./routes/infraAssets.js";
-import chatFrontRouter from "./routes/chat_front.js";
-import meRouter from "./routes/me.js";
-import billingRouter from "./routes/billing.js";
-import { authLocalRouter } from "./routes/auth_local.js";
+import { bookForgeRouter } from "./routes/bookForge.js";
+import { personaStudioRouter } from "./routes/personaStudio.js";
 
 // Debug: 未処理例外のハンドリング
 const pid = process.pid;
@@ -54,11 +44,6 @@ process.on("uncaughtException", (error) => {
 
 process.on("unhandledRejection", (reason, promise) => {
   const uptime = process.uptime();
-  const msg = String((reason as any)?.message || reason || "");
-  if (/No LLM provider configured|OPENAI_API_KEY missing|GEMINI_API_KEY missing/u.test(msg)) {
-    console.error(`[WARN] unhandledRejection(non-fatal) pid=${pid} uptime=${uptime}s:`, reason);
-    return;
-  }
   console.error(`[FATAL] unhandledRejection pid=${pid} uptime=${uptime}s:`, reason);
   process.exit(1);
 });
@@ -112,31 +97,16 @@ try {
 
 app.use(cors());
 app.use(express.json());
-// GET /api/health /api/readiness /api/version — 他 /api より先（404 / 先取り回避、rateLimit マウント時は bypass=/api/health と整合）
-app.use("/api", healthRouter);
-app.use("/api/infra", infraAssetsRouter);
-
 app.use(cookieParser());
-
-/** PWA billing: /api/billing/* を汎用 app.use("/api", …) より先に固定（先取りで 404 にならないようにする） */
-app.use("/api/billing", billingRouter);
 
 app.use("/api", kamuRouter);
 // Founder auth endpoints (additive)
 registerFounderAuth(app);
-app.use("/api", adminFounderExecutorTokenRouter);
-app.use("/api", adminCursorCommandRouter);
-app.use("/api", adminCursorResultRouter);
-app.use("/api", adminRemoteIntakeRouter);
-app.use("/api", adminRemoteBuildRouter);
-app.use("/api", adminMacDecisionRouter);
-app.use("/api", meRouter);
-app.use("/api", authLocalRouter);
 
 app.use("/api", authRouter);
+app.use("/api", meRouter);
 app.use("/api", auditRouter);
 app.use("/api", chatRouter);
-app.use("/api", chatFrontRouter);
 app.use("/api", lawRouter);
 app.use("/api", uploadRouter);
 app.use("/api", algRouter);
@@ -153,6 +123,8 @@ app.use("/api", writerVerifyRouter);
 app.use("/api", writerDraftRouter);
 app.use("/api", writerStoreRouter);
 app.use("/api", writerCommitRouter);
+app.use("/api", bookForgeRouter);
+app.use("/api", personaStudioRouter);
 app.use("/api", readerRouter);
 app.use("/api", seedRouter);
 app.use("/api", selfImproveRouter);
@@ -160,8 +132,6 @@ app.use("/api/kanagi", kanagiRoutes);
 
 // 既存 tenmon
 app.use("/api/tenmon", tenmonRoutes);
-
-app.use("/api/debug/kanagi", debugKanagiRouter);
 
 // health check
 app.get("/health", (_, res) => {
