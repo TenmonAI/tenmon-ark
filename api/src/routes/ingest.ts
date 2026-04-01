@@ -8,6 +8,7 @@ import { randomBytes, createHash } from "node:crypto";
 import { execSync, execFileSync } from "node:child_process";
 import { getTenmonDataDir, getDb, dbPrepare } from "../db/index.js";
 import { upsertPage } from "../kokuzo/pages.js";
+import { execFileSync } from "node:child_process";
 
 const router = Router();
 
@@ -414,6 +415,38 @@ sys.stderr.write(f"Extracted {len(pages)} pages\\n")
       console.error("[INGEST-CONFIRM][FAIL][FALLBACK_UPSERT]", upErr);
     }
     return res.json({ ok: true, doc: String(ingestId || "UP44_FALLBACK"), pagesInserted: 1, emptyPages: 1, warnings: ["INGEST_CONFIRM_FAILED", String(e)] });
+  }
+});
+
+/**
+ * GET /api/ocr/runtime/verify
+ * OCR runtime binaries health check
+ */
+router.get("/ocr/runtime/verify", (_req: Request, res: Response) => {
+  try {
+    const engines: Record<string, boolean> = {};
+    try {
+      execFileSync("tesseract", ["--version"], { encoding: "utf-8", stdio: "pipe", timeout: 3000 });
+      engines.tesseract = true;
+    } catch {
+      engines.tesseract = false;
+    }
+    try {
+      execFileSync("python3", ["--version"], { encoding: "utf-8", stdio: "pipe", timeout: 3000 });
+      engines.python3 = true;
+    } catch {
+      engines.python3 = false;
+    }
+    return res.json({
+      ok: true,
+      contract: "OCR is not truth",
+      engines,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      ok: false,
+      error: error instanceof Error ? error.message : String(error),
+    });
   }
 });
 
