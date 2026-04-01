@@ -59,3 +59,15 @@ CREATE TABLE IF NOT EXISTS training_freezes (
 CREATE INDEX IF NOT EXISTS idx_training_freezes_created_at
   ON training_freezes(created_at);
 
+-- Card5: asynchronous self-reflection ledger
+CREATE TABLE IF NOT EXISTS kanagi_growth_ledger (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  thread_id TEXT NOT NULL,
+  candidateType TEXT NOT NULL,
+  payload TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_kanagi_growth_ledger_thread_created
+  ON kanagi_growth_ledger(thread_id, created_at DESC);
+

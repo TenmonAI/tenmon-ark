@@ -43,6 +43,10 @@ import {
   selectWorldResponseModeV1,
   splitEpistemicLayerV1,
 } from "../core/tenmonWorldStateArbitratorV1.js";
+import {
+  record2ndOrderLearningV1,
+  runSelfReflectionV1,
+} from "../core/tenmonSelfReflectionKernelV1.js";
 
 import { memoryPersistMessage, memoryReadSession } from "../memory/index.js";
 import { listRules } from "../training/storage.js";
@@ -337,7 +341,33 @@ router.post("/chat", async (req: Request, res: Response<ChatResponseBody>) => {
             }
           }
         } catch {}
-        return __origJsonTop(obj);
+        const __ret = __origJsonTop(obj);
+        // Card5: response flush 後に自己内省を非同期実行（await禁止・fail-open）
+        try {
+          const __df: any = (obj as any)?.decisionFrame ?? {};
+          const __ku: any = (__df?.ku && typeof __df.ku === "object") ? __df.ku : {};
+          const finalSurface = String((obj as any)?.response ?? "");
+          const __routeReason = String(__ku?.routeReason ?? __df?.mode ?? "");
+          const __centerKey =
+            (__ku?.centerKey != null ? String(__ku.centerKey) : null);
+          const __thread = String(
+            (obj as any)?.threadId ?? threadId ?? "unknown"
+          );
+          Promise.resolve()
+            .then(() =>
+              runSelfReflectionV1({
+                surface: finalSurface,
+                centerKey: __centerKey,
+                routeReason: __routeReason,
+                lawsUsed: [],
+                threadId: __thread,
+              })
+                .then((r) => record2ndOrderLearningV1(r, __thread))
+                .catch(() => {})
+            )
+            .catch(() => {});
+        } catch {}
+        return __ret;
       };
     }
   } catch {}
@@ -2218,6 +2248,33 @@ try {
       if (ku.rewriteUsed === undefined) ku.rewriteUsed = false;
       if (ku.rewriteDelta === undefined) ku.rewriteDelta = 0;
     } catch {}
+
+    // Card5: res.json の直後に await なしで自己内省
+    Promise.resolve()
+      .then(() => {
+        return runSelfReflectionV1({
+          surface: String(response ?? ""),
+          centerKey:
+            payload?.decisionFrame?.ku?.centerKey != null
+              ? String(payload.decisionFrame.ku.centerKey)
+              : null,
+          routeReason: String(
+            payload?.decisionFrame?.ku?.routeReason ??
+              payload?.decisionFrame?.mode ??
+              ""
+          ),
+          lawsUsed: [],
+          threadId: String(payload?.threadId ?? threadId ?? "unknown"),
+        })
+          .then((r) =>
+            record2ndOrderLearningV1(
+              r,
+              String(payload?.threadId ?? threadId ?? "unknown")
+            )
+          )
+          .catch(() => {});
+      })
+      .catch(() => {});
 
 
 return res.json(__tenmonGeneralGateResultMaybe({
