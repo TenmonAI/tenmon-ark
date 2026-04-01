@@ -345,6 +345,134 @@ body::before {
   flex-direction: column;
   min-height: 0;
 }
+.book-mode-bar {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--gpt-border);
+  background: var(--gpt-bg-primary);
+}
+.book-mode-btn {
+  border: 1px solid var(--gpt-border);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--gpt-text-secondary);
+  font-size: var(--gpt-text-xs);
+  padding: 6px 10px;
+  cursor: pointer;
+}
+.book-mode-btn-active {
+  background: var(--gpt-hover-bg-strong);
+  color: var(--gpt-text-primary);
+  border-color: var(--gpt-border-strong);
+}
+.book-main-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--gpt-border);
+  background: var(--gpt-bg-secondary);
+}
+.book-title-input {
+  max-width: 320px;
+}
+.book-layout {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr minmax(320px, 400px);
+  min-height: 0;
+}
+.book-chat-column {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.book-project-panel {
+  border-left: 1px solid var(--gpt-border);
+  background: var(--gpt-bg-primary);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.book-panel-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 10px;
+  border-bottom: 1px solid var(--gpt-border);
+}
+.book-tab-btn {
+  border: 1px solid var(--gpt-border);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--gpt-text-secondary);
+  font-size: var(--gpt-text-xs);
+  padding: 4px 8px;
+  cursor: pointer;
+}
+.book-tab-btn-active {
+  background: var(--gpt-hover-bg-strong);
+  color: var(--gpt-text-primary);
+}
+.book-panel-content {
+  flex: 1;
+  overflow: auto;
+}
+.book-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+}
+.book-row {
+  display: flex;
+  gap: 8px;
+}
+.book-actions-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.book-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: var(--gpt-text-xs);
+  color: var(--gpt-text-secondary);
+}
+.book-source-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.book-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.book-list-item {
+  border: 1px solid var(--gpt-border);
+  border-radius: 10px;
+  padding: 8px;
+  background: var(--gpt-bg-secondary);
+}
+.book-muted {
+  color: var(--gpt-text-muted);
+  font-size: var(--gpt-text-xs);
+}
+.book-log-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 240px;
+  overflow: auto;
+}
+.book-log-line {
+  font-size: var(--gpt-text-xs);
+  color: var(--gpt-text-secondary);
+}
 .gpt-message-list {
   flex: 1;
   overflow-y: auto;
@@ -662,6 +790,17 @@ body::before {
 
   .gpt-main{ width:100vw; }
   .gpt-topbar{ position:sticky; top:0; z-index:1100; }
+  .book-layout {
+    grid-template-columns: 1fr;
+  }
+  .book-project-panel {
+    border-left: none;
+    border-top: 1px solid var(--gpt-border);
+    max-height: 46vh;
+  }
+  .book-main-actions {
+    flex-wrap: wrap;
+  }
 }
 
 /* Topbar account button (Phase1 UI-only) */

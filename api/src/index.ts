@@ -19,6 +19,7 @@ import memoryRouter from "./routes/memory.js";
 import { readerRouter } from "./routes/reader.js";
 import { writerStoreRouter } from "./routes/writerStore.js";
 import { writerCommitRouter } from "./routes/writerCommit.js";
+import { bookForgeRouter } from "./routes/bookForge.js";
 import { seedRouter } from "./routes/seed.js";
 import { selfImproveRouter } from "./routes/selfImprove.js";
 import { councilRouter } from "./routes/council.js";
@@ -28,6 +29,9 @@ import { registerFounderAuth } from "./routes/auth_founder.js";
 import { markListenReady } from "./health/readiness.js";
 import { getDb } from "./db/index.js";
 import koshikiConsoleRouter from "./routes/koshikiConsole.js";
+import { writerRouter } from "./routes/writer.js";
+import { writerVerifyRouter } from "./routes/writerVerify.js";
+import { writerDraftRouter } from "./routes/writerDraft.js";
 
 // Debug: 未処理例外のハンドリング
 const pid = process.pid;
@@ -118,6 +122,7 @@ app.use("/api", writerVerifyRouter);
 app.use("/api", writerDraftRouter);
 app.use("/api", writerStoreRouter);
 app.use("/api", writerCommitRouter);
+app.use("/api", bookForgeRouter);
 app.use("/api", readerRouter);
 app.use("/api", seedRouter);
 app.use("/api", selfImproveRouter);
@@ -140,6 +145,3 @@ app.listen(PORT, "0.0.0.0", () => {
   markListenReady();
   console.log(`[READY] listenReady=true`);
 });
-import { writerRouter } from "./routes/writer.js";
-import { writerVerifyRouter } from "./routes/writerVerify.js";
-import { writerDraftRouter } from "./routes/writerDraft.js";
