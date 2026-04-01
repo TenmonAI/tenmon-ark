@@ -10,13 +10,25 @@ const LLM_CONFIG = {
   timeout: 8000, // 8秒
 } as const;
 
+type CallLlmOptions = {
+  provider?: "gemini" | "claude";
+  responseFormat?: "text" | "json_object";
+};
+
+function providerModelV1(provider?: "gemini" | "claude"): string {
+  if (provider === "claude") {
+    return process.env.CLAUDE_MODEL || process.env.ANTHROPIC_MODEL || "claude-3-5-sonnet";
+  }
+  return process.env.GEMINI_MODEL || "gemini-2.5-flash";
+}
+
 /**
  * LLMを呼び出す
- * 
+ *
  * @param prompt プロンプト
  * @returns LLMの応答（失敗時はnull）
  */
-export async function callLLM(prompt: string): Promise<string | null> {
+export async function callLLM(prompt: string, options?: CallLlmOptions): Promise<string | null> {
   // APIキーが無い場合は null を返す
   if (!LLM_CONFIG.apiKey || LLM_CONFIG.apiKey.trim().length === 0) {
     console.log("[LLM] API key not configured, returning null");
@@ -32,23 +44,28 @@ export async function callLLM(prompt: string): Promise<string | null> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), LLM_CONFIG.timeout);
 
+    const reqBody: Record<string, unknown> = {
+      model: providerModelV1(options?.provider),
+      messages: [
+        {
+          role: "user",
+          content: prompt,
+        },
+      ],
+      temperature: 0.7,
+      max_tokens: 1000,
+    };
+    if (options?.responseFormat === "json_object") {
+      reqBody.response_format = { type: "json_object" };
+    }
+
     const response = await fetch(`${LLM_CONFIG.baseUrl}/chat/completions`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${LLM_CONFIG.apiKey}`,
       },
-      body: JSON.stringify({
-        model: LLM_CONFIG.model,
-        messages: [
-          {
-            role: "user",
-            content: prompt,
-          },
-        ],
-        temperature: 0.7,
-        max_tokens: 1000,
-      }),
+      body: JSON.stringify(reqBody),
       signal: controller.signal,
     });
 

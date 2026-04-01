@@ -84,6 +84,7 @@ import TwinCorePersonaDemo from "@/pages/TwinCorePersonaDemo";
 import LpChatFrame from "@/pages/embed/LpChatFrame";
 import EmbedChatPage from "@/pages/embed/EmbedChatPage";
 import Dashboard from "@/pages/Dashboard";
+import TenmonDashboard from "@/pages/TenmonDashboard";
 import Profile from "@/pages/Profile";
 import CustomArks from "@/pages/CustomArks";
 import FounderFeedback from "@/pages/FounderFeedback";
@@ -147,6 +148,7 @@ function Router() {
       <Route path={"/soul-sync/settings"} component={SoulSyncSettings} />
       <Route path={"/notification/settings"} component={NotificationSettings} />
       <Route path={"/dashboard"} component={Dashboard} />
+      <Route path={"/dashboard/tenmon"} component={TenmonDashboard} />
       <Route path={"/settings"} component={Settings} />
       <Route path={"/profile"} component={Profile} />
       <Route path={"/custom-arks"} component={CustomArks} />

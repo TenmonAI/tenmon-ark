@@ -38,6 +38,22 @@ import { applyKanaPhysicsToCell } from "../koshiki/kanaPhysicsMap.js";
 import { localSurfaceize } from "../tenmon/surface/localSurfaceize.js";
 import { llmChat } from "../core/llmWrapper.js";
 import { rewriteOnlyTenmon } from "../core/rewriteOnly.js";
+import {
+  compareTruthStructureV1,
+  selectWorldResponseModeV1,
+  splitEpistemicLayerV1,
+} from "../core/tenmonWorldStateArbitratorV1.js";
+import {
+  record2ndOrderLearningV1,
+  runSelfReflectionV1,
+} from "../core/tenmonSelfReflectionKernelV1.js";
+import {
+  applyLensIsolationToPromptV1,
+  buildAtomPromptInjectionV1,
+  expandWordToAtomsV1,
+  getLensIsolationRulesV1,
+} from "../core/tenmonKotodamaAtomEngine.js";
+import { TenmonTruthGraphReasonerV1 } from "../core/tenmonTruthGraphReasoner.js";
 
 import { memoryPersistMessage, memoryReadSession } from "../memory/index.js";
 import { listRules } from "../training/storage.js";
@@ -63,6 +79,76 @@ function scrubEvidenceLike(text: string): string {
   t = t.replace(/\n{3,}/g, "\n\n").trim();
   if (!t) t = "了解しました。もう少し状況を教えてください。";
   return t;
+}
+
+type LlmPlanV1 = {
+  intent: "advice" | "explain" | "list" | "steps" | "other";
+  bullets: string[];
+  cautions: string[];
+  nextSteps: string[];
+};
+
+function parseLlmPlanJsonV1(raw: string): LlmPlanV1 | null {
+  const s = String(raw ?? "").trim();
+  if (!s) return null;
+  let candidate = s;
+  if (candidate.startsWith("```")) {
+    const lines = candidate.split("\n");
+    const first = lines[0] ?? "";
+    const start = /```(?:json)?/i.test(first) ? 1 : 0;
+    const end = lines[lines.length - 1]?.startsWith("```") ? lines.length - 1 : lines.length;
+    candidate = lines.slice(start, end).join("\n").trim();
+  }
+  const l = candidate.indexOf("{");
+  const r = candidate.lastIndexOf("}");
+  if (l >= 0 && r > l) candidate = candidate.slice(l, r + 1);
+  try {
+    const obj = JSON.parse(candidate) as Record<string, unknown>;
+    const toStrArr = (v: unknown, max = 4): string[] =>
+      Array.isArray(v)
+        ? v
+            .map((x) => String(x ?? "").trim())
+            .filter(Boolean)
+            .slice(0, max)
+        : [];
+    const intentRaw = String(obj.intent ?? "other").trim();
+    const intent: LlmPlanV1["intent"] =
+      intentRaw === "advice" ||
+      intentRaw === "explain" ||
+      intentRaw === "list" ||
+      intentRaw === "steps"
+        ? intentRaw
+        : "other";
+    return {
+      intent,
+      bullets: toStrArr(obj.bullets),
+      cautions: toStrArr(obj.cautions),
+      nextSteps: toStrArr(obj.nextSteps),
+    };
+  } catch {
+    return null;
+  }
+}
+
+function fallbackPlanV1(userMsg: string): LlmPlanV1 {
+  const q = String(userMsg ?? "").trim();
+  const isHow = /(how|what|why|どう|なぜ|何を|なにを)/i.test(q);
+  const isSteps = /(手順|ステップ|順番|step)/i.test(q);
+  return {
+    intent: isSteps ? "steps" : isHow ? "explain" : "advice",
+    bullets: ["状況を一行で整理する", "優先度が高いものから一つだけ着手する"],
+    cautions: ["完璧を目指して止まらない", "情報不足の断定はしない"],
+    nextSteps: ["いま一番困っている点を一つ教えてください"],
+  };
+}
+
+function fallbackFinalAnswerV1(plan: LlmPlanV1): string {
+  const lines: string[] = [];
+  lines.push("了解しました。まず短く整理します。");
+  for (const b of plan.bullets.slice(0, 2)) lines.push(`・${b}`);
+  if (plan.cautions[0]) lines.push(`注意: ${plan.cautions[0]}`);
+  if (plan.nextSteps[0]) lines.push(plan.nextSteps[0]);
+  return lines.join("\n");
 }
 
 
@@ -332,7 +418,33 @@ router.post("/chat", async (req: Request, res: Response<ChatResponseBody>) => {
             }
           }
         } catch {}
-        return __origJsonTop(obj);
+        const __ret = __origJsonTop(obj);
+        // Card5: response flush 後に自己内省を非同期実行（await禁止・fail-open）
+        try {
+          const __df: any = (obj as any)?.decisionFrame ?? {};
+          const __ku: any = (__df?.ku && typeof __df.ku === "object") ? __df.ku : {};
+          const finalSurface = String((obj as any)?.response ?? "");
+          const __routeReason = String(__ku?.routeReason ?? __df?.mode ?? "");
+          const __centerKey =
+            (__ku?.centerKey != null ? String(__ku.centerKey) : null);
+          const __thread = String(
+            (obj as any)?.threadId ?? threadId ?? "unknown"
+          );
+          Promise.resolve()
+            .then(() =>
+              runSelfReflectionV1({
+                surface: finalSurface,
+                centerKey: __centerKey,
+                routeReason: __routeReason,
+                lawsUsed: [],
+                threadId: __thread,
+              })
+                .then((r) => record2ndOrderLearningV1(r, __thread))
+                .catch(() => {})
+            )
+            .catch(() => {});
+        } catch {}
+        return __ret;
       };
     }
   } catch {}
@@ -862,10 +974,25 @@ const DEF_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。雑談�
   const __kamiyo_clause = __kamiyo
     ? ("\n\n【直毘の理（内部法則）】\n" + __kamiyo + "\n\n【運用】\n一般論・説教・薄い共感を出さない。言い訳は裁かず受容し、今ここで出来る一手へ落とす。出典名（断捨離/カタカムナ等）は絶対に出さない。必ず短く、質問は任意（0〜1）。言い切り（余白）も許容する。")
     : "";
+let __worldviewInject = "";
+      try {
+        const layer = splitEpistemicLayerV1(
+          t0,
+          /今日|速報|情勢|ニュース/.test(t0) ? "news" : "general"
+        );
+        const cmp = compareTruthStructureV1(layer, "KHS");
+        const mode = selectWorldResponseModeV1(cmp.verdict, "NATURAL_GENERAL_LLM_TOP", "short");
+        __worldviewInject = `\n\n【WorldviewMode】${mode} / verdict=${cmp.verdict} / ${cmp.reason}`.slice(
+          0,
+          150
+        );
+      } catch {
+        __worldviewInject = "";
+      }
 const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。神の数式の運用（濁りを削ぎ、Seedを降ろし、四相の循環で整える）を背景に持ち、相手の「いまここ」を一点に整える対話を行います。一般論や相対化（人それぞれ／状況による等）や自己言及は濁りなので出しません。深い背景は内に保持し、出力は短く優しく鋭く、次の一手へ繋げます。
 
 ※絶対条件※
-必ず「【天聞の所見】」から始める。2〜5行、合計140〜260文字。箇条書き・番号・見出しは禁止。質問は原則0（必要な時だけ1）。言い切り（。/…）を優先し、相手に余白を残す。` + __kamiyo_clause;
+必ず「【天聞の所見】」から始める。2〜5行、合計140〜260文字。箇条書き・番号・見出しは禁止。質問は原則0（必要な時だけ1）。言い切り（。/…）を優先し、相手に余白を残す。` + __kamiyo_clause + __worldviewInject;
 
 let outText = "";
       let outProv = "llm";
@@ -905,13 +1032,24 @@ let outText = "";
           outText = "【天聞の所見】一般論や相対化は要りません。いま「正しさ」で迷っている場面を一つだけ教えてください（仕事／家族／自分の決断など）？";
         }
       }
+const __kuGeneral = {
+          routeReason: "NATURAL_GENERAL_LLM_TOP",
+        } as Record<string, unknown>;
+      try {
+        const layer = splitEpistemicLayerV1(
+          t0,
+          /今日|速報|情勢|ニュース/.test(t0) ? "news" : "general"
+        );
+        const cmp = compareTruthStructureV1(layer, "KHS");
+        __kuGeneral.tenmon_verdict = cmp.verdict;
+      } catch {}
 return res.json(__tenmonGeneralGateResultMaybe({
         response: outText,
         evidence: null,
         candidates: [],
         timestamp,
         threadId,
-        decisionFrame: { mode: "NATURAL", intent: "chat", llm: outProv, ku: { routeReason: "NATURAL_GENERAL_LLM_TOP" } },
+        decisionFrame: { mode: "NATURAL", intent: "chat", llm: outProv, ku: __kuGeneral },
       }));
     }
     // do not treat "definition / meaning" as support-mode
@@ -2188,6 +2326,33 @@ try {
       if (ku.rewriteDelta === undefined) ku.rewriteDelta = 0;
     } catch {}
 
+    // Card5: res.json の直後に await なしで自己内省
+    Promise.resolve()
+      .then(() => {
+        return runSelfReflectionV1({
+          surface: String(response ?? ""),
+          centerKey:
+            payload?.decisionFrame?.ku?.centerKey != null
+              ? String(payload.decisionFrame.ku.centerKey)
+              : null,
+          routeReason: String(
+            payload?.decisionFrame?.ku?.routeReason ??
+              payload?.decisionFrame?.mode ??
+              ""
+          ),
+          lawsUsed: [],
+          threadId: String(payload?.threadId ?? threadId ?? "unknown"),
+        })
+          .then((r) =>
+            record2ndOrderLearningV1(
+              r,
+              String(payload?.threadId ?? threadId ?? "unknown")
+            )
+          )
+          .catch(() => {});
+      })
+      .catch(() => {});
+
 
 return res.json(__tenmonGeneralGateResultMaybe({
       response,
@@ -2851,12 +3016,19 @@ return reply({
 
     const userMsg = trimmed;
 
-    // Stage1: plan (JSON only)
-    let planText = "";
+    const plannedProvider =
+      String((req as any)?.query?.llmProvider ?? "").toLowerCase() === "claude"
+        ? "claude"
+        : "gemini";
+
+    // Stage1: plan (strict JSON only)
+    let planRaw = "";
+    let planObj: LlmPlanV1 | null = null;
     try {
       const stage1 = await llmChat({
         system,
         history: [],
+        provider: plannedProvider,
         user: [
           "Return ONLY valid JSON. No prose.",
           "Goal: create a short plan for the final answer.",
@@ -2877,17 +3049,28 @@ return reply({
         ].join("\n"),
       });
 
-      planText = (stage1?.text ?? "").trim();
+      planRaw = String(stage1?.text ?? "").trim();
+      planObj = parseLlmPlanJsonV1(planRaw);
     } catch {
-      planText = "";
+      planRaw = "";
+      planObj = null;
+    }
+
+    const planParsedFromLlm = !!planObj;
+    if (!planObj) {
+      // Card10: strict JSON enforcement with deterministic fallback
+      planObj = fallbackPlanV1(userMsg);
+      planRaw = JSON.stringify(planObj);
     }
 
     // Stage2: final answer (follow plan)
     let finalText = "";
+    let finalProvider = plannedProvider;
     try {
       const stage2 = await llmChat({
         system,
         history: [],
+        provider: plannedProvider,
         user: [
           "You are TENMON-ARK LLM_CHAT.",
           "Write the final answer for the user.",
@@ -2896,27 +3079,52 @@ return reply({
           "- Keep tone calm and practical.",
           "- If a JSON plan is provided, follow it.",
           "",
-          "PLAN_JSON (may be empty):",
-          planText,
+          "PLAN_JSON:",
+          planRaw,
           "",
           "User:",
           userMsg,
         ].join("\n"),
       });
 
+      finalProvider = String(stage2?.provider || plannedProvider) as "gemini" | "claude";
       finalText = (stage2?.text ?? "").trim();
       if (!finalText) throw new Error("empty-final");
     } catch {
-      // fallback single-stage
+      // Card10: provider fallback
+      const fallbackProvider: "gemini" | "claude" =
+        plannedProvider === "claude" ? "gemini" : "claude";
       try {
-        const out = await llmChat({ system, history: [], user: userMsg });
-        finalText = (out?.text ?? "").trim();
+        const stage2Fallback = await llmChat({
+          system,
+          history: [],
+          provider: fallbackProvider,
+          user: [
+            "You are TENMON-ARK LLM_CHAT.",
+            "Write the final answer for the user.",
+            "Rules:",
+            "- Do not invent citations/sources/doc/pdfPage/evidenceIds.",
+            "- Keep tone calm and practical.",
+            "- If a JSON plan is provided, follow it.",
+            "",
+            "PLAN_JSON:",
+            planRaw,
+            "",
+            "User:",
+            userMsg,
+          ].join("\n"),
+        });
+        finalProvider = String(stage2Fallback?.provider || fallbackProvider) as
+          | "gemini"
+          | "claude";
+        finalText = (stage2Fallback?.text ?? "").trim();
       } catch {
-        finalText = "";
+        finalText = fallbackFinalAnswerV1(planObj);
+        finalProvider = fallbackProvider;
       }
     }
 
-    const safe = scrubEvidenceLike(finalText);
+    const safe = scrubEvidenceLike(finalText || fallbackFinalAnswerV1(planObj));
 
     return res.json(__tenmonGeneralGateResultMaybe({
       response: safe,
@@ -2924,8 +3132,14 @@ return reply({
       decisionFrame: {
         mode: "LLM_CHAT",
         intent: "chat",
-        llm: "llm",
-        ku: { twoStage: true, twoStagePlanJson: planText ? true : false },
+        llm: finalProvider,
+        ku: {
+          twoStage: true,
+          twoStagePlanJson: !!planObj,
+          llmProviderPlanned: plannedProvider,
+          llmProviderFinal: finalProvider,
+          llmPlanFallbackUsed: !planParsedFromLlm,
+        },
       },
       timestamp,
       threadId,
@@ -3200,6 +3414,7 @@ if (typeof out === "string" && out.trim()) nat.responseText = out.trim();
       .trim();
 
     const searchQuery1 = searchQuery0.replace(/言灵/g, "言霊");
+    const __truthReasoner = new TenmonTruthGraphReasonerV1();
     let candidates = searchPagesForHybrid(doc, searchQuery1, 10);
     // M1-03_DOC_DIVERSIFY_FALLBACK_V1: candidates が単一docに偏る時、他docも試して母集団を増やす（削除ではなく追加）
     // ルール: search.ts/DBは触らない。件数は維持し、最後にslice(0,10)。
@@ -3298,6 +3513,37 @@ if (typeof out === "string" && out.trim()) nat.responseText = out.trim();
     }
 
 let finalResponse = response;
+    let __truthPromptAddition = "";
+    try {
+      const centerNodeId = String(candidates?.[0]?.doc ?? "KHS");
+      const subgraph = await __truthReasoner.extractSubgraphV1(centerNodeId, 8);
+      const rawSubgraphPrompt = __truthReasoner.buildSubgraphPromptV1(subgraph);
+      const centerFamily = /空海|真言/.test(searchQuery1)
+        ? "KUKAI"
+        : /法華経|LOTUS/.test(searchQuery1)
+          ? "LOTUS"
+          : /カタカムナ/.test(searchQuery1)
+            ? "KATAKAMUNA"
+            : "KHS";
+      const isolation = getLensIsolationRulesV1(centerFamily);
+      const cleanedPrompt = applyLensIsolationToPromptV1(
+        rawSubgraphPrompt,
+        isolation.blocked_families
+      );
+      __truthPromptAddition = String(cleanedPrompt || "").slice(0, 300);
+    } catch {
+      __truthPromptAddition = "";
+    }
+    let __atomPromptAddition = "";
+    try {
+      const atoms = expandWordToAtomsV1(searchQuery1);
+      __atomPromptAddition = buildAtomPromptInjectionV1(atoms, "khs").slice(0, 200);
+    } catch {
+      __atomPromptAddition = "";
+    }
+    const __combinedPromptAddition = [__truthPromptAddition, __atomPromptAddition]
+      .filter(Boolean)
+      .join(" ");
   // FREECHAT_SANITIZE_V1: UX hardening
   // - menu prompt must not appear unless user explicitly requests it
   // - internal synth/TODO placeholder must not appear unless #詳細
@@ -3366,7 +3612,10 @@ if (__hasMenu && !__askedMenu) {
         if (pageText && pageText.trim().length > 0 && !isNonText) {
           // 回答本文を生成（50文字以上、短く自然に、最後にメニューを添える）
           const excerpt = pageText.trim().slice(0, 300);
-          finalResponse = `${excerpt}${excerpt.length < pageText.trim().length ? '...' : ''}\n\n※ 必要なら資料指定（doc/pdfPage）で厳密にもできます。`;
+          const __e = `${excerpt}${excerpt.length < pageText.trim().length ? "..." : ""}`;
+          finalResponse = __combinedPromptAddition
+            ? `${__combinedPromptAddition}\n${__e}\n\n※ 必要なら資料指定（doc/pdfPage）で厳密にもできます。`
+            : `${__e}\n\n※ 必要なら資料指定（doc/pdfPage）で厳密にもできます。`;
           evidenceDoc = top.doc;
           evidencePdfPage = top.pdfPage;
           evidenceQuote = top.snippet || excerpt.slice(0, 100);
@@ -3375,6 +3624,7 @@ if (__hasMenu && !__askedMenu) {
           const caps = getCaps(top.doc, top.pdfPage) || getCaps("KHS", top.pdfPage);
           if (caps && typeof caps.caption === "string" && caps.caption.trim()) {
             finalResponse =
+              (__combinedPromptAddition ? `${__combinedPromptAddition}\n` : "") +
               `（補完キャプション: 天聞AI解析 / doc=${caps.doc} pdfPage=${caps.pdfPage}）\n` +
               caps.caption.trim() +
               (caps.caption_alt?.length ? `\n\n補助: ${caps.caption_alt.slice(0, 3).join(" / ")}` : "");
@@ -3388,14 +3638,20 @@ if (__hasMenu && !__askedMenu) {
               caption_alt: caps.caption_alt,
             };
           } else {
-            finalResponse = `${sanitized.text}について、kokuzo データベースから関連情報を検索しましたが、詳細な説明が見つかりませんでした。資料指定（doc/pdfPage）で厳密に検索することもできます。`;
+            finalResponse =
+              (__combinedPromptAddition ? `${__combinedPromptAddition}\n` : "") +
+              `${sanitized.text}について、kokuzo データベースから関連情報を検索しましたが、詳細な説明が見つかりませんでした。資料指定（doc/pdfPage）で厳密に検索することもできます。`;
           }
         } else {
-          finalResponse = `${sanitized.text}について、kokuzo データベースから関連情報を検索しましたが、詳細な説明が見つかりませんでした。資料指定（doc/pdfPage）で厳密に検索することもできます。`;
+          finalResponse =
+            (__combinedPromptAddition ? `${__combinedPromptAddition}\n` : "") +
+            `${sanitized.text}について、kokuzo データベースから関連情報を検索しましたが、詳細な説明が見つかりませんでした。資料指定（doc/pdfPage）で厳密に検索することもできます。`;
         }
       } else {
         // 候補がない場合でも最低限の説明を返す（50文字以上）
-        finalResponse = `${sanitized.text}について、kokuzo データベースから関連情報を検索しましたが、該当する資料が見つかりませんでした。\n\n資料を投入するには、scripts/ingest_kokuzo_sample.sh を実行するか、doc/pdfPage を指定して厳密に検索してください。`;
+        finalResponse =
+          (__combinedPromptAddition ? `${__combinedPromptAddition}\n` : "") +
+          `${sanitized.text}について、kokuzo データベースから関連情報を検索しましたが、該当する資料が見つかりませんでした。\n\n資料を投入するには、scripts/ingest_kokuzo_sample.sh を実行するか、doc/pdfPage を指定して厳密に検索してください。`;
       }
       
       // 回答本文が50文字未満の場合は補足を追加
@@ -3613,6 +3869,9 @@ if (__hasMenu && !__askedMenu) {
         const q = "一点質問：この問いは、定義／作用／由来／実践のどれを知りたい？";
 
         let out = "";
+        if (__combinedPromptAddition) {
+          out += `【PromptAdd】${__combinedPromptAddition.slice(0, 500)}\n\n`;
+        }
         if (point) out += point + "\n\n";
         out += opinion + "\n\n" + q;
 

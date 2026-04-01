@@ -38,18 +38,27 @@ Observe and describe only.
   }
 }
 
-export type LlmChatHistoryItem = { role: "user" | "assistant" | "system"; content: string };export async function llmChat(params: {
+export type LlmChatHistoryItem = { role: "user" | "assistant" | "system"; content: string };
+
+export async function llmChat(params: {
   system: string;
   history: LlmChatHistoryItem[];
   user: string;
+  provider?: "gemini" | "claude";
+  responseFormat?: "text" | "json_object";
 }): Promise<{ text: string; provider: string }> {
   const blocks: string[] = [];
+  const provider = params.provider ?? "gemini";
   blocks.push("SYSTEM:\n" + params.system.trim());
+  blocks.push(`PROVIDER_HINT:\n${provider}`);
   for (const m of params.history) {
     blocks.push(`${m.role.toUpperCase()}:\n${m.content}`);
   }
   blocks.push("USER:\n" + params.user);
   const prompt = blocks.join("\n\n").trim() + "\n\nASSISTANT:\n";
-  const out = await callLLM(prompt);
-  return { text: (out ?? "").trim(), provider: "llm" };
+  const out = await callLLM(prompt, {
+    provider,
+    responseFormat: params.responseFormat ?? "text",
+  });
+  return { text: (out ?? "").trim(), provider };
 }
