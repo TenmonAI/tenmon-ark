@@ -1,10 +1,15 @@
 import { Router, type Request, type Response } from "express";
 import { getGitSha } from "../version.js";
 import { getReadiness } from "../health/readiness.js";
+const BUILD_MARK = process.env.BUILD_MARK ?? "dev";
+const BUILD_FEATURES = {
+  kokuzo: true,
+  hybrid: true,
+  natural: true,
+} as const;
 
 
 const BUILD_FEATURES_KOSHIKI = { ...BUILD_FEATURES, koshikiKernel: true } as const;
-import { BUILD_MARK, BUILD_FEATURES } from "../build/buildInfo.js";
 const router = Router();
 router.get("/audit", (_req: Request, res: Response) => {
   const handlerTime = Date.now();
