@@ -88,6 +88,7 @@ import Profile from "@/pages/Profile";
 import CustomArks from "@/pages/CustomArks";
 import FounderFeedback from "@/pages/FounderFeedback";
 import ConciergeManager from "@/pages/ConciergeManager";
+import PersonaStudioPage from "@/pages/PersonaStudioPage";
 import { WorldLaunchWizard } from "@/onboarding/worldLaunchWizard";
 import AdminTradePage from "@/pages/admin/trade/page";
 // ROOT-FIX v1: Global Slots (App.tsxから分離)
@@ -183,6 +184,7 @@ function Router() {
       <Route path={"/twin-core-persona"} component={TwinCorePersonaDemo} />
       <Route path={"/concierge"} component={ConciergeManager} />
       <Route path={"/worldlaunch"} component={WorldLaunchWizard} />
+      <Route path={"/persona-studio"} component={PersonaStudioPage} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />

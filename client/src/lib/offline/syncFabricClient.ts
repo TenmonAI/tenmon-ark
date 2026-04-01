@@ -7,9 +7,13 @@
  * ============================================================
  */
 
-import { createEventLogStore } from "../../../server/kokuzo/offline/eventLogStore";
-import { SyncFabricImpl } from "../../../server/kokuzo/offline/syncFabric";
-import { OfflineStateMachineImpl } from "../../../server/kokuzo/offline/offlineStateMachine";
+// TEMP: Disabled server imports for client build
+// import { createEventLogStore } from "../../../../server/kokuzo/offline/eventLogStore";
+// import { SyncFabricImpl } from "../../../../server/kokuzo/offline/syncFabric";
+// import { OfflineStateMachineImpl } from "../../../../server/kokuzo/offline/offlineStateMachine";
+const createEventLogStore = () => null as any;
+type SyncFabricImpl = any;
+type OfflineStateMachineImpl = any;
 
 let syncFabric: SyncFabricImpl | null = null;
 let stateMachine: OfflineStateMachineImpl | null = null;

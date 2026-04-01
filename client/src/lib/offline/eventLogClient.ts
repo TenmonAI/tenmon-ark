@@ -7,8 +7,11 @@
  * ============================================================
  */
 
-import { IndexedDBEventLogStore } from "../../../server/kokuzo/offline/eventLogStore";
-import { LocalKokuzoKernel } from "../../../server/kokuzo/offline/localKokuzoKernel";
+// TEMP: Disabled server imports for client build
+// import { IndexedDBEventLogStore } from "../../../../server/kokuzo/offline/eventLogStore";
+// import { LocalKokuzoKernel } from "../../../../server/kokuzo/offline/localKokuzoKernel";
+type IndexedDBEventLogStore = any;
+type LocalKokuzoKernel = any;
 
 let eventLogStore: IndexedDBEventLogStore | null = null;
 let localKokuzo: LocalKokuzoKernel | null = null;

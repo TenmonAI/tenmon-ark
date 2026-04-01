@@ -7,9 +7,11 @@
  * ============================================================
  */
 
-import { IndexedDBSnapshotStore } from "../../../server/kokuzo/offline/snapshotStore";
-import { IndexedDBEventLogStore } from "../../../server/kokuzo/offline/eventLogStore";
-import type { KzEvent } from "../../../server/kokuzo/offline/eventLogStore";
+// TEMP: Disabled server imports for client build
+// import { IndexedDBSnapshotStore } from "../../../../server/kokuzo/offline/snapshotStore";
+// import { IndexedDBEventLogStore } from "../../../../server/kokuzo/offline/eventLogStore";
+// import type { KzEvent } from "../../../../server/kokuzo/offline/eventLogStore";
+type KzEvent = any;
 
 /**
  * Snapshot から状態を復元
@@ -48,14 +50,14 @@ export async function restoreFromSnapshot(): Promise<void> {
     // メトリクス記録（GAP-F）
     const replayTime = Date.now() - replayStartTime;
     try {
-      const { getMetricsCollector } = await import("../../../server/kokuzo/offline/metricsCollector");
+      const { getMetricsCollector } = await import("../../../../server/kokuzo/offline/metricsCollector");
       getMetricsCollector().recordReplayTime(replayTime);
     } catch (error) {
       // メトリクス記録失敗は無視
     }
     
     // 4. 競合解決を実行（GAP-D）
-    const { resolveEventConflicts, canApplyEvent } = await import("../../../server/kokuzo/offline/conflictResolver");
+    const { resolveEventConflicts, canApplyEvent } = await import("../../../../server/kokuzo/offline/conflictResolver");
     const resolvedEvents = resolveEventConflicts(events);
     
     // 5. Event を順次適用（superseded Eventは除外）

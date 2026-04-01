@@ -1,4 +1,5 @@
 import { Router, type Request, type Response } from "express";
+import { llmChat } from "../core/llmWrapper.js";
 
 export const writerDraftRouter = Router();
 
@@ -56,31 +57,74 @@ function defaultTarget(mode: string, sectionsCount: number): number {
   return clamp(base + sectionsCount * 120, 600, 6000);
 }
 
-// 捏造なしで“量”を作る：意味は増やさず、検証観点と未確定を明記するテンプレ
-function safeFillerLine(sectionHeading: string, needEv: boolean): string {
+function buildStructuredFallback(sectionHeading: string, needEv: boolean): string {
   const h = sectionHeading || "節";
-  if (needEv) {
-    return `- ${h}: 根拠が未提供のため断言せず、必要な根拠（doc/pdfPage/evidenceIds）の提示待ち。`;
-  }
-  return `- ${h}: 断言を避け、論点の整理と検証観点のみを提示。`;
+  const evidenceLine = needEv
+    ? "根拠が不足している論点は断定せず、必要資料（doc/pdfPage/evidenceIds）を明示する。"
+    : "断定を避け、論点と前提を分けて説明する。";
+  return [
+    `## ${h}`,
+    "要点:",
+    `- ${h}の主題を定義し、前提条件を整理する。`,
+    `- ${evidenceLine}`,
+    "- 読者が次に検証すべき観点を短く示す。",
+  ].join("\n");
 }
 
-// セクション本文を targetChars 近傍まで伸ばす（決定論）
-function buildSectionBody(targetChars: number, heading: string, needEv: boolean): string {
-  const intro = `本文:\n（要点→理由→補足→検証の順。根拠が無い断言はしない）\n`;
-  let body = intro;
-  // 先に10行程度入れてから、必要なら繰り返し
-  for (let i = 0; i < 10; i++) body += safeFillerLine(heading, needEv) + "\n";
-  while (body.length < targetChars) {
-    body += safeFillerLine(heading, needEv) + "\n";
-    if (body.length > targetChars + 2000) break; // 念のため
+async function generateSectionWithGPT(args: {
+  heading: string;
+  goal: string;
+  needEv: boolean;
+  targetChars: number;
+}): Promise<string> {
+  const fallback = buildStructuredFallback(args.heading, args.needEv);
+  if (!process.env.OPENAI_API_KEY || !String(process.env.OPENAI_API_KEY).trim()) {
+    return fallback;
   }
-  // ちょい超過は切る（文章を壊さないため、末尾のみ調整）
-  if (body.length > targetChars) body = body.slice(0, targetChars);
-  return body;
+  try {
+    const system = [
+      "あなたは編集補助エンジン。",
+      "placeholderやダミー行を出力しない。",
+      "根拠不足なら断定しない。",
+      "OCR raw text を真理として断定しない。",
+    ].join("\n");
+    const user = [
+      `見出し: ${args.heading}`,
+      `目標: ${args.goal || "論点を整理する"}`,
+      `根拠必須: ${args.needEv ? "yes" : "no"}`,
+      `目安文字数: ${Math.max(120, args.targetChars)}`,
+      "出力は本文のみ。見出しを一度含める。",
+    ].join("\n");
+    const out = await llmChat({ system, history: [], user });
+    const text = String(out?.text || "").trim();
+    return text || fallback;
+  } catch {
+    return fallback;
+  }
 }
 
-writerDraftRouter.post("/writer/draft", (req: Request, res: Response) => {
+async function buildSectionBody(args: {
+  targetChars: number;
+  heading: string;
+  goal: string;
+  needEv: boolean;
+}): Promise<string> {
+  const generated = await generateSectionWithGPT({
+    heading: args.heading,
+    goal: args.goal,
+    needEv: args.needEv,
+    targetChars: args.targetChars,
+  });
+  let out = generated;
+  if (out.length > args.targetChars) out = out.slice(0, args.targetChars);
+  if (out.length < Math.min(args.targetChars, 160)) {
+    const pad = "\n補足: 前提・制約・検証観点を明確化し、次の確認手順を示す。";
+    out = (out + pad).slice(0, Math.max(args.targetChars, out.length + pad.length));
+  }
+  return out;
+}
+
+writerDraftRouter.post("/writer/draft", async (req: Request, res: Response) => {
   try {
     const body = (req.body ?? {}) as DraftBody;
 
@@ -156,7 +200,7 @@ let draft = `# ${title}\nmode: ${mode}\n`;
       }
 
       const secTarget = perTargets[i] ?? 200;
-      draft += "\n" + buildSectionBody(secTarget, h, needEv) + "\n";
+      draft += "\n" + (await buildSectionBody({ targetChars: secTarget, heading: h, goal: g, needEv })) + "\n";
 
       const _endLen = draft.length;
       const _actual = Math.max(0, _endLen - _startLen);
@@ -168,7 +212,7 @@ let draft = `# ${title}\nmode: ${mode}\n`;
     if (draft.length < lo) {
       // 足りない分は末尾セクションに安全行を足す
       while (draft.length < lo) {
-        draft += "\n" + safeFillerLine("調整", false);
+        draft += "\n補足: 論点・前提・検証観点を維持して記述を補う。";
         if (draft.length > hi + 4000) break;
       }
     } else if (draft.length > hi) {
@@ -236,9 +280,9 @@ writerDraftRouter.post("/writer/refine", (req: Request, res: Response) => {
       if (len >= lo && len <= hi) break;
 
       if (len < lo) {
-        // add safe filler (deterministic): fill in one shot
+        // deterministic extension using structured sentence
         const shortfall = lo - len;
-        const line = "\n" + safeFillerLine("refine", false);
+        const line = "\n補足: 表現を保ったまま、前提条件と検証観点を追記する。";
         const per = Math.max(1, line.length);
         const needLines = Math.min(2000, Math.ceil(shortfall / per));
         draft += line.repeat(needLines);

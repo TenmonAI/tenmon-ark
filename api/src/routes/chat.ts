@@ -38,6 +38,7 @@ import { applyKanaPhysicsToCell } from "../koshiki/kanaPhysicsMap.js";
 import { localSurfaceize } from "../tenmon/surface/localSurfaceize.js";
 import { llmChat } from "../core/llmWrapper.js";
 import { rewriteOnlyTenmon } from "../core/rewriteOnly.js";
+import { resolvePersonaForRequest } from "../core/personaRuntime.js";
 
 import { memoryPersistMessage, memoryReadSession } from "../memory/index.js";
 import { listRules } from "../training/storage.js";
@@ -329,6 +330,16 @@ router.post("/chat", async (req: Request, res: Response<ChatResponseBody>) => {
               if (!df.ku || typeof df.ku !== "object") df.ku = {};
               if (df.ku.rewriteUsed === undefined) df.ku.rewriteUsed = obj.rewriteUsed;
               if (df.ku.rewriteDelta === undefined) df.ku.rewriteDelta = obj.rewriteDelta;
+              try {
+                if (personaRuntime?.hasPersona && personaRuntime.composition) {
+                  (df.ku as any).personaRuntime = personaRuntime.composition.decisionFrameAddition;
+                  (df.ku as any).personaId = personaRuntime.personaId;
+                  (df.ku as any).personaSlug = personaRuntime.personaSlug;
+                  if (personaRuntime.isPreview) (df.ku as any).personaPreview = true;
+                }
+              } catch {
+                // keep response path non-fatal
+              }
             }
           }
         } catch {}
@@ -354,6 +365,11 @@ const pid = process.pid;
   // [B1] deterministic force-menu trigger for Phase36-1
 
   const threadId = String(body.threadId ?? "default").trim();
+  const explicitPersonaId = typeof body.personaId === "string" ? String(body.personaId).trim() : "";
+  const personaRuntime = resolvePersonaForRequest({
+    threadId,
+    explicitPersonaId: explicitPersonaId || undefined,
+  });
   const timestamp = new Date().toISOString();
   const wantsDetail = /#詳細/.test(message);
 
@@ -1105,6 +1121,23 @@ let outText = "";
   const __isCard1Flow = __card1Trigger || __card1Pending;
   // REPLY_SURFACE_V1: responseは必ずlocalSurfaceizeを通す。返却は opts をそのまま形にし caps は body.caps のみ参照
   const reply = (payload: any) => {
+  try {
+    if (personaRuntime.hasPersona && personaRuntime.composition) {
+      payload = payload && typeof payload === "object" ? payload : {};
+      payload.decisionFrame = payload.decisionFrame && typeof payload.decisionFrame === "object"
+        ? payload.decisionFrame
+        : { mode: "NATURAL", intent: "chat", llm: null, ku: {} };
+      payload.decisionFrame.ku = payload.decisionFrame.ku && typeof payload.decisionFrame.ku === "object"
+        ? payload.decisionFrame.ku
+        : {};
+      (payload.decisionFrame.ku as any).personaRuntime = personaRuntime.composition.decisionFrameAddition;
+      (payload.decisionFrame.ku as any).personaId = personaRuntime.personaId;
+      (payload.decisionFrame.ku as any).personaSlug = personaRuntime.personaSlug;
+      if (personaRuntime.isPreview) (payload.decisionFrame.ku as any).personaPreview = true;
+    }
+  } catch {
+    // never block response
+  }
     
   // FREECHAT_SANITIZE_V2B: last-mile sanitizer (works for ALL reply paths)
   const __sanitizeOut = (msg: any, txt: any): string => {
@@ -2847,7 +2880,16 @@ return reply({
   if (shouldLLMChat) {
     // C1_1_TWO_STAGE_LLMCHAT_V1: two-stage generation (plan JSON -> final) inside LLM_CHAT only
     // evidence is always null (no fabrication). If anything fails, fallback to single-stage output.
-    const system = TENMON_CONSTITUTION_TEXT;
+    const personaSystem = personaRuntime.hasPersona && personaRuntime.composition
+      ? [
+          personaRuntime.composition.systemPromptAddition,
+          personaRuntime.composition.memoryContextAddition,
+          personaRuntime.composition.prohibitionAddition,
+        ]
+          .filter(Boolean)
+          .join("\n")
+      : "";
+    const system = [TENMON_CONSTITUTION_TEXT, personaSystem].filter(Boolean).join("\n");
 
     const userMsg = trimmed;
 
