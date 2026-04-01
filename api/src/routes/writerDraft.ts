@@ -1,4 +1,5 @@
 import { Router, type Request, type Response } from "express";
+import { llmChat } from "../core/llmWrapper.js";
 
 export const writerDraftRouter = Router();
 
@@ -80,7 +81,39 @@ function buildSectionBody(targetChars: number, heading: string, needEv: boolean)
   return body;
 }
 
-writerDraftRouter.post("/writer/draft", (req: Request, res: Response) => {
+async function generateSectionWithGPT(params: {
+  mode: string;
+  topic: string;
+  heading: string;
+  goal: string;
+  targetChars: number;
+  continuitySummary: string;
+  bookSpec: string;
+  isTenmonMode: boolean;
+}): Promise<string> {
+  const { mode, topic, heading, goal, targetChars, continuitySummary, bookSpec, isTenmonMode } = params;
+  const system = isTenmonMode
+    ? "あなたは天聞AI。断定を避け、文脈を保った実文章を生成してください。捏造は禁止。"
+    : "あなたは文章作成アシスタントです。与件だけで自然な本文を生成してください。";
+  const user =
+    `mode: ${mode}\n` +
+    `topic: ${topic}\n` +
+    `heading: ${heading}\n` +
+    `goal: ${goal}\n` +
+    `targetChars: ${targetChars}\n` +
+    `bookSpec: ${bookSpec || "(none)"}\n` +
+    `continuitySummary: ${continuitySummary || "(none)"}\n\n` +
+    "要件:\n- 箇条書きを避け、本文として読める形で出力\n- 根拠未提示の断定はしない\n- 文字数は targetChars 近傍\n";
+
+  const out = await llmChat({
+    system,
+    history: [],
+    user,
+  });
+  return String(out?.text ?? "").trim();
+}
+
+writerDraftRouter.post("/writer/draft", async (req: Request, res: Response) => {
   try {
     const body = (req.body ?? {}) as DraftBody;
 
@@ -132,6 +165,11 @@ writerDraftRouter.post("/writer/draft", (req: Request, res: Response) => {
 
 let draft = `# ${title}\nmode: ${mode}\n`;
 
+    let continuitySummary = "";
+    const topic = (s((body as any).topic) || title).trim();
+    const bookSpec = s((body as any).bookSpec).trim();
+    const hasOpenAiKey = Boolean(process.env.OPENAI_API_KEY && String(process.env.OPENAI_API_KEY).trim());
+    const isTenmonMode = /tenmon|天聞/i.test(mode);
     for (let i = 0; i < sections.length; i++) {
       const sec = sections[i] ?? {};
       const h = (s(sec.heading) || "節").trim();
@@ -156,7 +194,30 @@ let draft = `# ${title}\nmode: ${mode}\n`;
       }
 
       const secTarget = perTargets[i] ?? 200;
-      draft += "\n" + buildSectionBody(secTarget, h, needEv) + "\n";
+      let sectionBody = "";
+      if (hasOpenAiKey) {
+        try {
+          sectionBody = await generateSectionWithGPT({
+            mode,
+            topic,
+            heading: h,
+            goal: g,
+            targetChars: secTarget,
+            continuitySummary,
+            bookSpec,
+            isTenmonMode,
+          });
+        } catch {
+          sectionBody = "";
+        }
+      }
+      if (!sectionBody) {
+        sectionBody = buildSectionBody(secTarget, h, needEv);
+      } else if (sectionBody.length > secTarget + 300) {
+        sectionBody = sectionBody.slice(0, secTarget + 300);
+      }
+      continuitySummary = sectionBody.slice(0, 300);
+      draft += "\n" + sectionBody + "\n";
 
       const _endLen = draft.length;
       const _actual = Math.max(0, _endLen - _startLen);
