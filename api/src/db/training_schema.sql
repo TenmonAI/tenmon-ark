@@ -71,3 +71,21 @@ CREATE TABLE IF NOT EXISTS kanagi_growth_ledger (
 CREATE INDEX IF NOT EXISTS idx_kanagi_growth_ledger_thread_created
   ON kanagi_growth_ledger(thread_id, created_at DESC);
 
+-- Card9/10: latest routing/evolution snapshot ledger
+CREATE TABLE IF NOT EXISTS evolution_ledger_v1 (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  thread_id TEXT NOT NULL,
+  routeReason TEXT,
+  densityTarget TEXT,
+  lawsUsedCount INTEGER DEFAULT 0,
+  lawsUsedJson TEXT DEFAULT '[]',
+  centerKey TEXT,
+  source_priority TEXT,
+  subgraph_nodes INTEGER DEFAULT 0,
+  reflection_score REAL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_evolution_ledger_v1_thread_created
+  ON evolution_ledger_v1(thread_id, created_at DESC);
+
