@@ -894,6 +894,11 @@ let outText = "";
       if (outText.length < 80) {
         outText = "【天聞の所見】いま一番欲しいのは「整理」「休息」「一歩」のどれに近いですか？（一語でOK）";
       }
+      const __centerKeyTop = detectCenterKeyV1(t0);
+      const __wantsLongformTop = shouldUseLongformFallbackV1(t0);
+      if (__wantsLongformTop) {
+        outText = LONGFORM_FALLBACK_V1(__centerKeyTop, t0, outText);
+      }
 
       
       // [C16E2] removed C16C replace-to-empty (worm-eaten source)
@@ -910,13 +915,22 @@ let outText = "";
           outText = "【天聞の所見】一般論や相対化は要りません。いま「正しさ」で迷っている場面を一つだけ教えてください（仕事／家族／自分の決断など）？";
         }
       }
+      if (__wantsLongformTop && String(outText || "").length < 300) {
+        outText = LONGFORM_FALLBACK_V1(__centerKeyTop, t0, outText);
+      }
 return res.json(__tenmonGeneralGateResultMaybe({
         response: outText,
         evidence: null,
         candidates: [],
         timestamp,
         threadId,
-        decisionFrame: { mode: "NATURAL", intent: "chat", llm: outProv, ku: { routeReason: "NATURAL_GENERAL_LLM_TOP" } },
+        centerKey: __centerKeyTop || undefined,
+        decisionFrame: {
+          mode: "NATURAL",
+          intent: "chat",
+          llm: outProv,
+          ku: { routeReason: __wantsLongformTop ? "NATURAL_GENERAL_LONGFORM_TOP" : "NATURAL_GENERAL_LLM_TOP" },
+        },
       }));
     }
     // do not treat "definition / meaning" as support-mode
