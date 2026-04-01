@@ -89,7 +89,7 @@ export function getActivePersonas(): PersonaProfile[] {
     const db = getDb("kokuzo");
     return db
       .prepare("SELECT * FROM persona_profiles WHERE status='active' ORDER BY COALESCE(updated_at, created_at) DESC")
-      .all() as PersonaProfile[];
+      .all() as unknown as PersonaProfile[];
   } catch {
     return [];
   }

@@ -8,7 +8,7 @@
  */
 
 import { trpc } from "../trpc";
-import { storeSeedBundleInLocalKokuzo, indexSeedBundleForFastOfflineLookup } from "../../../server/kokuzo/offline/seedBundle";
+import { storeSeedBundleInLocalKokuzo, indexSeedBundleForFastOfflineLookup } from "../../../../server/kokuzo/offline/seedBundle";
 
 export class SeedBundleSync {
   private deviceId: string;

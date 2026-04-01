@@ -330,6 +330,16 @@ router.post("/chat", async (req: Request, res: Response<ChatResponseBody>) => {
               if (!df.ku || typeof df.ku !== "object") df.ku = {};
               if (df.ku.rewriteUsed === undefined) df.ku.rewriteUsed = obj.rewriteUsed;
               if (df.ku.rewriteDelta === undefined) df.ku.rewriteDelta = obj.rewriteDelta;
+              try {
+                if (personaRuntime?.hasPersona && personaRuntime.composition) {
+                  (df.ku as any).personaRuntime = personaRuntime.composition.decisionFrameAddition;
+                  (df.ku as any).personaId = personaRuntime.personaId;
+                  (df.ku as any).personaSlug = personaRuntime.personaSlug;
+                  if (personaRuntime.isPreview) (df.ku as any).personaPreview = true;
+                }
+              } catch {
+                // keep response path non-fatal
+              }
             }
           }
         } catch {}

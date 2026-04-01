@@ -8,7 +8,6 @@ import { randomBytes, createHash } from "node:crypto";
 import { execSync, execFileSync } from "node:child_process";
 import { getTenmonDataDir, getDb, dbPrepare } from "../db/index.js";
 import { upsertPage } from "../kokuzo/pages.js";
-import { execFileSync } from "node:child_process";
 
 const router = Router();
 
