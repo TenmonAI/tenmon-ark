@@ -1,6 +1,10 @@
 /* CARD1_SEAL_V1 */
 import { synthHybridResponseV1 } from "../hybrid/synth.js";
 import { heartModelV1 } from "../core/heartModel.js";
+import { buildTenmonVerdictEngineV1 } from "../core/tenmonVerdictEngineV1.js";
+import { buildTenmonMultipassAnsweringV1 } from "../core/tenmonMultipassAnsweringV1.js";
+import { composeTenmonLongformV1, inferTenmonLongformModeV1 } from "../core/tenmonLongformComposerV1.js";
+import { detectTenmonCenterKeyV1 } from "../core/tenmonLearningConversationBridgeV1.js";
 import { Router, type IRouter, type Request, type Response } from "express";
 import { sanitizeInput } from "../tenmon/inputSanitizer.js";
 import { qcTextV1 } from "../kokuzo/qc.js";
@@ -329,6 +333,40 @@ router.post("/chat", async (req: Request, res: Response<ChatResponseBody>) => {
               if (!df.ku || typeof df.ku !== "object") df.ku = {};
               if (df.ku.rewriteUsed === undefined) df.ku.rewriteUsed = obj.rewriteUsed;
               if (df.ku.rewriteDelta === undefined) df.ku.rewriteDelta = obj.rewriteDelta;
+              const ku = df.ku as Record<string, unknown>;
+              const routeReason = String((ku as any).routeReason ?? df.mode ?? "");
+              const rawMessage = String(
+                (obj as any)?.rawMessage ??
+                (obj as any)?.message ??
+                ((req as any)?.body?.message ?? (req as any)?.body?.input ?? "")
+              );
+              const bodyText = typeof obj.response === "string" ? obj.response : "";
+              const centerKey = String((ku as any).centerKey || detectTenmonCenterKeyV1(rawMessage, routeReason));
+              (ku as any).centerKey = centerKey;
+
+              const multipass = buildTenmonMultipassAnsweringV1({ routeReason, centerKey });
+              (ku as any).multipassAnsweringV1 = multipass;
+
+              const verdict = buildTenmonVerdictEngineV1({ routeReason, centerKey, body: bodyText });
+              (ku as any).verdictEngineV1 = verdict;
+
+              const wantsLongform =
+                /(長文|詳しく|詳細|くわしく|解説|説明せよ|深く)/.test(rawMessage) ||
+                bodyText.length >= 220;
+              const targetLength = wantsLongform ? 360 : 120;
+              const composed = composeTenmonLongformV1({
+                body: bodyText,
+                mode: inferTenmonLongformModeV1(rawMessage),
+                centerClaim: verdict.tradition,
+                nextAxis: `${multipass.composePass} / ${multipass.stylePass}`,
+                targetLength,
+              });
+              if (composed.longform) obj.response = composed.longform;
+              (ku as any).longformComposerV1 = {
+                mode: composed.mode,
+                targetLength,
+                centerLockPassed: composed.centerLockPassed,
+              };
             }
           }
         } catch {}
