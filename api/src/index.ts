@@ -28,11 +28,9 @@ import { registerFounderAuth } from "./routes/auth_founder.js";
 import { markListenReady } from "./health/readiness.js";
 import { getDb } from "./db/index.js";
 import koshikiConsoleRouter from "./routes/koshikiConsole.js";
-import { writerRouter } from "./routes/writer.js";
-import { writerVerifyRouter } from "./routes/writerVerify.js";
-import { writerDraftRouter } from "./routes/writerDraft.js";
 import { bookForgeRouter } from "./routes/bookForge.js";
 import { personaStudioRouter } from "./routes/personaStudio.js";
+import { connectorsRouter } from "./routes/connectors.js";
 
 // Debug: 未処理例外のハンドリング
 const pid = process.pid;
@@ -121,10 +119,11 @@ app.use("/api", pwaRouter);
 app.use("/api", seedPackRouter);
 app.use("/api", writerVerifyRouter);
 app.use("/api", writerDraftRouter);
-app.use("/api", writerStoreRouter);
-app.use("/api", writerCommitRouter);
 app.use("/api", bookForgeRouter);
 app.use("/api", personaStudioRouter);
+app.use("/api", connectorsRouter);
+app.use("/api", writerStoreRouter);
+app.use("/api", writerCommitRouter);
 app.use("/api", readerRouter);
 app.use("/api", seedRouter);
 app.use("/api", selfImproveRouter);
@@ -147,3 +146,6 @@ app.listen(PORT, "0.0.0.0", () => {
   markListenReady();
   console.log(`[READY] listenReady=true`);
 });
+import { writerRouter } from "./routes/writer.js";
+import { writerVerifyRouter } from "./routes/writerVerify.js";
+import { writerDraftRouter } from "./routes/writerDraft.js";

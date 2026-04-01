@@ -417,4 +417,36 @@ sys.stderr.write(f"Extracted {len(pages)} pages\\n")
   }
 });
 
+/**
+ * GET /api/ocr/runtime/verify
+ * OCR runtime binaries health check
+ */
+router.get("/ocr/runtime/verify", (_req: Request, res: Response) => {
+  try {
+    const engines: Record<string, boolean> = {};
+    try {
+      execFileSync("tesseract", ["--version"], { encoding: "utf-8", stdio: "pipe", timeout: 3000 });
+      engines.tesseract = true;
+    } catch {
+      engines.tesseract = false;
+    }
+    try {
+      execFileSync("python3", ["--version"], { encoding: "utf-8", stdio: "pipe", timeout: 3000 });
+      engines.python3 = true;
+    } catch {
+      engines.python3 = false;
+    }
+    return res.json({
+      ok: true,
+      contract: "OCR is not truth",
+      engines,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      ok: false,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+});
+
 export default router;
