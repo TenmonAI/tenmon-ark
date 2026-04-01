@@ -175,3 +175,35 @@ CREATE TABLE IF NOT EXISTS kokuzo_restore_suggestions (
 CREATE INDEX IF NOT EXISTS idx_kokuzo_restore_doc_page
   ON kokuzo_restore_suggestions(doc, pdfPage);
 
+-- Card6: persona memory / profiles (stored in kokuzo.sqlite)
+CREATE TABLE IF NOT EXISTS persona_memory_v1 (
+  memory_id TEXT PRIMARY KEY,
+  user_id TEXT DEFAULT 'default',
+  memory_type TEXT NOT NULL,
+  memory_key TEXT NOT NULL,
+  memory_value TEXT NOT NULL,
+  is_hard_field INTEGER DEFAULT 0,
+  confidence REAL DEFAULT 1.0,
+  source TEXT DEFAULT 'explicit',
+  is_pinned INTEGER DEFAULT 0,
+  created_at TEXT DEFAULT (datetime('now')),
+  updated_at TEXT DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS persona_profiles_v1 (
+  profile_id TEXT PRIMARY KEY,
+  profile_name TEXT NOT NULL,
+  assistant_call_name TEXT DEFAULT '天聞',
+  user_call_name TEXT DEFAULT 'あなた',
+  forbidden_moves TEXT DEFAULT '[]',
+  worldview_constraints TEXT DEFAULT '[]',
+  is_active INTEGER DEFAULT 0,
+  created_at TEXT DEFAULT (datetime('now')),
+  updated_at TEXT DEFAULT (datetime('now'))
+);
+
+INSERT OR IGNORE INTO persona_profiles_v1
+  (profile_id, profile_name, assistant_call_name, user_call_name, is_active)
+VALUES
+  ('default', 'デフォルト天聞', '天聞', 'あなた', 1);
+

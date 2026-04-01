@@ -28,6 +28,7 @@ import { registerFounderAuth } from "./routes/auth_founder.js";
 import { markListenReady } from "./health/readiness.js";
 import { getDb } from "./db/index.js";
 import koshikiConsoleRouter from "./routes/koshikiConsole.js";
+import { personaRouter } from "./routes/persona.js";
 
 // Debug: 未処理例外のハンドリング
 const pid = process.pid;
@@ -110,6 +111,7 @@ app.use("/api", kokuzoRouter);
 app.use("/api", trainingRouter);
 app.use("/api", trainRouter);
 app.use("/api", memoryRouter);
+app.use("/api", personaRouter);
 app.use("/api", councilRouter);
 app.use("/api", writerRouter);
 app.use("/api", pwaRouter);
