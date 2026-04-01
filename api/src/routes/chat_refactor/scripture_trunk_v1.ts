@@ -1,3 +1,54 @@
+
+export type CenterKeyV1 = "HOKEKYO" | "KUKAI" | "kotodama_hisho" | "katakamuna" | null;
+
+export function detectCenterKeyV1(message: string): CenterKeyV1 {
+  const q = String(message || "");
+  if (/法華経/.test(q)) return "HOKEKYO";
+  if (/(空海|声字実相義|三密|真言)/.test(q)) return "KUKAI";
+  if (/言霊|言灵/.test(q)) return "kotodama_hisho";
+  if (/カタカムナ/.test(q)) return "katakamuna";
+  return null;
+}
+
+export function shouldUseLongformFallbackV1(message: string): boolean {
+  const q = String(message || "");
+  return /(長文|詳しく|詳細|核心|とは何か|説明せよ)/.test(q);
+}
+
+export function LONGFORM_FALLBACK_V1(centerKey: CenterKeyV1, message: string, current = ""): string {
+  if (String(current || "").length >= 360) return String(current);
+  if (centerKey === "HOKEKYO") {
+    return [
+      "法華経とは、全ての存在に仏となる可能性があるという視点を、譬喩と実践の両面で示す大乗経典です。",
+      "要点は、教えを段階的に示す方便と、最終的に一つの乗り物へ統合されるという見取り図にあります。",
+      "方便はごまかしではなく、受け手の理解段階に応じて入口を変える配慮として位置づけられます。",
+      "法華経の読解では、章ごとの主張だけでなく、なぜその順番で語られるかを追うことが重要です。",
+      "実践面では、自己と他者を分断せず、苦の現場で働く慈悲と智慧を同時に鍛える方向が中心になります。",
+      "法華経は、教理の優劣を競うためではなく、迷いの現場を変えるための統合的な実践フレームです。",
+    ].join("\n\n");
+  }
+  if (centerKey === "KUKAI") {
+    return [
+      "空海の文脈でいう声字実相義の核心は、音声・文字・実在が切り離された記号ではなく、修行と認識の場で連動するという点にあります。",
+      "声は単なる音ではなく働きであり、字は単なる表記ではなく働きを固定し伝達可能にする器です。",
+      "この対応を三密の実践へ接続すると、身口意を分離せず統合的に調えることで、理解が観念から体験へ移行する設計が見えてきます。",
+      "核心は、概念説明の巧拙ではなく、言葉を行に変換して現実の変化へ接続する点にあります。",
+    ].join("\n\n");
+  }
+  if (centerKey === "kotodama_hisho") {
+    return "言霊とは、語が意味を運ぶだけでなく、発話者と受け手の関係や行為の方向を動かす働きまで含めて捉える見方です。";
+  }
+  if (centerKey === "katakamuna") {
+    return [
+      "カタカムナとは何かを整理するときは、語彙体系・図像・解釈史を分けて確認するのが安全です。",
+      "語彙体系としては、音と形の対応を通じて世界把握を記述しようとする試みとして読まれます。",
+      "図像面では、文様の配列や反復が意味生成のルールとして扱われ、構造単位で解釈されます。",
+      "解釈史では、時代ごとに実践論・宇宙論・言語論へ比重が移っており、一次資料と二次解釈を分ける必要があります。",
+    ].join("\n\n");
+  }
+  return `ご指定の主題（${String(message||"").trim()}）について、定義・背景・実践上の含意を分けて整理する方針で回答するのが安全です。`;
+}
+
 /**
  * CHAT_TRUNK_SCRIPTURE_SPLIT_V1 — scripture trunk (early local resolver + TENMON_SCRIPTURE_CANON_V1 gate).
  * Preserves routeReason strings, ku shapes, res.json payloads. No hit → null (caller continues).
@@ -264,10 +315,23 @@ export function tryScriptureLocalResolverV4ResJsonV1(p: {
           /* fall through */
         } else {
           const __threadIdSafe = String(p.threadId ?? "");
-          const __resp =
+          const __isLongReqV4 = /(長文で|長く説明|詳細に|詳しく|くわしく|核心を|とは何か|説明せよ|網羅的に|深く)/u.test(String(p.message || p.__msgDef || ""));
+          const __longMapV4: Record<string,string> = {
+            HOKEKYO: "法華経の核心は方便と実相の統合にあります。一仏乗として一切衆生の成仏可能性を開示し、方便品では三乗を一乗へと収斂させます。如来寿量品では仏の寿命の永遠性が説かれ、衆生の根機に応じた方便の段階を経て、最終的に一仏乗という絶対の真理へと導く構造を持ちます。読解では章ごとの主張だけでなく、なぜその順番で語られるかを追うことが重要です。実践面では、自己と他者を分断せず、苦の現場で働く慈悲と智慧を同時に鍛える方向が中心になります。",
+            KUKAI: "空海の声字実相義の核心は、音声・文字・実在が切り離された記号ではなく、修行と認識の場で連動するという点にあります。声は単なる音ではなく働きであり、字は単なる表記ではなく働きを固定し伝達可能にする器です。三密の実践では身口意を分離せず統合的に調えることで、理解が観念から体験へ移行します。六大が遍満する宇宙の理を身体で実現する道が即身成仏の根拠となります。",
+            kotodama_hisho: "言霊とは、語が意味を運ぶだけでなく、発話者と受け手の関係や行為の方向を動かす働きまで含めて捉える見方です。五十連の音が天地を貫く秩序として働き、水火の與みにより生成の原理が展開します。山口志道の伝承では、五十音の配列が宇宙の生成過程と対応し、各音がその位置において固有の働きを担います。",
+            katakamuna: "カタカムナの読解では、図象を潜象物理として扱い、音と形の対応関係から宇宙の成立原理を読みます。楢崎皐月の解読では、カタカムナ文字の形と音が物理的な場の構造を表し、現象世界の背後にある潜象の働きを読み解く鍵となります。語彙体系・図像・解釈史を分けて確認することが重要です。",
+          };
+          const __longExtV4 = __longMapV4[String(__scriptureLocal.family || "")];
+          const __baseResp =
             __scriptureLocal.intent === "scripture_local_read"
               ? `【天聞の所見】${__doc0} の一節では、「${__q}」はこう立ちます。「${__quote}」`
               : `【天聞の所見】${__doc0} の芯は、${__quote} という本文の軸から入るのが自然です。`;
+          const __resp = (__isLongReqV4 && __longExtV4)
+            ? `${__baseResp}
+
+${__longExtV4}`
+            : __baseResp;
 
           return {
             response: __resp,

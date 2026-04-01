@@ -132,7 +132,7 @@ def load_allowlist_denylist(auto_dir: Path) -> tuple[dict[str, Any], dict[str, A
 
 def is_autonomy_card_permitted(card_id: str, allow: dict[str, Any], deny: dict[str, Any]) -> tuple[bool, str]:
     cid = (card_id or "").strip()
-    if not cid.startswith("TENMON_") or not cid.endswith("_CURSOR_AUTO_V1"):
+    if not cid.startswith("TENMON_") or not (cid.endswith("_CURSOR_AUTO_V1") or cid.endswith("_CURSOR_AUTO_V2") or cid.endswith("_CURSOR_AUTO_V3") or cid.endswith("_CURSOR_AUTO_V4")):
         return False, "invalid_card_id_pattern"
     for sub in deny.get("card_id_substrings") or []:
         s = str(sub)
