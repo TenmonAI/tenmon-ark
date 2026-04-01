@@ -159,10 +159,24 @@ export function readAtomByLensV1(atom: KotodamaAtomV1, lens: KotodamaLens): stri
   return atom.lens_khs;
 }
 
-const PROHIBITED_MERGE_MIN_V1: Record<string, string[]> = {
-  KHS: ["KATAKAMUNA_PRIMARY"],
-  KATAKAMUNA: ["KHS_DIRECT_MAP"],
-  KUKAI: ["KATAKAMUNA_PRIMARY"],
+// 正典 family ごとの遮断ルール
+const PROHIBITED_MERGE_V1: Record<string, string[]> = {
+  KHS: ["KATAKAMUNA_PRIMARY", "KOJIKI_MYTHOLOGICAL"],
+  KATAKAMUNA: ["KHS_DIRECT_MAP", "KUKAI_ESOTERIC"],
+  KUKAI: ["KATAKAMUNA_PRIMARY", "SHINTO_DIRECT_MERGE"],
+  LOTUS: ["KUKAI_ESOTERIC_MERGE", "SHINTO_DIRECT"],
+  IROHA: ["KATAKAMUNA_PRIMARY"],
+  MIZUHO: [],
+};
+
+const FAMILY_KEYWORDS_V1: Record<string, string[]> = {
+  KATAKAMUNA_PRIMARY: ["カタカムナ", "katakamuna", "KATAKAMUNA"],
+  KOJIKI_MYTHOLOGICAL: ["古事記", "kojiki", "神代"],
+  KHS_DIRECT_MAP: ["KHS", "言霊秘書", "ことだま秘書"],
+  KUKAI_ESOTERIC: ["空海", "弘法大師", "真言"],
+  SHINTO_DIRECT_MERGE: ["神道", "神社", "祝詞"],
+  KUKAI_ESOTERIC_MERGE: ["空海", "密教", "即身成仏"],
+  SHINTO_DIRECT: ["神道", "古神道"],
 };
 
 // 混線禁止チェック
@@ -170,8 +184,9 @@ export function checkProhibitedMergeV1(family1: string, family2: string): boolea
   const f1 = String(family1 ?? "").trim();
   const f2 = String(family2 ?? "").trim();
   if (!f1 || !f2) return false;
-  const list = PROHIBITED_MERGE_MIN_V1[f1] ?? [];
-  return list.includes(f2);
+  const list1 = PROHIBITED_MERGE_V1[f1] ?? [];
+  const list2 = PROHIBITED_MERGE_V1[f2] ?? [];
+  return list1.includes(f2) || list2.includes(f1);
 }
 
 // プロンプト用 atom 注入テキスト生成（最大200字）
@@ -189,4 +204,37 @@ export function buildAtomPromptInjectionV1(
     .join(" / ");
   const out = `【KotodamaAtom:${lens}】${compact}`;
   return out.slice(0, 200);
+}
+
+// centerFamily に対して遮断すべき family リストを返す
+export function getLensIsolationRulesV1(centerFamily: string): {
+  blocked_families: string[];
+  reason: string;
+} {
+  const center = String(centerFamily ?? "").trim().toUpperCase();
+  const blocked_families = PROHIBITED_MERGE_V1[center] ?? [];
+  return {
+    blocked_families,
+    reason: blocked_families.length
+      ? `lens_isolation:${center}`
+      : `lens_isolation:none:${center || "UNKNOWN"}`,
+  };
+}
+
+// プロンプトテキストから blocked_families に関連するキーワードを除去
+// 除去対象は最大500字以内のプロンプト追加テキストのみ
+// 元の ku / surface / routeReason には触れない
+export function applyLensIsolationToPromptV1(
+  promptAddition: string,
+  blockedFamilies: string[]
+): string {
+  let out = String(promptAddition ?? "").slice(0, 500);
+  for (const family of blockedFamilies || []) {
+    const kws = FAMILY_KEYWORDS_V1[String(family)] ?? [];
+    for (const kw of kws) {
+      const re = new RegExp(kw.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi");
+      out = out.replace(re, "");
+    }
+  }
+  return out.replace(/\s{2,}/g, " ").trim();
 }

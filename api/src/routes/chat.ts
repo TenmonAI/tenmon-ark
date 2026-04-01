@@ -47,6 +47,13 @@ import {
   record2ndOrderLearningV1,
   runSelfReflectionV1,
 } from "../core/tenmonSelfReflectionKernelV1.js";
+import {
+  applyLensIsolationToPromptV1,
+  buildAtomPromptInjectionV1,
+  expandWordToAtomsV1,
+  getLensIsolationRulesV1,
+} from "../core/tenmonKotodamaAtomEngine.js";
+import { TenmonTruthGraphReasonerV1 } from "../core/tenmonTruthGraphReasoner.js";
 
 import { memoryPersistMessage, memoryReadSession } from "../memory/index.js";
 import { listRules } from "../training/storage.js";
@@ -3288,6 +3295,7 @@ if (typeof out === "string" && out.trim()) nat.responseText = out.trim();
       .trim();
 
     const searchQuery1 = searchQuery0.replace(/言灵/g, "言霊");
+    const __truthReasoner = new TenmonTruthGraphReasonerV1();
     let candidates = searchPagesForHybrid(doc, searchQuery1, 10);
     // M1-03_DOC_DIVERSIFY_FALLBACK_V1: candidates が単一docに偏る時、他docも試して母集団を増やす（削除ではなく追加）
     // ルール: search.ts/DBは触らない。件数は維持し、最後にslice(0,10)。
@@ -3386,6 +3394,37 @@ if (typeof out === "string" && out.trim()) nat.responseText = out.trim();
     }
 
 let finalResponse = response;
+    let __truthPromptAddition = "";
+    try {
+      const centerNodeId = String(candidates?.[0]?.doc ?? "KHS");
+      const subgraph = await __truthReasoner.extractSubgraphV1(centerNodeId, 8);
+      const rawSubgraphPrompt = __truthReasoner.buildSubgraphPromptV1(subgraph);
+      const centerFamily = /空海|真言/.test(searchQuery1)
+        ? "KUKAI"
+        : /法華経|LOTUS/.test(searchQuery1)
+          ? "LOTUS"
+          : /カタカムナ/.test(searchQuery1)
+            ? "KATAKAMUNA"
+            : "KHS";
+      const isolation = getLensIsolationRulesV1(centerFamily);
+      const cleanedPrompt = applyLensIsolationToPromptV1(
+        rawSubgraphPrompt,
+        isolation.blocked_families
+      );
+      __truthPromptAddition = String(cleanedPrompt || "").slice(0, 300);
+    } catch {
+      __truthPromptAddition = "";
+    }
+    let __atomPromptAddition = "";
+    try {
+      const atoms = expandWordToAtomsV1(searchQuery1);
+      __atomPromptAddition = buildAtomPromptInjectionV1(atoms, "khs").slice(0, 200);
+    } catch {
+      __atomPromptAddition = "";
+    }
+    const __combinedPromptAddition = [__truthPromptAddition, __atomPromptAddition]
+      .filter(Boolean)
+      .join(" ");
   // FREECHAT_SANITIZE_V1: UX hardening
   // - menu prompt must not appear unless user explicitly requests it
   // - internal synth/TODO placeholder must not appear unless #詳細
@@ -3454,7 +3493,10 @@ if (__hasMenu && !__askedMenu) {
         if (pageText && pageText.trim().length > 0 && !isNonText) {
           // 回答本文を生成（50文字以上、短く自然に、最後にメニューを添える）
           const excerpt = pageText.trim().slice(0, 300);
-          finalResponse = `${excerpt}${excerpt.length < pageText.trim().length ? '...' : ''}\n\n※ 必要なら資料指定（doc/pdfPage）で厳密にもできます。`;
+          const __e = `${excerpt}${excerpt.length < pageText.trim().length ? "..." : ""}`;
+          finalResponse = __combinedPromptAddition
+            ? `${__combinedPromptAddition}\n${__e}\n\n※ 必要なら資料指定（doc/pdfPage）で厳密にもできます。`
+            : `${__e}\n\n※ 必要なら資料指定（doc/pdfPage）で厳密にもできます。`;
           evidenceDoc = top.doc;
           evidencePdfPage = top.pdfPage;
           evidenceQuote = top.snippet || excerpt.slice(0, 100);
@@ -3463,6 +3505,7 @@ if (__hasMenu && !__askedMenu) {
           const caps = getCaps(top.doc, top.pdfPage) || getCaps("KHS", top.pdfPage);
           if (caps && typeof caps.caption === "string" && caps.caption.trim()) {
             finalResponse =
+              (__combinedPromptAddition ? `${__combinedPromptAddition}\n` : "") +
               `（補完キャプション: 天聞AI解析 / doc=${caps.doc} pdfPage=${caps.pdfPage}）\n` +
               caps.caption.trim() +
               (caps.caption_alt?.length ? `\n\n補助: ${caps.caption_alt.slice(0, 3).join(" / ")}` : "");
@@ -3476,14 +3519,20 @@ if (__hasMenu && !__askedMenu) {
               caption_alt: caps.caption_alt,
             };
           } else {
-            finalResponse = `${sanitized.text}について、kokuzo データベースから関連情報を検索しましたが、詳細な説明が見つかりませんでした。資料指定（doc/pdfPage）で厳密に検索することもできます。`;
+            finalResponse =
+              (__combinedPromptAddition ? `${__combinedPromptAddition}\n` : "") +
+              `${sanitized.text}について、kokuzo データベースから関連情報を検索しましたが、詳細な説明が見つかりませんでした。資料指定（doc/pdfPage）で厳密に検索することもできます。`;
           }
         } else {
-          finalResponse = `${sanitized.text}について、kokuzo データベースから関連情報を検索しましたが、詳細な説明が見つかりませんでした。資料指定（doc/pdfPage）で厳密に検索することもできます。`;
+          finalResponse =
+            (__combinedPromptAddition ? `${__combinedPromptAddition}\n` : "") +
+            `${sanitized.text}について、kokuzo データベースから関連情報を検索しましたが、詳細な説明が見つかりませんでした。資料指定（doc/pdfPage）で厳密に検索することもできます。`;
         }
       } else {
         // 候補がない場合でも最低限の説明を返す（50文字以上）
-        finalResponse = `${sanitized.text}について、kokuzo データベースから関連情報を検索しましたが、該当する資料が見つかりませんでした。\n\n資料を投入するには、scripts/ingest_kokuzo_sample.sh を実行するか、doc/pdfPage を指定して厳密に検索してください。`;
+        finalResponse =
+          (__combinedPromptAddition ? `${__combinedPromptAddition}\n` : "") +
+          `${sanitized.text}について、kokuzo データベースから関連情報を検索しましたが、該当する資料が見つかりませんでした。\n\n資料を投入するには、scripts/ingest_kokuzo_sample.sh を実行するか、doc/pdfPage を指定して厳密に検索してください。`;
       }
       
       // 回答本文が50文字未満の場合は補足を追加
@@ -3701,6 +3750,9 @@ if (__hasMenu && !__askedMenu) {
         const q = "一点質問：この問いは、定義／作用／由来／実践のどれを知りたい？";
 
         let out = "";
+        if (__combinedPromptAddition) {
+          out += `【PromptAdd】${__combinedPromptAddition.slice(0, 500)}\n\n`;
+        }
         if (point) out += point + "\n\n";
         out += opinion + "\n\n" + q;
 
