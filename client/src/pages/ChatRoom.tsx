@@ -45,6 +45,7 @@ import { setupAutoSync } from "@/lib/offline/syncFabricClient";
 import { setupRestoreOnStartup } from "@/lib/offline/restoreFromSnapshot";
 import { getConversationLocalFirst } from "@/lib/kokuzo/localFirst";
 import { ProjectList } from "@/components/project/ProjectList";
+import { BookForgeButton } from "@/components/BookForgeButton";
 import { storeExperience, getMemorySummaryForAPI } from "@/lib/kokuzo";
 import "@/styles/chatgpt-ui.css";
 
@@ -836,6 +837,9 @@ export default function ChatRoom() {
           selectedProjectId={selectedProjectId}
           onSelectProject={setSelectedProjectId}
         />
+        <div className="p-2">
+          <BookForgeButton />
+        </div>
       </div>
 
       {/* 右サイドバー: 学習一覧 */}
