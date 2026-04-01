@@ -81,6 +81,76 @@ function scrubEvidenceLike(text: string): string {
   return t;
 }
 
+type LlmPlanV1 = {
+  intent: "advice" | "explain" | "list" | "steps" | "other";
+  bullets: string[];
+  cautions: string[];
+  nextSteps: string[];
+};
+
+function parseLlmPlanJsonV1(raw: string): LlmPlanV1 | null {
+  const s = String(raw ?? "").trim();
+  if (!s) return null;
+  let candidate = s;
+  if (candidate.startsWith("```")) {
+    const lines = candidate.split("\n");
+    const first = lines[0] ?? "";
+    const start = /```(?:json)?/i.test(first) ? 1 : 0;
+    const end = lines[lines.length - 1]?.startsWith("```") ? lines.length - 1 : lines.length;
+    candidate = lines.slice(start, end).join("\n").trim();
+  }
+  const l = candidate.indexOf("{");
+  const r = candidate.lastIndexOf("}");
+  if (l >= 0 && r > l) candidate = candidate.slice(l, r + 1);
+  try {
+    const obj = JSON.parse(candidate) as Record<string, unknown>;
+    const toStrArr = (v: unknown, max = 4): string[] =>
+      Array.isArray(v)
+        ? v
+            .map((x) => String(x ?? "").trim())
+            .filter(Boolean)
+            .slice(0, max)
+        : [];
+    const intentRaw = String(obj.intent ?? "other").trim();
+    const intent: LlmPlanV1["intent"] =
+      intentRaw === "advice" ||
+      intentRaw === "explain" ||
+      intentRaw === "list" ||
+      intentRaw === "steps"
+        ? intentRaw
+        : "other";
+    return {
+      intent,
+      bullets: toStrArr(obj.bullets),
+      cautions: toStrArr(obj.cautions),
+      nextSteps: toStrArr(obj.nextSteps),
+    };
+  } catch {
+    return null;
+  }
+}
+
+function fallbackPlanV1(userMsg: string): LlmPlanV1 {
+  const q = String(userMsg ?? "").trim();
+  const isHow = /(how|what|why|どう|なぜ|何を|なにを)/i.test(q);
+  const isSteps = /(手順|ステップ|順番|step)/i.test(q);
+  return {
+    intent: isSteps ? "steps" : isHow ? "explain" : "advice",
+    bullets: ["状況を一行で整理する", "優先度が高いものから一つだけ着手する"],
+    cautions: ["完璧を目指して止まらない", "情報不足の断定はしない"],
+    nextSteps: ["いま一番困っている点を一つ教えてください"],
+  };
+}
+
+function fallbackFinalAnswerV1(plan: LlmPlanV1): string {
+  const lines: string[] = [];
+  lines.push("了解しました。まず短く整理します。");
+  for (const b of plan.bullets.slice(0, 2)) lines.push(`・${b}`);
+  if (plan.cautions[0]) lines.push(`注意: ${plan.cautions[0]}`);
+  if (plan.nextSteps[0]) lines.push(plan.nextSteps[0]);
+  return lines.join("\n");
+}
+
 
 // --- DET_PASSPHRASE_HELPERS_V1 (required by DET_PASSPHRASE_V2) ---
 function extractPassphrase(text: string): string | null {
@@ -2946,12 +3016,19 @@ return reply({
 
     const userMsg = trimmed;
 
-    // Stage1: plan (JSON only)
-    let planText = "";
+    const plannedProvider =
+      String((req as any)?.query?.llmProvider ?? "").toLowerCase() === "claude"
+        ? "claude"
+        : "gemini";
+
+    // Stage1: plan (strict JSON only)
+    let planRaw = "";
+    let planObj: LlmPlanV1 | null = null;
     try {
       const stage1 = await llmChat({
         system,
         history: [],
+        provider: plannedProvider,
         user: [
           "Return ONLY valid JSON. No prose.",
           "Goal: create a short plan for the final answer.",
@@ -2972,17 +3049,28 @@ return reply({
         ].join("\n"),
       });
 
-      planText = (stage1?.text ?? "").trim();
+      planRaw = String(stage1?.text ?? "").trim();
+      planObj = parseLlmPlanJsonV1(planRaw);
     } catch {
-      planText = "";
+      planRaw = "";
+      planObj = null;
+    }
+
+    const planParsedFromLlm = !!planObj;
+    if (!planObj) {
+      // Card10: strict JSON enforcement with deterministic fallback
+      planObj = fallbackPlanV1(userMsg);
+      planRaw = JSON.stringify(planObj);
     }
 
     // Stage2: final answer (follow plan)
     let finalText = "";
+    let finalProvider = plannedProvider;
     try {
       const stage2 = await llmChat({
         system,
         history: [],
+        provider: plannedProvider,
         user: [
           "You are TENMON-ARK LLM_CHAT.",
           "Write the final answer for the user.",
@@ -2991,27 +3079,52 @@ return reply({
           "- Keep tone calm and practical.",
           "- If a JSON plan is provided, follow it.",
           "",
-          "PLAN_JSON (may be empty):",
-          planText,
+          "PLAN_JSON:",
+          planRaw,
           "",
           "User:",
           userMsg,
         ].join("\n"),
       });
 
+      finalProvider = String(stage2?.provider || plannedProvider) as "gemini" | "claude";
       finalText = (stage2?.text ?? "").trim();
       if (!finalText) throw new Error("empty-final");
     } catch {
-      // fallback single-stage
+      // Card10: provider fallback
+      const fallbackProvider: "gemini" | "claude" =
+        plannedProvider === "claude" ? "gemini" : "claude";
       try {
-        const out = await llmChat({ system, history: [], user: userMsg });
-        finalText = (out?.text ?? "").trim();
+        const stage2Fallback = await llmChat({
+          system,
+          history: [],
+          provider: fallbackProvider,
+          user: [
+            "You are TENMON-ARK LLM_CHAT.",
+            "Write the final answer for the user.",
+            "Rules:",
+            "- Do not invent citations/sources/doc/pdfPage/evidenceIds.",
+            "- Keep tone calm and practical.",
+            "- If a JSON plan is provided, follow it.",
+            "",
+            "PLAN_JSON:",
+            planRaw,
+            "",
+            "User:",
+            userMsg,
+          ].join("\n"),
+        });
+        finalProvider = String(stage2Fallback?.provider || fallbackProvider) as
+          | "gemini"
+          | "claude";
+        finalText = (stage2Fallback?.text ?? "").trim();
       } catch {
-        finalText = "";
+        finalText = fallbackFinalAnswerV1(planObj);
+        finalProvider = fallbackProvider;
       }
     }
 
-    const safe = scrubEvidenceLike(finalText);
+    const safe = scrubEvidenceLike(finalText || fallbackFinalAnswerV1(planObj));
 
     return res.json(__tenmonGeneralGateResultMaybe({
       response: safe,
@@ -3019,8 +3132,14 @@ return reply({
       decisionFrame: {
         mode: "LLM_CHAT",
         intent: "chat",
-        llm: "llm",
-        ku: { twoStage: true, twoStagePlanJson: planText ? true : false },
+        llm: finalProvider,
+        ku: {
+          twoStage: true,
+          twoStagePlanJson: !!planObj,
+          llmProviderPlanned: plannedProvider,
+          llmProviderFinal: finalProvider,
+          llmPlanFallbackUsed: !planParsedFromLlm,
+        },
       },
       timestamp,
       threadId,
