@@ -38,6 +38,11 @@ import { applyKanaPhysicsToCell } from "../koshiki/kanaPhysicsMap.js";
 import { localSurfaceize } from "../tenmon/surface/localSurfaceize.js";
 import { llmChat } from "../core/llmWrapper.js";
 import { rewriteOnlyTenmon } from "../core/rewriteOnly.js";
+import {
+  LONGFORM_FALLBACK_V1,
+  detectCenterKeyV1,
+  shouldUseLongformFallbackV1,
+} from "./chat_refactor/scripture_trunk_v1.js";
 
 import { memoryPersistMessage, memoryReadSession } from "../memory/index.js";
 import { listRules } from "../training/storage.js";
@@ -3625,6 +3630,12 @@ if (__hasMenu && !__askedMenu) {
       }
     } catch {}
 
+    const centerKey = detectCenterKeyV1(trimmed);
+    const wantsLongform = shouldUseLongformFallbackV1(trimmed);
+    if (wantsLongform && String(finalResponse || "").length < 300) {
+      finalResponse = LONGFORM_FALLBACK_V1(centerKey, trimmed, finalResponse);
+    }
+
     return reply({
       response: finalResponse,
       trace,
@@ -3634,6 +3645,7 @@ if (__hasMenu && !__askedMenu) {
       evidence,
       caps: capsPayload ?? undefined,
       timestamp: new Date().toISOString(),
+      centerKey: centerKey || undefined,
       decisionFrame: { mode: "HYBRID", intent: "chat", llm: null, ku: {} },
     });
   } catch (error) {

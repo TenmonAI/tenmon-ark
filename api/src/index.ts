@@ -28,6 +28,11 @@ import { registerFounderAuth } from "./routes/auth_founder.js";
 import { markListenReady } from "./health/readiness.js";
 import { getDb } from "./db/index.js";
 import koshikiConsoleRouter from "./routes/koshikiConsole.js";
+import { bookForgeRouter } from "./routes/bookForge.js";
+import healthRouter from "./routes/health.js";
+import { writerRouter } from "./routes/writer.js";
+import { writerVerifyRouter } from "./routes/writerVerify.js";
+import { writerDraftRouter } from "./routes/writerDraft.js";
 
 // Debug: 未処理例外のハンドリング
 const pid = process.pid;
@@ -100,6 +105,7 @@ registerFounderAuth(app);
 
 app.use("/api", authRouter);
 app.use("/api", meRouter);
+app.use("/api", healthRouter);
 app.use("/api", auditRouter);
 app.use("/api", chatRouter);
 app.use("/api", lawRouter);
@@ -122,6 +128,7 @@ app.use("/api", readerRouter);
 app.use("/api", seedRouter);
 app.use("/api", selfImproveRouter);
 app.use("/api/kanagi", kanagiRoutes);
+app.use("/api", bookForgeRouter);
 
 // 既存 tenmon
 app.use("/api/tenmon", tenmonRoutes);
@@ -140,6 +147,3 @@ app.listen(PORT, "0.0.0.0", () => {
   markListenReady();
   console.log(`[READY] listenReady=true`);
 });
-import { writerRouter } from "./routes/writer.js";
-import { writerVerifyRouter } from "./routes/writerVerify.js";
-import { writerDraftRouter } from "./routes/writerDraft.js";
