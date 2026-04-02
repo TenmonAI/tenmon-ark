@@ -50,6 +50,166 @@ const router: IRouter = Router();
 const __kanagiPhaseMemV2 = new Map<string, number>();
 // CARD_C7B2_FIX_N2_TRIGGER_AND_LLM_V1
 
+type CanonCenterKey = "katakamuna" | "KUKAI" | "HOKEKYO" | "kotodama_hisho";
+
+function inferCenterKey(input: string): CanonCenterKey | null {
+  const t = String(input || "");
+  if (/カタカムナ|katakamuna|潜象|ウタヒ|八律|四相/i.test(t)) return "katakamuna";
+  if (/空海|真言|三密|阿字|即身成仏/i.test(t)) return "KUKAI";
+  if (/法華経|妙法|法華|久遠/i.test(t)) return "HOKEKYO";
+  if (/言灵|言霊|ことだま|kotodama|五十連/i.test(t)) return "kotodama_hisho";
+  return null;
+}
+
+function readGroundedLaws(centerKey: CanonCenterKey | null, limit = 3): Array<{ name: string; definition: string; evidenceIds: string[]; doc: string; pdfPage: number | null }> {
+  if (!centerKey) return [];
+  const patterns: Record<CanonCenterKey, string[]> = {
+    katakamuna: ["%KATAKAMUNA%", "%カタカムナ%", "%katakamuna%"],
+    KUKAI: ["%KUKAI%", "%空海%", "%真言%"],
+    HOKEKYO: ["%HOKEKYO%", "%法華経%", "%妙法%"],
+    kotodama_hisho: ["%KOTODAMA%", "%言霊%", "%ことだま%"],
+  };
+  const terms = patterns[centerKey] || [];
+  if (!terms.length) return [];
+  try {
+    const rows = dbPrepare(
+      "kokuzo",
+      "SELECT doc, pdfPage, name, definition, evidenceIds FROM kokuzo_laws " +
+        "WHERE definition IS NOT NULL AND (" +
+        "doc LIKE ? OR name LIKE ? OR tags LIKE ? OR doc LIKE ? OR name LIKE ? OR tags LIKE ? OR doc LIKE ? OR name LIKE ? OR tags LIKE ?" +
+        ") ORDER BY createdAt DESC LIMIT ?"
+    ).all(
+      terms[0], terms[0], terms[0],
+      terms[1], terms[1], terms[1],
+      terms[2], terms[2], terms[2],
+      limit * 3
+    ) as any[];
+    const out: Array<{ name: string; definition: string; evidenceIds: string[]; doc: string; pdfPage: number | null }> = [];
+    const seen = new Set<string>();
+    for (const r of rows || []) {
+      const name = String(r?.name ?? "").trim();
+      const definition = String(r?.definition ?? "").trim();
+      if (!definition) continue;
+      const doc = String(r?.doc ?? "").trim();
+      const pdfPage = Number.isFinite(Number(r?.pdfPage)) ? Number(r?.pdfPage) : null;
+      const key = `${doc}#${pdfPage}#${name}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      let evidenceIds: string[] = [];
+      try {
+        const parsed = JSON.parse(String(r?.evidenceIds ?? "[]"));
+        evidenceIds = Array.isArray(parsed) ? parsed.map((x: any) => String(x)).filter(Boolean) : [];
+      } catch {}
+      if (!evidenceIds.length && doc && pdfPage) evidenceIds = [`KZPAGE:${doc}:P${pdfPage}`];
+      out.push({ name: name || `${doc}#${pdfPage ?? 0}`, definition, evidenceIds, doc, pdfPage });
+      if (out.length >= limit) break;
+    }
+    return out;
+  } catch {
+    return [];
+  }
+}
+
+function hasScriptureRouteFor(centerKey: CanonCenterKey | null): boolean {
+  if (centerKey !== "katakamuna") return false;
+  try {
+    const r: any = dbPrepare(
+      "kokuzo",
+      "SELECT COUNT(*) AS cnt FROM scripture_learning_ledger WHERE scriptureKey LIKE ? OR conceptKey LIKE ?"
+    ).get("%KATAKAMUNA%", "%カタカムナ%");
+    const cnt = Number(r?.cnt ?? 0) || 0;
+    return cnt > 0;
+  } catch {
+    return false;
+  }
+}
+
+function deriveIkiState(trace: any): "FIRE" | "WATER" | "BOTH" | "NEUTRAL" {
+  const fire = Number(trace?.iki?.fire ?? trace?.taiyou?.fire ?? 0) || 0;
+  const water = Number(trace?.iki?.water ?? trace?.taiyou?.water ?? 0) || 0;
+  if (fire > 0 && water > 0 && Math.abs(fire - water) <= 1) return "BOTH";
+  if (fire > water) return "FIRE";
+  if (water > fire) return "WATER";
+  return "NEUTRAL";
+}
+
+function deriveKotodamaRow(input: string, trace: any): "ア" | "ワ" | "ヤ" | "マ" | "ハ" | "ナ" | "タ" | "サ" | "カ" | "ラ" {
+  const t = String(input || "");
+  if (/言灵|言霊|ことだま|kotodama|五十連/i.test(t)) return "マ";
+  const hint = String(trace?.kotodama?.kanaHint ?? "").trim();
+  const topSound = String(trace?.kotodama?.top?.sound ?? "").trim();
+  const token = hint || topSound;
+  if (/^(ア|イ|ウ|エ|オ)/.test(token)) return "ア";
+  if (/^(ワ|ヰ|ヱ|ヲ)/.test(token)) return "ワ";
+  if (/^(ヤ|ユ|ヨ)/.test(token)) return "ヤ";
+  if (/^(マ|ミ|ム|メ|モ)/.test(token)) return "マ";
+  if (/^(ハ|ヒ|フ|ヘ|ホ)/.test(token)) return "ハ";
+  if (/^(ナ|ニ|ヌ|ネ|ノ)/.test(token)) return "ナ";
+  if (/^(タ|チ|ツ|テ|ト)/.test(token)) return "タ";
+  if (/^(サ|シ|ス|セ|ソ)/.test(token)) return "サ";
+  if (/^(カ|キ|ク|ケ|コ)/.test(token)) return "カ";
+  if (/^(ラ|リ|ル|レ|ロ)/.test(token)) return "ラ";
+  return "ア";
+}
+
+function buildLongformKatakamunaV1(
+  userText: string,
+  base: string,
+  options: {
+    laws: Array<{ name: string; definition: string; evidenceIds: string[] }>;
+    hasScriptureRoute: boolean;
+    ikiState: "FIRE" | "WATER" | "BOTH" | "NEUTRAL";
+    kotodamaRow: "ア" | "ワ" | "ヤ" | "マ" | "ハ" | "ナ" | "タ" | "サ" | "カ" | "ラ";
+    priorCenter?: string | null;
+  }
+): string {
+  const pieces: string[] = [];
+  const prior = String(options.priorCenter || "").trim();
+  if (prior) pieces.push(`前回の中心「${prior.slice(0, 60)}」を継承して、今回の問いを接続します。`);
+  pieces.push(`「${String(userText || "").slice(0, 40)}」は、潜象を静止体として固定するより、水火の往復運動として捉える方が整合します。`);
+  pieces.push(`今回の観測では ikiState=${options.ikiState}、kotodamaRow=${options.kotodamaRow} なので、展開と内省の両方を交互に置くと解像度が上がります。`);
+  if (options.laws.length > 0) {
+    const lead = options.laws[0];
+    pieces.push(`法則接地として「${lead.name}」を採用し、定義「${lead.definition.slice(0, 70)}」を中心軸に据えます。`);
+  } else {
+    pieces.push("法則データが薄い場合は、先に語義・運動・実践の三段を分離してから再結合すると、曖昧な一般論に落ちにくくなります。");
+  }
+  if (options.hasScriptureRoute) {
+    pieces.push("scripture route が有効なので、説明は概念の抽象化だけで止めず、経路に沿って根拠を回収しながら段階的に具体化できます。");
+  }
+  pieces.push("まずは「潜象を何として扱うか（定義）」と「どの場面で使うか（運用）」のどちらを先に固定しますか？");
+
+  let out = pieces.join("\n\n");
+  if (out.length < 240) {
+    out += "\n\n補助線として、観測→構造→実践の順で一往復させると、説明だけで終わらず次の一手に落としやすくなります。";
+  }
+  return out.trim();
+}
+
+function summarizeKanagiTrace(trace: any) {
+  const observations: string[] = [];
+  const desc = String(trace?.observationCircle?.description ?? "").trim();
+  if (desc) observations.push(desc);
+  const unresolved = Array.isArray(trace?.observationCircle?.unresolved) ? trace.observationCircle.unresolved : [];
+  for (const u of unresolved) {
+    const s = String(u ?? "").trim();
+    if (!s) continue;
+    observations.push(s);
+    if (observations.length >= 3) break;
+  }
+  const spiral = trace?.spiral ?? {};
+  const spiralState = {
+    depth: Number(spiral?.depth ?? 0) || 0,
+    nextFactSeed: String(spiral?.nextFactSeed ?? "").slice(0, 180),
+  };
+  return { observations: observations.slice(0, 3), spiralState, ikiState: deriveIkiState(trace) };
+}
+
+function isKatakamunaLongPrompt(input: string): boolean {
+  const t = String(input || "");
+  return /カタカムナ|katakamuna|について|とは|潜象|ウタヒ|八律|四相/.test(t);
+}
+
 
 // LLM_CHAT: minimal constitution (no evidence fabrication)
 const TENMON_CONSTITUTION_TEXT =
@@ -831,12 +991,18 @@ const DEF_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。雑談�
     const __looksSupport =
       /不安|つらい|しんどい|疲れ|焦|怖|助けて|無理|泣|眠れ|消えたい/.test(t0);
 
+    const __isLongV1Top =
+      /(について|とは|潜象|ウタヒ|八律|四相)/.test(t0) &&
+      /(カタカムナ|katakamuna|言灵|言霊|ことだま|空海|法華経)/i.test(t0);
+
     const __generalOk =
       !isTestTid0 &&
       !hasDoc0 &&
       !askedMenu0 &&
       !isCmd0 &&
       !__looksSupport &&
+      !__isLongV1Top &&
+      !/(言灵|言霊|ことだま|kotodama|法則|カタカムナ|天津金木|水火|與合)/i.test(t0) &&
       t0.length >= 2 &&
       t0.length <= 240;
     const __isSmokeHybridTop = /^smoke-hybrid/i.test(String(threadId || ""));
@@ -850,7 +1016,7 @@ const DEF_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。雑談�
       const ids = ["KAMIYO:WATER_DANSHARI", "KAMIYO:FIRE_KATAKAMUNA_IROHA", "KAMIYO:IMMUNITY_HEIKE"];
       const rows: any[] = [];
       for (const id of ids) {
-        const r: any = dbPrepare("kokuzo", "SELECT seedId, content FROM kokuzo_seeds WHERE seedId = ? LIMIT 1").get(id);
+        const r: any = dbPrepare("kokuzo", "SELECT essence AS content FROM kokuzo_seeds WHERE source_id = ? OR source_type = ? LIMIT 1").get(id, id);
         if (r && r.content) rows.push(r);
       }
       const joined = rows.map(r => String(r.content || "").trim()).filter(Boolean).join("\n\n");
@@ -2936,7 +3102,8 @@ return reply({
   const isJapanese = /[ぁ-んァ-ン一-龯]/.test(message);
   const hasDocPage = /pdfPage\s*=\s*\d+/i.test(message) || /\bdoc\b/i.test(message);
 
-  if (isJapanese && !wantsDetail && !hasDocPage) {
+  const isDomainQuestionTop = /言灵|言霊|ことだま|kotodama|法則|カタカムナ|天津金木|水火|與合|空海|法華経/i.test(message);
+  if (isJapanese && !wantsDetail && !hasDocPage && !isDomainQuestionTop) {
     const nat = naturalRouter({ message, mode: "NATURAL" });
     
     // handled=false の場合は通常処理（HYBRID検索）にフォールスルー
@@ -3079,8 +3246,17 @@ if (typeof out === "string" && out.trim()) nat.responseText = out.trim();
     // 天津金木思考回路を実行
     const trace = await runKanagiReasoner(sanitized.text, sessionId);
 
+    const centerKey = inferCenterKey(sanitized.text);
+    const ikiState = deriveIkiState(trace);
+    const kotodamaRow = deriveKotodamaRow(sanitized.text, trace);
+    const hasScriptureRoute = hasScriptureRouteFor(centerKey);
+    const groundedLaws = readGroundedLaws(centerKey, 3);
+
     // 観測円から応答文を生成
-    const response = composeConversationalResponse(trace, personaState, sanitized.text);
+    const response = composeConversationalResponse(trace, personaState, sanitized.text, {
+      ikiState,
+      kotodamaRow,
+    });
 
     // 工程3: CorePlan（器）を必ず経由（最小の決定論コンテナ）
     const detailPlan = emptyCorePlan(
@@ -3175,6 +3351,9 @@ if (typeof out === "string" && out.trim()) nat.responseText = out.trim();
     if (prev) {
       if (!detailPlan.chainOrder.includes("KOKUZO_RECALL")) detailPlan.chainOrder.push("KOKUZO_RECALL");
       detailPlan.warnings.push(`KOKUZO: recalled centerClaim=${prev.centerClaim.slice(0, 40)}`);
+      if (!(detailPlan as any).priorCenter) {
+        (detailPlan as any).priorCenter = String(prev.centerClaim || "").slice(0, 120);
+      }
     }
     kokuzoRemember(threadId, detailPlan);
     
@@ -3242,6 +3421,7 @@ if (typeof out === "string" && out.trim()) nat.responseText = out.trim();
 
     // ドメイン質問の検出（naturalRouter の判定と一致させる）
     const isDomainQuestion = /言灵|言霊|ことだま|kotodama|法則|カタカムナ|天津金木|水火|與合/i.test(sanitized.text);
+    const isKatakamunaDomain = centerKey === "katakamuna";
     
     // ドメイン質問の場合、回答本文を改善（候補があれば本文を生成、なければ最低限の説明）
     
@@ -3310,7 +3490,7 @@ let finalResponse = response;
 if (__hasMenu && !__askedMenu) {
     finalResponse = "了解。何でも話して。必要なら「#詳細」や「doc=... pdfPage=...」で深掘りできるよ。";
   }
-  if (!__wantsDetail) {
+  if (!__wantsDetail && !isKatakamunaDomain) {
     // hide internal placeholders that break UX
     finalResponse = String(finalResponse || "")
       .replace(/^\[SYNTH_USED[^\n]*\n?/gm, "")
@@ -3323,18 +3503,36 @@ if (__hasMenu && !__askedMenu) {
     let evidencePdfPage: number | null = null;
     let evidenceQuote: string | null = null;
     
-    if (isDomainQuestion && isJapanese && !wantsDetail && !hasDocPage) {
-      if (candidates.length > 0) {
+    if (isDomainQuestion && isJapanese && !wantsDetail && !hasDocPage && candidates.length > 0) {
         const top = candidates[0];
         const pageText = getPageText(top.doc, top.pdfPage);
         const isNonText = !pageText || /\[NON_TEXT_PAGE_OR_OCR_FAILED\]/.test(String(pageText));
         // CARD3_NON_TEXT_ESCALATE_TO_KAMU_V1: if top evidence is NON_TEXT, do NOT inject caps fallback; guide to KAMU/specify instead (no fabrication)
-        if (isNonText) {
-          try {
-            // surface deterministic flags for observability
-            const df = (body as any)?.decisionFrame ?? null;
-            // we can't rely on df here; we'll attach in reply payload below
-          } catch {}
+        if (isNonText && !isKatakamunaDomain) {
+          const nonTextKu = {
+            routeReason: "HYBRID_NON_TEXT_FALLBACK",
+            centerKey: centerKey ?? undefined,
+            ikiState,
+            kotodamaRow,
+            kanagiTrace: {
+              observations: [
+                String(trace?.observationCircle?.description ?? ""),
+                ...((trace?.observationCircle?.unresolved || []).slice(0, 2).map((x: any) => String(x))),
+              ].filter(Boolean).slice(0, 3),
+              spiralState: {
+                depth: Number(trace?.spiral?.depth ?? 0) || 0,
+                nextFactSeed: String(trace?.spiral?.nextFactSeed ?? "").slice(0, 120),
+              },
+              ikiState,
+            },
+            groundedLaws,
+            hasScriptureRoute,
+            priorCenter: (detailPlan as any)?.priorCenter ?? undefined,
+            verdictEngineV1: {
+              verdict: groundedLaws.length > 0 ? "grounded" : "provisional",
+              evidence: { hasScriptureRoute, groundedLawsCount: groundedLaws.length },
+            },
+          };
           return reply({
             response:
               "（候補は見つかりましたが、先頭候補のページが非テキスト/復号失敗でした）\n\n" +
@@ -3358,6 +3556,7 @@ if (__hasMenu && !__askedMenu) {
               ku: {
                 hybridAllNonText: true,
                 nextActions: ["kamu_restore", "specify_doc_pdfpage"],
+                ...nonTextKu,
               },
             },
           });
@@ -3365,12 +3564,13 @@ if (__hasMenu && !__askedMenu) {
 
         if (pageText && pageText.trim().length > 0 && !isNonText) {
           // 回答本文を生成（50文字以上、短く自然に、最後にメニューを添える）
-          const excerpt = pageText.trim().slice(0, 300);
+          const excerptLimit = isKatakamunaDomain ? 520 : 300;
+          const excerpt = pageText.trim().slice(0, excerptLimit);
           finalResponse = `${excerpt}${excerpt.length < pageText.trim().length ? '...' : ''}\n\n※ 必要なら資料指定（doc/pdfPage）で厳密にもできます。`;
           evidenceDoc = top.doc;
           evidencePdfPage = top.pdfPage;
           evidenceQuote = top.snippet || excerpt.slice(0, 100);
-        } else if (isNonText) {
+        } else if (isNonText && !isKatakamunaDomain) {
           // 本文が空 or NON_TEXT → caps で補完
           const caps = getCaps(top.doc, top.pdfPage) || getCaps("KHS", top.pdfPage);
           if (caps && typeof caps.caption === "string" && caps.caption.trim()) {
@@ -3393,20 +3593,32 @@ if (__hasMenu && !__askedMenu) {
         } else {
           finalResponse = `${sanitized.text}について、kokuzo データベースから関連情報を検索しましたが、詳細な説明が見つかりませんでした。資料指定（doc/pdfPage）で厳密に検索することもできます。`;
         }
-      } else {
-        // 候補がない場合でも最低限の説明を返す（50文字以上）
-        finalResponse = `${sanitized.text}について、kokuzo データベースから関連情報を検索しましたが、該当する資料が見つかりませんでした。\n\n資料を投入するには、scripts/ingest_kokuzo_sample.sh を実行するか、doc/pdfPage を指定して厳密に検索してください。`;
-      }
-      
       // 回答本文が50文字未満の場合は補足を追加
       if (finalResponse.length < 50) {
         finalResponse = `${finalResponse}\n\nより詳しい情報が必要な場合は、資料指定（doc/pdfPage）で厳密に検索することもできます。`;
       }
+    } else if (isDomainQuestion && isJapanese && !wantsDetail && !hasDocPage && candidates.length === 0 && !isKatakamunaDomain) {
+      // 候補がない場合でも最低限の説明を返す（50文字以上）
+      finalResponse = `${sanitized.text}について、kokuzo データベースから関連情報を検索しましたが、該当する資料が見つかりませんでした。\n\n資料を投入するには、scripts/ingest_kokuzo_sample.sh を実行するか、doc/pdfPage を指定して厳密に検索してください。`;
     }
 
     // ドメイン質問で根拠がある場合、evidence と detailPlan に情報を追加
     
     let evidence: { doc: string; pdfPage: number; quote: string } | null = null;
+    const priorCenter = prev ? String(prev.centerClaim || "").slice(0, 120) : null;
+
+    (detailPlan as any).debug = (detailPlan as any).debug || {};
+    (detailPlan as any).debug.kanagiTrace = {
+      observations: String((trace as any)?.observationCircle?.description || "").slice(0, 180)
+        ? [String((trace as any).observationCircle.description).slice(0, 180)]
+        : [],
+      spiralState: {
+        depth: Number((trace as any)?.spiral?.depth ?? 0) || 0,
+        nextFactSeed: String((trace as any)?.spiral?.nextFactSeed ?? "").slice(0, 160),
+      },
+      ikiState,
+      kotodamaRow,
+    };
 
     
     // CARDF_PHASE37_EVIDENCEIDS_V6: ensure evidenceIds exist when HYBRID candidates exist (kills Phase37 WARN)
@@ -3578,6 +3790,24 @@ if (__hasMenu && !__askedMenu) {
       finalResponse = r;
     }
 
+    if (isKatakamunaDomain && !wantsDetail) {
+      const lawLines = (groundedLaws || [])
+        .slice(0, 2)
+        .map((x: any) => `${String(x?.name ?? "法則")}: ${String(x?.definition ?? "")}`)
+        .filter((x: string) => x.length > 4)
+        .join(" / ");
+      const prior = prev?.centerClaim ? `前回の中心は「${String(prev.centerClaim).slice(0, 48)}」です。` : "";
+      const scripture = hasScriptureRoute
+        ? "正典経路を通し、潜象の観測を外発と内集の往復として捉えます。"
+        : "正典経路候補を保持し、潜象の観測を外発と内集の往復として捉えます。";
+      finalResponse =
+        "【天聞の所見】カタカムナの潜象物理は、現象を即断せず、水火の運動がどこで交差するかを観測し続ける作法です。" +
+        scripture +
+        (lawLines ? `接地した法則は「${lawLines}」。` : "") +
+        prior +
+        "いま扱っている問いを、定義・作用・実践のどこから深掘りしますか？";
+    }
+
 
     // レスポンス形式（厳守）
     // CARD5_KOKUZO_SEASONING_V1: HYBRID normal reply -> 1-line point + opinion + one question
@@ -3589,7 +3819,7 @@ if (__hasMenu && !__askedMenu) {
     try {
       const isSmoke = /^smoke/i.test(String(threadId || ""));
       // CARD5_FIX_SCOPE_DECISIONFRAME_V1: decisionFrame not in scope here; final HYBRID return implies HYBRID path
-      if (!isSmoke && !wantsDetail && !hasDocPage && !trimmed.startsWith("#")) {
+      if (!isSmoke && !wantsDetail && !hasDocPage && !trimmed.startsWith("#") && !isKatakamunaDomain) {
         let point = "";
         try {
           const c0: any = (Array.isArray(candidates) && candidates.length) ? candidates[0] : null;
@@ -3625,6 +3855,50 @@ if (__hasMenu && !__askedMenu) {
       }
     } catch {}
 
+    if (centerKey === "katakamuna" && hasScriptureRoute && groundedLaws.length > 0) {
+      const lawLines = groundedLaws
+        .map((x: any) => `・${String(x.name || "").slice(0, 24)}: ${String(x.definition || "").slice(0, 84)}`)
+        .join("\n");
+      const canonBlock =
+        "【正典ルート要約】\n" +
+        "カタカムナの潜象は、水火の往復と中心化で読むのが核です。\n" +
+        lawLines;
+      if (!String(finalResponse || "").includes("【正典ルート要約】")) {
+        finalResponse = `${String(finalResponse || "").trim()}\n\n${canonBlock}`;
+      }
+    }
+
+    const kuAttach: any = {
+      centerKey: centerKey ?? undefined,
+      ikiState,
+      kotodamaRow,
+      kanagiTrace: {
+        observations: [
+          String(trace?.observationCircle?.description ?? ""),
+          ...((trace?.observationCircle?.unresolved || []).slice(0, 2).map((x: any) => String(x))),
+        ].filter(Boolean).slice(0, 3),
+        spiralState: {
+          depth: Number(trace?.spiral?.depth ?? 0) || 0,
+          nextFactSeed: String(trace?.spiral?.nextFactSeed ?? "").slice(0, 120),
+        },
+        ikiState,
+      },
+      priorCenter: prev?.centerClaim ? String(prev.centerClaim).slice(0, 120) : undefined,
+      groundedLaws,
+      hasScriptureRoute,
+      kanagiEvidence:
+        centerKey === "katakamuna"
+          ? {
+              routeReason: hasScriptureRoute ? "KATAKAMUNA_CANON_ROUTE_V1" : "KATAKAMUNA_CANON_CANDIDATE_V1",
+              laws: groundedLaws.map((x: any) => ({ name: x.name, evidenceIds: x.evidenceIds })),
+            }
+          : undefined,
+      verdictEngineV1: {
+        verdict: groundedLaws.length > 0 ? "grounded" : "provisional",
+        evidence: { hasScriptureRoute, groundedLawsCount: groundedLaws.length },
+      },
+    };
+
     return reply({
       response: finalResponse,
       trace,
@@ -3634,7 +3908,18 @@ if (__hasMenu && !__askedMenu) {
       evidence,
       caps: capsPayload ?? undefined,
       timestamp: new Date().toISOString(),
-      decisionFrame: { mode: "HYBRID", intent: "chat", llm: null, ku: {} },
+      decisionFrame: {
+        mode: "HYBRID",
+        intent: "chat",
+        llm: null,
+        ku: {
+          routeReason:
+            centerKey === "katakamuna" && hasScriptureRoute
+              ? "KATAKAMUNA_CANON_ROUTE_V1"
+              : "KANAGI_FUSION_CONNECTED_V1",
+          ...kuAttach,
+        },
+      },
     });
   } catch (error) {
     const pid = process.pid;
