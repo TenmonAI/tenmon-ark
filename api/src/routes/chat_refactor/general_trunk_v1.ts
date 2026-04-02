@@ -238,16 +238,15 @@ export function tryConversationalGeneralPreemptExitV1(p: {
   let __helpers: string[] = ["breadth_shadow"];
   let __rr = "R22_CONVERSATIONAL_GENERAL_V1";
   if (__isCanSpeak) {
-    __body = "はい、話せます。いま扱いたいテーマを一つ置いてください。";
+    __body = "はい、話せます。扱いたいテーマを一つ置いてください。";
   } else if (__isFeeling) {
-    __body = "いま私は、中心を崩さずにどこへ接続するかを見ています。いま触れたい一点を一つ置いてください。";
+    __body = "いま触れたい一点を、そのまま一つ置いてください。";
   } else {
     __center = "relational_worldview";
     __label = "世界観";
     __helpers = ["gpt-5.4", "breadth_shadow"];
     __rr = "R22_RELATIONAL_WORLDVIEW_V1";
-    __body =
-      "AIの進化は、記憶・判断・表現・接続回路が分離から統合へ進むことです。次は、記憶・判断・表現・接続のどこから見ますか？";
+    __body = "AIの進化は、記憶・判断・表現・接続回路が分離から統合へ進むことです。";
   }
   p.res.json(
     p.__tenmonGeneralGateResultMaybe({

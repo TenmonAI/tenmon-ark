@@ -30,6 +30,7 @@ import notion_autobuild_intake_v1 as intake_mod
 CARD = "TENMON_NOTION_AUTOBUILD_WRITEBACK_LIVE_BIND_CURSOR_AUTO_V1"
 CONFIG_FN = "notion_autobuild_config_v1.json"
 RESULT_FN = "notion_autobuild_last_writeback_result_v1.json"
+PENDING_FN = "notion_autobuild_pending_writebacks_v1.json"
 INTAKE_RESULT_FN = "notion_autobuild_last_intake_result_v1.json"
 PROGRESS_FN = "notion_autobuild_progress_report_v1.json"
 MULTI_RT = "multi_ai_autonomy_runtime_state.json"
@@ -59,6 +60,92 @@ def _write_json(path: Path, obj: Any) -> None:
 
 def _repo_root(auto_dir: Path) -> Path:
     return auto_dir.parents[1]
+
+
+def _read_pending_queue(path: Path) -> list[dict[str, Any]]:
+    raw = _read_json(path)
+    ent = raw.get("entries")
+    return ent if isinstance(ent, list) else []
+
+
+def _append_pending_writeback(auto_dir: Path, payload: dict[str, Any]) -> dict[str, Any]:
+    p = auto_dir / PENDING_FN
+    entries = _read_pending_queue(p)
+    key = (
+        str(payload.get("notion_page_id") or "").strip(),
+        str(payload.get("head_sha") or "").strip(),
+        str(payload.get("hold_reason") or "").strip(),
+    )
+    for row in entries:
+        rk = (
+            str(row.get("notion_page_id") or "").strip(),
+            str(row.get("head_sha") or "").strip(),
+            str(row.get("hold_reason") or "").strip(),
+        )
+        if rk == key:
+            row["attempt_count"] = int(row.get("attempt_count") or 0) + 1
+            row["last_attempt_at"] = _utc_iso()
+            row["status"] = "pending"
+            row["last_error"] = str(payload.get("last_error") or row.get("last_error") or "")
+            out = {
+                "schema": "TENMON_NOTION_AUTOBUILD_PENDING_WRITEBACKS_V1",
+                "card": CARD,
+                "entries": entries,
+            }
+            _write_json(p, out)
+            return row
+    entry = {
+        "id": f"pending_writeback_{len(entries) + 1}_{int(datetime.now(timezone.utc).timestamp())}",
+        "status": "pending",
+        "created_at": _utc_iso(),
+        "last_attempt_at": _utc_iso(),
+        "attempt_count": 1,
+        **payload,
+    }
+    entries.append(entry)
+    _write_json(
+        p,
+        {
+            "schema": "TENMON_NOTION_AUTOBUILD_PENDING_WRITEBACKS_V1",
+            "card": CARD,
+            "entries": entries,
+        },
+    )
+    return entry
+
+
+def _queue_transport_failure(
+    *,
+    auto_dir: Path,
+    result: dict[str, Any],
+    git_sha: str,
+    evidence: str,
+    body_preview: dict[str, Any] | None,
+    transport_reason: str,
+) -> dict[str, Any]:
+    queued = _append_pending_writeback(
+        auto_dir,
+        {
+            "notion_page_id": str(result.get("notion_page_id") or "").strip(),
+            "patch_payload": body_preview or {},
+            "truth_source_paths": list(result.get("truth_source_paths") or []),
+            "evidence_path": evidence,
+            "head_sha": git_sha,
+            "hold_reason": transport_reason,
+            "last_error": transport_reason,
+        },
+    )
+    result["ok"] = True
+    result["verdict"] = "HOLD"
+    result["forensic_verdict"] = "HOLD"
+    result["patch_applied"] = False
+    result["writeback_pending"] = True
+    result["pending_queue_path"] = str((auto_dir / PENDING_FN))
+    result["pending_entry_id"] = queued.get("id")
+    result["hold_reason"] = f"writeback_pending_transport:{transport_reason}"
+    result["errors"].append(result["hold_reason"])
+    _write_json(auto_dir / RESULT_FN, result)
+    return result
 
 
 def _git_head_short(repo: Path) -> str:
@@ -385,6 +472,7 @@ def run_writeback(
 
     result["writeback_core_verdict"] = core_verdict
     result["forensic_verdict"] = core_verdict
+    body_preview = {"properties_preview": logical_values}
 
     expected_logical = list(logical_values.keys())
     missing_bind = [k for k in expected_logical if k not in pmap_s]
@@ -413,10 +501,14 @@ def run_writeback(
         token=token, version=version, method="GET", url=url_get, body=None
     )
     if code_g != 200 or not isinstance(page_data, dict):
-        result["hold_reason"] = f"notion_get_page_failed:{code_g}:{err_g}"
-        result["errors"].append(result["hold_reason"])
-        _write_json(auto_dir / RESULT_FN, result)
-        return result
+        return _queue_transport_failure(
+            auto_dir=auto_dir,
+            result=result,
+            git_sha=git_sha,
+            evidence=evidence,
+            body_preview=body_preview,
+            transport_reason=f"notion_get_page_failed:{code_g}:{err_g}",
+        )
 
     page_props = page_data.get("properties")
     if not isinstance(page_props, dict):
@@ -442,10 +534,14 @@ def run_writeback(
         token=token, version=version, method="PATCH", url=url_patch, body=body
     )
     if code != 200 or not isinstance(data, dict):
-        result["hold_reason"] = f"notion_patch_failed:{code}:{err}"
-        result["errors"].append(result["hold_reason"])
-        _write_json(auto_dir / RESULT_FN, result)
-        return result
+        return _queue_transport_failure(
+            auto_dir=auto_dir,
+            result=result,
+            git_sha=git_sha,
+            evidence=evidence,
+            body_preview=body,
+            transport_reason=f"notion_patch_failed:{code}:{err}",
+        )
 
     result["ok"] = True
     result["verdict"] = "PASS"

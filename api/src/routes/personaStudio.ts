@@ -2,7 +2,8 @@ import { randomUUID } from "node:crypto";
 import { Router, type Request, type Response } from "express";
 import { getDb } from "../db/index.js";
 import { createPreviewThreadId, verifyPreviewIsolation } from "../core/personaPreviewIsolation.js";
-import { getActivePersonas } from "../core/personaRegistry.js";
+import { buildMemoryProjectionPack, logMemoryProjection } from "../core/memoryProjection.js";
+import { getActivePersonas, getPersonaById } from "../core/personaRegistry.js";
 
 export const personaStudioRouter = Router();
 
@@ -172,6 +173,33 @@ personaStudioRouter.post("/persona/:id/preview/start", (req: Request, res: Respo
       personaId,
       previewThreadId,
       isolation,
+    });
+  } catch (e: any) {
+    return res.status(500).json({ ok: false, error: String(e?.message ?? e) });
+  }
+});
+
+personaStudioRouter.post("/persona/:id/memory-projection", (req: Request, res: Response) => {
+  try {
+    ensurePersonaStudioTables();
+    const personaId = s(req.params.id);
+    const threadId = s((req.body ?? {}).threadId);
+    const isPreview = Boolean((req.body ?? {}).isPreview);
+    if (!personaId) return res.status(400).json({ ok: false, error: "persona id required" });
+    if (!threadId) return res.status(400).json({ ok: false, error: "threadId required" });
+    const persona = getPersonaById(personaId);
+    if (!persona) return res.status(404).json({ ok: false, error: "persona not found" });
+
+    const pack = buildMemoryProjectionPack({ threadId, persona, isPreview });
+    logMemoryProjection(pack);
+    return res.json({
+      ok: true,
+      personaId,
+      threadId,
+      itemCount: pack.items.length,
+      compactSummary: pack.compactSummary,
+      sourceMemoryIds: pack.items.map((item) => item.memoryUnitId),
+      sourceBindingIds: pack.items.flatMap((item) => item.sourceBindingIds ?? []),
     });
   } catch (e: any) {
     return res.status(500).json({ ok: false, error: String(e?.message ?? e) });

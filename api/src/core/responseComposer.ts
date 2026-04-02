@@ -252,6 +252,28 @@ const TRUTHFRAME_DEFAULT = "いまは整理の入口にいます。";
 const RE_TIRED = /(疲れ|しんど|重い|つらい|辛い|消耗)/;
 const RE_FIRST_SENTENCE_DEDUP = /(状態です。|ようですね。|自然なこと。)/;
 const RE_FATIGUE_FIRST = /(疲れが強い状態です。|負荷が高い状態です。|疲れが溜まっているようですね。)/;
+const RE_SURFACE_GENERIC_PREAMBLE =
+  /^(?:この問いについて、今回は[^\n]*答えます。|[^\n]{1,48}について、今回は(?:分析|定義|説明|code)の立場で答えます。|続きが求められているようですね。[^\n]*|一貫の手がかりは、[^\n]*|いまの答えは、典拠は[^\n]*)\n?/gmu;
+const RE_SURFACE_HELPER_TAIL =
+  /(?:\n|^)(?:【次の一手】[^\n]*|（次の一手の記録）[^\n]*|次の一手として、[^\n]*|次の一歩として、[^\n]*|次に深めたいのは[^\n]*|どこから入りますか[。？?]?|まずどちらですか[。？?]?|どの側面について知りたいですか[。？?]?|どの分野に興味がありますか[。？?]?|具体的にどの部分を深めたいですか[。？?]?)(?=\n|$)/gmu;
+
+function suppressGenerationSideMetaV1(text: string, routeReason: string, rawMessage: string): string {
+  let out = String(text || "");
+  const rr = String(routeReason || "").trim();
+  const explicitLongform = (parseExplicitCharTargetFromUserMessageV1(rawMessage) || 0) >= 600;
+  out = out.replace(RE_SURFACE_GENERIC_PREAMBLE, "");
+  if (!/^(KATAKAMUNA_CANON_ROUTE_V1|KATAKAMUNA_DETAIL_FASTPATH_V1|DEF_FASTPATH_VERIFIED_V1|SOUL_FASTPATH_VERIFIED_V1|SOUL_DEF_SURFACE_V1|DEF_PROPOSED_FALLBACK_V1)$/u.test(rr)) {
+    out = out.replace(RE_SURFACE_HELPER_TAIL, "");
+  }
+  if (!explicitLongform) {
+    out = out
+      .replace(/\broot_reasoning\s*[:：]\s*[^\n]+/giu, "")
+      .replace(/\btruth_structure\s*[:：]\s*[^\n]+/giu, "")
+      .replace(/\bverdict\s*(?:[:：]|=)\s*[^\n]+/giu, "")
+      .replace(/\b(?:次軸|次観測|次の軸)\s*[:：]\s*[^\n]+/gu, "");
+  }
+  return out.replace(/\n{3,}/g, "\n\n").trim();
+}
 
 function generalToneNormalize(s: string): string {
   if (!s || typeof s !== "string") return s;
@@ -466,6 +488,7 @@ export function responseComposer(input: ResponseComposerInput): ResponseComposer
     "",
   ).replace(/^\u3044\u307e\u306e\u8a00\u8449\u3092[^\n]*\n?/gm, "").trimStart();
   out = stripTenmonInternalSurfaceLeakV1(out);
+  out = suppressGenerationSideMetaV1(out, String(input?.routeReason ?? ""), String(input?.rawMessage ?? ""));
   const style = getTenmonStyle();
   void style.voice;
 
@@ -549,7 +572,8 @@ export function responseComposer(input: ResponseComposerInput): ResponseComposer
     if ((_et != null && _et >= 600) || out.length >= 1200) {
       if (out.length >= 280) out = shapeLongformSurfaceForChatV1(out);
     }
-    if (isLongformTriArcIntentMessageV1(_rawLf) && (_etMerged >= 600 || _etIm != null)) {
+    const _composerOwnsLongform = _etMerged < 1000 && _etEx == null;
+    if (_composerOwnsLongform && isLongformTriArcIntentMessageV1(_rawLf) && (_etMerged >= 600 || _etIm != null)) {
       out = applyLongformWorldclassThreeArcV1({
         body: out,
         rawMessage: _rawLf,
@@ -615,6 +639,7 @@ export function responseComposer(input: ResponseComposerInput): ResponseComposer
     /* fail-open */
   }
   /** STAGE1: composer 出口でも generic preamble 等を一元除去（finalize と二重でも冪等） */
+  out = suppressGenerationSideMetaV1(out, rr, String(input?.rawMessage ?? ""));
   out = trimTenmonSurfaceNoiseV3(out);
   out = stripInternalRouteTokensFromSurfaceV1(out);
   try {

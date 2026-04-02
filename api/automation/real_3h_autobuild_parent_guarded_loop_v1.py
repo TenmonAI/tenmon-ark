@@ -35,6 +35,7 @@ RUNTIME_FN = "multi_ai_autonomy_runtime_state.json"
 PROGRESS_FN = "multi_ai_autonomy_progress_report.json"
 EXEC_HISTORY_FN = "multi_ai_autonomy_execution_history.json"
 NOTION_PROGRESS_FN = "notion_autobuild_progress_report_v1.json"
+WRITEBACK_RESULT_FN = "notion_autobuild_last_writeback_result_v1.json"
 STOP_FN = "multi_ai_autonomy_stop_conditions_v1.json"
 REPORT_FN = "real_3h_autobuild_parent_guarded_loop_report_v1.json"
 WATCH_SCRIPT = "notion_autobuild_watch_loop_v1.py"
@@ -458,9 +459,12 @@ def run_guarded_parent_loop(
         nprog = _read_json(auto_dir / NOTION_PROGRESS_FN)
         hold_reason = str(nprog.get("last_hold_reason") or "").strip()
         nver = str(nprog.get("last_cycle_verdict") or "")
+        wb = _read_json(auto_dir / WRITEBACK_RESULT_FN)
+        wb_hold = str(wb.get("hold_reason") or "").strip()
+        wb_pending_transport = wb_hold.startswith("writeback_pending_transport:")
         final_notion_hold = hold_reason
 
-        if not stopped_by and hold_reason and nver != "PASS":
+        if not stopped_by and hold_reason and nver != "PASS" and not wb_pending_transport:
             stopped_by = "notion_hold"
 
         head = _git_head(repo_root)

@@ -8,6 +8,11 @@ import { randomBytes, createHash } from "node:crypto";
 import { execSync, execFileSync } from "node:child_process";
 import { getTenmonDataDir, getDb, dbPrepare } from "../db/index.js";
 import { upsertPage } from "../kokuzo/pages.js";
+import {
+  appendSourceAnalysisLog,
+  ensureSourceRegistryTables,
+  upsertSourceRegistry,
+} from "../core/sourceRegistry.js";
 
 const router = Router();
 
@@ -19,6 +24,8 @@ interface IngestRequest {
   threadId: string;
   savedPath: string;
   doc: string;
+  sourceId: string;
+  sourceFingerprint: string;
   createdAt: string;
 }
 
@@ -71,6 +78,7 @@ function sanitizeDocName(doc: string): string {
  */
 router.post("/ingest/request", (req: Request, res: Response) => {
   try {
+    ensureSourceRegistryTables();
     const { threadId, savedPath, doc } = req.body;
 
     // バリデーション
@@ -108,6 +116,18 @@ router.post("/ingest/request", (req: Request, res: Response) => {
 
     // ingestId を生成
     const ingestId = randomBytes(16).toString("hex");
+    const reg = upsertSourceRegistry({
+      sourceType: "pdf_ingest",
+      uri: `file://${normalizedPath}`,
+      status: "pending",
+      meta: {
+        threadId,
+        savedPath,
+        doc: sanitizedDoc,
+        ingestId,
+      },
+      fingerprintParts: ["pdf_ingest", sanitizedDoc, savedPath, normalizedPath],
+    });
 
     // リクエストを保存
     const request: IngestRequest = {
@@ -115,9 +135,24 @@ router.post("/ingest/request", (req: Request, res: Response) => {
       threadId,
       savedPath,
       doc: sanitizedDoc,
+      sourceId: reg.sourceId,
+      sourceFingerprint: reg.fingerprint,
       createdAt: new Date().toISOString(),
     };
     saveIngestRequest(request);
+    appendSourceAnalysisLog({
+      sourceId: reg.sourceId,
+      status: "pending",
+      summary: "ingest request accepted",
+      analysisType: "ingest_request",
+      fingerprint: reg.fingerprint,
+      meta: {
+        threadId,
+        savedPath,
+        doc: sanitizedDoc,
+        duplicate: reg.duplicate,
+      },
+    });
 
     // confirmText を生成
     const confirmText = `以下のPDFを取り込みますか？\n- ファイル: ${savedPath}\n- ドキュメント名: ${sanitizedDoc}\n- スレッドID: ${threadId}`;
@@ -146,6 +181,7 @@ router.post("/ingest/request", (req: Request, res: Response) => {
 router.post("/ingest/confirm", (req: Request, res: Response) => {
   const ingestId = req.body?.ingestId;
   try {
+    ensureSourceRegistryTables();
     const { ingestId: bodyIngestId, confirm } = req.body;
     const ingestId = bodyIngestId;
 
@@ -289,6 +325,20 @@ sys.stderr.write(f"Extracted {len(pages)} pages\\n")
         }
 
         removeIngestRequest(ingestId);
+        appendSourceAnalysisLog({
+          sourceId: request.sourceId,
+          status: "partial",
+          summary: "pdf extraction failed; fallback page inserted",
+          analysisType: "pdf_extract_confirm",
+          fingerprint: request.sourceFingerprint,
+          meta: {
+            doc: request.doc,
+            pagesInserted,
+            emptyPages,
+            fallback: true,
+            error: e instanceof Error ? e.message : String(e),
+          },
+        });
         return res.json({
           ok: true,
           doc: request.doc,
@@ -325,6 +375,19 @@ sys.stderr.write(f"Extracted {len(pages)} pages\\n")
       }
 
       removeIngestRequest(ingestId);
+      appendSourceAnalysisLog({
+        sourceId: request.sourceId,
+        status: "partial",
+        summary: "pdf extraction produced no jsonl; fallback page inserted",
+        analysisType: "pdf_extract_confirm",
+        fingerprint: request.sourceFingerprint,
+        meta: {
+          doc: request.doc,
+          pagesInserted,
+          emptyPages,
+          fallback: true,
+        },
+      });
       return res.json({
         ok: true,
         doc: request.doc,
@@ -396,6 +459,19 @@ sys.stderr.write(f"Extracted {len(pages)} pages\\n")
 
     // リクエストを削除
     removeIngestRequest(ingestId);
+    appendSourceAnalysisLog({
+      sourceId: request.sourceId,
+      status: "ok",
+      summary: `pdf ingest complete: ${pagesInserted} pages`,
+      analysisType: "pdf_extract_confirm",
+      fingerprint: request.sourceFingerprint,
+      meta: {
+        doc: request.doc,
+        pagesInserted,
+        emptyPages,
+        fallback: false,
+      },
+    });
 
     return res.json({
       ok: true,
@@ -412,6 +488,21 @@ sys.stderr.write(f"Extracted {len(pages)} pages\\n")
       upsertPage(String(ingestId || "UP44_FALLBACK"), 1, text, sha);
     } catch (upErr) {
       console.error("[INGEST-CONFIRM][FAIL][FALLBACK_UPSERT]", upErr);
+    }
+    const req0 = typeof ingestId === "string" ? findIngestRequest(ingestId) : null;
+    if (req0?.sourceId) {
+      appendSourceAnalysisLog({
+        sourceId: req0.sourceId,
+        status: "error",
+        summary: "ingest confirm failed; fallback page inserted",
+        analysisType: "pdf_extract_confirm",
+        fingerprint: req0.sourceFingerprint,
+        meta: {
+          doc: req0.doc,
+          ingestId,
+          error: String(e),
+        },
+      });
     }
     return res.json({ ok: true, doc: String(ingestId || "UP44_FALLBACK"), pagesInserted: 1, emptyPages: 1, warnings: ["INGEST_CONFIRM_FAILED", String(e)] });
   }

@@ -1,10 +1,26 @@
 // Training Chat: API Routes
 
+import { randomUUID } from "node:crypto";
 import { Router, type IRouter, type Request, type Response } from "express";
+import { getDb } from "../db/index.js";
 import { createSession, addMessages, listSessions, getSession, saveRules, listRules } from "../training/storage.js";
 import { parseConversationDump, extractRules } from "../training/extract.js";
 
 const router: IRouter = Router();
+
+function appendTenmonTrainingLog(question: string): void {
+  try {
+    const q = String(question || "").trim();
+    if (!q) return;
+    const db = getDb("kokuzo");
+    db.prepare("INSERT INTO tenmon_training_log (id, createdAt, question) VALUES (?, datetime('now'), ?)").run(
+      randomUUID(),
+      q.slice(0, 1000)
+    );
+  } catch {
+    // training log is observability only
+  }
+}
 
 /**
  * POST /api/training/session
@@ -18,6 +34,7 @@ router.post("/training/session", (req: Request, res: Response) => {
   }
 
   try {
+    appendTenmonTrainingLog(body.title);
     const session = createSession(body.title);
     return res.json({
       success: true,
@@ -47,6 +64,7 @@ router.post("/training/ingest", (req: Request, res: Response) => {
   }
 
   try {
+    appendTenmonTrainingLog(body.dump_text.slice(0, 240));
     // Parse conversation dump
     const parseResult = parseConversationDump(body.dump_text);
 

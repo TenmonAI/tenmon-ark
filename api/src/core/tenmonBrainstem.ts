@@ -123,24 +123,7 @@ export function tenmonBrainstem(input: BrainstemInput): BrainstemDecision {
   const centerLabel = threadCore?.centerLabel ?? null;
   const explicitLen = input.explicitLengthRequested != null && Number(input.explicitLengthRequested) > 0 ? Number(input.explicitLengthRequested) : null;
 
-  // 1. support（明示字数より優先：課金/PWA/登録を subconcept・長文帯へ誤落下させない）
-  if (isSupport(msg)) {
-    return {
-      routeClass: "support",
-      centerKey,
-      centerLabel,
-      answerLength: "short",
-      answerMode: "support",
-      answerFrame: "one_step",
-      responsePolicy: "answer_first",
-      explicitLengthRequested: null,
-      forbiddenMoves: [],
-      nextTurnSeed: null,
-      fallthroughAllowed: false,
-    };
-  }
-
-  // 2. explicit length
+  // 1. explicit length
   if (explicitLen != null) {
     return {
       routeClass: "analysis",
@@ -152,6 +135,23 @@ export function tenmonBrainstem(input: BrainstemInput): BrainstemDecision {
       responsePolicy: "answer_first",
       explicitLengthRequested: explicitLen,
       forbiddenMoves: ["feeling_preempt", "future_preempt"],
+      nextTurnSeed: null,
+      fallthroughAllowed: false,
+    };
+  }
+
+  // 2. support（明示字数なしのときのみ優先：課金/PWA/登録の誤落下を防ぐ）
+  if (isSupport(msg)) {
+    return {
+      routeClass: "support",
+      centerKey,
+      centerLabel,
+      answerLength: "short",
+      answerMode: "support",
+      answerFrame: "one_step",
+      responsePolicy: "answer_first",
+      explicitLengthRequested: null,
+      forbiddenMoves: [],
       nextTurnSeed: null,
       fallthroughAllowed: false,
     };

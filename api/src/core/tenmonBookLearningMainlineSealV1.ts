@@ -9,6 +9,7 @@ import { fileURLToPath } from "node:url";
 import { getTenmonBookLearningDeepXrayQualityForensicPayloadV1 } from "./tenmonBookLearningDeepXrayQualityForensicV1.js";
 import { getTenmonOcrToBookSettlementBindProbePayloadV1 } from "./tenmonBookReadingKernelV1.js";
 import { getTenmonReuseBenchAndConversationUpliftAcceptancePayloadV1 } from "./tenmonReuseBenchAndConversationUpliftAcceptanceV1.js";
+import { buildTenmonSealDecisionV1, type TenmonSealDecisionV1 } from "./tenmonSealDecisionV1.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const AUTOMATION_DIR = path.resolve(__dirname, "../../automation");
@@ -37,6 +38,7 @@ export type TenmonBookLearningMainlineSealGatesV1 = {
   katakamuna_lineage_mix_suppressed: boolean;
   deep_xray_forensic_pass: boolean;
   reuse_uplift_acceptance_pass: boolean;
+  ocr_chain_binding_ok: boolean;
 };
 
 export function getTenmonBookLearningMainlineSealPayloadV1(): {
@@ -61,6 +63,7 @@ export function getTenmonBookLearningMainlineSealPayloadV1(): {
     base_bench_acceptance_pass: boolean;
     final_checks: Record<string, boolean>;
   };
+  seal_decision: TenmonSealDecisionV1;
 } {
   const ocr = readOcrRuntimeResultV1();
   const settlement = getTenmonOcrToBookSettlementBindProbePayloadV1();
@@ -78,6 +81,7 @@ export function getTenmonBookLearningMainlineSealPayloadV1(): {
     uplift.final_checks.ark_inheritance_shape_ok;
 
   const katakamuna_lineage_mix_suppressed = ss.bench_accept;
+  const ocr_chain_binding_ok = settlement.acceptance_pass === true && uplift.final_checks.ark_inheritance_shape_ok;
 
   const gates: TenmonBookLearningMainlineSealGatesV1 = {
     ocr_json_present: ocr != null,
@@ -91,6 +95,7 @@ export function getTenmonBookLearningMainlineSealPayloadV1(): {
     katakamuna_lineage_mix_suppressed,
     deep_xray_forensic_pass: deep.acceptance_pass,
     reuse_uplift_acceptance_pass: uplift.acceptance_pass,
+    ocr_chain_binding_ok,
   };
 
   const failure_reasons: string[] = [];
@@ -106,8 +111,23 @@ export function getTenmonBookLearningMainlineSealPayloadV1(): {
   }
   if (!gates.deep_xray_forensic_pass) failure_reasons.push("deep_xray_quality_forensic_not_pass");
   if (!gates.reuse_uplift_acceptance_pass) failure_reasons.push("reuse_uplift_acceptance_not_pass");
+  if (!gates.ocr_chain_binding_ok) failure_reasons.push("ocr_chain_binding_not_observed");
 
   const acceptance_pass = failure_reasons.length === 0;
+  const seal_decision = buildTenmonSealDecisionV1({
+    decisionSource: "tenmonBookLearningMainlineSealV1",
+    stage: "book_learning_mainline",
+    acceptanceObserved: acceptance_pass,
+    acceptanceSource: "book_learning_acceptance_bundle",
+    reasons: acceptance_pass ? ["acceptance_bound_seal_pass", "ocr_chain_binding_via_source_memory_promotion"] : ["acceptance_bound_seal_pending"],
+    blockers: acceptance_pass ? [] : failure_reasons,
+    evidenceRefs: [
+      "tenmon_ocr_runtime_wake_and_binary_verify_result_v1.json",
+      "tenmonBookReadingKernelV1",
+      "tenmonReuseBenchAndConversationUpliftAcceptanceV1",
+      "tenmonBookLearningDeepXrayQualityForensicV1",
+    ],
+  });
 
   return {
     schema: "TENMON_BOOK_LEARNING_MAINLINE_SEAL_PAYLOAD_V1",
@@ -131,5 +151,6 @@ export function getTenmonBookLearningMainlineSealPayloadV1(): {
       base_bench_acceptance_pass: uplift.base_bench_acceptance_pass,
       final_checks: { ...uplift.final_checks },
     },
+    seal_decision,
   };
 }

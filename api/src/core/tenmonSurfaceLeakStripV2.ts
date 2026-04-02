@@ -20,6 +20,7 @@ export const TENMON_SURFACE_LEAK_PATTERNS_V2: RegExp[] = [
   /\s*中心命題\s*[:：]\s*[^\n]+/giu,
   /\s*次軸\s*[:：]\s*[^\n]+/gu,
   /\s*次観測\s*[:：]\s*[^\n]+/gu,
+  /\s*次の軸\s*[:：]\s*[^\n]+/gu,
   /(?:^|\n)\s*root_reasoning\s*[:：]\s*[^\n]+/gimu,
   /(?:^|\n)\s*truth_structure\s*[:：]\s*[^\n]+/gimu,
   /(?:^|\n)\s*verdict\s*=\s*[^\n]+/gimu,
@@ -28,6 +29,7 @@ export const TENMON_SURFACE_LEAK_PATTERNS_V2: RegExp[] = [
   /(?:^|\n)\s*中心命題\s*[:：]\s*[^\n]+/gimu,
   /(?:^|\n)\s*次軸\s*[:：]\s*[^\n]+/gimu,
   /(?:^|\n)\s*次観測\s*[:：]\s*[^\n]+/gimu,
+  /(?:^|\n)\s*次の軸\s*[:：]\s*[^\n]+/gimu,
   /(?<=[。．])root_reasoning\s*[:：]\s*[^\n]+/giu,
   /(?<=[。．])truth_structure\s*[:：]\s*[^\n]+/giu,
   /(?<=[。．])verdict\s*=\s*[^\n]+/giu,
@@ -36,6 +38,7 @@ export const TENMON_SURFACE_LEAK_PATTERNS_V2: RegExp[] = [
   /(?<=[。．])中心命題\s*[:：]\s*[^\n]+/giu,
   /(?<=[。．])次軸\s*[:：]\s*[^\n]+/gu,
   /(?<=[。．])次観測\s*[:：]\s*[^\n]+/gu,
+  /(?<=[。．])次の軸\s*[:：]\s*[^\n]+/gu,
   // TENMON_SURFACE_LEAK_CLEANUP_CURSOR_AUTO_V2: 行頭アンカー（ASCII コロン／内部接続句）
   /^root_reasoning:[^\n]*\n?/gm,
   /^truth_structure:[^\n]*\n?/gm,
@@ -47,6 +50,7 @@ export const TENMON_SURFACE_LEAK_PATTERNS_V2: RegExp[] = [
   /^次観測:\s*.*\n?/gm,
   /^次軸：\s*.*\n?/gm,
   /^次観測：\s*.*\n?/gm,
+  /^次の軸[:：]\s*.*\n?/gm,
   /^この点では、/gm,
   // TENMON_SURFACE_LEAK_CLEANUP_CURSOR_AUTO_V3: 行頭空白（NBSP/全角含む）・読点直後のインライン接続
   /^[\s\u00A0\u3000\uFEFF]*root_reasoning\s*[:：][^\n]*\n?/gmu,
@@ -57,6 +61,7 @@ export const TENMON_SURFACE_LEAK_PATTERNS_V2: RegExp[] = [
   /^[\s\u00A0\u3000\uFEFF]*中心命題\s*[:：]\s*\(pri:[^\)]+\)\n?/gmu,
   /^[\s\u00A0\u3000\uFEFF]*次軸\s*[:：]\s*.*\n?/gmu,
   /^[\s\u00A0\u3000\uFEFF]*次観測\s*[:：]\s*.*\n?/gmu,
+  /^[\s\u00A0\u3000\uFEFF]*次の軸\s*[:：]\s*.*\n?/gmu,
   /^[\s\u00A0\u3000\uFEFF]*この点では、/gmu,
   /(?<=[、，,])root_reasoning\s*[:：]\s*[^\n]+/giu,
   /(?<=[、，,])truth_structure\s*[:：]\s*[^\n]+/giu,
@@ -72,9 +77,14 @@ export const TENMON_SURFACE_LEAK_PATTERNS_V2: RegExp[] = [
   /[。．、，]\s*verdict\s*=\s*[^\n]+/giu,
   /[。．、，]\s*次軸\s*[:：][^\n]+/gu,
   /[。．、，]\s*次観測\s*[:：][^\n]+/gu,
+  /[。．、，]\s*次の軸\s*[:：][^\n]+/gu,
   /\s+root_reasoning\s*[:：][^\n]+/giu,
   /\s+次軸\s*[:：][^\n]+/gu,
   /\s+次観測\s*[:：][^\n]+/gu,
+  /\s+次の軸\s*[:：][^\n]+/gu,
+  /^次に深めたいのは[^\n]*\n?/gmu,
+  /^次の一歩として[^\n]*\n?/gmu,
+  /^generic preamble[^\n]*\n?/gmu,
 ];
 
 /** finalize 従来の定型テンプレ（表層のみ） */

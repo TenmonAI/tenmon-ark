@@ -68,6 +68,10 @@ CREATE TABLE IF NOT EXISTS source_registry (
   uri TEXT,
   status TEXT NOT NULL DEFAULT 'active',
   metaJson TEXT,
+  updatedAt TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+  fingerprint TEXT,
+  originKind TEXT,
   createdAt TEXT NOT NULL DEFAULT (datetime('now')),
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
@@ -122,9 +126,15 @@ CREATE TABLE IF NOT EXISTS source_analysis_logs (
   sourceId TEXT,
   status TEXT NOT NULL DEFAULT 'ok',
   summary TEXT,
+  updatedAt TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+  analysisType TEXT,
+  metaJson TEXT,
+  fingerprint TEXT,
   createdAt TEXT NOT NULL DEFAULT (datetime('now')),
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
+
 
 CREATE TABLE IF NOT EXISTS crawl_runs (
   id TEXT PRIMARY KEY,

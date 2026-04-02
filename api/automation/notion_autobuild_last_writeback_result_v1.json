@@ -1,27 +1,17 @@
 {
-  "schema": "TENMON_NOTION_AUTOBUILD_LAST_WRITEBACK_RESULT_V1",
-  "card": "TENMON_NOTION_AUTOBUILD_WRITEBACK_LIVE_BIND_CURSOR_AUTO_V1",
-  "at": "2026-03-30T20:57:08Z",
-  "ok": false,
+  "notion_page_id": "dummy-page",
+  "truth_source_paths": [
+    "a.json"
+  ],
+  "errors": [
+    "writeback_pending_transport:notion_patch_failed:599:synthetic_transport_failure"
+  ],
+  "ok": true,
   "verdict": "HOLD",
   "forensic_verdict": "HOLD",
-  "truth_source_policy": "vps_runtime_progress_judgement_schedule_probes_evidence_local_paths_only",
-  "hold_reason": "notion_token_missing",
-  "truth_source_paths": [
-    "multi_ai_autonomy_runtime_state.json",
-    "multi_ai_autonomy_progress_report.json",
-    "multi_ai_autonomy_last_judgement.json",
-    "schedule_executor_config_v1.json",
-    "tenmon_final_acceptance_probe_relock_result_v3.json",
-    "tenmon_conversation_acceptance_probe_relock_result_v1.json"
-  ],
-  "notion_page_id": "3336514658e681e39aedc0290968cd2a",
   "patch_applied": false,
-  "updated_fields": [],
-  "missing_property_bindings": [],
-  "errors": [
-    "notion_token_missing"
-  ],
-  "page_id_source": "notion_autobuild_progress_trace",
-  "writeback_core_verdict": "HOLD"
+  "writeback_pending": true,
+  "pending_queue_path": "/opt/tenmon-ark-repo/api/automation/notion_autobuild_pending_writebacks_v1.json",
+  "pending_entry_id": "pending_writeback_1_1775086000",
+  "hold_reason": "writeback_pending_transport:notion_patch_failed:599:synthetic_transport_failure"
 }

@@ -333,7 +333,10 @@ export function buildKnowledgeBinder(input: KnowledgeBinderInput): KnowledgeBind
   );
   const verdictEngineV1 = buildTenmonVerdictEngineV1({
     routeReason: rr,
+    centerKey,
     centerLabel,
+    message: String(message || ""),
+    primaryMeaning: sourceStackSummary?.primaryMeaning,
     sourcePack,
     evidenceRefs,
     uncertaintyFlags,

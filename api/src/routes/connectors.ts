@@ -1,6 +1,12 @@
 import { randomUUID } from "node:crypto";
 import { Router, type Request, type Response } from "express";
 import { getDb } from "../db/index.js";
+import {
+  appendSourceAnalysisLog,
+  ensureSourceRegistryTables,
+  linkWritingSource,
+  upsertSourceRegistry,
+} from "../core/sourceRegistry.js";
 
 export const connectorsRouter = Router();
 
@@ -14,35 +20,8 @@ type ConnectorType =
   | "google_docs"
   | "notion"
   | "notebooklm"
-  | "local_file";
-
-function ensureConnectorTables(): void {
-  const db = getDb("kokuzo");
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS source_registry (
-      id TEXT PRIMARY KEY,
-      sourceType TEXT,
-      source_type TEXT,
-      uri TEXT,
-      status TEXT NOT NULL DEFAULT 'active',
-      metaJson TEXT,
-      createdAt TEXT NOT NULL DEFAULT (datetime('now')),
-      created_at TEXT NOT NULL DEFAULT (datetime('now'))
-    );
-  `);
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS writing_sources (
-      id TEXT PRIMARY KEY,
-      projectId TEXT NOT NULL,
-      sourceId TEXT NOT NULL,
-      sourceType TEXT NOT NULL,
-      doc TEXT,
-      note TEXT,
-      createdAt TEXT NOT NULL DEFAULT (datetime('now')),
-      created_at TEXT NOT NULL DEFAULT (datetime('now'))
-    );
-  `);
-}
+  | "local_file"
+  | "manual";
 
 connectorsRouter.get("/connectors/list", (_req: Request, res: Response) => {
   return res.json({
@@ -60,7 +39,7 @@ connectorsRouter.get("/connectors/list", (_req: Request, res: Response) => {
 
 connectorsRouter.post("/connectors/ingest", (req: Request, res: Response) => {
   try {
-    ensureConnectorTables();
+    ensureSourceRegistryTables();
     const body = (req.body ?? {}) as any;
     const connectorType = s(body.connectorType) as ConnectorType;
     const projectId = s(body.projectId);
@@ -71,26 +50,39 @@ connectorsRouter.post("/connectors/ingest", (req: Request, res: Response) => {
     if (!connectorType) return res.status(400).json({ ok: false, error: "connectorType required" });
 
     const db = getDb("kokuzo");
-    const sourceId = randomUUID();
-    db.prepare(
-      `INSERT INTO source_registry
-      (id,sourceType,source_type,uri,status,metaJson,createdAt,created_at)
-      VALUES(?,?,?,?,'active',?,datetime('now'),datetime('now'))`
-    ).run(
+    const reg = upsertSourceRegistry({
+      sourceType: connectorType,
+      uri: url || (connectorType === "manual" ? `manual://${title}` : null),
+      meta: { title, projectId: projectId || null, url, hasContent: Boolean(content) },
+      fingerprintParts: [connectorType, url || null, title, content || null, projectId || null],
+      status: content ? "active" : "partial",
+    });
+    const sourceId = reg.sourceId;
+    appendSourceAnalysisLog({
       sourceId,
-      connectorType,
-      connectorType,
-      url || null,
-      JSON.stringify({ title, projectId: projectId || null, url, hasContent: Boolean(content) })
-    );
+      projectId: projectId || null,
+      status: content ? "ok" : "partial",
+      summary: `${connectorType} source registered`,
+      analysisType: "connector_ingest",
+      fingerprint: reg.fingerprint,
+      meta: {
+        title,
+        url,
+        hasContent: Boolean(content),
+        duplicate: reg.duplicate,
+      },
+    });
 
     if (projectId) {
       const project = db.prepare("SELECT id FROM writing_projects WHERE id=? LIMIT 1").get(projectId) as any;
       if (project?.id) {
-        db.prepare(
-          `INSERT INTO writing_sources(id,projectId,sourceId,sourceType,doc,note,createdAt,created_at)
-          VALUES(?,?,?,?,?,?,datetime('now'),datetime('now'))`
-        ).run(randomUUID(), projectId, sourceId, connectorType, null, title);
+        linkWritingSource({
+          projectId,
+          sourceId,
+          sourceType: connectorType,
+          doc: null,
+          note: title,
+        });
       }
     }
 

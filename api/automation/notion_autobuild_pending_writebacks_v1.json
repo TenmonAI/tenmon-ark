@@ -1,0 +1,30 @@
+{
+  "schema": "TENMON_NOTION_AUTOBUILD_PENDING_WRITEBACKS_V1",
+  "card": "TENMON_NOTION_AUTOBUILD_WRITEBACK_LIVE_BIND_CURSOR_AUTO_V1",
+  "entries": [
+    {
+      "id": "pending_writeback_1_1775086000",
+      "status": "pending",
+      "created_at": "2026-04-01T23:26:40Z",
+      "last_attempt_at": "2026-04-01T23:26:40Z",
+      "attempt_count": 1,
+      "notion_page_id": "dummy-page",
+      "patch_payload": {
+        "properties": {
+          "Status": {
+            "select": {
+              "name": "Hold"
+            }
+          }
+        }
+      },
+      "truth_source_paths": [
+        "a.json"
+      ],
+      "evidence_path": "/tmp/evidence",
+      "head_sha": "deadbeef",
+      "hold_reason": "notion_patch_failed:599:synthetic_transport_failure",
+      "last_error": "notion_patch_failed:599:synthetic_transport_failure"
+    }
+  ]
+}

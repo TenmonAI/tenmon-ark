@@ -71,7 +71,7 @@ const RE_INTERNAL_KEYS =
   /\b(?:kotodama_hisho|iroha_kotodama_kai|katakamuna_kotodama_kai|mizuho_den|technical_implementation|conversation_system)\b/gi;
 
 const RE_INTERNAL_PHRASE_INLINE =
-  /thoughtCoreSummary|notionCanon|sourceStackSummary|semanticSlots|decisionFrame|routeReason\s*[:：]\s*[^\s\n]+|lawsUsed\s*\/\s*evidenceIds|\blawsUsed\b|\bevidenceIds\b|\blawTrace\b|quoteHash|unitId|\blawKey\b|probe_ok|forensic|has_internal_leak|has_ONE_STEP/ui;
+  /thoughtCoreSummary|notionCanon|sourceStackSummary|semanticSlots|decisionFrame|routeReason\s*[:：]\s*[^\s\n]+|lawsUsed\s*\/\s*evidenceIds|\blawsUsed\b|\bevidenceIds\b|\blawTrace\b|quoteHash|unitId|\blawKey\b|probe_ok|forensic|has_internal_leak|has_ONE_STEP|generic preamble|次の軸\s*[:：]|次に深めたい/ui;
 
 const RE_JSONISH = /\{\s*"(?:centerKey|routeReason|thoughtCore|notionCanon|schema)"\s*:/u;
 
@@ -158,8 +158,8 @@ function isTenmonInternalMetaSurfaceLineV1(line: string): boolean {
   const t = line.trim();
   if (!t) return false;
   if (/次に深めたい/u.test(t)) return false;
-  if (/^(?:center|root_reasoning|truth_structure|verdict|次軸|次観測|中心命題)\s*[:：]\s*$/u.test(t)) return true;
-  if (/^(?:center|root_reasoning|truth_structure|verdict|次軸|次観測|中心命題)\s*[:：]\s*\S/u.test(t)) return true;
+  if (/^(?:center|root_reasoning|truth_structure|verdict|次軸|次観測|次の軸|中心命題)\s*[:：]\s*$/u.test(t)) return true;
+  if (/^(?:center|root_reasoning|truth_structure|verdict|次軸|次観測|次の軸|中心命題)\s*[:：]\s*\S/u.test(t)) return true;
   if (/^verdict\s*:\s*\S/u.test(t)) return true;
   if (/^truth_structure\s*[:：]?\s*相\s*=/u.test(t)) return true;
   if (/^verdict\s*=\s*center_loss\b/u.test(t)) return true;

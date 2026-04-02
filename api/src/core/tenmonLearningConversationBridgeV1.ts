@@ -15,6 +15,8 @@ export type LearningConversationBridgeBundleV1 = {
   rootReasoningSummary: string;
   comparativeSummary: string;
   projectionSummary: string;
+  promotionReasonCodes: readonly string[];
+  ocrBindingPolicy: "source_analysis_memory_promotion_only";
 };
 
 export function buildLearningConversationBridgeV1(
@@ -34,5 +36,7 @@ export function buildLearningConversationBridgeV1(
       ? sanskrit.comparativeInsight
       : `mapping 層のみ: edges=${mapping.comparativeMap.length}（root=KHS 固定）`,
     projectionSummary: physics.fractalPhysicsHint,
+    promotionReasonCodes: gate.reasonCodes,
+    ocrBindingPolicy: "source_analysis_memory_promotion_only",
   };
 }
