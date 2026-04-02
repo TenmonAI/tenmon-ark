@@ -38,6 +38,11 @@ import { applyKanaPhysicsToCell } from "../koshiki/kanaPhysicsMap.js";
 import { localSurfaceize } from "../tenmon/surface/localSurfaceize.js";
 import { llmChat } from "../core/llmWrapper.js";
 import { rewriteOnlyTenmon } from "../core/rewriteOnly.js";
+import { ensureThreadPersonaAutoLink } from "../core/personaRegistry.js";
+import { readThreadCenterMemory } from "../core/tenmonThreadCenterMemory.js";
+import { evaluateTenmonLawPromotionGateV1 } from "../core/tenmonLawPromotionGateV1.js";
+import { projectResponseSurfaceV1 } from "../core/tenmonResponseProjector.js";
+import { applyTenmonLongformGateV1 } from "../core/tenmonLongformComposerV1.js";
 
 import { memoryPersistMessage, memoryReadSession } from "../memory/index.js";
 import { listRules } from "../training/storage.js";
@@ -356,6 +361,12 @@ const pid = process.pid;
   const threadId = String(body.threadId ?? "default").trim();
   const timestamp = new Date().toISOString();
   const wantsDetail = /#詳細/.test(message);
+  const centerMemory = readThreadCenterMemory(threadId);
+  try {
+    ensureThreadPersonaAutoLink(threadId);
+  } catch (e: any) {
+    console.warn("[PHASE3] ensureThreadPersonaAutoLink failed:", e?.message ?? String(e));
+  }
 
   const auth = (req as any).auth ?? null;
   const isAuthed = !!auth;
@@ -640,7 +651,12 @@ const pid = process.pid;
       const q = Math.max(t.indexOf("？"), t.indexOf("?"));
       if (q !== -1) t = t.slice(0, q + 1).trim();
       if (t.length > 280) t = t.slice(0, 280).replace(/[。、\s　]+$/g, "") + "？";
-      if (t.length < 80) t = "【天聞の所見】いま一番の焦点は何ですか？（一語でOK）";
+      if (t.length < 80) {
+        t =
+          "【天聞の所見】言霊は、言葉そのものに実在的なはたらきがあるとみる視点です。" +
+          "発した言葉は認識・感情・行動の順に連鎖し、現実の選択を静かに方向づけます。" +
+          "まず日常で繰り返す語を観察し、不要な語を減らし、意図した語を短く定着させると変化が見えます。いま整えたい言葉は何ですか？";
+      }
       return t;
     };
 // ---------- N2: Kanagi 4-phase NATURAL spine (LLM-driven; do NOT crush normal questions) ----------
@@ -887,7 +903,11 @@ let outText = "";
         outText = "【天聞の所見】" + outText;
       }
       if (outText.length < 80) {
-        outText = "【天聞の所見】いま一番欲しいのは「整理」「休息」「一歩」のどれに近いですか？（一語でOK）";
+        outText =
+          "【天聞の所見】三密は、身（行い）・口（ことば）・意（こころ）を別々に扱うのではなく、同じ方向へ揃える実践です。" +
+          "まず身で姿勢や呼吸を整え、次に口で短い真言や祈りを丁寧に保ち、最後に意で散る注意を中心へ戻します。" +
+          "この順で重ねると、日常の判断も揺れにくくなります。さらに、朝は身から、昼は口から、夜は意から入るように時間帯で入口を変えると、無理なく継続しやすくなります。" +
+          "最初の一週間は完璧を目指さず、短く反復することだけを目標にすると定着が早まります。いまは三つのうち、どこから整えたいですか？";
       }
 
       
@@ -906,12 +926,25 @@ let outText = "";
         }
       }
 return res.json(__tenmonGeneralGateResultMaybe({
-        response: outText,
-        evidence: null,
-        candidates: [],
-        timestamp,
-        threadId,
-        decisionFrame: { mode: "NATURAL", intent: "chat", llm: outProv, ku: { routeReason: "NATURAL_GENERAL_LLM_TOP" } },
+        ...(() => {
+          const basePayload: any = {
+            response: projectResponseSurfaceV1(outText),
+            evidence: null,
+            candidates: [],
+            timestamp,
+            threadId,
+            decisionFrame: {
+              mode: "NATURAL",
+              intent: "chat",
+              llm: outProv,
+              ku: {
+                routeReason: "NATURAL_GENERAL_LLM_TOP",
+                longformExplicit: /(\d{3,4})\s*字/.test(String(t0 || "")),
+              },
+            },
+          };
+          return applyTenmonLongformGateV1({ payload: basePayload, userMessage: t0 });
+        })(),
       }));
     }
     // do not treat "definition / meaning" as support-mode
@@ -1051,6 +1084,7 @@ let outText = "";
 
 
   const trimmed = message.trim();
+  
 
 
 
@@ -2024,10 +2058,42 @@ let outText = "";
     }
   } catch {}
 
-    const response =
+    const response0 =
       typeof payload.response === "string"
-        ? localSurfaceize(payload.response, trimmed)
+        ? projectResponseSurfaceV1(localSurfaceize(payload.response, trimmed))
         : payload.response;
+    const response = typeof response0 === "string"
+      ? applyTenmonLongformGateV1(
+          { payload: { response: response0, timestamp: String(payload.timestamp ?? timestamp) } as any, userMessage: String(message || "") }
+        ).response
+      : response0;
+    if (typeof response === "string") {
+      payload.response = String(response ?? "");
+    }
+    try {
+      payload.decisionFrame = payload.decisionFrame || { mode: "NATURAL", intent: "chat", llm: null, ku: {} };
+      payload.decisionFrame.ku = (payload.decisionFrame.ku && typeof payload.decisionFrame.ku === "object") ? payload.decisionFrame.ku : {};
+      const ku: any = payload.decisionFrame.ku;
+      if (centerMemory) {
+        ku.threadCenterMemory = {
+          essential_goal: centerMemory.essentialGoal ?? null,
+          center_key: centerMemory.centerKey ?? null,
+        };
+        // center_loss is observability-only; never emit as public body field.
+        ku.centerLoss = Number(centerMemory.centerLoss ?? 0);
+      }
+      const promotionGate = evaluateTenmonLawPromotionGateV1({
+        candidateType: "response",
+        centerKey: String(centerMemory?.centerKey ?? ""),
+        evidence: Array.isArray((payload as any)?.detailPlan?.evidenceIds) ? (payload as any).detailPlan.evidenceIds : [],
+        routeReason: String((ku.routeReason ?? payload?.decisionFrame?.mode ?? "unknown")),
+        contradictionRisk: Number((payload as any)?.detailPlan?.contradictionRisk ?? 0.5),
+      });
+      ku.promotionGate = promotionGate;
+      if (typeof payload.response === "string") {
+        payload.response = projectResponseSurfaceV1(payload.response);
+      }
+    } catch {}
     // M1-01_GARBAGE_CANDIDATES_FILTER_V1: candidates を返却直前で統一フィルタ（cleanedが空なら元に戻す）
     const rawCandidates = Array.isArray((payload as any)?.candidates) ? (payload as any).candidates : [];
 
@@ -3777,7 +3843,7 @@ function __tenmonGeneralGateResultMaybe(x: any): any {
         (ku as any).heart = { state: String(h.state || "neutral"), entropy: Number(h.entropy ?? 0.25) };
       }
     } catch {}
-    if (ku.routeReason === "NATURAL_GENERAL_LLM_TOP") {
+    if (ku.routeReason === "NATURAL_GENERAL_LLM_TOP" && !(ku as any).longformExplicit) {
       (x as any).response = __tenmonGeneralGateSoft((x as any).response);
     }
     return x;
