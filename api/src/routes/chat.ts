@@ -29,6 +29,15 @@ import { getMythMapEdges, setMythMapEdges } from "../kokuzo/mythMapMemory.js";
 import { listThreadLaws, dedupLawsByDocPage } from "../kokuzo/laws.js";
 import { projectCandidateToCell } from "../kanagi/ufk/projector.js";
 import { buildGenesisPlan } from "../kanagi/ufk/genesisPlan.js";
+import {
+  appendLearningReturn,
+  buildLongformTraceV2,
+  buildOperableSealV2,
+  buildThreadCenter,
+  ensureCoreTablesForContinuation,
+  getPromotionLawBundle,
+  renderLongformMinimum,
+} from "../core/tenmonContinuationCardV2.js";
 import { computeBreathCycle } from "../koshiki/breathEngine.js";
 import { teniwohaWarnings } from "../koshiki/teniwoha.js";
 import { parseItsura } from "../koshiki/itsura.js";
@@ -48,6 +57,7 @@ import { DatabaseSync } from "node:sqlite";
 const router: IRouter = Router();
 // __KANAGI_PHASE_MEM_V2: module-scope phase tracker (per threadId) for NATURAL 4-phase state machine.
 const __kanagiPhaseMemV2 = new Map<string, number>();
+const __threadCenterKeyMemory = new Map<string, string>();
 // CARD_C7B2_FIX_N2_TRIGGER_AND_LLM_V1
 
 
@@ -329,6 +339,79 @@ router.post("/chat", async (req: Request, res: Response<ChatResponseBody>) => {
               if (!df.ku || typeof df.ku !== "object") df.ku = {};
               if (df.ku.rewriteUsed === undefined) df.ku.rewriteUsed = obj.rewriteUsed;
               if (df.ku.rewriteDelta === undefined) df.ku.rewriteDelta = obj.rewriteDelta;
+
+              try {
+                ensureCoreTablesForContinuation();
+                const kuAny: any = (df.ku && typeof df.ku === "object")
+                  ? df.ku
+                  : ((df.ku = {}), df.ku);
+                const responseText = String((obj as any)?.response ?? "");
+                const rawMessage = String(
+                  (obj as any)?.rawMessage ??
+                  (obj as any)?.message ??
+                  (obj as any)?.input ??
+                  (req.body as any)?.message ??
+                  (req.body as any)?.input ??
+                  ""
+                );
+                const resolvedThreadId = String((obj as any)?.threadId ?? (req.body as any)?.threadId ?? "default");
+
+                const lawsLite = Array.isArray(kuAny.kokuzoLaws) ? kuAny.kokuzoLaws : [];
+                const prevCenter = __threadCenterKeyMemory.get(resolvedThreadId) ?? null;
+                const threadCenter = buildThreadCenter({
+                  threadId: resolvedThreadId,
+                  message: rawMessage,
+                  previousCenterKey: prevCenter,
+                });
+                kuAny.threadCenter = threadCenter;
+                if (threadCenter.center_key) __threadCenterKeyMemory.set(resolvedThreadId, threadCenter.center_key);
+                if (threadCenter.centerShift) kuAny.centerShift = true;
+                if (!threadCenter.center_key) kuAny.centerLoss = { source: "missing" };
+
+                const promo = getPromotionLawBundle({
+                  threadId: resolvedThreadId,
+                  message: rawMessage,
+                  laws: lawsLite,
+                });
+                kuAny.promotionGate = promo.promotionGate;
+                kuAny.promotedLaws = promo.promotedLaws;
+                kuAny.promotionTrace = promo.promotionTrace;
+
+                const longTrace = buildLongformTraceV2({ message: rawMessage, response: responseText });
+                if (longTrace) {
+                  kuAny.longformComposerV1 = longTrace;
+                  if (!longTrace.structurePassed) {
+                    const expanded = renderLongformMinimum(rawMessage, longTrace.minimumFloor, responseText);
+                    (obj as any).response = expanded;
+                    kuAny.longformComposerV1 = {
+                      ...longTrace,
+                      actualLength: expanded.length,
+                      structurePassed: expanded.length >= longTrace.minimumFloor,
+                    };
+                  }
+                }
+
+                const seal = buildOperableSealV2();
+                kuAny.operable_seal = seal;
+
+                let verdict = "grounded";
+                try {
+                  const ve = kuAny?.verdictEngineV1;
+                  if (ve && typeof ve === "object" && typeof ve.verdict === "string") {
+                    verdict = ve.verdict;
+                  }
+                } catch {}
+
+                appendLearningReturn({
+                  threadId: resolvedThreadId,
+                  message: rawMessage,
+                  response: String((obj as any)?.response ?? responseText),
+                  centerKey: threadCenter.center_key,
+                  verdict,
+                  decision: promo.promotionGate.decision,
+                  reasonCodes: promo.promotionGate.reason_codes,
+                });
+              } catch {}
             }
           }
         } catch {}
@@ -1986,6 +2069,7 @@ let outText = "";
         }
 
 } catch {}
+
       // DF_DETAILPLAN_MIRROR_V1: always mirror top-level detailPlan into decisionFrame.detailPlan
 
     // AK6_GENESISPLAN_DEBUG_V1: attach genesisPlan template (debug-only, deterministic)
