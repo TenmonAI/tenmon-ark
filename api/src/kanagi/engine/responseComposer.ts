@@ -16,6 +16,8 @@ export type ComposePolishOpts = {
   wantsDetail?: boolean;
   userMessage?: string;
   threadId?: string;
+  ikiState?: "FIRE" | "WATER" | "BOTH" | "NEUTRAL";
+  kotodamaRow?: "ア" | "ワ" | "ヤ" | "マ" | "ハ" | "ナ" | "タ" | "サ" | "カ" | "ラ" | null;
 };
 
 /**
@@ -130,6 +132,25 @@ function endsWithQuestion(s: string): boolean {
   return /[？?]\s*$/.test(s) || /(ですか|でしょうか|ますか)\s*$/.test(s);
 }
 
+function ikiStyleHint(ikiState?: ComposePolishOpts["ikiState"]): string {
+  if (ikiState === "FIRE") return "ここでは外へ展開する順で整理します。";
+  if (ikiState === "WATER") return "ここでは内側を深める順で整理します。";
+  if (ikiState === "BOTH") return "ここでは展開と深化を往復する順で整理します。";
+  return "";
+}
+
+function closingQuestionByKotodama(
+  row: ComposePolishOpts["kotodamaRow"],
+  isConsult: boolean
+): string {
+  if (row === "ア") return "次に開くとしたら、どの論点から始めますか？";
+  if (row === "マ") return "定義を1つ固定するなら、どこを先に置きますか？";
+  if (row === "ハ") return "まず最小の実践として、何を試しますか？";
+  return isConsult
+    ? "いま一番ひっかかっている点は、どこですか？"
+    : "次の一手は、どこから始めましょうか？";
+}
+
 /**
  * 会話形応答を生成（UI向け）
  * - 内部構造は崩さず、返答テキストだけ会話に寄せる
@@ -153,12 +174,16 @@ export function composeConversationalResponse(
   const lines = t.split("\n").filter((x: string) => x.trim().length > 0);
   if (lines.length > 7) t = lines.slice(0, 7).join("\n");
 
+  const styleHint = ikiStyleHint(polishOpts?.ikiState);
+  if (styleHint && !t.includes(styleHint)) {
+    t = `${t}\n\n${styleHint}`;
+  }
+
   // 末尾を問いで閉じる
+  const isConsult = /不安|動けない|どうすれば|困って|迷って/i.test(userMessage);
+  const closing = closingQuestionByKotodama(polishOpts?.kotodamaRow ?? null, isConsult);
   if (!endsWithQuestion(t)) {
-    const isConsult = /不安|動けない|どうすれば|困って|迷って/i.test(userMessage);
-    t += isConsult
-      ? "\n\nいま一番ひっかかっている点は、どこですか？"
-      : "\n\n次の一手は、どこから始めましょうか？";
+    t += `\n\n${closing}`;
   }
 
   return t;

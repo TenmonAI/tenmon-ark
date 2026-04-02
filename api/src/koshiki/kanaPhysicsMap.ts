@@ -34,13 +34,36 @@ export interface KanaPhysicsCellParams {
   evidenceIds: string[]; // MUST be non-empty
 }
 
+const KHS_EVIDENCE = ["KZPAGE:KHS:P132"];
+
+function makeGroup(
+  chars: string[],
+  fire: number,
+  water: number,
+  spiral: KanaPhysicsCellParams["spiral"]
+): Record<string, KanaPhysicsCellParams> {
+  const out: Record<string, KanaPhysicsCellParams> = {};
+  for (const ch of chars) {
+    out[ch] = { fire, water, spiral, evidenceIds: KHS_EVIDENCE };
+  }
+  return out;
+}
+
 /**
  * K6: MVP kana physics params (deterministic).
  * NOTE: This is an MVP mapping; replace with grounded mapping later.
  */
 export const KANA_PHYSICS_CELL_PARAMS_MVP: Record<string, KanaPhysicsCellParams> = {
-  "ア": { fire: 0.1, water: 0.9, spiral: "L_OUT", evidenceIds: ["KZPAGE:KHS:P132"] },
-  "ト": { fire: 0.8, water: 0.2, spiral: "R_IN",  evidenceIds: ["KZPAGE:KHS:P132"] },
+  ...makeGroup(["ア", "イ", "ウ", "エ", "オ"], 0.2, 0.8, "L_OUT"), // ア行: 水型・展開型
+  ...makeGroup(["カ", "キ", "ク", "ケ", "コ"], 0.8, 0.2, "R_IN"),  // カ行: 火型・収束型
+  ...makeGroup(["サ", "シ", "ス", "セ", "ソ"], 0.5, 0.5, "L_IN"),  // サ行: 水火両型
+  ...makeGroup(["タ", "チ", "ツ", "テ", "ト"], 0.75, 0.25, "R_OUT"), // タ行: 火型・転換型
+  ...makeGroup(["ナ", "ニ", "ヌ", "ネ", "ノ"], 0.35, 0.65, "L_IN"), // ナ行: 水型・深化型
+  ...makeGroup(["ハ", "ヒ", "フ", "ヘ", "ホ"], 0.55, 0.45, "L_OUT"), // ハ行: 両型・開放型
+  ...makeGroup(["マ", "ミ", "ム", "メ", "モ"], 0.4, 0.6, "R_IN"),  // マ行: 水型・統合型
+  ...makeGroup(["ヤ", "ユ", "ヨ"], 0.7, 0.3, "R_OUT"),             // ヤ行: 火型・生成型
+  ...makeGroup(["ラ", "リ", "ル", "レ", "ロ"], 0.5, 0.5, "L_OUT"), // ラ行: 両型・循環型
+  ...makeGroup(["ワ", "ヰ", "ヱ", "ヲ", "ン"], 0.3, 0.7, "L_IN"),  // ワ行: 水型・完結型
 };
 
 export function applyKanaPhysicsToCell(cell: { content: string; iki: { fire:number; water:number }; spiral: any; evidenceIds: string[] }) {
