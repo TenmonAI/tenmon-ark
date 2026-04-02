@@ -5,6 +5,12 @@
  */
 export function localSurfaceize(text: string, userMsg: string): string {
   let out = String(text ?? "");
+  const explicitLongReq = (() => {
+    const m = String(userMsg ?? "").match(/([1-9]\d{2,4})\s*字/);
+    if (!m) return 0;
+    const n = Number(m[1] || 0);
+    return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
+  })();
 
   // 0) NON_TEXT は絶対に露出させない（最優先）
   if (out.includes("[NON_TEXT_PAGE_OR_OCR_FAILED]")) {
@@ -37,6 +43,9 @@ export function localSurfaceize(text: string, userMsg: string): string {
   // 相談系は末尾を「？」で閉じる
   const isConsult = /どうすれば|困って|不安|迷|疲れ|多すぎ|整理|優先|判断/i.test(String(userMsg ?? ""));
   if (isConsult && !/[？?]\s*$/.test(out)) out += "？";
+
+  // 明示的な長文化要求では短文化の行数制限をかけない
+  if (explicitLongReq > 0) return out;
 
   // 行数を抑える
   const lines = out.split("\n").filter((x) => x.trim().length > 0);
