@@ -2,9 +2,12 @@ import { Router, type Request, type Response } from "express";
 import { getGitSha } from "../version.js";
 import { getReadiness } from "../health/readiness.js";
 
-
+const BUILD_MARK = "BUILD_MARK:DET_RECALL_V1";
+const BUILD_FEATURES = {
+  recall: true,
+  deterministic: true,
+} as const;
 const BUILD_FEATURES_KOSHIKI = { ...BUILD_FEATURES, koshikiKernel: true } as const;
-import { BUILD_MARK, BUILD_FEATURES } from "../build/buildInfo.js";
 const router = Router();
 router.get("/audit", (_req: Request, res: Response) => {
   const handlerTime = Date.now();
@@ -59,6 +62,21 @@ router.get("/audit", (_req: Request, res: Response) => {
       pid,
       uptime: Math.floor(uptime),
       readiness,
+    });
+  }
+});
+router.get("/audit.build", (_req: Request, res: Response) => {
+  try {
+    return res.json({
+      ok: true,
+      timestamp: new Date().toISOString(),
+      build: { mark: BUILD_MARK, features: BUILD_FEATURES_KOSHIKI },
+    });
+  } catch (error) {
+    return res.status(500).json({
+      ok: false,
+      timestamp: new Date().toISOString(),
+      error: error instanceof Error ? error.message : String(error),
     });
   }
 });

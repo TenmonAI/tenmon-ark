@@ -9,23 +9,29 @@ import { existsSync } from "fs";
  * gitSha を取得（実行時に /opt/tenmon-ark-repo/api から取得）
  */
 export function getGitSha(): string {
-  const repoPath = "/opt/tenmon-ark-repo/api";
-  if (!existsSync(repoPath)) {
-    throw new Error("Repository path not found: " + repoPath);
-  }
-  try {
-    const sha = execSync("git rev-parse --short HEAD", {
-      cwd: repoPath,
-      encoding: "utf-8",
-      stdio: ["ignore", "pipe", "ignore"],
-    }).trim();
-    if (!sha || sha.length === 0) {
-      throw new Error("gitSha is empty");
+  const candidateRepoPaths = [
+    process.env.TENMON_REPO_PATH,
+    process.cwd(),
+    "/opt/tenmon-ark-repo/api",
+    "/workspace/api",
+    "/workspace",
+  ].filter((x): x is string => typeof x === "string" && x.trim().length > 0);
+
+  for (const repoPath of candidateRepoPaths) {
+    try {
+      if (!existsSync(repoPath)) continue;
+      const sha = execSync("git rev-parse --short HEAD", {
+        cwd: repoPath,
+        encoding: "utf-8",
+        stdio: ["ignore", "pipe", "ignore"],
+      }).trim();
+      if (sha) return sha;
+    } catch {
+      // try next candidate
     }
-    return sha;
-  } catch (error) {
-    throw new Error(`Failed to get gitSha: ${error instanceof Error ? error.message : String(error)}`);
   }
+
+  return process.env.GIT_SHA || "unknown";
 }
 
 

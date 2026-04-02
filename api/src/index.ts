@@ -131,6 +131,11 @@ app.get("/health", (_, res) => {
   res.json({ status: "ok" });
 });
 
+// Backward-compatible probe endpoint used by some automation cards.
+app.get("/api/health", (_, res) => {
+  res.json({ status: "ok" });
+});
+
 app.use(koshikiConsoleRouter);
 app.listen(PORT, "0.0.0.0", () => {
   const listenTime = Date.now();
