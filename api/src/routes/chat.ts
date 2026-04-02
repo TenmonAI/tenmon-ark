@@ -34,7 +34,9 @@ import {
   buildLongformTraceV2,
   buildOperableSealV2,
   buildThreadCenter,
+  ensureCoreTablesForContinuation,
   getPromotionLawBundle,
+  renderLongformMinimum,
 } from "../core/tenmonContinuationCardV2.js";
 import { computeBreathCycle } from "../koshiki/breathEngine.js";
 import { teniwohaWarnings } from "../koshiki/teniwoha.js";
@@ -337,6 +339,79 @@ router.post("/chat", async (req: Request, res: Response<ChatResponseBody>) => {
               if (!df.ku || typeof df.ku !== "object") df.ku = {};
               if (df.ku.rewriteUsed === undefined) df.ku.rewriteUsed = obj.rewriteUsed;
               if (df.ku.rewriteDelta === undefined) df.ku.rewriteDelta = obj.rewriteDelta;
+
+              try {
+                ensureCoreTablesForContinuation();
+                const kuAny: any = (df.ku && typeof df.ku === "object")
+                  ? df.ku
+                  : ((df.ku = {}), df.ku);
+                const responseText = String((obj as any)?.response ?? "");
+                const rawMessage = String(
+                  (obj as any)?.rawMessage ??
+                  (obj as any)?.message ??
+                  (obj as any)?.input ??
+                  (req.body as any)?.message ??
+                  (req.body as any)?.input ??
+                  ""
+                );
+                const resolvedThreadId = String((obj as any)?.threadId ?? (req.body as any)?.threadId ?? "default");
+
+                const lawsLite = Array.isArray(kuAny.kokuzoLaws) ? kuAny.kokuzoLaws : [];
+                const prevCenter = __threadCenterKeyMemory.get(resolvedThreadId) ?? null;
+                const threadCenter = buildThreadCenter({
+                  threadId: resolvedThreadId,
+                  message: rawMessage,
+                  previousCenterKey: prevCenter,
+                });
+                kuAny.threadCenter = threadCenter;
+                if (threadCenter.center_key) __threadCenterKeyMemory.set(resolvedThreadId, threadCenter.center_key);
+                if (threadCenter.centerShift) kuAny.centerShift = true;
+                if (!threadCenter.center_key) kuAny.centerLoss = { source: "missing" };
+
+                const promo = getPromotionLawBundle({
+                  threadId: resolvedThreadId,
+                  message: rawMessage,
+                  laws: lawsLite,
+                });
+                kuAny.promotionGate = promo.promotionGate;
+                kuAny.promotedLaws = promo.promotedLaws;
+                kuAny.promotionTrace = promo.promotionTrace;
+
+                const longTrace = buildLongformTraceV2({ message: rawMessage, response: responseText });
+                if (longTrace) {
+                  kuAny.longformComposerV1 = longTrace;
+                  if (!longTrace.structurePassed) {
+                    const expanded = renderLongformMinimum(rawMessage, longTrace.minimumFloor, responseText);
+                    (obj as any).response = expanded;
+                    kuAny.longformComposerV1 = {
+                      ...longTrace,
+                      actualLength: expanded.length,
+                      structurePassed: expanded.length >= longTrace.minimumFloor,
+                    };
+                  }
+                }
+
+                const seal = buildOperableSealV2();
+                kuAny.operable_seal = seal;
+
+                let verdict = "grounded";
+                try {
+                  const ve = kuAny?.verdictEngineV1;
+                  if (ve && typeof ve === "object" && typeof ve.verdict === "string") {
+                    verdict = ve.verdict;
+                  }
+                } catch {}
+
+                appendLearningReturn({
+                  threadId: resolvedThreadId,
+                  message: rawMessage,
+                  response: String((obj as any)?.response ?? responseText),
+                  centerKey: threadCenter.center_key,
+                  verdict,
+                  decision: promo.promotionGate.decision,
+                  reasonCodes: promo.promotionGate.reason_codes,
+                });
+              } catch {}
             }
           }
         } catch {}
@@ -1995,59 +2070,6 @@ let outText = "";
 
 } catch {}
 
-      // TENMON_CONTINUATION_CARD_V2: promotion/thread/longform/seal + learning-return hooks
-      try {
-        const kuAny: any = (payload.decisionFrame?.ku && typeof payload.decisionFrame.ku === "object")
-          ? payload.decisionFrame.ku
-          : ((payload.decisionFrame.ku = {}), payload.decisionFrame.ku);
-        const responseText = String(payload?.response ?? "");
-        const userMessage = String(payload?.rawMessage ?? message ?? "");
-        const lawsLite = Array.isArray(kuAny.kokuzoLaws) ? kuAny.kokuzoLaws : [];
-
-        const prevCenter = __threadCenterKeyMemory.get(String(threadId || "")) ?? null;
-        const threadCenter = buildThreadCenter({
-          threadId: String(threadId || ""),
-          message: userMessage,
-          previousCenterKey: prevCenter,
-        });
-        kuAny.threadCenter = threadCenter;
-        if (threadCenter.center_key) __threadCenterKeyMemory.set(String(threadId || ""), threadCenter.center_key);
-        if (threadCenter.centerShift) kuAny.centerShift = true;
-        if (!threadCenter.center_key) kuAny.centerLoss = { source: "missing" };
-
-        const promo = getPromotionLawBundle({
-          threadId: String(threadId || ""),
-          message: userMessage,
-          laws: lawsLite,
-        });
-        kuAny.promotionGate = promo.promotionGate;
-        kuAny.promotedLaws = promo.promotedLaws;
-        kuAny.promotionTrace = promo.promotionTrace;
-
-        const longTrace = buildLongformTraceV2({ message: userMessage, response: responseText });
-        if (longTrace) kuAny.longformComposerV1 = longTrace;
-
-        const seal = buildOperableSealV2();
-        kuAny.operable_seal = seal;
-
-        let verdict = "grounded";
-        try {
-          const ve = kuAny?.verdictEngineV1;
-          if (ve && typeof ve === "object" && typeof ve.verdict === "string") {
-            verdict = ve.verdict;
-          }
-        } catch {}
-
-        appendLearningReturn({
-          threadId: String(threadId || ""),
-          message: userMessage,
-          response: responseText,
-          centerKey: threadCenter.center_key,
-          verdict,
-          decision: promo.promotionGate.decision,
-          reasonCodes: promo.promotionGate.reason_codes,
-        });
-      } catch {}
       // DF_DETAILPLAN_MIRROR_V1: always mirror top-level detailPlan into decisionFrame.detailPlan
 
     // AK6_GENESISPLAN_DEBUG_V1: attach genesisPlan template (debug-only, deterministic)

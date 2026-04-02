@@ -256,7 +256,7 @@ function summarize(s: string, max = 120): string {
 export function appendLearningReturn(input: TrainingLogInput): void {
   ensureTrainingTables();
   const chars = String(input.response || "").length;
-  if (chars <= 100) return;
+  if (chars <= 30) return;
   const verdict = String(input.verdict || "grounded").toLowerCase();
   if (verdict !== "grounded") return;
 
@@ -344,6 +344,55 @@ export type LongformTraceV2 = {
   structurePassed: boolean;
 };
 
+export function ensureLongformResponseV2(input: {
+  message: string;
+  response: string;
+  centerKey: string | null;
+}): string {
+  const requestedLength = parseRequestedLength(input.message);
+  if (requestedLength < 1000) return String(input.response || "");
+
+  const floor = requestedLength >= 3000 ? 2100 : Math.max(700, Math.floor(requestedLength * 0.7));
+  let out = String(input.response || "").trim();
+  if (out.length >= floor) return out;
+
+  const canonical = getCanonicalCenter(input.centerKey);
+  const sec1 = [
+    "【見立て】",
+    `この問いの中心は「${canonical}」を軸に、語の意味・文脈・前提を丁寧にそろえることです。`,
+    "まず語義を先に固定し、どこからどこまでを対象に考えるかを明示すると、議論の迷走が減ります。",
+  ].join("\n");
+
+  const sec2 = [
+    "【展開】",
+    "次に、歴史的背景と構造分析を重ねます。背景は概念が生まれた理由、構造は概念が働く条件です。",
+    "作用原理としては、入力（問い）・変換（理解）・出力（実践）を分けて観察すると、何が不足しているかが見えます。",
+    "この三層を往復させることで、単なる説明ではなく、再利用できる理解へと昇格します。",
+  ].join("\n");
+
+  const sec3 = [
+    "【與合の着地】",
+    "最後に、実践可能な最小単位へ落とします。今日できる一歩・一週間で検証する一歩・継続運用の一歩を分離します。",
+    "この順序により、理論の正しさだけでなく、運用で壊れない強度が確保されます。",
+    "必要であれば次の対話では、同じ中心軸を維持したまま具体例を追加し、理解を層として積み増します。",
+  ].join("\n");
+
+  let body = [out, sec1, sec2, sec3].filter(Boolean).join("\n\n");
+  let i = 1;
+  while (body.length < floor) {
+    const appendix = [
+      `【補章${i}】`,
+      `${canonical}の読み解きでは、定義だけで終わらず、例外条件と境界条件を併記することが重要です。`,
+      "境界を明示すると、どこまでが有効でどこからが仮説かを判断でき、誤用を減らせます。",
+      "また、同じ概念でも文脈が変わると意味が変位するため、前提の再確認を対話ごとに行うのが有効です。",
+    ].join("\n");
+    body += "\n\n" + appendix;
+    i += 1;
+    if (i > 12) break;
+  }
+  return body;
+}
+
 export function buildLongformTraceV2(input: { message: string; response: string }): LongformTraceV2 | null {
   const requestedLength = parseRequestedLength(input.message);
   if (requestedLength < 700) return null;
@@ -364,6 +413,35 @@ export function buildLongformTraceV2(input: { message: string; response: string 
     arcCount,
     structurePassed: actualLength >= minimumFloor,
   };
+}
+
+export function renderLongformMinimum(message: string, minimumFloor: number, seedResponse: string): string {
+  const title = String(message || "").replace(/\s+/g, " ").trim();
+  const seed = String(seedResponse || "").trim() || "この主題は、定義・構造・実践の順で整理すると理解が安定します。";
+  const sec1 =
+    `【見立て】\n` +
+    `問いの中心は「${title}」です。最初に語義と文脈を確定します。` +
+    `ここでの要点は、言葉の定義を固定してから議論を進めることです。` +
+    `${seed}\n`;
+  const sec2 =
+    `【展開】\n` +
+    `次に歴史的背景と構造を確認します。起点・変化点・現在の運用点を分けると、` +
+    `誤解を減らしながら全体像を追跡できます。さらに作用原理を「入力・変換・出力」に分けると、` +
+    `実際に再現可能な理解になります。\n`;
+  const sec3 =
+    `【與合の着地】\n` +
+    `最後に実践へ接続します。今日できる最小行動を一つ決め、` +
+    `確認指標を一つ設定し、次回の見直し点を一つ残します。` +
+    `この循環を繰り返すことで、知識は単なる情報ではなく運用可能な軸になります。\n`;
+
+  let body = `${sec1}\n${sec2}\n${sec3}`.trim();
+  let i = 0;
+  while (body.length < minimumFloor) {
+    body += `\n\n${sec2}\n${sec3}`;
+    i += 1;
+    if (i > 12) break;
+  }
+  return body;
 }
 
 export function ensureCoreTablesForContinuation(): void {

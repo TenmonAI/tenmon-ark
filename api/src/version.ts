@@ -9,10 +9,9 @@ import { existsSync } from "fs";
  * gitSha を取得（実行時に /opt/tenmon-ark-repo/api から取得）
  */
 export function getGitSha(): string {
-  const repoPath = "/opt/tenmon-ark-repo/api";
-  if (!existsSync(repoPath)) {
-    throw new Error("Repository path not found: " + repoPath);
-  }
+  const preferred = "/opt/tenmon-ark-repo/api";
+  const fallback = process.cwd();
+  const repoPath = existsSync(preferred) ? preferred : fallback;
   try {
     const sha = execSync("git rev-parse --short HEAD", {
       cwd: repoPath,

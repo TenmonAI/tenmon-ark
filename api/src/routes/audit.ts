@@ -1,10 +1,10 @@
 import { Router, type Request, type Response } from "express";
 import { getGitSha } from "../version.js";
 import { getReadiness } from "../health/readiness.js";
+import { BUILD_MARK, BUILD_FEATURES } from "../build/buildInfo.js";
 
 
 const BUILD_FEATURES_KOSHIKI = { ...BUILD_FEATURES, koshikiKernel: true } as const;
-import { BUILD_MARK, BUILD_FEATURES } from "../build/buildInfo.js";
 const router = Router();
 router.get("/audit", (_req: Request, res: Response) => {
   const handlerTime = Date.now();
