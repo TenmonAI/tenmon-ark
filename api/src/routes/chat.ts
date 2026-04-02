@@ -29,6 +29,13 @@ import { getMythMapEdges, setMythMapEdges } from "../kokuzo/mythMapMemory.js";
 import { listThreadLaws, dedupLawsByDocPage } from "../kokuzo/laws.js";
 import { projectCandidateToCell } from "../kanagi/ufk/projector.js";
 import { buildGenesisPlan } from "../kanagi/ufk/genesisPlan.js";
+import {
+  appendLearningReturn,
+  buildLongformTraceV2,
+  buildOperableSealV2,
+  buildThreadCenter,
+  getPromotionLawBundle,
+} from "../core/tenmonContinuationCardV2.js";
 import { computeBreathCycle } from "../koshiki/breathEngine.js";
 import { teniwohaWarnings } from "../koshiki/teniwoha.js";
 import { parseItsura } from "../koshiki/itsura.js";
@@ -48,6 +55,7 @@ import { DatabaseSync } from "node:sqlite";
 const router: IRouter = Router();
 // __KANAGI_PHASE_MEM_V2: module-scope phase tracker (per threadId) for NATURAL 4-phase state machine.
 const __kanagiPhaseMemV2 = new Map<string, number>();
+const __threadCenterKeyMemory = new Map<string, string>();
 // CARD_C7B2_FIX_N2_TRIGGER_AND_LLM_V1
 
 
@@ -1986,6 +1994,60 @@ let outText = "";
         }
 
 } catch {}
+
+      // TENMON_CONTINUATION_CARD_V2: promotion/thread/longform/seal + learning-return hooks
+      try {
+        const kuAny: any = (payload.decisionFrame?.ku && typeof payload.decisionFrame.ku === "object")
+          ? payload.decisionFrame.ku
+          : ((payload.decisionFrame.ku = {}), payload.decisionFrame.ku);
+        const responseText = String(payload?.response ?? "");
+        const userMessage = String(payload?.rawMessage ?? message ?? "");
+        const lawsLite = Array.isArray(kuAny.kokuzoLaws) ? kuAny.kokuzoLaws : [];
+
+        const prevCenter = __threadCenterKeyMemory.get(String(threadId || "")) ?? null;
+        const threadCenter = buildThreadCenter({
+          threadId: String(threadId || ""),
+          message: userMessage,
+          previousCenterKey: prevCenter,
+        });
+        kuAny.threadCenter = threadCenter;
+        if (threadCenter.center_key) __threadCenterKeyMemory.set(String(threadId || ""), threadCenter.center_key);
+        if (threadCenter.centerShift) kuAny.centerShift = true;
+        if (!threadCenter.center_key) kuAny.centerLoss = { source: "missing" };
+
+        const promo = getPromotionLawBundle({
+          threadId: String(threadId || ""),
+          message: userMessage,
+          laws: lawsLite,
+        });
+        kuAny.promotionGate = promo.promotionGate;
+        kuAny.promotedLaws = promo.promotedLaws;
+        kuAny.promotionTrace = promo.promotionTrace;
+
+        const longTrace = buildLongformTraceV2({ message: userMessage, response: responseText });
+        if (longTrace) kuAny.longformComposerV1 = longTrace;
+
+        const seal = buildOperableSealV2();
+        kuAny.operable_seal = seal;
+
+        let verdict = "grounded";
+        try {
+          const ve = kuAny?.verdictEngineV1;
+          if (ve && typeof ve === "object" && typeof ve.verdict === "string") {
+            verdict = ve.verdict;
+          }
+        } catch {}
+
+        appendLearningReturn({
+          threadId: String(threadId || ""),
+          message: userMessage,
+          response: responseText,
+          centerKey: threadCenter.center_key,
+          verdict,
+          decision: promo.promotionGate.decision,
+          reasonCodes: promo.promotionGate.reason_codes,
+        });
+      } catch {}
       // DF_DETAILPLAN_MIRROR_V1: always mirror top-level detailPlan into decisionFrame.detailPlan
 
     // AK6_GENESISPLAN_DEBUG_V1: attach genesisPlan template (debug-only, deterministic)

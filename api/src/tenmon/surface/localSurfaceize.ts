@@ -5,6 +5,11 @@
  */
 export function localSurfaceize(text: string, userMsg: string): string {
   let out = String(text ?? "");
+  const requestedLong = (() => {
+    const m = String(userMsg || "").match(/(\d{3,5})\s*字/);
+    return m ? Number(m[1] || 0) || 0 : 0;
+  })();
+  const isExplicitLongRequest = requestedLong >= 1000;
 
   // 0) NON_TEXT は絶対に露出させない（最優先）
   if (out.includes("[NON_TEXT_PAGE_OR_OCR_FAILED]")) {
@@ -40,7 +45,7 @@ export function localSurfaceize(text: string, userMsg: string): string {
 
   // 行数を抑える
   const lines = out.split("\n").filter((x) => x.trim().length > 0);
-  if (lines.length > 6) out = lines.slice(0, 6).join("\n");
+  if (!isExplicitLongRequest && lines.length > 6) out = lines.slice(0, 6).join("\n");
 
   return out;
 }
