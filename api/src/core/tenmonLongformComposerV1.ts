@@ -51,7 +51,7 @@ export function composeTenmonLongformV1(args: {
 
   let response = String(args.response || "");
   let guard = 0;
-  while (response.length < req.minimumFloor && guard < 6) {
+  while (response.length < req.minimumFloor && guard < 12) {
     response = expandFromCenterArc(response, args.message);
     guard += 1;
   }
@@ -62,9 +62,18 @@ export function applyTenmonLongformGateV1(args: {
   payload: ChatResponseBody;
   userMessage: string;
 }): ChatResponseBody {
+  const req = parseRequestedLength(args.userMessage);
   const response = composeTenmonLongformV1({
     message: args.userMessage,
     response: String(args.payload?.response ?? ""),
   });
-  return { ...args.payload, response };
+  const out: ChatResponseBody = { ...args.payload, response };
+  if (req.explicit && req.minimumFloor > 0) {
+    out.decisionFrame = out.decisionFrame || { mode: "NATURAL", intent: "chat", llm: null, ku: {} };
+    out.decisionFrame.ku = out.decisionFrame.ku && typeof out.decisionFrame.ku === "object" ? out.decisionFrame.ku : {};
+    (out.decisionFrame.ku as any).longformExplicit = true;
+    (out.decisionFrame.ku as any).requestedLength = req.requestedLength;
+    (out.decisionFrame.ku as any).minimumFloor = req.minimumFloor;
+  }
+  return out;
 }

@@ -651,7 +651,12 @@ const pid = process.pid;
       const q = Math.max(t.indexOf("？"), t.indexOf("?"));
       if (q !== -1) t = t.slice(0, q + 1).trim();
       if (t.length > 280) t = t.slice(0, 280).replace(/[。、\s　]+$/g, "") + "？";
-      if (t.length < 80) t = "【天聞の所見】いま一番の焦点は何ですか？（一語でOK）";
+      if (t.length < 80) {
+        t =
+          "【天聞の所見】言霊は、言葉そのものに実在的なはたらきがあるとみる視点です。" +
+          "発した言葉は認識・感情・行動の順に連鎖し、現実の選択を静かに方向づけます。" +
+          "まず日常で繰り返す語を観察し、不要な語を減らし、意図した語を短く定着させると変化が見えます。いま整えたい言葉は何ですか？";
+      }
       return t;
     };
 // ---------- N2: Kanagi 4-phase NATURAL spine (LLM-driven; do NOT crush normal questions) ----------
@@ -921,12 +926,25 @@ let outText = "";
         }
       }
 return res.json(__tenmonGeneralGateResultMaybe({
-        response: outText,
-        evidence: null,
-        candidates: [],
-        timestamp,
-        threadId,
-        decisionFrame: { mode: "NATURAL", intent: "chat", llm: outProv, ku: { routeReason: "NATURAL_GENERAL_LLM_TOP" } },
+        ...(() => {
+          const basePayload: any = {
+            response: projectResponseSurfaceV1(outText),
+            evidence: null,
+            candidates: [],
+            timestamp,
+            threadId,
+            decisionFrame: {
+              mode: "NATURAL",
+              intent: "chat",
+              llm: outProv,
+              ku: {
+                routeReason: "NATURAL_GENERAL_LLM_TOP",
+                longformExplicit: /(\d{3,4})\s*字/.test(String(t0 || "")),
+              },
+            },
+          };
+          return applyTenmonLongformGateV1({ payload: basePayload, userMessage: t0 });
+        })(),
       }));
     }
     // do not treat "definition / meaning" as support-mode
@@ -3825,7 +3843,7 @@ function __tenmonGeneralGateResultMaybe(x: any): any {
         (ku as any).heart = { state: String(h.state || "neutral"), entropy: Number(h.entropy ?? 0.25) };
       }
     } catch {}
-    if (ku.routeReason === "NATURAL_GENERAL_LLM_TOP") {
+    if (ku.routeReason === "NATURAL_GENERAL_LLM_TOP" && !(ku as any).longformExplicit) {
       (x as any).response = __tenmonGeneralGateSoft((x as any).response);
     }
     return x;
