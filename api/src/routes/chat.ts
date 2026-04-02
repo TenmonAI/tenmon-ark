@@ -42,7 +42,7 @@ import { rewriteOnlyTenmon } from "../core/rewriteOnly.js";
 import { memoryPersistMessage, memoryReadSession } from "../memory/index.js";
 import { listRules } from "../training/storage.js";
 import { buildTenmonVerdictEngineV1 } from "../core/tenmonVerdictEngineV1.js";
-import { upsertConversationDistillMemoryV1 } from "../core/memoryProjection.js";
+import { upsertConversationDistillMemoryV1, buildMemoryProjectionPack, logMemoryProjection } from "../core/memoryProjection.js";
 import {
   TENMON_LONGFORM_CONTRACT_V1,
   composeTenmonLongformV1,
@@ -354,6 +354,10 @@ router.post("/chat", async (req: Request, res: Response<ChatResponseBody>) => {
                   routeReason: routeReasonV1,
                   responseText,
                 });
+                try {
+                  const __pack = buildMemoryProjectionPack({ threadId: String(threadId ?? "").trim() });
+                  if (__pack.items.length > 0) logMemoryProjection(__pack);
+                } catch {}
               }
             }
           }
@@ -1788,6 +1792,10 @@ let outText = "";
                 routeReason: routeReasonV1,
                 responseText,
               });
+              try {
+                const __pack = buildMemoryProjectionPack({ threadId: String(threadId ?? "").trim() });
+                if (__pack.items.length > 0) logMemoryProjection(__pack);
+              } catch {}
             }
           }
         } catch {}
