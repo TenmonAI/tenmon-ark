@@ -78,6 +78,8 @@ import {
   inferTenmonLongformModeV1,
 } from "../../core/tenmonLongformComposerV1.js";
 import { selectTenmonSurfaceStyleV1 } from "../../core/tenmonSurfaceStyleSelectorV1.js";
+import { buildTenmonVerdictEngineV1 } from "../../core/tenmonVerdictEngineV1.js";
+import { upsertConversationDistillMemoryV1 } from "../../core/memoryProjection.js";
 
 /** FINAL_DENSITY_CONTRACT_AND_GENERAL_SOURCEPACK_V1: 密度対象 route（routeReason 不変・PATCH29 期待と独立） */
 const DENSITY_CONTRACT_ROUTE_REASONS = new Set<string>([
@@ -648,6 +650,24 @@ export function finalizeSingleExitV1(
   try {
     if (__out && typeof __out === "object") tryAppendEvolutionLedgerSnapshotOnceV1(__out as Record<string, unknown>);
   } catch {}
+  try {
+    const __kuFinal: any = __out?.decisionFrame?.ku;
+    const __bodyFinal = String(__out?.response || "");
+    if (__kuFinal && typeof __kuFinal === "object" && !Array.isArray(__kuFinal)) {
+      __kuFinal.verdictEngineV1 = buildTenmonVerdictEngineV1({
+        routeReason: String(__kuFinal.routeReason || ""),
+        centerKey: String(__kuFinal.centerKey || __kuFinal.centerMeaning || ""),
+        centerLabel: String(__kuFinal.centerLabel || ""),
+        body: __bodyFinal,
+      });
+      upsertConversationDistillMemoryV1({
+        threadId: String(__out?.threadId || payload?.threadId || ""),
+        centerKey: String(__kuFinal.centerKey || __kuFinal.centerMeaning || ""),
+        routeReason: String(__kuFinal.routeReason || ""),
+        responseText: __bodyFinal,
+      });
+    }
+  } catch {}
 
   return res.json(__out);
 }
@@ -959,14 +979,19 @@ export function applyFinalAnswerConstitutionAndWisdomReducerV1(payload: any): an
       if (__lf.longform) body = __lf.longform;
       (ku as any).tenmonLongformContractV1 = TENMON_LONGFORM_CONTRACT_V1;
       (ku as any).tenmonLongformTraceV1 = {
-        mode: __lf.mode,
+        mode: __lf.mode as import("../../core/tenmonLongformComposerV1.js").TenmonLongformModeV1,
+        requestedLength: __lf.requestedLength,
+        effectiveTargetLength: __lf.effectiveTargetLength,
+        minimumFloor: __lf.minimumFloor,
         centerLockPassed: __lf.centerLockPassed,
+        actualLength: __lf.actualLength,
         outputLength: String(body || "").length,
+        charGatePassed: __lf.charGatePassed,
       };
       const __style = selectTenmonSurfaceStyleV1({
         routeReason: rr,
         rawMessage: userMessageForSurface,
-        mode: __lf.mode,
+        mode: __lf.mode as import("../../core/tenmonLongformComposerV1.js").TenmonLongformModeV1,
         targetLength: __explicitForRepair,
       });
       (ku as any).surfaceStyle = __style.style;
