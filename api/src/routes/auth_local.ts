@@ -73,12 +73,24 @@ function ensureTables() {
   return db;
 }
 
-function setSessionCookie(res: any, sessionId: string) {
+
+function isLocalLikeRequest(req: any): boolean {
+  const host = String(req?.headers?.host ?? "").toLowerCase();
+  const xfproto = String(req?.headers?.["x-forwarded-proto"] ?? "").toLowerCase();
+  return (
+    host.includes("127.0.0.1") ||
+    host.includes("localhost") ||
+    xfproto == "http"
+  );
+}
+
+function setSessionCookie(req: any, res: any, sessionId: string) {
   const isProd = String(process.env.NODE_ENV || "") === "production";
+  const secure = isProd && !isLocalLikeRequest(req);
   res.cookie("auth_session", sessionId, {
     httpOnly: true,
     sameSite: "lax",
-    secure: isProd,
+    secure,
     path: "/",
     maxAge: 1000 * 60 * 60 * 24 * 30,
   });
@@ -119,7 +131,7 @@ authLocalRouter.post("/auth/local/register", (req, res) => {
       throw e;
     }
 
-    setSessionCookie(res, sessionId);
+    setSessionCookie(req, res, sessionId);
     let nextPath = String((req.body as any)?.next ?? "/pwa/").trim();
     if (!nextPath.startsWith("/")) nextPath = "/pwa/";
     return res.json({ ok: true, user: { id: userId, email }, next: nextPath || "/pwa/" });
@@ -167,7 +179,7 @@ authLocalRouter.post("/auth/local/login", (req, res) => {
       throw e;
     }
 
-    setSessionCookie(res, sessionId);
+    setSessionCookie(req, res, sessionId);
     return res.json({
       ok: true,
       authenticated: true,
