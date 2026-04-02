@@ -55,6 +55,8 @@ import { DatabaseSync } from "node:sqlite";
 const router: IRouter = Router();
 // __KANAGI_PHASE_MEM_V2: module-scope phase tracker (per threadId) for NATURAL 4-phase state machine.
 const __kanagiPhaseMemV2 = new Map<string, number>();
+// KANAGI_KU_CACHE_V1: thread別 kanagi 結果キャッシュ（NATURAL早期returnに渡すため）
+const __kanagiKuCache = new Map<string, { kanagiTrace: any; ikiState: string }>();
 // CARD_C7B2_FIX_N2_TRIGGER_AND_LLM_V1
 
 
@@ -871,7 +873,7 @@ const DEF_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。雑談�
       t0.length <= 240;
     const __isSmokeHybridTop = /^smoke-hybrid/i.test(String(threadId || ""));
     // LONGFORM_CHAT_GATE_V1: NATURAL_GENERALでも長文要求を優先処理
-    const __isLongV1Top = /(長文で|長く説明|詳細に|詳しく|くわしく|核心を|とは何か|説明せよ|網羅的に|深く)/u.test(t0);
+    const __isLongV1Top = /(長文で|長く説明|詳細に|詳しく|くわしく|核心を|とは何か|について|説明せよ|網羅的に|深く|潜象|ウタヒ|水火|イキ)/u.test(t0) && /(カタカムナ|言灵|言霊|空海|法華経|kotodama)/iu.test(t0);
     const __explicitLongCharsTop = (() => {
       const m = String(t0 || "").match(/(\d{2,5})\s*(?:字|文字)/u);
       if (!m || !m[1]) return 0;
@@ -1010,8 +1012,9 @@ return res.json(__tenmonGeneralGateResultMaybe({
                 explicitLengthRequested: __explicitLongCharsTop || null,
                 tenmonLongformContractV1: __explicitLongTraceTop ? TENMON_LONGFORM_CONTRACT_V1 : undefined,
                 tenmonLongformTraceV1: __explicitLongTraceTop,
+              ...(__kanagiKuCache.get(String(threadId || "default")) ?? {}),
               }
-            : { routeReason: "NATURAL_GENERAL_LLM_TOP" },
+            : { routeReason: "NATURAL_GENERAL_LLM_TOP", ...(__kanagiKuCache.get(String(threadId || "default")) ?? {}) },
         },
       }));
     }
@@ -3257,6 +3260,36 @@ if (typeof out === "string" && out.trim()) nat.responseText = out.trim();
     // --- /S3_DEBUG_BOX_V1 ---
 
     detailPlan.chainOrder = ["KANAGI_TRACE", "COMPOSE_RESPONSE"];
+// KANAGI_KU_HOOK_V1: trace結果をkuに本線接続
+try {
+  const __iki = (() => {
+    const f = Number((trace as any)?.iki?.fire ?? (trace as any)?.taiyou?.fire ?? 0) || 0;
+    const w = Number((trace as any)?.iki?.water ?? (trace as any)?.taiyou?.water ?? 0) || 0;
+    if (f > 0 && w > 0 && Math.abs(f - w) <= 1) return "BOTH";
+    if (f > w) return "FIRE";
+    if (w > f) return "WATER";
+    return "NEUTRAL";
+  })();
+  const __obs: string[] = [];
+  const __desc = String((trace as any)?.observationCircle?.description ?? "").trim();
+  if (__desc) __obs.push(__desc);
+  for (const u of ((trace as any)?.observationCircle?.unresolved || [])) {
+    const s = String(u ?? "").trim();
+    if (s) { __obs.push(s); if (__obs.length >= 3) break; }
+  }
+  if (!(detailPlan as any).ku) (detailPlan as any).ku = {};
+  (detailPlan as any).ku.kanagiTrace = {
+    observations: __obs.slice(0, 3),
+    spiralState: {
+      depth: Number((trace as any)?.spiral?.depth ?? 0) || 0,
+      nextFactSeed: String((trace as any)?.spiral?.nextFactSeed ?? "").slice(0, 120),
+    },
+    ikiState: __iki,
+  };
+  (detailPlan as any).ku.ikiState = __iki;
+  // cache for NATURAL early-return
+  __kanagiKuCache.set(String(threadId || "default"), { kanagiTrace: (detailPlan as any).ku.kanagiTrace, ikiState: __iki });
+} catch {}
     // M6_INJECTION_V1: inject training rules into detailPlan (deterministic, capped)
     try {
       const mSid = String(message || "").match(/\bsession_id\s*=\s*([A-Za-z0-9_]+)/);
