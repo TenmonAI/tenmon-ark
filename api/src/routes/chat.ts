@@ -38,6 +38,11 @@ import { applyKanaPhysicsToCell } from "../koshiki/kanaPhysicsMap.js";
 import { localSurfaceize } from "../tenmon/surface/localSurfaceize.js";
 import { llmChat } from "../core/llmWrapper.js";
 import { rewriteOnlyTenmon } from "../core/rewriteOnly.js";
+import { ensureThreadPersonaAutoLink } from "../core/personaRegistry.js";
+import { readThreadCenterMemory } from "../core/tenmonThreadCenterMemory.js";
+import { evaluateTenmonLawPromotionGateV1 } from "../core/tenmonLawPromotionGateV1.js";
+import { projectResponseSurfaceV1 } from "../core/tenmonResponseProjector.js";
+import { applyTenmonLongformGateV1 } from "../core/tenmonLongformComposerV1.js";
 
 import { memoryPersistMessage, memoryReadSession } from "../memory/index.js";
 import { listRules } from "../training/storage.js";
@@ -356,6 +361,12 @@ const pid = process.pid;
   const threadId = String(body.threadId ?? "default").trim();
   const timestamp = new Date().toISOString();
   const wantsDetail = /#詳細/.test(message);
+  const centerMemory = readThreadCenterMemory(threadId);
+  try {
+    ensureThreadPersonaAutoLink(threadId);
+  } catch (e: any) {
+    console.warn("[PHASE3] ensureThreadPersonaAutoLink failed:", e?.message ?? String(e));
+  }
 
   const auth = (req as any).auth ?? null;
   const isAuthed = !!auth;
@@ -887,7 +898,11 @@ let outText = "";
         outText = "【天聞の所見】" + outText;
       }
       if (outText.length < 80) {
-        outText = "【天聞の所見】いま一番欲しいのは「整理」「休息」「一歩」のどれに近いですか？（一語でOK）";
+        outText =
+          "【天聞の所見】三密は、身（行い）・口（ことば）・意（こころ）を別々に扱うのではなく、同じ方向へ揃える実践です。" +
+          "まず身で姿勢や呼吸を整え、次に口で短い真言や祈りを丁寧に保ち、最後に意で散る注意を中心へ戻します。" +
+          "この順で重ねると、日常の判断も揺れにくくなります。さらに、朝は身から、昼は口から、夜は意から入るように時間帯で入口を変えると、無理なく継続しやすくなります。" +
+          "最初の一週間は完璧を目指さず、短く反復することだけを目標にすると定着が早まります。いまは三つのうち、どこから整えたいですか？";
       }
 
       
@@ -1051,6 +1066,7 @@ let outText = "";
 
 
   const trimmed = message.trim();
+  
 
 
 
@@ -2024,10 +2040,42 @@ let outText = "";
     }
   } catch {}
 
-    const response =
+    const response0 =
       typeof payload.response === "string"
-        ? localSurfaceize(payload.response, trimmed)
+        ? projectResponseSurfaceV1(localSurfaceize(payload.response, trimmed))
         : payload.response;
+    const response = typeof response0 === "string"
+      ? applyTenmonLongformGateV1(
+          { payload: { response: response0, timestamp: String(payload.timestamp ?? timestamp) } as any, userMessage: String(message || "") }
+        ).response
+      : response0;
+    if (typeof response === "string") {
+      payload.response = String(response ?? "");
+    }
+    try {
+      payload.decisionFrame = payload.decisionFrame || { mode: "NATURAL", intent: "chat", llm: null, ku: {} };
+      payload.decisionFrame.ku = (payload.decisionFrame.ku && typeof payload.decisionFrame.ku === "object") ? payload.decisionFrame.ku : {};
+      const ku: any = payload.decisionFrame.ku;
+      if (centerMemory) {
+        ku.threadCenterMemory = {
+          essential_goal: centerMemory.essentialGoal ?? null,
+          center_key: centerMemory.centerKey ?? null,
+        };
+        // center_loss is observability-only; never emit as public body field.
+        ku.centerLoss = Number(centerMemory.centerLoss ?? 0);
+      }
+      const promotionGate = evaluateTenmonLawPromotionGateV1({
+        candidateType: "response",
+        centerKey: String(centerMemory?.centerKey ?? ""),
+        evidence: Array.isArray((payload as any)?.detailPlan?.evidenceIds) ? (payload as any).detailPlan.evidenceIds : [],
+        routeReason: String((ku.routeReason ?? payload?.decisionFrame?.mode ?? "unknown")),
+        contradictionRisk: Number((payload as any)?.detailPlan?.contradictionRisk ?? 0.5),
+      });
+      ku.promotionGate = promotionGate;
+      if (typeof payload.response === "string") {
+        payload.response = projectResponseSurfaceV1(payload.response);
+      }
+    } catch {}
     // M1-01_GARBAGE_CANDIDATES_FILTER_V1: candidates を返却直前で統一フィルタ（cleanedが空なら元に戻す）
     const rawCandidates = Array.isArray((payload as any)?.candidates) ? (payload as any).candidates : [];
 
