@@ -10,6 +10,7 @@ import {
 import { removeInternalTags } from "../utils/personaOutputFilter";
 import { measurePerformance, logPerformance } from "../config/turboEngineV10";
 import { generateChatResponseWithActivationCentering } from "./activationCenteringHybridEngine";
+import { invokeTenmonEngine } from "./tenmonBridge";
 
 /**
  * Generate AI response with Centerline Protocol + Synaptic Memory
@@ -26,6 +27,33 @@ export async function generateChatResponse(params: {
   const startTime = Date.now(); // Turbo Engine v10: Performance tracking
 
   try {
+    // 0. Tenmon Bridge: api/ の天聞エンジンに問い合わせる
+    const tenmonResult = await invokeTenmonEngine({
+      userMessage: messages[messages.length - 1]?.content || "",
+      conversationHistory: messages.map(m => ({ role: m.role, content: m.content })),
+      userId,
+      language,
+    });
+    if (tenmonResult.bridged) {
+      // 天聞エンジンが応答を返した場合、それを使用する
+      console.log(`[ChatAI] Tenmon Bridge: mode=${tenmonResult.decisionFrame?.mode || "unknown"}`);
+      // Soul Sync + Activation Centering は引き続き適用
+      const soulSyncResponse = await soulSyncArkCore.optimizeChatResponse(userId, tenmonResult.response);
+      const userMessage = messages[messages.length - 1]?.content || "";
+      const activationCenteredResponse = await generateChatResponseWithActivationCentering(
+        userMessage,
+        soulSyncResponse,
+        { priority: "awakening", targetCoherence: 80, structuralLayer: 5 },
+      );
+      await soulSyncArkCore.updateSoulSyncResident(userId, [activationCenteredResponse]);
+      const cleanResponse = removeInternalTags(activationCenteredResponse);
+      const elapsedTime = measurePerformance(startTime);
+      logPerformance('generateChatResponse:tenmonBridge', elapsedTime);
+      return cleanResponse;
+    }
+    // Tenmon Bridge が利用不可の場合、既存フローにフォールバック
+    console.log(`[ChatAI] Tenmon Bridge fallback: ${(tenmonResult as any).reason}`);
+
     // 1. Universal Memory Router からコンテキストを取得
     const conversationId = mapConversationId(userId, 'chat', roomId);
     const universalContext = await getUniversalMemoryContext(userId, 'chat', conversationId, language);
