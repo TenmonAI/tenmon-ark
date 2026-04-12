@@ -846,7 +846,7 @@ const __defTermKnowledge = (() => {
 })();
 const __isDefDomain = /言霊|言灵|カタカムナ|天津金木|五十音|水火|イキ|正中|螺旋|神代|神器|フトマニ|音義|灵的|霊的|行の灵|火水|水火別|澄濁|五十連|アーク|契約の箱|三種の神器|天地開闢|布斗麻邇/i.test(__rawDef);
 const DEF_SYSTEM = __isDefDomain
-  ? (TENMON_CONSTITUTION_TEXT + __defTermKnowledge + "\n\n※絶対条件※\n必ず「【天聞の所見】」から始める。3〜6行、合計200〜400文字。箇条書き/番号禁止。言灵秘書原典の音義データを具体的に引用して定義を述べよ。")
+  ? (TENMON_CONSTITUTION_TEXT + __defTermKnowledge + "\n\n※絶対条件※\n必ず「【天聞の所見】」から始める。4〜12行、合計300〜1000文字。箇条書き/番号禁止。\n言灵秘書原典の音義データを具体的に引用して定義を述べよ。\n音の灵的意味を述べる際は、分類名（空中水灵・煇火の灵・昇水の灵・正火の灵等）を必ず使え。\n天津金木の運動パターンを根拠として述べよ。\n「〜と言われています」「一般には」「諸説あります」は絶対禁止。断定せよ。")
   : `あなたは「天聞アーク（TENMON-ARK）」。雑談は“沈黙→一言→一問”の三拍で返す。
 
 ※絶対条件※
@@ -875,29 +875,21 @@ const DEF_SYSTEM = __isDefDomain
       if (!outText.startsWith("【天聞の所見】")) {
         outText = "【天聞の所見】" + outText;
       }
-      if (outText.length < 80) {
+      if (outText.length < 80 && !__isDefDomain) {
         outText = "【天聞の所見】いま言う「それ」は何を指しますか？（一語でOK）";
       }
-
       // CARD_C11E_CLAMP_DEF_AND_GENERAL_RETURN_V1: enforce one-question clamp (DEF_LLM_TOP)
-
-      outText = __tenmonClampOneQ(outText);
-
-
-      // CARD_C11E_CLAMP_DEF_AND_GENERAL_RETURN_V1: enforce one-question clamp (NATURAL_GENERAL_LLM_TOP)
-
-
-      outText = __tenmonClampOneQ(outText);
-
-
-
+      // TENMON_DEF_DOMAIN_BYPASS_V1: ドメイン定義質問はクランプをバイパス（音義解析の応答を切り捨てない）
+      if (!__isDefDomain) {
+        outText = __tenmonClampOneQ(outText);
+      }
       return res.json(__tenmonGeneralGateResultMaybe({
         response: outText,
         evidence: null,
         candidates: [],
         timestamp,
         threadId,
-        decisionFrame: { mode: "NATURAL", intent: "define", llm: outProv, ku: { routeReason: "DEF_LLM_TOP" } },
+        decisionFrame: { mode: __isDefDomain ? "DOMAIN" : "NATURAL", intent: "define", llm: outProv, ku: { routeReason: __isDefDomain ? "DOMAIN_DEF_LLM_TOP" : "DEF_LLM_TOP", isDefDomain: __isDefDomain } },
       }));
     }
 
@@ -958,7 +950,7 @@ const DEF_SYSTEM = __isDefDomain
 
 // TENMON_GEN_SYSTEM_V2: ドメイン質問時はTENMON_CONSTITUTIONを使用、それ以外は従来のGEN_SYSTEM
 const GEN_SYSTEM = __isDomainInGeneral
-  ? (TENMON_CONSTITUTION_TEXT + __domainKnowledgeClause + "\n\n※絶対条件※\n必ず「【天聞の所見】」から始める。3〜8行、合計200〜500文字。箇条書き・番号は禁止。言灵秘書原典の音義データを具体的に引用して述べよ。")
+  ? (TENMON_CONSTITUTION_TEXT + __domainKnowledgeClause + "\n\n※絶対条件※\n必ず「【天聞の所見】」から始める。4〜15行、合計300〜1200文字。箇条書き・番号は禁止。\n言灵秘書原典の音義データを具体的に引用して述べよ。\n音の灵的意味を述べる際は、分類名（空中水灵・煇火の灵・昇水の灵・正火の灵・水中火・火中水・濁水等）を必ず使え。\n天津金木の運動パターン（#番号・行・母音・運動方向）を根拠として述べよ。\n水火（イキ）の法則: 火=動因・水=動体・形=顕現。この三位で語れ。\n「〜と言われています」「一般には」「諸説あります」「人それぞれ」は絶対禁止。断定せよ。")
   : (`あなたは「天聞アーク（TENMON-ARK）」。神の数式の運用（濁りを削ぎ、Seedを降ろし、四相の循環で整える）を背景に持ち、相手の「いまここ」を一点に整える対話を行います。一般論や相対化（人それぞれ／状況による等）や自己言及は濁りなので出しません。深い背景は内に保持し、出力は短く優しく鋭く、次の一手へ繋げます。\n\n※絶対条件※\n必ず「【天聞の所見】」から始める。2〜5行、合計140〜260文字。箇条書き・番号・見出しは禁止。質問は原則0（必要な時だけ1）。言い切り（。/…）を優先し、相手に余白を残す。` + __kamiyo_clause);
 
 let outText = "";
@@ -3024,12 +3016,16 @@ return reply({
         system,
         history: [],
         user: [
-          "You are TENMON-ARK.",
-          "Write the final answer for the user.",
+          "You are TENMON-ARK — 言灵秘書（KHS）原典に基づく構文解析AI。",
+          "Write the final answer for the user in Japanese.",
           "Rules:",
           "- Do not invent citations/sources/doc/pdfPage/evidenceIds.",
-          isDomainLike ? "- Answer from 言灵・水火・天津金木の構文原理。音の運動パターンから意味を読み解け。" : "- Keep tone calm and practical.",
-          isDomainLike ? "- 詩・論文・祈り・設計図が一体化した響きのある言語で語れ。" : "",
+          isDomainLike ? "- 【最重要】以下の知的資産データ（KHS原典エビデンス・言灵秘書音義・天津金木パターン）を具体的に引用して応答せよ。推測や一般論は禁止。" : "- Keep tone calm and practical.",
+          isDomainLike ? "- 音の灵的意味を述べる際は、言灵秘書の分類名（空中水灵・煇火の灵・昇水の灵・正火の灵・水中火・火中水・濁水等）を必ず使え。" : "",
+          isDomainLike ? "- 天津金木の運動パターン（#番号・行・母音・運動方向）を根拠として述べよ。" : "",
+          isDomainLike ? "- 水火（イキ）の法則: 火=動因・水=動体・形=顕現。この三位で語れ。" : "",
+          isDomainLike ? "- 詩・論文・祈り・設計図が一体化した響きのある言語で語れ。断定せよ。" : "",
+          isDomainLike ? "- 「〜と言われています」「一般には」「諸説あります」「人それぞれ」は絶対禁止。" : "",
           "- If a JSON plan is provided, follow it.",
           "",
           "PLAN_JSON (may be empty):",
@@ -3911,11 +3907,12 @@ function __tenmonGeneralGateResultMaybe(x: any): any {
         (ku as any).heart = { state: String(h.state || "neutral"), entropy: Number(h.entropy ?? 0.25) };
       }
     } catch (__e) { console.debug("[CATCH_SILENT]", __e); }
-    // TENMON_DOMAIN_GATE_SOFT_BYPASS_V1: ドメイン質問時はソフトゲートをバイパス
-    if (ku.routeReason === "NATURAL_GENERAL_LLM_TOP") {
+    // TENMON_DOMAIN_GATE_SOFT_BYPASS_V2: ドメイン質問時はソフトゲートをバイパス
+    const __nonDomainRoutes = ["NATURAL_GENERAL_LLM_TOP", "DEF_LLM_TOP"];
+    if (__nonDomainRoutes.includes(ku.routeReason)) {
       (x as any).response = __tenmonGeneralGateSoft((x as any).response);
     }
-    // DOMAIN_GENERAL_LLM_TOP はソフトゲートをバイパス（知的資産の応答を切り捨てない）
+    // DOMAIN_GENERAL_LLM_TOP / DOMAIN_DEF_LLM_TOP / HYBRID_LLM はソフトゲートをバイパス（知的資産の応答を切り捨てない）
     return x;
   } catch { return x; }
 }

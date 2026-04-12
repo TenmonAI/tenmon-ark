@@ -1,0 +1,24 @@
+{
+  "name": "天聞アーク TENMON-ARK",
+  "short_name": "天聞ARK",
+  "description": "言灵の法則に基づく天聞AI対話システム",
+  "start_url": "/pwa/",
+  "scope": "/pwa/",
+  "display": "standalone",
+  "background_color": "#0b1220",
+  "theme_color": "#1e3a5f",
+  "orientation": "portrait-primary",
+  "lang": "ja",
+  "icons": [
+    {
+      "src": "brand/tenmon-ark-favicon-32.png",
+      "sizes": "32x32",
+      "type": "image/png"
+    },
+    {
+      "src": "brand/tenmon-ark-apple-touch.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    }
+  ]
+}
