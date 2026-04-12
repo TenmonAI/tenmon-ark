@@ -1,5 +1,6 @@
 // LLM ラッパー（天聞アーク人格接続済み）
 // TENMON_PHASE6_5_LLM_WRAPPER_PERSONA_RELINK_V1
+// TENMON_DEEP_ANALYSIS_V3: 深層解析モード対応（動的max_tokens/timeout）
 
 /**
  * LLM 設定（llm.ts の LLM_CONFIG と同一ソースを参照）
@@ -19,20 +20,23 @@ export type LlmChatHistoryItem = {
 
 /**
  * OpenAI Chat Completions API を messages 配列で正しく呼び出す。
- * 旧実装では system/history/user を1つの user メッセージに結合していたため、
- * ロール分離が効いていなかった。この修正で system ロールが正しく機能する。
+ * V3: max_tokens と timeout を動的に指定可能に。
  */
 async function callLLMMessages(
   messages: LlmChatHistoryItem[],
+  opts?: { maxTokens?: number; timeout?: number },
 ): Promise<string | null> {
   if (!WRAPPER_CONFIG.apiKey || WRAPPER_CONFIG.apiKey.trim().length === 0) {
     console.log("[LLM-WRAPPER] API key not configured, returning fallback");
     return "（LLM未設定のため、検索結果ベースで応答します。#詳細 または doc=... pdfPage=... を指定してください）";
   }
 
+  const maxTokens = opts?.maxTokens ?? 2000;
+  const timeoutMs = opts?.timeout ?? WRAPPER_CONFIG.timeout;
+
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), WRAPPER_CONFIG.timeout);
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
     const response = await fetch(
       `${WRAPPER_CONFIG.baseUrl}/chat/completions`,
@@ -46,7 +50,7 @@ async function callLLMMessages(
           model: WRAPPER_CONFIG.model,
           messages,
           temperature: 0.7,
-          max_tokens: 2000,
+          max_tokens: maxTokens,
         }),
         signal: controller.signal,
       },
@@ -85,18 +89,16 @@ async function callLLMMessages(
 /**
  * llmChat — 天聞アーク人格を正しくロール分離して LLM に送信する。
  *
- * 変更点（CARD 39）:
- * 1. system prompt を OpenAI の system ロールとして送信（旧: user ロールに結合）
- * 2. history を assistant/user ロールとして正しく送信
- * 3. generateYouContent（死コード）を削除
- *
- * 呼び出し元（chat.ts）の system 引数には既に天聞人格プロンプトが入っているため、
- * ここでは追加の人格注入は行わない。ロール分離のみを担当する。
+ * V3変更点:
+ * 1. maxTokens / timeout をオプションで指定可能
+ * 2. 深層解析モード時は maxTokens=3500, timeout=25000 を推奨
  */
 export async function llmChat(params: {
   system: string;
   history: LlmChatHistoryItem[];
   user: string;
+  maxTokens?: number;
+  timeout?: number;
 }): Promise<{ text: string; provider: string }> {
   const messages: LlmChatHistoryItem[] = [];
 
@@ -116,7 +118,10 @@ export async function llmChat(params: {
   // 3. user メッセージ
   messages.push({ role: "user", content: params.user });
 
-  const out = await callLLMMessages(messages);
+  const out = await callLLMMessages(messages, {
+    maxTokens: params.maxTokens,
+    timeout: params.timeout,
+  });
 
   if (out === null) {
     return {
