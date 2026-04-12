@@ -7,7 +7,7 @@ const LLM_CONFIG = {
   apiKey: process.env.OPENAI_API_KEY || "",
   baseUrl: process.env.OPENAI_BASE_URL || "https://api.openai.com/v1",
   model: process.env.OPENAI_MODEL || "gpt-4o-mini",
-  timeout: 8000, // 8秒
+  timeout: 15000, // 15秒
 } as const;
 
 /**
@@ -47,7 +47,7 @@ export async function callLLM(prompt: string): Promise<string | null> {
           },
         ],
         temperature: 0.7,
-        max_tokens: 1000,
+        max_tokens: 2000,
       }),
       signal: controller.signal,
     });

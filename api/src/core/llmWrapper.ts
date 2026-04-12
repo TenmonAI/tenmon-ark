@@ -9,7 +9,7 @@ const WRAPPER_CONFIG = {
   apiKey: process.env.OPENAI_API_KEY || "",
   baseUrl: process.env.OPENAI_BASE_URL || "https://api.openai.com/v1",
   model: process.env.OPENAI_MODEL || "gpt-4o-mini",
-  timeout: 8000,
+  timeout: 15000,
 } as const;
 
 export type LlmChatHistoryItem = {
@@ -46,7 +46,7 @@ async function callLLMMessages(
           model: WRAPPER_CONFIG.model,
           messages,
           temperature: 0.7,
-          max_tokens: 1000,
+          max_tokens: 2000,
         }),
         signal: controller.signal,
       },
