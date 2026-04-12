@@ -331,11 +331,11 @@ router.post("/chat", async (req: Request, res: Response<ChatResponseBody>) => {
               if (df.ku.rewriteDelta === undefined) df.ku.rewriteDelta = obj.rewriteDelta;
             }
           }
-        } catch {}
+        } catch (__e) { console.debug("[CATCH_SILENT]", __e); }
         return __origJsonTop(obj);
       };
     }
-  } catch {}
+  } catch (__e) { console.debug("[CATCH_SILENT]", __e); }
 
   const handlerTime = Date.now();
 
@@ -385,13 +385,13 @@ const pid = process.pid;
           if (typeof (globalThis as any).memoryPersistMessage === "function") {
             (globalThis as any).memoryPersistMessage(String(threadId||""), "user", __raw);
           }
-        } catch {}
+        } catch (__e) { console.debug("[CATCH_SILENT]", __e); }
         const resp = "【天聞の所見】合言葉を設定しました。";
         try {
           if (typeof (globalThis as any).memoryPersistMessage === "function") {
             (globalThis as any).memoryPersistMessage(String(threadId||""), "assistant", resp);
           }
-        } catch {}
+        } catch (__e) { console.debug("[CATCH_SILENT]", __e); }
         return res.json({
           response: resp,
           evidence: null,
@@ -467,14 +467,14 @@ const pid = process.pid;
     try {
       const __isTestTid0 = /^(accept|core-seed|bible-smoke)/i.test(String(threadId || ""));
       if (!__isTestTid0 && t0.includes("合言葉")) {
-        try { clearThreadState(threadId); } catch {}
+        try { clearThreadState(threadId); } catch (__e) { console.debug("[CATCH_SILENT]", __e); }
 
         if (wantsPassphraseRecall(t0)) {
           const p = recallPassphraseFromSession(threadId, 120);
           const answer = p
             ? ("【天聞の所見】合言葉は「" + String(p) + "」です。")
             : "【天聞の所見】合言葉が未設定です。先に『合言葉は◯◯です』と教えてください。";
-          try { persistTurn(threadId, t0, answer); } catch {}
+          try { persistTurn(threadId, t0, answer); } catch (__e) { console.debug("[CATCH_SILENT]", __e); }
           return res.json({
             response: answer,
             evidence: null,
@@ -488,7 +488,7 @@ const pid = process.pid;
         const p2 = extractPassphrase(t0);
         if (p2) {
           const answer = "【天聞の所見】登録しました。合言葉は「" + String(p2) + "」です。";
-          try { persistTurn(threadId, t0, answer); } catch {}
+          try { persistTurn(threadId, t0, answer); } catch (__e) { console.debug("[CATCH_SILENT]", __e); }
           return res.json({
             response: answer,
             evidence: null,
@@ -499,7 +499,7 @@ const pid = process.pid;
           } as any);
         }
       }
-    } catch {}
+    } catch (__e) { console.debug("[CATCH_SILENT]", __e); }
     const isTestTid0 = /^(accept|core-seed|bible-smoke)/i.test(tid0);
     // FAST_ACCEPTANCE_RETURN: must respond <1s for acceptance/smoke probes (no LLM/DB)
     if (isTestTid0 && tid0 !== "smoke") {
@@ -694,9 +694,9 @@ const pid = process.pid;
           const db: any = new (DatabaseSync as any)(dbPath, { readOnly: true });
           const stmt: any = db.prepare("SELECT definition FROM kokuzo_glossary WHERE term = ?");
           const row: any = stmt.get(term);
-          try { db.close?.(); } catch {}
+          try { db.close?.(); } catch (__e) { console.debug("[CATCH_SILENT]", __e); }
           return row?.definition ? String(row.definition) : null;
-        } catch {}
+        } catch (__e) { console.debug("[CATCH_SILENT]", __e); }
         return null;
       };
 
@@ -981,7 +981,7 @@ let outText = "";
         },
       }));
     }
-  } catch {}
+  } catch (__e) { console.debug("[CATCH_SILENT]", __e); }
 
   // N1_GREETING_TOP_GUARD_V1: greetings must be handled before any kokuzo/hybrid routing (avoid HEIKE吸い込み)
   try {
@@ -998,7 +998,7 @@ let outText = "";
         decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: { routeReason: "FASTPATH_GREETING_TOP" } },
       } as any);
     }
-  } catch {}
+  } catch (__e) { console.debug("[CATCH_SILENT]", __e); }
 
   // CARD_C3_FASTPATH_IDENTITY_V1: meta questions must get a direct answer (avoid questionnaire loop)
   try {
@@ -1036,7 +1036,7 @@ let outText = "";
         }
       } as any);
     }
-  } catch {}
+  } catch (__e) { console.debug("[CATCH_SILENT]", __e); }
 
   // B1: deterministic menu trigger for acceptance (must work even for GUEST)
   if (String(message ?? "").trim() === "__FORCE_MENU__") {
@@ -1139,7 +1139,7 @@ let outText = "";
         if ((obj as any).rewriteUsed === undefined) (obj as any).rewriteUsed = false;
         if ((obj as any).rewriteDelta === undefined) (obj as any).rewriteDelta = 0;
       }
-    } catch {}
+    } catch (__e) { console.debug("[CATCH_SILENT]", __e); }
 
     // CARD6C_FORCE_KU_RESJSON_V5: always ensure decisionFrame.ku exists + has rewriteUsed/rewriteDelta defaults
     try {
@@ -1151,7 +1151,7 @@ let outText = "";
           // CARD_R1_ROUTE_REASON_V2_MIN: routeReason mirror (observability; NO behavior change)
           try {
             if ((df.ku as any).routeReason === undefined) (df.ku as any).routeReason = String(df.mode ?? "");
-          } catch {}
+          } catch (__e) { console.debug("[CATCH_SILENT]", __e); }
 
           // CARD_P1_GREETING_NO_HYBRID_V1: greetings must never fall into HYBRID (avoid HEIKE吸い込み)
           try {
@@ -1175,7 +1175,7 @@ let outText = "";
               df3.ku = (df3.ku && typeof df3.ku === "object") ? df3.ku : {};
               (df3.ku as any).routeReason = "FASTPATH_GREETING_OVERRIDDEN";
             }
-          } catch {}
+          } catch (__e) { console.debug("[CATCH_SILENT]", __e); }
 
           // CARD_C1_NATURAL_DE_NUMBERIZE_SMALLTALK_V1: soften NATURAL numbered-choice UX for smalltalk only (do NOT touch contracts/Card1)
           try {
@@ -1208,7 +1208,7 @@ let outText = "";
                 (obj as any).response = t;
               }
             }
-          } catch {}
+          } catch (__e) { console.debug("[CATCH_SILENT]", __e); }
 
           // CARD_C2_COLLAPSE_NUMBER_LIST_SMALLTALK_V2: collapse numbered list into one natural question (smalltalk only; keep contracts)
           try {
@@ -1258,7 +1258,7 @@ let outText = "";
                 }
               }
             }
-          } catch {}
+          } catch (__e) { console.debug("[CATCH_SILENT]", __e); }
 
           // CARD_C4_SMALLTALK_WARM_ONE_QUESTION_V1: warm smalltalk response (empathy + support + one question), avoid questionnaire tone
           try {
@@ -1293,12 +1293,12 @@ let outText = "";
                 }
               }
             }
-          } catch {}
+          } catch (__e) { console.debug("[CATCH_SILENT]", __e); }
           if ((df.ku as any).rewriteUsed === undefined) (df.ku as any).rewriteUsed = false;
           if ((df.ku as any).rewriteDelta === undefined) (df.ku as any).rewriteDelta = 0;
         }
       }
-    } catch {}
+    } catch (__e) { console.debug("[CATCH_SILENT]", __e); }
 
     try {
       if (obj && typeof obj === "object" && ("response" in obj)) {
@@ -1365,11 +1365,11 @@ let outText = "";
               df.ku = (df.ku && typeof df.ku === "object") ? df.ku : {};
               (df.ku as any).lengthIntentRaw = q2.slice(0, 180);
             }
-          } catch {}
+          } catch (__e) { console.debug("[CATCH_SILENT]", __e); }
 (df.ku as any).lengthIntent = intent;
             (df.ku as any).lengthTarget = { minChars, maxChars };
           }
-        } catch {}
+        } catch (__e) { console.debug("[CATCH_SILENT]", __e); }
 
         // CARDH_LENGTH_INTENT_APPLY_V1: apply lengthIntent to NATURAL generic fallback only (NO fabrication)
         try {
@@ -1415,7 +1415,7 @@ let outText = "";
           } else {
             // MED: keep as-is
           }
-        } catch {}
+        } catch (__e) { console.debug("[CATCH_SILENT]", __e); }
 
         // CARDH_APPLY_LENGTHINTENT_GENERIC_V2: apply lengthIntent ONLY to NATURAL generic fallback (no evidence fabrication)
         try {
@@ -1505,18 +1505,18 @@ let outText = "";
                 try {
                   const ev = (obj as any)?.evidence;
                   if (ev && ev.doc) { doc = String(ev.doc); page = Number(ev.pdfPage||0); }
-                } catch {}
+                } catch (__e) { console.debug("[CATCH_SILENT]", __e); }
                 try {
                   if (!doc) {
                     const c0 = Array.isArray((obj as any)?.candidates) ? (obj as any).candidates[0] : null;
                     if (c0 && c0.doc) { doc = String(c0.doc); page = Number(c0.pdfPage||0); }
                   }
-                } catch {}
+                } catch (__e) { console.debug("[CATCH_SILENT]", __e); }
                 const hint = (doc && page>0) ? (` doc=${doc} P${page}`) : "";
                 const first = (`【要点】（本文未抽出のため要点保留）${hint}`).slice(0, 160);
                 return (first + "\n" + bodyAll).trimEnd();
               }
-            } catch {}
+            } catch (__e) { console.debug("[CATCH_SILENT]", __e); }
 
             const first = lines[0] || "";
             const rest = lines.slice(1).join("\n");
@@ -1553,10 +1553,10 @@ let outText = "";
             (df.ku as any).voiceGuard = g.reason;
             (df.ku as any).voiceGuardAllow = g.allow;
           }
-        } catch {}
+        } catch (__e) { console.debug("[CATCH_SILENT]", __e); }
 
       }
-    } catch {}
+    } catch (__e) { console.debug("[CATCH_SILENT]", __e); }
         // CARD5_KOKUZO_SEASONING_V2: HYBRID normal reply -> 1-line point + (existing voiced text) + one question
         // Contract:
         // - DO NOT touch #詳細 (transparency)
@@ -1583,7 +1583,7 @@ let outText = "";
               const page = Number(c0.pdfPage);
 
               let snippet = "";
-              try { snippet = String(c0.snippet ?? ""); } catch {}
+              try { snippet = String(c0.snippet ?? ""); } catch (__e) { console.debug("[CATCH_SILENT]", __e); }
               snippet = snippet.replace(/\s+/g, " ").trim();
               if (!snippet || /\[NON_TEXT_PAGE_OR_OCR_FAILED\]/.test(snippet)) snippet = "";
 
@@ -1613,7 +1613,7 @@ let outText = "";
               }
             }
           }
-        } catch {}
+        } catch (__e) { console.debug("[CATCH_SILENT]", __e); }
         // CARD6A_REWRITE_ONLY_PLUMBING_V2: rewrite-only hook (SYNC, default OFF)
         // - NO behavior change unless TENMON_REWRITE_ONLY=1
         // - MUST remain synchronous (no await) to keep wrapper shape safe
@@ -1653,7 +1653,7 @@ let outText = "";
               }
             }
           }
-        } catch {}
+        } catch (__e) { console.debug("[CATCH_SILENT]", __e); }
         // CARD6C_FORCE_KU_V3: ensure decisionFrame.ku carries rewriteUsed/rewriteDelta (never empty)
         try {
           if (obj && typeof obj === "object") {
@@ -1667,7 +1667,7 @@ let outText = "";
               if (rd === undefined) (df.ku as any).rewriteDelta = Number((obj as any).rewriteDelta ?? 0) || 0;
             }
           }
-        } catch {}
+        } catch (__e) { console.debug("[CATCH_SILENT]", __e); }
 
 
 
@@ -1690,7 +1690,7 @@ let outText = "";
           }
         }
       }
-    } catch {}
+    } catch (__e) { console.debug("[CATCH_SILENT]", __e); }
 
     // M6-B0_LIGHT_APPLY_SESSIONID_V1: keep raw message for session_id parsing
     if (payload && payload.rawMessage == null) payload.rawMessage = message;
@@ -1727,7 +1727,7 @@ let outText = "";
               if (dp && Array.isArray(dp.chainOrder)) {
                 if (!dp.chainOrder.includes("WRITER_SEED")) dp.chainOrder.push("WRITER_SEED");
               }
-            } catch {}
+            } catch (__e) { console.debug("[CATCH_SILENT]", __e); }
 
             // MK6_SEED_SUMMARY_V1: append deterministic 3-bullet seed skeleton to response (no LLM)
             try {
@@ -1750,7 +1750,7 @@ let outText = "";
                   }
                 }
               }
-            } catch {}
+            } catch (__e) { console.debug("[CATCH_SILENT]", __e); }
             // observability
             (ku as any).appliedSeedsCount = 1;
             const marks = Array.isArray((ku as any).memoryMarks) ? (ku as any).memoryMarks : [];
@@ -1762,7 +1762,7 @@ let outText = "";
         } else {
           if (typeof (ku as any).appliedSeedsCount !== "number") (ku as any).appliedSeedsCount = 0;
         }
-      } catch {}
+      } catch (__e) { console.debug("[CATCH_SILENT]", __e); }
 
       // M6-B1_USED_ONE_RULE_V1: mark first rule as "used" (ku-only, no body change)
         try {
@@ -1796,13 +1796,13 @@ let outText = "";
                 if (usedArr2.length > 0) marks2.push("M6");
                 if ((ku as any).recallUsed) marks2.push("KOKUZO_RECALL");
                 (ku as any).memoryMarks = marks2;
-              } catch {}
+              } catch (__e) { console.debug("[CATCH_SILENT]", __e); }
             }
           }
-        } catch {}
+        } catch (__e) { console.debug("[CATCH_SILENT]", __e); }
 
         if (Array.isArray(rules)) available = rules.length;
-      } catch {}
+      } catch (__e) { console.debug("[CATCH_SILENT]", __e); }
       const used = Array.isArray(ku.learnedRulesUsed) ? ku.learnedRulesUsed : [];      // MK4_SEED_VISIBILITY_V1: count seeds for this thread (deterministic, sync)
       try {
         const row = (dbPrepare as any)(
@@ -1818,7 +1818,7 @@ let outText = "";
           const next = mm.slice(0);
           if (n > 0 && !next.includes("K2")) next.push("K2");
           (ku as any).memoryMarks = next;
-        } catch {}
+        } catch (__e) { console.debug("[CATCH_SILENT]", __e); }
       } catch {
         if (typeof (ku as any).appliedSeedsCount !== "number") (ku as any).appliedSeedsCount = 0;
       }      // MK4_SEED_VISIBILITY_V2: appliedSeedsCount from kokuzo_seeds (sync, deterministic)
@@ -1835,7 +1835,7 @@ let outText = "";
             const next = marks.slice(0);
             if (n > 0 && !next.includes("K2")) next.push("K2");
             (ku as any).memoryMarks = next;
-          } catch {}
+          } catch (__e) { console.debug("[CATCH_SILENT]", __e); }
         } else {
           if (typeof (ku as any).appliedSeedsCount !== "number") (ku as any).appliedSeedsCount = 0;
         }
@@ -1882,7 +1882,7 @@ let outText = "";
             const next = mm.slice(0);
             if (n2 > 0 && !next.includes("K2")) next.push("K2");
             (ku as any).memoryMarks = next;
-          } catch {}
+          } catch (__e) { console.debug("[CATCH_SILENT]", __e); }
         } else {
           if (typeof (ku as any).appliedSeedsCount !== "number") (ku as any).appliedSeedsCount = 0;
         }
@@ -1912,7 +1912,7 @@ let outText = "";
         (ku as any).llmProviderPlanned = provider;
         (ku as any).llmIntentPlanned = intent;
 
-      } catch {}
+      } catch (__e) { console.debug("[CATCH_SILENT]", __e); }
 
 
 
@@ -1985,7 +1985,7 @@ let outText = "";
           (payload.decisionFrame.ku as any).freeChatHints = [];
         }
 
-} catch {}
+} catch (__e) { console.debug("[CATCH_SILENT]", __e); }
       // DF_DETAILPLAN_MIRROR_V1: always mirror top-level detailPlan into decisionFrame.detailPlan
 
     // AK6_GENESISPLAN_DEBUG_V1: attach genesisPlan template (debug-only, deterministic)
@@ -2020,9 +2020,9 @@ let outText = "";
             payload.decisionFrame.detailPlan = (payload as any).detailPlan;
           }
         }
-      } catch {}
+      } catch (__e) { console.debug("[CATCH_SILENT]", __e); }
     }
-  } catch {}
+  } catch (__e) { console.debug("[CATCH_SILENT]", __e); }
 
     const response =
       typeof payload.response === "string"
@@ -2055,7 +2055,7 @@ let outText = "";
             (df.ku as any).voiceGuard = g.reason;
             (df.ku as any).voiceGuardAllow = !!g.allow;
           }
-        } catch {}
+        } catch (__e) { console.debug("[CATCH_SILENT]", __e); }
 
         if (!g.allow) return txt;
 
@@ -2092,7 +2092,7 @@ let outText = "";
             df.ku = (df.ku && typeof df.ku === "object") ? df.ku : {};
             (df.ku as any).opinionFirst = true;
           }
-        } catch {}
+        } catch (__e) { console.debug("[CATCH_SILENT]", __e); }
         return out;
       } catch {
         return txt;
@@ -2104,7 +2104,7 @@ let outText = "";
       const __tid = String(payload?.threadId ?? threadId ?? "");
       const __df = payload?.decisionFrame ?? null;
     // (disabled) v3 out assignment removed (out may not exist in this reply shape)
-    } catch {}
+    } catch (__e) { console.debug("[CATCH_SILENT]", __e); }
 
 
 
@@ -2125,7 +2125,7 @@ let outText = "";
           (__df.ku as any).voiceGuard = g.reason;
           (__df.ku as any).voiceGuardAllow = !!g.allow;
         }
-      } catch {}
+      } catch (__e) { console.debug("[CATCH_SILENT]", __e); }
 
       if (g.allow) {
         const mode = String(__df?.mode ?? "");
@@ -2166,18 +2166,18 @@ let outText = "";
           if (!endsQ) {
             payload.response = cur + "\n\n一点だけ。どこを確かめますか？";
           }
-        } catch {}
+        } catch (__e) { console.debug("[CATCH_SILENT]", __e); }
 try {
                 if (__df && typeof __df === "object") {
                   __df.ku = (__df.ku && typeof __df.ku === "object") ? __df.ku : {};
                   (__df.ku as any).opinionFirst = true;
                 }
-              } catch {}
+              } catch (__e) { console.debug("[CATCH_SILENT]", __e); }
             }
           }
         }
       }
-    } catch {}
+    } catch (__e) { console.debug("[CATCH_SILENT]", __e); }
     // CARD6C_REPLY_DEFAULT_V4: ensure rewriteUsed/rewriteDelta always exist in decisionFrame.ku (default false/0)
     try {
       payload.decisionFrame = payload.decisionFrame || { mode: "NATURAL", intent: "chat", llm: null, ku: {} };
@@ -2186,7 +2186,7 @@ try {
 
       if (ku.rewriteUsed === undefined) ku.rewriteUsed = false;
       if (ku.rewriteDelta === undefined) ku.rewriteDelta = 0;
-    } catch {}
+    } catch (__e) { console.debug("[CATCH_SILENT]", __e); }
 
 
 return res.json(__tenmonGeneralGateResultMaybe({
@@ -2433,7 +2433,7 @@ return res.json(__tenmonGeneralGateResultMaybe({
               };
             }
           }
-        } catch {}
+        } catch (__e) { console.debug("[CATCH_SILENT]", __e); }
 
 if (usable.length === 0) {
         const question = "いま一番困っているのは、(1) 情報の量、(2) 優先順位、(3) 期限の圧力――どれが一番近い？";
@@ -2654,7 +2654,7 @@ if (usable.length === 0) {
         try {
           const g = (typeof __voiceGuard === "function") ? __voiceGuard(raw, tid) : null;
           vgAllow = g ? !!g.allow : true;
-        } catch {}
+        } catch (__e) { console.debug("[CATCH_SILENT]", __e); }
         if (!isSmoke && vgAllow && !wantsDetailHere && !hasDocHere && !isCmd && !isLow) {
           if (typeof nat.responseText === "string" && nat.responseText.trim().length >= 8) {
             const r = await rewriteOnlyTenmon(nat.responseText, raw);
@@ -2665,7 +2665,7 @@ if (usable.length === 0) {
           }
         }
       }
-    } catch {}
+    } catch (__e) { console.debug("[CATCH_SILENT]", __e); }
 
     
     // N2_KANAGI_4PHASE_V1: Kanagi 4-phase micro state machine to avoid template repetition (NATURAL only)
@@ -2682,7 +2682,7 @@ if (usable.length === 0) {
           for (const row of mem) {
             if (row && (row as any).role === "user") ucount++;
           }
-        } catch {}
+        } catch (__e) { console.debug("[CATCH_SILENT]", __e); }
         const phase = (ucount % 4);
         const phaseName = phase === 0 ? "SENSE" : phase === 1 ? "NAME" : phase === 2 ? "ONE_STEP" : "NEXT_DOOR";
 
@@ -2714,9 +2714,9 @@ if (usable.length === 0) {
         try {
           (nat as any).ku = (nat as any).ku || {};
           (nat as any).ku.kanagiPhase = phaseName;
-        } catch {}
+        } catch (__e) { console.debug("[CATCH_SILENT]", __e); }
       }
-    } catch {}
+    } catch (__e) { console.debug("[CATCH_SILENT]", __e); }
 return reply({
       response: nat.responseText,
       evidence: null,
@@ -2780,7 +2780,7 @@ return reply({
         });
       }
     }
-  } catch {}
+  } catch (__e) { console.debug("[CATCH_SILENT]", __e); }
 
   // LLM_CHAT_ENTRY_V1: 通常会話はLLMへ（根拠要求/資料指定は除外）
   // GUEST_BLOCK_SKIP_JA_V1: Japanese free chat should not be routed to LLM_CHAT (so guests won't be blocked)
@@ -2974,7 +2974,7 @@ return reply({
             const g = __voiceGuard(__raw, __tid);
             __allow = !!g.allow;
           }
-        } catch {}
+        } catch (__e) { console.debug("[CATCH_SILENT]", __e); }
 
         if (__rewriteReq && __allow && !__isSmoke && !__isCmd && !__hasDocLocal && !__wantsDetailLocal && !__isLowSignal) {
           const draft = String(nat.responseText || "").trim();
@@ -2986,11 +2986,11 @@ return reply({
           const __after = String(out || "").trim();
           const __used = (__after && __after !== __before);
           const __delta = (__after.length - __before.length);
-          try { (nat as any).rewriteUsed = __used; (nat as any).rewriteDelta = __delta; } catch {}
+          try { (nat as any).rewriteUsed = __used; (nat as any).rewriteDelta = __delta; } catch (__e) { console.debug("[CATCH_SILENT]", __e); }
 if (typeof out === "string" && out.trim()) nat.responseText = out.trim();
           }
         }
-      } catch {}
+      } catch (__e) { console.debug("[CATCH_SILENT]", __e); }
 
 
       return reply({
@@ -3114,7 +3114,7 @@ if (typeof out === "string" && out.trim()) nat.responseText = out.trim();
       } : null;
     }
     (detailPlan as any).debug = dbg;
-  } catch (_e) {}
+  } catch (_e) { console.debug("[CATCH_SILENT]", _e); }
   } catch (_e) {
     if (!(detailPlan as any).debug) (detailPlan as any).debug = {};
     (detailPlan as any).debug.koshiki = { cellsCount: 0, breathCycle: (detailPlan as any).debug?.breathCycle || [], warnings: (detailPlan as any).warnings || [], kanaPhysicsMapOk: false };
@@ -3160,7 +3160,7 @@ if (typeof out === "string" && out.trim()) nat.responseText = out.trim();
         // also surface deterministic counters in ku (if present later)
         (detailPlan as any).appliedRulesCount = picked.length;
       }
-    } catch {}
+    } catch (__e) { console.debug("[CATCH_SILENT]", __e); }
 
     if (trace && Array.isArray((trace as any).violations) && (trace as any).violations.length) {
       detailPlan.warnings = (trace as any).violations.map((v: any) => String(v));
@@ -3334,7 +3334,7 @@ if (__hasMenu && !__askedMenu) {
             // surface deterministic flags for observability
             const df = (body as any)?.decisionFrame ?? null;
             // we can't rely on df here; we'll attach in reply payload below
-          } catch {}
+          } catch (__e) { console.debug("[CATCH_SILENT]", __e); }
           return reply({
             response:
               "（候補は見つかりましたが、先頭候補のページが非テキスト/復号失敗でした）\n\n" +
@@ -3421,10 +3421,10 @@ if (__hasMenu && !__askedMenu) {
         const page0 = Number(c0?.pdfPage ?? 0);
         if (doc0 && Number.isFinite(page0) && page0 > 0) {
           evidence = { doc: doc0, pdfPage: page0, quote: "" };
-          try { (detailPlan as any).evidence = evidence; } catch {}
+          try { (detailPlan as any).evidence = evidence; } catch (__e) { console.debug("[CATCH_SILENT]", __e); }
         }
       }
-    } catch {}
+    } catch (__e) { console.debug("[CATCH_SILENT]", __e); }
     
     // - NO fabrication: uses candidates[0].doc/pdfPage only
     
@@ -3468,11 +3468,11 @@ if (__hasMenu && !__askedMenu) {
     
           }
     
-        } catch {}
+        } catch (__e) { console.debug("[CATCH_SILENT]", __e); }
     
       }
     
-    } catch {}
+    } catch (__e) { console.debug("[CATCH_SILENT]", __e); }
 
     if (isDomainQuestion && evidenceDoc && evidencePdfPage !== null) {
       evidence = {
@@ -3601,7 +3601,7 @@ if (__hasMenu && !__askedMenu) {
               point = String(c0.snippet || "").replace(/\s+/g, " ").slice(0, 96).trim();
             }
           }
-        } catch {}
+        } catch (__e) { console.debug("[CATCH_SILENT]", __e); }
 
         if (!point) {
           point = String(finalResponse || "").replace(/\s+/g, " ").slice(0, 96).trim();
@@ -3623,7 +3623,7 @@ if (__hasMenu && !__askedMenu) {
 
         // Keep evidenceIds/evidence behavior unchanged (CardF already handles evidenceIds safely)
       }
-    } catch {}
+    } catch (__e) { console.debug("[CATCH_SILENT]", __e); }
 
     return reply({
       response: finalResponse,
@@ -3769,14 +3769,14 @@ function __tenmonGeneralGateResultMaybe(x: any): any {
         (x as any).response = __tenmonCompassionWrapV2((x as any).response, h);
         (x as any).response = __tenmonSupportSanitizeV1((x as any).response);
       }
-    } catch {}
+    } catch (__e) { console.debug("[CATCH_SILENT]", __e); }
 
     try {
       const h = __tenmonLastHeart;
       if (h && typeof h === "object") {
         (ku as any).heart = { state: String(h.state || "neutral"), entropy: Number(h.entropy ?? 0.25) };
       }
-    } catch {}
+    } catch (__e) { console.debug("[CATCH_SILENT]", __e); }
     if (ku.routeReason === "NATURAL_GENERAL_LLM_TOP") {
       (x as any).response = __tenmonGeneralGateSoft((x as any).response);
     }
