@@ -121,6 +121,31 @@ function schemaFilesFor(kind: DbKind): string[] {
   return ["approval_schema.sql", "audit_schema.sql"];
 }
 
+function applyFts5Schema(database: DatabaseSync): void {
+  const __filename = fileURLToPath(import.meta.url);
+  const __dirname = path.dirname(__filename);
+  const ftsFile = path.join(__dirname, "kokuzo_fts_schema.sql");
+  
+  if (!fs.existsSync(ftsFile)) {
+    console.log(`[DB-FTS5] FTS5 schema file not found: ${ftsFile}, skipping`);
+    return;
+  }
+  
+  try {
+    const sql = fs.readFileSync(ftsFile, "utf8");
+    database.exec(sql);
+    console.log(`[DB-FTS5] \u2705 FTS5 schema applied successfully`);
+  } catch (e: any) {
+    const msg = e?.message || String(e);
+    if (msg.includes("fts5") || msg.includes("no such module")) {
+      console.warn(`[DB-FTS5] \u26a0\ufe0f FTS5 not available in this Node.js build. Full-text search disabled.`);
+      console.warn(`[DB-FTS5] To enable FTS5, use better-sqlite3 or a Node.js build with FTS5 support.`);
+    } else {
+      console.warn(`[DB-FTS5] \u26a0\ufe0f FTS5 schema failed (non-fatal): ${msg}`);
+    }
+  }
+}
+
 function applySchemas(database: DatabaseSync, kind: DbKind): void {
   // dist 実行でも参照できるパス（dist/db/*.sql を読む）
   const __filename = fileURLToPath(import.meta.url);
@@ -215,6 +240,11 @@ export function getDb(kind: DbKind): DatabaseSync {
   });
 
   applySchemas(database, kind);
+
+  // FTS5 schema (optional, applied separately with error handling)
+  if (kind === "kokuzo") {
+    applyFts5Schema(database);
+  }
 
   // schema apply が終わった時点で DB ready
   markDbReady(kind);
