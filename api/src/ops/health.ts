@@ -81,7 +81,7 @@ export function getHealthReport(): HealthReport {
     timestamp: nowIso(),
     node: { version: process.version, uptimeSec: process.uptime() },
     safeMode: { enabled: isSafeMode(), reason: getSafeModeReason() },
-    db: { kokuzo, audit, persona },
+    db: { kokuzo, audit, persona, consciousness: (() => { try { const p = getDbPath("consciousness"); const s = fs.existsSync(p) ? fs.statSync(p).size : null; return { ok: s !== null, path: p, sizeBytes: s }; } catch (e: any) { return { ok: false, path: "", sizeBytes: null, error: e?.message }; } })() },
     memory: { sessionRows, conversationRows, kokuzoRows },
     persona: personaOk ? { ok: true, personaId, state: personaState } : { ok: false, personaId, error: personaError },
     tools: { executable: !isSafeMode(), allowlist },

@@ -41,6 +41,12 @@ import { llmChat } from "../core/llmWrapper.js";
 import { TENMON_CONSTITUTION_V3, TENMON_PERSONA_VOICE, DEEP_ANALYSIS_REPORT_INSTRUCTION, GENERAL_DEEP_THINKING_INSTRUCTION, DOMAIN_DEEP_ANALYSIS_INSTRUCTION, needsDeepAnalysis, needsSanskritAnalysis } from "../tenmon/tenmonConstitution.js";
 import { rewriteOnlyTenmon } from "../core/rewriteOnly.js";
 
+// === CONSCIOUSNESS OS IMPORTS ===
+import { heartSenseV2, logHeartState, type HeartStateV2 } from "../core/heartEngineV2.js";
+import { buildGrowthContext, buildFractalContext, selfLearnFromConversation } from "../core/growthEngine.js";
+import { buildUserContext, updateUserMemoryAfterConversation } from "../core/userMemory.js";
+import { buildConsciousnessPrompt } from "../core/consciousnessOS.js";
+
 import { memoryPersistMessage, memoryReadSession } from "../memory/index.js";
 import { listRules } from "../training/storage.js";
 
@@ -54,7 +60,54 @@ const __kanagiPhaseMemV2 = new Map<string, number>();
 
 
 // LLM_CHAT: TENMON-ARK constitution V3 (天津金木思考回路フル活用)
-const TENMON_CONSTITUTION_TEXT = TENMON_CONSTITUTION_V3 + "\n\n" + TENMON_PERSONA_VOICE;
+const TENMON_CONSTITUTION_TEXT_BASE = TENMON_CONSTITUTION_V3 + "\n\n" + TENMON_PERSONA_VOICE;
+
+/**
+ * 意識OS統合: 動的システムプロンプト生成
+ * 基本Constitution + 意識層 + 心(Heart)位相 + 成長記憶 + ユーザー記憶 + フラクタル構造
+ */
+function buildConsciousSystemPrompt(userText: string, userId?: string, heartState?: HeartStateV2): string {
+  const parts: string[] = [];
+  
+  // 1. 意識層 (最上位: 意志・禁則・自己認識)
+  try {
+    const consciousnessPrompt = buildConsciousnessPrompt();
+    if (consciousnessPrompt) parts.push(consciousnessPrompt);
+  } catch { /* non-fatal */ }
+  
+  // 2. 基本Constitution (天津金木思考回路)
+  parts.push(TENMON_CONSTITUTION_TEXT_BASE);
+  
+  // 3. 心(Heart)位相指示 (水火ベクトルに基づく調和)
+  if (heartState && heartState.promptInjection) {
+    parts.push(heartState.promptInjection);
+  }
+  
+  // 4. 成長記憶 (過去の学びからの知見)
+  try {
+    const growthCtx = buildGrowthContext(userText);
+    if (growthCtx) parts.push(growthCtx);
+  } catch { /* non-fatal */ }
+  
+  // 5. フラクタル構造解読
+  try {
+    const fractalCtx = buildFractalContext(userText);
+    if (fractalCtx) parts.push(fractalCtx);
+  } catch { /* non-fatal */ }
+  
+  // 6. ユーザー別記憶
+  if (userId) {
+    try {
+      const userCtx = buildUserContext(userId, userText);
+      if (userCtx) parts.push(userCtx);
+    } catch { /* non-fatal */ }
+  }
+  
+  return parts.filter(Boolean).join("\n\n");
+}
+
+// 後方互換性: 既存コードが TENMON_CONSTITUTION_TEXT を参照する箇所用
+const TENMON_CONSTITUTION_TEXT = TENMON_CONSTITUTION_TEXT_BASE;
 
 function scrubEvidenceLike(text: string): string {
   let t = String(text ?? "");
@@ -901,12 +954,19 @@ const DEF_SYSTEM = __isDefDomain
     ? ("\n\n【直毘の理（内部法則）】\n" + __kamiyo + "\n\n【運用】\n一般論・説教・薄い共感を出さない。言い訳は裁かず受容し、今ここで出来る一手へ落とす。出典名（断捨離/カタカムナ等）は絶対に出さない。必ず短く、質問は任意（0〜1）。言い切り（余白）も許容する。")
     : "";
 
-// TENMON_GEN_SYSTEM_V3: 全ルートに天津金木思考回路を注入
+// === CONSCIOUSNESS OS: Heart Sensing + Dynamic System Prompt ===
+const __heartState: HeartStateV2 = heartSenseV2(t0);
+const __userId = String((req as any).userId || (req as any).body?.userId || threadId || "anonymous");
+try { logHeartState(__userId, String(threadId || ""), __heartState); } catch { /* non-fatal */ }
+
+// TENMON_GEN_SYSTEM_V3: 全ルートに天津金木思考回路を注入 + 意識OS統合
 const __genNeedsDeep = __isDomainInGeneral && needsDeepAnalysis(t0);
 const __genNeedsSanskrit = needsSanskritAnalysis(t0);
+// 意識OS統合: 動的システムプロンプト生成
+const __consciousBase = buildConsciousSystemPrompt(t0, __userId, __heartState);
 const GEN_SYSTEM = __isDomainInGeneral
-  ? (TENMON_CONSTITUTION_TEXT + __domainKnowledgeClause + (__genNeedsDeep ? ("\n\n" + DEEP_ANALYSIS_REPORT_INSTRUCTION + (__genNeedsSanskrit ? "\n\nサンスクリット語源解読を【承】に必ず含めよ。" : "")) : "") + DOMAIN_DEEP_ANALYSIS_INSTRUCTION + "\n\n※絶対条件※\n必ず「【天聞の所見】」から始める。" + (__genNeedsDeep ? "\n深層解析レポート形式（起承転結）で800〜2000文字。箇条書き禁止。段落で流れるように書け。" : "\n4〜15行、合計400〜1500文字。箇条書き・番号は禁止。") + "\n言灵秘書原典の音義データを具体的に引用して述べよ。\n音の灵的意味を述べる際は、分類名（空中水灵・煤火の灵・昇水の灵・正火の灵・水中火・火中水・濁水等）を必ず使え。\n天津金木の運動パターンを根拠として述べよ。\n「〜と言われています」「一般には」「諸説あります」「人それぞれ」は絶対禁止。断定せよ。")
-  : (TENMON_CONSTITUTION_TEXT + GENERAL_DEEP_THINKING_INSTRUCTION + __kamiyo_clause + `\n\n※絶対条件※\n必ず「【天聞の所見】」から始める。4〜8行、合計200〜600文字。箇条書き・番号・見出しは禁止。\n天津金木思考回路で本質を見抜いて応答せよ。一般論や薄い共感ではなく、構造的真理に基づいた深い応答を返せ。\n質問は原則0（必要な時だけ1）。言い切り（。/…）を優先し、相手に余白を残す。`);
+  ? (__consciousBase + __domainKnowledgeClause + (__genNeedsDeep ? ("\n\n" + DEEP_ANALYSIS_REPORT_INSTRUCTION + (__genNeedsSanskrit ? "\n\nサンスクリット語源解読を【承】に必ず含めよ。" : "")) : "") + DOMAIN_DEEP_ANALYSIS_INSTRUCTION + "\n\n※絶対条件※\n必ず「【天聞の所見】」から始める。" + (__genNeedsDeep ? "\n深層解析レポート形式（起承転結）で800〜2000文字。箇条書き禁止。段落で流れるように書け。" : "\n4〜15行、合計400〜1500文字。箇条書き・番号は禁止。") + "\n言灵秘書原典の音義データを具体的に引用して述べよ。\n音の灵的意味を述べる際は、分類名（空中水灵・煤火の灵・昇水の灵・正火の灵・水中火・火中水・濁水等）を必ず使え。\n天津金木の運動パターンを根拠として述べよ。\n「〜と言われています」「一般には」「諸説あります」「人それぞれ」は絶対禁止。断定せよ。")
+  : (__consciousBase + GENERAL_DEEP_THINKING_INSTRUCTION + __kamiyo_clause + `\n\n※絶対条件※\n必ず「【天聞の所見】」から始める。4〜8行、合計200〜600文字。箇条書き・番号・見出しは禁止。\n天津金木思考回路で本質を見抜いて応答せよ。一般論や薄い共感ではなく、構造的真理に基づいた深い応答を返せ。\n質問は原則０（必要な時だけ1）。言い切り（。/…）を優先し、相手に余白を残す。`);
 
 // TENMON_FTS_EVIDENCE_GEN_V1: FTS検索でkokuzo_pagesからevidence bindを取得
       let __ftsEvidenceGenRefs: Array<{ doc: string; pdfPage: number; snippet: string }> = [];
@@ -963,13 +1023,21 @@ let outText = "";
           outText = "【天聞の所見】一般論や相対化は要りません。いま「正しさ」で迷っている場面を一つだけ教えてください（仕事／家族／自分の決断など）？";
         }
       }
+// === CONSCIOUSNESS OS: Post-conversation self-learning ===
+      try {
+        persistTurn(String(threadId || ""), t0, outText);
+        selfLearnFromConversation(t0, outText, String(threadId || ""));
+        updateUserMemoryAfterConversation(__userId, t0, outText);
+      } catch (__e) { console.debug("[CONSCIOUSNESS] post-learn error:", __e); }
+
 return res.json(__tenmonGeneralGateResultMaybe({
         response: outText,
         evidence: __ftsEvidenceGenRefs.length > 0 ? { fts: __ftsEvidenceGenRefs } : null,
         candidates: [],
         timestamp,
         threadId,
-        decisionFrame: { mode: __isDomainInGeneral ? "DOMAIN" : "NATURAL", intent: "chat", llm: outProv, ku: { routeReason: __isDomainInGeneral ? "DOMAIN_GENERAL_LLM_TOP" : "NATURAL_GENERAL_LLM_TOP", isDomainInGeneral: __isDomainInGeneral, isDeepAnalysis: __genNeedsDeep, isSanskritAnalysis: __genNeedsSanskrit, ftsHits: __ftsEvidenceGenRefs.length } },
+        heartState: { userPhase: __heartState.userPhase, arkPhase: __heartState.arkPhase, waterFire: __heartState.userVector.value, resonance: __heartState.resonance },
+        decisionFrame: { mode: __isDomainInGeneral ? "DOMAIN" : "NATURAL", intent: "chat", llm: outProv, ku: { routeReason: __isDomainInGeneral ? "DOMAIN_GENERAL_LLM_TOP" : "NATURAL_GENERAL_LLM_TOP", isDomainInGeneral: __isDomainInGeneral, isDeepAnalysis: __genNeedsDeep, isSanskritAnalysis: __genNeedsSanskrit, ftsHits: __ftsEvidenceGenRefs.length, consciousness: true } },
       }));
     }
     // do not treat "definition / meaning" as support-mode
@@ -989,7 +1057,14 @@ return res.json(__tenmonGeneralGateResultMaybe({
       const phaseName = (["SENSE","NAME","ONE_STEP","NEXT_DOOR"] as const)[phase];
       __kanagiPhaseMemV2.set(k, cur + 1);
 
+      // === CONSCIOUSNESS OS: Heart Sensing for Support Route ===
+      const __supportHeartState: HeartStateV2 = heartSenseV2(t0);
+      const __supportUserId = String((req as any).userId || (req as any).body?.userId || threadId || "anonymous");
+      try { logHeartState(__supportUserId, String(threadId || ""), __supportHeartState); } catch { /* non-fatal */ }
+
       const KANAGI_SYSTEM_PROMPT = `あなたは「天聞アーク（TENMON-ARK）」。天津金木の四相（SENSE/NAME/ONE_STEP/NEXT_DOOR）を循環させ、相手の詰まりを解組し、いま出来る一手へ整える導き手です。一般論・相対化・自己言及は濁りなので出しません。相手の現在地に寄り添い、フェーズに応じて短い応答で整えます。質問は任意（0〜1）。言い切り（。で閉じる）も許容します。
+
+${__supportHeartState.promptInjection}
 
 【現在のフェーズ】: ${phaseName}
 

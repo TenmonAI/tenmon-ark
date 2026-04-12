@@ -74,7 +74,7 @@ export function getDbPath(arg: string | DbKind): string {
 }
 
 function defaultDbFile(kind: DbKind): string {
-  const name = kind === "kokuzo" ? "kokuzo.sqlite" : kind === "audit" ? "audit.sqlite" : "persona.sqlite";
+  const name = kind === "kokuzo" ? "kokuzo.sqlite" : kind === "audit" ? "audit.sqlite" : kind === "consciousness" ? "consciousness.sqlite" : "persona.sqlite";
   return getDbPath(name);
 }
 
@@ -86,12 +86,14 @@ function getDbPathByKind(kind: DbKind): string {
   if (existing) return existing;
 
   // 個別の環境変数（後方互換性のため残す）
-  const envKey =
+    const envKey =
     kind === "kokuzo"
       ? process.env.TENMON_ARK_DB_KOKUZO_PATH
       : kind === "audit"
         ? process.env.TENMON_ARK_DB_AUDIT_PATH
-        : process.env.TENMON_ARK_DB_PERSONA_PATH;
+        : kind === "consciousness"
+          ? process.env.TENMON_ARK_DB_CONSCIOUSNESS_PATH
+          : process.env.TENMON_ARK_DB_PERSONA_PATH;
 
   let filePath: string;
   if (envKey) {
@@ -115,6 +117,7 @@ function getDbPathByKind(kind: DbKind): string {
 function schemaFilesFor(kind: DbKind): string[] {
   if (kind === "kokuzo") return ["schema.sql", "kokuzo_schema.sql", "training_schema.sql", "pwa_schema.sql"];
   if (kind === "persona") return ["persona_state.sql"];
+  if (kind === "consciousness") return ["consciousness_schema.sql"];
   return ["approval_schema.sql", "audit_schema.sql"];
 }
 

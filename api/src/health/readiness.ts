@@ -1,5 +1,5 @@
 // api/src/health/readiness.ts
-export type DbKind = "kokuzo" | "audit" | "persona";
+export type DbKind = "kokuzo" | "audit" | "persona" | "consciousness";
 
 type State = {
   listenReady: boolean;
@@ -10,7 +10,7 @@ type State = {
 
 const state: State = {
   listenReady: false,
-  dbReady: { kokuzo: false, audit: false, persona: false },
+  dbReady: { kokuzo: false, audit: false, persona: false, consciousness: false },
   kokuzoVerified: false,
   startedAt: Date.now(),
 };
@@ -34,6 +34,7 @@ export function getReadiness() {
     state.dbReady.kokuzo &&
     state.dbReady.audit &&
     state.dbReady.persona &&
+    state.dbReady.consciousness &&
     state.kokuzoVerified;
   // "どこで止まってるか"が一目で分かる stage
   let stage = "READY";
@@ -41,6 +42,7 @@ export function getReadiness() {
   else if (!state.dbReady.kokuzo) stage = "WAIT_DB_KOKUZO";
   else if (!state.dbReady.audit) stage = "WAIT_DB_AUDIT";
   else if (!state.dbReady.persona) stage = "WAIT_DB_PERSONA";
+  else if (!state.dbReady.consciousness) stage = "WAIT_DB_CONSCIOUSNESS";
   else if (!state.kokuzoVerified) stage = "WAIT_KOKUZO_VERIFY";
 
   return {

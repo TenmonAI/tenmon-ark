@@ -381,6 +381,9 @@ importers:
       express:
         specifier: ^4.21.2
         version: 4.21.2
+      jose:
+        specifier: ^6.2.2
+        version: 6.2.2
       kuromoji:
         specifier: ^0.1.2
         version: 0.1.2
@@ -4515,6 +4518,9 @@ packages:
 
   jose@6.1.0:
     resolution: {integrity: sha512-TTQJyoEoKcC1lscpVDCSsVgYzUDg/0Bt3WE//WiTPK6uOCQC2KZS4MpugbMWt/zyjkopgZoXhZuCi00gLudfUA==}
+
+  jose@6.2.2:
+    resolution: {integrity: sha512-d7kPDd34KO/YnzaDOlikGpOurfF0ByC2sEV4cANCtdqLlTfBlw2p14O/5d/zv40gJPbIQxfES3nSx1/oYNyuZQ==}
 
   js-tiktoken@1.0.21:
     resolution: {integrity: sha512-biOj/6M5qdgx5TKjDnFT1ymSpM5tbd3ylwDtrQvFQSu0Z7bBYko2dF+W/aUkXUPuk6IVpRxk/3Q2sHOzGlS36g==}
@@ -10895,6 +10901,8 @@ snapshots:
   jiti@2.6.1: {}
 
   jose@6.1.0: {}
+
+  jose@6.2.2: {}
 
   js-tiktoken@1.0.21:
     dependencies:

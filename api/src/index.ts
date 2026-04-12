@@ -26,6 +26,7 @@ import { authRouter } from "./routes/auth.js";
 import { meRouter } from "./routes/me.js";
 import { registerFounderAuth } from "./routes/auth_founder.js";
 import { markListenReady } from "./health/readiness.js";
+import { initConsciousnessOS } from "./core/consciousnessOS.js";
 import { getDb } from "./db/index.js";
 import koshikiConsoleRouter from "./routes/koshikiConsole.js";
 
@@ -88,6 +89,15 @@ try {
 } catch (e: any) {
   console.error(`[DB-INIT] FATAL: persona init failed pid=${pid} uptime=${uptime}s:`, e);
   process.exit(1);
+}
+
+try {
+  getDb("consciousness");
+  initConsciousnessOS();
+  console.log(`[DB-INIT] consciousness ready pid=${pid} uptime=${uptime}s`);
+} catch (e: any) {
+  console.error(`[DB-INIT] WARNING: consciousness init failed pid=${pid} uptime=${uptime}s:`, e);
+  // Non-fatal: consciousness is additive, not required for basic operation
 }
 
 app.use(cors());
