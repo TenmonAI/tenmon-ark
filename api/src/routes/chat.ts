@@ -917,7 +917,11 @@ const DEF_SYSTEM = __isDefDomain
     if (__generalOk && !__isSmokeHybridTop) {
       
   // TENMON_DOMAIN_DETECT_GENERAL_V1: NATURAL_GENERAL内でもドメイン質問を検出
+  // SUKUYOU_DETECT_V1: 宿曜経関連キーワードの検出
+  const __isSukuyouQuery = /宿曜|しゅくよう|命宿|本命宿|二十七宿|三九法|相性診断|鑑定|占い|運勢|宿命|十二宮|七曜|九星|旧暦|躰と用|たいとよう|命宮|直宿|遊年|八卦|角宿|亢宿|氐宿|房宿|心宿|尾宿|箕宿|斗宿|女宿|虚宿|危宿|室宿|壁宿|奎宿|婁宿|胃宿|昴宿|畢宿|觜宿|参宿|井宿|鬼宿|柳宿|星宿|張宿|翼宿|軫宿|ナクシャトラ|密教占星/.test(t0);
+
   const __isDomainInGeneral = (
+    __isSukuyouQuery ||
     /言霊|言灵|ことだま|コトダマ|カタカムナ|天津金木|あまつかなぎ|古事記|法華経|真言|フトマニ|五十音|水火|イキ|正中|螺旋|神代|国産み|神器|曼荼羅|般若心経|天之御中主|音義|音の意味|灵的|霊的|行の灵|火水|水火別|澄濁|五十連|十行|ア行|カ行|サ行|タ行|ナ行|ハ行|マ行|ヤ行|ラ行|ワ行|母音|子音|アーク|契約の箱|三種の神器|天地開闢|布斗麻邇|ヒフミヨイムナ/i.test(t0) ||
     /^[「『]?[ァ-ヶー][」』]?の(音義|意味|灵|霊|音|響き|力|性質)/.test(t0) ||
     /^[「『]?[あ-ん][」』]?の(音義|意味|灵|霊|音|響き|力|性質)/.test(t0) ||
@@ -933,6 +937,37 @@ const DEF_SYSTEM = __isDefDomain
         __domainKnowledgeClause = "\n\n" + __kCtx + "\n\n【応答指示】\n上記の言灵秘書原典データを踏まえ、構文原理（言灵・水火・天津金木）に基づいて応答せよ。\n各音の灵的意味を具体的に述べよ。「無にして有」「煤火」「昇水」「正火」等の原典用語を使え。\n音の運動パターンから意味を読み解き、詩・論文・祈り・設計図が一体化した響きで語れ。";
       }
     } catch (__e) { console.debug("[CATCH_SILENT] knowledgeContext for GENERAL", __e); }
+  }
+
+  // SUKUYOU_CONTEXT_INJECT_V1: 宿曜経診断コンテキストの動的注入
+  let __sukuyouContextClause = "";
+  if (__isSukuyouQuery) {
+    try {
+      const { calculateDailyNakshatra, calculateDailyPlanet, calculateJuniChoku, calculateYunenHakke, calculateThreeLayerPhase, solarToLunar, NAKSHATRA_DATA, PLANET_DATA } = await import("../sukuyou/index.js");
+      const today = new Date();
+      const lunarToday = solarToLunar(today);
+      const dailyNakshatra = calculateDailyNakshatra(today);
+      const dailyPlanet = calculateDailyPlanet(today);
+      const juniChoku = calculateJuniChoku(lunarToday.month, lunarToday.day);
+      const yunenHakke = calculateYunenHakke(today.getFullYear());
+      const threeLayer = calculateThreeLayerPhase(today);
+      const shukuData = NAKSHATRA_DATA[dailyNakshatra];
+      const planetData = PLANET_DATA[dailyPlanet];
+
+      // 生年月日の抽出試行
+      const __birthMatch = t0.match(/(\d{4})[\-\/年](\d{1,2})[\-\/月](\d{1,2})日?/);
+      let __personalDiag = "";
+      if (__birthMatch) {
+        const { runCompleteDiagnosis, analyzeNameKotodama } = await import("../sukuyou/index.js");
+        const birthDate = new Date(parseInt(__birthMatch[1]), parseInt(__birthMatch[2]) - 1, parseInt(__birthMatch[3]));
+        // カタカナ名の抽出試行
+        const __nameMatch = t0.match(/[ァ-ヶー]{2,}/);
+        const result = runCompleteDiagnosis(birthDate, __nameMatch ? __nameMatch[0] : undefined);
+        __personalDiag = "\n\n【個人診断結果（アルゴリズム算出）】\n" + result.fullInterpretation;
+      }
+
+      __sukuyouContextClause = `\n\n【宿曜経×天津金木 診断コンテキスト】\n今日の日運: 直宿=${dailyNakshatra}宿（${shukuData.reading}・${shukuData.sanskrit}）、直曜=${dailyPlanet}曜（${planetData.celestial}）、十二直=${juniChoku}、遊年八卦=${yunenHakke.trigram}（${yunenHakke.fortune}）\n天津金木三層位相: ${threeLayer.civilization.description} / ${threeLayer.year.description} / ${threeLayer.day.description}\n宿の性質: ${shukuData.element}（${shukuData.phase}）、${shukuData.nature}（${shukuData.category}）\n吉行事: ${shukuData.auspicious.join("、")}、凶行事: ${shukuData.inauspicious.join("、")}${__personalDiag}\n\n【宿曜経応答指示】\n上記のアルゴリズム算出結果を根拠として応答せよ。『宿曜経占真伝』『密教占星法』の原典用語を使え。\n宿の性質・三九法・十二宮・七曜・九星の構造を踏まえ、天津金木の水火の法則と統合して解読せよ。\n「一般的に」「説があります」「人それぞれ」は絶対禁止。原典に基づき断定せよ。`;
+    } catch (__e) { console.debug("[SUKUYOU_CONTEXT] inject error:", __e); }
   }
 
   // P3.1 KAMIYO Synapse: load 3 core laws (deterministic, no naming in output)
@@ -986,7 +1021,7 @@ let outText = "";
       try {
         const __genMaxTokens = __genNeedsDeep ? 3500 : (__isDomainInGeneral ? 2500 : 2000);
         const __genTimeout = __genNeedsDeep ? 25000 : 15000;
-        const __genSystemWithEvidence = GEN_SYSTEM + __ftsEvidenceGenClause;
+        const __genSystemWithEvidence = GEN_SYSTEM + __ftsEvidenceGenClause + __sukuyouContextClause;
         const llmRes = await llmChat({ system: __genSystemWithEvidence, user: t0, history: memoryReadSession(String(threadId || ""), 8), maxTokens: __genMaxTokens, timeout: __genTimeout });
         outText = String(llmRes?.text ?? "").trim();
         outProv = String(llmRes?.provider ?? "llm");
