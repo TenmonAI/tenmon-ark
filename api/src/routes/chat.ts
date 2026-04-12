@@ -38,7 +38,7 @@ import { applyKanaPhysicsToCell } from "../koshiki/kanaPhysicsMap.js";
 
 import { localSurfaceize } from "../tenmon/surface/localSurfaceize.js";
 import { llmChat } from "../core/llmWrapper.js";
-import { TENMON_CONSTITUTION_V3, DEEP_ANALYSIS_REPORT_INSTRUCTION, GENERAL_DEEP_THINKING_INSTRUCTION, DOMAIN_DEEP_ANALYSIS_INSTRUCTION, needsDeepAnalysis, needsSanskritAnalysis } from "../tenmon/tenmonConstitution.js";
+import { TENMON_CONSTITUTION_V3, TENMON_PERSONA_VOICE, DEEP_ANALYSIS_REPORT_INSTRUCTION, GENERAL_DEEP_THINKING_INSTRUCTION, DOMAIN_DEEP_ANALYSIS_INSTRUCTION, needsDeepAnalysis, needsSanskritAnalysis } from "../tenmon/tenmonConstitution.js";
 import { rewriteOnlyTenmon } from "../core/rewriteOnly.js";
 
 import { memoryPersistMessage, memoryReadSession } from "../memory/index.js";
@@ -54,7 +54,7 @@ const __kanagiPhaseMemV2 = new Map<string, number>();
 
 
 // LLM_CHAT: TENMON-ARK constitution V3 (天津金木思考回路フル活用)
-const TENMON_CONSTITUTION_TEXT = TENMON_CONSTITUTION_V3;
+const TENMON_CONSTITUTION_TEXT = TENMON_CONSTITUTION_V3 + "\n\n" + TENMON_PERSONA_VOICE;
 
 function scrubEvidenceLike(text: string): string {
   let t = String(text ?? "");

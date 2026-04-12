@@ -10,6 +10,7 @@
 import { readFileSync } from "fs";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
+import { getDb } from "../../db/index.js";
 
 // === 型定義 ===
 interface SoundMeaning {
@@ -750,9 +751,7 @@ export function searchKokuzoPagesForContext(userMessage: string, limit: number =
   evidenceRefs: Array<{ doc: string; pdfPage: number; snippet: string }>;
 } {
   try {
-    // 動的インポート回避: getDb/searchPagesForHybrid は同一プロセスで利用可能
-    // ただし循環参照を避けるため、ここではDB直接アクセスする
-    const { getDb } = require("../../db/index.js");
+    // ESM対応: モジュールレベルでインポート済みの getDb を使用
     const db = getDb("kokuzo");
     
     // クエリ正規化
