@@ -39,19 +39,39 @@ export const KOTODAMA_SECRETARY_GOJUON_MASTER = getAllKotodamaSounds();
  */
 export const KOTODAMA_SECRETARY_SUIKA_LAW = {
   fire: {
-    nature: "外発・創造・拡散・上昇",
+    nature: "外発・創造・拡散・上昇（煇火の灵・正火の灵）",
     characteristics: ["始源", "発展", "照らす", "立つ", "方向"],
     sounds: KOTODAMA_SECRETARY_GOJUON_MASTER.filter(s => s.fireWaterNature === "fire"),
   },
   water: {
-    nature: "内包・受容・凝縮・下降",
+    nature: "内包・受容・凝縮・下降（空中の水の灵・昇水の灵・濁水の灵）",
     characteristics: ["流れ", "満たす", "浄化", "循環", "深み"],
-    sounds: KOTODAMA_SECRETARY_GOJUON_MASTER.filter(s => s.fireWaterNature === "water"),
+    sounds: KOTODAMA_SECRETARY_GOJUON_MASTER.filter(s => s.fireWaterNature === "water" || s.fireWaterNature === "turbid_water"),
   },
-  neutral: {
-    nature: "調和・統合・中庸・バランス",
-    characteristics: ["和", "空", "境界", "根源", "完結"],
-    sounds: KOTODAMA_SECRETARY_GOJUON_MASTER.filter(s => s.fireWaterNature === "neutral"),
+  fire_in_water: {
+    nature: "水中の火の灵（タ行）",
+    characteristics: ["種", "胎", "渦巻", "掌", "轟"],
+    sounds: KOTODAMA_SECRETARY_GOJUON_MASTER.filter(s => s.fireWaterNature === "fire_in_water"),
+  },
+  water_in_fire: {
+    nature: "火中の水の灵（マ行）",
+    characteristics: ["潤水", "正中", "月", "無", "睦"],
+    sounds: KOTODAMA_SECRETARY_GOJUON_MASTER.filter(s => s.fireWaterNature === "water_in_fire"),
+  },
+  fire_water: {
+    nature: "火水の灵（ナ行・ヤ行）",
+    characteristics: ["和", "正中", "根", "文", "与"],
+    sounds: KOTODAMA_SECRETARY_GOJUON_MASTER.filter(s => s.fireWaterNature === "fire_water"),
+  },
+  water_fire: {
+    nature: "水火の灵（ワ行）",
+    characteristics: ["国土", "蒼空", "搦", "縦", "統合"],
+    sounds: KOTODAMA_SECRETARY_GOJUON_MASTER.filter(s => s.fireWaterNature === "water_fire"),
+  },
+  condensed: {
+    nature: "凝灵（ン）",
+    characteristics: ["凝結", "ウム", "究極"],
+    sounds: KOTODAMA_SECRETARY_GOJUON_MASTER.filter(s => s.fireWaterNature === "condensed"),
   },
 };
 
@@ -90,26 +110,8 @@ export const KOTODAMA_SECRETARY_SPIRITUAL_LAYERS = {
  * 
  * 現代五十音では失われた音を含む完全版。
  */
-export const KOTODAMA_SECRETARY_ANCIENT_GOJUON = [
-  ...KOTODAMA_SECRETARY_GOJUON_MASTER,
-  // 古五十音の追加音
-  { 
-    sound: "ゐ", 
-    row: "wa" as any, 
-    column: "i" as any, 
-    spiritualMeaning: "井・水の源・生命の泉", 
-    fireWaterNature: "water" as const, 
-    element: "earth" as const 
-  },
-  { 
-    sound: "ゑ", 
-    row: "wa" as any, 
-    column: "e" as any, 
-    spiritualMeaning: "恵・恵み・天の恩寵", 
-    fireWaterNature: "water" as const, 
-    element: "heaven" as const 
-  },
-];
+// ゐ・ゑ は既に KOTODAMA_SOUNDS に含まれるため、追加不要
+export const KOTODAMA_SECRETARY_ANCIENT_GOJUON = KOTODAMA_SECRETARY_GOJUON_MASTER;
 
 /**
  * 言霊秘書 - 解釈ルール
@@ -133,18 +135,18 @@ export const KOTODAMA_SECRETARY_INTERPRETATION_RULES = {
  */
 export const KOTODAMA_SECRETARY_ONGI_LAW = {
   row_law: {
-    description: "行（縦）は音の質を示す",
+    description: "行（縦）は音の灵質を示す（言灵秘書準拠）",
     examples: [
-      "ア行: 始源・初発",
-      "カ行: 火・外発",
-      "サ行: 差・分離",
-      "タ行: 立・確立",
-      "ナ行: 成・成就",
-      "ハ行: 発・展開",
-      "マ行: 満・充満",
-      "ヤ行: 矢・方向",
-      "ラ行: 羅・網羅",
-      "ワ行: 和・統合",
+      "ア行: 空中の水の灵 — 天の初発、息の解き始め",
+      "カ行: 煇火の灵 — 火の芽ぶき、陽の昇る力",
+      "サ行: 昇水の灵 — 割き別ける水の力",
+      "タ行: 水中の火の灵 — タマ（魂）、種を宿す水中の火",
+      "ナ行: 火水の灵 — 正中の灵、火水が和合する中心点",
+      "ハ行: 正火の灵 — 地の方を宰り、出入息の両を宰る",
+      "マ行: 火中の水の灵 — 潤水、火の中に宿る水の灵",
+      "ヤ行: 火水の灵（八行） — 文（あや）、水火の両を宰る",
+      "ラ行: 濁水の灵 — 降る濁水の灵、地に降りる力",
+      "ワ行: 水火の灵 — 国土、万物の形を宰る",
     ],
   },
   column_law: {

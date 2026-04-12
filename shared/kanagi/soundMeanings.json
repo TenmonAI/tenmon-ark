@@ -1,0 +1,452 @@
+{
+  "meta": {
+    "title": "言灵秘書 五十行一言法則 — 音義辞典",
+    "source": "言灵秘書（山口志道霊学全集）/ 稲荷古伝五十連法則",
+    "authority": "KHS原典準拠。推測・補間なし。",
+    "notation": "「霊」→「灵」、「水火」=「イキ」（DOMAIN_GUIDE_KOTODAMA_KHS_v1準拠）",
+    "version": "v2_khs_strict"
+  },
+  "gojiuren": {
+    "structure": "五列十行。右から左へ読む。",
+    "columns": [
+      { "position": 1, "name": "空中水灵", "type": "water", "sounds": ["ア","イ","ウ","エ","オ"] },
+      { "position": 2, "name": "煇火の灵（昇火灵）", "type": "fire", "sounds": ["カ","キ","ク","ケ","コ"] },
+      { "position": 3, "name": "昇水の灵", "type": "water", "sounds": ["サ","シ","ス","セ","ソ"] },
+      { "position": 4, "name": "水中の火の灵", "type": "fire_in_water", "sounds": ["タ","チ","ツ","テ","ト"] },
+      { "position": 5, "name": "火水の灵", "type": "fire_water", "sounds": ["ナ","ニ","ヌ","ネ","ノ"] },
+      { "position": 6, "name": "正火の灵", "type": "true_fire", "sounds": ["ハ","ヒ","フ","ヘ","ホ"] },
+      { "position": 7, "name": "火中の水の灵", "type": "water_in_fire", "sounds": ["マ","ミ","ム","メ","モ"] },
+      { "position": 8, "name": "火水の灵（八行）", "type": "fire_water_mixed", "sounds": ["ヤ","（イ）","ユ","（エ）","ヨ"] },
+      { "position": 9, "name": "濁水の灵", "type": "turbid_water", "sounds": ["ラ","リ","ル","レ","ロ"] },
+      { "position": 10, "name": "水火の灵", "type": "water_fire", "sounds": ["ワ","ヰ","（ウ）","ヱ","ヲ"] }
+    ]
+  },
+  "sounds": {
+    "ア": {
+      "classification": "空中の水の灵",
+      "element": "water",
+      "polarity": "陰陽未分",
+      "position": "天",
+      "meanings": ["無にして有也","五十連の総名也","天也","海也","吾也","自然（おのつから）也","◯也"],
+      "spiritual_origin": "天の初発、息の解き始め、天地開闢の初音、火水が未分化の状態"
+    },
+    "イ": {
+      "classification": "空中の水の灵",
+      "element": "water",
+      "polarity": "陰",
+      "position": "天地中心",
+      "meanings": ["出息也","命也"],
+      "spiritual_origin": "灵核、天地の中心点、イキの本"
+    },
+    "ウ": {
+      "classification": "空中の水の灵",
+      "element": "water",
+      "polarity": "陰",
+      "position": "天",
+      "meanings": ["浮き昇る也","動也","生也","暗也"],
+      "spiritual_origin": "浮昇の息、包む力"
+    },
+    "エ": {
+      "classification": "空中の水の灵",
+      "element": "water",
+      "polarity": "陰",
+      "position": "天地中心",
+      "meanings": ["天地の胞衣也","枝也","肢也"],
+      "spiritual_origin": "天地を包む胞衣（えな）"
+    },
+    "オ": {
+      "classification": "空中の水の灵",
+      "element": "water",
+      "polarity": "陰陽統合",
+      "position": "天",
+      "meanings": ["起也","貴也","高也","於（うへ）也"],
+      "spiritual_origin": "天の総括音。此ア行ヘ総テ天ニ位シテ親音也、故ニ各横音ニヒビクナリ"
+    },
+    "カ": {
+      "classification": "煇火の灵",
+      "element": "fire",
+      "polarity": "陽",
+      "position": "天地の間",
+      "meanings": ["影也","別也","香也","必也","黒也","暗也","大也","上也","数也","疑也","高也","限也","如是也","陽の昇也","家也","草也","是有也","搦也"],
+      "spiritual_origin": "火の芽ぶき、発・端。陽の昇る力"
+    },
+    "キ": {
+      "classification": "煇火の灵",
+      "element": "fire",
+      "polarity": "陽",
+      "position": "天地の間",
+      "meanings": ["氣（いき）也","正中也","限也","生也","草也","貴也","来也","香也","土"],
+      "spiritual_origin": "氣・正氣。正中を貫く火の灵"
+    },
+    "ク": {
+      "classification": "煇火の灵",
+      "element": "fire",
+      "polarity": "陽",
+      "position": "天地の間",
+      "meanings": ["氣（いき）の降る也","与也","土也","黒也","香也","濁也"],
+      "spiritual_origin": "氣が降る。火の灵が地に降りる動き"
+    },
+    "ケ": {
+      "classification": "煇火の灵",
+      "element": "fire",
+      "polarity": "陽",
+      "position": "天地の間",
+      "meanings": ["差別（けじめ）也","正也","香也","器也","五穀也","家也","朝より暮に至る義也"],
+      "spiritual_origin": "差別（けじめ）。区別・正しさを宰る"
+    },
+    "コ": {
+      "classification": "煇火の灵",
+      "element": "fire",
+      "polarity": "陽",
+      "position": "天地の間",
+      "meanings": ["男也","女也","総ての人の灵也","凝也","器也","囲也","処也","細也","香也","小也"],
+      "spiritual_origin": "総ての人の灵。凝り固まる力"
+    },
+    "サ": {
+      "classification": "昇水の灵",
+      "element": "water",
+      "polarity": "陰",
+      "position": "天地の間",
+      "meanings": ["割別也","細也","小也","少也","短也","誘也","放也","去也"],
+      "spiritual_origin": "灵の分離と発動。割き別ける水の力"
+    },
+    "シ": {
+      "classification": "昇水の灵",
+      "element": "water",
+      "polarity": "陰",
+      "position": "天地の間",
+      "meanings": ["始也","終也","死也","己也","幸也","司也","育也","石也","出水也","印也","進也","繁也","為限（しきる）也"],
+      "spiritual_origin": "始まりと終わり。循環の要。死と再生を司る"
+    },
+    "ス": {
+      "classification": "昇水の灵",
+      "element": "water",
+      "polarity": "陰中陽",
+      "position": "地",
+      "meanings": ["澄也","洲也","直也","鳥也","穴也","差別也","黒也","文（かざり）なき也","一（すいち）也","住也"],
+      "spiritual_origin": "澄む。水中に潜む火の灵。飾りなき直（すぐ）なる力"
+    },
+    "セ": {
+      "classification": "昇水の灵",
+      "element": "water",
+      "polarity": "陰中陽",
+      "position": "地",
+      "meanings": ["与（くむ）也","助也","瀬也","背也","偽也","甲也"],
+      "spiritual_origin": "与（くむ）。水と火が交わる瀬"
+    },
+    "ソ": {
+      "classification": "昇水の灵",
+      "element": "water",
+      "polarity": "陰陽混合",
+      "position": "天地の間",
+      "meanings": ["形の無也","遅也","揃也","塩也","白也","底也","背也","始也","山也","磯也","所也"],
+      "spiritual_origin": "形なき灵。火水が混じり合う根源の場"
+    },
+    "タ": {
+      "classification": "水中の火の灵",
+      "element": "fire_in_water",
+      "polarity": "陰中陽",
+      "position": "地",
+      "meanings": ["タマ也","種也","大也","多也","連也","胎也","縦也","溜水也"],
+      "spiritual_origin": "タマ（魂・玉）。種を宿す水中の火"
+    },
+    "チ": {
+      "classification": "水中の火の灵",
+      "element": "fire_in_water",
+      "polarity": "陰中陽",
+      "position": "地中",
+      "meanings": ["胎内の火の灵也","血也","地中の火也","草也","剣也","風也","父の灵（たま）也","息の本也","五穀也","鳥の灵（たま）也","一也","年月日時の灵也","隔限也"],
+      "spiritual_origin": "胎内の火の灵。血・地中の火。息の本"
+    },
+    "ツ": {
+      "classification": "水中の火の灵",
+      "element": "fire_in_water",
+      "polarity": "陽中陰",
+      "position": "天地の間",
+      "meanings": ["渦巻也","列（つらなる）也","続也","積也","約也"],
+      "spiritual_origin": "渦巻。連なり続く力"
+    },
+    "テ": {
+      "classification": "水中の火の灵",
+      "element": "fire_in_water",
+      "polarity": "陰陽両",
+      "position": "天地の間",
+      "meanings": ["右左也","掌（たなごころ）也","風也","人也","発也","児の灵也"],
+      "spiritual_origin": "右左（水火の両）。掌で万物を発する力"
+    },
+    "ト": {
+      "classification": "水中の火の灵",
+      "element": "fire_in_water",
+      "polarity": "陰中陽",
+      "position": "地",
+      "meanings": ["男也","轟也","解也","飛也","基也","人也","与也","止め也","昇也","速也","前也","所也"],
+      "spiritual_origin": "與（くむ）。基・止め。水中の火が轟く力"
+    },
+    "ナ": {
+      "classification": "火水の灵",
+      "element": "fire_water",
+      "polarity": "陰陽和合",
+      "position": "正中",
+      "meanings": ["和也","女也","流也","下知也","正中の灵也","凝也","双也","頭也","無也","生也","鳴也","汝也","過去現在未来にわたる灵也","納也"],
+      "spiritual_origin": "正中の灵。火水が和合する中心点。過去現在未来を貫く"
+    },
+    "ニ": {
+      "classification": "火水の灵",
+      "element": "fire_water",
+      "polarity": "陰陽二",
+      "position": "天地",
+      "meanings": ["天地也","日月也","水火の凝也","丹（あかき）也","非也","従也"],
+      "spiritual_origin": "天地・日月。水火が凝る二つの力"
+    },
+    "ヌ": {
+      "classification": "火水の灵",
+      "element": "fire_water",
+      "polarity": "陰陽間",
+      "position": "天地の間",
+      "meanings": ["黒也","暗也","終也","潤也","緯（ぬき）也","出入の息の間に位する◯也"],
+      "spiritual_origin": "出入の息の間に位する◯。終わりと潤い"
+    },
+    "ネ": {
+      "classification": "火水の灵",
+      "element": "fire_water",
+      "polarity": "陰陽根",
+      "position": "地の底",
+      "meanings": ["水火の根也","母の灵也","土也","鎮也"],
+      "spiritual_origin": "水火の根。母の灵。万物の根源"
+    },
+    "ノ": {
+      "classification": "火水の灵",
+      "element": "fire_water",
+      "polarity": "陰",
+      "position": "天地の間",
+      "meanings": ["回水也","如也","差別（けじめ）を宰る也","切也","割別也","◯也"],
+      "spiritual_origin": "回水。差別（けじめ）を宰る水の灵"
+    },
+    "ハ": {
+      "classification": "正火の灵",
+      "element": "true_fire",
+      "polarity": "陽",
+      "position": "地",
+      "meanings": ["地の方（けた）を宰る也","端也","角也","実也","初也","発也","出入息の両を宰る也","土也","髪也","広也","ワに唱うる時は◯の心をなす也"],
+      "spiritual_origin": "正火の灵。地の方を宰り、出入息の両を宰る"
+    },
+    "ヒ": {
+      "classification": "正火の灵",
+      "element": "true_fire",
+      "polarity": "陽",
+      "position": "天",
+      "meanings": ["天を回る火の灵也","日也","出入息の本也","穴也","米也","非也","否也","氷也"],
+      "spiritual_origin": "天を回る火の灵。日。出入息の本"
+    },
+    "フ": {
+      "classification": "正火の灵",
+      "element": "true_fire",
+      "polarity": "陽",
+      "position": "天地の間",
+      "meanings": ["火水の両を宰る也","経（ふる）也","含也","太也","吹也","覆也"],
+      "spiritual_origin": "火水の両を宰る。吹く力。布斗麻邇のフ"
+    },
+    "ヘ": {
+      "classification": "正火の灵",
+      "element": "true_fire",
+      "polarity": "陽",
+      "position": "天地の間",
+      "meanings": ["膨也","隔也","経也","緯也"],
+      "spiritual_origin": "膨らみ隔てる。経緯を成す正火"
+    },
+    "ホ": {
+      "classification": "正火の灵",
+      "element": "true_fire",
+      "polarity": "陽",
+      "position": "天地の間",
+      "meanings": ["母也","火浮（ほのめく）也","尖也","天地万物の初也","陰門也","臍（へそ）也","袋也","ヽ（ほし）也"],
+      "spiritual_origin": "母。天地万物の初。火浮（ほのめく）灵"
+    },
+    "マ": {
+      "classification": "火中の水の灵",
+      "element": "water_in_fire",
+      "polarity": "陽中陰",
+      "position": "天地の間",
+      "meanings": ["潤水也","向也","眼也","回也","間也","曲也","大也","広也","円也","甚也","狗也","多也","女也"],
+      "spiritual_origin": "潤水。火の中に宿る水の灵。円・回の力"
+    },
+    "ミ": {
+      "classification": "火中の水の灵",
+      "element": "water_in_fire",
+      "polarity": "陽中陰",
+      "position": "正中",
+      "meanings": ["潤水也","正中を宰る也","月の灵也","貴也","虫也","五穀也","渦巻也","暗也"],
+      "spiritual_origin": "潤水。正中を宰る月の灵。布斗麻邇のミ"
+    },
+    "ム": {
+      "classification": "火中の水の灵",
+      "element": "water_in_fire",
+      "polarity": "陽中陰",
+      "position": "天地の間",
+      "meanings": ["潤水也","無也","空也","息の終也","暗也","結也","睦也","渦巻也","黒也"],
+      "spiritual_origin": "無・空。息の終わり。睦み結ぶ力"
+    },
+    "メ": {
+      "classification": "火中の水の灵",
+      "element": "water_in_fire",
+      "polarity": "陽中陰",
+      "position": "天地の間",
+      "meanings": ["潤水也","回也","芽也","正中を宰る也","女也","米也","海草也","馬也","群也","下知也"],
+      "spiritual_origin": "潤水。芽。正中を宰り回る力"
+    },
+    "モ": {
+      "classification": "火中の水の灵",
+      "element": "water_in_fire",
+      "polarity": "陽中陰",
+      "position": "天地の間",
+      "meanings": ["潤水也","舫（もやう）也","塊也","亦（また）也","者也","累（かさなる）也","与也"],
+      "spiritual_origin": "潤水。舫（もやう）。累なり与する力"
+    },
+    "ヤ": {
+      "classification": "火水の灵（八行）",
+      "element": "fire_water",
+      "polarity": "陰陽両",
+      "position": "天地の間",
+      "meanings": ["文（あや）也","和也","沼也","家也","否也","水火の両を宰る也","反（うらはら）の義をなす也"],
+      "spiritual_origin": "文（あや）。水火の両を宰る。反（うらはら）の義"
+    },
+    "ユ": {
+      "classification": "火水の灵（八行）",
+      "element": "fire_in_water",
+      "polarity": "陰中陽",
+      "position": "天地の間",
+      "meanings": ["寛也","火水の和也","流水也","従の通音也","爾の通音也"],
+      "spiritual_origin": "寛（ゆるやか）。火水の和。流れる水中の火"
+    },
+    "ヨ": {
+      "classification": "火水の灵（八行）",
+      "element": "fire_water",
+      "polarity": "陰陽和",
+      "position": "天地の間",
+      "meanings": ["与也","女男の契也","淀也","齢也","下知也"],
+      "spiritual_origin": "與（くむ）。女男の契り。布斗麻邇のヨ"
+    },
+    "ラ": {
+      "classification": "濁水の灵",
+      "element": "turbid_water",
+      "polarity": "陰（濁）",
+      "position": "地",
+      "meanings": ["降也","涎也","唾也"],
+      "spiritual_origin": "降る濁水の灵。地に降りる力"
+    },
+    "リ": {
+      "classification": "濁水の灵",
+      "element": "turbid_water",
+      "polarity": "陰（濁）",
+      "position": "地",
+      "meanings": ["息息（いい）の両也","人也","割別（さきわく）也","涎也","唾也"],
+      "spiritual_origin": "息息の両。逆らわずして共に循環する（リの法則）"
+    },
+    "ル": {
+      "classification": "濁水の灵",
+      "element": "turbid_water",
+      "polarity": "陰（濁）",
+      "position": "地",
+      "meanings": ["涎也","唾也"],
+      "spiritual_origin": "濁水の灵。流れ降る力"
+    },
+    "レ": {
+      "classification": "濁水の灵",
+      "element": "turbid_water",
+      "polarity": "陰（濁）",
+      "position": "地",
+      "meanings": ["涎也","唾也"],
+      "spiritual_origin": "濁水の灵。流れ降る力"
+    },
+    "ロ": {
+      "classification": "濁水の灵",
+      "element": "turbid_water",
+      "polarity": "陰（濁・凝塊）",
+      "position": "地の底",
+      "meanings": ["大濁の塊也"],
+      "spiritual_origin": "大濁の塊。ラリルレの四音はこの一音に凝塊也。故にこの四音に代りてなすことある也"
+    },
+    "ワ": {
+      "classification": "水火の灵",
+      "element": "water_fire",
+      "polarity": "陰陽統合",
+      "position": "地",
+      "meanings": ["国土也","水火水（しほみず）也","水の◯（わ）也","万物の形を宰る也"],
+      "spiritual_origin": "国土。万物の形を宰る水火の灵"
+    },
+    "ヰ": {
+      "classification": "水火の灵",
+      "element": "water_fire",
+      "polarity": "陰陽統合",
+      "position": "天地人",
+      "meanings": ["蒼空也","潮水也","引汐也","天地人万物を搦めて備えたるしほみつ也","居也"],
+      "spiritual_origin": "蒼空。五十連の活用はこの灵に過ぎたるはなき也"
+    },
+    "ヱ": {
+      "classification": "水火の灵",
+      "element": "water_fire",
+      "polarity": "陰陽統合",
+      "position": "天地の間",
+      "meanings": ["搦也","胞衣也","恵也","回也"],
+      "spiritual_origin": "搦み。胞衣。恵みの灵"
+    },
+    "ヲ": {
+      "classification": "水火の灵",
+      "element": "water_fire",
+      "polarity": "陰陽統合",
+      "position": "地",
+      "meanings": ["縦也","賤也","男也","終也","折也","居也","小也","少也","苧也","低也"],
+      "spiritual_origin": "縦。男。終わりの灵。五十連の結び"
+    },
+    "ン": {
+      "classification": "凝灵",
+      "element": "condensed",
+      "polarity": "陰陽凝結",
+      "position": "中心",
+      "meanings": ["ウム"],
+      "spiritual_origin": "ウム。凝り結ぶ究極の灵。五十連を超えた凝結点"
+    }
+  },
+  "etymologyRules": {
+    "description": "語源解析の基本ルール（言灵秘書一言法則準拠）",
+    "method": [
+      "1. 言葉をカタカナに変換し、一音ずつ分解する",
+      "2. 各音の classification（灵の種別）と meanings（原典意味群）を参照する",
+      "3. 音義の組み合わせから、言葉の本来の意味（語源）を導出する",
+      "4. 五列十行の位置（element / polarity）から火水バランスを判定する",
+      "5. spiritual_origin で構造的な裏付けを行う",
+      "6. 濁音は清音の meanings に「重さ・濁り・地への引力」を加えて解釈する",
+      "7. 半濁音（パ行）は正火の灵（ハ行）に「破裂・弾ける力」を加えて解釈する"
+    ],
+    "examples": [
+      {
+        "word": "ひかり",
+        "sounds": ["ヒ", "カ", "リ"],
+        "analysis": "ヒ（天を回る火の灵・日・出入息の本）＋ カ（煇火の灵・陽の昇・影）＋ リ（濁水の灵・息息の両・割別）",
+        "etymology": "天を回る火の灵が陽として昇り、息息の両を割き別けて顕れるもの。日の灵が影を生じて万物を照らす",
+        "fireWater": "火優勢（正火＋煇火＋濁水）"
+      },
+      {
+        "word": "ことば",
+        "sounds": ["コ", "ト", "ハ（バ＝濁）"],
+        "analysis": "コ（煇火の灵・総ての人の灵・凝）＋ ト（水中の火の灵・基・與）＋ バ（正火の灵に濁り・地の方を宰る・発）",
+        "etymology": "総ての人の灵が凝り、基を與（く）み、地の方に発して重く顕れるもの。灵が凝結して地上に発現する行為",
+        "fireWater": "火優勢（煇火＋水中火＋正火濁）"
+      },
+      {
+        "word": "いのち",
+        "sounds": ["イ", "ノ", "チ"],
+        "analysis": "イ（空中水灵・出息・命）＋ ノ（火水の灵・回水・差別を宰る）＋ チ（水中の火の灵・胎内の火の灵・血・息の本）",
+        "etymology": "出息（命）が回水して差別（けじめ）を宰り、胎内の火の灵として血に宿るもの。命の息が循環して胎内の火となる",
+        "fireWater": "水火均衡（空中水＋火水＋水中火）"
+      },
+      {
+        "word": "たましい",
+        "sounds": ["タ", "マ", "シ", "イ"],
+        "analysis": "タ（水中の火の灵・タマ・種・胎）＋ マ（火中の水の灵・潤水・円・回）＋ シ（昇水の灵・始終・死・司）＋ イ（空中水灵・出息・命）",
+        "etymology": "タマ（種）が潤水の中で円く回り、始まりと終わりを司りながら、出息として命を吹き込むもの。水中の火と火中の水が交互に循環する灵の全体構造",
+        "fireWater": "完全均衡（水中火＋火中水＋昇水＋空中水）"
+      }
+    ]
+  }
+}
