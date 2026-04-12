@@ -7,7 +7,7 @@
  * 【唯一の参照元】言灵秘書（山口志道霊学全集）
  * インターネット検索、外部情報、推測による解釈は禁止。
  * 
- * v2_khs_strict: 言灵秘書原典（五十連一言法則）完全準拠版
+ * v3_gojiuren_51: 言灵秘書原典（五十連十行法則）10行×5列=50音+ン=51音完全準拠版
  */
 
 /**
@@ -134,7 +134,9 @@ const KOTODAMA_SOUNDS: KotodamaSound[] = [
   // ヤ行：火水の灵（八行）
   // ═══════════════════════════════════════════
   { sound: "や", row: KotodamaRow.YA, column: KotodamaColumn.A, spiritualMeaning: "文也・和也・沼也・家也・水火の両を宰る也", fireWaterNature: "fire_water", element: "human", khsClassification: "火水の灵（八行）" },
+  { sound: "ヤ行い", row: KotodamaRow.YA, column: KotodamaColumn.I, spiritualMeaning: "入息のイの灵也・ア行イとワ行ヰの文也・完全内集也・灵核", fireWaterNature: "fire_water", element: "human", khsClassification: "火水の灵（八行）・中心灵" },
   { sound: "ゆ", row: KotodamaRow.YA, column: KotodamaColumn.U, spiritualMeaning: "寛也・火水の和也・流水也", fireWaterNature: "fire_water", element: "human", khsClassification: "火水の灵（八行）" },
+  { sound: "ヤ行え", row: KotodamaRow.YA, column: KotodamaColumn.E, spiritualMeaning: "昼夜の胞衣のエの灵也・ア行エとワ行ヱの文也・完全外発也・灵核", fireWaterNature: "fire_water", element: "human", khsClassification: "火水の灵（八行）・中心灵" },
   { sound: "よ", row: KotodamaRow.YA, column: KotodamaColumn.O, spiritualMeaning: "与也・女男の契也・淀也・齢也", fireWaterNature: "fire_water", element: "human", khsClassification: "火水の灵（八行）" },
 
   // ═══════════════════════════════════════════
@@ -151,6 +153,7 @@ const KOTODAMA_SOUNDS: KotodamaSound[] = [
   // ═══════════════════════════════════════════
   { sound: "わ", row: KotodamaRow.WA, column: KotodamaColumn.A, spiritualMeaning: "国土也・水火水也・水の◯也・万物の形を宰る也", fireWaterNature: "water_fire", element: "human", khsClassification: "水火の灵" },
   { sound: "ゐ", row: KotodamaRow.WA, column: KotodamaColumn.I, spiritualMeaning: "蒼空也・潮水也・引汐也・天地人万物を搦めて備えたるしほみつ也", fireWaterNature: "water_fire", element: "human", khsClassification: "水火の灵" },
+  { sound: "ワ行う", row: KotodamaRow.WA, column: KotodamaColumn.U, spiritualMeaning: "渦巻降のウの灵也・左に渦巻きて降る也・ア行ウ（浮昇）の対極", fireWaterNature: "water_fire", element: "human", khsClassification: "水火の灵" },
   { sound: "ゑ", row: KotodamaRow.WA, column: KotodamaColumn.E, spiritualMeaning: "搦也・胞衣也・恵也・回也", fireWaterNature: "water_fire", element: "human", khsClassification: "水火の灵" },
   { sound: "を", row: KotodamaRow.WA, column: KotodamaColumn.O, spiritualMeaning: "縦也・賤也・男也・終也・折也・五十連の結び", fireWaterNature: "water_fire", element: "human", khsClassification: "水火の灵" },
 

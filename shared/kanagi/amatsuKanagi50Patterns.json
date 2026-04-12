@@ -213,7 +213,7 @@
     },
     {
       "number": 9,
-      "sound": "ウ",
+      "sound": "ワ行ウ",
       "category": "天津金木24相",
       "pattern": "左旋外発-右旋内集-左旋内集-右旋外発",
       "movements": [
@@ -222,17 +222,18 @@
         "左旋内集",
         "右旋外発"
       ],
-      "classification": "空中の水の灵",
-      "element": "water",
-      "polarity": "陰",
+      "classification": "水火の灵",
+      "element": "water_fire",
+      "polarity": "陰（降）",
       "khs_meanings": [
-        "浮き昇る也",
-        "動也",
-        "生也",
-        "暗也"
+        "渦巻降のウの灵也",
+        "左に渦巻きて降る也"
       ],
-      "spiritual_origin": "浮昇の息、包む力",
-      "meaning": "浮き昇る也"
+      "spiritual_origin": "ア行のウ（浮昇）の対極。左に渦巻きて降る水火の灵。天津金木の生成順序第9番。",
+      "meaning": "渦巻降のウの灵也",
+      "row": "ワ行",
+      "column": "ウ段",
+      "distinction": "ア行ウ=右に浮き昇る灵（陰・天）。ワ行ウ=左に渦巻き降る灵（陰・地）。浮昇と渦降の対極。"
     },
     {
       "number": 10,
@@ -311,7 +312,7 @@
     },
     {
       "number": 13,
-      "sound": "井",
+      "sound": "ヰ",
       "category": "天津金木24相",
       "pattern": "右旋内集-左旋内集-左旋外発-右旋外発",
       "movements": [
@@ -319,7 +320,21 @@
         "左旋内集",
         "左旋外発",
         "右旋外発"
-      ]
+      ],
+      "classification": "水火の灵",
+      "element": "water_fire",
+      "polarity": "陰陽統合",
+      "khs_meanings": [
+        "蒼空也",
+        "潮水也",
+        "引汐也",
+        "天地人万物を搦めて備えたるしほみつ也",
+        "居也"
+      ],
+      "spiritual_origin": "蒼空。五十連の活用はこの灵に過ぎたるはなき也",
+      "meaning": "蒼空也",
+      "row": "ワ行",
+      "column": "イ段"
     },
     {
       "number": 14,
@@ -428,9 +443,9 @@
     },
     {
       "number": 18,
-      "sound": "イ",
-      "category": "中心霊",
-      "type": "ヤイ：完全内集",
+      "sound": "ヤ行イ",
+      "category": "中心灵",
+      "type": "ヤ行イ：完全内集",
       "pattern": "左旋内集-右旋内集-左旋内集-右旋内集",
       "movements": [
         "左旋内集",
@@ -438,16 +453,20 @@
         "左旋内集",
         "右旋内集"
       ],
-      "meaning": "中心霊・完全内集・収縮の極致",
+      "meaning": "入息のイの灵也",
       "special": true,
-      "classification": "空中の水の灵",
-      "element": "water",
-      "polarity": "陰",
+      "classification": "火水の灵（八行）",
+      "element": "fire_water_center",
+      "polarity": "陰陽統合（入息）",
       "khs_meanings": [
-        "出息也",
-        "命也"
+        "入息のイの灵也",
+        "ア行のイとワ行のヰの文（交わり）也",
+        "完全内集也"
       ],
-      "spiritual_origin": "灵核、天地の中心点、イキの本"
+      "spiritual_origin": "ア行のイ（出息・命）とワ行のヰ（引汐・搦み）が文（交わり）して生ずる入息の灵。天津金木の中心灵の一つ。完全内集。",
+      "row": "ヤ行",
+      "column": "イ段",
+      "distinction": "ア行イ=出息の灵（命の発動）。ヤ行イ=入息の灵（ア行イとワ行ヰの文）。灵核として中心に位置する。"
     },
     {
       "number": 19,
@@ -475,9 +494,9 @@
     },
     {
       "number": 20,
-      "sound": "エ",
-      "category": "中心霊",
-      "type": "ヤエ：完全外発",
+      "sound": "ヤ行エ",
+      "category": "中心灵",
+      "type": "ヤ行エ：完全外発",
       "pattern": "左旋外発-右旋外発-左旋外発-右旋外発",
       "movements": [
         "左旋外発",
@@ -485,17 +504,20 @@
         "左旋外発",
         "右旋外発"
       ],
-      "meaning": "中心霊・完全外発・拡散の極致",
+      "meaning": "昼夜の胞衣のエの灵也",
       "special": true,
-      "classification": "空中の水の灵",
-      "element": "water",
-      "polarity": "陰",
+      "classification": "火水の灵（八行）",
+      "element": "fire_water_center",
+      "polarity": "陰陽統合（胞衣）",
       "khs_meanings": [
-        "天地の胞衣也",
-        "枝也",
-        "肢也"
+        "昼夜の胞衣のエの灵也",
+        "ア行のエとワ行のヱの文（交わり）也",
+        "完全外発也"
       ],
-      "spiritual_origin": "天地を包む胞衣（えな）"
+      "spiritual_origin": "ア行のエ（天地の胞衣）とワ行のヱ（胞衣搦む）が文（交わり）して生ずる昼夜の胞衣の灵。天津金木の中心灵の一つ。完全外発。",
+      "row": "ヤ行",
+      "column": "エ段",
+      "distinction": "ア行エ=天地の胞衣（包む力）。ヤ行エ=昼夜の胞衣（ア行エとワ行ヱの文）。灵核として中心に位置する。"
     },
     {
       "number": 21,
@@ -596,7 +618,7 @@
     },
     {
       "number": 25,
-      "sound": "二",
+      "sound": "ニ",
       "category": "天津金木24相",
       "pattern": "右旋外発-右旋内集-左旋内集-左旋外発",
       "movements": [
@@ -604,7 +626,22 @@
         "右旋内集",
         "左旋内集",
         "左旋外発"
-      ]
+      ],
+      "classification": "火水の灵",
+      "element": "fire_water",
+      "polarity": "陰陽二",
+      "khs_meanings": [
+        "天地也",
+        "日月也",
+        "水火の凝也",
+        "丹（あかき）也",
+        "非也",
+        "従也"
+      ],
+      "spiritual_origin": "天地・日月。水火が凝る二つの力",
+      "meaning": "天地也",
+      "row": "ナ行",
+      "column": "イ段"
     },
     {
       "number": 26,
@@ -749,7 +786,7 @@
     },
     {
       "number": 32,
-      "sound": "ゴ",
+      "sound": "コ",
       "category": "陰陽反転相",
       "pattern": "左旋内集-右旋外発-右旋内集-左旋外発",
       "movements": [
@@ -757,7 +794,26 @@
         "右旋外発",
         "右旋内集",
         "左旋外発"
-      ]
+      ],
+      "classification": "煇火の灵",
+      "element": "fire",
+      "polarity": "陽",
+      "khs_meanings": [
+        "男也",
+        "女也",
+        "総ての人の灵也",
+        "凝也",
+        "器也",
+        "囲也",
+        "処也",
+        "細也",
+        "香也",
+        "小也"
+      ],
+      "spiritual_origin": "総ての人の灵。凝り固まる力",
+      "meaning": "男也",
+      "row": "カ行",
+      "column": "オ段"
     },
     {
       "number": 33,

@@ -4,7 +4,9 @@
     "source": "言灵秘書（山口志道霊学全集）/ 稲荷古伝五十連法則",
     "authority": "KHS原典準拠。推測・補間なし。",
     "notation": "「霊」→「灵」、「水火」=「イキ」（DOMAIN_GUIDE_KOTODAMA_KHS_v1準拠）",
-    "version": "v2_khs_strict"
+    "version": "v3_gojiuren_51",
+    "totalSounds": 51,
+    "note": "10行×5列=50音＋ン=51音。ヤ行イ・ヤ行エ・ワ行ウはア行のイ・エ・ウとは異なる独立した灵。"
   },
   "gojiuren": {
     "structure": "五列十行。右から左へ読む。",
@@ -16,9 +18,9 @@
       { "position": 5, "name": "火水の灵", "type": "fire_water", "sounds": ["ナ","ニ","ヌ","ネ","ノ"] },
       { "position": 6, "name": "正火の灵", "type": "true_fire", "sounds": ["ハ","ヒ","フ","ヘ","ホ"] },
       { "position": 7, "name": "火中の水の灵", "type": "water_in_fire", "sounds": ["マ","ミ","ム","メ","モ"] },
-      { "position": 8, "name": "火水の灵（八行）", "type": "fire_water_mixed", "sounds": ["ヤ","（イ）","ユ","（エ）","ヨ"] },
+      { "position": 8, "name": "火水の灵（八行）", "type": "fire_water_mixed", "sounds": ["ヤ","ヤ行イ","ユ","ヤ行エ","ヨ"], "note": "ヤ行イ=ア行イとワ行ヰの文（交わり）。ヤ行エ=ア行エとワ行ヱの文。" },
       { "position": 9, "name": "濁水の灵", "type": "turbid_water", "sounds": ["ラ","リ","ル","レ","ロ"] },
-      { "position": 10, "name": "水火の灵", "type": "water_fire", "sounds": ["ワ","ヰ","（ウ）","ヱ","ヲ"] }
+      { "position": 10, "name": "水火の灵", "type": "water_fire", "sounds": ["ワ","ヰ","ワ行ウ","ヱ","ヲ"], "note": "ワ行ウ=渦巻降のウの灵。ア行ウ（浮昇）とは対極。" }
     ]
   },
   "sounds": {
@@ -326,6 +328,30 @@
       "meanings": ["与也","女男の契也","淀也","齢也","下知也"],
       "spiritual_origin": "與（くむ）。女男の契り。布斗麻邇のヨ"
     },
+    "ヤ行イ": {
+      "classification": "火水の灵（八行）",
+      "element": "fire_water_center",
+      "polarity": "陰陽統合（入息）",
+      "position": "正中",
+      "row": "ヤ行",
+      "column": "イ段",
+      "kanagi_number": 18,
+      "meanings": ["入息のイの灵也","ア行のイとワ行のヰの文（交わり）也","完全内集也"],
+      "spiritual_origin": "ア行のイ（出息・命）とワ行のヰ（引汐・搦み）が文（交わり）して生ずる入息の灵。天津金木の中心灵の一つ。完全内集。",
+      "distinction": "ア行イ=出息の灵（命の発動）。ヤ行イ=入息の灵（ア行イとワ行ヰの文）。灵核として中心に位置する。"
+    },
+    "ヤ行エ": {
+      "classification": "火水の灵（八行）",
+      "element": "fire_water_center",
+      "polarity": "陰陽統合（胞衣）",
+      "position": "正中",
+      "row": "ヤ行",
+      "column": "エ段",
+      "kanagi_number": 20,
+      "meanings": ["昼夜の胞衣のエの灵也","ア行のエとワ行のヱの文（交わり）也","完全外発也"],
+      "spiritual_origin": "ア行のエ（天地の胞衣）とワ行のヱ（胞衣搦む）が文（交わり）して生ずる昼夜の胞衣の灵。天津金木の中心灵の一つ。完全外発。",
+      "distinction": "ア行エ=天地の胞衣（包む力）。ヤ行エ=昼夜の胞衣（ア行エとワ行ヱの文）。灵核として中心に位置する。"
+    },
     "ラ": {
       "classification": "濁水の灵",
       "element": "turbid_water",
@@ -381,6 +407,18 @@
       "position": "天地人",
       "meanings": ["蒼空也","潮水也","引汐也","天地人万物を搦めて備えたるしほみつ也","居也"],
       "spiritual_origin": "蒼空。五十連の活用はこの灵に過ぎたるはなき也"
+    },
+    "ワ行ウ": {
+      "classification": "水火の灵",
+      "element": "water_fire",
+      "polarity": "陰（降）",
+      "position": "地",
+      "row": "ワ行",
+      "column": "ウ段",
+      "kanagi_number": 9,
+      "meanings": ["渦巻降のウの灵也","左に渦巻きて降る也"],
+      "spiritual_origin": "ア行のウ（浮昇）の対極。左に渦巻きて降る水火の灵。天津金木の生成順序第9番。",
+      "distinction": "ア行ウ=右に浮き昇る灵（陰・天）。ワ行ウ=左に渦巻き降る灵（陰・地）。浮昇と渦降の対極。"
     },
     "ヱ": {
       "classification": "水火の灵",
