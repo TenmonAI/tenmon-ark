@@ -11,6 +11,42 @@ import { upsertPage } from "../kokuzo/pages.js";
 
 const router = Router();
 
+/**
+ * GET /api/ocr/runtime/verify
+ * OCR runtime readiness probe (binary-focused).
+ */
+router.get("/ocr/runtime/verify", (_req: Request, res: Response) => {
+  const check = (cmd: string) => {
+    try {
+      execFileSync("bash", ["-lc", `command -v ${cmd}`], { stdio: "ignore" });
+      return true;
+    } catch {
+      return false;
+    }
+  };
+  const tesseract = check("tesseract");
+  const convert = check("convert");
+  const pdftotext = check("pdftotext");
+  const ocrmypdf = check("ocrmypdf");
+  const failures: string[] = [];
+  if (!tesseract) failures.push("missing:tesseract");
+  if (!convert) failures.push("missing:convert");
+  if (!pdftotext) failures.push("missing:pdftotext");
+  return res.json({
+    ok: failures.length === 0,
+    schemaVersion: 1,
+    engines: {
+      tesseract: tesseract ? "ok" : "missing",
+      convert: convert ? "ok" : "missing",
+      pdftotext: pdftotext ? "ok" : "missing",
+      ocrmypdf: ocrmypdf ? "ok" : "optional-missing",
+    },
+    failure_reasons: failures,
+    note: ocrmypdf ? null : "ocrmypdf is optional",
+    contract: "OCR is not truth",
+  });
+});
+
 // Ingest request storage (JSON file, minimal diff)
 const INGEST_REQUESTS_FILE = path.join(getTenmonDataDir(), "db", "ingest_requests.json");
 

@@ -60,12 +60,14 @@ export function GptShell() {
     return () => window.removeEventListener("keydown", onKey);
   }, [sidebarOpen, isOverlayNav]);
 
-const title =
+  const title =
     view === "chat"
       ? APP_TITLE
       : view === "dashboard"
         ? "Dashboard"
-        : "Profile";
+        : view === "bookforge"
+          ? "Book Forge Unlimited"
+          : "Profile";
   return (
     <div className={`gpt-shell ${isOverlayNav ? "gpt-shell--overlay" : ""} ${sidebarOpen ? "gpt-shell--open" : ""}`}>
       <div className="gpt-overlay" onClick={() => setSidebarOpen(false)} />
@@ -80,6 +82,7 @@ const title =
         <div className="gpt-content">
           {view === "chat" && <ChatRoute />}
           {view === "dashboard" && <DashboardPage />}
+          {view === "bookforge" && <ChatRoute initialMode="book_forge_unlimited" />}
           {view === "profile" && <ProfilePage />}
         </div>
       </main>

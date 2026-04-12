@@ -1,7 +1,7 @@
 import React from "react";
 import { useI18n } from "../../i18n/useI18n";
 
-export type GptView = "chat" | "dashboard" | "profile";
+export type GptView = "chat" | "dashboard" | "bookforge" | "profile";
 
 interface SidebarProps {
   view: GptView;
@@ -35,6 +35,9 @@ export function Sidebar({ view, onView, onNewChat, onOpenSettings }: SidebarProp
         <div className="gpt-sidebar-section-label">{t("sidebar.explore")}</div>
         <button type="button" className={linkClass("dashboard")} onClick={() => onView("dashboard")}>
           {t("sidebar.dashboard")}
+        </button>
+        <button type="button" className={linkClass("bookforge")} onClick={() => onView("bookforge")}>
+          📖 書籍構築
         </button>
         <button type="button" className={linkClass("profile")} onClick={() => onView("profile")}>
           {t("sidebar.profile")}
