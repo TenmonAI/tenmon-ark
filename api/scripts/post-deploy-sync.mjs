@@ -1,84 +1,101 @@
 /**
- * Post-deploy sync: ensure systemd can find dist/index.js
+ * Post-deploy sync script
  * 
- * VPS directory structure:
- *   /opt/tenmon-ark/api/          — deploy target (git clone, npm install, npm run build)
- *   /opt/tenmon-ark/tenmon-ark/   — systemd WorkingDirectory (ExecStart=node dist/index.js)
+ * Runs after `npm run build` on the VPS during deploy.
  * 
- * This script copies the built dist/ and node_modules/ from the deploy target
- * to the systemd WorkingDirectory so the restarted service picks up the latest code.
+ * Tasks:
+ * 1. Kill any rogue node processes on port 3000 (pm2, manual starts, etc.)
+ *    so that `systemctl restart tenmon-ark-api` can bind to the port.
+ * 2. Ensure dist/ and node_modules/ are accessible from systemd WorkingDirectory.
  */
 import { execSync } from "child_process";
-import { existsSync, mkdirSync } from "fs";
+import { existsSync } from "fs";
 import { resolve, dirname } from "path";
 import { fileURLToPath } from "url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const apiDir = resolve(__dirname, "..");
 
-// Known VPS paths
-const DEPLOY_API = "/opt/tenmon-ark/api";
-const SYSTEMD_BASE = "/opt/tenmon-ark/tenmon-ark";
-
-// Only run on VPS when building from the deploy target
-if (apiDir !== DEPLOY_API) {
-  console.log(`[sync] Not deploy path (${apiDir}), skipping`);
+// Only run on VPS
+if (!apiDir.startsWith("/opt/tenmon-ark")) {
+  console.log("[sync] Not on VPS, skipping");
   process.exit(0);
 }
 
-if (!existsSync(SYSTEMD_BASE)) {
-  console.log(`[sync] systemd base not found: ${SYSTEMD_BASE}, skipping`);
-  process.exit(0);
-}
+console.log(`[sync] Running on VPS, apiDir=${apiDir}`);
 
-console.log(`[sync] Deploy path: ${DEPLOY_API}`);
-console.log(`[sync] Systemd base: ${SYSTEMD_BASE}`);
-
+// Task 1: Kill any rogue processes on port 3000
 try {
-  // Step 1: Sync dist/ to systemd base
-  const srcDist = resolve(DEPLOY_API, "dist");
-  const dstDist = resolve(SYSTEMD_BASE, "dist");
+  console.log("[sync] Killing any rogue processes on port 3000...");
   
-  if (existsSync(srcDist)) {
-    console.log(`[sync] Copying dist/ -> ${dstDist}`);
-    execSync(`rm -rf ${dstDist} && cp -rf ${srcDist} ${dstDist}`, { stdio: "inherit" });
-    console.log(`[sync] ✅ dist/ synced`);
+  // Try pm2 first
+  try {
+    execSync("which pm2 && pm2 kill 2>/dev/null", { stdio: "pipe" });
+    console.log("[sync] pm2 processes killed");
+  } catch {
+    // pm2 not installed or no processes
   }
   
-  // Step 2: Sync node_modules/ to systemd base
-  const srcModules = resolve(DEPLOY_API, "node_modules");
-  const dstModules = resolve(SYSTEMD_BASE, "node_modules");
-  
-  if (existsSync(srcModules)) {
-    console.log(`[sync] Syncing node_modules/ -> ${dstModules}`);
-    // Use rsync for efficiency if available, otherwise cp
-    try {
-      execSync(`rsync -a --delete ${srcModules}/ ${dstModules}/`, { stdio: "inherit" });
-    } catch {
-      execSync(`rm -rf ${dstModules} && cp -rf ${srcModules} ${dstModules}`, { stdio: "inherit" });
+  // Kill any node processes listening on port 3000
+  try {
+    const result = execSync("lsof -ti:3000 2>/dev/null || true", { encoding: "utf8" }).trim();
+    if (result) {
+      const pids = result.split("\n").filter(Boolean);
+      console.log(`[sync] Found processes on port 3000: ${pids.join(", ")}`);
+      for (const pid of pids) {
+        try {
+          execSync(`kill -9 ${pid} 2>/dev/null || true`);
+          console.log(`[sync] Killed PID ${pid}`);
+        } catch {
+          // Process might have already exited
+        }
+      }
+    } else {
+      console.log("[sync] No rogue processes on port 3000");
     }
-    console.log(`[sync] ✅ node_modules/ synced`);
+  } catch {
+    // lsof not available, try fuser
+    try {
+      execSync("fuser -k 3000/tcp 2>/dev/null || true", { stdio: "pipe" });
+      console.log("[sync] Killed processes on port 3000 via fuser");
+    } catch {
+      // Neither lsof nor fuser available
+    }
   }
-  
-  // Step 3: Ensure .env is accessible
-  const srcEnv = resolve(DEPLOY_API, ".env");
-  const dstEnv = resolve(SYSTEMD_BASE, ".env");
-  if (existsSync(srcEnv) && !existsSync(dstEnv)) {
-    execSync(`cp ${srcEnv} ${dstEnv}`, { stdio: "inherit" });
-    console.log(`[sync] ✅ .env copied`);
-  }
-  
-  // Step 4: Also sync package.json for any runtime references
-  const srcPkg = resolve(DEPLOY_API, "package.json");
-  const dstPkg = resolve(SYSTEMD_BASE, "package.json");
-  if (existsSync(srcPkg)) {
-    execSync(`cp ${srcPkg} ${dstPkg}`, { stdio: "inherit" });
-    console.log(`[sync] ✅ package.json copied`);
-  }
-  
-  console.log("[sync] ✅ All sync complete — systemd will pick up latest code on restart");
 } catch (err) {
-  console.error(`[sync] ⚠️ Error: ${err.message}`);
-  console.error("[sync] The server may still run old code. Manual intervention may be needed.");
-  // Don't exit with error code to avoid breaking the deploy
+  console.error(`[sync] ⚠️ Failed to kill rogue processes: ${err.message}`);
 }
+
+// Task 2: Ensure systemd can find the files
+// The systemd service might use /opt/tenmon-ark/api as WorkingDirectory
+// In that case, dist/ is already in the right place after build.
+// But if there's a different WorkingDirectory, we need to sync.
+const possibleSystemdDirs = [
+  "/opt/tenmon-ark/tenmon-ark",
+  "/opt/tenmon-ark/tenmon-ark/api",
+];
+
+for (const systemdDir of possibleSystemdDirs) {
+  if (existsSync(systemdDir) && systemdDir !== apiDir) {
+    console.log(`[sync] Found potential systemd dir: ${systemdDir}`);
+    try {
+      const srcDist = resolve(apiDir, "dist");
+      const dstDist = resolve(systemdDir, "dist");
+      if (existsSync(srcDist)) {
+        execSync(`rm -rf ${dstDist} && cp -rf ${srcDist} ${dstDist}`, { stdio: "inherit" });
+        console.log(`[sync] ✅ Copied dist/ to ${systemdDir}`);
+      }
+      
+      const srcModules = resolve(apiDir, "node_modules");
+      const dstModules = resolve(systemdDir, "node_modules");
+      if (existsSync(srcModules) && !existsSync(dstModules)) {
+        execSync(`ln -sf ${srcModules} ${dstModules}`, { stdio: "inherit" });
+        console.log(`[sync] ✅ Linked node_modules to ${systemdDir}`);
+      }
+    } catch (err) {
+      console.error(`[sync] ⚠️ Sync to ${systemdDir} failed: ${err.message}`);
+    }
+  }
+}
+
+console.log("[sync] ✅ Post-deploy sync complete");

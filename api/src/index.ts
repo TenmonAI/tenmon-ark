@@ -19,6 +19,9 @@ import memoryRouter from "./routes/memory.js";
 import { readerRouter } from "./routes/reader.js";
 import { writerStoreRouter } from "./routes/writerStore.js";
 import { writerCommitRouter } from "./routes/writerCommit.js";
+import { writerRouter } from "./routes/writer.js";
+import { writerVerifyRouter } from "./routes/writerVerify.js";
+import { writerDraftRouter } from "./routes/writerDraft.js";
 import { seedRouter } from "./routes/seed.js";
 import { selfImproveRouter } from "./routes/selfImprove.js";
 import { councilRouter } from "./routes/council.js";
@@ -105,6 +108,11 @@ app.use(cors());
 app.use(express.json());
 app.use(cookieParser());
 
+// Version check endpoint (for deploy verification)
+app.get("/api/version", (_req, res) => {
+  res.json({ version: "2.1.0-sukuyou-consciousness", timestamp: new Date().toISOString(), pid });
+});
+
 app.use("/api", kamuRouter);
 // Founder auth endpoints (additive)
 registerFounderAuth(app);
@@ -153,12 +161,4 @@ app.listen(PORT, "0.0.0.0", () => {
   console.log(`API listening on http://0.0.0.0:${PORT}`);
   markListenReady();
   console.log(`[READY] listenReady=true`);
-});
-import { writerRouter } from "./routes/writer.js";
-import { writerVerifyRouter } from "./routes/writerVerify.js";
-import { writerDraftRouter } from "./routes/writerDraft.js";
-
-// Version check endpoint
-app.get("/api/version", (_req, res) => {
-  res.json({ version: "2.0.0-sukuyou", timestamp: new Date().toISOString() });
 });
