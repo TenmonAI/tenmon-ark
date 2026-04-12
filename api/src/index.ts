@@ -157,3 +157,8 @@ app.listen(PORT, "0.0.0.0", () => {
 import { writerRouter } from "./routes/writer.js";
 import { writerVerifyRouter } from "./routes/writerVerify.js";
 import { writerDraftRouter } from "./routes/writerDraft.js";
+
+// Version check endpoint
+app.get("/api/version", (_req, res) => {
+  res.json({ version: "2.0.0-sukuyou", timestamp: new Date().toISOString() });
+});
