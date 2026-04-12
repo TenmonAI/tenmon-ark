@@ -734,6 +734,141 @@ function buildKatakamunContext(userMessage: string): string {
   return parts.join("\n");
 }
 
+// === kokuzo_pages FTS検索 → LLMプロンプト注入 ===
+
+/**
+ * kokuzo_pages FTS検索結果をLLMプロンプト用コンテキストとして返す。
+ * DEF/GENERALルートから呼び出し、evidence bindとして応答に組み込む。
+ * 
+ * 設計原則:
+ * - 原文を改変しない（snippetはそのまま引用）
+ * - 検索結果が0件の場合は空文字列を返す（hallucination防止）
+ * - source_type / doc / pdfPage を明示し、出典追跡可能にする
+ */
+export function searchKokuzoPagesForContext(userMessage: string, limit: number = 5): {
+  contextText: string;
+  evidenceRefs: Array<{ doc: string; pdfPage: number; snippet: string }>;
+} {
+  try {
+    // 動的インポート回避: getDb/searchPagesForHybrid は同一プロセスで利用可能
+    // ただし循環参照を避けるため、ここではDB直接アクセスする
+    const { getDb } = require("../../db/index.js");
+    const db = getDb("kokuzo");
+    
+    // クエリ正規化
+    let q = String(userMessage || "").trim();
+    q = q.replace(/#詳細/g, "").replace(/\bdoc\s*=\s*[^\s]+/gi, "").replace(/\bpdfPage\s*=\s*\d+/gi, "").trim();
+    q = q.replace(/言灵/g, "言霊");
+    // 記号除去
+    q = q.replace(/[。．、,：:;!?？#=()\[\]{}<>「」『』/\\]/g, " ").replace(/\s+/g, " ").trim();
+    if (q.length < 2) return { contextText: "", evidenceRefs: [] };
+    
+    const ftsQuery = q.split(/\s+/).filter(Boolean).join(" ");
+    let rows: any[] = [];
+    
+    // FTS5検索
+    try {
+      const hasFts = db.prepare("SELECT 1 AS ok FROM sqlite_master WHERE type='table' AND name='kokuzo_pages_fts' LIMIT 1").get();
+      if (hasFts) {
+        rows = db.prepare(
+          `SELECT doc, pdfPage, substr(replace(text, char(12), ''), 1, 300) AS snippet, bm25(kokuzo_pages_fts) AS rank
+           FROM kokuzo_pages_fts
+           WHERE kokuzo_pages_fts MATCH ?
+           ORDER BY rank ASC
+           LIMIT ?`
+        ).all(ftsQuery, limit * 2) as any[];
+      }
+    } catch { /* FTS失敗時はLIKEへ */ }
+    
+    // LIKE fallback
+    if (rows.length === 0) {
+      try {
+        const like = `%${q}%`;
+        rows = db.prepare(
+          `SELECT doc, pdfPage, substr(replace(text, char(12), ''), 1, 300) AS snippet
+           FROM kokuzo_pages
+           WHERE text LIKE ?
+           ORDER BY length(text) DESC
+           LIMIT ?`
+        ).all(like, limit * 2) as any[];
+      } catch { /* LIKE失敗時は空 */ }
+    }
+    
+    if (rows.length === 0) return { contextText: "", evidenceRefs: [] };
+    
+    // ゴミフィルタ（表紙・OCR失敗・日本語なしを除外）
+    const filtered = rows.filter((r: any) => {
+      const sn = String(r.snippet || "").trim();
+      if (sn.length < 30) return false;
+      if (/\[NON_TEXT_PAGE_OR_OCR_FAILED\]/.test(sn)) return false;
+      if (!/[ぁ-んァ-ン一-龯]/.test(sn)) return false;
+      if (Number(r.pdfPage) === 1) return false; // 表紙除外
+      return true;
+    }).slice(0, limit);
+    
+    if (filtered.length === 0) return { contextText: "", evidenceRefs: [] };
+    
+    // コンテキストテキスト生成
+    const parts: string[] = [];
+    parts.push("【kokuzo書籍検索結果 — 以下は原典からの抜粋。改変禁止。】");
+    const evidenceRefs: Array<{ doc: string; pdfPage: number; snippet: string }> = [];
+    
+    for (const r of filtered) {
+      const doc = String(r.doc || "");
+      const pdfPage = Number(r.pdfPage || 0);
+      const snippet = String(r.snippet || "").replace(/\s+/g, " ").trim();
+      parts.push(`■ ${doc} P${pdfPage}: ${snippet}`);
+      evidenceRefs.push({ doc, pdfPage, snippet });
+    }
+    
+    parts.push("");
+    parts.push("【引用指示】上記の書籍検索結果を根拠として応答に活用せよ。ただし出力にdoc/pdfPageを含めるな。原文の内容を改変するな。検索結果にない情報は『未確認』と明示せよ。");
+    
+    return { contextText: parts.join("\n"), evidenceRefs };
+  } catch (e) {
+    console.warn("[KNOWLEDGE-LOADER] searchKokuzoPagesForContext failed:", e);
+    return { contextText: "", evidenceRefs: [] };
+  }
+}
+
+// === NAS書籍メタデータ契約 ===
+
+/**
+ * NAS書籍を取り込む際のメタデータ契約。
+ * 全ての外部書籍データはこの形式に従うこと。
+ * 
+ * 設計原則:
+ * - source_type で出典種別を明示（nas_book / notion / manual）
+ * - 原文（quote_exact）と解釈（interpretation_layer）を分離
+ * - lineage で系譜を追跡可能にする
+ */
+export interface BookChunkMetadata {
+  source_type: "nas_book" | "notion" | "manual" | "kokuzo_page";
+  title: string;
+  author: string;
+  lineage: string;  // e.g. "楢崎皐月系" | "宇野多美恵系" | "天聞独自統合系"
+  era_or_tradition: string;  // e.g. "昭和" | "古代" | "現代"
+  file_path: string;
+  extracted_at: string;  // ISO 8601
+  chunk_id: string;
+  quote_exact: string;  // 原文そのまま（改変禁止）
+  interpretation_layer: string;  // 天聞アークによる解釈
+}
+
+/**
+ * NAS書籍チャンクをkokuzo_pagesに安全に追加する関数（将来実装用の受け口）
+ * 
+ * 現時点ではインターフェースのみ定義。実際の取り込みは
+ * NASテキスト抽出パイプライン完成後に実装する。
+ */
+export function ingestBookChunk(_chunk: BookChunkMetadata): { success: boolean; error?: string } {
+  // TODO: kokuzo_pages への INSERT + FTS5 自動同期
+  // 1. doc = `NAS:${chunk.title}` として kokuzo_pages に INSERT
+  // 2. FTS5 トリガーが自動で kokuzo_pages_fts を更新
+  // 3. metadata を kokuzo_book_metadata テーブルに保存（要スキーマ拡張）
+  return { success: false, error: "Not yet implemented. NAS ingestion pipeline pending." };
+}
+
 // === ユーティリティ ===
 
 function toKatakana(text: string): string {

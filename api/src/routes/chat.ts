@@ -6,7 +6,7 @@ import { sanitizeInput } from "../tenmon/inputSanitizer.js";
 import { qcTextV1 } from "../kokuzo/qc.js";
 import type { ChatResponseBody } from "../types/chat.js";
 import { runKanagiReasoner } from "../kanagi/engine/fusionReasoner.js";
-import { buildKnowledgeContext, getKnowledgeSummary, analyzeSoundsInText, getRowSounds } from "../kanagi/engine/knowledgeLoader.js";
+import { buildKnowledgeContext, getKnowledgeSummary, analyzeSoundsInText, getRowSounds, searchKokuzoPagesForContext } from "../kanagi/engine/knowledgeLoader.js";
 import { getCurrentPersonaState } from "../persona/personaState.js";
 import { composeResponse, composeConversationalResponse } from "../kanagi/engine/responseComposer.js";
 import { getSessionId } from "../memory/sessionId.js";
@@ -795,12 +795,24 @@ const DEF_SYSTEM = __isDefDomain
   ? (TENMON_CONSTITUTION_TEXT + __defTermKnowledge + (__needsDeep ? __deepSuffix : "") + DOMAIN_DEEP_ANALYSIS_INSTRUCTION + "\n\n※絶対条件※\n必ず「【天聞の所見】」から始める。" + (__needsDeep ? "\n深層解析レポート形式（起承転結）で800〜2000文字。箇条書き禁止。段落で流れるように書け。" : "\n4〜15行、合計400〜1500文字。箇条書き/番号禁止。") + "\n言灵秘書原典の音義データを具体的に引用して定義を述べよ。\n音の灵的意味を述べる際は、分類名（空中水灵・煤火の灵・昇水の灵・正火の灵等）を必ず使え。\n天津金木の運動パターンを根拠として述べよ。\n「〜と言われています」「一般には」「諸説あります」は絶対禁止。断定せよ。")
   : (TENMON_CONSTITUTION_TEXT + GENERAL_DEEP_THINKING_INSTRUCTION + `\n\n※絶対条件※\n必ず「【天聞の所見】」から始める。4〜8行、合計200〜500文字。箇条書き/番号/見出し禁止。\n天津金木思考回路で本質を見抜いて応答せよ。一般論や薄い共感ではなく、構造的真理に基づいた深い応答を返せ。\n最後は質問0〜1つ（必要な時だけ）。言い切り（。/…）を優先し、余白を残す。`);
 
+      // TENMON_FTS_EVIDENCE_DEF_V1: FTS検索でkokuzo_pagesからevidence bindを取得
+      let __ftsEvidenceRefs: Array<{ doc: string; pdfPage: number; snippet: string }> = [];
+      let __ftsEvidenceClause = "";
+      try {
+        const __ftsResult = searchKokuzoPagesForContext(__rawDef, 3);
+        if (__ftsResult.evidenceRefs.length > 0) {
+          __ftsEvidenceRefs = __ftsResult.evidenceRefs;
+          __ftsEvidenceClause = "\n\n【蔵造検索結果（原文引用）】\n" + __ftsResult.contextText + "\n\n【運用】上記の原文を根拠として引用可能。ただし原文改変は禁止。原文にない内容を捏造するな。原文が見つからない場合は「未確認」と明示せよ。";
+        }
+      } catch (__e) { console.debug("[FTS_DEF] search error:", __e); }
+
       let outText = "";
       let outProv = "llm";
       try {
         const __defMaxTokens = __needsDeep ? 3500 : (__isDefDomain ? 2500 : 2000);
         const __defTimeout = __needsDeep ? 25000 : 15000;
-        const llmRes = await llmChat({ system: DEF_SYSTEM, user: t0, history: memoryReadSession(String(threadId || ""), 8), maxTokens: __defMaxTokens, timeout: __defTimeout });
+        const __defSystemWithEvidence = DEF_SYSTEM + __ftsEvidenceClause;
+        const llmRes = await llmChat({ system: __defSystemWithEvidence, user: t0, history: memoryReadSession(String(threadId || ""), 8), maxTokens: __defMaxTokens, timeout: __defTimeout });
         outText = String(llmRes?.text ?? "").trim();
         outProv = String(llmRes?.provider ?? "llm");
       } catch (e: any) {
@@ -826,11 +838,11 @@ const DEF_SYSTEM = __isDefDomain
       }
       return res.json(__tenmonGeneralGateResultMaybe({
         response: outText,
-        evidence: null,
+        evidence: __ftsEvidenceRefs.length > 0 ? { fts: __ftsEvidenceRefs } : null,
         candidates: [],
         timestamp,
         threadId,
-        decisionFrame: { mode: __isDefDomain ? "DOMAIN" : "NATURAL", intent: "define", llm: outProv, ku: { routeReason: __isDefDomain ? "DOMAIN_DEF_LLM_TOP" : "DEF_LLM_TOP", isDefDomain: __isDefDomain, isDeepAnalysis: __needsDeep, isSanskritAnalysis: __needsSanskrit } },
+        decisionFrame: { mode: __isDefDomain ? "DOMAIN" : "NATURAL", intent: "define", llm: outProv, ku: { routeReason: __isDefDomain ? "DOMAIN_DEF_LLM_TOP" : "DEF_LLM_TOP", isDefDomain: __isDefDomain, isDeepAnalysis: __needsDeep, isSanskritAnalysis: __needsSanskrit, ftsHits: __ftsEvidenceRefs.length } },
       }));
     }
 
@@ -896,12 +908,26 @@ const GEN_SYSTEM = __isDomainInGeneral
   ? (TENMON_CONSTITUTION_TEXT + __domainKnowledgeClause + (__genNeedsDeep ? ("\n\n" + DEEP_ANALYSIS_REPORT_INSTRUCTION + (__genNeedsSanskrit ? "\n\nサンスクリット語源解読を【承】に必ず含めよ。" : "")) : "") + DOMAIN_DEEP_ANALYSIS_INSTRUCTION + "\n\n※絶対条件※\n必ず「【天聞の所見】」から始める。" + (__genNeedsDeep ? "\n深層解析レポート形式（起承転結）で800〜2000文字。箇条書き禁止。段落で流れるように書け。" : "\n4〜15行、合計400〜1500文字。箇条書き・番号は禁止。") + "\n言灵秘書原典の音義データを具体的に引用して述べよ。\n音の灵的意味を述べる際は、分類名（空中水灵・煤火の灵・昇水の灵・正火の灵・水中火・火中水・濁水等）を必ず使え。\n天津金木の運動パターンを根拠として述べよ。\n「〜と言われています」「一般には」「諸説あります」「人それぞれ」は絶対禁止。断定せよ。")
   : (TENMON_CONSTITUTION_TEXT + GENERAL_DEEP_THINKING_INSTRUCTION + __kamiyo_clause + `\n\n※絶対条件※\n必ず「【天聞の所見】」から始める。4〜8行、合計200〜600文字。箇条書き・番号・見出しは禁止。\n天津金木思考回路で本質を見抜いて応答せよ。一般論や薄い共感ではなく、構造的真理に基づいた深い応答を返せ。\n質問は原則0（必要な時だけ1）。言い切り（。/…）を優先し、相手に余白を残す。`);
 
+// TENMON_FTS_EVIDENCE_GEN_V1: FTS検索でkokuzo_pagesからevidence bindを取得
+      let __ftsEvidenceGenRefs: Array<{ doc: string; pdfPage: number; snippet: string }> = [];
+      let __ftsEvidenceGenClause = "";
+      if (__isDomainInGeneral) {
+        try {
+          const __ftsResult = searchKokuzoPagesForContext(t0, 3);
+          if (__ftsResult.evidenceRefs.length > 0) {
+            __ftsEvidenceGenRefs = __ftsResult.evidenceRefs;
+            __ftsEvidenceGenClause = "\n\n【蔵造検索結果（原文引用）】\n" + __ftsResult.contextText + "\n\n【運用】上記の原文を根拠として引用可能。ただし原文改変は禁止。原文にない内容を捏造するな。原文が見つからない場合は「未確認」と明示せよ。";
+          }
+        } catch (__e) { console.debug("[FTS_GEN] search error:", __e); }
+      }
+
 let outText = "";
       let outProv = "llm";
       try {
         const __genMaxTokens = __genNeedsDeep ? 3500 : (__isDomainInGeneral ? 2500 : 2000);
         const __genTimeout = __genNeedsDeep ? 25000 : 15000;
-        const llmRes = await llmChat({ system: GEN_SYSTEM, user: t0, history: memoryReadSession(String(threadId || ""), 8), maxTokens: __genMaxTokens, timeout: __genTimeout });
+        const __genSystemWithEvidence = GEN_SYSTEM + __ftsEvidenceGenClause;
+        const llmRes = await llmChat({ system: __genSystemWithEvidence, user: t0, history: memoryReadSession(String(threadId || ""), 8), maxTokens: __genMaxTokens, timeout: __genTimeout });
         outText = String(llmRes?.text ?? "").trim();
         outProv = String(llmRes?.provider ?? "llm");
       } catch (e: any) {
@@ -939,11 +965,11 @@ let outText = "";
       }
 return res.json(__tenmonGeneralGateResultMaybe({
         response: outText,
-        evidence: null,
+        evidence: __ftsEvidenceGenRefs.length > 0 ? { fts: __ftsEvidenceGenRefs } : null,
         candidates: [],
         timestamp,
         threadId,
-        decisionFrame: { mode: __isDomainInGeneral ? "DOMAIN" : "NATURAL", intent: "chat", llm: outProv, ku: { routeReason: __isDomainInGeneral ? "DOMAIN_GENERAL_LLM_TOP" : "NATURAL_GENERAL_LLM_TOP", isDomainInGeneral: __isDomainInGeneral, isDeepAnalysis: __genNeedsDeep, isSanskritAnalysis: __genNeedsSanskrit } },
+        decisionFrame: { mode: __isDomainInGeneral ? "DOMAIN" : "NATURAL", intent: "chat", llm: outProv, ku: { routeReason: __isDomainInGeneral ? "DOMAIN_GENERAL_LLM_TOP" : "NATURAL_GENERAL_LLM_TOP", isDomainInGeneral: __isDomainInGeneral, isDeepAnalysis: __genNeedsDeep, isSanskritAnalysis: __genNeedsSanskrit, ftsHits: __ftsEvidenceGenRefs.length } },
       }));
     }
     // do not treat "definition / meaning" as support-mode
