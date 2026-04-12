@@ -754,21 +754,40 @@ export function searchKokuzoPagesForContext(userMessage: string, limit: number =
     // ESM対応: モジュールレベルでインポート済みの getDb を使用
     const db = getDb("kokuzo");
     
-    // クエリ正規化
+    // クエリ正規化: 助詞・記号を除去し、キーワードだけを抽出
     let q = String(userMessage || "").trim();
     q = q.replace(/#詳細/g, "").replace(/\bdoc\s*=\s*[^\s]+/gi, "").replace(/\bpdfPage\s*=\s*\d+/gi, "").trim();
-    q = q.replace(/言灵/g, "言霊");
-    // 記号除去
-    q = q.replace(/[。．、,：:;!?？#=()\[\]{}<>「」『』/\\]/g, " ").replace(/\s+/g, " ").trim();
+    // 記号・助詞除去
+    q = q.replace(/[。．、,：:;!?？#=()\[\]{}<>「」『』/\\・…]/g, " ").replace(/\s+/g, " ").trim();
+    // 日本語の助詞・助動詞を除去してキーワードだけにする
+    const stopWords = ["とは", "って", "ですか", "ですね", "について", "を教えて", "教えて", "ください", "とは何", "何ですか", "の意味", "してください", "お願い", "します", "しました", "でしょうか", "ですが", "ですけど", "ですよ", "ですよね", "だと思います", "かもしれません", "解析", "解読", "深層", "レポート"];
+    for (const sw of stopWords) {
+      q = q.replace(new RegExp(sw, "g"), " ");
+    }
+    q = q.replace(/\s+/g, " ").trim();
     if (q.length < 2) return { contextText: "", evidenceRefs: [] };
     
-    const ftsQuery = q.split(/\s+/).filter(Boolean).join(" ");
+    // キーワード分割: 両方の表記で検索（言灵/言霊）
+    const keywords = q.split(/\s+/).filter(w => w.length >= 2);
+    if (keywords.length === 0) return { contextText: "", evidenceRefs: [] };
+    
+    console.log(`[FTS-SEARCH] query="${q}" keywords=[${keywords.join(", ")}]`);
+    
     let rows: any[] = [];
     
-    // FTS5検索
+    // FTS5検索: OR結合で検索（1つでもヒットすれば返す）
     try {
       const hasFts = db.prepare("SELECT 1 AS ok FROM sqlite_master WHERE type='table' AND name='kokuzo_pages_fts' LIMIT 1").get();
       if (hasFts) {
+        // 言灵/言霊の両方を含むOR検索
+        const expandedKeywords: string[] = [];
+        for (const kw of keywords) {
+          expandedKeywords.push(kw);
+          if (kw.includes("言灵")) expandedKeywords.push(kw.replace(/言灵/g, "言霊"));
+          if (kw.includes("言霊")) expandedKeywords.push(kw.replace(/言霊/g, "言灵"));
+        }
+        const ftsQuery = expandedKeywords.join(" OR ");
+        console.log(`[FTS-SEARCH] ftsQuery="${ftsQuery}"`);
         rows = db.prepare(
           `SELECT doc, pdfPage, substr(replace(text, char(12), ''), 1, 300) AS snippet, bm25(kokuzo_pages_fts) AS rank
            FROM kokuzo_pages_fts
@@ -776,21 +795,34 @@ export function searchKokuzoPagesForContext(userMessage: string, limit: number =
            ORDER BY rank ASC
            LIMIT ?`
         ).all(ftsQuery, limit * 2) as any[];
+        console.log(`[FTS-SEARCH] FTS5 hits=${rows.length}`);
       }
-    } catch { /* FTS失敗時はLIKEへ */ }
+    } catch (ftsErr: any) {
+      console.warn(`[FTS-SEARCH] FTS5 failed: ${ftsErr?.message || ftsErr}`);
+    }
     
-    // LIKE fallback
+    // LIKE fallback: 各キーワードでOR検索
     if (rows.length === 0) {
       try {
-        const like = `%${q}%`;
+        const likeConditions = keywords.map(() => "text LIKE ?").join(" OR ");
+        const likeParams = keywords.map(kw => `%${kw}%`);
+        // 言灵/言霊の両方もLIKEで検索
+        for (const kw of keywords) {
+          if (kw.includes("言灵")) { likeParams.push(`%${kw.replace(/言灵/g, "言霊")}%`); }
+          if (kw.includes("言霊")) { likeParams.push(`%${kw.replace(/言霊/g, "言灵")}%`); }
+        }
+        const allConditions = likeParams.map(() => "text LIKE ?").join(" OR ");
         rows = db.prepare(
           `SELECT doc, pdfPage, substr(replace(text, char(12), ''), 1, 300) AS snippet
            FROM kokuzo_pages
-           WHERE text LIKE ?
+           WHERE ${allConditions}
            ORDER BY length(text) DESC
            LIMIT ?`
-        ).all(like, limit * 2) as any[];
-      } catch { /* LIKE失敗時は空 */ }
+        ).all(...likeParams, limit * 2) as any[];
+        console.log(`[FTS-SEARCH] LIKE fallback hits=${rows.length}`);
+      } catch (likeErr: any) {
+        console.warn(`[FTS-SEARCH] LIKE failed: ${likeErr?.message || likeErr}`);
+      }
     }
     
     if (rows.length === 0) return { contextText: "", evidenceRefs: [] };
