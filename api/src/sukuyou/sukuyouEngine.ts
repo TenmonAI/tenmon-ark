@@ -137,6 +137,9 @@ export interface NakshatraData {
   fortuneType: string;
   auspicious: string[];
   inauspicious: string[];
+  famousPeople: string[];
+  growthChallenge: string;
+  interpersonalStyle: string;
 }
 
 export const NAKSHATRA_DATA: Record<Nakshatra, NakshatraData> = {
@@ -153,7 +156,10 @@ export const NAKSHATRA_DATA: Record<Nakshatra, NakshatraData> = {
     mantra: "のうまく　さんまんだ　ぼだなん　ばく", openingAdvice: "新しいことに挑戦する勇気が開運の鍵。古い習慣や固定観念を手放し、革新的な発想で道を切り開いて。",
     palaceBelong: "室女宮", palaceFoot: "四足", elementType: "風", quality: "柔軟", planetInfluence: "水星",
     fortuneType: "技芸運・知性運",
-    auspicious: ["建築", "種蒔", "旅行"], inauspicious: ["婚姻"]
+    auspicious: ["建築", "種蒔", "旅行"], inauspicious: ["婚姻"],
+    famousPeople: ["織田信長", "坂本龍馬", "手塚治虫", "宮崎駿", "イチロー"],
+    growthChallenge: "鋭い分析力と独立心の強さゆえに、周囲との摩擦を生みやすい。協調性を意識し、他者の意見にも耳を傾ける柔軟さを養うことが成長の鍵。自分の正しさに固執せず、多様な価値観を受け入れる器の大きさを育てよ。",
+    interpersonalStyle: "知的な会話を好み、表面的な付き合いを嫌う。信頼した相手には深い情を見せるが、初対面では距離を置きがち。独立心が強いため、束縛を嫌い自由な関係を好む。"
   },
   "亢": {
     name: "亢", reading: "こうしゅく", sanskrit: "スヴァーティ", starCount: 2, starShape: "長布堆",
@@ -168,7 +174,10 @@ export const NAKSHATRA_DATA: Record<Nakshatra, NakshatraData> = {
     mantra: "のうまく　さんまんだ　ぼだなん　きりく", openingAdvice: "学びと慈悲の心が開運の鍵。他者への奉仕が巡り巡って自分に返ってくる。",
     palaceBelong: "天秤宮", palaceFoot: "二足", elementType: "風", quality: "活動", planetInfluence: "金星",
     fortuneType: "学問運・慈悲運",
-    auspicious: ["学問", "修行", "治療"], inauspicious: ["戦闘", "訴訟"]
+    auspicious: ["学問", "修行", "治療"], inauspicious: ["戦闘", "訴訟"],
+    famousPeople: ["徳川家康", "福沢諭吉", "黒澤明", "松下幸之助", "本田宗一郎"],
+    growthChallenge: "学問への探究心が深いが、理論に偏りすぎて実践が疎かになることがある。頭で考えるだけでなく、行動に移す勇気を持つことが成長の鍵。完璧主義を手放し、不完全でも前に進む姿勢を大切に。",
+    interpersonalStyle: "穏やかで知的な雰囲気を持ち、誰とでも円満な関係を築ける。ただし本心を見せるまでに時間がかかり、深い信頼関係を築くには忍耐が必要。"
   },
   "氐": {
     name: "氐", reading: "ていしゅく", sanskrit: "ヴィシャーカー", starCount: 4, starShape: "牛形",
@@ -183,7 +192,10 @@ export const NAKSHATRA_DATA: Record<Nakshatra, NakshatraData> = {
     mantra: "のうまく　さんまんだ　ぼだなん　たらく", openingAdvice: "忍耐と誠実さが開運の鍵。善行を積み重ねることで、大きな果報が訪れる。",
     palaceBelong: "天秤宮", palaceFoot: "四足", elementType: "風", quality: "活動", planetInfluence: "金星",
     fortuneType: "道徳運・忍耐運",
-    auspicious: ["祈祷", "種蒔", "入宅"], inauspicious: ["旅行"]
+    auspicious: ["祈祷", "種蒔", "入宅"], inauspicious: ["旅行"],
+    famousPeople: ["聖徳太子", "空海", "紫式部", "夏目漱石", "湯川秀樹"],
+    growthChallenge: "慈悲深さと優しさが強みだが、他者に尽くしすぎて自分を犠牲にしがち。自分自身の欲求や感情にも正直になり、適度な自己主張を学ぶことが成長の鍵。",
+    interpersonalStyle: "温かく包容力のある人柄で、誰からも慕われる。困っている人を放っておけない性格だが、時に相手に依存されすぎることも。"
   },
   "房": {
     name: "房", reading: "ぼうしゅく", sanskrit: "アヌラーダー", starCount: 4, starShape: "蛇布形",
@@ -198,7 +210,10 @@ export const NAKSHATRA_DATA: Record<Nakshatra, NakshatraData> = {
     mantra: "のうまく　さんまんだ　ぼだなん　ばん", openingAdvice: "家族や仲間との絆を深めることが開運の鍵。威厳と徳を磨き、周囲から信頼される存在を目指して。",
     palaceBelong: "天蠍宮", palaceFoot: "一足", elementType: "水", quality: "不動", planetInfluence: "火星",
     fortuneType: "家運・威徳運",
-    auspicious: ["婚姻", "建築", "入宅"], inauspicious: ["裁衣"]
+    auspicious: ["婚姻", "建築", "入宅"], inauspicious: ["裁衣"],
+    famousPeople: ["豊臣秀吉", "西郷隆盛", "渋沢栄一", "田中角栄", "孫正義"],
+    growthChallenge: "富貴の運に恵まれるが、物質的な豊かさに執着しすぎると精神的な成長が停滞する。権力や地位に溺れず、謙虚さを忘れないことが成長の鍵。",
+    interpersonalStyle: "リーダーシップがあり、人を惹きつけるカリスマ性を持つ。面倒見が良く、部下や後輩からの信頼は厚いが、支配的になりすぎないよう注意が必要。"
   },
   "心": {
     name: "心", reading: "しんしゅく", sanskrit: "ジェーシュター", starCount: 3, starShape: "階段形",
@@ -214,7 +229,10 @@ export const NAKSHATRA_DATA: Record<Nakshatra, NakshatraData> = {
     openingAdvice: "未知なることにも大胆に踏み込むこと。外ではとても明るく振舞い、内では何故か陰鬱な気分になってふさぎ込むことも。ピンチやアクシデントに遭遇しても、決して諦めることなく起死回生を図ることができる運を持っているので、物事をポジティブに捉えて、大きな転機と飛躍の波に乗ること。興味の湧いたことにトライし、深めていけば間違いなく、運気アップのよび水をさそう。",
     palaceBelong: "天蠍宮", palaceFoot: "四足", elementType: "水", quality: "不動", planetInfluence: "冥王星",
     fortuneType: "人気運・地位運",
-    auspicious: ["祭祀", "建築"], inauspicious: ["旅行", "移転"]
+    auspicious: ["祭祀", "建築"], inauspicious: ["旅行", "移転"],
+    famousPeople: ["菅野美穂", "高岡早紀", "常盤貴子", "木村カエラ", "レディー・ガガ", "阿部寛", "反町隆史", "松尾芭蕉", "スティーブン・スピルバーグ"],
+    growthChallenge: "好奇心旺盛で社交的だが、自分の感情や弱さを抱え込みがち。直感力の高さゆえに他人の裏側を読みすぎて過剰な警戒心や猜疑心に陥ることもある。信頼できる相手に心の内を打ち明ける勇気を持つことが成長の鍵。素直な気持ちを言葉にすることで、心は解放され、対人関係もより健やかなものへと変わっていく。",
+    interpersonalStyle: "社交的で周囲に合わせるのが得意だが、自分自身のことを語ることには慎重で、本心をなかなか明かさない秘密主義の傾向がある。相手の感情を読み取る力が非常に高いため、ちょっとした違和感や矛盾を敏感に察知する。信頼関係が築けるまでは殻に閉じこもりがちで、真の意味で心を開くまでには時間がかかる。"
   },
   "尾": {
     name: "尾", reading: "びしゅく", sanskrit: "ムーラ", starCount: 9, starShape: "獅子頂毛",
@@ -229,7 +247,10 @@ export const NAKSHATRA_DATA: Record<Nakshatra, NakshatraData> = {
     mantra: "のうまく　さんまんだ　ぼだなん　きりく　そわか", openingAdvice: "古いものを手放し、新しい自分に生まれ変わる勇気が開運の鍵。根源的な変容を恐れないこと。",
     palaceBelong: "天蠍宮", palaceFoot: "四足", elementType: "水", quality: "不動", planetInfluence: "冥王星",
     fortuneType: "再生運・変容運",
-    auspicious: ["伐木", "除暴"], inauspicious: ["婚姻", "建築"]
+    auspicious: ["伐木", "除暴"], inauspicious: ["婚姻", "建築"],
+    famousPeople: ["源義経", "武田信玄", "伊達政宗", "三島由紀夫", "矢沢永吉"],
+    growthChallenge: "激しい気性と不屈の精神を持つが、破壊的なエネルギーをコントロールすることが課題。怒りや嫉妬を建設的な方向に昇華させ、再生の力として活用することが成長の鍵。",
+    interpersonalStyle: "一度信頼した相手には深い忠誠心を見せるが、裏切りには容赦しない。情熱的で一途だが、嫉妬心も強い。表面的な関係には満足せず、魂のレベルでの繋がりを求める。"
   },
   "箕": {
     name: "箕", reading: "きしゅく", sanskrit: "プールヴァ・アシャーダー", starCount: 4, starShape: "牛歩形",
@@ -244,7 +265,10 @@ export const NAKSHATRA_DATA: Record<Nakshatra, NakshatraData> = {
     mantra: "のうまく　さんまんだ　ぼだなん　ばく　そわか", openingAdvice: "受容と調和の心が開運の鍵。流れに身を任せつつ、自分の美意識を大切にすること。",
     palaceBelong: "人馬宮", palaceFoot: "四足", elementType: "火", quality: "柔軟", planetInfluence: "木星",
     fortuneType: "芸術運・受容運",
-    auspicious: ["治水", "農耕"], inauspicious: ["火事"]
+    auspicious: ["治水", "農耕"], inauspicious: ["火事"],
+    famousPeople: ["宮本武蔵", "勝海舟", "野口英世", "松任谷由実", "北野武"],
+    growthChallenge: "風のように自由で行動力があるが、一つのことに集中し続けることが苦手。移り気な性格を自覚し、本当に大切なものを見極めて腰を据える忍耐力を養うことが成長の鍵。",
+    interpersonalStyle: "明るく開放的で、誰とでもすぐに打ち解ける。自由を愛し、束縛を嫌うため、適度な距離感を保った関係を好む。"
   },
   "斗": {
     name: "斗", reading: "としゅく", sanskrit: "ウッタラ・アシャーダー", starCount: 4, starShape: "象歩形",
@@ -259,7 +283,10 @@ export const NAKSHATRA_DATA: Record<Nakshatra, NakshatraData> = {
     mantra: "のうまく　さんまんだ　ぼだなん　たらく　そわか", openingAdvice: "高い志を持ち続けることが開運の鍵。社会貢献の意識が運気を大きく引き上げる。",
     palaceBelong: "人馬宮", palaceFoot: "四足", elementType: "火", quality: "柔軟", planetInfluence: "木星",
     fortuneType: "志運・リーダー運",
-    auspicious: ["入宅", "建築", "学問"], inauspicious: ["訴訟"]
+    auspicious: ["入宅", "建築", "学問"], inauspicious: ["訴訟"],
+    famousPeople: ["上杉謙信", "吉田松陰", "坂口安吾", "美空ひばり", "長嶋茂雄"],
+    growthChallenge: "高い志と理想を持つが、理想と現実のギャップに苦しむことがある。地に足をつけた現実的な行動計画を立て、一歩一歩着実に前進することが成長の鍵。",
+    interpersonalStyle: "リーダーシップがあり、周囲を導く力を持つ。正義感が強く、不正を許さない。部下や仲間からの信頼は厚いが、時に厳しすぎることも。"
   },
   "女": {
     name: "女", reading: "じょしゅく", sanskrit: "シュラヴァナ", starCount: 4, starShape: "牛角形",
@@ -274,7 +301,10 @@ export const NAKSHATRA_DATA: Record<Nakshatra, NakshatraData> = {
     mantra: "のうまく　さんまんだ　ぼだなん　そわか", openingAdvice: "学びと知識の追求が開運の鍵。新しい情報に敏感であり続けること。",
     palaceBelong: "磨羯宮", palaceFoot: "三足", elementType: "地", quality: "活動", planetInfluence: "土星",
     fortuneType: "学問運・急速運",
-    auspicious: ["学問", "技芸"], inauspicious: ["婚姻"]
+    auspicious: ["学問", "技芸"], inauspicious: ["婚姻"],
+    famousPeople: ["清少納言", "与謝野晶子", "樋口一葉", "安室奈美恵", "浅田真央"],
+    growthChallenge: "聡明で学問に秀でるが、知識偏重になりがち。頭で理解するだけでなく、心で感じる力を養うことが成長の鍵。急速に物事を進めたがる性格を抑え、じっくりと深める姿勢も大切。",
+    interpersonalStyle: "知的な会話を楽しめる相手に惹かれる。情報収集力が高く、話題が豊富。ただし感情表現が苦手で、冷たい印象を与えることも。"
   },
   "虚": {
     name: "虚", reading: "きょしゅく", sanskrit: "ダニシュター", starCount: 3, starShape: "梨格形",
@@ -289,7 +319,10 @@ export const NAKSHATRA_DATA: Record<Nakshatra, NakshatraData> = {
     mantra: "のうまく　さんまんだ　ぼだなん　きりく　ばく", openingAdvice: "精神性の向上が開運の鍵。瞑想や内省の時間を大切にすること。",
     palaceBelong: "磨羯宮", palaceFoot: "四足", elementType: "地", quality: "活動", planetInfluence: "土星",
     fortuneType: "精神運・健康運",
-    auspicious: ["修行", "祈祷"], inauspicious: ["建築", "移転"]
+    auspicious: ["修行", "祈祷"], inauspicious: ["建築", "移転"],
+    famousPeople: ["最澄", "道元", "良寛", "宮沢賢治", "中村天風"],
+    growthChallenge: "精神性が高く哲学的だが、現実世界との折り合いをつけることが課題。理想の世界に逃避せず、地に足をつけた生活の中にも精神的な豊かさを見出すことが成長の鍵。",
+    interpersonalStyle: "穏やかで思慮深い人柄。深い精神的なつながりを求め、表面的な付き合いには興味を示さない。少数の信頼できる人との深い関係を大切にする。"
   },
   "危": {
     name: "危", reading: "きしゅく", sanskrit: "シャタビシャー", starCount: 3, starShape: "花穂形",
@@ -304,7 +337,10 @@ export const NAKSHATRA_DATA: Record<Nakshatra, NakshatraData> = {
     mantra: "のうまく　さんまんだ　ぼだなん　うん", openingAdvice: "勇気を持って危険に立ち向かうことが開運の鍵。ただし、無謀と勇気は違うことを忘れずに。",
     palaceBelong: "寶瓶宮", palaceFoot: "二足", elementType: "風", quality: "不動", planetInfluence: "土星",
     fortuneType: "冒険運・革新運",
-    auspicious: ["兵士訓練", "武芸"], inauspicious: ["旅行", "婚姻"]
+    auspicious: ["兵士訓練", "武芸"], inauspicious: ["旅行", "婚姻"],
+    famousPeople: ["真田幸村", "高杉晋作", "岡本太郎", "尾崎豊", "本田圭佑"],
+    growthChallenge: "常識にとらわれない独創性と勇気を持つが、無謀な行動に走りがち。勇気と無謀の違いを見極め、計画的に冒険することが成長の鍵。衝動的な行動を抑え、戦略的に動く知恵を養え。",
+    interpersonalStyle: "刺激的で魅力的な存在。周囲を巻き込む力があるが、安定した関係を維持するのは苦手。スリルを求める傾向があり、平穏な日常に退屈を感じやすい。"
   },
   "室": {
     name: "室", reading: "しつしゅく", sanskrit: "プールヴァ・バードラパダー", starCount: 4, starShape: "詞梨勒形",
@@ -319,7 +355,10 @@ export const NAKSHATRA_DATA: Record<Nakshatra, NakshatraData> = {
     mantra: "のうまく　さんまんだ　ぼだなん　ばん　うん", openingAdvice: "富と力を正しく使うことが開運の鍵。社会に還元する心が更なる繁栄を呼ぶ。",
     palaceBelong: "寶瓶宮", palaceFoot: "四足", elementType: "風", quality: "不動", planetInfluence: "土星",
     fortuneType: "富貴運・権力運",
-    auspicious: ["建築", "入宅", "種蒔"], inauspicious: ["裁衣"]
+    auspicious: ["建築", "入宅", "種蒔"], inauspicious: ["裁衣"],
+    famousPeople: ["武田信玄", "徳川吉宗", "松下幸之助", "稲盛和夫", "柳井正"],
+    growthChallenge: "富と権力を手にする力があるが、それに溺れないことが課題。物質的な成功だけでなく、精神的な充実も追求し、社会に還元する心を忘れないことが成長の鍵。",
+    interpersonalStyle: "カリスマ性があり、自然と人が集まる。支配的な面があるが、面倒見も良い。信頼した相手には惜しみなく与えるが、裏切りには厳しい。"
   },
   "壁": {
     name: "壁", reading: "へきしゅく", sanskrit: "ウッタラ・バードラパダー", starCount: 1, starShape: "立等形",
@@ -334,7 +373,10 @@ export const NAKSHATRA_DATA: Record<Nakshatra, NakshatraData> = {
     mantra: "のうまく　さんまんだ　ぼだなん　きりく　ばん", openingAdvice: "美を追求し、芸術的な表現を磨くことが開運の鍵。美しいものに囲まれた環境が運気を高める。",
     palaceBelong: "寶瓶宮", palaceFoot: "三足", elementType: "風", quality: "不動", planetInfluence: "土星",
     fortuneType: "芸術運・美運",
-    auspicious: ["学問", "芸術", "建築"], inauspicious: ["戦闘"]
+    auspicious: ["学問", "芸術", "建築"], inauspicious: ["戦闘"],
+    famousPeople: ["光源氏（架空）", "千利休", "尾形光琳", "横山大観", "草間彌生"],
+    growthChallenge: "芸術的才能に恵まれるが、現実的な生活力が不足しがち。美の追求と現実のバランスを取り、地に足のついた生活基盤を築くことが成長の鍵。",
+    interpersonalStyle: "優雅で品のある人柄。美意識が高く、洗練された人間関係を好む。繊細な感性で相手の気持ちを察するが、自分の世界に閉じこもりがちな面も。"
   },
   "奎": {
     name: "奎", reading: "けいしゅく", sanskrit: "レーヴァティー", starCount: 1, starShape: "立等形",
@@ -349,7 +391,10 @@ export const NAKSHATRA_DATA: Record<Nakshatra, NakshatraData> = {
     mantra: "のうまく　さんまんだ　ぼだなん　そわか　きりく", openingAdvice: "信仰と善行が開運の鍵。純粋な心で人に接することで、大きな恵みが訪れる。",
     palaceBelong: "雙魚宮", palaceFoot: "四足", elementType: "水", quality: "柔軟", planetInfluence: "木星",
     fortuneType: "信仰運・慈善運",
-    auspicious: ["祈祷", "入宅"], inauspicious: ["戦闘"]
+    auspicious: ["祈祷", "入宅"], inauspicious: ["戦闘"],
+    famousPeople: ["藤原道長", "足利義満", "伊藤博文", "吉田茂", "田中角栄"],
+    growthChallenge: "温厚で人望があるが、優柔不断になりがち。決断力を養い、時には厳しい選択をする勇気を持つことが成長の鍵。八方美人にならず、自分の信念を貫く強さを。",
+    interpersonalStyle: "温かく包容力のある人柄で、誰からも好かれる。調和を重んじ、争いを避ける傾向がある。多くの人と広く浅く付き合うのが得意。"
   },
   "婁": {
     name: "婁", reading: "ろうしゅく", sanskrit: "アシュヴィニー", starCount: 3, starShape: "馬頭形",
@@ -364,7 +409,10 @@ export const NAKSHATRA_DATA: Record<Nakshatra, NakshatraData> = {
     mantra: "のうまく　さんまんだ　ぼだなん　うん　たらく", openingAdvice: "素早い行動と決断が開運の鍵。チャンスが来たら迷わず飛び込むこと。",
     palaceBelong: "雙魚宮", palaceFoot: "四足", elementType: "水", quality: "柔軟", planetInfluence: "木星",
     fortuneType: "行動運・治療運",
-    auspicious: ["旅行", "治療", "商売"], inauspicious: ["建築"]
+    auspicious: ["旅行", "治療", "商売"], inauspicious: ["建築"],
+    famousPeople: ["北条政子", "日野富子", "お市の方", "津田梅子", "緒方貞子"],
+    growthChallenge: "聡明で行動力があるが、完璧主義に陥りやすい。自分にも他人にも厳しすぎる面を緩め、不完全さを受け入れる寛容さを養うことが成長の鍵。",
+    interpersonalStyle: "知的で洗練された人柄。礼儀正しく、社交的だが、内面は繊細。信頼できる少数の人との深い関係を大切にする。"
   },
   "胃": {
     name: "胃", reading: "いしゅく", sanskrit: "バラニー", starCount: 3, starShape: "鼎形",
@@ -379,7 +427,10 @@ export const NAKSHATRA_DATA: Record<Nakshatra, NakshatraData> = {
     mantra: "のうまく　さんまんだ　ぼだなん　うん　ばん", openingAdvice: "情熱を正しい方向に向けることが開運の鍵。怒りのエネルギーを建設的な行動に変換すること。",
     palaceBelong: "白羊宮", palaceFoot: "四足", elementType: "火", quality: "活動", planetInfluence: "火星",
     fortuneType: "情熱運・改革運",
-    auspicious: ["伐木", "除暴", "火作"], inauspicious: ["婚姻", "旅行"]
+    auspicious: ["伐木", "除暴", "火作"], inauspicious: ["婚姻", "旅行"],
+    famousPeople: ["平清盛", "北条時宗", "大久保利通", "東条英機", "三船敏郎"],
+    growthChallenge: "強い意志と行動力を持つが、頑固で融通が利かない面がある。他者の意見を柔軟に取り入れ、協調性を養うことが成長の鍵。力で押し通すのではなく、知恵で解決する道を探れ。",
+    interpersonalStyle: "堂々とした存在感があり、頼りがいがある。リーダーシップを発揮するが、時に威圧的になることも。忠義に厚く、仲間を大切にする。"
   },
   "昴": {
     name: "昴", reading: "ぼうしゅく", sanskrit: "クリッティカー", starCount: 6, starShape: "剃刀形",
@@ -394,7 +445,10 @@ export const NAKSHATRA_DATA: Record<Nakshatra, NakshatraData> = {
     mantra: "のうまく　さんまんだ　ぼだなん　きりく　うん", openingAdvice: "学問と礼節を磨くことが開運の鍵。知識を深め、品格を高めることで運気が上昇する。",
     palaceBelong: "白羊宮", palaceFoot: "四足", elementType: "火", quality: "活動", planetInfluence: "火星",
     fortuneType: "学問運・品格運",
-    auspicious: ["火作", "煎責", "計算", "種蒔", "入宅", "剃頭"], inauspicious: ["裁衣"]
+    auspicious: ["火作", "煎責", "計算", "種蒔", "入宅", "剃頭"], inauspicious: ["裁衣"],
+    famousPeople: ["源頼朝", "明智光秀", "新渡戸稲造", "太宰治", "村上春樹"],
+    growthChallenge: "繊細な感性と高い美意識を持つが、現実逃避しやすい傾向がある。理想と現実のバランスを取り、地に足をつけた行動を心がけることが成長の鍵。",
+    interpersonalStyle: "上品で穏やかな人柄。芸術的な感性を共有できる相手との交流を好む。大勢の中にいるよりも、少人数での深い会話を楽しむタイプ。"
   },
   "畢": {
     name: "畢", reading: "ひっしゅく", sanskrit: "ローヒニー", starCount: 5, starShape: "額形",
@@ -409,7 +463,10 @@ export const NAKSHATRA_DATA: Record<Nakshatra, NakshatraData> = {
     mantra: "のうまく　さんまんだ　ぼだなん　たらく　きりく", openingAdvice: "創造力を発揮し、美しいものを生み出すことが開運の鍵。ものづくりの喜びが運気を高める。",
     palaceBelong: "金牛宮", palaceFoot: "三足", elementType: "地", quality: "不動", planetInfluence: "金星",
     fortuneType: "創造運・美運",
-    auspicious: ["建築", "婚姻", "種蒔"], inauspicious: ["戦闘"]
+    auspicious: ["建築", "婚姻", "種蒔"], inauspicious: ["戦闘"],
+    famousPeople: ["西郷隆盛", "大隈重信", "野口英世", "力道山", "王貞治"],
+    growthChallenge: "粘り強さと忍耐力が強みだが、変化を恐れる保守的な面がある。新しいことに挑戦する勇気を持ち、変化を成長の機会と捉えることが成長の鍵。",
+    interpersonalStyle: "温厚で誠実な人柄。約束を守り、信頼される存在。ゆっくりと関係を深めるタイプで、一度築いた絆は長く続く。"
   },
   "觜": {
     name: "觜", reading: "ししゅく", sanskrit: "ムリガシラス", starCount: 3, starShape: "馬頭乾闌形",
@@ -424,7 +481,10 @@ export const NAKSHATRA_DATA: Record<Nakshatra, NakshatraData> = {
     mantra: "のうまく　さんまんだ　ぼだなん　そわか　たらく", openingAdvice: "知的探求を続けることが開運の鍵。好奇心を大切にし、学び続ける姿勢が運気を高める。",
     palaceBelong: "金牛宮", palaceFoot: "四足", elementType: "地", quality: "不動", planetInfluence: "金星",
     fortuneType: "探求運・知性運",
-    auspicious: ["学問", "旅行"], inauspicious: ["建築"]
+    auspicious: ["学問", "旅行"], inauspicious: ["建築"],
+    famousPeople: ["安倍晴明", "千利休", "松尾芭蕉", "谷崎潤一郎", "黒澤明"],
+    growthChallenge: "鋭い直感力と洞察力を持つが、考えすぎて行動に移せないことがある。分析と行動のバランスを取り、完璧を求めすぎず、まず動いてみることが成長の鍵。",
+    interpersonalStyle: "知的で神秘的な雰囲気を持つ。深い洞察力で相手の本質を見抜くが、自分からは多くを語らない。少数の理解者との深い関係を大切にする。"
   },
   "参": {
     name: "参", reading: "さんしゅく", sanskrit: "アールドラー", starCount: 1, starShape: "額上點形",
@@ -439,7 +499,10 @@ export const NAKSHATRA_DATA: Record<Nakshatra, NakshatraData> = {
     mantra: "のうまく　さんまんだ　ぼだなん　うん　ばく", openingAdvice: "激しいエネルギーを建設的な方向に向けることが開運の鍵。破壊の後に必ず創造があることを信じて。",
     palaceBelong: "雙女宮", palaceFoot: "二足", elementType: "風", quality: "柔軟", planetInfluence: "水星",
     fortuneType: "変革運・嵐運",
-    auspicious: ["武芸", "除暴"], inauspicious: ["婚姻", "建築", "旅行"]
+    auspicious: ["武芸", "除暴"], inauspicious: ["婚姻", "建築", "旅行"],
+    famousPeople: ["源義経", "楠木正成", "坂本龍馬", "西郷隆盛", "石原裕次郎"],
+    growthChallenge: "勇猛果敢で行動力があるが、猪突猛進になりがち。戦略的な思考を養い、力だけでなく知恵も使うことが成長の鍵。周囲との協調も忘れずに。",
+    interpersonalStyle: "豪快で頼りがいのある存在。仲間意識が強く、困っている人を見過ごせない。ただし、敵と味方をはっきり分ける傾向がある。"
   },
   "井": {
     name: "井", reading: "せいしゅく", sanskrit: "プナルヴァス", starCount: 4, starShape: "屋獄形",
@@ -454,7 +517,10 @@ export const NAKSHATRA_DATA: Record<Nakshatra, NakshatraData> = {
     mantra: "のうまく　さんまんだ　ぼだなん　きりく　たらく", openingAdvice: "バランスと調和を保つことが開運の鍵。極端を避け、中庸の道を歩むこと。",
     palaceBelong: "雙女宮", palaceFoot: "四足", elementType: "風", quality: "柔軟", planetInfluence: "水星",
     fortuneType: "調和運・再生運",
-    auspicious: ["建築", "入宅", "学問"], inauspicious: ["伐木"]
+    auspicious: ["建築", "入宅", "学問"], inauspicious: ["伐木"],
+    famousPeople: ["聖武天皇", "藤原鎌足", "菅原道真", "紀貫之", "川端康成"],
+    growthChallenge: "知性と教養に恵まれるが、プライドが高く、他者を見下しがちな面がある。謙虚さを忘れず、知識を社会のために活用する姿勢が成長の鍵。",
+    interpersonalStyle: "知的で品格のある人柄。教養豊かな会話を好み、知的レベルの高い人との交流を楽しむ。礼儀正しいが、時に堅苦しい印象を与えることも。"
   },
   "鬼": {
     name: "鬼", reading: "きしゅく", sanskrit: "プシュヤ", starCount: 3, starShape: "獅子頭形",
@@ -469,7 +535,10 @@ export const NAKSHATRA_DATA: Record<Nakshatra, NakshatraData> = {
     mantra: "のうまく　さんまんだ　ぼだなん　うん　きりく　そわか", openingAdvice: "知恵と戦略を磨くことが開運の鍵。最吉の宿の運を最大限に活かすには、常に学び続けること。",
     palaceBelong: "巨蟹宮", palaceFoot: "一足", elementType: "水", quality: "活動", planetInfluence: "月",
     fortuneType: "最吉運・智策運",
-    auspicious: ["祈祷", "入宅", "建築", "学問", "商売"], inauspicious: []
+    auspicious: ["祈祷", "入宅", "建築", "学問", "商売"], inauspicious: [],
+    famousPeople: ["弘法大師空海", "最澄", "親鸞", "日蓮", "一休宗純"],
+    growthChallenge: "最も吉祥な宿であり、あらゆる面で恵まれるが、その恵みに甘えて努力を怠ると運気が停滞する。感謝の心を忘れず、恵まれた才能を社会に還元することが成長の鍵。",
+    interpersonalStyle: "温かく慈悲深い人柄で、誰からも愛される。困っている人を助けずにはいられない。自然と人が集まり、良い縁に恵まれる。"
   },
   "柳": {
     name: "柳", reading: "りゅうしゅく", sanskrit: "アーシュレーシャー", starCount: 6, starShape: "蛇頭形",
@@ -484,7 +553,10 @@ export const NAKSHATRA_DATA: Record<Nakshatra, NakshatraData> = {
     mantra: "のうまく　さんまんだ　ぼだなん　ばく　うん", openingAdvice: "洞察力を磨き、深い知恵を身につけることが開運の鍵。執念を正しい方向に向けること。",
     palaceBelong: "巨蟹宮", palaceFoot: "四足", elementType: "水", quality: "活動", planetInfluence: "月",
     fortuneType: "洞察運・執念運",
-    auspicious: ["薬事", "除暴"], inauspicious: ["婚姻", "旅行"]
+    auspicious: ["薬事", "除暴"], inauspicious: ["婚姻", "旅行"],
+    famousPeople: ["平将門", "足利尊氏", "織田信長", "豊臣秀吉", "ナポレオン"],
+    growthChallenge: "激しい気性と強い意志を持つが、怒りのコントロールが課題。感情に振り回されず、冷静な判断力を養うことが成長の鍵。破壊的なエネルギーを創造に転換せよ。",
+    interpersonalStyle: "カリスマ性があり、人を惹きつける力を持つ。しかし、気性の激しさから敵も多い。忠実な仲間には深い情を見せるが、裏切りには容赦しない。"
   },
   "星": {
     name: "星", reading: "せいしゅく", sanskrit: "マガー", starCount: 5, starShape: "猛海伽神形",
@@ -499,7 +571,10 @@ export const NAKSHATRA_DATA: Record<Nakshatra, NakshatraData> = {
     mantra: "のうまく　さんまんだ　ぼだなん　うん　ばん　そわか", openingAdvice: "王者の風格を磨き、大きな舞台に立つことが開運の鍵。祖霊への感謝を忘れずに。",
     palaceBelong: "獅子宮", palaceFoot: "四足", elementType: "火", quality: "不動", planetInfluence: "太陽",
     fortuneType: "王者運・カリスマ運",
-    auspicious: ["武芸", "祭祀"], inauspicious: ["婚姻", "建築", "旅行"]
+    auspicious: ["武芸", "祭祀"], inauspicious: ["婚姻", "建築", "旅行"],
+    famousPeople: ["卑弥呼", "推古天皇", "北条政子", "クレオパトラ", "マリー・アントワネット"],
+    growthChallenge: "華やかさとカリスマ性を持つが、虚栄心に走りやすい。外見の華やかさだけでなく、内面の充実を図ることが成長の鍵。真の輝きは内側から生まれることを忘れずに。",
+    interpersonalStyle: "華やかで目立つ存在。周囲の注目を集め、人を楽しませる才能がある。ただし、自分が中心でないと不満を感じる傾向も。"
   },
   "張": {
     name: "張", reading: "ちょうしゅく", sanskrit: "プールヴァ・パルグニー", starCount: 6, starShape: "杵婆蔵神形",
@@ -514,7 +589,10 @@ export const NAKSHATRA_DATA: Record<Nakshatra, NakshatraData> = {
     mantra: "のうまく　さんまんだ　ぼだなん　ばん　たらく", openingAdvice: "創造力と社交性を磨くことが開運の鍵。華やかな場に積極的に出ることで運気が上昇する。",
     palaceBelong: "獅子宮", palaceFoot: "四足", elementType: "火", quality: "不動", planetInfluence: "太陽",
     fortuneType: "華運・創造運",
-    auspicious: ["芸術", "祭祀"], inauspicious: ["婚姻"]
+    auspicious: ["芸術", "祭祀"], inauspicious: ["婚姻"],
+    famousPeople: ["紫式部", "清少納言", "与謝野晶子", "樋口一葉", "宮沢賢治"],
+    growthChallenge: "芸術的才能と表現力に恵まれるが、感情の起伏が激しい面がある。感情をコントロールし、安定した心の状態を保つことが成長の鍵。",
+    interpersonalStyle: "華やかで社交的。宴席や集まりの場を盛り上げる才能がある。芸術的な感性を共有できる仲間との交流を特に楽しむ。"
   },
   "翼": {
     name: "翼", reading: "よくしゅく", sanskrit: "ウッタラ・パルグニー", starCount: 22, starShape: "脚跡形",
@@ -529,7 +607,10 @@ export const NAKSHATRA_DATA: Record<Nakshatra, NakshatraData> = {
     mantra: "のうまく　さんまんだ　ぼだなん　きりく　ばん　そわか", openingAdvice: "人との絆を大切にし、温かい関係を築くことが開運の鍵。家族や仲間への愛情が運気を高める。",
     palaceBelong: "獅子宮", palaceFoot: "一足", elementType: "火", quality: "不動", planetInfluence: "太陽",
     fortuneType: "家族運・繁栄運",
-    auspicious: ["婚姻", "建築", "入宅"], inauspicious: ["戦闘"]
+    auspicious: ["婚姻", "建築", "入宅"], inauspicious: ["戦闘"],
+    famousPeople: ["徳川家光", "井伊直弼", "山本五十六", "白洲次郎", "盛田昭夫"],
+    growthChallenge: "忍耐力と持続力に優れるが、変化への適応が遅い面がある。時代の流れを読み、柔軟に対応する力を養うことが成長の鍵。",
+    interpersonalStyle: "寡黙で実直な人柄。口数は少ないが、行動で信頼を示す。長い時間をかけて深い関係を築くタイプ。"
   },
   "軫": {
     name: "軫", reading: "しんしゅく", sanskrit: "ハスタ", starCount: 2, starShape: "蜘蛛跡形",
@@ -544,7 +625,10 @@ export const NAKSHATRA_DATA: Record<Nakshatra, NakshatraData> = {
     mantra: "のうまく　さんまんだ　ぼだなん　そわか　ばん", openingAdvice: "手先の技術を磨き、慈悲の心で人に接することが開運の鍵。ものづくりの喜びが運気を高める。",
     palaceBelong: "室女宮", palaceFoot: "三足", elementType: "地", quality: "柔軟", planetInfluence: "水星",
     fortuneType: "技芸運・慈悲運",
-    auspicious: ["治療", "学問", "芸術"], inauspicious: ["戦闘"]
+    auspicious: ["治療", "学問", "芸術"], inauspicious: ["戦闘"],
+    famousPeople: ["聖徳太子", "中大兄皇子", "藤原不比等", "源実朝", "夏目漱石"],
+    growthChallenge: "知性と慈悲心を兼ね備えるが、優柔不断になりがち。決断力を養い、時には大胆な行動を取る勇気を持つことが成長の鍵。",
+    interpersonalStyle: "穏やかで知的な人柄。相手の気持ちを察する力に優れ、良き相談相手となる。争いを好まず、調和を重んじる。"
   }
 };
 

@@ -435,19 +435,42 @@ export function runCompleteDiagnosis(
   // 4. 躰/用 総合判定
   const taiYou = determineTaiYou(sukuyou.honmeiShuku, nameBalance, new Date());
 
-  // 5. 総合解釈テキスト生成
+  // 5. 総合解釈テキスト生成（超高品質版）
   const shukuData = sukuyou.shukuData;
-  let fullInterpretation = `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
-  fullInterpretation += `　天聞アーク 統合診断結果\n`;
-  fullInterpretation += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+  const birthYear = birthDate.getFullYear();
+  const birthMonth = birthDate.getMonth() + 1;
+  const birthDay = birthDate.getDate();
+  const dateStr = `${birthYear}年${birthMonth}月${birthDay}日`;
 
-  fullInterpretation += `【命宿】${sukuyou.honmeiShuku}宿（${shukuData.reading}）\n`;
-  fullInterpretation += `　梵名: ${shukuData.sanskrit}\n`;
+  let fullInterpretation = `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+  fullInterpretation += `　　天聞アーク 宿曜経×天津金木 精密統合診断\n`;
+  fullInterpretation += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+  fullInterpretation += `　生年月日: ${dateStr}\n`;
+  fullInterpretation += `　旧暦: ${sukuyou.lunarDate.year}年${sukuyou.lunarDate.month}月${sukuyou.lunarDate.day}日\n`;
+  fullInterpretation += `　算出精度: ${sukuyou.lookupUsed ? "ルックアップテーブル（syukuyo.com完全一致）" : "旧暦計算（フォールバック）"}\n\n`;
+
+  // === 命宿 ===
+  fullInterpretation += `◆━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━◆\n`;
+  fullInterpretation += `　【命宿】${sukuyou.honmeiShuku}宿（${shukuData.reading}）\n`;
+  fullInterpretation += `◆━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━◆\n`;
+  fullInterpretation += `　梵名（サンスクリット）: ${shukuData.sanskrit}\n`;
   fullInterpretation += `　守護神: ${shukuData.deity}\n`;
+  fullInterpretation += `　星数: ${shukuData.starCount}星（${shukuData.starShape}）\n`;
   fullInterpretation += `　言霊属性: ${shukuData.element}（${shukuData.phase}）\n`;
-  fullInterpretation += `　性質: ${shukuData.nature}（${shukuData.category}）\n`;
-  fullInterpretation += `　性格: ${shukuData.personality}\n\n`;
+  fullInterpretation += `　水火スコア: 火${shukuData.fireScore} : 水${shukuData.waterScore}\n`;
+  fullInterpretation += `　性質分類: ${shukuData.nature}（${shukuData.category}）\n`;
+  fullInterpretation += `　運勢タイプ: ${shukuData.fortuneType}\n`;
+  fullInterpretation += `　真言: ${shukuData.mantra}\n\n`;
 
+  // === 十二宮 ===
+  fullInterpretation += `【十二宮配置】\n`;
+  fullInterpretation += `　命宮: ${sukuyou.meikyu}\n`;
+  fullInterpretation += `　所属宮: ${shukuData.palaceBelong}（${shukuData.palaceFoot}）\n`;
+  fullInterpretation += `　エレメント: ${shukuData.elementType}\n`;
+  fullInterpretation += `　クオリティ: ${shukuData.quality}\n`;
+  fullInterpretation += `　支配惑星: ${shukuData.planetInfluence}\n\n`;
+
+  // === 本命曜・九星 ===
   fullInterpretation += `【本命曜】${sukuyou.honmeiYo}曜（${sukuyou.planetData.celestial}）\n`;
   fullInterpretation += `　梵名: ${sukuyou.planetData.sanskrit}\n`;
   fullInterpretation += `　五行: ${sukuyou.planetData.element}\n`;
@@ -455,11 +478,60 @@ export function runCompleteDiagnosis(
 
   fullInterpretation += `【九星】${sukuyou.kyusei}\n\n`;
 
-  fullInterpretation += `【命宮】${sukuyou.meikyu}\n`;
-  fullInterpretation += `　支配星: ${NAKSHATRA_DATA[sukuyou.honmeiShuku] ? "―" : "―"}\n\n`;
+  // === 基本的性格 ===
+  fullInterpretation += `◆━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━◆\n`;
+  fullInterpretation += `　【基本的性格】\n`;
+  fullInterpretation += `◆━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━◆\n`;
+  fullInterpretation += `${shukuData.personality}\n\n`;
 
+  // === 対人関係 ===
+  fullInterpretation += `【対人関係の特徴】\n`;
+  fullInterpretation += `${shukuData.interpersonalStyle}\n\n`;
+
+  // === 成長課題 ===
+  fullInterpretation += `【成長課題】\n`;
+  fullInterpretation += `${shukuData.growthChallenge}\n\n`;
+
+  // === 恋愛運 ===
+  fullInterpretation += `◆━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━◆\n`;
+  fullInterpretation += `　【恋愛運】\n`;
+  fullInterpretation += `◆━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━◆\n`;
+  fullInterpretation += `${shukuData.loveAdvice}\n\n`;
+
+  // === 仕事運 ===
+  fullInterpretation += `【仕事運・適職】\n`;
+  fullInterpretation += `${shukuData.workAdvice}\n\n`;
+
+  // === 金運 ===
+  fullInterpretation += `【金運】\n`;
+  fullInterpretation += `${shukuData.moneyAdvice}\n\n`;
+
+  // === 健康運 ===
+  fullInterpretation += `【健康運】\n`;
+  fullInterpretation += `${shukuData.healthAdvice}\n`;
+  fullInterpretation += `　対応部位: ${shukuData.bodyPart}\n\n`;
+
+  // === 開運法 ===
+  fullInterpretation += `◆━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━◆\n`;
+  fullInterpretation += `　【開運法アドバイス】\n`;
+  fullInterpretation += `◆━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━◆\n`;
+  fullInterpretation += `${shukuData.openingAdvice}\n\n`;
+  fullInterpretation += `　ラッキーカラー: ${shukuData.luckyColor}\n`;
+  fullInterpretation += `　パワーストーン: ${shukuData.powerStone}\n`;
+  fullInterpretation += `　吉行事: ${shukuData.auspicious.join("、")}\n`;
+  fullInterpretation += `　凶行事: ${shukuData.inauspicious.join("、") || "特になし"}\n\n`;
+
+  // === 同宿の有名人 ===
+  if (shukuData.famousPeople && shukuData.famousPeople.length > 0) {
+    fullInterpretation += `【同宿の有名人】\n`;
+    fullInterpretation += `　${shukuData.famousPeople.join("、")}\n\n`;
+  }
+
+  // === 名前の言霊解析 ===
   if (nameAnalysis) {
-    fullInterpretation += `【名前の言霊解析】\n`;
+    fullInterpretation += `◆━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━◆\n`;
+    fullInterpretation += `　【名前の言霊解析】\n`;
+    fullInterpretation += `◆━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━◆\n`;
     fullInterpretation += `　名前: ${katakanaName}\n`;
     fullInterpretation += `　水火バランス: 火${Math.round(nameAnalysis.fireScore)} : 水${Math.round(nameAnalysis.waterScore)}\n`;
     fullInterpretation += `　属性: ${nameAnalysis.dominantAttribute}\n`;
@@ -468,25 +540,58 @@ export function runCompleteDiagnosis(
         fullInterpretation += `　　${s.char} → ${s.kotodama.attribute}（火${s.kotodama.fireScore}:水${s.kotodama.waterScore}）\n`;
       }
     }
+    // 名前と宿の相性解析
+    const nameFireDominant = nameAnalysis.fireScore > nameAnalysis.waterScore;
+    const shukuFireDominant = shukuData.fireScore > shukuData.waterScore;
+    if (nameFireDominant === shukuFireDominant) {
+      fullInterpretation += `\n　→ 名前と命宿の水火属性が一致しており、天命に沿った名前である。名前の持つ言霊の力が宿の特性を強化し、本来の才能を最大限に引き出す。\n`;
+    } else {
+      fullInterpretation += `\n　→ 名前と命宿の水火属性が対照的であり、内面にバランスの取れた二面性を持つ。名前の言霊が宿の偏りを補完し、より調和のとれた人格形成を促す。\n`;
+    }
     fullInterpretation += `\n`;
   }
 
-  fullInterpretation += `【天津金木 三層位相（現在）】\n`;
-  fullInterpretation += `　${threeLayer.civilization.description}\n`;
-  fullInterpretation += `　${threeLayer.year.description}\n`;
-  fullInterpretation += `　${threeLayer.day.description}\n\n`;
+  // === 天津金木 三層位相 ===
+  fullInterpretation += `◆━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━◆\n`;
+  fullInterpretation += `　【天津金木 三層位相（現在の宇宙的位相）】\n`;
+  fullInterpretation += `◆━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━◆\n`;
+  fullInterpretation += `　文明層: ${threeLayer.civilization.description}\n`;
+  fullInterpretation += `　年層: ${threeLayer.year.description}\n`;
+  fullInterpretation += `　日層: ${threeLayer.day.description}\n\n`;
 
+  // === 躰/用 総合判定 ===
   fullInterpretation += `【躰/用 総合判定】\n`;
   fullInterpretation += `　判定: ${taiYou.taiYou}\n`;
   fullInterpretation += `　総合火水: 火${Math.round(taiYou.totalFireScore)} : 水${Math.round(taiYou.totalWaterScore)}\n`;
   fullInterpretation += `　${taiYou.interpretation}\n\n`;
 
-  fullInterpretation += `【今日の運勢】\n`;
+  // === 今日の運勢 ===
+  fullInterpretation += `◆━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━◆\n`;
+  fullInterpretation += `　【今日の運勢】\n`;
+  fullInterpretation += `◆━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━◆\n`;
   fullInterpretation += `　直宿: ${sukuyou.dailyNakshatra}宿\n`;
   fullInterpretation += `　命宿との関係: ${sukuyou.dailyRelation}\n`;
   fullInterpretation += `　直曜: ${sukuyou.dailyPlanet}曜\n`;
   fullInterpretation += `　十二直: ${sukuyou.juniChoku}\n`;
   fullInterpretation += `　遊年八卦: ${sukuyou.yunenHakke.trigram}（${sukuyou.yunenHakke.fortune}）\n`;
+  // 日運の吉凶解釈
+  const dailyRelationMeaning: Record<string, string> = {
+    "命": "命の日。自分自身と向き合う日。内省と自己理解を深めるのに最適。大きな決断は避け、静かに過ごすのが吉。",
+    "栄": "栄の日。大吉日。あらゆる物事が順調に進み、新しいことを始めるのに最適。積極的に行動せよ。",
+    "衰": "衰の日。運気が低下する日。無理をせず、体を休めることを優先。大きな決断や契約は避けるのが賢明。",
+    "安": "安の日。穏やかで安定した日。日常の業務をこなすのに適している。人間関係も円満に進む。",
+    "危": "危の日。注意が必要な日。思わぬトラブルに巻き込まれやすい。慎重な行動を心がけ、冒険は避けよ。",
+    "成": "成の日。物事が成就する日。努力が実を結び、成果が得られる。契約や交渉に最適。",
+    "壊": "壊の日。破壊と再生の日。古いものを手放し、新しい道を切り開く力がある。ただし、人間関係のトラブルに注意。",
+    "友": "友の日。友情と交流の日。人との出会いに恵まれ、良い縁が生まれる。社交的に過ごすのが吉。",
+    "親": "親の日。親密な関係が深まる日。家族や恋人との時間を大切に。趣味や創作活動にも好日。",
+    "業": "業の日。前世からの因縁が動く日。予測不能な出来事が起こりやすいが、それは魂の成長に必要な試練。",
+    "胎": "胎の日。新しい命が宿る日。新しいプロジェクトや計画の種を蒔くのに最適。未来への投資を。"
+  };
+  const dailyMeaning = dailyRelationMeaning[sukuyou.dailyRelation] || "";
+  if (dailyMeaning) {
+    fullInterpretation += `\n　${dailyMeaning}\n`;
+  }
 
   return {
     sukuyou, threeLayer, nameAnalysis, taiYou, fullInterpretation

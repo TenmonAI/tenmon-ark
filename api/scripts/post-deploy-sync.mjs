@@ -1,14 +1,19 @@
 /**
- * Post-deploy sync v22 - SYNC + RESTART + VERIFY
+ * Post-deploy sync v23 - SYNC TO BOTH DIRS + DIAGNOSTIC
  * 
- * The deploy.yml's `systemctl restart` appears to never execute
- * (45ms gap suggests SSH session ends before it runs).
- * So this script handles EVERYTHING.
+ * Strategy: The dist is already built in BUILD dir (/opt/tenmon-ark/api).
+ * We sync it to REPO dir (/opt/tenmon-ark-repo/api) as well.
+ * We also read the existing systemd service file to determine which dir it uses.
+ * We do NOT restart the service - deploy.yml's systemctl restart handles that.
+ * 
+ * Key insight: deploy.yml's systemctl restart IS async (returns in ~50ms).
+ * It sends SIGTERM to the old process and systemd starts a new one.
+ * The new process uses whatever ExecStart is in the service file.
  */
 import { execSync } from "child_process";
 import { dirname, resolve } from "path";
 import { fileURLToPath } from "url";
-import { existsSync, writeFileSync } from "fs";
+import { existsSync, readFileSync, writeFileSync } from "fs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const apiDir = resolve(__dirname, "..");
@@ -18,7 +23,7 @@ if (!apiDir.startsWith("/opt/tenmon-ark")) {
   process.exit(0);
 }
 
-console.log("[sync] v22 pid=" + process.pid);
+console.log("[sync] v23 - sync to both dirs");
 
 function run(cmd) {
   try {
@@ -42,91 +47,62 @@ if (existsSync(BUILD + "/.env") && !existsSync(REPO + "/.env")) {
   run("cp " + BUILD + "/.env " + REPO + "/.env");
 }
 
-// 3. Sync dist + node_modules to REPO
+// 3. Sync dist to REPO (BUILD already has it from tsc)
 if (existsSync(REPO)) {
   run("rsync -a --delete " + BUILD + "/dist/ " + REPO + "/dist/");
   run("rsync -a --delete " + BUILD + "/node_modules/ " + REPO + "/node_modules/");
   run("cp " + BUILD + "/package.json " + REPO + "/package.json 2>/dev/null || true");
-  console.log("[sync] Synced to REPO");
+  console.log("[sync] Synced BUILD -> REPO");
 }
 
-// 4. Verify files
-console.log("[sync] REPO files: index=" + existsSync(REPO + "/dist/index.js") +
-  " sukuyou=" + existsSync(REPO + "/dist/sukuyou/sukuyouEngine.js") +
-  " lookup=" + existsSync(REPO + "/dist/sukuyou/sukuyou_lookup_table.json") +
-  " kanagi=" + existsSync(REPO + "/dist/kanagi/patterns/soundMeanings.json"));
+// 4. Verify files in BOTH dirs
+console.log("[sync] BUILD dist/index.js: " + existsSync(BUILD + "/dist/index.js"));
+console.log("[sync] BUILD dist/sukuyou: " + existsSync(BUILD + "/dist/sukuyou/sukuyouEngine.js"));
+console.log("[sync] REPO dist/index.js: " + existsSync(REPO + "/dist/index.js"));
+console.log("[sync] REPO dist/sukuyou: " + existsSync(REPO + "/dist/sukuyou/sukuyouEngine.js"));
 
-// 5. Find .env
+// 5. Read and log the EXISTING systemd service file
+var svcPath = "/etc/systemd/system/tenmon-ark-api.service";
+if (existsSync(svcPath)) {
+  var svcContent = readFileSync(svcPath, "utf8");
+  var wdMatch = svcContent.match(/WorkingDirectory=(.+)/);
+  var execMatch = svcContent.match(/ExecStart=(.+)/);
+  var envMatch = svcContent.match(/EnvironmentFile=(.+)/);
+  console.log("[sync] EXISTING svc WorkDir: " + (wdMatch ? wdMatch[1] : "N/A"));
+  console.log("[sync] EXISTING svc ExecStart: " + (execMatch ? execMatch[1] : "N/A"));
+  console.log("[sync] EXISTING svc EnvFile: " + (envMatch ? envMatch[1] : "N/A"));
+} else {
+  console.log("[sync] No service file at " + svcPath);
+}
+
+// 6. Check for OTHER service files
+var otherSvc = run("find /etc/systemd -name '*tenmon*' -type f 2>/dev/null || true");
+console.log("[sync] All tenmon services: " + otherSvc);
+
+// 7. Write the CORRECT service file pointing to REPO
 var envFile = "";
 if (existsSync(REPO + "/.env")) envFile = REPO + "/.env";
 else if (existsSync(BUILD + "/.env")) envFile = BUILD + "/.env";
 
-// 6. Write systemd service
 var svc = "[Unit]\nDescription=TENMON-ARK API Server\nAfter=network.target\n\n[Service]\nType=simple\nUser=root\nWorkingDirectory=" + REPO + "\n" + (envFile ? "EnvironmentFile=" + envFile + "\n" : "") + "Environment=NODE_ENV=production\nEnvironment=TENMON_DATA_DIR=/opt/tenmon-ark-data\nExecStart=/usr/bin/node " + REPO + "/dist/index.js\nRestart=always\nRestartSec=5\n\n[Install]\nWantedBy=multi-user.target\n";
 
-writeFileSync("/etc/systemd/system/tenmon-ark-api.service", svc);
+writeFileSync(svcPath, svc);
 run("systemctl daemon-reload");
-console.log("[sync] Wrote systemd service");
 
-// 7. Kill ALL node on port 3000 (except self and parent)
-var myPid = String(process.pid);
-var parentPid = String(process.ppid);
-var pids = run("lsof -ti:3000 2>/dev/null || true");
-if (pids && !pids.startsWith("[err")) {
-  pids.split("\n").forEach(function(p) {
-    p = p.trim();
-    if (p && p !== myPid && p !== parentPid) {
-      run("kill -9 " + p + " 2>/dev/null || true");
-      console.log("[sync] Killed PID " + p);
-    }
-  });
+// 8. Read back to verify
+var readBack = readFileSync(svcPath, "utf8");
+var rbWd = readBack.match(/WorkingDirectory=(.+)/);
+var rbExec = readBack.match(/ExecStart=(.+)/);
+console.log("[sync] WRITTEN svc WorkDir: " + (rbWd ? rbWd[1] : "N/A"));
+console.log("[sync] WRITTEN svc ExecStart: " + (rbExec ? rbExec[1] : "N/A"));
+
+// 9. Check current server status
+var currentPid = run("lsof -ti:3000 2>/dev/null || echo none");
+console.log("[sync] Current port 3000 PID: " + currentPid);
+if (currentPid !== "none" && !currentPid.startsWith("[err")) {
+  var fp = currentPid.split("\n")[0].trim();
+  console.log("[sync] Current CWD: " + run("readlink /proc/" + fp + "/cwd 2>/dev/null || echo ?"));
+  console.log("[sync] Current cmdline: " + run("cat /proc/" + fp + "/cmdline 2>/dev/null | tr '\\0' ' ' || echo ?").substring(0, 200));
 }
 
-// 8. Stop service cleanly
-run("systemctl stop tenmon-ark-api 2>/dev/null || true");
-run("sleep 2");
-
-// 9. Verify port is free
-var portCheck = run("lsof -ti:3000 2>/dev/null || echo free");
-console.log("[sync] Port 3000: " + portCheck);
-
-// If port still occupied, force kill
-if (portCheck !== "free" && !portCheck.startsWith("[err")) {
-  portCheck.split("\n").forEach(function(p) {
-    p = p.trim();
-    if (p && p !== myPid && p !== parentPid) {
-      run("kill -9 " + p + " 2>/dev/null || true");
-    }
-  });
-  run("sleep 1");
-}
-
-// 10. Start service
-run("systemctl reset-failed tenmon-ark-api 2>/dev/null || true");
-run("systemctl start tenmon-ark-api");
-console.log("[sync] Started service");
-
-// 11. Wait for startup
-run("sleep 8");
-
-// 12. Verify
-var status = run("systemctl is-active tenmon-ark-api 2>/dev/null || echo inactive");
-console.log("[sync] Status: " + status);
-
-if (status !== "active") {
-  console.log("[sync] JOURNAL: " + run("journalctl -u tenmon-ark-api --no-pager -n 20 --since '30 seconds ago' 2>/dev/null").substring(0, 1000));
-}
-
-var ver = run("curl -s -m 5 http://127.0.0.1:3000/api/version 2>&1");
-console.log("[sync] Version: " + ver.substring(0, 300));
-
-// 13. CRITICAL: Prevent deploy.yml's systemctl restart from killing us.
-// Write a wrapper script that deploy.yml's systemctl restart will call.
-// This wrapper checks if the service is already running with the correct version
-// and skips the restart if so.
-// Actually, we can't prevent deploy.yml from running systemctl restart.
-// But we CAN make the service resilient by using nohup as a backup.
-var nohupPid = run("lsof -ti:3000 2>/dev/null || echo none");
-console.log("[sync] Server PID: " + nohupPid);
-
-console.log("[sync] v22 done");
+console.log("[sync] v23 done - deploy.yml systemctl restart will now restart the service");
