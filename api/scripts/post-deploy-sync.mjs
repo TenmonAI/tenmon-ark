@@ -2,12 +2,12 @@
  * Post-deploy sync script
  * 
  * Runs after `npm run build` on the VPS during deploy.
- * BEFORE systemctl restart tenmon-ark-api runs.
- * 
- * The key insight: systemd's Restart=always auto-respawns killed processes.
- * We must STOP the systemd service first, then kill any remaining processes,
- * then reset the failure counter. The deploy script's final
- * `systemctl restart tenmon-ark-api` will start the new code.
+ * Handles the full service restart cycle:
+ * 1. Stop systemd service
+ * 2. Kill orphan processes  
+ * 3. Reset failure counter
+ * 4. Start the service (don't wait for deploy's systemctl restart)
+ * 5. Verify the service is running
  */
 import { execSync } from "child_process";
 import { dirname, resolve } from "path";
@@ -24,32 +24,27 @@ if (!apiDir.startsWith("/opt/tenmon-ark")) {
 
 console.log(`[sync] Running on VPS, apiDir=${apiDir}`);
 
-// Step 1: STOP the systemd service (prevents auto-respawn)
+// Step 1: Stop the systemd service
 try {
   execSync("systemctl stop tenmon-ark-api 2>/dev/null || true", { stdio: "pipe" });
   console.log("[sync] ✅ systemd service stopped");
 } catch {}
 
 // Step 2: Wait for the service to fully stop
-try {
-  execSync("sleep 2");
-} catch {}
+try { execSync("sleep 2"); } catch {}
 
-// Step 3: Kill any remaining processes on port 3000 (orphans, pm2, etc.)
+// Step 3: Kill any remaining processes on port 3000
 try {
   const result = execSync("lsof -ti:3000 2>/dev/null || true", { encoding: "utf8" }).trim();
   if (result) {
     const pids = result.split("\n").filter(Boolean);
-    console.log(`[sync] Found ${pids.length} remaining processes on port 3000: ${pids.join(", ")}`);
+    console.log(`[sync] Killing ${pids.length} remaining processes: ${pids.join(", ")}`);
     for (const pid of pids) {
-      try {
-        execSync(`kill -9 ${pid} 2>/dev/null || true`);
-        console.log(`[sync] Killed PID ${pid}`);
-      } catch {}
+      try { execSync(`kill -9 ${pid} 2>/dev/null || true`); } catch {}
     }
-    execSync("sleep 1");
+    try { execSync("sleep 1"); } catch {}
   } else {
-    console.log("[sync] No remaining processes on port 3000");
+    console.log("[sync] Port 3000 is free");
   }
 } catch {}
 
@@ -59,23 +54,40 @@ try {
   console.log("[sync] ✅ systemd failure counter reset");
 } catch {}
 
-// Step 5: Diagnostic info
+// Step 5: Start the service NOW (don't wait for deploy's systemctl restart)
 try {
-  const nodeVersion = execSync("node --version 2>/dev/null || echo unknown", { encoding: "utf8" }).trim();
-  console.log(`[sync] Node.js version: ${nodeVersion}`);
-  
-  const distFiles = execSync(`ls -la ${apiDir}/dist/index.js 2>/dev/null || echo 'not found'`, { encoding: "utf8" }).trim();
-  console.log(`[sync] dist/index.js: ${distFiles}`);
-  
-  // Check systemd service status
-  const status = execSync("systemctl is-active tenmon-ark-api 2>/dev/null || echo 'unknown'", { encoding: "utf8" }).trim();
-  console.log(`[sync] systemd service status: ${status}`);
-  
-  // Verify port 3000 is free
-  const portCheck = execSync("lsof -ti:3000 2>/dev/null || echo 'free'", { encoding: "utf8" }).trim();
-  console.log(`[sync] port 3000: ${portCheck}`);
+  execSync("systemctl start tenmon-ark-api 2>&1", { encoding: "utf8", timeout: 10000 });
+  console.log("[sync] ✅ systemctl start executed");
 } catch (err) {
-  console.error(`[sync] ⚠️ Diagnostic failed: ${err.message}`);
+  console.error(`[sync] ⚠️ systemctl start failed: ${err.message}`);
 }
 
-console.log("[sync] ✅ Post-deploy sync complete. Port 3000 is free for systemctl restart.");
+// Step 6: Wait for service to start
+try { execSync("sleep 3"); } catch {}
+
+// Step 7: Verify the service is running
+try {
+  const status = execSync("systemctl is-active tenmon-ark-api 2>/dev/null || echo 'inactive'", { encoding: "utf8" }).trim();
+  console.log(`[sync] Service status: ${status}`);
+  
+  if (status !== "active") {
+    // Check the journal for crash reasons
+    const journal = execSync("journalctl -u tenmon-ark-api --no-pager -n 30 2>/dev/null || echo 'no journal'", { encoding: "utf8" }).trim();
+    console.log(`[sync] Journal output:\n${journal}`);
+  }
+} catch (err) {
+  console.error(`[sync] ⚠️ Status check failed: ${err.message}`);
+}
+
+// Step 8: Test if the server responds
+try {
+  const response = execSync("curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:3000/api/version 2>/dev/null || echo 'failed'", { encoding: "utf8" }).trim();
+  console.log(`[sync] Version endpoint response: ${response}`);
+  
+  const portCheck = execSync("lsof -ti:3000 2>/dev/null || echo 'no process'", { encoding: "utf8" }).trim();
+  console.log(`[sync] Process on port 3000: ${portCheck}`);
+} catch (err) {
+  console.error(`[sync] ⚠️ Response check failed: ${err.message}`);
+}
+
+console.log("[sync] ✅ Post-deploy sync complete");
