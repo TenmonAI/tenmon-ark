@@ -36,3 +36,32 @@ export type {
   IntegratedCompatibilityResult,
   CompleteDiagnosisResult
 } from "./integratedDiagnosis.js";
+
+export {
+  generateTenmonArkReport
+} from "./reportGenerator.js";
+export type {
+  TenmonArkReportResult
+} from "./reportGenerator.js";
+
+export {
+  classifyDisaster,
+  describeDisasterPattern
+} from "./disasterClassifier.js";
+export type {
+  DisasterProfile
+} from "./disasterClassifier.js";
+
+export {
+  prescribeKotodama,
+  generatePracticePlan,
+  analyzeNameSounds,
+  describeNameSoundAnalysis,
+  describeKotodamaPrescription,
+  describePracticePlan
+} from "./kotodamaPrescriber.js";
+export type {
+  KotodamaPrescription,
+  NameSoundAnalysis,
+  PracticePlan
+} from "./kotodamaPrescriber.js";

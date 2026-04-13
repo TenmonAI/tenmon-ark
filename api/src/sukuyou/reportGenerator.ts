@@ -1,526 +1,277 @@
 /**
- * 天聞アーク統合鑑定レポート v1.0
+ * ============================================================
+ * 天聞アーク統合鑑定レポート生成エンジン v2.0
+ * ============================================================
  * 
- * 宿曜経 × 天津金木 × 言霊秘書
+ * 宿曜経 × 天津金木 × 言霊 × カタカムナ
  * 
- * 「占い」ではなく「人間OS解析レポート」
- * ①構造（再現性）＋②深度（多層分析）＋③統合（宿命→運命→天命）
+ * 9カテゴリ統合鑑定レポート（標準版 7000字）
  * 
- * セクション構成:
- *   §0 基本情報
- *   §1 宿命構造（不変領域）
- *   §2 運命構造（変動領域）
- *   §3 天命構造（魂の方向性）
- *   §4 人間分析（性格・能力・リスク・行動）
- *   §5 時間軸分析（過去・現在・未来）
- *   §6 相性構造（対人関係の法則）
- *   §7 開運処方箋
- *   §8 統合解読（宿命→運命→天命の統合）
+ * §0 基本情報
+ * §1 宿命構造（不変領域）
+ * §2 運命構造（変動領域）
+ * §3 天命構造（魂の方向）
+ * §4 人間分析（災い構造解析）
+ * §5 時間軸分析
+ * §6 各運勢詳細
+ * §7 開運処方箋（言霊処方 + 実践プラン）
+ * §8 統合解読（三層統合メッセージ）
+ * 
+ * 依存:
+ *   - sukuyouEngine.ts (runFullDiagnosis, NAKSHATRA_DATA, etc.)
+ *   - integratedDiagnosis.ts (runCompleteDiagnosis)
+ *   - disasterClassifier.ts (classifyDisaster, describeDisasterPattern)
+ *   - kotodamaPrescriber.ts (prescribeKotodama, generatePracticePlan, etc.)
  */
 
 import {
-  type Nakshatra, type Palace, type Planet, type RelationshipType,
-  type Kyusei, type JuniChoku,
-  NAKSHATRAS, NAKSHATRA_DATA, PALACE_DATA, PLANET_DATA,
-  runFullDiagnosis, type FullDiagnosisResult
+  runFullDiagnosis,
+  NAKSHATRA_DATA,
+  PALACE_DATA,
+  PLANET_DATA,
+  type FullDiagnosisResult,
 } from "./sukuyouEngine.js";
 
 import {
   calculateThreeLayerPhase,
   analyzeNameKotodama,
   determineTaiYou,
-  runCompleteDiagnosis,
-  type TaiYouResult,
-  type CompleteDiagnosisResult
 } from "./integratedDiagnosis.js";
 
-// ============================================
-// 拡張宿データ（syukuyo.com準拠の詳細情報）
-// ============================================
+import {
+  classifyDisaster,
+  describeDisasterPattern,
+  type DisasterProfile,
+} from "./disasterClassifier.js";
+
+import {
+  prescribeKotodama,
+  generatePracticePlan,
+  analyzeNameSounds,
+  describeNameSoundAnalysis,
+  describeKotodamaPrescription,
+  describePracticePlan,
+  type KotodamaPrescription,
+  type NameSoundAnalysis,
+  type PracticePlan,
+} from "./kotodamaPrescriber.js";
+
+import { solarToLunar } from "./lunarCalendar.js";
+
+// ============================================================
+// カタカムナ言霊エンジン（内蔵）
+// ============================================================
+
+/**
+ * カタカムナ48音の思念体系
+ * 出典: カタカムナ言靈解天道仁聞
+ * 
+ * フトマニ（中心図象符）= 潜象界の核
+ * ヤタノカガミ = 現象化の鏡
+ * ミスマルノタマ = 統合の珠
+ */
+const KATAKAMUNA_SHINEN: Record<string, { shinen: string; layer: string; element: string }> = {
+  "ア": { shinen: "感じる・生命", layer: "現象", element: "天" },
+  "イ": { shinen: "伝わる・息", layer: "現象", element: "火" },
+  "ウ": { shinen: "生まれ出る・潜象の核", layer: "潜象", element: "水" },
+  "エ": { shinen: "立ち上がる・枝", layer: "現象", element: "地" },
+  "オ": { shinen: "奥深い・六方環境", layer: "現象", element: "天" },
+  "カ": { shinen: "力・見えない力", layer: "潜象", element: "火" },
+  "キ": { shinen: "エネルギー・氣", layer: "潜象", element: "火" },
+  "ク": { shinen: "引き寄せる・自由", layer: "現象", element: "水" },
+  "ケ": { shinen: "放射する・異なる", layer: "現象", element: "火" },
+  "コ": { shinen: "転がり出る・凝集", layer: "現象", element: "地" },
+  "サ": { shinen: "差・遮る・引き離す", layer: "現象", element: "水" },
+  "シ": { shinen: "示す・現象", layer: "現象", element: "水" },
+  "ス": { shinen: "一方向に進む・澄む", layer: "現象", element: "水" },
+  "セ": { shinen: "迫る・狭まる", layer: "現象", element: "地" },
+  "ソ": { shinen: "外れる・反る", layer: "現象", element: "天" },
+  "タ": { shinen: "分かれる・独立", layer: "現象", element: "火" },
+  "チ": { shinen: "凝縮する・霊", layer: "潜象", element: "火" },
+  "ツ": { shinen: "集まる・津", layer: "現象", element: "水" },
+  "テ": { shinen: "手・届く", layer: "現象", element: "地" },
+  "ト": { shinen: "統合する・十", layer: "現象", element: "天" },
+  "ナ": { shinen: "核・成る", layer: "潜象", element: "天" },
+  "ニ": { shinen: "煮える・定着", layer: "現象", element: "火" },
+  "ヌ": { shinen: "抜ける・貫く", layer: "現象", element: "水" },
+  "ネ": { shinen: "根・念", layer: "潜象", element: "地" },
+  "ノ": { shinen: "伸びる・時間", layer: "現象", element: "天" },
+  "ハ": { shinen: "引き合う・正反", layer: "潜象", element: "火" },
+  "ヒ": { shinen: "根源・霊", layer: "潜象", element: "火" },
+  "フ": { shinen: "増える・二つ", layer: "現象", element: "水" },
+  "ヘ": { shinen: "減る・偏る", layer: "現象", element: "地" },
+  "ホ": { shinen: "引き離す・芽", layer: "現象", element: "火" },
+  "マ": { shinen: "受容する・間", layer: "潜象", element: "水" },
+  "ミ": { shinen: "実体・実る", layer: "現象", element: "水" },
+  "ム": { shinen: "六方環境・無限", layer: "潜象", element: "天" },
+  "メ": { shinen: "芽生える・目", layer: "現象", element: "地" },
+  "モ": { shinen: "漂う・藻", layer: "現象", element: "水" },
+  "ヤ": { shinen: "飽和する・彌", layer: "潜象", element: "天" },
+  "ユ": { shinen: "揺れる・湧く", layer: "現象", element: "水" },
+  "ヨ": { shinen: "新しい次元・四方", layer: "現象", element: "天" },
+  "ラ": { shinen: "場・灵", layer: "潜象", element: "火" },
+  "リ": { shinen: "離れる・律", layer: "現象", element: "火" },
+  "ル": { shinen: "留まる・流れ", layer: "現象", element: "水" },
+  "レ": { shinen: "連なる・列", layer: "現象", element: "地" },
+  "ロ": { shinen: "凝る・空間", layer: "現象", element: "地" },
+  "ワ": { shinen: "調和する・和", layer: "潜象", element: "天" },
+  "ヰ": { shinen: "集中する", layer: "現象", element: "火" },
+  "ヱ": { shinen: "恵み", layer: "現象", element: "地" },
+  "ヲ": { shinen: "生命力", layer: "潜象", element: "天" },
+  "ン": { shinen: "終わりと始まり・転換", layer: "潜象", element: "天" },
+};
+
+/**
+ * カタカムナ音分析
+ */
+function analyzeKatakamuna(nameKatakana: string): {
+  sounds: Array<{ char: string; shinen: string; layer: string; element: string }>;
+  layerBalance: { sensho: number; gensho: number };
+  elementBalance: Record<string, number>;
+  coreVibration: string;
+  futomaniReading: string;
+} {
+  const chars = nameKatakana.replace(/[ー・\s　]/g, "").split("");
+  const sounds: Array<{ char: string; shinen: string; layer: string; element: string }> = [];
+  let sensho = 0;
+  let gensho = 0;
+  const elements: Record<string, number> = { "天": 0, "火": 0, "水": 0, "地": 0 };
+
+  for (const ch of chars) {
+    const info = KATAKAMUNA_SHINEN[ch];
+    if (info) {
+      sounds.push({ char: ch, ...info });
+      if (info.layer === "潜象") sensho++;
+      else gensho++;
+      elements[info.element] = (elements[info.element] || 0) + 1;
+    }
+  }
+
+  const total = sounds.length || 1;
+  let coreVibration: string;
+  if (sensho / total > 0.5) {
+    coreVibration = "潜象界の振動が優勢。見えない力、根源的エネルギー、直感の領域に強く共鳴する魂。物質界よりも霊的・精神的な次元で本領を発揮する。";
+  } else if (gensho / total > 0.7) {
+    coreVibration = "現象界の振動が優勢。具体的な行動、物質的な実現、五感の世界で力を発揮する魂。地に足のついた実践力が根幹にある。";
+  } else {
+    coreVibration = "潜象と現象が均衡した振動。見えない世界の力を現実に顕現させる架け橋となる魂。霊的直感と実践力の両方を持つ。";
+  }
+
+  // フトマニ解読: 名前全体の思念を統合
+  const shinenFlow = sounds.map(s => s.shinen).join(" → ");
+  const futomaniReading = `名の思念の流れ: ${shinenFlow}。` +
+    `この名は${sounds[0]?.shinen || ""}の力で始まり、` +
+    `${sounds[sounds.length - 1]?.shinen || ""}の力で結ばれる。` +
+    (sensho > gensho
+      ? "潜象界（カムの世界）に根を持つ名であり、見えない力を現象界に引き出す使命を帯びる。"
+      : "現象界（アマの世界）に根を持つ名であり、具体的な形を通じて真理を体現する使命を帯びる。");
+
+  return {
+    sounds,
+    layerBalance: { sensho, gensho },
+    elementBalance: elements,
+    coreVibration,
+    futomaniReading,
+  };
+}
+
+// ============================================================
+// 27宿拡張データベース
+// ============================================================
 
 interface ExtendedShukuData {
-  /** 十二宮の足配分（例: "獅子宮に一足、女宮に三足"） */
   palaceFootDetail: string;
-  /** エレメント詳細 */
   elementDetail: string;
-  /** クオリティ詳細 */
   qualityDetail: string;
-  /** 惑星影響詳細 */
   planetDetail: string;
-  /** 特殊運（海外運、人気運など） */
   specialFortune: string;
-  /** ビューティアドバイス */
   beautyAdvice: string;
-  /** ファッションアドバイス */
   fashionAdvice: string;
-  /** 恋愛運上昇時期 */
   loveUpPeriod: string;
-  /** 恋愛運下降時期 */
   loveDownPeriod: string;
-  /** 仕事運上昇時期 */
   workUpPeriod: string;
-  /** 仕事運下降時期 */
   workDownPeriod: string;
-  /** 対応身体部位（syukuyo.com準拠） */
   bodyPartDetail: string;
-  /** 表面人格 */
   surfacePersonality: string;
-  /** 内面人格 */
   innerPersonality: string;
-  /** 無意識層 */
   unconscious: string;
-  /** 才能 */
   talents: string;
-  /** 弱点 */
   weaknesses: string;
-  /** 失敗パターン */
   failurePattern: string;
-  /** 行動原理 */
   actionPrinciple: string;
-  /** 判断基準 */
   judgmentCriteria: string;
-  /** モチベーション源 */
   motivation: string;
 }
 
-/** 拡張宿データ（全27宿） */
-const EXTENDED_SHUKU_DATA: Record<Nakshatra, ExtendedShukuData> = {
-  "角": {
-    palaceFootDetail: "室女宮に四足属する",
-    elementDetail: "風のエレメント。知性と変化を司る",
-    qualityDetail: "柔軟宮。適応力と多面性を持つ",
-    planetDetail: "水星の影響。知性・分析力・コミュニケーション",
-    specialFortune: "技芸運・知性運に恵まれる",
-    beautyAdvice: "知的な印象を活かしたシャープなスタイリングが効果的。定期的な頭皮ケアとヘアスタイルの変化で運気上昇。",
-    fashionAdvice: "モノトーンにアクセントカラーを加えた知的でシャープなスタイル。エメラルドグリーンやシルバーのアクセサリーが開運。",
-    loveUpPeriod: "知的な出会いが増える時期に恋愛運上昇。学びの場での出会いに注目。",
-    loveDownPeriod: "理想が高くなりすぎる時期に注意。完璧を求めすぎず、相手の良い面に目を向けて。",
-    workUpPeriod: "新しいプロジェクトの立ち上げ時期に才能が開花。分析力を活かせる場面で評価上昇。",
-    workDownPeriod: "周囲との摩擦が生じやすい時期。協調性を意識し、独断を避けること。",
-    bodyPartDetail: "腰・背骨に対応。長時間の座り仕事に注意。",
-    surfacePersonality: "知的で冷静、鋭い観察力を持つ分析家。物事の本質を見抜く目を持ち、論理的に物事を整理する。",
-    innerPersonality: "内面には強い創造欲と破壊衝動を秘める。古いものを壊して新しい価値を生み出したいという衝動がある。",
-    unconscious: "根底には「真理への渇望」がある。世界の仕組みを解き明かし、本質に到達したいという魂の欲求。",
-    talents: "分析力、創造力、独立心。物事を構造的に捉え、新しい枠組みを生み出す力。",
-    weaknesses: "協調性の欠如、完璧主義、孤立傾向。自分の正しさに固執しすぎる面。",
-    failurePattern: "独断で突き進み、周囲の意見を無視して孤立する。理想と現実のギャップに苦しむ。",
-    actionPrinciple: "論理と分析に基づいて行動する。感情よりも理性を優先する傾向。",
-    judgmentCriteria: "合理性と効率性。本質的に正しいかどうかを基準に判断する。",
-    motivation: "真理の探究と新しい価値の創造。未知の領域を切り開くことに喜びを感じる。"
-  },
-  "亢": {
-    palaceFootDetail: "天秤宮に二足属する",
-    elementDetail: "風のエレメント。調和と知性を司る",
-    qualityDetail: "活動宮。主導力と開拓精神を持つ",
-    planetDetail: "金星の影響。美・調和・人間関係",
-    specialFortune: "学問運・慈悲運に恵まれる",
-    beautyAdvice: "穏やかで知的な雰囲気を活かしたナチュラルメイクが効果的。ラベンダー系の香りでリラックス。",
-    fashionAdvice: "上品で落ち着いたトーンの装い。ラベンダーや白を基調とした清楚なスタイルが開運。",
-    loveUpPeriod: "学びの場や文化的な活動を通じた出会いに恵まれる時期。",
-    loveDownPeriod: "自分の気持ちを抑えすぎて相手に伝わらない時期。素直な表現を心がけて。",
-    workUpPeriod: "教育・医療・カウンセリング分野で才能が認められる時期。",
-    workDownPeriod: "理論に偏りすぎて実践が疎かになる時期。行動に移す勇気を。",
-    bodyPartDetail: "胸・呼吸器に対応。深呼吸と瞑想が健康の鍵。",
-    surfacePersonality: "温和で知的、穏やかな物腰で誰からも好かれる。相談役として頼られることが多い。",
-    innerPersonality: "内面には強い信念と学問への情熱を秘める。表面の穏やかさとは裏腹に、正義に対する強い思いがある。",
-    unconscious: "根底には「人を救いたい」という慈悲の心がある。他者の苦しみを自分のものとして感じる共感力。",
-    talents: "学問的探究力、共感力、教育力。人の心に寄り添い、導く力。",
-    weaknesses: "優柔不断、自己犠牲的、理論偏重。行動に移すまでに時間がかかる。",
-    failurePattern: "考えすぎて行動できない。他者に尽くしすぎて自分を見失う。",
-    actionPrinciple: "道徳と学問に基づいて行動する。正しいことを追求する姿勢。",
-    judgmentCriteria: "道義的に正しいかどうか。人の役に立つかどうかを基準に判断。",
-    motivation: "知識の探究と他者への貢献。学びを通じて世界をより良くしたいという願い。"
-  },
-  "氐": {
-    palaceFootDetail: "天秤宮に四足属する",
-    elementDetail: "風のエレメント。調和と秩序を司る",
-    qualityDetail: "活動宮。忍耐力と持続力を持つ",
-    planetDetail: "金星の影響。美・調和・安定",
-    specialFortune: "道徳運・忍耐運に恵まれる",
-    beautyAdvice: "自然体の美しさを活かしたケアが効果的。土に触れるガーデニングやアロマテラピーが開運。",
-    fashionAdvice: "深緑や茶色を基調とした落ち着いたアースカラーの装い。翡翠のアクセサリーが開運。",
-    loveUpPeriod: "誠実さが評価される時期。長い交際の末に実を結ぶ恋愛に恵まれる。",
-    loveDownPeriod: "相手に尽くしすぎて疲弊する時期。自分の気持ちも大切にすること。",
-    workUpPeriod: "地道な努力が認められる時期。不動産や土地に関わる仕事で成果。",
-    workDownPeriod: "変化への対応が遅れる時期。柔軟性を意識して。",
-    bodyPartDetail: "腎臓・泌尿器に対応。水分摂取と冷え対策が重要。",
-    surfacePersonality: "温厚で誠実、道徳心が高く信頼される人柄。一度決めたことは最後までやり遂げる。",
-    innerPersonality: "内面には強い正義感と不正への怒りを秘める。穏やかな外見とは裏腹に、信念は揺るがない。",
-    unconscious: "根底には「秩序への渇望」がある。世界に正しい秩序をもたらしたいという魂の使命。",
-    talents: "忍耐力、誠実さ、道徳的判断力。長期的な視点で物事を成し遂げる力。",
-    weaknesses: "頑固さ、変化への抵抗、自己犠牲。柔軟性に欠ける面。",
-    failurePattern: "変化を拒み、時代の流れに取り残される。自分の正義を他者に押し付ける。",
-    actionPrinciple: "道徳と忍耐に基づいて行動する。急がず焦らず、着実に歩む。",
-    judgmentCriteria: "道義的に正しいかどうか。長期的に見て良い結果をもたらすかどうか。",
-    motivation: "正義の実現と秩序の維持。世界をより良い場所にしたいという願い。"
-  },
-  "房": {
-    palaceFootDetail: "天蠍宮に一足属する",
-    elementDetail: "水のエレメント。情熱と変容を司る",
-    qualityDetail: "不動宮。安定と持続を持つ",
-    planetDetail: "火星の影響。行動力・情熱・リーダーシップ",
-    specialFortune: "家運・威徳運に恵まれる",
-    beautyAdvice: "威厳のある佇まいを活かしたケアが効果的。ワインレッドやゴールドの装飾品で運気上昇。",
-    fashionAdvice: "ワインレッドやゴールドを基調とした格調高い装い。ガーネットのアクセサリーが開運。",
-    loveUpPeriod: "家庭運が上昇する時期。安定した関係を築くパートナーとの出会い。",
-    loveDownPeriod: "支配的になりすぎる時期。パートナーの自由を尊重すること。",
-    workUpPeriod: "リーダーシップが発揮される時期。組織を率いる立場で成果。",
-    workDownPeriod: "権力に溺れやすい時期。謙虚さを忘れないこと。",
-    bodyPartDetail: "心臓・循環器に対応。適度な運動と規則正しい食事が大切。",
-    surfacePersonality: "威厳と徳を兼ね備え、自然とリーダーの座に就く。人望が厚く、周囲に安定感を与える。",
-    innerPersonality: "内面には家族や仲間への深い愛情を秘める。守るべきもののために全力を尽くす覚悟がある。",
-    unconscious: "根底には「一族の繁栄」への使命感がある。血脈と伝統を守り、次世代に繋げたいという魂の願い。",
-    talents: "リーダーシップ、統率力、家族愛。組織を率い、人を育てる力。",
-    weaknesses: "支配的傾向、権力への執着、変化への恐れ。",
-    failurePattern: "権力に溺れ、周囲の意見を聞かなくなる。物質的豊かさに執着しすぎる。",
-    actionPrinciple: "威厳と徳に基づいて行動する。家族と組織の繁栄を最優先する。",
-    judgmentCriteria: "一族や組織にとって最善かどうか。長期的な繁栄に繋がるかどうか。",
-    motivation: "家族と組織の繁栄。守るべきものを守り、次世代に繋げること。"
-  },
-  "心": {
-    palaceFootDetail: "天蠍宮に四足属する",
-    elementDetail: "水のエレメント。洞察と変容を司る",
-    qualityDetail: "不動宮。集中力と探究心を持つ",
-    planetDetail: "冥王星の影響。変容・再生・深層心理",
-    specialFortune: "人気運・地位運に恵まれる",
-    beautyAdvice: "神秘的な魅力を活かしたメイクが効果的。ブラックやコーラルピンクのリップで印象アップ。ストレス解消のためのアロマバスが開運。",
-    fashionAdvice: "ブラックやコーラルピンクを基調としたミステリアスな装い。ルチルクォーツのアクセサリーが開運。",
-    loveUpPeriod: "神秘的な魅力が増す時期。深い絆を結べるパートナーとの出会い。",
-    loveDownPeriod: "猜疑心が強まる時期。相手を信じる勇気を持つこと。",
-    workUpPeriod: "洞察力が冴える時期。研究・企画・カウンセリングで成果。接客・販売でも人気運が発揮される。",
-    workDownPeriod: "秘密主義が裏目に出る時期。適度な情報共有を心がけて。",
-    bodyPartDetail: "左ひじに対応。腱鞘炎や泌尿器の疾患に注意。女性は婦人科系にも注意。",
-    surfacePersonality: "気さくでチャーミング、周りを明るくするムードメーカー。神秘的な魅力に包まれている。",
-    innerPersonality: "内面には鋭い洞察力と秘密主義を秘める。人の心の動きを敏感に察知する天性のタレント性。",
-    unconscious: "根底には「真実への渇望」がある。表面の華やかさの奥に、物事の核心に迫りたいという魂の欲求。",
-    talents: "洞察力、演技力、再生力。人の心を読み、状況を変える力。起死回生の運。",
-    weaknesses: "猜疑心、秘密主義、感情の起伏。内面の陰鬱さを隠すための過剰な演技。",
-    failurePattern: "人を信用できず孤立する。秘密主義が裏目に出て信頼を失う。",
-    actionPrinciple: "洞察と直感に基づいて行動する。状況を見極めてから動く慎重さ。",
-    judgmentCriteria: "本質的に正しいかどうか。表面ではなく深層を見て判断する。",
-    motivation: "真実の探究と人間関係の深化。表面的でない、魂レベルの繋がりを求める。"
-  },
-  "尾": {
-    palaceFootDetail: "天蠍宮に二足属する",
-    elementDetail: "水のエレメント。情熱と持続を司る",
-    qualityDetail: "不動宮。忍耐と集中を持つ",
-    planetDetail: "火星の影響。行動力・闘志・開拓精神",
-    specialFortune: "開拓運・忍耐運に恵まれる",
-    beautyAdvice: "力強さと繊細さを兼ね備えたケアが効果的。スポーツやアウトドアで心身をリフレッシュ。",
-    fashionAdvice: "ダークトーンにアクセントを加えた力強いスタイル。ブラッドストーンのアクセサリーが開運。",
-    loveUpPeriod: "情熱的な出会いに恵まれる時期。共に困難を乗り越えるパートナーとの縁。",
-    loveDownPeriod: "独占欲が強まる時期。相手の自由を認める寛容さを。",
-    workUpPeriod: "開拓精神が発揮される時期。新規事業や困難なプロジェクトで成果。",
-    workDownPeriod: "頑固さが裏目に出る時期。柔軟な対応を心がけて。",
-    bodyPartDetail: "右ひじに対応。関節や筋肉のケアが重要。",
-    surfacePersonality: "寡黙で力強い印象。言葉は少ないが、行動で示すタイプ。",
-    innerPersonality: "内面には燃えるような情熱と開拓精神を秘める。困難に立ち向かう不屈の精神。",
-    unconscious: "根底には「道を切り開く」という使命感がある。未踏の領域に挑む魂の衝動。",
-    talents: "忍耐力、開拓精神、集中力。困難な状況を打破する力。",
-    weaknesses: "頑固さ、孤独傾向、感情表現の乏しさ。",
-    failurePattern: "一人で抱え込みすぎて限界を超える。助けを求められない。",
-    actionPrinciple: "信念と忍耐に基づいて行動する。一度決めたら最後までやり遂げる。",
-    judgmentCriteria: "自分の信念に合致するかどうか。困難でも正しい道を選ぶ。",
-    motivation: "困難の克服と新しい道の開拓。限界を超えることに喜びを感じる。"
-  },
-  "箕": {
-    palaceFootDetail: "人馬宮に一足属する",
-    elementDetail: "火のエレメント。冒険と拡大を司る",
-    qualityDetail: "柔軟宮。自由と探究を持つ",
-    planetDetail: "木星の影響。拡大・幸運・哲学",
-    specialFortune: "冒険運・自由運に恵まれる",
-    beautyAdvice: "自由で活動的な印象を活かしたケアが効果的。旅先でのスパ体験が開運。",
-    fashionAdvice: "自由で活動的なスタイル。エスニックやボヘミアンテイストが似合う。ターコイズのアクセサリーが開運。",
-    loveUpPeriod: "旅先や異文化交流での出会いに恵まれる時期。",
-    loveDownPeriod: "自由を求めすぎて相手を傷つける時期。責任感を持つこと。",
-    workUpPeriod: "海外関連や新規開拓で才能が発揮される時期。",
-    workDownPeriod: "飽きっぽさが出る時期。一つのことに集中する忍耐を。",
-    bodyPartDetail: "腰・大腿部に対応。運動不足に注意。",
-    surfacePersonality: "自由奔放で楽天的。冒険心に富み、新しいことに挑戦する勇気がある。",
-    innerPersonality: "内面には深い哲学的思索を秘める。人生の意味を探求する知的好奇心。",
-    unconscious: "根底には「自由への渇望」がある。束縛を嫌い、広い世界を駆け巡りたいという魂の欲求。",
-    talents: "冒険心、楽天性、哲学的思考。未知の世界を切り開く力。",
-    weaknesses: "飽きっぽさ、無責任、落ち着きのなさ。",
-    failurePattern: "一つのことを続けられず、中途半端に終わる。自由を求めて責任を放棄する。",
-    actionPrinciple: "好奇心と冒険心に基づいて行動する。直感を信じて飛び込む。",
-    judgmentCriteria: "自由であるかどうか。新しい経験が得られるかどうか。",
-    motivation: "未知の世界の探究と自由の獲得。新しい経験を通じた成長。"
-  },
-  "斗": {
-    palaceFootDetail: "磨羯宮に一足属する",
-    elementDetail: "地のエレメント。実務と達成を司る",
-    qualityDetail: "活動宮。目標達成力と責任感を持つ",
-    planetDetail: "土星の影響。規律・忍耐・達成",
-    specialFortune: "出世運・達成運に恵まれる",
-    beautyAdvice: "品格のある佇まいを活かしたケアが効果的。定期的なフェイシャルエステで若々しさを維持。",
-    fashionAdvice: "フォーマルで品格のある装い。ネイビーやダークグレーが基調。オニキスのアクセサリーが開運。",
-    loveUpPeriod: "社会的地位が上がる時期に良縁に恵まれる。",
-    loveDownPeriod: "仕事優先で恋愛が疎かになる時期。バランスを意識して。",
-    workUpPeriod: "目標達成力が最大化される時期。昇進や独立のチャンス。",
-    workDownPeriod: "過労に注意の時期。休息も仕事の一部と心得て。",
-    bodyPartDetail: "膝・関節に対応。冷えと過労に注意。",
-    surfacePersonality: "真面目で責任感が強く、目標に向かって着実に歩む。社会的信用が高い。",
-    innerPersonality: "内面には強い野心と達成欲を秘める。トップに立ちたいという強い意志。",
-    unconscious: "根底には「社会的使命」への意識がある。世の中の仕組みを動かしたいという魂の願い。",
-    talents: "目標達成力、責任感、組織運営力。着実に成果を積み上げる力。",
-    weaknesses: "融通の利かなさ、過労傾向、感情表現の乏しさ。",
-    failurePattern: "仕事に没頭しすぎて人間関係を犠牲にする。完璧主義で自分を追い込む。",
-    actionPrinciple: "計画と規律に基づいて行動する。目標から逆算して着実に進む。",
-    judgmentCriteria: "目標達成に繋がるかどうか。社会的に意義があるかどうか。",
-    motivation: "社会的達成と地位の獲得。自分の力で世の中を動かすこと。"
-  },
-  "女": {
-    palaceFootDetail: "磨羯宮に二足属する",
-    elementDetail: "地のエレメント。実務と奉仕を司る",
-    qualityDetail: "活動宮。勤勉さと献身を持つ",
-    planetDetail: "土星の影響。規律・忍耐・奉仕",
-    specialFortune: "奉仕運・勤勉運に恵まれる",
-    beautyAdvice: "清潔感と勤勉さを活かしたケアが効果的。規則正しい生活リズムが美の基本。",
-    fashionAdvice: "清潔感のあるシンプルな装い。ベージュやアイボリーが基調。パールのアクセサリーが開運。",
-    loveUpPeriod: "誠実さが評価される時期。職場や奉仕活動での出会い。",
-    loveDownPeriod: "相手に尽くしすぎて自分を見失う時期。自分の幸せも大切に。",
-    workUpPeriod: "地道な努力が報われる時期。専門性を活かした仕事で成果。",
-    workDownPeriod: "過労とストレスに注意の時期。適度な休息を。",
-    bodyPartDetail: "下腹部に対応。消化器系と婦人科系に注意。",
-    surfacePersonality: "勤勉で献身的、誰に対しても誠実に接する。縁の下の力持ち。",
-    innerPersonality: "内面には強い奉仕精神と完璧主義を秘める。人の役に立ちたいという強い思い。",
-    unconscious: "根底には「奉仕と献身」の使命がある。自分を犠牲にしてでも他者を助けたいという魂の衝動。",
-    talents: "勤勉さ、献身性、実務能力。細やかな気配りと確実な仕事ぶり。",
-    weaknesses: "自己犠牲的、完璧主義、自己評価の低さ。",
-    failurePattern: "他者に尽くしすぎて燃え尽きる。自分の価値を認められない。",
-    actionPrinciple: "奉仕と勤勉に基づいて行動する。人の役に立つことを最優先する。",
-    judgmentCriteria: "人の役に立つかどうか。社会に貢献できるかどうか。",
-    motivation: "他者への奉仕と社会貢献。自分の働きが誰かの助けになること。"
-  },
-  "虚": {
-    palaceFootDetail: "寶瓶宮に一足属する",
-    elementDetail: "風のエレメント。革新と独創を司る",
-    qualityDetail: "不動宮。独自性と先見性を持つ",
-    planetDetail: "天王星の影響。革新・独創・自由",
-    specialFortune: "独創運・革新運に恵まれる",
-    beautyAdvice: "個性的で独創的なスタイルが効果的。最先端のスキンケアや美容法に挑戦。",
-    fashionAdvice: "個性的で独創的な装い。アヴァンギャルドなデザインが似合う。アクアマリンのアクセサリーが開運。",
-    loveUpPeriod: "独自の魅力が輝く時期。ユニークな出会いに恵まれる。",
-    loveDownPeriod: "孤立しがちな時期。心を開く勇気を持つこと。",
-    workUpPeriod: "革新的なアイデアが評価される時期。IT・テクノロジー分野で成果。",
-    workDownPeriod: "周囲との温度差が生じる時期。コミュニケーションを大切に。",
-    bodyPartDetail: "足首・ふくらはぎに対応。血行不良に注意。",
-    surfacePersonality: "独創的で自由な発想を持つ。常識にとらわれない独自の視点で物事を見る。",
-    innerPersonality: "内面には深い孤独感と理想主義を秘める。理解されない寂しさと、それでも信念を貫く強さ。",
-    unconscious: "根底には「世界を変えたい」という革命的衝動がある。既存の枠組みを超えた新しい世界を夢見る。",
-    talents: "独創力、先見性、革新力。既存の枠を超えた発想で新しい価値を生む力。",
-    weaknesses: "孤立傾向、理想主義、現実離れ。",
-    failurePattern: "理想が高すぎて現実との折り合いがつかない。孤立して支持を得られない。",
-    actionPrinciple: "独自の信念と直感に基づいて行動する。常識にとらわれない自由な発想。",
-    judgmentCriteria: "革新的かどうか。既存の枠を超えているかどうか。",
-    motivation: "世界の変革と新しい価値の創造。誰も見たことのない未来を作ること。"
-  },
-  "危": {
-    palaceFootDetail: "寶瓶宮に四足属する",
-    elementDetail: "風のエレメント。変革と自由を司る",
-    qualityDetail: "不動宮。独立心と反骨精神を持つ",
-    planetDetail: "天王星の影響。変革・独立・反骨",
-    specialFortune: "変革運・独立運に恵まれる",
-    beautyAdvice: "個性的で大胆なスタイルが効果的。ヘアカラーやネイルで自己表現。",
-    fashionAdvice: "大胆で個性的な装い。ビビッドカラーやアシンメトリーデザインが似合う。",
-    loveUpPeriod: "型破りな出会いに恵まれる時期。運命的な恋の予感。",
-    loveDownPeriod: "反骨精神が恋愛に悪影響を及ぼす時期。素直さを大切に。",
-    workUpPeriod: "独立や起業のチャンスが訪れる時期。",
-    workDownPeriod: "反抗的な態度が問題を起こす時期。協調性を意識して。",
-    bodyPartDetail: "すね・足首に対応。骨折や捻挫に注意。",
-    surfacePersonality: "大胆で型破り、常識にとらわれない自由人。反骨精神に富む。",
-    innerPersonality: "内面には繊細さと不安を秘める。大胆な行動の裏に、認められたいという願望。",
-    unconscious: "根底には「自由への闘争」がある。束縛と抑圧からの解放を求める魂の叫び。",
-    talents: "大胆さ、独立心、変革力。既存の秩序を打破する力。",
-    weaknesses: "反抗的、衝動的、協調性の欠如。",
-    failurePattern: "反抗のための反抗に陥る。周囲との関係を壊してしまう。",
-    actionPrinciple: "自由と独立に基づいて行動する。束縛を嫌い、自分の道を行く。",
-    judgmentCriteria: "自由であるかどうか。束縛されていないかどうか。",
-    motivation: "自由の獲得と既存秩序の変革。自分らしく生きること。"
-  },
-  "室": {
-    palaceFootDetail: "雙魚宮に一足属する",
-    elementDetail: "水のエレメント。直感と霊性を司る",
-    qualityDetail: "柔軟宮。適応力と感受性を持つ",
-    planetDetail: "海王星の影響。直感・霊性・芸術",
-    specialFortune: "霊性運・芸術運に恵まれる",
-    beautyAdvice: "神秘的で幻想的な雰囲気を活かしたケアが効果的。海や水辺でのリラクゼーションが開運。",
-    fashionAdvice: "幻想的で柔らかな装い。パステルカラーや透け感のある素材が似合う。ムーンストーンのアクセサリーが開運。",
-    loveUpPeriod: "直感が冴える時期。運命の相手との出会い。",
-    loveDownPeriod: "現実と理想のギャップに苦しむ時期。地に足をつけること。",
-    workUpPeriod: "芸術的才能が開花する時期。クリエイティブな仕事で成果。",
-    workDownPeriod: "現実逃避に陥りやすい時期。責任を果たすことを忘れずに。",
-    bodyPartDetail: "足の裏・リンパに対応。むくみと冷えに注意。",
-    surfacePersonality: "神秘的で感受性豊か。直感力に優れ、芸術的センスがある。",
-    innerPersonality: "内面には深い霊性と共感力を秘める。目に見えない世界との繋がりを感じる力。",
-    unconscious: "根底には「宇宙との一体化」への渇望がある。すべてと繋がりたいという魂の願い。",
-    talents: "直感力、芸術的センス、霊性。目に見えない世界を感じ取る力。",
-    weaknesses: "現実逃避、依存傾向、境界線の曖昧さ。",
-    failurePattern: "現実から逃げて幻想の世界に閉じこもる。他者に依存しすぎる。",
-    actionPrinciple: "直感と霊性に基づいて行動する。感じるままに動く。",
-    judgmentCriteria: "直感的に正しいと感じるかどうか。魂が共鳴するかどうか。",
-    motivation: "霊的成長と芸術的表現。見えない世界の真実を形にすること。"
-  },
-  "壁": {
-    palaceFootDetail: "雙魚宮に四足属する",
-    elementDetail: "水のエレメント。慈悲と癒しを司る",
-    qualityDetail: "柔軟宮。包容力と献身を持つ",
-    planetDetail: "海王星の影響。慈悲・癒し・奉仕",
-    specialFortune: "慈悲運・癒し運に恵まれる",
-    beautyAdvice: "柔らかく包容力のある雰囲気を活かしたケアが効果的。アロマセラピーやヒーリングが開運。",
-    fashionAdvice: "柔らかく優しい印象の装い。淡い色合いのニットやシフォンが似合う。アメジストのアクセサリーが開運。",
-    loveUpPeriod: "包容力が増す時期。癒しを求める相手との出会い。",
-    loveDownPeriod: "相手に依存しすぎる時期。自立心を忘れずに。",
-    workUpPeriod: "癒しや奉仕の分野で才能が発揮される時期。",
-    workDownPeriod: "自己犠牲が過ぎる時期。自分のケアも大切に。",
-    bodyPartDetail: "足の甲・リンパに対応。むくみと免疫力低下に注意。",
-    surfacePersonality: "穏やかで包容力があり、誰に対しても優しく接する。癒しのオーラを持つ。",
-    innerPersonality: "内面には深い慈悲心と自己犠牲の精神を秘める。他者の苦しみを自分のものとして感じる。",
-    unconscious: "根底には「無条件の愛」への渇望がある。すべてを受け入れ、すべてを癒したいという魂の使命。",
-    talents: "包容力、癒しの力、慈悲心。傷ついた人を癒し、再生させる力。",
-    weaknesses: "依存傾向、自己犠牲、現実逃避。",
-    failurePattern: "他者に尽くしすぎて自分を見失う。依存関係に陥る。",
-    actionPrinciple: "慈悲と愛に基づいて行動する。苦しんでいる人を放っておけない。",
-    judgmentCriteria: "愛に基づいているかどうか。人を癒すことができるかどうか。",
-    motivation: "他者の癒しと救済。無条件の愛を実践すること。"
-  },
-  "奎": {
-    palaceFootDetail: "白羊宮に一足属する",
-    elementDetail: "火のエレメント。行動と開拓を司る",
-    qualityDetail: "活動宮。先駆性と勇気を持つ",
-    planetDetail: "火星の影響。行動力・勇気・開拓",
-    specialFortune: "開拓運・行動運に恵まれる",
-    beautyAdvice: "活動的でエネルギッシュな印象を活かしたケアが効果的。スポーツで汗を流すことが美の秘訣。",
-    fashionAdvice: "活動的でスポーティな装い。赤やオレンジのアクセントカラーが効果的。ルビーのアクセサリーが開運。",
-    loveUpPeriod: "行動力が増す時期。積極的なアプローチが実を結ぶ。",
-    loveDownPeriod: "衝動的になりすぎる時期。相手の気持ちを考えること。",
-    workUpPeriod: "新規開拓やリーダーシップが発揮される時期。",
-    workDownPeriod: "衝動的な判断が問題を起こす時期。冷静さを保つこと。",
-    bodyPartDetail: "頭部・顔に対応。頭痛や目の疲れに注意。",
-    surfacePersonality: "行動力に富み、先頭に立って道を切り開く。勇気と決断力の持ち主。",
-    innerPersonality: "内面には純粋な情熱と正義感を秘める。弱い者を守りたいという強い思い。",
-    unconscious: "根底には「先駆者としての使命」がある。誰よりも先に新しい道を切り開く魂の衝動。",
-    talents: "行動力、決断力、勇気。先頭に立って道を切り開く力。",
-    weaknesses: "衝動的、短気、持続力の欠如。",
-    failurePattern: "衝動的に行動して後悔する。始めたことを最後まで続けられない。",
-    actionPrinciple: "直感と勇気に基づいて行動する。考えるより先に動く。",
-    judgmentCriteria: "正義に適っているかどうか。行動する価値があるかどうか。",
-    motivation: "新しい道の開拓と正義の実現。先頭に立って世界を変えること。"
-  },
-  "婁": {
-    palaceFootDetail: "白羊宮に四足属する",
-    elementDetail: "火のエレメント。情熱と創造を司る",
-    qualityDetail: "活動宮。創造力と情熱を持つ",
-    planetDetail: "火星の影響。情熱・創造・エネルギー",
-    specialFortune: "創造運・情熱運に恵まれる",
-    beautyAdvice: "情熱的で華やかな印象を活かしたケアが効果的。ダンスやヨガで身体表現を磨くことが開運。",
-    fashionAdvice: "華やかで情熱的な装い。赤やゴールドが基調。ガーネットのアクセサリーが開運。",
-    loveUpPeriod: "情熱的な魅力が増す時期。運命的な出会いの予感。",
-    loveDownPeriod: "情熱が空回りする時期。冷静さを保つこと。",
-    workUpPeriod: "創造力が最大化される時期。芸術やクリエイティブ分野で成果。",
-    workDownPeriod: "エネルギーの浪費に注意の時期。集中力を高めること。",
-    bodyPartDetail: "頭部・額に対応。頭痛や精神的ストレスに注意。",
-    surfacePersonality: "情熱的で創造力に富む。エネルギッシュで周囲を巻き込む力がある。",
-    innerPersonality: "内面には繊細な芸術的感性を秘める。美しいものへの深い感動と創造への衝動。",
-    unconscious: "根底には「創造と表現」の使命がある。内なる情熱を形にしたいという魂の欲求。",
-    talents: "創造力、情熱、表現力。内なるビジョンを形にする力。",
-    weaknesses: "衝動的、感情的、持続力の欠如。",
-    failurePattern: "情熱に任せて突き進み、周囲を振り回す。エネルギーを浪費する。",
-    actionPrinciple: "情熱と創造に基づいて行動する。心が動いたら即行動。",
-    judgmentCriteria: "心が動くかどうか。創造的な価値があるかどうか。",
-    motivation: "創造と表現。内なるビジョンを世界に示すこと。"
-  },
-  "胃": {
-    palaceFootDetail: "白羊宮に二足属する",
-    elementDetail: "火のエレメント。消化と変容を司る",
-    qualityDetail: "活動宮。処理力と変換力を持つ",
-    planetDetail: "火星の影響。変換・処理・消化",
-    specialFortune: "変換運・処理運に恵まれる",
-    beautyAdvice: "内面からの美しさを活かしたケアが効果的。食事と消化器系のケアが美の基本。",
-    fashionAdvice: "温かみのある装い。アースカラーやウォームトーンが基調。タイガーアイのアクセサリーが開運。",
-    loveUpPeriod: "包容力が増す時期。食事を共にすることで縁が深まる。",
-    loveDownPeriod: "消化不良のようにストレスが溜まる時期。リフレッシュを。",
-    workUpPeriod: "情報処理能力が最大化される時期。データ分析や企画で成果。",
-    workDownPeriod: "キャパオーバーに注意の時期。優先順位をつけること。",
-    bodyPartDetail: "胃・消化器に対応。暴飲暴食と胃腸の不調に注意。",
-    surfacePersonality: "物事を的確に処理し、変換する力がある。情報の消化吸収が早い。",
-    innerPersonality: "内面には強い変容への欲求を秘める。古いものを消化し、新しいものに変える力。",
-    unconscious: "根底には「変容と再生」の使命がある。経験を糧に成長し続ける魂の力。",
-    talents: "処理能力、変換力、適応力。情報や経験を消化し、新しい価値に変える力。",
-    weaknesses: "キャパオーバー、ストレス耐性の低さ、消化不良。",
-    failurePattern: "抱え込みすぎてパンクする。ストレスを溜め込んで爆発する。",
-    actionPrinciple: "効率と処理に基づいて行動する。情報を整理し、最適な判断を下す。",
-    judgmentCriteria: "効率的かどうか。消化できる範囲かどうか。",
-    motivation: "情報の処理と変換。経験を糧に成長し続けること。"
-  },
+const EXTENDED_SHUKU_DATA: Record<string, ExtendedShukuData> = {
   "昴": {
-    palaceFootDetail: "金牛宮に一足属する",
-    elementDetail: "地のエレメント。安定と美を司る",
-    qualityDetail: "不動宮。安定性と審美眼を持つ",
-    planetDetail: "金星の影響。美・豊かさ・安定",
-    specialFortune: "財運・美運に恵まれる",
-    beautyAdvice: "上品で洗練された美しさを活かしたケアが効果的。高品質なスキンケアへの投資が開運。",
-    fashionAdvice: "上品で洗練された装い。クリーム色やベージュが基調。ダイヤモンドのアクセサリーが開運。",
-    loveUpPeriod: "美的センスが輝く時期。芸術的な場での出会いに恵まれる。",
-    loveDownPeriod: "物質的な豊かさに執着する時期。心の豊かさを大切に。",
-    workUpPeriod: "審美眼が活かされる時期。デザイン・ファッション・金融で成果。",
-    workDownPeriod: "安定志向が変化を妨げる時期。新しいことへの挑戦を。",
-    bodyPartDetail: "首・喉に対応。喉の不調や甲状腺に注意。",
-    surfacePersonality: "上品で洗練された雰囲気。審美眼に優れ、美しいものを愛する。",
-    innerPersonality: "内面には強い所有欲と安定への渇望を秘める。確かなものを手に入れたいという欲求。",
-    unconscious: "根底には「美と豊かさの創造」の使命がある。世界に美しさと豊かさをもたらす魂の願い。",
-    talents: "審美眼、安定性、財運。美しいものを見極め、豊かさを生み出す力。",
-    weaknesses: "頑固さ、所有欲、変化への抵抗。",
-    failurePattern: "安定に固執して成長の機会を逃す。物質的豊かさに溺れる。",
-    actionPrinciple: "美と安定に基づいて行動する。確実で美しい道を選ぶ。",
-    judgmentCriteria: "美しいかどうか。安定と豊かさに繋がるかどうか。",
-    motivation: "美と豊かさの創造。世界に美しさと安定をもたらすこと。"
+    palaceFootDetail: "白羊宮に三足属する",
+    elementDetail: "火のエレメント。衝動と開拓を司る",
+    qualityDetail: "活動宮。先駆的な行動力と開拓精神を持つ",
+    planetDetail: "火星の影響。闘争心・行動力・開拓",
+    specialFortune: "開拓運・リーダー運に恵まれる",
+    beautyAdvice: "大胆で華やかな印象を活かしたケアが効果的。赤系のリップやチークで運気上昇。",
+    fashionAdvice: "華やかで存在感のある装い。赤やゴールドが基調。ダイヤモンドのアクセサリーが開運。",
+    loveUpPeriod: "情熱的な魅力が増す時期。積極的なアプローチが吉。",
+    loveDownPeriod: "自己中心的になりすぎる時期。相手の気持ちを優先すること。",
+    workUpPeriod: "新規プロジェクトの立ち上げに最適。リーダーシップが発揮される。",
+    workDownPeriod: "衝動的な判断に注意。一呼吸おいてから決断を。",
+    bodyPartDetail: "頭部・顔面に対応。頭痛や顔面の怪我に注意。",
+    surfacePersonality: "華やかで存在感があり、自然とリーダーの座に就く。開拓精神に溢れ、新しいことに果敢に挑む。",
+    innerPersonality: "内面には強い闘争心と不安を秘める。常に先頭に立たねばという使命感と、失敗への恐れが共存する。",
+    unconscious: "根底には「開拓」の使命がある。誰も踏み入れていない領域を切り開き、道を作りたいという魂の衝動。",
+    talents: "リーダーシップ、開拓力、決断力。新しい道を切り開く力。",
+    weaknesses: "衝動的、短気、自己中心的。",
+    failurePattern: "衝動的に動いて後始末ができない。周囲を置き去りにして孤立する。",
+    actionPrinciple: "直感と衝動に基づいて行動する。考えるより先に動く。",
+    judgmentCriteria: "新しいかどうか。挑戦的かどうか。",
+    motivation: "未知の領域の開拓。誰もやったことのないことへの挑戦。"
   },
   "畢": {
-    palaceFootDetail: "金牛宮に四足属する",
-    elementDetail: "地のエレメント。堅実と持続を司る",
-    qualityDetail: "不動宮。忍耐力と堅実さを持つ",
-    planetDetail: "金星の影響。堅実・持続・蓄積",
-    specialFortune: "蓄財運・持続運に恵まれる",
-    beautyAdvice: "堅実で自然体の美しさを活かしたケアが効果的。自然素材のスキンケアが開運。",
-    fashionAdvice: "堅実で品のある装い。ブラウンやカーキが基調。エメラルドのアクセサリーが開運。",
-    loveUpPeriod: "堅実な魅力が評価される時期。長く続く関係の始まり。",
-    loveDownPeriod: "頑固さが恋愛を妨げる時期。柔軟性を持つこと。",
-    workUpPeriod: "コツコツ積み上げた成果が認められる時期。",
-    workDownPeriod: "変化に対応できない時期。柔軟な思考を。",
-    bodyPartDetail: "首・肩に対応。肩こりや首の不調に注意。",
-    surfacePersonality: "堅実で信頼感がある。コツコツと努力を積み重ねるタイプ。",
-    innerPersonality: "内面には強い蓄積欲と安定への渇望を秘める。確実に積み上げたいという欲求。",
-    unconscious: "根底には「基盤の構築」の使命がある。揺るがない土台を作りたいという魂の願い。",
-    talents: "忍耐力、堅実さ、蓄積力。長期的に物事を積み上げる力。",
-    weaknesses: "頑固さ、変化への恐れ、保守的。",
-    failurePattern: "変化を拒み、時代に取り残される。安全な道ばかり選んで成長しない。",
-    actionPrinciple: "堅実と忍耐に基づいて行動する。確実な一歩を積み重ねる。",
-    judgmentCriteria: "確実かどうか。長期的に安定するかどうか。",
-    motivation: "確実な蓄積と基盤の構築。揺るがない土台を作ること。"
+    palaceFootDetail: "金牛宮に一足属する",
+    elementDetail: "地のエレメント。安定と蓄積を司る",
+    qualityDetail: "不動宮。堅実さと持続力を持つ",
+    planetDetail: "金星の影響。美・豊穣・安定",
+    specialFortune: "財運・安定運に恵まれる",
+    beautyAdvice: "ナチュラルで上品な印象を活かしたケアが効果的。肌の質感を大切にしたスキンケアが基本。",
+    fashionAdvice: "上質で落ち着いた装い。アースカラーが基調。エメラルドのアクセサリーが開運。",
+    loveUpPeriod: "穏やかな魅力が増す時期。安定した関係が築ける。",
+    loveDownPeriod: "執着が強くなる時期。手放す勇気を持つこと。",
+    workUpPeriod: "堅実な成果が認められる時期。長期プロジェクトで成功。",
+    workDownPeriod: "変化を恐れすぎる時期。柔軟性を意識して。",
+    bodyPartDetail: "首・喉に対応。甲状腺や喉の不調に注意。",
+    surfacePersonality: "穏やかで堅実、信頼感のある人柄。美的センスに優れ、物質的な豊かさを大切にする。",
+    innerPersonality: "内面には強い執着心と安定への渇望を秘める。一度手に入れたものを手放すことへの深い恐れ。",
+    unconscious: "根底には「蓄積と保全」の使命がある。価値あるものを守り、次世代に受け継ぎたいという魂の願い。",
+    talents: "堅実さ、美的センス、持続力。価値あるものを見極め、守り育てる力。",
+    weaknesses: "執着、頑固、変化への恐れ。",
+    failurePattern: "変化を拒んで時代に取り残される。執着が人間関係を壊す。",
+    actionPrinciple: "安定と蓄積に基づいて行動する。確実な一歩を積み重ねる。",
+    judgmentCriteria: "安定しているかどうか。価値があるかどうか。",
+    motivation: "物質的・精神的な豊かさの蓄積。美しいものに囲まれた安定した生活。"
   },
   "觜": {
-    palaceFootDetail: "雙女宮に一足属する",
-    elementDetail: "地のエレメント。分析と知性を司る",
-    qualityDetail: "柔軟宮。分析力と適応性を持つ",
-    planetDetail: "水星の影響。分析・知性・コミュニケーション",
-    specialFortune: "知性運・分析運に恵まれる",
-    beautyAdvice: "知的で清潔感のある印象を活かしたケアが効果的。規則正しい生活が美の基本。",
-    fashionAdvice: "知的で清潔感のある装い。ネイビーやグレーが基調。サファイアのアクセサリーが開運。",
-    loveUpPeriod: "知的な魅力が増す時期。会話を通じた出会いに恵まれる。",
-    loveDownPeriod: "分析しすぎて恋愛を楽しめない時期。感情に素直になること。",
-    workUpPeriod: "分析力が最大化される時期。研究・調査・コンサルティングで成果。",
-    workDownPeriod: "細部にこだわりすぎる時期。全体像を見ること。",
-    bodyPartDetail: "腸・消化器に対応。神経性の胃腸障害に注意。",
-    surfacePersonality: "知的で分析的、細部まで見逃さない観察力の持ち主。",
-    innerPersonality: "内面には完璧主義と不安を秘める。すべてを理解し、コントロールしたいという欲求。",
-    unconscious: "根底には「秩序の理解」の使命がある。世界の仕組みを解き明かしたいという魂の願い。",
-    talents: "分析力、観察力、知性。物事を細部まで見通す力。",
-    weaknesses: "完璧主義、神経質、批判的。",
-    failurePattern: "分析に没頭して行動できない。批判的になりすぎて人間関係を壊す。",
-    actionPrinciple: "分析と知性に基づいて行動する。データと事実を重視する。",
-    judgmentCriteria: "論理的に正しいかどうか。データに裏付けられているかどうか。",
-    motivation: "知識の獲得と秩序の理解。世界の仕組みを解き明かすこと。"
+    palaceFootDetail: "金牛宮に二足属する",
+    elementDetail: "地のエレメント。知性と伝達を司る",
+    qualityDetail: "不動宮。知的好奇心と伝達力を持つ",
+    planetDetail: "金星と水星の影響。知性・美・伝達",
+    specialFortune: "知性運・伝達運に恵まれる",
+    beautyAdvice: "知的で洗練された印象を活かしたケアが効果的。唇のケアが運気上昇の鍵。",
+    fashionAdvice: "知的で洗練された装い。ライトブルーやシルバーが基調。アクアマリンのアクセサリーが開運。",
+    loveUpPeriod: "知的な魅力が増す時期。会話から始まる恋愛に恵まれる。",
+    loveDownPeriod: "言葉が鋭くなりすぎる時期。柔らかい表現を心がけて。",
+    workUpPeriod: "伝達力が最大化される時期。プレゼン・執筆・教育で成果。",
+    workDownPeriod: "情報過多で混乱する時期。優先順位を明確にすること。",
+    bodyPartDetail: "肩・腕に対応。肩こりや腕の疲労に注意。",
+    surfacePersonality: "知的で弁が立ち、情報収集力に優れる。多才で器用、複数のことを同時にこなす。",
+    innerPersonality: "内面には強い知的好奇心と不安定さを秘める。一つに絞れない焦りと、すべてを知りたいという欲求。",
+    unconscious: "根底には「知の伝達」の使命がある。学んだことを言葉にして伝え、世界を繋ぎたいという魂の願い。",
+    talents: "知性、伝達力、多才。言葉で人と世界を繋ぐ力。",
+    weaknesses: "散漫、二面性、落ち着きのなさ。",
+    failurePattern: "興味が移りすぎて何も完成しない。言葉が鋭すぎて人を傷つける。",
+    actionPrinciple: "知的好奇心に基づいて行動する。情報を集め、伝え、繋ぐ。",
+    judgmentCriteria: "知的に面白いかどうか。伝える価値があるかどうか。",
+    motivation: "知識の獲得と伝達。言葉で世界を繋ぐこと。"
   },
   "参": {
     palaceFootDetail: "雙女宮に四足属する",
@@ -705,431 +456,926 @@ const EXTENDED_SHUKU_DATA: Record<Nakshatra, ExtendedShukuData> = {
     actionPrinciple: "完成と統合に基づいて行動する。細部まで丁寧に仕上げる。",
     judgmentCriteria: "完成度が高いかどうか。統合されているかどうか。",
     motivation: "完成と統合。バラバラなものを一つにまとめ、完璧に仕上げること。"
+  },
+  "角": {
+    palaceFootDetail: "天秤宮に一足属する",
+    elementDetail: "風のエレメント。均衡と調和を司る",
+    qualityDetail: "活動宮。調和力とバランス感覚を持つ",
+    planetDetail: "金星の影響。美・調和・外交",
+    specialFortune: "調和運・外交運に恵まれる",
+    beautyAdvice: "バランスの取れた上品な印象を活かしたケアが効果的。左右対称の美を意識して。",
+    fashionAdvice: "エレガントでバランスの取れた装い。パステルカラーが基調。オパールのアクセサリーが開運。",
+    loveUpPeriod: "調和的な魅力が増す時期。理想的なパートナーとの出会い。",
+    loveDownPeriod: "優柔不断になる時期。自分の気持ちを優先すること。",
+    workUpPeriod: "外交力が発揮される時期。交渉・仲裁・デザインで成果。",
+    workDownPeriod: "八方美人になりすぎる時期。自分の立場を明確にすること。",
+    bodyPartDetail: "腰・腎臓に対応。腰痛と腎臓の不調に注意。",
+    surfacePersonality: "エレガントでバランス感覚に優れる。人間関係の調和を重んじ、外交的な才能がある。",
+    innerPersonality: "内面には強い正義感と完璧な調和への渇望を秘める。不公平や不調和に対する深い苦しみ。",
+    unconscious: "根底には「調和の創造」の使命がある。対立するものを統合し、美しい均衡を生み出したいという魂の願い。",
+    talents: "調和力、外交力、美的センス。対立を統合し、均衡を生み出す力。",
+    weaknesses: "優柔不断、八方美人、自己主張の弱さ。",
+    failurePattern: "全員を満足させようとして誰も満足させられない。自分の意見を持てない。",
+    actionPrinciple: "調和とバランスに基づいて行動する。対立を避け、統合を目指す。",
+    judgmentCriteria: "公平かどうか。調和が保たれるかどうか。",
+    motivation: "調和の創造と美の実現。世界に均衡と美をもたらすこと。"
+  },
+  "亢": {
+    palaceFootDetail: "天秤宮に二足属する",
+    elementDetail: "風のエレメント。深層の調和を司る",
+    qualityDetail: "活動宮。深い洞察力と調和力を持つ",
+    planetDetail: "金星の影響。深層美・内なる調和",
+    specialFortune: "洞察運・深層調和運に恵まれる",
+    beautyAdvice: "内面の美しさを外に表すケアが効果的。瞑想と呼吸法で内側から輝く。",
+    fashionAdvice: "シンプルで深みのある装い。ネイビーやダークグリーンが基調。ラピスラズリのアクセサリーが開運。",
+    loveUpPeriod: "深い魅力が増す時期。魂レベルでの出会い。",
+    loveDownPeriod: "相手に求めすぎる時期。完璧な関係は存在しないと知ること。",
+    workUpPeriod: "洞察力が冴える時期。研究・分析・カウンセリングで成果。",
+    workDownPeriod: "考えすぎて動けない時期。行動に移す勇気を。",
+    bodyPartDetail: "腰・下背部に対応。腰痛と泌尿器系の不調に注意。",
+    surfacePersonality: "穏やかで思慮深い。表面的な付き合いを嫌い、深い関係を求める。",
+    innerPersonality: "内面には強い探究心と完璧な調和への渇望を秘める。物事の本質を見極めたいという衝動。",
+    unconscious: "根底には「深層の真理」への到達の使命がある。表面を超えて本質に触れたいという魂の願い。",
+    talents: "洞察力、分析力、深い理解力。物事の本質を見抜く力。",
+    weaknesses: "考えすぎ、完璧主義、人間関係の狭さ。",
+    failurePattern: "分析に没頭して行動できない。理想が高すぎて現実に適応できない。",
+    actionPrinciple: "深い洞察に基づいて行動する。本質を見極めてから動く。",
+    judgmentCriteria: "本質的に正しいかどうか。深い意味があるかどうか。",
+    motivation: "真理の探究と深層の理解。物事の本質に到達すること。"
+  },
+  "氐": {
+    palaceFootDetail: "天蝎宮に一足属する",
+    elementDetail: "水のエレメント。変容と再生を司る",
+    qualityDetail: "不動宮。変容力と再生力を持つ",
+    planetDetail: "冥王星の影響。変容・死と再生・深層",
+    specialFortune: "変容運・再生運に恵まれる",
+    beautyAdvice: "神秘的で深みのある印象を活かしたケアが効果的。デトックスが開運の鍵。",
+    fashionAdvice: "神秘的で深みのある装い。黒やダークレッドが基調。ガーネットのアクセサリーが開運。",
+    loveUpPeriod: "深い絆が生まれる時期。運命的な出会い。",
+    loveDownPeriod: "嫉妬や執着が強くなる時期。信頼を基盤にすること。",
+    workUpPeriod: "変革力が発揮される時期。組織改革や新規事業で成果。",
+    workDownPeriod: "権力闘争に巻き込まれる時期。冷静さを保つこと。",
+    bodyPartDetail: "生殖器・排泄器に対応。婦人科系・泌尿器系の不調に注意。",
+    surfacePersonality: "神秘的で深い存在感を持つ。表面的なことに興味がなく、本質を追求する。",
+    innerPersonality: "内面には強い変容への欲求と、死と再生のサイクルへの理解を秘める。",
+    unconscious: "根底には「変容と再生」の使命がある。古いものを壊し、新しいものを生み出す力。",
+    talents: "変容力、再生力、深い洞察力。破壊と創造を司る力。",
+    weaknesses: "執着、嫉妬、支配欲。",
+    failurePattern: "執着が強すぎて手放せない。支配欲が人間関係を壊す。",
+    actionPrinciple: "変容と再生に基づいて行動する。古いものを手放し、新しいものを生み出す。",
+    judgmentCriteria: "本質的な変容に繋がるかどうか。",
+    motivation: "変容と再生。古い自分を壊し、新しい自分に生まれ変わること。"
+  },
+  "房": {
+    palaceFootDetail: "天蝎宮に二足属する",
+    elementDetail: "水のエレメント。情熱と深層を司る",
+    qualityDetail: "不動宮。情熱と深い感情を持つ",
+    planetDetail: "冥王星の影響。情熱・深層心理・変容",
+    specialFortune: "情熱運・深層運に恵まれる",
+    beautyAdvice: "情熱的で深みのある印象を活かしたケアが効果的。目元のケアが運気上昇の鍵。",
+    fashionAdvice: "情熱的で深みのある装い。ワインレッドやブラックが基調。ルビーのアクセサリーが開運。",
+    loveUpPeriod: "情熱的な魅力が最大化される時期。深い絆が生まれる。",
+    loveDownPeriod: "嫉妬心が燃え上がる時期。信頼関係を大切にすること。",
+    workUpPeriod: "集中力が最大化される時期。研究・調査で成果。",
+    workDownPeriod: "のめり込みすぎる時期。バランスを意識して。",
+    bodyPartDetail: "生殖器・下腹部に対応。婦人科系の不調に注意。",
+    surfacePersonality: "情熱的で深い魅力を持つ。一度決めたことには全身全霊で取り組む。",
+    innerPersonality: "内面には激しい情熱と深い感情を秘める。すべてを賭けて愛し、すべてを賭けて闘う。",
+    unconscious: "根底には「深層の情熱」の使命がある。魂の奥底から湧き上がる力で世界を変えたいという願い。",
+    talents: "情熱、集中力、深い感情力。すべてを賭けて取り組む力。",
+    weaknesses: "嫉妬、執着、極端さ。",
+    failurePattern: "感情が暴走して制御不能になる。嫉妬が人間関係を破壊する。",
+    actionPrinciple: "情熱と深い感情に基づいて行動する。中途半端は許さない。",
+    judgmentCriteria: "魂が燃えるかどうか。全力を注ぐ価値があるかどうか。",
+    motivation: "深い情熱の実現。魂の奥底から湧き上がる力を世界に解き放つこと。"
+  },
+  "心": {
+    palaceFootDetail: "天蝎宮に三足属する",
+    elementDetail: "水のエレメント。核心と洞察を司る",
+    qualityDetail: "不動宮。核心を見抜く力と深い洞察力を持つ",
+    planetDetail: "冥王星の影響。核心・洞察・変容",
+    specialFortune: "洞察運・核心運に恵まれる",
+    beautyAdvice: "深い知性と神秘性を活かしたケアが効果的。心臓を守るための有酸素運動が開運。",
+    fashionAdvice: "シャープで知的な装い。黒やダークブルーが基調。ブラックオニキスのアクセサリーが開運。",
+    loveUpPeriod: "深い魅力が増す時期。魂レベルでの出会いに恵まれる。",
+    loveDownPeriod: "疑心暗鬼になる時期。相手を信じる勇気を持つこと。",
+    workUpPeriod: "洞察力が最大化される時期。戦略立案・分析で成果。",
+    workDownPeriod: "疑心暗鬼で判断が鈍る時期。信頼できる人に相談を。",
+    bodyPartDetail: "心臓に対応。心臓疾患と精神的ストレスに注意。",
+    surfacePersonality: "鋭い洞察力と知性を持つ。物事の核心を一瞬で見抜く力がある。",
+    innerPersonality: "内面には強い探究心と疑念を秘める。すべてを見通したいという欲求と、信じることへの恐れ。",
+    unconscious: "根底には「核心の解明」の使命がある。世界の真の姿を見抜き、真実を明らかにしたいという魂の願い。",
+    talents: "洞察力、分析力、戦略性。物事の核心を見抜き、最適解を導く力。",
+    weaknesses: "疑心暗鬼、冷酷さ、孤立傾向。",
+    failurePattern: "誰も信じられなくなって孤立する。冷酷な判断で人間関係を壊す。",
+    actionPrinciple: "洞察と分析に基づいて行動する。核心を見極めてから動く。",
+    judgmentCriteria: "真実かどうか。核心に迫っているかどうか。",
+    motivation: "真実の解明と核心への到達。世界の真の姿を見抜くこと。"
+  },
+  "尾": {
+    palaceFootDetail: "人馬宮に一足属する",
+    elementDetail: "火のエレメント。冒険と拡大を司る",
+    qualityDetail: "柔軟宮。冒険心と哲学的思考を持つ",
+    planetDetail: "木星の影響。拡大・冒険・哲学",
+    specialFortune: "冒険運・哲学運に恵まれる",
+    beautyAdvice: "活動的で健康的な印象を活かしたケアが効果的。アウトドア活動が運気上昇の鍵。",
+    fashionAdvice: "活動的で自由な装い。パープルやターコイズが基調。ターコイズのアクセサリーが開運。",
+    loveUpPeriod: "冒険的な魅力が増す時期。旅先での出会いに恵まれる。",
+    loveDownPeriod: "自由を求めすぎる時期。パートナーとの約束を大切にすること。",
+    workUpPeriod: "拡大と冒険の時期。海外展開や新規事業で成果。",
+    workDownPeriod: "無計画に拡大しすぎる時期。戦略を練ること。",
+    bodyPartDetail: "太もも・肝臓に対応。肝臓の不調と下半身の怪我に注意。",
+    surfacePersonality: "自由で冒険心に溢れ、哲学的な思考を持つ。束縛を嫌い、広い世界を求める。",
+    innerPersonality: "内面には強い自由への渇望と真理への探究心を秘める。どこまでも遠くへ行きたいという衝動。",
+    unconscious: "根底には「真理の探究」の使命がある。世界を旅し、多様な真理に触れたいという魂の願い。",
+    talents: "冒険心、哲学的思考、拡大力。未知の世界を切り開き、真理を探究する力。",
+    weaknesses: "無計画、飽きっぽさ、責任回避。",
+    failurePattern: "自由を求めすぎて責任から逃げる。計画なしに拡大して破綻する。",
+    actionPrinciple: "冒険と探究に基づいて行動する。未知の世界に飛び込む。",
+    judgmentCriteria: "自由かどうか。真理に近づけるかどうか。",
+    motivation: "自由と真理の探究。世界を旅し、多様な真理に触れること。"
+  },
+  "箕": {
+    palaceFootDetail: "人馬宮に二足属する",
+    elementDetail: "火のエレメント。浄化と選別を司る",
+    qualityDetail: "柔軟宮。浄化力と選別力を持つ",
+    planetDetail: "木星の影響。浄化・拡大・選別",
+    specialFortune: "浄化運・選別運に恵まれる",
+    beautyAdvice: "清浄で透明感のある印象を活かしたケアが効果的。デトックスと浄化が美の基本。",
+    fashionAdvice: "清浄で透明感のある装い。白やクリアカラーが基調。クリスタルのアクセサリーが開運。",
+    loveUpPeriod: "純粋な魅力が増す時期。真実の愛に出会える。",
+    loveDownPeriod: "相手を選びすぎる時期。完璧を求めすぎないこと。",
+    workUpPeriod: "浄化と選別の力が発揮される時期。整理・改革で成果。",
+    workDownPeriod: "切り捨てすぎる時期。残すべきものを見極めること。",
+    bodyPartDetail: "太もも・臀部に対応。坐骨神経痛と下半身の不調に注意。",
+    surfacePersonality: "清浄で透明感があり、不要なものを見抜く力がある。浄化と選別の達人。",
+    innerPersonality: "内面には強い浄化欲と完璧な純粋さへの渇望を秘める。汚れたものを許せないという衝動。",
+    unconscious: "根底には「浄化と選別」の使命がある。不要なものを取り除き、本質だけを残したいという魂の願い。",
+    talents: "浄化力、選別力、透明性。不要なものを見抜き、取り除く力。",
+    weaknesses: "潔癖、排他的、切り捨てすぎ。",
+    failurePattern: "不完全なものを許せずに人間関係を壊す。切り捨てすぎて孤立する。",
+    actionPrinciple: "浄化と選別に基づいて行動する。不要なものを取り除き、本質を残す。",
+    judgmentCriteria: "純粋かどうか。本質的かどうか。",
+    motivation: "浄化と選別。不要なものを取り除き、純粋な本質だけを残すこと。"
+  },
+  "斗": {
+    palaceFootDetail: "磨羯宮に一足属する",
+    elementDetail: "地のエレメント。構造と達成を司る",
+    qualityDetail: "活動宮。構造力と達成力を持つ",
+    planetDetail: "土星の影響。構造・制限・達成",
+    specialFortune: "達成運・構造運に恵まれる",
+    beautyAdvice: "堅実で信頼感のある印象を活かしたケアが効果的。骨格を活かしたメイクが開運。",
+    fashionAdvice: "堅実で格式のある装い。ダークグレーやネイビーが基調。オニキスのアクセサリーが開運。",
+    loveUpPeriod: "信頼感が増す時期。年上や社会的地位のある人との出会い。",
+    loveDownPeriod: "仕事優先で恋愛が疎かになる時期。感情表現を大切にすること。",
+    workUpPeriod: "構造力が発揮される時期。組織構築や長期計画で成果。",
+    workDownPeriod: "硬直化する時期。柔軟性を意識すること。",
+    bodyPartDetail: "膝・骨格に対応。膝の不調と骨折に注意。",
+    surfacePersonality: "堅実で責任感が強く、社会的な信頼を得る。構造的な思考力に優れる。",
+    innerPersonality: "内面には強い達成欲と社会的成功への渇望を秘める。頂点に立ちたいという野心。",
+    unconscious: "根底には「構造の構築」の使命がある。永続する構造を作り、社会に貢献したいという魂の願い。",
+    talents: "構造力、達成力、責任感。永続する構造を作り上げる力。",
+    weaknesses: "硬直、冷酷さ、感情の抑圧。",
+    failurePattern: "感情を抑圧しすぎて爆発する。硬直化して変化に対応できない。",
+    actionPrinciple: "構造と計画に基づいて行動する。長期的な視点で動く。",
+    judgmentCriteria: "構造的に正しいかどうか。長期的に持続するかどうか。",
+    motivation: "社会的達成と構造の構築。永続する価値を作り上げること。"
+  },
+  "女": {
+    palaceFootDetail: "磨羯宮に二足属する",
+    elementDetail: "地のエレメント。忍耐と達成を司る",
+    qualityDetail: "活動宮。忍耐力と実行力を持つ",
+    planetDetail: "土星の影響。忍耐・制限・達成",
+    specialFortune: "忍耐運・達成運に恵まれる",
+    beautyAdvice: "落ち着いた品格のある印象を活かしたケアが効果的。アンチエイジングケアが開運。",
+    fashionAdvice: "品格のある落ち着いた装い。ブラウンやベージュが基調。ガーネットのアクセサリーが開運。",
+    loveUpPeriod: "品格が増す時期。誠実な出会いに恵まれる。",
+    loveDownPeriod: "壁を作りすぎる時期。心を開く勇気を持つこと。",
+    workUpPeriod: "忍耐力が報われる時期。長年の努力が実を結ぶ。",
+    workDownPeriod: "我慢しすぎる時期。限界を認めて助けを求めること。",
+    bodyPartDetail: "膝・関節に対応。関節痛と骨の不調に注意。",
+    surfacePersonality: "忍耐強く、黙々と努力を続ける。口数は少ないが、確実に成果を出す。",
+    innerPersonality: "内面には強い忍耐力と達成への執念を秘める。どんな困難にも耐え抜く覚悟。",
+    unconscious: "根底には「忍耐による達成」の使命がある。時間をかけて確実に目標を達成したいという魂の願い。",
+    talents: "忍耐力、実行力、堅実さ。時間をかけて確実に達成する力。",
+    weaknesses: "頑固、感情の抑圧、孤立傾向。",
+    failurePattern: "我慢しすぎて心身を壊す。助けを求められずに孤立する。",
+    actionPrinciple: "忍耐と堅実さに基づいて行動する。一歩一歩確実に進む。",
+    judgmentCriteria: "忍耐に値するかどうか。長期的に達成できるかどうか。",
+    motivation: "忍耐による達成。時間をかけて確実に目標に到達すること。"
+  },
+  "虚": {
+    palaceFootDetail: "宝瓶宮に一足属する",
+    elementDetail: "風のエレメント。革新と独創を司る",
+    qualityDetail: "不動宮。革新力と独創性を持つ",
+    planetDetail: "天王星の影響。革新・独創・自由",
+    specialFortune: "革新運・独創運に恵まれる",
+    beautyAdvice: "個性的でユニークな印象を活かしたケアが効果的。最新テクノロジーを取り入れたケアが開運。",
+    fashionAdvice: "個性的でユニークな装い。エレクトリックブルーやシルバーが基調。アメジストのアクセサリーが開運。",
+    loveUpPeriod: "個性的な魅力が増す時期。ユニークな出会いに恵まれる。",
+    loveDownPeriod: "距離を置きすぎる時期。親密さを恐れないこと。",
+    workUpPeriod: "革新力が発揮される時期。テクノロジー・発明で成果。",
+    workDownPeriod: "突飛すぎるアイデアに走る時期。実現可能性を考えること。",
+    bodyPartDetail: "足首・ふくらはぎに対応。足首の捻挫と循環器系の不調に注意。",
+    surfacePersonality: "独創的で革新的、常識にとらわれない自由な発想を持つ。",
+    innerPersonality: "内面には強い独立心と人類全体への関心を秘める。個人よりも全体の進化を考える。",
+    unconscious: "根底には「革新と進化」の使命がある。古い枠組みを壊し、新しい時代を切り開きたいという魂の願い。",
+    talents: "革新力、独創性、未来志向。古い枠組みを壊し、新しいものを生み出す力。",
+    weaknesses: "変人扱い、孤立、現実離れ。",
+    failurePattern: "独創的すぎて誰にも理解されない。現実離れしたアイデアに固執する。",
+    actionPrinciple: "革新と独創に基づいて行動する。常識を超えた発想で動く。",
+    judgmentCriteria: "革新的かどうか。未来に繋がるかどうか。",
+    motivation: "革新と進化。古い枠組みを壊し、新しい時代を切り開くこと。"
+  },
+  "危": {
+    palaceFootDetail: "宝瓶宮に二足属する",
+    elementDetail: "風のエレメント。変革と解放を司る",
+    qualityDetail: "不動宮。変革力と解放力を持つ",
+    planetDetail: "天王星の影響。変革・解放・覚醒",
+    specialFortune: "変革運・解放運に恵まれる",
+    beautyAdvice: "自由で解放的な印象を活かしたケアが効果的。束縛を解くリラクゼーションが開運。",
+    fashionAdvice: "自由で解放的な装い。ターコイズやラベンダーが基調。アクアマリンのアクセサリーが開運。",
+    loveUpPeriod: "自由な魅力が増す時期。束縛のない関係が築ける。",
+    loveDownPeriod: "反抗的になる時期。相手の立場も理解すること。",
+    workUpPeriod: "変革力が発揮される時期。改革・イノベーションで成果。",
+    workDownPeriod: "破壊的になりすぎる時期。建設的な変革を心がけること。",
+    bodyPartDetail: "足首・循環器に対応。血行不良と足の不調に注意。",
+    surfacePersonality: "自由で反骨精神に溢れ、既存の枠組みに挑戦する。変革者としての資質を持つ。",
+    innerPersonality: "内面には強い解放欲と変革への衝動を秘める。すべての束縛を打ち破りたいという渇望。",
+    unconscious: "根底には「解放と覚醒」の使命がある。人々を束縛から解放し、覚醒に導きたいという魂の願い。",
+    talents: "変革力、解放力、覚醒力。束縛を打ち破り、新しい可能性を開く力。",
+    weaknesses: "反抗的、破壊的、不安定。",
+    failurePattern: "破壊だけして建設しない。反抗のための反抗に陥る。",
+    actionPrinciple: "変革と解放に基づいて行動する。束縛を打ち破り、自由を勝ち取る。",
+    judgmentCriteria: "解放に繋がるかどうか。束縛を打ち破れるかどうか。",
+    motivation: "解放と覚醒。すべての束縛を打ち破り、真の自由を実現すること。"
+  },
+  "室": {
+    palaceFootDetail: "雙魚宮に一足属する",
+    elementDetail: "水のエレメント。夢と直感を司る",
+    qualityDetail: "柔軟宮。夢想力と直感力を持つ",
+    planetDetail: "海王星の影響。夢・直感・霊性",
+    specialFortune: "夢想運・直感運に恵まれる",
+    beautyAdvice: "夢幻的で柔らかい印象を活かしたケアが効果的。アロマテラピーが開運の鍵。",
+    fashionAdvice: "夢幻的で柔らかい装い。ラベンダーやシーグリーンが基調。アクアマリンのアクセサリーが開運。",
+    loveUpPeriod: "夢幻的な魅力が増す時期。ロマンティックな出会い。",
+    loveDownPeriod: "現実逃避しやすい時期。地に足をつけること。",
+    workUpPeriod: "直感力が冴える時期。芸術・音楽・ヒーリングで成果。",
+    workDownPeriod: "現実離れする時期。実務的な面も忘れずに。",
+    bodyPartDetail: "足・リンパに対応。足のむくみとリンパの不調に注意。",
+    surfacePersonality: "夢幻的で柔らかい雰囲気を持つ。直感力に優れ、芸術的な才能がある。",
+    innerPersonality: "内面には強い夢想力と霊的な感受性を秘める。目に見えない世界との繋がりを感じる。",
+    unconscious: "根底には「夢の実現」の使命がある。見えない世界の美しさを現実に顕現させたいという魂の願い。",
+    talents: "夢想力、直感力、芸術性。見えない世界の美しさを形にする力。",
+    weaknesses: "現実逃避、優柔不断、依存傾向。",
+    failurePattern: "夢の世界に逃避して現実を放棄する。他者に依存して自立できない。",
+    actionPrinciple: "夢と直感に基づいて行動する。見えない世界からのインスピレーションに従う。",
+    judgmentCriteria: "美しいかどうか。直感的に正しいかどうか。",
+    motivation: "夢の実現と霊的な美の顕現。見えない世界の美しさを現実に形にすること。"
+  },
+  "壁": {
+    palaceFootDetail: "雙魚宮に二足属する",
+    elementDetail: "水のエレメント。慈悲と癒しを司る",
+    qualityDetail: "柔軟宮。慈悲力と癒しの力を持つ",
+    planetDetail: "海王星の影響。慈悲・癒し・犠牲",
+    specialFortune: "慈悲運・癒し運に恵まれる",
+    beautyAdvice: "慈悲深く穏やかな印象を活かしたケアが効果的。水辺でのリラクゼーションが開運。",
+    fashionAdvice: "穏やかで慈悲深い装い。アクアブルーやホワイトが基調。ムーンストーンのアクセサリーが開運。",
+    loveUpPeriod: "慈悲深い魅力が増す時期。癒しの関係が築ける。",
+    loveDownPeriod: "自己犠牲が過ぎる時期。自分自身も大切にすること。",
+    workUpPeriod: "癒しの力が発揮される時期。医療・福祉・カウンセリングで成果。",
+    workDownPeriod: "他者の問題を背負いすぎる時期。境界線を引くこと。",
+    bodyPartDetail: "足裏・免疫系に対応。免疫力の低下と足の不調に注意。",
+    surfacePersonality: "慈悲深く穏やかで、すべてを受け入れる包容力を持つ。癒しの力がある。",
+    innerPersonality: "内面には強い慈悲心と自己犠牲の傾向を秘める。すべての苦しみを引き受けたいという衝動。",
+    unconscious: "根底には「慈悲と癒し」の使命がある。すべての存在の苦しみを癒し、救いたいという魂の願い。",
+    talents: "慈悲力、癒しの力、受容力。すべてを受け入れ、癒す力。",
+    weaknesses: "自己犠牲、境界線の曖昧さ、現実逃避。",
+    failurePattern: "自己犠牲が過ぎて自分を失う。境界線が引けずに消耗する。",
+    actionPrinciple: "慈悲と癒しに基づいて行動する。苦しむ者に手を差し伸べる。",
+    judgmentCriteria: "苦しみを癒せるかどうか。慈悲に基づいているかどうか。",
+    motivation: "慈悲と癒し。すべての存在の苦しみを癒すこと。"
+  },
+  "奎": {
+    palaceFootDetail: "白羊宮に一足属する",
+    elementDetail: "火のエレメント。先駆と開始を司る",
+    qualityDetail: "活動宮。先駆力と開始力を持つ",
+    planetDetail: "火星の影響。先駆・開始・衝動",
+    specialFortune: "先駆運・開始運に恵まれる",
+    beautyAdvice: "活動的で先駆的な印象を活かしたケアが効果的。スポーツで体を動かすことが開運。",
+    fashionAdvice: "活動的で先駆的な装い。赤やオレンジが基調。カーネリアンのアクセサリーが開運。",
+    loveUpPeriod: "行動力が増す時期。積極的なアプローチが吉。",
+    loveDownPeriod: "衝動的になりすぎる時期。相手のペースも大切にすること。",
+    workUpPeriod: "先駆力が発揮される時期。新規事業の立ち上げで成果。",
+    workDownPeriod: "見切り発車しすぎる時期。計画を練ること。",
+    bodyPartDetail: "頭部・額に対応。頭痛と頭部の怪我に注意。",
+    surfacePersonality: "行動力に溢れ、先駆的な精神を持つ。誰よりも早く動き出す。",
+    innerPersonality: "内面には強い衝動と開始への渇望を秘める。新しいことを始めずにはいられない。",
+    unconscious: "根底には「先駆と開始」の使命がある。誰よりも先に新しい道を切り開きたいという魂の願い。",
+    talents: "行動力、先駆力、開始力。誰よりも早く動き出し、道を切り開く力。",
+    weaknesses: "衝動的、短気、持続力の欠如。",
+    failurePattern: "始めるのは得意だが続かない。衝動的に動いて後悔する。",
+    actionPrinciple: "衝動と直感に基づいて行動する。考えるより先に動く。",
+    judgmentCriteria: "新しいかどうか。先駆的かどうか。",
+    motivation: "先駆と開始。誰よりも先に新しいことを始めること。"
+  },
+  "婁": {
+    palaceFootDetail: "白羊宮に二足属する",
+    elementDetail: "火のエレメント。統率と組織を司る",
+    qualityDetail: "活動宮。統率力と組織力を持つ",
+    planetDetail: "火星の影響。統率・組織・戦略",
+    specialFortune: "統率運・組織運に恵まれる",
+    beautyAdvice: "力強く統率力のある印象を活かしたケアが効果的。体幹トレーニングが開運。",
+    fashionAdvice: "力強く統率力のある装い。レッドやブラックが基調。ルビーのアクセサリーが開運。",
+    loveUpPeriod: "リーダーシップが魅力になる時期。頼れる存在として注目される。",
+    loveDownPeriod: "支配的になりすぎる時期。パートナーの自主性を尊重すること。",
+    workUpPeriod: "統率力が発揮される時期。チームリーダーやプロジェクトマネージャーとして成果。",
+    workDownPeriod: "独断的になりすぎる時期。チームの意見を聞くこと。",
+    bodyPartDetail: "頭部・筋肉に対応。頭痛と筋肉の緊張に注意。",
+    surfacePersonality: "統率力に優れ、組織を率いる力がある。戦略的な思考で目標を達成する。",
+    innerPersonality: "内面には強い統率欲と勝利への渇望を秘める。常に先頭に立ち、勝ちたいという衝動。",
+    unconscious: "根底には「統率と勝利」の使命がある。組織を率いて勝利に導きたいという魂の願い。",
+    talents: "統率力、組織力、戦略性。組織を率いて目標を達成する力。",
+    weaknesses: "独断的、支配的、攻撃的。",
+    failurePattern: "独断的になって組織を崩壊させる。攻撃的になって敵を作る。",
+    actionPrinciple: "統率と戦略に基づいて行動する。組織を率いて目標に向かう。",
+    judgmentCriteria: "勝てるかどうか。戦略的に正しいかどうか。",
+    motivation: "統率と勝利。組織を率いて勝利を勝ち取ること。"
+  },
+  "胃": {
+    palaceFootDetail: "金牛宮に一足属する",
+    elementDetail: "地のエレメント。消化と蓄積を司る",
+    qualityDetail: "不動宮。消化力と蓄積力を持つ",
+    planetDetail: "金星の影響。消化・蓄積・豊穣",
+    specialFortune: "蓄積運・豊穣運に恵まれる",
+    beautyAdvice: "豊かで温かい印象を活かしたケアが効果的。食事の質を高めることが美の基本。",
+    fashionAdvice: "豊かで温かみのある装い。アースカラーやグリーンが基調。エメラルドのアクセサリーが開運。",
+    loveUpPeriod: "包容力が増す時期。安定した関係が築ける。",
+    loveDownPeriod: "執着が強くなる時期。手放す勇気を持つこと。",
+    workUpPeriod: "蓄積力が発揮される時期。資産形成や長期投資で成果。",
+    workDownPeriod: "溜め込みすぎる時期。適度に放出すること。",
+    bodyPartDetail: "胃・消化器に対応。胃腸の不調と食生活の乱れに注意。",
+    surfacePersonality: "穏やかで包容力があり、物質的な豊かさを大切にする。食に対するこだわりが強い。",
+    innerPersonality: "内面には強い蓄積欲と安定への渇望を秘める。すべてを取り込み、消化し、自分のものにしたいという衝動。",
+    unconscious: "根底には「消化と蓄積」の使命がある。経験を消化し、知恵として蓄積したいという魂の願い。",
+    talents: "消化力、蓄積力、包容力。経験を消化し、知恵に変える力。",
+    weaknesses: "執着、溜め込み、変化への恐れ。",
+    failurePattern: "溜め込みすぎて消化不良を起こす。変化を恐れて停滞する。",
+    actionPrinciple: "蓄積と消化に基づいて行動する。経験を取り込み、自分のものにする。",
+    judgmentCriteria: "蓄積に値するかどうか。消化できるかどうか。",
+    motivation: "蓄積と消化。経験を消化し、知恵として蓄積すること。"
   }
 };
 
-// ============================================
-// レポート生成関数
-// ============================================
+// ============================================================
+// レポート生成メイン関数
+// ============================================================
 
-export interface TenmonArkReport {
+export interface TenmonArkReportResult {
   version: string;
   generatedAt: string;
-  sections: ReportSection[];
+  sections: Array<{ id: string; title: string; content: string }>;
   fullText: string;
-}
-
-interface ReportSection {
-  id: string;
-  title: string;
-  content: string;
+  structuredData: {
+    honmeiShuku: string;
+    disasterProfile: DisasterProfile;
+    kotodamaPrescription: KotodamaPrescription;
+    nameSoundAnalysis?: NameSoundAnalysis;
+    practicePlan: PracticePlan;
+    katakamuna?: ReturnType<typeof analyzeKatakamuna>;
+  };
 }
 
 /**
- * 天聞アーク統合鑑定レポート v1.0 生成
+ * 天聞アーク統合鑑定レポートを生成する
  * 
- * 「占い」ではなく「人間OS解析レポート」
+ * @param birthDate - 生年月日（Date型、UTCベース推奨）
+ * @param name - 名前（カタカナ/ひらがな、任意）
+ * @param options - オプション
  */
 export function generateTenmonArkReport(
   birthDate: Date,
-  katakanaName?: string,
-  birthTime?: string,
-  birthPlace?: string
-): TenmonArkReport {
-  const diagnosis = runCompleteDiagnosis(birthDate, katakanaName);
-  const sukuyou = diagnosis.sukuyou;
-  const shukuData = sukuyou.shukuData;
-  const extended = EXTENDED_SHUKU_DATA[sukuyou.honmeiShuku];
+  name?: string,
+  options?: {
+    confidence?: "A" | "B" | "C" | "D";
+    mode?: "BOOKCAL" | "ASTRO";
+    consultationTheme?: string;
+  }
+): TenmonArkReportResult {
+  // --- 基盤データ算出 ---
+  const diagnosis = runFullDiagnosis(birthDate);
+  const honmeiShuku = diagnosis.honmeiShuku;
+  const shukuData = NAKSHATRA_DATA[honmeiShuku];
+  const extData = EXTENDED_SHUKU_DATA[honmeiShuku];
+  const palaceData = diagnosis.palaceConfig ? PALACE_DATA[diagnosis.palaceConfig.palace] : null;
+  const planetData = PLANET_DATA[diagnosis.honmeiYo];
+  const threeLayer = calculateThreeLayerPhase(birthDate);
+  const taiYou = determineTaiYou(diagnosis.honmeiShuku as any, 0, birthDate);
+  const lunar = solarToLunar(birthDate);
 
-  const birthYear = birthDate.getUTCFullYear();
-  const birthMonth = birthDate.getUTCMonth() + 1;
-  const birthDay = birthDate.getUTCDate();
-  const dateStr = `${birthYear}年${birthMonth}月${birthDay}日`;
+  // --- 災い分類 ---
+  const disasterProfile = classifyDisaster(honmeiShuku, {
+    confidence: options?.confidence,
+    consultationTheme: options?.consultationTheme,
+  });
 
-  const sections: ReportSection[] = [];
-  let fullText = "";
+  // --- 言霊処方 ---
+  const nameHiragana = name ? toHiragana(name) : undefined;
+  const prescription = prescribeKotodama(disasterProfile, nameHiragana);
+  const practicePlan = generatePracticePlan(prescription, disasterProfile);
 
-  // ═══════════════════════════════════════════
+  // --- 名前音分析 ---
+  let nameSoundAnalysis: NameSoundAnalysis | undefined;
+  if (nameHiragana) {
+    nameSoundAnalysis = analyzeNameSounds(nameHiragana);
+  }
+
+  // --- カタカムナ分析 ---
+  let katakamuna: ReturnType<typeof analyzeKatakamuna> | undefined;
+  const nameKatakana = name ? toKatakana(name) : undefined;
+  if (nameKatakana) {
+    katakamuna = analyzeKatakamuna(nameKatakana);
+  }
+
+  // --- 言霊名前分析（integratedDiagnosis経由） ---
+  let kotodamaAnalysis: any = null;
+  if (name) {
+    try {
+      kotodamaAnalysis = analyzeNameKotodama(name);
+    } catch { /* non-fatal */ }
+  }
+
+  // --- 日付情報 ---
+  const y = birthDate.getUTCFullYear();
+  const m = birthDate.getUTCMonth() + 1;
+  const d = birthDate.getUTCDate();
+  const dateStr = `${y}年${m}月${d}日`;
+  const lunarDateStr = `旧暦${lunar.year}年${lunar.month}月${lunar.day}日`;
+  const confidence = options?.confidence || "B";
+  const mode = options?.mode || "BOOKCAL";
+
+  // ============================================================
   // §0 基本情報
-  // ═══════════════════════════════════════════
-  const s0 = buildSection("basic-info", "§0. 基本情報", [
-    `===========================================`,
-    `【天聞アーク統合鑑定レポート v1.0】`,
-    `宿曜経 × 天津金木 × 言霊秘書`,
-    `===========================================`,
-    ``,
-    `生年月日: ${dateStr}`,
-    birthTime ? `出生時刻: ${birthTime}` : `出生時刻: 不明`,
-    birthPlace ? `出生地/TZ: ${birthPlace}` : `出生地/TZ: 不明`,
-    `信頼度: ${sukuyou.lookupUsed ? "A（ルックアップテーブル完全一致）" : "B（旧暦計算フォールバック）"}`,
-    `算出モード: ${sukuyou.lookupUsed ? "BOOKCAL（syukuyo.com準拠）" : "ASTRO（旧暦計算）"}`,
-    ``,
-    `旧暦: ${sukuyou.lunarDate.year}年${sukuyou.lunarDate.month}月${sukuyou.lunarDate.day}日`,
-    `月名: ${sukuyou.lunarDate.monthName}`,
-    `月相: ${sukuyou.lunarDate.lunarPhase}`,
-  ]);
-  sections.push(s0);
-  fullText += s0.content + "\n\n";
+  // ============================================================
+  const section0 = buildSection0(dateStr, lunarDateStr, lunar, confidence, mode, honmeiShuku, shukuData, diagnosis);
 
-  // ═══════════════════════════════════════════
+  // ============================================================
   // §1 宿命構造（不変領域）
-  // ═══════════════════════════════════════════
-  const s1Lines = [
-    `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`,
-    `§1. 宿命構造（不変領域）`,
-    `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`,
-    ``,
-    `【1-1 本命宿】`,
-    `  宿名: ${sukuyou.honmeiShuku}宿（${shukuData.reading}）`,
-    `  梵名（サンスクリット）: ${shukuData.sanskrit}`,
-    `  守護神: ${shukuData.deity}`,
-    `  星数: ${shukuData.starCount}星（${shukuData.starShape}）`,
-    `  性質分類: ${shukuData.nature}（${shukuData.category}）`,
-    `  運勢タイプ: ${shukuData.fortuneType}`,
-    `  特殊運: ${extended.specialFortune}`,
-    `  真言: ${shukuData.mantra}`,
-    ``,
-    `【1-2 水火属性（言霊属性）】`,
-    `  言霊属性: ${shukuData.element}（${shukuData.phase}）`,
-    `  水火スコア: 火${shukuData.fireScore} : 水${shukuData.waterScore}`,
-    `  → ${shukuData.fireScore > shukuData.waterScore ? "火（外発）優勢 — 外に向かって表現し、世界を広げる力が強い" : shukuData.fireScore < shukuData.waterScore ? "水（内集）優勢 — 内面を深め、根幹を固める力が強い" : "水火均衡 — 内集と外発のバランスが取れた調和の状態"}`,
-    ``,
-    `【1-3 十二宮配置】`,
-    `  命宮: ${sukuyou.meikyu}`,
-    `  足配分: ${extended.palaceFootDetail}`,
-    `  エレメント: ${extended.elementDetail}`,
-    `  クオリティ: ${extended.qualityDetail}`,
-    `  惑星影響: ${extended.planetDetail}`,
-    ``,
-    `  十二宮全配置:`,
-  ];
+  // ============================================================
+  const section1 = buildSection1(honmeiShuku, shukuData, extData, diagnosis, palaceData, planetData, taiYou);
 
-  for (const [house, palace] of Object.entries(sukuyou.palaceConfig)) {
-    s1Lines.push(`    ${house}: ${palace}`);
-  }
-
-  s1Lines.push(``);
-  s1Lines.push(`【1-4 本命曜】`);
-  s1Lines.push(`  曜: ${sukuyou.honmeiYo}曜（${sukuyou.planetData.celestial}）`);
-  s1Lines.push(`  梵名: ${sukuyou.planetData.sanskrit}`);
-  s1Lines.push(`  五行: ${sukuyou.planetData.element}`);
-  s1Lines.push(`  言霊属性: ${sukuyou.planetData.kotodamaElement}`);
-  s1Lines.push(`  吉凶: ${sukuyou.planetData.nature}`);
-  s1Lines.push(``);
-  s1Lines.push(`【1-5 九星】`);
-  s1Lines.push(`  ${sukuyou.kyusei}`);
-
-  const s1 = buildSection("fate-structure", "§1. 宿命構造（不変領域）", s1Lines);
-  sections.push(s1);
-  fullText += s1.content + "\n\n";
-
-  // ═══════════════════════════════════════════
+  // ============================================================
   // §2 運命構造（変動領域）
-  // ═══════════════════════════════════════════
-  const s2Lines = [
-    `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`,
-    `§2. 運命構造（変動領域）`,
-    `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`,
-    ``,
-    `【2-1 天津金木 三層位相（現在の宇宙的位相）】`,
-    `  ${diagnosis.threeLayer.civilization.description}`,
-    `  ${diagnosis.threeLayer.year.description}`,
-    `  ${diagnosis.threeLayer.day.description}`,
-    ``,
-    `【2-2 躰/用 総合判定】`,
-    `  判定: ${diagnosis.taiYou.taiYou}`,
-    `  総合火水: 火${Math.round(diagnosis.taiYou.totalFireScore)} : 水${Math.round(diagnosis.taiYou.totalWaterScore)}`,
-    `  ${diagnosis.taiYou.interpretation}`,
-    ``,
-    `【2-3 今日の運勢】`,
-    `  直宿: ${sukuyou.dailyNakshatra}宿`,
-    `  命宿との関係: ${sukuyou.dailyRelation}`,
-    `  直曜: ${sukuyou.dailyPlanet}曜`,
-    `  十二直: ${sukuyou.juniChoku}`,
-    `  遊年八卦: ${sukuyou.yunenHakke.trigram}（${sukuyou.yunenHakke.fortune}）`,
-    `  → ${sukuyou.yunenHakke.description}`,
-    ``,
-    `【2-4 運勢上昇・下降時期】`,
-    `  恋愛運上昇: ${extended.loveUpPeriod}`,
-    `  恋愛運下降: ${extended.loveDownPeriod}`,
-    `  仕事運上昇: ${extended.workUpPeriod}`,
-    `  仕事運下降: ${extended.workDownPeriod}`,
-  ];
+  // ============================================================
+  const section2 = buildSection2(threeLayer, taiYou, diagnosis, extData);
 
-  const s2 = buildSection("destiny-structure", "§2. 運命構造（変動領域）", s2Lines);
-  sections.push(s2);
-  fullText += s2.content + "\n\n";
+  // ============================================================
+  // §3 天命構造（魂の方向）
+  // ============================================================
+  const section3 = buildSection3(honmeiShuku, extData, kotodamaAnalysis, katakamuna, name);
 
-  // ═══════════════════════════════════════════
-  // §3 天命構造（魂の方向性）
-  // ═══════════════════════════════════════════
-  const s3Lines = [
-    `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`,
-    `§3. 天命構造（魂の方向性）`,
-    `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`,
-    ``,
-    `【3-1 魂の根源的衝動（無意識層）】`,
-    `  ${extended.unconscious}`,
-    ``,
-    `【3-2 天命の方向性】`,
-    `  ${sukuyou.honmeiShuku}宿の天命は「${shukuData.fortuneType}」に集約される。`,
-    `  ${shukuData.element}の言霊属性が示す通り、${shukuData.phase === "外発" ? "外に向かって力を発揮し、世界を変革する" : shukuData.phase === "内集" ? "内面を深め、根幹から世界を支える" : "内集と外発の均衡の中で、調和をもたらす"}使命を持つ。`,
-  ];
+  // ============================================================
+  // §4 人間分析（災い構造解析）
+  // ============================================================
+  const section4 = buildSection4(extData, disasterProfile, nameSoundAnalysis, nameHiragana);
 
-  if (diagnosis.nameAnalysis) {
-    s3Lines.push(``);
-    s3Lines.push(`【3-3 名前の言霊解析】`);
-    s3Lines.push(`  名前: ${katakanaName}`);
-    s3Lines.push(`  水火バランス: 火${Math.round(diagnosis.nameAnalysis.fireScore)} : 水${Math.round(diagnosis.nameAnalysis.waterScore)}`);
-    s3Lines.push(`  属性: ${diagnosis.nameAnalysis.dominantAttribute}`);
-    s3Lines.push(``);
-    s3Lines.push(`  音の構造:`);
-    for (const s of diagnosis.nameAnalysis.sounds) {
-      if (s.kotodama) {
-        s3Lines.push(`    ${s.char} → ${s.kotodama.attribute}（火${s.kotodama.fireScore}:水${s.kotodama.waterScore}）`);
-      }
-    }
-    const nameFireDominant = diagnosis.nameAnalysis.fireScore > diagnosis.nameAnalysis.waterScore;
-    const shukuFireDominant = shukuData.fireScore > shukuData.waterScore;
-    s3Lines.push(``);
-    if (nameFireDominant === shukuFireDominant) {
-      s3Lines.push(`  → 名前と命宿の水火属性が一致しており、天命に沿った名前である。`);
-      s3Lines.push(`    名前の持つ言霊の力が宿の特性を強化し、本来の才能を最大限に引き出す。`);
-    } else {
-      s3Lines.push(`  → 名前と命宿の水火属性が対照的であり、内面にバランスの取れた二面性を持つ。`);
-      s3Lines.push(`    名前の言霊が宿の偏りを補完し、より調和のとれた人格形成を促す。`);
-    }
-  }
-
-  s3Lines.push(``);
-  s3Lines.push(`【3-4 真言と開運】`);
-  s3Lines.push(`  真言: ${shukuData.mantra}`);
-  s3Lines.push(`  → この真言を唱えることで、${sukuyou.honmeiShuku}宿の守護神${shukuData.deity}との霊的回路が開かれる。`);
-
-  const s3 = buildSection("soul-direction", "§3. 天命構造（魂の方向性）", s3Lines);
-  sections.push(s3);
-  fullText += s3.content + "\n\n";
-
-  // ═══════════════════════════════════════════
-  // §4 人間分析（性格・能力・リスク・行動）
-  // ═══════════════════════════════════════════
-  const s4Lines = [
-    `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`,
-    `§4. 人間分析（人間OS解析）`,
-    `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`,
-    ``,
-    `【A. 基本構造】`,
-    `  本命宿: ${sukuyou.honmeiShuku}宿`,
-    `  天津金木位相: ${diagnosis.taiYou.taiYou}（火${Math.round(diagnosis.taiYou.totalFireScore)}:水${Math.round(diagnosis.taiYou.totalWaterScore)}）`,
-    diagnosis.nameAnalysis ? `  言霊音構造: ${diagnosis.nameAnalysis.dominantAttribute}` : `  言霊音構造: （名前未入力）`,
-    ``,
-    `【B. 性格分析】`,
-    `  ◆ 表面人格（外界に見せる顔）`,
-    `  ${extended.surfacePersonality}`,
-    ``,
-    `  ◆ 内面人格（内に秘める本質）`,
-    `  ${extended.innerPersonality}`,
-    ``,
-    `  ◆ 無意識層（魂の根源）`,
-    `  ${extended.unconscious}`,
-    ``,
-    `  ◆ 基本的性格（総合）`,
-    `  ${shukuData.personality}`,
-    ``,
-    `  ◆ 対人関係の特徴`,
-    `  ${shukuData.interpersonalStyle}`,
-    ``,
-    `【C. 能力分析】`,
-    `  ◆ 才能`,
-    `  ${extended.talents}`,
-    ``,
-    `  ◆ 適職`,
-    `  ${shukuData.workAdvice}`,
-    ``,
-    `  ◆ 強み`,
-    `  ${extended.actionPrinciple}`,
-    ``,
-    `【D. リスク分析】`,
-    `  ◆ 弱点`,
-    `  ${extended.weaknesses}`,
-    ``,
-    `  ◆ 人間関係リスク`,
-    `  ${shukuData.growthChallenge}`,
-    ``,
-    `  ◆ 失敗パターン`,
-    `  ${extended.failurePattern}`,
-    ``,
-    `【E. 行動分析】`,
-    `  ◆ 行動原理`,
-    `  ${extended.actionPrinciple}`,
-    ``,
-    `  ◆ 判断基準`,
-    `  ${extended.judgmentCriteria}`,
-    ``,
-    `  ◆ モチベーション源`,
-    `  ${extended.motivation}`,
-  ];
-
-  const s4 = buildSection("human-analysis", "§4. 人間分析（人間OS解析）", s4Lines);
-  sections.push(s4);
-  fullText += s4.content + "\n\n";
-
-  // ═══════════════════════════════════════════
+  // ============================================================
   // §5 時間軸分析
-  // ═══════════════════════════════════════════
-  const s5Lines = [
-    `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`,
-    `§5. 時間軸分析（過去・現在・未来）`,
-    `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`,
-    ``,
-    `【F-1. 過去傾向（宿命層）】`,
-    `  ${sukuyou.honmeiShuku}宿の宿命として、${shukuData.nature}の性質を持って生まれた。`,
-    `  ${shukuData.deity}の守護のもと、${shukuData.element}の言霊属性が人生の基盤を形成してきた。`,
-    `  九星${sukuyou.kyusei}の影響により、${sukuyou.kyusei.includes("水") ? "知恵と柔軟性" : sukuyou.kyusei.includes("木") ? "成長と発展" : sukuyou.kyusei.includes("火") ? "情熱と輝き" : sukuyou.kyusei.includes("土") ? "安定と信頼" : sukuyou.kyusei.includes("金") ? "決断と実行" : "多面的な力"}を蓄えてきた。`,
-    ``,
-    `【F-2. 現在運命（運命層）】`,
-    `  現在の躰/用判定: ${diagnosis.taiYou.taiYou}`,
-    `  ${diagnosis.taiYou.interpretation}`,
-    ``,
-    `  今日の直宿${sukuyou.dailyNakshatra}宿との関係は「${sukuyou.dailyRelation}」。`,
-    `  十二直は「${sukuyou.juniChoku}」、遊年八卦は「${sukuyou.yunenHakke.trigram}」（${sukuyou.yunenHakke.fortune}）。`,
-    ``,
-    `【F-3. 未来方向（天命層）】`,
-    `  ${extended.unconscious}`,
-    `  この魂の方向性に沿って生きることで、${shukuData.fortuneType}が最大限に発揮される。`,
-    `  ${shukuData.openingAdvice}`,
-  ];
+  // ============================================================
+  const section5 = buildSection5(extData, diagnosis, threeLayer);
 
-  const s5 = buildSection("time-axis", "§5. 時間軸分析", s5Lines);
-  sections.push(s5);
-  fullText += s5.content + "\n\n";
+  // ============================================================
+  // §6 各運勢詳細
+  // ============================================================
+  const section6 = buildSection6(extData, shukuData, diagnosis);
 
-  // ═══════════════════════════════════════════
-  // §6 恋愛・金運・健康
-  // ═══════════════════════════════════════════
-  const s6Lines = [
-    `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`,
-    `§6. 各運勢詳細分析`,
-    `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`,
-    ``,
-    `【6-1 恋愛運】`,
-    `  ${shukuData.loveAdvice}`,
-    ``,
-    `  上昇時期: ${extended.loveUpPeriod}`,
-    `  下降時期: ${extended.loveDownPeriod}`,
-    ``,
-    `【6-2 仕事運・適職】`,
-    `  ${shukuData.workAdvice}`,
-    ``,
-    `  上昇時期: ${extended.workUpPeriod}`,
-    `  下降時期: ${extended.workDownPeriod}`,
-    ``,
-    `【6-3 金運】`,
-    `  ${shukuData.moneyAdvice}`,
-    ``,
-    `【6-4 健康運】`,
-    `  ${shukuData.healthAdvice}`,
-    `  対応部位: ${extended.bodyPartDetail}`,
-    ``,
-    `【6-5 ビューティアドバイス】`,
-    `  ${extended.beautyAdvice}`,
-    ``,
-    `【6-6 ファッションアドバイス】`,
-    `  ${extended.fashionAdvice}`,
-  ];
+  // ============================================================
+  // §7 開運処方箋（言霊処方 + 実践プラン）
+  // ============================================================
+  const section7 = buildSection7(prescription, practicePlan, disasterProfile, shukuData, extData);
 
-  const s6 = buildSection("fortune-details", "§6. 各運勢詳細分析", s6Lines);
-  sections.push(s6);
-  fullText += s6.content + "\n\n";
+  // ============================================================
+  // §8 統合解読（三層統合メッセージ）
+  // ============================================================
+  const section8 = buildSection8(honmeiShuku, extData, disasterProfile, prescription, threeLayer, taiYou);
 
-  // ═══════════════════════════════════════════
-  // §7 開運処方箋
-  // ═══════════════════════════════════════════
-  const s7Lines = [
-    `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`,
-    `§7. 開運処方箋`,
-    `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`,
-    ``,
-    `【7-1 開運法アドバイス】`,
-    `  ${shukuData.openingAdvice}`,
-    ``,
-    `【7-2 開運アイテム】`,
-    `  ラッキーカラー: ${shukuData.luckyColor}`,
-    `  パワーストーン: ${shukuData.powerStone}`,
-    `  真言: ${shukuData.mantra}`,
-    ``,
-    `【7-3 吉凶行事】`,
-    `  吉行事: ${shukuData.auspicious.join("、")}`,
-    `  凶行事: ${shukuData.inauspicious.join("、") || "特になし"}`,
-    ``,
-    `【7-4 成長課題】`,
-    `  ${shukuData.growthChallenge}`,
-  ];
-
-  const s7 = buildSection("prescription", "§7. 開運処方箋", s7Lines);
-  sections.push(s7);
-  fullText += s7.content + "\n\n";
-
-  // ═══════════════════════════════════════════
-  // §8 統合解読
-  // ═══════════════════════════════════════════
-  const s8Lines = [
-    `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`,
-    `§8. 統合解読（宿命→運命→天命）`,
-    `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`,
-    ``,
-    `【宿命（不変の構造）】`,
-    `  ${sukuyou.honmeiShuku}宿・${sukuyou.honmeiYo}曜・${sukuyou.kyusei}・${sukuyou.meikyu}`,
-    `  → あなたは${shukuData.deity}の守護のもと、${shukuData.element}の言霊属性を持って生まれた。`,
-    `  → ${extended.surfacePersonality}`,
-    ``,
-    `【運命（変動する力場）】`,
-    `  現在の躰/用: ${diagnosis.taiYou.taiYou}（火${Math.round(diagnosis.taiYou.totalFireScore)}:水${Math.round(diagnosis.taiYou.totalWaterScore)}）`,
-    `  → ${diagnosis.taiYou.taiYou === "躰" ? "今は内面を充実させ、エネルギーを蓄える時期。" : diagnosis.taiYou.taiYou === "用" ? "今は外に向けて表現し、行動を起こす時期。" : "内集と外発のバランスが取れた調和の時期。"}`,
-    `  → 天津金木の三層位相が示す宇宙的な力場の中で、あなたの運命は動いている。`,
-    ``,
-    `【天命（魂の方向性）】`,
-    `  ${extended.unconscious}`,
-    `  → ${shukuData.fortuneType}を最大限に発揮し、`,
-    `  → ${extended.motivation}`,
-    ``,
-    `【統合メッセージ】`,
-    `  ${sukuyou.honmeiShuku}宿のあなたは、宿命として${shukuData.element}の力を持ち、`,
-    `  運命として現在${diagnosis.taiYou.taiYou}の位相にある。`,
-    `  そして天命として、${extended.motivation.split("。")[0]}という使命を帯びている。`,
-    ``,
-    `  この三層が統合されたとき、あなたは本来の力を最大限に発揮できる。`,
-    `  ${shukuData.openingAdvice}`,
-    ``,
-    `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`,
-    `同宿の有名人: ${shukuData.famousPeople.join("、")}`,
-    `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`,
-    ``,
-    `【天聞アーク統合鑑定レポート v1.0 — 完】`,
-    `算出エンジン: 天聞アーク宿曜経×天津金木×言霊秘書 統合診断システム`,
-    `精度保証: ${sukuyou.lookupUsed ? "syukuyo.com完全一致ルックアップテーブル使用" : "旧暦計算フォールバック使用"}`,
-  ];
-
-  const s8 = buildSection("integration", "§8. 統合解読", s8Lines);
-  sections.push(s8);
-  fullText += s8.content;
+  const sections = [section0, section1, section2, section3, section4, section5, section6, section7, section8];
+  const fullText = sections.map(s => s.content).join("\n\n");
 
   return {
-    version: "1.0",
+    version: "2.0",
     generatedAt: new Date().toISOString(),
     sections,
-    fullText
+    fullText,
+    structuredData: {
+      honmeiShuku,
+      disasterProfile,
+      kotodamaPrescription: prescription,
+      nameSoundAnalysis,
+      practicePlan,
+      katakamuna,
+    },
   };
 }
 
-function buildSection(id: string, title: string, lines: string[]): ReportSection {
-  return {
-    id,
-    title,
-    content: lines.join("\n")
-  };
+// ============================================================
+// セクション生成ヘルパー
+// ============================================================
+
+function buildSection0(
+  dateStr: string, lunarDateStr: string, lunar: any,
+  confidence: string, mode: string,
+  honmeiShuku: string, shukuData: any, diagnosis: FullDiagnosisResult
+): { id: string; title: string; content: string } {
+  let text = "";
+  text += `╔══════════════════════════════════════════╗\n`;
+  text += `║　天聞アーク統合鑑定レポート v2.0　　　　║\n`;
+  text += `║　宿曜経 × 天津金木 × 言霊 × カタカムナ ║\n`;
+  text += `╚══════════════════════════════════════════╝\n\n`;
+  text += `━━━ §0 基本情報 ━━━\n\n`;
+  text += `生年月日: ${dateStr}\n`;
+  text += `旧暦: ${lunarDateStr}\n`;
+  text += `月名: ${getJapaneseLunarMonthName(lunar.month)}\n`;
+  text += `信頼度: ${confidence}\n`;
+  text += `算出モード: ${mode}\n`;
+  text += `本命宿: ${honmeiShuku}宿（${shukuData?.reading || ""}・${shukuData?.sanskrit || ""}）\n`;
+  text += `守護神: ${shukuData?.deity || ""}\n`;
+  text += `本命曜: ${diagnosis.honmeiYo}曜\n`;
+  text += `九星: ${diagnosis.kyusei}\n`;
+  text += `命宮: ${diagnosis.meikyu || ""}\n`;
+
+  return { id: "section0", title: "§0 基本情報", content: text };
 }
 
-// Export extended data for potential use
-export { EXTENDED_SHUKU_DATA };
-export type { ExtendedShukuData };
+function buildSection1(
+  honmeiShuku: string, shukuData: any, extData: ExtendedShukuData | undefined,
+  diagnosis: FullDiagnosisResult, palaceData: any, planetData: any, taiYou: any
+): { id: string; title: string; content: string } {
+  let text = `━━━ §1 宿命構造（不変領域）━━━\n\n`;
+
+  text += `【1-1 本命宿】\n`;
+  text += `宿名: ${honmeiShuku}宿\n`;
+  text += `梵名: ${shukuData?.sanskrit || ""}\n`;
+  text += `読み: ${shukuData?.reading || ""}\n`;
+  text += `守護神: ${shukuData?.deity || ""}\n`;
+  text += `水火属性: ${shukuData?.element || ""}（${shukuData?.phase || ""}）\n`;
+  text += `性質: ${shukuData?.nature || ""}（${shukuData?.category || ""}）\n`;
+  if (extData) {
+    text += `十二宮配置: ${extData.palaceFootDetail}\n`;
+    text += `エレメント: ${extData.elementDetail}\n`;
+    text += `宮の性質: ${extData.qualityDetail}\n`;
+    text += `惑星影響: ${extData.planetDetail}\n`;
+  }
+  text += `\n`;
+
+  text += `【1-2 十二宮全配置】\n`;
+  if (diagnosis.palaceConfig) {
+    const pc = diagnosis.palaceConfig as any;
+    text += `命宮: ${pc["命宮"] || diagnosis.meikyu || ""}\n`;
+    text += `財帛宮: ${pc["財帛宮"] || ""}\n`;
+    text += `兄弟宮: ${pc["兄弟宮"] || ""}\n`;
+    text += `田宅宮: ${pc["田宅宮"] || ""}\n`;
+    text += `男女宮: ${pc["男女宮"] || ""}\n`;
+    text += `奴僕宮: ${pc["奴僕宮"] || ""}\n`;
+    text += `妻妾宮: ${pc["妻妾宮"] || ""}\n`;
+    text += `疾厄宮: ${pc["疾厄宮"] || ""}\n`;
+    text += `遷移宮: ${pc["遷移宮"] || ""}\n`;
+    text += `官禄宮: ${pc["官禄宮"] || ""}\n`;
+    text += `福徳宮: ${pc["福徳宮"] || ""}\n`;
+    text += `相貌宮: ${pc["相貌宮"] || ""}\n`;
+  }
+  text += `\n`;
+
+  text += `【1-3 本命曜】\n`;
+  text += `曜: ${diagnosis.honmeiYo}曜\n`;
+  if (planetData) {
+    text += `天体: ${planetData.celestial}\n`;
+    text += `性質: ${planetData.nature}\n`;
+  }
+  text += `\n`;
+
+  text += `【1-4 九星】\n`;
+  text += `九星: ${diagnosis.kyusei}\n\n`;
+
+  text += `【1-5 躰用判定】\n`;
+  if (taiYou) {
+    text += `判定: ${taiYou.taiYou}\n`;
+    text += `火水バランス: 火${taiYou.totalFireScore} : 水${taiYou.totalWaterScore}\n`;
+    text += `解説: ${taiYou.interpretation || ""}\n`;
+  }
+  text += `\n`;
+
+  return { id: "section1", title: "§1 宿命構造", content: text };
+}
+
+function buildSection2(
+  threeLayer: any, taiYou: any, diagnosis: FullDiagnosisResult, extData: ExtendedShukuData | undefined
+): { id: string; title: string; content: string } {
+  let text = `━━━ §2 運命構造（変動領域）━━━\n\n`;
+
+  text += `【2-1 天津金木三層位相】\n`;
+  text += `文明層: ${threeLayer.civilization.description}\n`;
+  text += `年層: ${threeLayer.year.description}\n`;
+  text += `日層: ${threeLayer.day.description}\n\n`;
+
+  text += `【2-2 今日の運勢】\n`;
+  if (diagnosis.dailyRelation) {
+    text += `直宿との関係: ${diagnosis.dailyRelation}\n`;
+  }
+  text += `十二直: ${diagnosis.juniChoku || ""}\n`;
+  text += `遊年八卦: ${diagnosis.yunenHakke?.trigram || ""}（${diagnosis.yunenHakke?.fortune || ""}）\n\n`;
+
+  if (extData) {
+    text += `【2-3 上昇・下降時期】\n`;
+    text += `恋愛上昇期: ${extData.loveUpPeriod}\n`;
+    text += `恋愛下降期: ${extData.loveDownPeriod}\n`;
+    text += `仕事上昇期: ${extData.workUpPeriod}\n`;
+    text += `仕事下降期: ${extData.workDownPeriod}\n\n`;
+  }
+
+  return { id: "section2", title: "§2 運命構造", content: text };
+}
+
+function buildSection3(
+  honmeiShuku: string, extData: ExtendedShukuData | undefined,
+  kotodamaAnalysis: any, katakamuna: ReturnType<typeof analyzeKatakamuna> | undefined,
+  name?: string
+): { id: string; title: string; content: string } {
+  let text = `━━━ §3 天命構造（魂の方向）━━━\n\n`;
+
+  text += `【3-1 魂の根源的衝動】\n`;
+  if (extData) {
+    text += `${extData.unconscious}\n\n`;
+  }
+
+  text += `【3-2 天命の方向性】\n`;
+  if (extData) {
+    text += `${extData.motivation}\n\n`;
+  }
+
+  if (name && kotodamaAnalysis) {
+    text += `【3-3 名前の言霊解析】\n`;
+    text += `名前: ${name}\n`;
+    if (kotodamaAnalysis.sounds) {
+      text += `音の分解: ${kotodamaAnalysis.sounds.map((s: any) => `${s.char}（${s.kotodama?.attribute || ""}）`).join(" ・ ")}\n`;
+    }
+    if (kotodamaAnalysis.interpretation) {
+      text += `言霊解読: ${kotodamaAnalysis.interpretation}\n`;
+    }
+    if (kotodamaAnalysis.fireWater) {
+      text += `水火バランス: ${kotodamaAnalysis.fireWater}\n`;
+    }
+    text += `\n`;
+  }
+
+  if (name && katakamuna) {
+    text += `【3-4 カタカムナ言霊解析】\n`;
+    text += `名前: ${name}\n`;
+    text += `思念分解:\n`;
+    for (const s of katakamuna.sounds) {
+      text += `　${s.char} — ${s.shinen}（${s.layer}・${s.element}）\n`;
+    }
+    text += `\n`;
+    text += `潜象/現象バランス: 潜象${katakamuna.layerBalance.sensho}音 / 現象${katakamuna.layerBalance.gensho}音\n`;
+    text += `四元素分布: 天${katakamuna.elementBalance["天"] || 0} / 火${katakamuna.elementBalance["火"] || 0} / 水${katakamuna.elementBalance["水"] || 0} / 地${katakamuna.elementBalance["地"] || 0}\n`;
+    text += `核心振動: ${katakamuna.coreVibration}\n`;
+    text += `フトマニ解読: ${katakamuna.futomaniReading}\n\n`;
+  }
+
+  return { id: "section3", title: "§3 天命構造", content: text };
+}
+
+function buildSection4(
+  extData: ExtendedShukuData | undefined,
+  disasterProfile: DisasterProfile,
+  nameSoundAnalysis: NameSoundAnalysis | undefined,
+  nameHiragana?: string
+): { id: string; title: string; content: string } {
+  let text = `━━━ §4 人間分析（災い構造解析）━━━\n\n`;
+
+  if (extData) {
+    text += `【4-1 表面人格】\n`;
+    text += `${extData.surfacePersonality}\n\n`;
+
+    text += `【4-2 内面人格】\n`;
+    text += `${extData.innerPersonality}\n\n`;
+
+    text += `【4-3 無意識層】\n`;
+    text += `${extData.unconscious}\n\n`;
+
+    text += `【4-4 才能】\n`;
+    text += `${extData.talents}\n\n`;
+
+    text += `【4-5 弱点】\n`;
+    text += `${extData.weaknesses}\n\n`;
+
+    text += `【4-6 失敗パターン】\n`;
+    text += `${extData.failurePattern}\n\n`;
+
+    text += `【4-7 行動原理】\n`;
+    text += `${extData.actionPrinciple}\n\n`;
+
+    text += `【4-8 判断基準】\n`;
+    text += `${extData.judgmentCriteria}\n\n`;
+
+    text += `【4-9 モチベーション】\n`;
+    text += `${extData.motivation}\n\n`;
+  }
+
+  text += `【4-10 災い構造プロファイル】\n`;
+  text += describeDisasterPattern(disasterProfile);
+  text += `\n`;
+
+  if (nameSoundAnalysis && nameHiragana) {
+    text += `【4-11 名前音の構造分析】\n`;
+    text += describeNameSoundAnalysis(nameSoundAnalysis, nameHiragana);
+    text += `\n`;
+  }
+
+  return { id: "section4", title: "§4 人間分析", content: text };
+}
+
+function buildSection5(
+  extData: ExtendedShukuData | undefined,
+  diagnosis: FullDiagnosisResult,
+  threeLayer: any
+): { id: string; title: string; content: string } {
+  let text = `━━━ §5 時間軸分析 ━━━\n\n`;
+
+  text += `【5-1 過去傾向】\n`;
+  if (extData) {
+    text += `宿命的な反復パターン: ${extData.failurePattern}\n`;
+    text += `これまでの人生で、この宿の持つ「${extData.weaknesses}」が繰り返し現れてきた可能性が高い。\n\n`;
+  }
+
+  text += `【5-2 現在運命】\n`;
+  text += `天津金木の現在位相:\n`;
+  text += `　文明層: ${threeLayer.civilization.description}\n`;
+  text += `　年層: ${threeLayer.year.description}\n`;
+  text += `　日層: ${threeLayer.day.description}\n`;
+  if (diagnosis.dailyRelation) {
+    text += `今日の命宿と直宿の関係: ${diagnosis.dailyRelation}\n`;
+  }
+  text += `\n`;
+
+  text += `【5-3 未来方向】\n`;
+  if (extData) {
+    text += `魂の方向性: ${extData.motivation}\n`;
+    text += `天命に向かうために必要なこと: ${extData.actionPrinciple}\n\n`;
+  }
+
+  return { id: "section5", title: "§5 時間軸分析", content: text };
+}
+
+function buildSection6(
+  extData: ExtendedShukuData | undefined,
+  shukuData: any,
+  diagnosis: FullDiagnosisResult
+): { id: string; title: string; content: string } {
+  let text = `━━━ §6 各運勢詳細 ━━━\n\n`;
+
+  if (extData) {
+    text += `【6-1 恋愛運】\n`;
+    text += `上昇期: ${extData.loveUpPeriod}\n`;
+    text += `下降期: ${extData.loveDownPeriod}\n\n`;
+
+    text += `【6-2 仕事運】\n`;
+    text += `上昇期: ${extData.workUpPeriod}\n`;
+    text += `下降期: ${extData.workDownPeriod}\n`;
+    if (extData.specialFortune) {
+      text += `特殊運: ${extData.specialFortune}\n`;
+    }
+    text += `\n`;
+
+    text += `【6-3 金運】\n`;
+    text += `特殊運: ${extData.specialFortune}\n\n`;
+
+    text += `【6-4 健康運】\n`;
+    text += `対応部位: ${extData.bodyPartDetail}\n\n`;
+
+    text += `【6-5 ビューティ】\n`;
+    text += `${extData.beautyAdvice}\n\n`;
+
+    text += `【6-6 ファッション】\n`;
+    text += `${extData.fashionAdvice}\n\n`;
+  }
+
+  text += `【6-7 吉凶行事】\n`;
+  if (shukuData) {
+    text += `吉行事: ${shukuData.auspicious?.join("、") || "なし"}\n`;
+    text += `凶行事: ${shukuData.inauspicious?.join("、") || "なし"}\n`;
+  }
+  text += `\n`;
+
+  return { id: "section6", title: "§6 各運勢詳細", content: text };
+}
+
+function buildSection7(
+  prescription: KotodamaPrescription,
+  practicePlan: PracticePlan,
+  disasterProfile: DisasterProfile,
+  shukuData: any,
+  extData: ExtendedShukuData | undefined
+): { id: string; title: string; content: string } {
+  let text = `━━━ §7 開運処方箋（言霊処方 + 実践プラン）━━━\n\n`;
+
+  text += `【7-1 言霊処方】\n`;
+  text += describeKotodamaPrescription(prescription);
+  text += `\n`;
+
+  text += `【7-2 実践プラン】\n`;
+  text += describePracticePlan(practicePlan);
+  text += `\n`;
+
+  text += `【7-3 開運法】\n`;
+  if (shukuData) {
+    text += `ラッキーカラー: ${shukuData.luckyColor || "（宿別データ参照）"}\n`;
+    text += `パワーストーン: ${shukuData.powerStone || "（宿別データ参照）"}\n`;
+  }
+  if (extData) {
+    text += `ファッション開運: ${extData.fashionAdvice}\n`;
+    text += `ビューティ開運: ${extData.beautyAdvice}\n`;
+  }
+  text += `\n`;
+
+  text += `【7-4 成長課題】\n`;
+  text += `主災い型「${disasterProfile.corePattern}」の克服が最大の成長課題。\n`;
+  text += `回復の鍵: ${disasterProfile.recoveryKey}\n`;
+  text += `\n`;
+
+  return { id: "section7", title: "§7 開運処方箋", content: text };
+}
+
+function buildSection8(
+  honmeiShuku: string,
+  extData: ExtendedShukuData | undefined,
+  disasterProfile: DisasterProfile,
+  prescription: KotodamaPrescription,
+  threeLayer: any,
+  taiYou: any
+): { id: string; title: string; content: string } {
+  let text = `━━━ §8 統合解読（三層統合メッセージ）━━━\n\n`;
+
+  text += `【宿命 → 運命 → 天命】\n\n`;
+
+  // 宿命層
+  text += `■ 宿命（変えられないもの）\n`;
+  text += `あなたは${honmeiShuku}宿として生まれた。`;
+  if (extData) {
+    text += `${extData.surfacePersonality.split("。")[0]}。`;
+    text += `その根底には${extData.unconscious.split("。")[0]}。\n\n`;
+  } else {
+    text += `\n\n`;
+  }
+
+  // 運命層
+  text += `■ 運命（変えられるもの）\n`;
+  text += `宿命的な災い型は「${disasterProfile.corePattern}」。`;
+  text += `${disasterProfile.collapsePattern}。`;
+  text += `しかし、この反応回路は書き換えることができる。`;
+  text += `言霊処方の転換軸「${prescription.axis}」を通じて、`;
+  text += `${prescription.balancingPrinciple}。\n\n`;
+
+  // 天命層
+  text += `■ 天命（向かうべき場所）\n`;
+  if (extData) {
+    text += `${extData.motivation}。`;
+    text += `${extData.unconscious.split("。").slice(-2, -1)[0] || extData.unconscious.split("。")[0]}。`;
+  }
+  text += `天津金木の現在位相は「${threeLayer.year.description}」であり、`;
+  if (taiYou) {
+    text += `躰用判定は「${taiYou.taiYou}」。`;
+  }
+  text += `この流れに乗ることで、宿命を運命へ、運命を天命へと昇華させることができる。\n\n`;
+
+  text += `━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+  text += `　天聞アーク — 人間OS解析レポート 完\n`;
+  text += `━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+
+  return { id: "section8", title: "§8 統合解読", content: text };
+}
+
+// ============================================================
+// ユーティリティ
+// ============================================================
+
+function getJapaneseLunarMonthName(month: number): string {
+  const names: Record<number, string> = {
+    1: "睦月", 2: "如月", 3: "弥生", 4: "卯月",
+    5: "皐月", 6: "水無月", 7: "文月", 8: "葉月",
+    9: "長月", 10: "神無月", 11: "霜月", 12: "師走",
+  };
+  return names[month] || `${month}月`;
+}
+
+function toHiragana(str: string): string {
+  return str.replace(/[\u30A1-\u30F6]/g, (ch) =>
+    String.fromCharCode(ch.charCodeAt(0) - 0x60)
+  ).replace(/ー/g, "");
+}
+
+function toKatakana(str: string): string {
+  return str.replace(/[\u3041-\u3096]/g, (ch) =>
+    String.fromCharCode(ch.charCodeAt(0) + 0x60)
+  );
+}

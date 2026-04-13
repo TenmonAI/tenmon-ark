@@ -251,10 +251,15 @@ router.post("/report", async (req: Request, res: Response) => {
     }
 
     const katakanaName = name ? String(name) : undefined;
-    const timeStr = birthTime ? String(birthTime) : undefined;
-    const placeStr = birthPlace ? String(birthPlace) : undefined;
+    const confidence = req.body.confidence || "B";
+    const mode = req.body.mode || "BOOKCAL";
+    const consultationTheme = req.body.consultationTheme || undefined;
 
-    const report = generateTenmonArkReport(birth, katakanaName, timeStr, placeStr);
+    const report = generateTenmonArkReport(birth, katakanaName, {
+      confidence,
+      mode,
+      consultationTheme,
+    });
 
     return res.json({
       success: true,
@@ -262,7 +267,8 @@ router.post("/report", async (req: Request, res: Response) => {
         version: report.version,
         generatedAt: report.generatedAt,
         sections: report.sections,
-        fullText: report.fullText
+        fullText: report.fullText,
+        structuredData: report.structuredData
       }
     });
   } catch (err: any) {
