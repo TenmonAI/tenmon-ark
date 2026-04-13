@@ -1,4 +1,8 @@
 /**
+ * @deprecated DEAD_FILE: このモジュールはどこからもimportされていない孤立ファイルです。
+ * 将来の言霊エンジン統合時に接続するか、廃棄を検討してください。
+ * 監査日: 2026-04-13
+ *
  * K1_KOTODAMA_ONE_SOUND_LAW_INDEX_V1
  * K2_NOTION_BRIDGE_V1: Notion を索引・補助軸として追加。本文根拠は VPS 優先。raw Notion id / KHSL は前面に出さない。
  * 言霊秘書の一音法則を front-level で即参照する軽量 law index。
