@@ -1,5 +1,5 @@
 /**
- * Post-deploy sync script - Full restart with diagnostics
+ * Post-deploy sync script - Deep diagnostics version
  */
 import { execSync } from "child_process";
 import { dirname, resolve } from "path";
@@ -17,65 +17,60 @@ function run(cmd) {
   try {
     return execSync(cmd, { encoding: "utf8", timeout: 15000 }).trim();
   } catch (e) {
-    return `[error: ${e.message}]`;
+    return `[error: ${e.stderr || e.message}]`;
   }
 }
 
 console.log(`[sync] Running on VPS, apiDir=${apiDir}`);
 
-// Step 1: Stop service
-run("systemctl stop tenmon-ark-api");
-console.log("[sync] Service stopped");
+// Step 1: List ALL systemd services related to tenmon
+const services = run("systemctl list-units --type=service --all | grep -i tenmon || echo 'none'");
+console.log(`[sync] Tenmon services:\n${services}`);
+
+// Step 2: Stop ALL tenmon services
+run("systemctl stop tenmon-ark-api 2>/dev/null || true");
+run("systemctl stop tenmon-ark 2>/dev/null || true");
 run("sleep 2");
 
-// Step 2: Kill ALL node processes (not just port 3000)
-const nodePids = run("pgrep -f 'node.*dist/index.js' || true");
-if (nodePids && !nodePids.startsWith("[error")) {
-  console.log(`[sync] Killing node processes: ${nodePids.replace(/\n/g, ", ")}`);
-  run("pkill -9 -f 'node.*dist/index.js' || true");
-  run("sleep 1");
-}
+// Step 3: Kill ALL node processes
+const allNode = run("ps aux | grep node | grep -v grep || echo 'none'");
+console.log(`[sync] All node processes after stop:\n${allNode}`);
+run("pkill -9 -f 'node' || true");
+run("sleep 2");
 
-// Also kill anything on port 3000
+// Step 4: Verify port is free
+const portCheck = run("lsof -ti:3000 || echo 'free'");
+console.log(`[sync] Port 3000: ${portCheck}`);
+
+// Step 5: Reset failure counter
+run("systemctl reset-failed tenmon-ark-api 2>/dev/null || true");
+
+// Step 6: Check the actual service file
+const svcFile = run("systemctl cat tenmon-ark-api 2>&1");
+console.log(`[sync] Service file:\n${svcFile}`);
+
+// Step 7: Try to start the server directly (not via systemd) to see if it crashes
+console.log("[sync] Testing direct server start...");
+const directStart = run(`cd ${apiDir} && timeout 5 node dist/index.js 2>&1 || true`);
+console.log(`[sync] Direct start output:\n${directStart}`);
+
+// Step 8: Kill the test server
 run("fuser -k 3000/tcp 2>/dev/null || true");
 run("sleep 1");
 
-// Step 3: Reset failure counter
-run("systemctl reset-failed tenmon-ark-api");
-console.log("[sync] Failure counter reset");
+// Step 9: Start via systemd
+run("systemctl start tenmon-ark-api 2>&1");
+run("sleep 8");
 
-// Step 4: Verify port is free
-const portCheck1 = run("lsof -ti:3000 || echo 'free'");
-console.log(`[sync] Port 3000 before start: ${portCheck1}`);
+// Step 10: Check status and journal
+const status = run("systemctl status tenmon-ark-api 2>&1");
+console.log(`[sync] Service status:\n${status}`);
 
-// Step 5: Check the dist/index.js has version endpoint
-const hasVersion = run(`grep -c 'api/version' ${apiDir}/dist/index.js`);
-const hasSukuyou = run(`grep -c 'sukuyouRouter' ${apiDir}/dist/index.js`);
-console.log(`[sync] dist/index.js: version mentions=${hasVersion}, sukuyou mentions=${hasSukuyou}`);
+const journal = run("journalctl -u tenmon-ark-api --no-pager -n 100 2>&1");
+console.log(`[sync] Full journal:\n${journal.substring(0, 2000)}`);
 
-// Step 6: Start service
-const startResult = run("systemctl start tenmon-ark-api 2>&1");
-console.log(`[sync] systemctl start result: ${startResult || "OK"}`);
-
-// Step 7: Wait longer for service to fully start
-run("sleep 5");
-
-// Step 8: Check status
-const status = run("systemctl is-active tenmon-ark-api");
-console.log(`[sync] Service status: ${status}`);
-
-// Step 9: Get journal output
-const journal = run("journalctl -u tenmon-ark-api --no-pager -n 50 --since '1 minute ago' 2>&1");
-console.log(`[sync] Journal:\n${journal}`);
-
-// Step 10: Test endpoints
-const portCheck2 = run("lsof -ti:3000 || echo 'no process'");
-console.log(`[sync] Port 3000 after start: ${portCheck2}`);
-
+// Step 11: Test endpoints
 const versionTest = run("curl -s http://127.0.0.1:3000/api/version 2>&1");
-console.log(`[sync] Version response: ${versionTest.substring(0, 200)}`);
+console.log(`[sync] Version: ${versionTest.substring(0, 200)}`);
 
-const chatTest = run("curl -s -o /dev/null -w '%{http_code}' -X POST -H 'Content-Type: application/json' -d '{\"message\":\"test\"}' http://127.0.0.1:3000/api/chat 2>&1");
-console.log(`[sync] Chat status: ${chatTest}`);
-
-console.log("[sync] ✅ Post-deploy sync complete");
+console.log("[sync] ✅ Done");
