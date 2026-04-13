@@ -477,24 +477,22 @@ function __tenmonGeneralGateSoft(out: string): string {
 
   // If response drifts into preach OR violates strict shape, overwrite with fixed seed.
   // If response drifts into preach OR violates strict shape, CLAMP (do not overwrite with fixed seed).
-  if (hasBad || qcount !== 1 || qpos === -1 || lines.length > 4 || t.length > 220) {
+  // VOICE_REFINEMENT_E5HP: relaxed constraints (allow 0-1 questions, up to 8 lines, up to 500 chars)
+  if (hasBad || qcount > 1 || lines.length > 8 || t.length > 500) {
     // keep content; reshape only
     let u = String(t || "").replace(/\r/g, "").trim();
 
     // remove bullet/numbered lines
     u = u.replace(/^\s*\d+[.)].*$/gm, "").replace(/^\s*[-*•]\s+.*$/gm, "").trim();
 
-    // keep at most 4 non-empty lines
+      // VOICE_REFINEMENT_E5HP: keep at most 8 non-empty lines
     const ls = u.split("\n").map(x => String(x || "").trim()).filter(Boolean);
-    u = ls.slice(0, 4).join("\n").trim();
-
-    // keep exactly one question at end if exists; otherwise add one
+    u = ls.slice(0, 8).join("\n").trim();
+    // VOICE_REFINEMENT_E5HP: allow 0 questions (言い切り) - only trim if >1 question
     const qpos2 = Math.max(u.lastIndexOf("？"), u.lastIndexOf("?"));
-    if (qpos2 !== -1) u = u.slice(0, qpos2 + 1).trim();
-    else u = u.replace(/[。、\s　]+$/g, "") + "？";
-
+    if (qcount > 1 && qpos2 !== -1) u = u.slice(0, qpos2 + 1).trim();
     // cap length
-    if (u.length > 220) u = u.slice(0, 220).replace(/[。、\s　]+$/g, "") + "？";
+    if (u.length > 500) u = u.slice(0, 500).replace(/[。、\s　]+$/g, "").trim();
 
     // R10_GENERAL_POST_TAIL_SANITIZE_V1: remove generic support tails for NATURAL_GENERAL_LLM_TOP
     u = u.replace(/.*もし動けない理由があるなら[^\n]*\n?/g, "");
@@ -887,20 +885,29 @@ function __tenmonGeneralGateResultMaybe(x: any, rawMessageOverride?: string): an
         tcs.routeReason = String(__ku.routeReason || "");
         tcs.inputKind = frontKind || intentKind;
 
-        // 前面4類型は generic fallback ではなく専用短文応答を返す
+        // 前面4類型: LLMが既に意味のある応答を生成している場合はそのまま通す。空・genericの場合のみフォールバック。
+        // OLD_PIPELINE_RETIRED_E5HP: GENERAL_FRONT_TEMPLATE_OVERRIDE
         if (typeof (x as any).response === "string") {
-          if (frontKind === "greeting") {
-            (x as any).response =
-              "【天聞の所見】おはようございます。今日この時間で、一緒に見ていきたいテーマを一言で教えてもらえますか？";
-          } else if (frontKind === "meta_conversation") {
-            (x as any).response =
-              "【天聞の所見】いまの会話がどこまで来ているか、一度一緒に確かめましょう。いま「できていること」と「まだ曖昧なところ」を一言ずつ挙げてもらえますか？";
-          } else if (frontKind === "present_state") {
-            (x as any).response =
-              "【天聞の所見】こちらでは、直前までの中心と意味の層を俯瞰して見ています。あなたの側では、いま一番気になっている一点はどこでしょう？";
-          } else if (intentKind === "next_step") {
-            (x as any).response =
-              "【天聞の所見】今日は、いまの中心を一言でそろえてから「次の一歩」を一つだけ決めるのが良さそうです。まずは今日の中心を一言で置いてみましょう。";
+          const __curResp = String((x as any).response || "").trim();
+          const __isEmptyOrGeneric = !__curResp ||
+            /了解。何でも話して/.test(__curResp) ||
+            /受け取っています/.test(__curResp) ||
+            /受け取りました/.test(__curResp);
+          // LLMが意味のある応答を生成している場合はテンプレで上書きしない
+          if (__isEmptyOrGeneric) {
+            if (frontKind === "greeting") {
+              (x as any).response =
+                "【天聞の所見】おはようございます。今日この時間で、一緒に見ていきたいテーマを一言で教えてもらえますか？";
+            } else if (frontKind === "meta_conversation") {
+              (x as any).response =
+                "【天聞の所見】いまの会話がどこまで来ているか、一度一緒に確かめましょう。いま「できていること」と「まだ曖昧なところ」を一言ずつ挙げてもらえますか？";
+            } else if (frontKind === "present_state") {
+              (x as any).response =
+                "【天聞の所見】こちらでは、直前までの中心と意味の層を俯瞰して見ています。あなたの側では、いま一番気になっている一点はどこでしょう？";
+            } else if (intentKind === "next_step") {
+              (x as any).response =
+                "【天聞の所見】今日は、いまの中心を一言でそろえてから「次の一歩」を一つだけ決めるのが良さそうです。まずは今日の中心を一言で置いてみましょう。";
+            }
           }
         }
       }
