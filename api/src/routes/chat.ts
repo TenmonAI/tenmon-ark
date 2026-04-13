@@ -958,15 +958,22 @@ const DEF_SYSTEM = __isDefDomain
       const __birthMatch = t0.match(/(\d{4})[\-\/年](\d{1,2})[\-\/月](\d{1,2})日?/);
       let __personalDiag = "";
       if (__birthMatch) {
-        const { generateTenmonArkReport } = await import("../sukuyou/index.js");
+        const { runGuidancePipeline } = await import("../sukuyou/index.js");
         const birthDate = new Date(Date.UTC(parseInt(__birthMatch[1]), parseInt(__birthMatch[2]) - 1, parseInt(__birthMatch[3])));
         // カタカナ名またはひらがな名の抽出試行
         const __nameMatch = t0.match(/[ァ-ヶー]{2,}/) || t0.match(/[ぁ-ん]{2,}/);
-        const report = generateTenmonArkReport(birthDate, __nameMatch ? __nameMatch[0] : undefined);
-        __personalDiag = "\n\n【天聞アーク統合鑑定レポート（アルゴリズム算出）】\n" + report.fullText;
+        // 悩みテキストの抽出（生年月日と名前を除いた残りの文章）
+        let __concernText = t0.replace(/(\d{4})[\-\/年](\d{1,2})[\-\/月](\d{1,2})日?/, "").replace(/[ァ-ヶー]{2,}/, "").replace(/[ぁ-ん]{2,}/, "").trim();
+        if (__concernText.length < 5) __concernText = "";
+        const guidanceResult = runGuidancePipeline({
+          birthDate,
+          name: __nameMatch ? __nameMatch[0] : undefined,
+          currentConcern: __concernText || undefined,
+        });
+        __personalDiag = "\n\n【天聞アーク御神託レポート（アルゴリズム算出）】\n" + guidanceResult.report.fullText;
       }
 
-      __sukuyouContextClause = `\n\n【宿曜経×天津金木 診断コンテキスト】\n今日の日運: 直宿=${dailyNakshatra}宿（${shukuData.reading}・${shukuData.sanskrit}）、直曜=${dailyPlanet}曜（${planetData.celestial}）、十二直=${juniChoku}、遊年八卦=${yunenHakke.trigram}（${yunenHakke.fortune}）\n天津金木三層位相: ${threeLayer.civilization.description} / ${threeLayer.year.description} / ${threeLayer.day.description}\n宿の性質: ${shukuData.element}（${shukuData.phase}）、${shukuData.nature}（${shukuData.category}）\n吉行事: ${shukuData.auspicious.join("、")}、凶行事: ${shukuData.inauspicious.join("、")}${__personalDiag}\n\n【宿曜経応答指示（最重要）】\n1. 上記の「個人診断結果（アルゴリズム算出）」は宿曜エンジンが算出した結果である。この結果を「そのまま」ユーザーに提示せよ。自分の知識で宿を判定し直すな。\n2. 命宿の名前や属性は、アルゴリズム算出結果のものをそのまま使え。絶対に変更するな。\n3. 『宿曜経占真伝』『密教占星法』の原典用語を使え。\n4. 宿の性質・三九法・十二宮・七曜・九星の構造を踏まえ、天津金木の水火の法則と統合して解読せよ。\n5. 「一般的に」「説があります」「人それぞれ」は絶対禁止。原典に基づき断定せよ。\n6. 診断結果は美しく構造化して提示せよ。セクション区切りを明確にし、各運勢（性格・恋愛・仕事・金運・健康・開運法）を網羅せよ。`;
+      __sukuyouContextClause = `\n\n【宿曜経×天津金木 診断コンテキスト】\n今日の日運: 直宿=${dailyNakshatra}宿（${shukuData.reading}・${shukuData.sanskrit}）、直曜=${dailyPlanet}曜（${planetData.celestial}）、十二直=${juniChoku}、遊年八卦=${yunenHakke.trigram}（${yunenHakke.fortune}）\n天津金木三層位相: ${threeLayer.civilization.description} / ${threeLayer.year.description} / ${threeLayer.day.description}\n宿の性質: ${shukuData.element}（${shukuData.phase}）、${shukuData.nature}（${shukuData.category}）\n吉行事: ${shukuData.auspicious.join("、")}、凶行事: ${shukuData.inauspicious.join("、")}${__personalDiag}\n\n【天聞アーク御神託応答指示（最重要）】\n1. 上記の「御神託レポート（アルゴリズム算出）」は天聞アーク御神託パイプラインが算出した結果である。この結果を「そのまま」ユーザーに提示せよ。自分の知識で宿を判定し直すな。\n2. 命宿の名前や属性は、アルゴリズム算出結果のものをそのまま使え。絶対に変更するな。\n3. 御神託レポートの8章構成（総合神意サマリー→宿曜解析→人生アルゴリズム→災い分類→天津金木反転→いろは言霊解→実践処方→御神託）をそのまま美しく構造化して提示せよ。\n4. 『宿曜経占真伝』『密教占星法』の原典用語を使え。\n5. 「一般的に」「説があります」「人それぞれ」は絶対禁止。原典に基づき断定せよ。\n6. 悩みの本質を「宿曜で構造化」し、「天津金木で反転」し、「言霊で導き」、「御神託で結晶化」する一筆書きの流れで応答せよ。\n7. 御神託で恐怖喚起や決断強制をするな。医療・法律・投資の断定助言をするな。\n8. ユーザーが悩みを話した場合、その悩みを宿曜の構造と結びつけて解読し、具体的な反転の道筋と実践処方を示せ。\n9. 御神託の最後に「今すぐの一手」を必ず示せ。導きは常に行動可能な形で終わらせること。`;
       console.log(`[SUKUYOU_CONTEXT] OK: context injected, len=${__sukuyouContextClause.length}, personalDiag=${__personalDiag.length > 0}`);
     } catch (__e: any) { console.error("[SUKUYOU_CONTEXT] inject error:", __e?.message || __e, __e?.stack?.split("\n").slice(0,3).join(" ")); }
   } else if (/占い|宿曜|運勢/.test(t0)) {

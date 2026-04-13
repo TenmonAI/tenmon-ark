@@ -26,6 +26,7 @@ import {
   type Nakshatra
 } from "../sukuyou/index.js";
 import { generateTenmonArkReport } from "../sukuyou/reportGenerator.js";
+import { runGuidancePipeline } from "../sukuyou/guidanceEngine.js";
 
 const router = Router();
 
@@ -274,6 +275,54 @@ router.post("/report", async (req: Request, res: Response) => {
   } catch (err: any) {
     console.error("[sukuyou/report] Error:", err);
     return res.status(500).json({ error: err.message || "レポート生成中にエラーが発生しました" });
+  }
+});
+
+/**
+ * POST /api/sukuyou/guidance
+ * 天聞アーク御神託統合パイプライン
+ * 悩み聴取→宿曜解析→天津金木反転→言霊処方→御神託
+ */
+router.post("/guidance", async (req: Request, res: Response) => {
+  try {
+    const { birthDate, name, currentConcern, confidence, consultationTheme, painDomain, desiredState } = req.body;
+    if (!birthDate) {
+      return res.status(400).json({ error: "birthDate は必須です（YYYY-MM-DD形式）" });
+    }
+    const bd = new Date(birthDate + "T00:00:00Z");
+    if (isNaN(bd.getTime())) {
+      return res.status(400).json({ error: "birthDate の形式が不正です" });
+    }
+
+    const result = runGuidancePipeline({
+      birthDate: bd,
+      name,
+      currentConcern,
+      confidence,
+      consultationTheme,
+      painDomain,
+      desiredState,
+    });
+
+    return res.json({
+      success: true,
+      version: result.version,
+      generatedAt: result.generatedAt,
+      premise: result.premise,
+      honmeiShuku: result.sukuyoResult.honmeiShuku,
+      disasterType: result.disasterClassification.corePattern,
+      reversalAxis: result.amatsuKanagiReversal.reversalAxis,
+      oracle: result.oracleMessage,
+      report: {
+        chapters: result.report.chapters,
+        fullText: result.report.fullText,
+        charCount: result.report.charCount,
+      },
+      warnings: result.warnings,
+    });
+  } catch (err: any) {
+    console.error("[sukuyou/guidance] Error:", err);
+    return res.status(500).json({ error: err.message || "御神託生成中にエラーが発生しました" });
   }
 });
 

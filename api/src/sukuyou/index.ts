@@ -65,3 +65,16 @@ export type {
   NameSoundAnalysis,
   PracticePlan
 } from "./kotodamaPrescriber.js";
+
+export {
+  runGuidancePipeline
+} from "./guidanceEngine.js";
+export type {
+  GuidancePipelineInput,
+  GuidanceResult,
+  ConcernIntake,
+  LifeAlgorithmAnalysis,
+  AmatsuKanagiReversal,
+  IrohaKotodamaGuidance,
+  OracleMessage
+} from "./guidanceEngine.js";
