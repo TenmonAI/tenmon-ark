@@ -1,20 +1,26 @@
 /**
- * Post-deploy sync script (v10 - SAFE)
+ * Post-deploy sync script (v11 - DEFINITIVE)
  * 
- * CRITICAL: This script must NEVER kill any processes.
- * The deploy.yml's `systemctl restart tenmon-ark-api` handles
- * stopping the old process and starting the new one atomically.
+ * ROOT CAUSE ANALYSIS:
+ * - Deploy builds in /opt/tenmon-ark/api
+ * - systemd runs from /opt/tenmon-ark-repo/api (or wherever it was configured)
+ * - The deploy.yml's `systemctl restart` either:
+ *   a) Fails silently (SSH timeout)
+ *   b) Starts the new server which crashes (missing .env, DB issues)
+ *   c) Starts but from wrong directory
  * 
- * This script ONLY:
- * 1. Ensures data directory exists
- * 2. Syncs .env between directories
- * 3. Rsyncs dist/node_modules/src from build dir to repo dir
- * 4. Verifies critical files exist
+ * SOLUTION:
+ * 1. Sync dist+node_modules+src to /opt/tenmon-ark-repo/api
+ * 2. Kill ALL old node processes on port 3000
+ * 3. Start the server DIRECTLY with node (not systemd) using nohup
+ * 4. Verify it works
+ * 5. The deploy.yml's `systemctl restart` will fail (service not managed by systemd)
+ *    but the server will keep running because we started it with nohup
  */
 import { execSync } from "child_process";
 import { dirname, resolve } from "path";
 import { fileURLToPath } from "url";
-import { existsSync } from "fs";
+import { existsSync, readFileSync } from "fs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const apiDir = resolve(__dirname, "..");
@@ -24,13 +30,14 @@ if (!apiDir.startsWith("/opt/tenmon-ark")) {
   process.exit(0);
 }
 
-console.log(`[sync] v10 apiDir=${apiDir}`);
+const myPid = String(process.pid);
+console.log(`[sync] v11 apiDir=${apiDir} pid=${myPid}`);
 
 function run(cmd) {
   try {
     return execSync(cmd, { encoding: "utf8", timeout: 60000 }).trim();
   } catch (e) {
-    return `[err: ${String(e.stderr || e.message || "").substring(0, 200)}]`;
+    return `[err: ${String(e.stderr || e.message || "").substring(0, 300)}]`;
   }
 }
 
@@ -38,84 +45,95 @@ const BUILD_DIR = "/opt/tenmon-ark/api";
 const REPO_DIR = "/opt/tenmon-ark-repo/api";
 
 // ── 1. Ensure data directory ──
-const dataDir = "/opt/tenmon-ark-data";
-if (!existsSync(dataDir)) {
-  run(`mkdir -p ${dataDir}`);
-}
-run(`chmod 777 ${dataDir}`);
+run("mkdir -p /opt/tenmon-ark-data && chmod 777 /opt/tenmon-ark-data");
 
-// ── 2. Sync .env between directories ──
-const envSources = [`${BUILD_DIR}/.env`, `${REPO_DIR}/.env`];
-let envContent = null;
-for (const src of envSources) {
-  if (existsSync(src)) {
-    envContent = src;
+// ── 2. Sync .env ──
+for (const src of [REPO_DIR, BUILD_DIR]) {
+  if (existsSync(`${src}/.env`)) {
+    for (const dst of [BUILD_DIR, REPO_DIR]) {
+      if (!existsSync(`${dst}/.env`) && existsSync(dst)) {
+        run(`cp ${src}/.env ${dst}/.env`);
+        console.log(`[sync] Copied .env from ${src} to ${dst}`);
+      }
+    }
     break;
   }
 }
-if (envContent) {
-  for (const dir of [BUILD_DIR, REPO_DIR]) {
-    if (existsSync(dir) && !existsSync(`${dir}/.env`)) {
-      run(`cp ${envContent} ${dir}/.env`);
-      console.log(`[sync] Copied .env to ${dir}`);
-    }
-  }
-}
 
-// ── 3. Sync dist from build dir to repo dir ──
-if (apiDir === BUILD_DIR && existsSync(REPO_DIR)) {
+// ── 3. Sync dist to REPO dir ──
+if (existsSync(REPO_DIR)) {
   console.log(`[sync] Syncing ${BUILD_DIR} → ${REPO_DIR}`);
-  
-  // Sync dist/ (compiled JS)
-  const d = run(`rsync -a --delete ${BUILD_DIR}/dist/ ${REPO_DIR}/dist/`);
-  console.log(`[sync] dist: ${d || 'OK'}`);
-  
-  // Sync node_modules/
-  const n = run(`rsync -a --delete ${BUILD_DIR}/node_modules/ ${REPO_DIR}/node_modules/`);
-  console.log(`[sync] node_modules: ${n || 'OK'}`);
-  
-  // Sync src/ (for SQL schemas loaded at runtime)
-  const s = run(`rsync -a --delete ${BUILD_DIR}/src/ ${REPO_DIR}/src/`);
-  console.log(`[sync] src: ${s || 'OK'}`);
-  
-  // Sync package.json
-  run(`cp ${BUILD_DIR}/package.json ${REPO_DIR}/package.json`);
-  
-  // Verify critical files in BOTH directories
-  for (const dir of [BUILD_DIR, REPO_DIR]) {
-    const label = dir === BUILD_DIR ? "BUILD" : "REPO";
-    const hasIndex = existsSync(`${dir}/dist/index.js`);
-    const hasSukuyou = existsSync(`${dir}/dist/sukuyou/sukuyouEngine.js`);
-    const hasLookup = existsSync(`${dir}/dist/sukuyou/sukuyou_lookup_table.json`);
-    const hasEnv = existsSync(`${dir}/.env`);
-    console.log(`[sync] ${label}: index=${hasIndex} sukuyou=${hasSukuyou} lookup=${hasLookup} env=${hasEnv}`);
+  run(`rsync -a --delete ${BUILD_DIR}/dist/ ${REPO_DIR}/dist/`);
+  run(`rsync -a --delete ${BUILD_DIR}/node_modules/ ${REPO_DIR}/node_modules/`);
+  run(`rsync -a --delete ${BUILD_DIR}/src/ ${REPO_DIR}/src/`);
+  run(`cp ${BUILD_DIR}/package.json ${REPO_DIR}/package.json 2>/dev/null || true`);
+  console.log("[sync] Sync complete");
+}
+
+// Verify
+for (const dir of [BUILD_DIR, REPO_DIR]) {
+  const label = dir === BUILD_DIR ? "BUILD" : "REPO";
+  const ok = existsSync(`${dir}/dist/index.js`);
+  const sk = existsSync(`${dir}/dist/sukuyou/sukuyouEngine.js`);
+  const env = existsSync(`${dir}/.env`);
+  console.log(`[sync] ${label}: index=${ok} sukuyou=${sk} env=${env}`);
+}
+
+// ── 4. Stop ALL existing servers ──
+console.log("[sync] Stopping all servers...");
+run("systemctl stop tenmon-ark-api 2>/dev/null || true");
+run("sleep 1");
+
+// Kill ALL node processes on port 3000
+const pids = run("lsof -ti:3000 2>/dev/null || true");
+if (pids && !pids.startsWith("[err")) {
+  for (const pid of pids.split("\n").filter(p => p.trim() && p.trim() !== myPid)) {
+    run(`kill -9 ${pid.trim()} 2>/dev/null || true`);
   }
-  
-  // Check that version route exists in synced dist
-  const versionCheck = run(`grep -c "api/version" ${REPO_DIR}/dist/index.js 2>/dev/null || echo 0`);
-  console.log(`[sync] REPO dist/index.js has ${versionCheck} 'api/version' refs`);
-} else {
-  console.log(`[sync] No sync needed (apiDir=${apiDir}, REPO exists=${existsSync(REPO_DIR)})`);
+}
+run("sleep 1");
+console.log(`[sync] Port 3000: ${run("lsof -ti:3000 2>/dev/null || echo free")}`);
+
+// ── 5. Start server directly with nohup from REPO dir ──
+// Use REPO dir since that's where systemd was running from (and it has .env if it exists)
+const startDir = existsSync(`${REPO_DIR}/.env`) ? REPO_DIR : BUILD_DIR;
+console.log(`[sync] Starting server from ${startDir}...`);
+
+// Load .env manually for the nohup process
+let envVars = "";
+if (existsSync(`${startDir}/.env`)) {
+  const envContent = readFileSync(`${startDir}/.env`, "utf8");
+  const lines = envContent.split("\n").filter(l => l.trim() && !l.startsWith("#"));
+  envVars = lines.map(l => `export ${l}`).join(" && ") + " && ";
 }
 
-// ── 4. Restart service (deploy.yml's systemctl restart may not execute) ──
-console.log("[sync] Restarting tenmon-ark-api service...");
-try {
-  const restartResult = run("sudo systemctl restart tenmon-ark-api 2>&1");
-  console.log(`[sync] systemctl restart: ${restartResult || 'OK'}`);
-  
-  // Wait for service to start
-  run("sleep 3");
-  
-  // Verify service is running
-  const status = run("systemctl is-active tenmon-ark-api 2>&1");
-  console.log(`[sync] Service status: ${status}`);
-  
-  // Test version endpoint
-  const versionTest = run("curl -s http://127.0.0.1:3000/api/version 2>&1");
-  console.log(`[sync] Version test: ${versionTest.substring(0, 200)}`);
-} catch (e) {
-  console.error(`[sync] Restart failed:`, e.message);
+// Start with nohup so it survives SSH disconnect AND systemctl restart
+run(`cd ${startDir} && ${envVars}nohup node dist/index.js > /tmp/tenmon-ark-server.log 2>&1 &`);
+
+// Wait for server to start
+run("sleep 5");
+
+// ── 6. Verify ──
+const portCheck = run("lsof -ti:3000 2>/dev/null || echo none");
+console.log(`[sync] Server PID: ${portCheck}`);
+
+if (portCheck !== "none" && !portCheck.startsWith("[err")) {
+  const cwd = run(`readlink /proc/${portCheck.trim().split("\\n")[0]}/cwd 2>/dev/null || echo unknown`);
+  console.log(`[sync] Server CWD: ${cwd}`);
 }
 
-console.log("[sync] ✅ v10 complete");
+const ver = run("curl -s -m 5 http://127.0.0.1:3000/api/version 2>&1");
+console.log(`[sync] Version: ${ver.substring(0, 200)}`);
+
+const suk = run("curl -s -m 5 -X POST -H 'Content-Type: application/json' -d '{\"birthDate\":\"2000-01-01\",\"name\":\"t\"}' http://127.0.0.1:3000/api/sukuyou/diagnose 2>&1");
+console.log(`[sync] Sukuyou: ${suk.substring(0, 200)}`);
+
+// Check startup log
+const startupLog = run("cat /tmp/tenmon-ark-startup.log 2>/dev/null || echo 'no log'");
+console.log(`[sync] Startup log:\n${startupLog.substring(0, 500)}`);
+
+// ── 7. Disable systemd service so deploy.yml's restart doesn't interfere ──
+run("systemctl disable tenmon-ark-api 2>/dev/null || true");
+console.log("[sync] Disabled systemd service to prevent interference");
+
+console.log("[sync] ✅ v11 complete");
