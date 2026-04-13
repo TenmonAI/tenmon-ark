@@ -146,6 +146,11 @@ export interface GuidanceResult {
     shukuSanskrit: string;
     shukuElement: string;
     shukuNature: string;
+    shukuOverview: string;
+    shukuPersonality: string;
+    shukuFortuneType: string;
+    shukuLuckyColor: string;
+    shukuPowerStone: string;
     meikyu: string;
     palaceConfigStr: Record<string, string>;
   };
@@ -1014,6 +1019,25 @@ function formatReport(
     lines.push(`${diagnosis.honmeiShuku}宿は${shukuData.element}の気を帯び、${shukuData.nature}の性質を持つ。`);
     lines.push(`この宿に生まれた者は、${lifeAlgo.outerPersona}。`);
     lines.push(`しかしその内面には、${lifeAlgo.innerPersona}。`);
+    lines.push("");
+    // NAKSHATRA_DATAの詳細データを活用
+    if (shukuData.overview) {
+      lines.push(`【宿の概要】`);
+      lines.push(shukuData.overview);
+      lines.push("");
+    }
+    if (shukuData.personality) {
+      lines.push(`【性格詳細】`);
+      lines.push(shukuData.personality);
+      lines.push("");
+    }
+    if (shukuData.palaceBelong) {
+      lines.push(`【十二宮帰属】${shukuData.palaceBelong}に${shukuData.palaceFoot || ""}属する`);
+      lines.push(`エレメント: ${shukuData.elementType || ""} / クオリティ: ${shukuData.quality || ""}`);
+      lines.push(`惑星影響: ${shukuData.planetInfluence || ""}`);
+      lines.push(`特殊運: ${shukuData.fortuneType || ""}`);
+      lines.push("");
+    }
     chapters.push({ number: 2, title: "宿曜・宿命構造解析", content: lines.join("\n") });
   }
 
@@ -1150,6 +1174,24 @@ function formatReport(
     lines.push(`これらの処方は、${disaster.corePattern}の災いを${reversal.reversalAxis}へ反転させるための実践である。`);
     lines.push(`言霊は唱えるだけで終わらせず、その音の響きを体に通すことが重要である。`);
     lines.push(`7日で気づき、21日で習慣化し、49日で構造が変わる。`);
+    lines.push("");
+    // NAKSHATRA_DATAの開運情報を追加
+    if (shukuData.openingAdvice) {
+      lines.push(`【開運の秘訣】`);
+      lines.push(shukuData.openingAdvice);
+      lines.push("");
+    }
+    if (shukuData.mantra) {
+      lines.push(`【守護真言】`);
+      lines.push(shukuData.mantra);
+      lines.push("");
+    }
+    if (shukuData.luckyColor || shukuData.powerStone) {
+      lines.push(`【開運アイテム】`);
+      if (shukuData.luckyColor) lines.push(`ラッキーカラー: ${shukuData.luckyColor}`);
+      if (shukuData.powerStone) lines.push(`パワーストーン: ${shukuData.powerStone}`);
+      lines.push("");
+    }
     chapters.push({ number: 7, title: "日々の実践処方", content: lines.join("\n") });
   }
 
@@ -1317,6 +1359,11 @@ export function runGuidancePipeline(input: GuidancePipelineInput): GuidanceResul
       shukuSanskrit: shukuData.sanskrit,
       shukuElement: shukuData.element,
       shukuNature: shukuData.nature,
+      shukuOverview: shukuData.overview,
+      shukuPersonality: shukuData.personality,
+      shukuFortuneType: shukuData.fortuneType,
+      shukuLuckyColor: shukuData.luckyColor,
+      shukuPowerStone: shukuData.powerStone,
       meikyu,
       palaceConfigStr: palaceConfigStr,
     },
