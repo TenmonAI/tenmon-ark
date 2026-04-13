@@ -26,3 +26,17 @@ for (const jf of jsonFiles) {
   fs.copyFileSync(src2, dst2);
   console.log(`[copy-assets] copied ${src2} -> ${dst2}`);
 }
+
+// 3. Copy kanagi patterns JSON (soundMeanings.json, amatsuKanagi50Patterns.json)
+const kanagiSrc = path.join(root, "src", "kanagi", "patterns");
+const kanagiDst = path.join(root, "dist", "kanagi", "patterns");
+if (fs.existsSync(kanagiSrc)) {
+  fs.mkdirSync(kanagiDst, { recursive: true });
+  const kFiles = fs.readdirSync(kanagiSrc).filter((f) => f.endsWith(".json"));
+  for (const kf of kFiles) {
+    const src3 = path.join(kanagiSrc, kf);
+    const dst3 = path.join(kanagiDst, kf);
+    fs.copyFileSync(src3, dst3);
+    console.log(`[copy-assets] copied ${src3} -> ${dst3}`);
+  }
+}

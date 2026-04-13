@@ -157,15 +157,23 @@ function loadData(): void {
   if (_soundMeanings && _kanagiPatterns) return;
   try {
     // 1. soundMeanings.json — 言灵秘書原典データ（51音）
-    const smPath = resolveDataPath("../../kanagi/patterns/soundMeanings.json");
-    const smRaw = readFileSync(smPath, "utf-8");
-    _soundMeanings = JSON.parse(smRaw) as SoundMeaningsData;
+    try {
+      const smPath = resolveDataPath("../../kanagi/patterns/soundMeanings.json");
+      const smRaw = readFileSync(smPath, "utf-8");
+      _soundMeanings = JSON.parse(smRaw) as SoundMeaningsData;
+    } catch (e: any) {
+      console.warn(`[KNOWLEDGE-LOADER-V2] soundMeanings.json not found: ${e?.message}`);
+    }
 
     // 2. amatsuKanagi50Patterns.json — 天津金木50パターン
-    const akPath = resolveDataPath("../../kanagi/patterns/amatsuKanagi50Patterns.json");
-    const akRaw = readFileSync(akPath, "utf-8");
-    const akData = JSON.parse(akRaw);
-    _kanagiPatterns = (akData.patterns || akData) as KanagiPattern[];
+    try {
+      const akPath = resolveDataPath("../../kanagi/patterns/amatsuKanagi50Patterns.json");
+      const akRaw = readFileSync(akPath, "utf-8");
+      const akData = JSON.parse(akRaw);
+      _kanagiPatterns = (akData.patterns || akData) as KanagiPattern[];
+    } catch (e: any) {
+      console.warn(`[KNOWLEDGE-LOADER-V2] amatsuKanagi50Patterns.json not found: ${e?.message}`);
+    }
 
     // 3. katakamuna80.json — カタカムナ80首（写像レイヤー）
     const katakamunaPaths = [
