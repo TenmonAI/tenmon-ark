@@ -134,6 +134,15 @@ app.use("/api/kanagi", kanagiRoutes);
 // 既存 tenmon
 app.use("/api/tenmon", tenmonRoutes);
 
+// 宿曜経 × 天津金木 × 言霊 統合診断 (dynamic import to prevent crash)
+try {
+  const sukuyouMod = await import("./routes/sukuyou.js");
+  app.use("/api/sukuyou", sukuyouMod.default);
+  console.log(`[ROUTE] sukuyou registered`);
+} catch (e: any) {
+  console.log(`[ROUTE] sukuyou failed to load: ${e?.message}`);
+}
+
 // health check
 app.get("/health", (_, res) => {
   res.json({ status: "ok" });
