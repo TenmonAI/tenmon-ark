@@ -32,7 +32,8 @@ import { markListenReady } from "./health/readiness.js";
 import { initConsciousnessOS } from "./core/consciousnessOS.js";
 import { getDb } from "./db/index.js";
 import koshikiConsoleRouter from "./routes/koshikiConsole.js";
-import sukuyouRouter from "./routes/sukuyou.js";
+// sukuyou imported dynamically below to prevent crash if module fails
+let sukuyouRouter: any = null;
 
 // Debug: 未処理例外のハンドリング
 const pid = process.pid;
@@ -145,8 +146,15 @@ app.use("/api/kanagi", kanagiRoutes);
 // 既存 tenmon
 app.use("/api/tenmon", tenmonRoutes);
 
-// 宿曜経 × 天津金木 × 言霊 統合診断
-app.use("/api/sukuyou", sukuyouRouter);
+// 宿曜経 × 天津金木 × 言霊 統合診断 (dynamic import to prevent crash)
+try {
+  const sukuyouMod = await import("./routes/sukuyou.js");
+  sukuyouRouter = sukuyouMod.default;
+  app.use("/api/sukuyou", sukuyouRouter);
+  console.log(`[ROUTE] sukuyou registered`);
+} catch (e: any) {
+  console.error(`[ROUTE] sukuyou failed to load:`, e.message);
+}
 
 // health check
 app.get("/health", (_, res) => {
@@ -162,4 +170,4 @@ app.listen(PORT, "0.0.0.0", () => {
   markListenReady();
   console.log(`[READY] listenReady=true`);
 });
-// v7 deploy marker 1776046098
+
