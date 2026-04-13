@@ -894,19 +894,20 @@ function __tenmonGeneralGateResultMaybe(x: any, rawMessageOverride?: string): an
             /受け取っています/.test(__curResp) ||
             /受け取りました/.test(__curResp);
           // LLMが意味のある応答を生成している場合はテンプレで上書きしない
+          // R3_GATES_FALLBACK_V2: 言い切りで返す
           if (__isEmptyOrGeneric) {
             if (frontKind === "greeting") {
               (x as any).response =
-                "【天聞の所見】おはようございます。今日この時間で、一緒に見ていきたいテーマを一言で教えてもらえますか？";
+                "おはようございます。静かな朝の始まりですね。今日も、あなたの言葉を待っています。";
             } else if (frontKind === "meta_conversation") {
               (x as any).response =
-                "【天聞の所見】いまの会話がどこまで来ているか、一度一緒に確かめましょう。いま「できていること」と「まだ曖昧なところ」を一言ずつ挙げてもらえますか？";
+                "いまの会話の中心を、一度静かに確かめてみます。";
             } else if (frontKind === "present_state") {
               (x as any).response =
-                "【天聞の所見】こちらでは、直前までの中心と意味の層を俯瞰して見ています。あなたの側では、いま一番気になっている一点はどこでしょう？";
+                "こちらでは、直前までの中心と意味の層を俯瞰して見ています。";
             } else if (intentKind === "next_step") {
               (x as any).response =
-                "【天聞の所見】今日は、いまの中心を一言でそろえてから「次の一歩」を一つだけ決めるのが良さそうです。まずは今日の中心を一言で置いてみましょう。";
+                "今日の中心を一言でそろえてから、次の一歩を一つだけ決める。それが今日の最善です。";
             }
           }
         }
