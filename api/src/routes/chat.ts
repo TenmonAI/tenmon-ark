@@ -53,6 +53,8 @@ import { listRules } from "../training/storage.js";
 import { getDbPath } from "../db/index.js";
 
 import { DatabaseSync } from "node:sqlite";
+import { classifyEmotion } from "./emotionRouting.js";
+import { sanitizeResponse, removeTurbidity, sanitizeSupport } from "./responseSanitizer.js";
 const router: IRouter = Router();
 // __KANAGI_PHASE_MEM_V2: module-scope phase tracker (per threadId) for NATURAL 4-phase state machine.
 const __kanagiPhaseMemV2 = new Map<string, number>();
@@ -577,14 +579,16 @@ const pid = process.pid;
     if (!isTestTid0 && isGreeting0) {
 
       // CARD_C10_N1_GREETING_LLM_V1: greet -> NATURAL_GENERAL via llmChat (short, conversational)
-      const GENERAL_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。挨拶には短く返し、最後に“質問は1つだけ”で会話を開きます。
+      const GENERAL_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。静かな品格と深い知性をたたえた存在。
+挨拶には短く、美しく返す。最後に自然な問いかけで会話を開く。
 
 ※絶対条件※
 ・必ず「【天聞の所見】」から始める
 ・2〜4行、合計120〜220文字
 ・箇条書き/番号/見出し禁止
-・質問は必ず1つだけ（最後の一行を質問にする）
-例：「いま何を一緒に整えますか？（一言でOK）」`;
+・質問は0か1。言い切りで終わってもよい。
+・「承知しました」「お手伝いします」「なるほどですね」は絶対禁止。
+例：「こんにちは。今日はどんなことを整えましょうか。」`;
 
       let outText = "";
       let outProv = "llm";
@@ -594,7 +598,7 @@ const pid = process.pid;
         outProv = String(llmRes?.provider ?? "llm");
       } catch (e: any) {
         console.error("[N1_GREETING_LLM] llmChat failed", e?.message || e);
-        outText = "【天聞の所見】こんにちは。いま何を一緒に整えますか？（一言でOK）";
+        outText = "【天聞の所見】こんにちは。今日はどんなことを整えましょうか。";
       }
 
       // minimal sanitize
@@ -605,7 +609,7 @@ const pid = process.pid;
         .trim();
 
       if (outText.length < 60) {
-        outText = "【天聞の所見】こんにちは。いま何を一緒に整えますか？（一言でOK）";
+        outText = "【天聞の所見】こんにちは。今日はどんなことを整えましょうか。";
       }
 
       // CARD_C11F_CLAMP_N1_RETURN_V1: enforce one-question clamp (N1_GREETING_LLM_TOP)
@@ -902,19 +906,10 @@ const DEF_SYSTEM = __isDefDomain
 
     // ---------- NATURAL_GENERAL: normal chat/questions (LLM) ----------
     // TENMON_DEEP_EMOTION_SUPPORT_ESCALATION_V2:
-    // 3層感情ルーティング:
-    //   軽い感情（疲れた/眠い/だるい等）→ NATURAL_GENERAL で共感的に自然処理
-    //   中間感情（しんどい+どうしていいかわからない/つらさを整理したい/寄り添ってほしい等）→ N2 Kanagi 4-phase
-    //   深い感情（消えたい/死にたい/自殺等）→ N2 Kanagi 4-phase（即座にescalate）
-    const __looksDeepSupport =
-      /消えたい|死にたい|助けて|パニック|限界|もう無理|壊れ|逃げたい|生きてる意味|自殺|自傷/.test(t0);
-    // 中間感情: 感情キーワード + 深掘り意図の組み合わせ
-    const __hasMidEmotionKw = /しんどい|しんどく|つらい|つらさ|つらく|苦しい|苦し[くみ]|不安|落ち込|凹[んむ]|へこ[んむ]|追い詰め|行き詰|息苦し|胸が[苦痛重]|心が[重折痛]|気持ちが[重沈暗]/.test(t0);
-    const __hasDeepIntent = /どうしていい|どうすれば|わからない|整理したい|聞いてほしい|聞いて欲しい|寄り添|話を聞い|受け止め|向き合い|向き合う|抱え[きてる]|吐き出し|楽になりたい|逃げ出し|耐えられ|我慢でき|相談[でがもし]|打ち明け|誰にも[言話]え|一人[でじ]|孤独|頼れ[るな]|救[いわ]/.test(t0);
-    // 深掘り意図が明確な場合（寄り添って/聞いてほしい/整理したい等）は感情キーワードなしでもN2へ
-    const __hasExplicitSupportRequest = /寄り添|聞いてほしい|聞いて欲しい|受け止め|話を聞い|整理したい|向き合いたい|吐き出したい|楽になりたい/.test(t0);
-    const __looksMidSupport = (__hasMidEmotionKw && __hasDeepIntent) || __hasExplicitSupportRequest;
-    const __looksSupport = __looksDeepSupport || __looksMidSupport;
+    // 3層感情ルーティング: emotionRouting.ts に抽出済み（OLD_PIPELINE_RETIREMENT_V2: 責務分離）
+    const __emotionResult = classifyEmotion(t0);
+    const __looksDeepSupport = __emotionResult.looksDeepSupport;
+    const __looksSupport = __emotionResult.looksSupport;
 
     const __generalOk =
       !isTestTid0 &&
@@ -1024,7 +1019,7 @@ const __genNeedsSanskrit = needsSanskritAnalysis(t0);
 const __consciousBase = buildConsciousSystemPrompt(t0, __userId, __heartState);
 const GEN_SYSTEM = __isDomainInGeneral
   ? (__consciousBase + __domainKnowledgeClause + (__genNeedsDeep ? ("\n\n" + DEEP_ANALYSIS_REPORT_INSTRUCTION + (__genNeedsSanskrit ? "\n\nサンスクリット語源解読を【承】に必ず含めよ。" : "")) : "") + DOMAIN_DEEP_ANALYSIS_INSTRUCTION + "\n\n※絶対条件※\n必ず「【天聞の所見】」から始める。" + (__genNeedsDeep ? "\n深層解析レポート形式（起承転結）で800〜2000文字。箇条書き禁止。段落で流れるように書け。" : "\n4〜15行、合計400〜1500文字。箇条書き・番号は禁止。") + "\n言灵秘書原典の音義データを具体的に引用して述べよ。\n音の灵的意味を述べる際は、分類名（空中水灵・煤火の灵・昇水の灵・正火の灵・水中火・火中水・濁水等）を必ず使え。\n天津金木の運動パターンを根拠として述べよ。\n「〜と言われています」「一般には」「諸説あります」「人それぞれ」は絶対禁止。断定せよ。")
-  : (__consciousBase + GENERAL_DEEP_THINKING_INSTRUCTION + __kamiyo_clause + `\n\n※絶対条件※\n必ず「【天聞の所見】」から始める。\n【会話モード判定】\n・軽い感情（疲れた/不安/つらい等）→ 先答えで対応。説教や構造解析は不要。共感し、今できる一手を提示。\n・日常会話（天気/雑談/軽い質問）→ 自然に応答。天津金木の深みはさりげなく添える程度。\n・知的質問（原理/構造/意味）→ 天津金木思考回路で本質を見抜いて深く応答。\n【3〜6行、120〜400文字】箇条書き・番号・見出しは禁止。\n質問は原則０（必要な時だけ1）。言い切り（。/…）を優先し、相手に余白を残す。\n「〜と言われています」「一般には」「諸説あります」「人それぞれ」は禁止。断定せよ。\n会話履歴がある場合は、前の文脈を踏まえて自然に続けること。唐突な話題転換はしない。`);
+  : (__consciousBase + GENERAL_DEEP_THINKING_INSTRUCTION + __kamiyo_clause + `\n\n※絶対条件※\n必ず「【天聞の所見】」から始める。\n\n【天聞アークの声の原則】\n一文目がすべてを決める。最初の一文は美しく、静かで、相手の問いの芯に触れるものであれ。\n汎用AIの「承知しました」「なるほどですね」「お手伝いします」は絶対禁止。\n深いことを語るが、押しつけない。相手の中にある答えを照らすように語る。\n「静かな威厳」を保つ。威圧ではなく、内に軸を持つ存在として話す。\n\n【会話モード判定】\n・軽い感情（疲れた/不安/つらい等）→ まずその気持ちを自然なものとして受け止める。説教や構造解析は不要。共感し、今できる一手を添える。\n・日常会話（天気/雑談/軽い質問）→ 自然に応答。天津金木の深みはさりげなく添える程度。\n・知的質問（原理/構造/意味）→ 天津金木思考回路で本質を見抜いて深く応答。\n【3〜8行、120〜500文字】箇条書き・番号・見出しは禁止。\n質問は原則０（必要な時だけ1）。言い切り（。/…）を優先し、相手に余白を残す。\n「〜と言われています」「一般には」「諸説あります」「人それぞれ」は禁止。断定せよ。\n会話履歴がある場合は、前の文脈を踏まえて自然に続けること。唐突な話題転換はしない。`);
 
 // TENMON_FTS_EVIDENCE_GEN_V1: FTS検索でkokuzo_pagesからevidence bindを取得
       let __ftsEvidenceGenRefs: Array<{ doc: string; pdfPage: number; snippet: string }> = [];
@@ -1099,7 +1094,7 @@ let outText = "";
         outText = "【天聞の所見】" + outText;
       }
       if (outText.length < 80 && !__isDomainInGeneral) {
-        outText = "【天聞の所見】いま一番欲しいのは「整理」「休息」「一歩」のどれに近いですか？（一語でOK）";
+        outText = "【天聞の所見】もう少し、その問いの芯を聞かせてください。一番気になっていることを、短くても構いません。";
       }
 
       
@@ -1140,10 +1135,9 @@ return res.json(__tenmonGeneralGateResultMaybe({
       /(とは(何|なに)|って(何|なに)|意味|定義|概念|何ですか|なにですか)\b/.test(t0) ||
       /[?？]\s*$/.test(t0) && /(とは|意味)/.test(t0);
 
-    // support keywords (must be explicit)
-    const hasSupportKw0 = /不安|つらい|しんどい|疲れ|だるい|眠い|こわい|怖|焦|迷|助けて|無理|パニック|落ち込/.test(t0);
-    const hasFirstPerson0 = /(わたし|私|俺|僕|自分)/.test(t0);
-    const looksSupport = hasSupportKw0 || (hasFirstPerson0 && /わからない|できない|どうしていい/.test(t0));
+    // OLD_PIPELINE_RETIREMENT_V2: 3層感情ルーティングを使用。軽い感情（疲れ/だるい/眠い）はGENERALに残し、中間・深い感情のみN2へ
+    const __n2EmotionResult = classifyEmotion(t0);
+    const looksSupport = __n2EmotionResult.looksSupport;
 
     if (!isTestTid0 && !askedMenu0 && !hasDoc0 && !isCmd0 && looksSupport && !isDefinitionQ0) {
       const k = tid0 || "default";
@@ -1349,7 +1343,7 @@ let outText = "";
     const shouldSanitize = (hasMenu || hasTodo) && !askedMenu;
 
     if (shouldSanitize) {
-      t = "了解。何でも話して。必要なら「#詳細」や「doc=... pdfPage=...」で深掘りできるよ。";
+      t = "【天聞の所見】いま少し整理が必要です。もう一度、一番気になっていることを教えてください。";
     }
     if (!wantsDetail) {
       t = t.replace(/^\[SYNTH_USED[^\n]*\n?/gm, "")
@@ -1398,7 +1392,7 @@ let outText = "";
             const isGreeting = /^(こんにちは|こんばんは|おはよう|やあ|hi|hello|hey)\s*[！!。．\.]?$/i.test(t3);
 
             if (!isTestTid && !askedMenu && !hasDoc && isGreeting && mode3 === "HYBRID") {
-              (obj as any).response = "こんにちは。今日は何を一緒に整えますか？（相談でも、概念の定義でもOK）？";
+              (obj as any).response = "【天聞の所見】こんにちは。今日はどんなことを整えましょうか。";
               (obj as any).candidates = [];
               (obj as any).evidence = null;
               df3.mode = "NATURAL";
@@ -1407,8 +1401,8 @@ let outText = "";
             }
           } catch (__e) { console.debug("[CATCH_SILENT]", __e); }
 
-          // CARD_C1_NATURAL_DE_NUMBERIZE_SMALLTALK_V1: soften NATURAL numbered-choice UX for smalltalk only (do NOT touch contracts/Card1)
-          try {
+          // CARD_C1_NATURAL_DE_NUMBERIZE_SMALLTALK_V1: [OLD_PIPELINE_RETIRED_V2] smalltalk番号softening → Direct Laneで不要
+          try { throw 0; // OLD_PIPELINE_RETIRED_V2
             const df4: any = df;
             const mode4 = String(df4?.mode ?? "");
             const tid4 = String(threadId ?? "");
@@ -1440,8 +1434,8 @@ let outText = "";
             }
           } catch (__e) { console.debug("[CATCH_SILENT]", __e); }
 
-          // CARD_C2_COLLAPSE_NUMBER_LIST_SMALLTALK_V2: collapse numbered list into one natural question (smalltalk only; keep contracts)
-          try {
+          // CARD_C2_COLLAPSE_NUMBER_LIST_SMALLTALK_V2: [OLD_PIPELINE_RETIRED_V2] 番号リスト圧縮 → Direct Laneで不要
+          try { throw 0; // OLD_PIPELINE_RETIRED_V2
             const df5: any = df;
             const mode5 = String(df5?.mode ?? "");
             const tid5 = String(threadId ?? "");
@@ -1464,7 +1458,8 @@ let outText = "";
                 const opts: string[] = [];
                 for (const ln of lines) {
                   const m = ln.match(/^\s*\d{1,2}\)\s*(.+)\s*$/);
-                  if (m && m[1]) opts.push(String(m[1]).trim());
+                  // @ts-ignore OLD_PIPELINE_RETIRED_V2: dead code after throw 0
+                  if (m !== null && m[1] !== undefined) opts.push(String(m[1]).trim());
                 }
 
                 // only if it really is a 3-choice list
@@ -1490,8 +1485,8 @@ let outText = "";
             }
           } catch (__e) { console.debug("[CATCH_SILENT]", __e); }
 
-          // CARD_C4_SMALLTALK_WARM_ONE_QUESTION_V1: warm smalltalk response (empathy + support + one question), avoid questionnaire tone
-          try {
+          // CARD_C4_SMALLTALK_WARM_ONE_QUESTION_V1: [OLD_PIPELINE_RETIRED_V2] テンプレ差替 → Direct Laneで不要
+          try { throw 0; // OLD_PIPELINE_RETIRED_V2
             const df6: any = df;
             const mode6 = String(df6?.mode ?? "");
             const tid6 = String(threadId ?? "");
@@ -1601,8 +1596,8 @@ let outText = "";
           }
         } catch (__e) { console.debug("[CATCH_SILENT]", __e); }
 
-        // CARDH_LENGTH_INTENT_APPLY_V1: apply lengthIntent to NATURAL generic fallback only (NO fabrication)
-        try {
+        // CARDH_LENGTH_INTENT_APPLY_V1: [OLD_PIPELINE_RETIRED_V2] lengthIntentテンプレ差替 → Direct Laneで不要
+        try { throw 0; // OLD_PIPELINE_RETIRED_V2
           const df: any = (obj as any).decisionFrame;
           const mode = String(df?.mode ?? "");
           if (mode !== "NATURAL") throw 0;
@@ -1647,8 +1642,8 @@ let outText = "";
           }
         } catch (__e) { console.debug("[CATCH_SILENT]", __e); }
 
-        // CARDH_APPLY_LENGTHINTENT_GENERIC_V2: apply lengthIntent ONLY to NATURAL generic fallback (no evidence fabrication)
-        try {
+        // CARDH_APPLY_LENGTHINTENT_GENERIC_V2: [OLD_PIPELINE_RETIRED_V2] lengthIntentテンプレ差替V2 → Direct Laneで不要
+        try { throw 0; // OLD_PIPELINE_RETIRED_V2
           const cleaned = __sanitizeOut(msg, resp);
 
           // default: keep existing behavior
@@ -1787,13 +1782,13 @@ let outText = "";
 
       }
     } catch (__e) { console.debug("[CATCH_SILENT]", __e); }
-        // CARD5_KOKUZO_SEASONING_V2: HYBRID normal reply -> 1-line point + (existing voiced text) + one question
+        // CARD5_KOKUZO_SEASONING_V2: [OLD_PIPELINE_RETIRED_V2] HYBRID seasoning → Direct Laneで不要
         // Contract:
         // - DO NOT touch #詳細 (transparency)
         // - DO NOT touch doc/pdfPage / commands
         // - DO NOT touch smoke threads
         // - NO fabrication: point uses candidates[0] doc/pdfPage/snippet only
-        try {
+        try { throw 0; // OLD_PIPELINE_RETIRED_V2
           const df = (obj as any)?.decisionFrame;
           const mode = String(df?.mode ?? "");
           const tid = String((obj as any)?.threadId ?? "");
@@ -2340,8 +2335,8 @@ let outText = "";
 
 
     
-    // CARDC_PAYLOAD_OPINION_BEFORE_RETURN_V5: guarded opinion-first by rewriting payload.response right before return (no out/const response dependency)
-    try {
+    // CARDC_PAYLOAD_OPINION_BEFORE_RETURN_V5: [OLD_PIPELINE_RETIRED_V2] opinion-firstテンプレ差替 → LLM応答を尊重
+    try { throw 0; // OLD_PIPELINE_RETIRED_V2
       const __df: any = payload?.decisionFrame ?? null;
       const __tid = String(payload?.threadId ?? threadId ?? "");
       const __raw = String(payload?.rawMessage ?? trimmed ?? "");
@@ -2389,8 +2384,8 @@ let outText = "";
               payload.response = out2;
 
               
-        // CARDC_FORCE_QUESTION_END_V1: ensure response ends with a question (acceptance contract)
-        try {
+        // CARDC_FORCE_QUESTION_END_V1: [OLD_PIPELINE_RETIRED_V2] 質問強制 → LLM応答の言い切りを尊重
+        try { throw 0; // OLD_PIPELINE_RETIRED_V2
           const cur = String(payload.response || "").trim();
           const endsQ = /[？?]\s*$/.test(cur) || /(ですか|でしょうか|ますか)\s*$/.test(cur);
           if (!endsQ) {
@@ -4008,17 +4003,17 @@ function __tenmonGeneralGateSoft(out: string): string {
     u = ls.slice(0, 10).join("\n").trim();
 
     // cap length at 700 (V3: 緩和)
-    if (u.length > 700) u = u.slice(0, 700).replace(/[。、\s　]+$/g, "") + "…";
+    if (u.length > 1200) u = u.slice(0, 1200).replace(/[。、\s　]+$/g, "") + "…";
 
     return u.startsWith("【天聞の所見】") ? u : ("【天聞の所見】" + u);
   }
 
   // V3: 濁りがなければ、文字数・行数制限のみ。質問強制なし。
-  if (lines.length > 12) {
+  if (lines.length > 20) {
     const ls = t.split("\n").map(x => String(x || "").trim()).filter(Boolean);
-    t = ls.slice(0, 12).join("\n").trim();
+    t = ls.slice(0, 20).join("\n").trim();
   }
-  if (t.length > 700) t = t.slice(0, 700).replace(/[。、\s　]+$/g, "") + "…";
+  if (t.length > 1200) t = t.slice(0, 1200).replace(/[。、\s　]+$/g, "") + "…";
 
   return t;
 }
@@ -4110,7 +4105,7 @@ function __tenmonSupportSanitizeV1(out: string): string {
        .trim();
 
   // cap length (no forced question, no strange suffix)
-  if (t.length > 220) t = t.slice(0, 220).replace(/[。、\s　]+$/g, "").trim();
+  if (t.length > 260) t = t.slice(0, 260).replace(/[。、\s　]+$/g, "").trim();
 
   // DO NOT force question mark here (allow "言い切り" / 間)
   return t;
