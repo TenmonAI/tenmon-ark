@@ -25,6 +25,7 @@ import {
   calculateHonmeiShuku,
   type Nakshatra
 } from "../sukuyou/index.js";
+import { generateTenmonArkReport } from "../sukuyou/reportGenerator.js";
 
 const router = Router();
 
@@ -226,6 +227,47 @@ router.get("/nakshatras", async (_req: Request, res: Response) => {
     return res.json({ success: true, nakshatras: list });
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
+  }
+});
+
+// ============================================
+// POST /api/sukuyou/report — 天聞アーク統合鑑定レポート
+// ============================================
+router.post("/report", async (req: Request, res: Response) => {
+  try {
+    const { birthDate, name, birthTime, birthPlace } = req.body;
+
+    if (!birthDate) {
+      return res.status(400).json({
+        error: "birthDate は必須です（YYYY-MM-DD形式）"
+      });
+    }
+
+    const birth = new Date(birthDate);
+    if (isNaN(birth.getTime())) {
+      return res.status(400).json({
+        error: "birthDate の形式が不正です。YYYY-MM-DD形式で指定してください。"
+      });
+    }
+
+    const katakanaName = name ? String(name) : undefined;
+    const timeStr = birthTime ? String(birthTime) : undefined;
+    const placeStr = birthPlace ? String(birthPlace) : undefined;
+
+    const report = generateTenmonArkReport(birth, katakanaName, timeStr, placeStr);
+
+    return res.json({
+      success: true,
+      report: {
+        version: report.version,
+        generatedAt: report.generatedAt,
+        sections: report.sections,
+        fullText: report.fullText
+      }
+    });
+  } catch (err: any) {
+    console.error("[sukuyou/report] Error:", err);
+    return res.status(500).json({ error: err.message || "レポート生成中にエラーが発生しました" });
   }
 });
 
