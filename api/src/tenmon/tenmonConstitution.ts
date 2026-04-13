@@ -282,7 +282,7 @@ export const DOMAIN_DEEP_ANALYSIS_INSTRUCTION = `
 export function needsDeepAnalysis(userMessage: string): boolean {
   const t = String(userMessage || "").trim();
   // 明示的な深層解析要求
-  if (/解析|分析|レポート|詳し[くい]|深[くい]|詳細|構造|本質|真相|語源|サンスクリット|梵語|ヘブライ|etymology/i.test(t)) {
+  if (/解析|分析|レポート|詳し[くい]|深[くい]|詳細|構造|本質|真相|語源|サンスクリット|梵語|ヘブライ|etymology|鑑定|占い|宿曜|運勢|命宿|御神託/i.test(t)) {
     return true;
   }
   // ドメイン質問で一定の長さ以上（深い質問の可能性）

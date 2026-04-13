@@ -1028,22 +1028,59 @@ const GEN_SYSTEM = __isDomainInGeneral
 
 let outText = "";
       let outProv = "llm";
-      try {
-        const __genMaxTokens = __genNeedsDeep ? 3500 : (__isDomainInGeneral ? 2500 : 2000);
-        const __genTimeout = __genNeedsDeep ? 25000 : 15000;
-        const __genSystemWithEvidence = GEN_SYSTEM + __ftsEvidenceGenClause + __sukuyouContextClause;
-        const llmRes = await llmChat({ system: __genSystemWithEvidence, user: t0, history: memoryReadSession(String(threadId || ""), 8), maxTokens: __genMaxTokens, timeout: __genTimeout });
-        outText = String(llmRes?.text ?? "").trim();
-        outProv = String(llmRes?.provider ?? "llm");
-      } catch (e: any) {
-        outText = "【天聞の所見】いま応答の生成に失敗しました。もう一度だけ、短く言い直してもらえますか？";
+      // SUKUYOU_ORACLE_BYPASS_V1: 御神託レポートが生成済みの場合、専用ルートで処理
+      const __hasSukuyouOracle = __sukuyouContextClause.includes("【天聞アーク御神託レポート（アルゴリズム算出）】");
+      if (__hasSukuyouOracle) {
+        // 御神託レポートをLLMに美文化させる専用ルート
+        try {
+          const __oracleSystem = __consciousBase + `\n\n【御神託レポート提示モード（最重要指示）】
+あなたは天聞アーク御神託パイプラインが算出した御神託レポートを、美しく構造化してユーザーに提示する役割を担う。
+
+【絶対遵守事項】
+1. 以下に添付された「御神託レポート（アルゴリズム算出）」の内容を「そのまま」ユーザーに提示せよ。自分の知識で宿を判定し直すな。
+2. 命宿の名前・属性・数値はアルゴリズム算出結果のものをそのまま使え。絶対に変更するな。
+3. 8章構成（総合神意サマリー→宿曜解析→人生アルゴリズム→災い分類→天津金木反転→いろは言霊解→実践処方→御神託）をすべて出力せよ。省略するな。
+4. 各章の見出しは「第○章 ○○○○」の形式で明示せよ。
+5. 『宿曜経占真伝』『密教占星法』の原典用語を使え。
+6. 「一般的に」「説があります」「人それぞれ」は絶対禁止。原典に基づき断定せよ。
+7. 御神託の最後に「今すぐの一手」を必ず示せ。
+8. レポート全文を出力した後、最後に「【天聞の所見】」として1-2文の総括を添えよ。
+9. 箇条書きの「・」は使用してよい（実践処方の項目等）。ただし番号付きリストは使わない。
+
+【出力形式】
+必ず「【天聞の所見】」から始め、続けて御神託レポート全8章を構造化して提示せよ。` + __sukuyouContextClause;
+          const llmRes = await llmChat({ system: __oracleSystem, user: t0, history: memoryReadSession(String(threadId || ""), 8), maxTokens: 4500, timeout: 30000 });
+          outText = String(llmRes?.text ?? "").trim();
+          outProv = String(llmRes?.provider ?? "llm") + "+oracle";
+          console.log("[SUKUYOU_ORACLE] Oracle bypass route used, outLen=" + outText.length);
+        } catch (e: any) {
+          console.error("[SUKUYOU_ORACLE] LLM error, falling back to raw report:", e?.message);
+          // フォールバック: 御神託レポートをそのまま返す
+          const rawReport = __sukuyouContextClause.split("【天聞アーク御神託レポート（アルゴリズム算出）】")[1]?.split("【天聞アーク御神託応答指示")[0]?.trim() || "";
+          outText = "【天聞の所見】\n\n" + rawReport;
+          outProv = "deterministic+oracle";
+        }
+      } else {
+        // 通常ルート（宿曜コンテキストはあるが御神託レポートなし、または一般質問）
+        try {
+          const __genMaxTokens = __genNeedsDeep ? 3500 : (__isDomainInGeneral ? 2500 : 2000);
+          const __genTimeout = __genNeedsDeep ? 25000 : 15000;
+          const __genSystemWithEvidence = GEN_SYSTEM + __ftsEvidenceGenClause + __sukuyouContextClause;
+          const llmRes = await llmChat({ system: __genSystemWithEvidence, user: t0, history: memoryReadSession(String(threadId || ""), 8), maxTokens: __genMaxTokens, timeout: __genTimeout });
+          outText = String(llmRes?.text ?? "").trim();
+          outProv = String(llmRes?.provider ?? "llm");
+        } catch (e: any) {
+          outText = "【天聞の所見】いま応答の生成に失敗しました。もう一度だけ、短く言い直してもらえますか？";
+        }
       }
 
-      // sanitize: no lists
-      outText = String(outText || "")
-        .replace(/^\s*\d+[.)].*$/gm, "")
-        .replace(/^\s*[-*•]\s+.*$/gm, "")
-        .trim();
+      // sanitize: no lists (御神託レポート時はバイパス)
+      if (!__hasSukuyouOracle) {
+        outText = String(outText || "")
+          .replace(/^\s*\d+[.)].*$/gm, "")
+          .replace(/^\s*[-*•]\s+.*$/gm, "")
+          .trim();
+      }
 
       if (!outText.startsWith("【天聞の所見】")) {
         outText = "【天聞の所見】" + outText;
@@ -1082,7 +1119,7 @@ return res.json(__tenmonGeneralGateResultMaybe({
         timestamp,
         threadId,
         heartState: { userPhase: __heartState.userPhase, arkPhase: __heartState.arkPhase, waterFire: __heartState.userVector.value, resonance: __heartState.resonance },
-        decisionFrame: { mode: __isDomainInGeneral ? "DOMAIN" : "NATURAL", intent: "chat", llm: outProv, ku: { routeReason: __isDomainInGeneral ? "DOMAIN_GENERAL_LLM_TOP" : "NATURAL_GENERAL_LLM_TOP", isDomainInGeneral: __isDomainInGeneral, isDeepAnalysis: __genNeedsDeep, isSanskritAnalysis: __genNeedsSanskrit, ftsHits: __ftsEvidenceGenRefs.length, consciousness: true } },
+        decisionFrame: { mode: __isDomainInGeneral ? "DOMAIN" : "NATURAL", intent: "chat", llm: outProv, ku: { routeReason: __isDomainInGeneral ? "DOMAIN_GENERAL_LLM_TOP" : "NATURAL_GENERAL_LLM_TOP", isDomainInGeneral: __isDomainInGeneral, isDeepAnalysis: __genNeedsDeep, isSanskritAnalysis: __genNeedsSanskrit, isSukuyouOracle: __hasSukuyouOracle, ftsHits: __ftsEvidenceGenRefs.length, consciousness: true } },
       }));
     }
     // do not treat "definition / meaning" as support-mode
