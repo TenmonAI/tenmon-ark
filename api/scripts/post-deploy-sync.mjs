@@ -98,6 +98,24 @@ if (apiDir === BUILD_DIR && existsSync(REPO_DIR)) {
   console.log(`[sync] No sync needed (apiDir=${apiDir}, REPO exists=${existsSync(REPO_DIR)})`);
 }
 
-// ── 4. NO PROCESS KILLING ──
-// systemctl restart handles stopping old + starting new atomically
-console.log("[sync] ✅ v10 complete - deploy.yml systemctl restart will handle process lifecycle");
+// ── 4. Restart service (deploy.yml's systemctl restart may not execute) ──
+console.log("[sync] Restarting tenmon-ark-api service...");
+try {
+  const restartResult = run("sudo systemctl restart tenmon-ark-api 2>&1");
+  console.log(`[sync] systemctl restart: ${restartResult || 'OK'}`);
+  
+  // Wait for service to start
+  run("sleep 3");
+  
+  // Verify service is running
+  const status = run("systemctl is-active tenmon-ark-api 2>&1");
+  console.log(`[sync] Service status: ${status}`);
+  
+  // Test version endpoint
+  const versionTest = run("curl -s http://127.0.0.1:3000/api/version 2>&1");
+  console.log(`[sync] Version test: ${versionTest.substring(0, 200)}`);
+} catch (e) {
+  console.error(`[sync] Restart failed:`, e.message);
+}
+
+console.log("[sync] ✅ v10 complete");
