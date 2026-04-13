@@ -22,6 +22,8 @@ export type {
   FullDiagnosisResult
 } from "./sukuyouEngine.js";
 
+export { getSukuyouMs, getShukuName, SHUKU_NAMES } from "./sukuyouLookup.js";
+
 export {
   calculateThreeLayerPhase,
   analyzeNameKotodama,
