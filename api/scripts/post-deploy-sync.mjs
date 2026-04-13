@@ -1,16 +1,16 @@
 /**
- * Post-deploy sync script (v5)
+ * Post-deploy sync script
  * 
- * ONLY syncs dist + node_modules from build dir to systemd dir.
- * Does NOT restart the service - the deploy script's `systemctl restart` handles that.
+ * Root cause: deploy.yml builds in /opt/tenmon-ark/api
+ * but systemd runs from /opt/tenmon-ark-repo/api
  * 
- * Build dir:   /opt/tenmon-ark/api      (where deploy.yml runs npm run build)
- * Systemd dir: /opt/tenmon-ark-repo/api  (where systemd runs the server)
+ * This script ONLY syncs the built artifacts.
+ * deploy.yml handles the systemctl restart AFTER this script.
  */
 import { execSync } from "child_process";
+import { existsSync } from "fs";
 import { dirname, resolve } from "path";
 import { fileURLToPath } from "url";
-import { existsSync } from "fs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const apiDir = resolve(__dirname, "..");
@@ -26,49 +26,50 @@ function run(cmd) {
   try {
     return execSync(cmd, { encoding: "utf8", timeout: 60000 }).trim();
   } catch (e) {
-    return `[error: ${(e.stderr || e.stdout || e.message || "").substring(0, 300)}]`;
+    return `[error: ${(e.stderr || e.stdout || e.message || "").substring(0, 500)}]`;
   }
 }
 
-const BUILD_DIR = "/opt/tenmon-ark/api";
+const DEPLOY_DIR = apiDir;  // /opt/tenmon-ark/api
 const SYSTEMD_DIR = "/opt/tenmon-ark-repo/api";
 
-if (apiDir === BUILD_DIR && existsSync(SYSTEMD_DIR)) {
-  console.log(`[sync] Syncing from ${BUILD_DIR} → ${SYSTEMD_DIR}`);
-  
-  // 1. Sync dist/ (compiled JS)
-  const d = run(`rsync -a --delete ${BUILD_DIR}/dist/ ${SYSTEMD_DIR}/dist/`);
-  console.log(`[sync] dist: ${d || 'OK'}`);
-  
-  // 2. Sync node_modules/
-  const n = run(`rsync -a --delete ${BUILD_DIR}/node_modules/ ${SYSTEMD_DIR}/node_modules/`);
-  console.log(`[sync] node_modules: ${n || 'OK'}`);
-  
-  // 3. Sync package.json + src/ (for SQL schemas)
-  run(`cp ${BUILD_DIR}/package.json ${SYSTEMD_DIR}/package.json`);
-  const s = run(`rsync -a --delete ${BUILD_DIR}/src/ ${SYSTEMD_DIR}/src/`);
-  console.log(`[sync] src+pkg: ${s || 'OK'}`);
-  
-  // 4. Verify
-  const hasVersion = run(`grep -l "version" ${SYSTEMD_DIR}/dist/index.js 2>/dev/null && echo YES || echo NO`);
-  const hasSukuyou = run(`ls ${SYSTEMD_DIR}/dist/sukuyou/sukuyouEngine.js 2>/dev/null && echo YES || echo NO`);
-  const hasLookup = run(`ls ${SYSTEMD_DIR}/dist/sukuyou/sukuyou_lookup_table.json 2>/dev/null && echo YES || echo NO`);
-  console.log(`[sync] Verify: version=${hasVersion}, sukuyou=${hasSukuyou}, lookup=${hasLookup}`);
-  
-  // 5. Stop the old server so the deploy script's `systemctl restart` starts fresh
-  console.log("[sync] Stopping old server for clean restart...");
-  run("systemctl stop tenmon-ark-api 2>/dev/null || true");
-  
-  // Kill any lingering processes on port 3000
-  const pids = run("lsof -ti:3000 2>/dev/null || true");
-  if (pids && !pids.startsWith("[error")) {
-    const myPid = process.pid;
-    for (const pid of pids.split("\n").filter(p => p && p !== String(myPid))) {
-      run(`kill -9 ${pid} 2>/dev/null || true`);
-    }
+const needsSync = DEPLOY_DIR !== SYSTEMD_DIR && existsSync(SYSTEMD_DIR);
+console.log(`[sync] Deploy dir: ${DEPLOY_DIR}`);
+console.log(`[sync] Systemd dir: ${SYSTEMD_DIR}, exists: ${existsSync(SYSTEMD_DIR)}`);
+console.log(`[sync] Needs sync: ${needsSync}`);
+
+if (needsSync) {
+  // Sync dist/
+  console.log("[sync] Syncing dist/...");
+  const syncDist = run(`rsync -a --delete ${DEPLOY_DIR}/dist/ ${SYSTEMD_DIR}/dist/`);
+  console.log(`[sync] dist sync: ${syncDist || "OK"}`);
+
+  // Sync node_modules/
+  console.log("[sync] Syncing node_modules/...");
+  const syncModules = run(`rsync -a --delete ${DEPLOY_DIR}/node_modules/ ${SYSTEMD_DIR}/node_modules/`);
+  console.log(`[sync] node_modules sync: ${syncModules || "OK"}`);
+
+  // Sync package.json
+  if (existsSync(`${DEPLOY_DIR}/package.json`)) {
+    run(`cp ${DEPLOY_DIR}/package.json ${SYSTEMD_DIR}/package.json`);
+    console.log("[sync] package.json synced");
   }
-  
-  console.log("[sync] ✅ Sync complete. Deploy script will restart service.");
+
+  // Verify critical files
+  const checks = [
+    `${SYSTEMD_DIR}/dist/index.js`,
+    `${SYSTEMD_DIR}/dist/sukuyou/sukuyouEngine.js`,
+    `${SYSTEMD_DIR}/dist/sukuyou/sukuyou_lookup_table.json`,
+    `${SYSTEMD_DIR}/dist/routes/sukuyou.js`,
+    `${SYSTEMD_DIR}/dist/core/consciousnessOS.js`,
+  ];
+  for (const f of checks) {
+    const exists = existsSync(f);
+    console.log(`[sync] ${exists ? "✅" : "❌"} ${f.replace(SYSTEMD_DIR + "/", "")}`);
+  }
 } else {
-  console.log(`[sync] No sync needed (apiDir=${apiDir})`);
+  console.log("[sync] No sync needed (same directory or systemd dir not found)");
 }
+
+// DO NOT restart service here - deploy.yml's systemctl restart handles it
+console.log("[sync] ✅ Sync complete (deploy.yml will restart service)");
