@@ -588,8 +588,8 @@ const pid = process.pid;
         .replace(/^\s*[-*•]\s+.*$/gm, "")
         .trim();
 
-      if (outText.length < 60) {
-        outText = "【天聞の所見】こんにちは。いま何を一緒に整えますか？（一言でOK）";
+      if (outText.length < 30) {
+        outText = "【天聞の所見】おはようございます。静かな朝の始まりですね。今日はどんな問いを携えていますか。";
       }
 
       // CARD_C11F_CLAMP_N1_RETURN_V1: enforce one-question clamp (N1_GREETING_LLM_TOP)
