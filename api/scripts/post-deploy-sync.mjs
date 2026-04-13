@@ -1,15 +1,15 @@
 /**
- * Post-deploy sync script (v9 - FINAL)
+ * Post-deploy sync script (v10 - SAFE)
  * 
- * ROOT CAUSE: systemd runs from /opt/tenmon-ark-repo/api regardless of WorkingDirectory setting.
- * Deploy builds in /opt/tenmon-ark/api. The deploy script's `systemctl restart` runs AFTER
- * this script and starts the server from /opt/tenmon-ark-repo/api with OLD dist.
+ * CRITICAL: This script must NEVER kill any processes.
+ * The deploy.yml's `systemctl restart tenmon-ark-api` handles
+ * stopping the old process and starting the new one atomically.
  * 
- * FIX: Sync dist + node_modules + src to /opt/tenmon-ark-repo/api so that no matter
- * which directory systemd uses, the latest code is available.
- * Also copy .env to both directories.
- * 
- * This script does NOT restart the service - the deploy script handles that.
+ * This script ONLY:
+ * 1. Ensures data directory exists
+ * 2. Syncs .env between directories
+ * 3. Rsyncs dist/node_modules/src from build dir to repo dir
+ * 4. Verifies critical files exist
  */
 import { execSync } from "child_process";
 import { dirname, resolve } from "path";
@@ -24,7 +24,7 @@ if (!apiDir.startsWith("/opt/tenmon-ark")) {
   process.exit(0);
 }
 
-console.log(`[sync] v9 apiDir=${apiDir}`);
+console.log(`[sync] v10 apiDir=${apiDir}`);
 
 function run(cmd) {
   try {
@@ -98,18 +98,6 @@ if (apiDir === BUILD_DIR && existsSync(REPO_DIR)) {
   console.log(`[sync] No sync needed (apiDir=${apiDir}, REPO exists=${existsSync(REPO_DIR)})`);
 }
 
-// ── 4. Kill old processes on port 3000 ──
-const myPid = String(process.pid);
-const portPids = run("lsof -ti:3000 2>/dev/null || true");
-if (portPids && !portPids.startsWith("[err")) {
-  for (const pid of portPids.split("\n").filter(p => p.trim() && p.trim() !== myPid)) {
-    console.log(`[sync] Killing old PID ${pid.trim()}`);
-    run(`kill -9 ${pid.trim()} 2>/dev/null || true`);
-  }
-  run("sleep 1");
-}
-
-const portFree = run("lsof -ti:3000 2>/dev/null || echo free");
-console.log(`[sync] Port 3000: ${portFree}`);
-
-console.log("[sync] ✅ v9 complete - deploy.yml will now run systemctl restart");
+// ── 4. NO PROCESS KILLING ──
+// systemctl restart handles stopping old + starting new atomically
+console.log("[sync] ✅ v10 complete - deploy.yml systemctl restart will handle process lifecycle");

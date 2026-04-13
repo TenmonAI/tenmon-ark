@@ -32,92 +32,102 @@ import { markListenReady } from "./health/readiness.js";
 import { initConsciousnessOS } from "./core/consciousnessOS.js";
 import { getDb } from "./db/index.js";
 import koshikiConsoleRouter from "./routes/koshikiConsole.js";
-// sukuyou imported dynamically below to prevent crash if module fails
-let sukuyouRouter: any = null;
+import { writeFileSync, appendFileSync, mkdirSync, existsSync } from "fs";
 
-// Debug: 未処理例外のハンドリング
+// ── Startup diagnostics ──
 const pid = process.pid;
+const startTime = Date.now();
+const startISO = new Date().toISOString();
+
+// Write startup log to file for post-deploy verification
+const logPath = "/tmp/tenmon-ark-startup.log";
+function logStartup(msg: string) {
+  const line = `[${new Date().toISOString()}] PID=${pid} ${msg}\n`;
+  try { appendFileSync(logPath, line); } catch {}
+  console.log(msg);
+}
+
+logStartup(`[SERVER-START] PID=${pid} CWD=${process.cwd()} startTime=${startISO}`);
+
+// ── Exception handlers (log but try to survive) ──
 process.on("uncaughtException", (error) => {
-  const uptime = process.uptime();
-  console.error(`[FATAL] uncaughtException pid=${pid} uptime=${uptime}s:`, error);
-  process.exit(1);
+  logStartup(`[FATAL] uncaughtException: ${error.message}\n${error.stack}`);
+  // Don't exit immediately - give time for the log to be written
+  setTimeout(() => process.exit(1), 100);
 });
 
-process.on("unhandledRejection", (reason, promise) => {
-  const uptime = process.uptime();
-  console.error(`[FATAL] unhandledRejection pid=${pid} uptime=${uptime}s:`, reason);
-  process.exit(1);
+process.on("unhandledRejection", (reason: any) => {
+  logStartup(`[FATAL] unhandledRejection: ${reason?.message || reason}`);
+  setTimeout(() => process.exit(1), 100);
 });
 
 const app = express();
 const PORT = process.env.PORT ? Number(process.env.PORT) : 3000;
 
-// Debug: 起動情報を記録
-const startTime = Date.now();
-const uptime = process.uptime();
-console.log(`[SERVER-START] PID=${pid} uptime=${uptime}s startTime=${new Date().toISOString()}`);
+// ── Database initialization (ALL non-fatal) ──
+logStartup(`[DB-INIT] initializing databases...`);
 
-// Initialize all databases at startup
-console.log(`[DB-INIT] initializing databases at startup pid=${pid} uptime=${uptime}s`);
-try {
-  getDb("kokuzo");
-  // ENSURE_KOKUZO_LAWS_COLUMNS_V1: add optional columns safely (idempotent)
+const dbStatus: Record<string, string> = {};
+
+for (const dbName of ["kokuzo", "audit", "persona", "consciousness"] as const) {
   try {
-    const db = getDb("kokuzo") as any;
-    const cols = (db.prepare("PRAGMA table_info('kokuzo_laws')").all() as any[]).map((r: any) => String(r.name));
-    const has = (name: string) => cols.includes(name);
-
-    if (!has("name")) db.prepare("ALTER TABLE kokuzo_laws ADD COLUMN name TEXT").run();
-    if (!has("definition")) db.prepare("ALTER TABLE kokuzo_laws ADD COLUMN definition TEXT").run();
-    if (!has("evidenceIds")) db.prepare("ALTER TABLE kokuzo_laws ADD COLUMN evidenceIds TEXT").run(); // JSON array
-  } catch (e) {
-    console.error("[DB] ENSURE_KOKUZO_LAWS_COLUMNS_V1 failed:", e);
+    getDb(dbName);
+    if (dbName === "kokuzo") {
+      // ENSURE_KOKUZO_LAWS_COLUMNS_V1
+      try {
+        const db = getDb("kokuzo") as any;
+        const cols = (db.prepare("PRAGMA table_info('kokuzo_laws')").all() as any[]).map((r: any) => String(r.name));
+        const has = (name: string) => cols.includes(name);
+        if (!has("name")) db.prepare("ALTER TABLE kokuzo_laws ADD COLUMN name TEXT").run();
+        if (!has("definition")) db.prepare("ALTER TABLE kokuzo_laws ADD COLUMN definition TEXT").run();
+        if (!has("evidenceIds")) db.prepare("ALTER TABLE kokuzo_laws ADD COLUMN evidenceIds TEXT").run();
+      } catch (e: any) {
+        logStartup(`[DB] ENSURE_KOKUZO_LAWS_COLUMNS_V1 failed: ${e.message}`);
+      }
+    }
+    if (dbName === "consciousness") {
+      try { initConsciousnessOS(); } catch (e: any) {
+        logStartup(`[DB] initConsciousnessOS failed: ${e.message}`);
+      }
+    }
+    dbStatus[dbName] = "ok";
+    logStartup(`[DB-INIT] ${dbName} ready`);
+  } catch (e: any) {
+    dbStatus[dbName] = `error: ${e.message}`;
+    logStartup(`[DB-INIT] WARNING: ${dbName} init failed: ${e.message}`);
+    // Continue - don't exit! The server should start even if some DBs fail.
   }
-
-  console.log(`[DB-INIT] kokuzo ready pid=${pid} uptime=${uptime}s`);
-} catch (e: any) {
-  console.error(`[DB-INIT] FATAL: kokuzo init failed pid=${pid} uptime=${uptime}s:`, e);
-  process.exit(1);
 }
 
-try {
-  getDb("audit");
-  console.log(`[DB-INIT] audit ready pid=${pid} uptime=${uptime}s`);
-} catch (e: any) {
-  console.error(`[DB-INIT] FATAL: audit init failed pid=${pid} uptime=${uptime}s:`, e);
-  process.exit(1);
-}
-
-try {
-  getDb("persona");
-  console.log(`[DB-INIT] persona ready pid=${pid} uptime=${uptime}s`);
-} catch (e: any) {
-  console.error(`[DB-INIT] FATAL: persona init failed pid=${pid} uptime=${uptime}s:`, e);
-  process.exit(1);
-}
-
-try {
-  getDb("consciousness");
-  initConsciousnessOS();
-  console.log(`[DB-INIT] consciousness ready pid=${pid} uptime=${uptime}s`);
-} catch (e: any) {
-  console.error(`[DB-INIT] WARNING: consciousness init failed pid=${pid} uptime=${uptime}s:`, e);
-  // Non-fatal: consciousness is additive, not required for basic operation
-}
-
+// ── Middleware ──
 app.use(cors());
 app.use(express.json());
 app.use(cookieParser());
 
-// Version check endpoint (for deploy verification)
+// ── Version endpoint (FIRST, before all routes) ──
 app.get("/api/version", (_req, res) => {
-  res.json({ version: "2.1.0-sukuyou-consciousness", timestamp: new Date().toISOString(), pid });
+  res.json({
+    version: "2.2.0-sukuyou-consciousness",
+    timestamp: new Date().toISOString(),
+    pid,
+    cwd: process.cwd(),
+    dbStatus,
+    uptime: process.uptime(),
+  });
 });
 
-app.use("/api", kamuRouter);
-// Founder auth endpoints (additive)
-registerFounderAuth(app);
+// ── Health endpoint ──
+app.get("/health", (_, res) => {
+  res.json({ status: "ok", pid, uptime: process.uptime(), dbStatus });
+});
 
+app.get("/api/health", (_, res) => {
+  res.json({ status: "ok", pid, uptime: process.uptime(), dbStatus });
+});
+
+// ── Routes ──
+app.use("/api", kamuRouter);
+registerFounderAuth(app);
 app.use("/api", authRouter);
 app.use("/api", meRouter);
 app.use("/api", auditRouter);
@@ -142,32 +152,23 @@ app.use("/api", readerRouter);
 app.use("/api", seedRouter);
 app.use("/api", selfImproveRouter);
 app.use("/api/kanagi", kanagiRoutes);
-
-// 既存 tenmon
 app.use("/api/tenmon", tenmonRoutes);
 
 // 宿曜経 × 天津金木 × 言霊 統合診断 (dynamic import to prevent crash)
 try {
   const sukuyouMod = await import("./routes/sukuyou.js");
-  sukuyouRouter = sukuyouMod.default;
-  app.use("/api/sukuyou", sukuyouRouter);
-  console.log(`[ROUTE] sukuyou registered`);
+  app.use("/api/sukuyou", sukuyouMod.default);
+  logStartup(`[ROUTE] sukuyou registered`);
 } catch (e: any) {
-  console.error(`[ROUTE] sukuyou failed to load:`, e.message);
+  logStartup(`[ROUTE] sukuyou failed to load: ${e.message}`);
 }
 
-// health check
-app.get("/health", (_, res) => {
-  res.json({ status: "ok" });
-});
-
 app.use(koshikiConsoleRouter);
-app.listen(PORT, "0.0.0.0", () => {
-  const listenTime = Date.now();
-  const elapsed = listenTime - startTime;
-  console.log(`[SERVER-LISTEN] PID=${pid} port=${PORT} listenTime=${new Date().toISOString()} elapsed=${elapsed}ms`);
-  console.log(`API listening on http://0.0.0.0:${PORT}`);
-  markListenReady();
-  console.log(`[READY] listenReady=true`);
-});
 
+// ── Start listening ──
+app.listen(PORT, "0.0.0.0", () => {
+  const elapsed = Date.now() - startTime;
+  logStartup(`[SERVER-LISTEN] port=${PORT} elapsed=${elapsed}ms`);
+  logStartup(`[READY] All routes registered, server is ready`);
+  markListenReady();
+});
