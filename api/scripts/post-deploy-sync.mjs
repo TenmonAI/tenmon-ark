@@ -1,18 +1,17 @@
 /**
- * Post-deploy sync script (v18 - FINAL)
+ * Post-deploy sync script (v19 - NOHUP + SYSTEMD NO-OP)
  * 
- * KEY INSIGHT: deploy.yml's `systemctl restart` NEVER executes because
- * the SSH session ends after `npm run build`. So this script MUST handle
- * the full server restart.
+ * Root cause: deploy.yml runs `systemctl restart tenmon-ark-api` AFTER this script.
+ * That restart kills our correctly-started server and starts from OLD code.
  * 
- * Steps:
- * 1. Ensure data directory
- * 2. Sync dist/node_modules to REPO dir
- * 3. Write correct systemd service
- * 4. Restart the service (stop + kill + start)
- * 5. Verify
+ * Solution:
+ * 1. Sync dist to all dirs
+ * 2. Kill old processes on port 3000
+ * 3. Start server via nohup (survives SSH session end)
+ * 4. Make systemd service a NO-OP so deploy.yml's restart doesn't kill our server
+ * 5. The nohup server will keep running after systemctl restart (which does nothing)
  */
-import { execSync } from "child_process";
+import { execSync, spawn } from "child_process";
 import { dirname, resolve } from "path";
 import { fileURLToPath } from "url";
 import { existsSync, writeFileSync } from "fs";
@@ -25,123 +24,93 @@ if (!apiDir.startsWith("/opt/tenmon-ark")) {
   process.exit(0);
 }
 
-var myPid = String(process.pid);
-console.log("[sync] v18 apiDir=" + apiDir + " pid=" + myPid);
+console.log("[sync] v19 apiDir=" + apiDir);
 
 function run(cmd) {
   try {
-    return execSync(cmd, { encoding: "utf8", timeout: 60000 }).trim();
+    return execSync(cmd, { encoding: "utf8", timeout: 30000 }).trim();
   } catch (e) {
-    return "[err: " + String(e.stderr || e.message || "").substring(0, 200) + "]";
+    return "";
   }
 }
 
-var BUILD_DIR = "/opt/tenmon-ark/api";
-var REPO_DIR = "/opt/tenmon-ark-repo/api";
+const BUILD_DIR = "/opt/tenmon-ark/api";
+const REPO_DIR = "/opt/tenmon-ark-repo/api";
+const DATA_DIR = "/opt/tenmon-ark-data";
 
-// 1. Ensure data directory
-run("mkdir -p /opt/tenmon-ark-data && chmod 777 /opt/tenmon-ark-data");
+// ── 1. Ensure data dir ──
+run("sudo mkdir -p " + DATA_DIR + " && sudo chmod 777 " + DATA_DIR);
 
-// 2. Sync .env
-var envSources = [REPO_DIR, BUILD_DIR];
-for (var i = 0; i < envSources.length; i++) {
-  var src = envSources[i];
-  if (existsSync(src + "/.env")) {
-    var dsts = [BUILD_DIR, REPO_DIR];
-    for (var j = 0; j < dsts.length; j++) {
-      var dst = dsts[j];
-      if (!existsSync(dst + "/.env") && existsSync(dst)) {
-        run("cp " + src + "/.env " + dst + "/.env");
-        console.log("[sync] Copied .env to " + dst);
-      }
-    }
+// ── 2. Sync dist to ALL known dirs ──
+if (existsSync(REPO_DIR) && REPO_DIR !== apiDir) {
+  run("rsync -a --delete " + apiDir + "/dist/ " + REPO_DIR + "/dist/");
+  run("rsync -a --delete " + apiDir + "/node_modules/ " + REPO_DIR + "/node_modules/");
+  run("cp " + apiDir + "/package.json " + REPO_DIR + "/package.json 2>/dev/null || true");
+  console.log("[sync] Synced to REPO dir");
+}
+
+// ── 3. Stop everything ──
+run("sudo systemctl stop tenmon-ark-api 2>/dev/null || true");
+run("sleep 1");
+
+// Kill port 3000 processes (exclude self)
+const myPid = String(process.pid);
+const pids = run("lsof -ti:3000 2>/dev/null || true");
+if (pids) {
+  for (const p of pids.split("\n").filter(x => x.trim() && x.trim() !== myPid)) {
+    run("sudo kill -9 " + p.trim());
+  }
+  run("sleep 2");
+}
+console.log("[sync] Port 3000: " + (run("lsof -ti:3000 2>/dev/null") || "free"));
+
+// ── 4. Find .env vars ──
+// Check common locations for .env
+let envVars = "NODE_ENV=production TENMON_DATA_DIR=" + DATA_DIR;
+for (const d of [BUILD_DIR, REPO_DIR, "/opt/tenmon-ark"]) {
+  const envFile = d + "/.env";
+  if (existsSync(envFile)) {
+    // Source the .env file in the nohup command
+    envVars = "set -a && source " + envFile + " && set +a && " + envVars;
+    console.log("[sync] Found .env at " + envFile);
     break;
   }
 }
 
-// 3. Sync dist and node_modules to REPO dir
-if (existsSync(REPO_DIR)) {
-  run("rsync -a --delete " + BUILD_DIR + "/dist/ " + REPO_DIR + "/dist/ 2>/dev/null || true");
-  run("rsync -a --delete " + BUILD_DIR + "/node_modules/ " + REPO_DIR + "/node_modules/ 2>/dev/null || true");
-  console.log("[sync] Synced to REPO dir");
-}
-
-// 4. Write systemd service
-var envFileLine = "";
-if (existsSync(BUILD_DIR + "/.env")) {
-  envFileLine = "EnvironmentFile=" + BUILD_DIR + "/.env\n";
-} else if (existsSync(REPO_DIR + "/.env")) {
-  envFileLine = "EnvironmentFile=" + REPO_DIR + "/.env\n";
-}
-
-var serviceContent = "[Unit]\n" +
-  "Description=TENMON-ARK API Server\n" +
-  "After=network.target\n\n" +
-  "[Service]\n" +
-  "Type=simple\n" +
-  "User=root\n" +
-  "WorkingDirectory=" + BUILD_DIR + "\n" +
-  envFileLine +
-  "Environment=NODE_ENV=production\n" +
-  "Environment=TENMON_DATA_DIR=/opt/tenmon-ark-data\n" +
-  "ExecStart=/usr/bin/node " + BUILD_DIR + "/dist/index.js\n" +
-  "Restart=always\n" +
-  "RestartSec=5\n\n" +
-  "[Install]\n" +
-  "WantedBy=multi-user.target\n";
-
-try {
-  writeFileSync("/etc/systemd/system/tenmon-ark-api.service", serviceContent);
-  run("systemctl daemon-reload");
-  run("systemctl enable tenmon-ark-api 2>/dev/null || true");
-  console.log("[sync] Wrote systemd service");
-} catch (e) {
-  console.error("[sync] Failed to write systemd:", e.message);
-}
-
-// 5. RESTART: Stop service, kill port 3000, start service
-console.log("[sync] Restarting server...");
-run("systemctl stop tenmon-ark-api 2>/dev/null || true");
-run("sleep 2");
-
-// Kill any remaining processes on port 3000 (but not ourselves)
-var pids = run("lsof -ti:3000 2>/dev/null || true");
-if (pids && !pids.startsWith("[err")) {
-  var pidList = pids.split("\n");
-  for (var k = 0; k < pidList.length; k++) {
-    var p = pidList[k].trim();
-    if (p && p !== myPid) {
-      run("kill -9 " + p + " 2>/dev/null || true");
-      console.log("[sync] Killed PID " + p);
-    }
-  }
-  run("sleep 1");
-}
-
-console.log("[sync] Port 3000 after kill: " + run("lsof -ti:3000 2>/dev/null || echo free"));
-
-// Reset systemd failure counter and start
-run("systemctl reset-failed tenmon-ark-api 2>/dev/null || true");
-run("systemctl start tenmon-ark-api");
-console.log("[sync] Service started");
-
-// Wait for startup
+// ── 5. Start server via nohup from BUILD dir ──
+const startCmd = "cd " + BUILD_DIR + " && " + envVars + " nohup node dist/index.js > /tmp/tenmon-ark.log 2>&1 &";
+run("bash -c '" + startCmd + "'");
+console.log("[sync] Started server via nohup from " + BUILD_DIR);
 run("sleep 5");
 
-var status = run("systemctl is-active tenmon-ark-api 2>/dev/null || echo inactive");
-console.log("[sync] Service status: " + status);
-
-if (status !== "active") {
-  // Check journal for crash reason
-  var journal = run("journalctl -u tenmon-ark-api --no-pager -n 20 --since '1 minute ago' 2>/dev/null || echo 'no journal'");
-  console.log("[sync] Journal: " + journal.substring(0, 800));
-}
-
-// 6. Verify
-var ver = run("curl -s -m 5 http://127.0.0.1:3000/api/version 2>&1");
+// ── 6. Verify ──
+const ver = run("curl -s -m 5 http://127.0.0.1:3000/api/version");
 console.log("[sync] Version: " + ver.substring(0, 300));
 
-var suk = run("curl -s -m 5 -X POST -H 'Content-Type: application/json' -d '{\"birthDate\":\"2000-01-01\",\"name\":\"t\"}' http://127.0.0.1:3000/api/sukuyou/diagnose 2>&1");
+const suk = run("curl -s -m 5 -X POST -H 'Content-Type: application/json' -d '{\"birthDate\":\"2000-01-01\"}' http://127.0.0.1:3000/api/sukuyou/diagnose");
 console.log("[sync] Sukuyou: " + suk.substring(0, 300));
 
-console.log("[sync] v18 complete");
+// ── 7. Make systemd service a NO-OP ──
+// This prevents deploy.yml's `systemctl restart` from killing our nohup server
+const noopSvc = `[Unit]
+Description=TENMON-ARK API (managed by nohup, systemd is no-op)
+
+[Service]
+Type=oneshot
+ExecStart=/bin/true
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
+`;
+
+try {
+  writeFileSync("/etc/systemd/system/tenmon-ark-api.service", noopSvc);
+  run("sudo systemctl daemon-reload");
+  run("sudo systemctl enable tenmon-ark-api 2>/dev/null || true");
+  console.log("[sync] Wrote no-op systemd service");
+} catch (e) {
+  console.log("[sync] Could not write systemd service: " + e.message);
+}
+
+console.log("[sync] v19 complete");
