@@ -4,11 +4,8 @@
  * Strategy:
  * 1. Sync dist/node_modules to REPO dir
  * 2. Write correct systemd service pointing to BUILD dir
- * 3. Spawn a BACKGROUND WATCHDOG script that:
- *    - Waits 30 seconds (for deploy.yml's systemctl restart to complete)
- *    - Checks if port 3000 is serving the correct version
- *    - If not, kills everything and starts with nohup
- * 4. Also list cron jobs for diagnostics
+ * 3. Spawn a BACKGROUND WATCHDOG script that waits 30s then fixes if needed
+ * 4. Diagnostics: list cron jobs, journal
  */
 import { execSync } from "child_process";
 import { dirname, resolve } from "path";
@@ -24,13 +21,13 @@ if (!apiDir.startsWith("/opt/tenmon-ark")) {
 }
 
 const myPid = String(process.pid);
-console.log(`[sync] v15 apiDir=${apiDir} pid=${myPid}`);
+console.log("[sync] v15 apiDir=" + apiDir + " pid=" + myPid);
 
 function run(cmd) {
   try {
     return execSync(cmd, { encoding: "utf8", timeout: 60000 }).trim();
   } catch (e) {
-    return `[err: ${String(e.stderr || e.message || "").substring(0, 200)}]`;
+    return "[err: " + String(e.stderr || e.message || "").substring(0, 200) + "]";
   }
 }
 
@@ -41,12 +38,13 @@ const REPO_DIR = "/opt/tenmon-ark-repo/api";
 run("mkdir -p /opt/tenmon-ark-data && chmod 777 /opt/tenmon-ark-data");
 
 // ── 2. Sync .env ──
-for (const src of [REPO_DIR, BUILD_DIR]) {
-  if (existsSync(\`\${src}/.env\`)) {
+const envSources = [REPO_DIR, BUILD_DIR];
+for (const src of envSources) {
+  if (existsSync(src + "/.env")) {
     for (const dst of [BUILD_DIR, REPO_DIR]) {
-      if (!existsSync(\`\${dst}/.env\`) && existsSync(dst)) {
-        run(\`cp \${src}/.env \${dst}/.env\`);
-        console.log(\`[sync] Copied .env to \${dst}\`);
+      if (!existsSync(dst + "/.env") && existsSync(dst)) {
+        run("cp " + src + "/.env " + dst + "/.env");
+        console.log("[sync] Copied .env to " + dst);
       }
     }
     break;
@@ -55,131 +53,128 @@ for (const src of [REPO_DIR, BUILD_DIR]) {
 
 // ── 3. Sync dist to REPO dir ──
 if (existsSync(REPO_DIR)) {
-  run(\`rsync -a --delete \${BUILD_DIR}/dist/ \${REPO_DIR}/dist/ 2>/dev/null || true\`);
-  run(\`rsync -a --delete \${BUILD_DIR}/node_modules/ \${REPO_DIR}/node_modules/ 2>/dev/null || true\`);
+  run("rsync -a --delete " + BUILD_DIR + "/dist/ " + REPO_DIR + "/dist/ 2>/dev/null || true");
+  run("rsync -a --delete " + BUILD_DIR + "/node_modules/ " + REPO_DIR + "/node_modules/ 2>/dev/null || true");
   console.log("[sync] Synced to REPO dir");
 }
 
 // ── 4. Write correct systemd service ──
 let envFileLine = "";
-if (existsSync(\`\${BUILD_DIR}/.env\`)) {
-  envFileLine = \`EnvironmentFile=\${BUILD_DIR}/.env\`;
-} else if (existsSync(\`\${REPO_DIR}/.env\`)) {
-  envFileLine = \`EnvironmentFile=\${REPO_DIR}/.env\`;
+if (existsSync(BUILD_DIR + "/.env")) {
+  envFileLine = "EnvironmentFile=" + BUILD_DIR + "/.env";
+} else if (existsSync(REPO_DIR + "/.env")) {
+  envFileLine = "EnvironmentFile=" + REPO_DIR + "/.env";
 }
 
-const serviceContent = \`[Unit]
-Description=TENMON-ARK API Server
-After=network.target
-
-[Service]
-Type=simple
-User=root
-WorkingDirectory=\${BUILD_DIR}
-\${envFileLine}
-Environment=NODE_ENV=production
-Environment=TENMON_DATA_DIR=/opt/tenmon-ark-data
-ExecStart=/usr/bin/node \${BUILD_DIR}/dist/index.js
-Restart=always
-RestartSec=5
-
-[Install]
-WantedBy=multi-user.target
-\`;
+const serviceLines = [
+  "[Unit]",
+  "Description=TENMON-ARK API Server",
+  "After=network.target",
+  "",
+  "[Service]",
+  "Type=simple",
+  "User=root",
+  "WorkingDirectory=" + BUILD_DIR,
+  envFileLine,
+  "Environment=NODE_ENV=production",
+  "Environment=TENMON_DATA_DIR=/opt/tenmon-ark-data",
+  "ExecStart=/usr/bin/node " + BUILD_DIR + "/dist/index.js",
+  "Restart=always",
+  "RestartSec=5",
+  "",
+  "[Install]",
+  "WantedBy=multi-user.target",
+  ""
+].filter(l => l !== "").join("\n");
 
 const serviceFile = "/etc/systemd/system/tenmon-ark-api.service";
 try {
-  writeFileSync(serviceFile, serviceContent);
+  writeFileSync(serviceFile, serviceLines);
   run("systemctl daemon-reload");
   run("systemctl unmask tenmon-ark-api 2>/dev/null || true");
   run("systemctl enable tenmon-ark-api 2>/dev/null || true");
-  console.log(\`[sync] Wrote systemd service: WorkingDirectory=\${BUILD_DIR}\`);
+  console.log("[sync] Wrote systemd service: WorkingDirectory=" + BUILD_DIR);
 } catch (e) {
   console.error("[sync] Failed to write systemd service:", e.message);
 }
 
 // ── 5. Diagnostics ──
 const crontab = run("crontab -l 2>/dev/null || echo 'no crontab'");
-console.log(\`[sync] Crontab: \${crontab.substring(0, 300)}\`);
+console.log("[sync] Crontab: " + crontab.substring(0, 500));
 
 const journal = run("journalctl -u tenmon-ark-api --no-pager -n 10 2>/dev/null || echo 'no journal'");
-console.log(\`[sync] Journal (last 10): \${journal.substring(0, 500)}\`);
+console.log("[sync] Journal (last 10): " + journal.substring(0, 500));
 
 // ── 6. Write background watchdog ──
-// This script will run AFTER deploy.yml's systemctl restart completes.
-// It waits 30 seconds, then checks if the server is running the correct version.
-// If not, it kills everything and starts with nohup.
-const watchdogScript = \`#!/bin/bash
-# Watchdog for TENMON-ARK deploy (auto-generated by post-deploy-sync v15)
-LOG=/tmp/tenmon-ark-watchdog.log
-echo "[watchdog] Started at \\$(date)" > \\$LOG
-
-# Wait for deploy.yml's systemctl restart to complete
-sleep 30
-echo "[watchdog] Checking server..." >> \\$LOG
-
-# Check if version endpoint responds correctly
-VERSION=\\$(curl -s -m 5 http://127.0.0.1:3000/api/version 2>/dev/null)
-echo "[watchdog] Version response: \\$VERSION" >> \\$LOG
-
-if echo "\\$VERSION" | grep -q "sukuyou-consciousness"; then
-  echo "[watchdog] Server is running correct version. Done." >> \\$LOG
-  exit 0
-fi
-
-echo "[watchdog] Server NOT running correct version. Fixing..." >> \\$LOG
-
-# Kill everything on port 3000
-systemctl stop tenmon-ark-api 2>/dev/null || true
-sleep 2
-PIDS=\\$(lsof -ti:3000 2>/dev/null || true)
-if [ -n "\\$PIDS" ]; then
-  echo "[watchdog] Killing PIDs: \\$PIDS" >> \\$LOG
-  echo "\\$PIDS" | xargs kill -9 2>/dev/null || true
-  sleep 2
-fi
-
-# Load .env if available
-ENV_FILE=""
-if [ -f "\${BUILD_DIR}/.env" ]; then
-  ENV_FILE="\${BUILD_DIR}/.env"
-elif [ -f "\${REPO_DIR}/.env" ]; then
-  ENV_FILE="\${REPO_DIR}/.env"
-fi
-
-if [ -n "\\$ENV_FILE" ]; then
-  set -a
-  source "\\$ENV_FILE"
-  set +a
-fi
-
-export NODE_ENV=production
-export TENMON_DATA_DIR=/opt/tenmon-ark-data
-
-# Start server with nohup
-cd \${BUILD_DIR}
-nohup /usr/bin/node dist/index.js >> /tmp/tenmon-ark-server.log 2>&1 &
-echo "[watchdog] Started server with PID \\$!" >> \\$LOG
-
-sleep 5
-
-# Verify
-VERSION2=\\$(curl -s -m 5 http://127.0.0.1:3000/api/version 2>/dev/null)
-echo "[watchdog] Version after fix: \\$VERSION2" >> \\$LOG
-
-if echo "\\$VERSION2" | grep -q "sukuyou-consciousness"; then
-  echo "[watchdog] ✅ Server fixed successfully" >> \\$LOG
-else
-  echo "[watchdog] ❌ Server still not working" >> \\$LOG
-fi
-\`;
+const watchdogLines = [
+  "#!/bin/bash",
+  "# Watchdog for TENMON-ARK deploy (auto-generated by post-deploy-sync v15)",
+  "LOG=/tmp/tenmon-ark-watchdog.log",
+  'echo "[watchdog] Started at $(date)" > $LOG',
+  "",
+  "# Wait for deploy.yml systemctl restart to complete",
+  "sleep 30",
+  'echo "[watchdog] Checking server..." >> $LOG',
+  "",
+  "# Check if version endpoint responds correctly",
+  "VERSION=$(curl -s -m 5 http://127.0.0.1:3000/api/version 2>/dev/null)",
+  'echo "[watchdog] Version response: $VERSION" >> $LOG',
+  "",
+  'if echo "$VERSION" | grep -q "sukuyou-consciousness"; then',
+  '  echo "[watchdog] Server is running correct version. Done." >> $LOG',
+  "  exit 0",
+  "fi",
+  "",
+  'echo "[watchdog] Server NOT running correct version. Fixing..." >> $LOG',
+  "",
+  "# Kill everything on port 3000",
+  "systemctl stop tenmon-ark-api 2>/dev/null || true",
+  "sleep 2",
+  "PIDS=$(lsof -ti:3000 2>/dev/null || true)",
+  'if [ -n "$PIDS" ]; then',
+  '  echo "[watchdog] Killing PIDs: $PIDS" >> $LOG',
+  '  echo "$PIDS" | xargs kill -9 2>/dev/null || true',
+  "  sleep 2",
+  "fi",
+  "",
+  "# Load .env if available",
+  'if [ -f "' + BUILD_DIR + '/.env" ]; then',
+  "  set -a",
+  '  source "' + BUILD_DIR + '/.env"',
+  "  set +a",
+  'elif [ -f "' + REPO_DIR + '/.env" ]; then',
+  "  set -a",
+  '  source "' + REPO_DIR + '/.env"',
+  "  set +a",
+  "fi",
+  "",
+  "export NODE_ENV=production",
+  "export TENMON_DATA_DIR=/opt/tenmon-ark-data",
+  "",
+  "# Start server with nohup",
+  "cd " + BUILD_DIR,
+  "nohup /usr/bin/node dist/index.js >> /tmp/tenmon-ark-server.log 2>&1 &",
+  'echo "[watchdog] Started server with PID $!" >> $LOG',
+  "",
+  "sleep 5",
+  "",
+  "# Verify",
+  "VERSION2=$(curl -s -m 5 http://127.0.0.1:3000/api/version 2>/dev/null)",
+  'echo "[watchdog] Version after fix: $VERSION2" >> $LOG',
+  "",
+  'if echo "$VERSION2" | grep -q "sukuyou-consciousness"; then',
+  '  echo "[watchdog] Server fixed successfully" >> $LOG',
+  "else",
+  '  echo "[watchdog] Server still not working" >> $LOG',
+  "fi"
+].join("\n");
 
 const watchdogPath = "/tmp/tenmon-ark-watchdog.sh";
-writeFileSync(watchdogPath, watchdogScript);
-run(\`chmod +x \${watchdogPath}\`);
+writeFileSync(watchdogPath, watchdogLines);
+run("chmod +x " + watchdogPath);
 
 // Launch watchdog in background (detached from this process)
-run(\`nohup bash \${watchdogPath} > /dev/null 2>&1 &\`);
+run("nohup bash " + watchdogPath + " > /dev/null 2>&1 &");
 console.log("[sync] Launched background watchdog (will check in 30s)");
 
-console.log("[sync] ✅ v15 complete");
+console.log("[sync] v15 complete");
