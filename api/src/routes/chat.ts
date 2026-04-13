@@ -987,10 +987,23 @@ let outText = "";
           console.log("[SUKUYOU_ORACLE] Oracle bypass route used, outLen=" + outText.length);
         } catch (e: any) {
           console.error("[SUKUYOU_ORACLE] LLM error, falling back to raw report:", e?.message);
-          // フォールバック: 御神託レポートをそのまま返す
-          const rawReport = __sukuyouContextClause.split("【天聞アーク御神託レポート（アルゴリズム算出）】")[1]?.split("【天聞アーク御神託応答指示")[0]?.trim() || "";
-          outText = rawReport;
+          outText = "";
           outProv = "deterministic+oracle";
+        }
+        // SUKUYOU_ORACLE_FALLBACK_V2: LLMが空応答を返した場合、rawReportにフォールバック
+        if (!outText) {
+          console.warn("[SUKUYOU_ORACLE] LLM returned empty, falling back to raw report");
+          const rawReport = __sukuyouContextClause.split("【天聞アーク御神託レポート（アルゴリズム算出）】")[1]?.split("【天聞アーク御神託応答指示")[0]?.trim() || "";
+          if (rawReport) {
+            outText = rawReport;
+            outProv = "deterministic+oracle";
+            console.log("[SUKUYOU_ORACLE] rawReport fallback used, len=" + rawReport.length);
+          } else {
+            // 最終フォールバック: 御神託パイプラインのコンテキスト全文を返す
+            outText = __sukuyouContextClause.replace(/\n\n【天聞アーク御神託応答指示[​\s\S]*$/, "").trim();
+            outProv = "deterministic+context";
+            console.log("[SUKUYOU_ORACLE] context fallback used, len=" + outText.length);
+          }
         }
       } else {
         // 通常ルート（宿曜コンテキストはあるが御神託レポートなし、または一般質問）
