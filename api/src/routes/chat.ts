@@ -626,8 +626,9 @@ const pid = process.pid;
         if (t.length < 60) t = "【天聞の所見】いま何を一緒に整えますか？（一言でOK）";
         return t;
       };
-      outText = __n1ClampOneQ(outText);
-
+       outText = __n1ClampOneQ(outText);
+      // TENMON_N1_PERSIST_V1: N1挨拶応答もメモリに保存してfollow-up continuityを確保
+      try { persistTurn(String(threadId || ""), t0, outText); } catch (__e) { console.debug("[N1_PERSIST]", __e); }
       return res.json(__tenmonGeneralGateResultMaybe({
         response: outText,
         evidence: null,
@@ -889,6 +890,8 @@ const DEF_SYSTEM = __isDefDomain
       if (!__isDefDomain) {
         outText = __tenmonClampOneQ(outText);
       }
+      // TENMON_DEF_PERSIST_V1: DEF応答もメモリに保存してfollow-up continuityを確保
+      try { persistTurn(String(threadId || ""), t0, outText); } catch (__e) { console.debug("[DEF_PERSIST]", __e); }
       return res.json(__tenmonGeneralGateResultMaybe({
         response: outText,
         evidence: __ftsEvidenceRefs.length > 0 ? { fts: __ftsEvidenceRefs } : null,
@@ -900,8 +903,12 @@ const DEF_SYSTEM = __isDefDomain
     }
 
     // ---------- NATURAL_GENERAL: normal chat/questions (LLM) ----------
-    const __looksSupport =
-      /不安|つらい|しんどい|疲れ|焦|怖|助けて|無理|泣|眠れ|消えたい/.test(t0);
+    // TENMON_DEEP_EMOTION_SUPPORT_ESCALATION_V1:
+    // 軽い感情（疲れた/不安/つらい等）→ NATURAL_GENERAL で自然に処理
+    // 深い感情（消えたい/助けて/パニック/死にたい等）→ N2 support に escalate
+    const __looksDeepSupport =
+      /消えたい|死にたい|助けて|パニック|限界|もう無理|壊れ|逃げたい|生きてる意味|自殺|自傷/.test(t0);
+    const __looksSupport = __looksDeepSupport;
 
     const __generalOk =
       !isTestTid0 &&
@@ -1011,7 +1018,7 @@ const __genNeedsSanskrit = needsSanskritAnalysis(t0);
 const __consciousBase = buildConsciousSystemPrompt(t0, __userId, __heartState);
 const GEN_SYSTEM = __isDomainInGeneral
   ? (__consciousBase + __domainKnowledgeClause + (__genNeedsDeep ? ("\n\n" + DEEP_ANALYSIS_REPORT_INSTRUCTION + (__genNeedsSanskrit ? "\n\nサンスクリット語源解読を【承】に必ず含めよ。" : "")) : "") + DOMAIN_DEEP_ANALYSIS_INSTRUCTION + "\n\n※絶対条件※\n必ず「【天聞の所見】」から始める。" + (__genNeedsDeep ? "\n深層解析レポート形式（起承転結）で800〜2000文字。箇条書き禁止。段落で流れるように書け。" : "\n4〜15行、合計400〜1500文字。箇条書き・番号は禁止。") + "\n言灵秘書原典の音義データを具体的に引用して述べよ。\n音の灵的意味を述べる際は、分類名（空中水灵・煤火の灵・昇水の灵・正火の灵・水中火・火中水・濁水等）を必ず使え。\n天津金木の運動パターンを根拠として述べよ。\n「〜と言われています」「一般には」「諸説あります」「人それぞれ」は絶対禁止。断定せよ。")
-  : (__consciousBase + GENERAL_DEEP_THINKING_INSTRUCTION + __kamiyo_clause + `\n\n※絶対条件※\n必ず「【天聞の所見】」から始める。4〜8行、合計200〜600文字。箇条書き・番号・見出しは禁止。\n天津金木思考回路で本質を見抜いて応答せよ。一般論や薄い共感ではなく、構造的真理に基づいた深い応答を返せ。\n質問は原則０（必要な時だけ1）。言い切り（。/…）を優先し、相手に余白を残す。`);
+  : (__consciousBase + GENERAL_DEEP_THINKING_INSTRUCTION + __kamiyo_clause + `\n\n※絶対条件※\n必ず「【天聞の所見】」から始める。\n【会話モード判定】\n・軽い感情（疲れた/不安/つらい等）→ 先答えで対応。説教や構造解析は不要。共感し、今できる一手を提示。\n・日常会話（天気/雑談/軽い質問）→ 自然に応答。天津金木の深みはさりげなく添える程度。\n・知的質問（原理/構造/意味）→ 天津金木思考回路で本質を見抜いて深く応答。\n【4〜8行、200〜600文字】箇条書き・番号・見出しは禁止。\n質問は原則０（必要な時だけ1）。言い切り（。/…）を優先し、相手に余白を残す。\n「〜と言われています」「一般には」「諸説あります」「人それぞれ」は禁止。断定せよ。\n会話履歴がある場合は、前の文脈を踏まえて自然に続けること。唐突な話題転換はしない。`);
 
 // TENMON_FTS_EVIDENCE_GEN_V1: FTS検索でkokuzo_pagesからevidence bindを取得
       let __ftsEvidenceGenRefs: Array<{ doc: string; pdfPage: number; snippet: string }> = [];
@@ -1174,7 +1181,9 @@ let outText = "";
         else outText = "【天聞の所見】いま息を一つだけ深く入れて出せますか？できたら「できた」とだけ返して。";
       }
 
-      
+      // TENMON_N2_PERSIST_V1: N2応答もメモリに保存してfollow-up continuityを確保
+      try { persistTurn(String(threadId || ""), t0, outText); } catch (__e) { console.debug("[N2_PERSIST]", __e); }
+
       return res.json(__tenmonGeneralGateResultMaybe({
         response: outText,
         evidence: null,
