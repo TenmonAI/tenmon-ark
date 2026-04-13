@@ -126,11 +126,9 @@ router.post("/compatibility", async (req: Request, res: Response) => {
       });
     }
 
-    // 各人の命宿と名前解析
-    const lunarA = solarToLunar(birthA);
-    const lunarB = solarToLunar(birthB);
-    const shukuA = calculateHonmeiShuku(lunarA);
-    const shukuB = calculateHonmeiShuku(lunarB);
+    // 各人の命宿と名前解析（Date型を渡してルックアップテーブルを優先使用）
+    const shukuA = calculateHonmeiShuku(birthA);
+    const shukuB = calculateHonmeiShuku(birthB);
 
     const nameA = personA.name ? analyzeNameKotodama(String(personA.name)) : null;
     const nameB = personB.name ? analyzeNameKotodama(String(personB.name)) : null;
@@ -184,7 +182,7 @@ router.get("/daily", async (_req: Request, res: Response) => {
     const dailyNakshatra = calculateDailyNakshatra(today);
     const dailyPlanet = calculateDailyPlanet(today);
     const juniChoku = calculateJuniChoku(lunarToday.month, lunarToday.day);
-    const yunenHakke = calculateYunenHakke(today.getFullYear());
+    const yunenHakke = calculateYunenHakke(today.getUTCFullYear());
     const threeLayer = calculateThreeLayerPhase(today);
 
     const shukuData = NAKSHATRA_DATA[dailyNakshatra];

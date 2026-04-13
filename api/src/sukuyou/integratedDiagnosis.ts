@@ -437,9 +437,9 @@ export function runCompleteDiagnosis(
 
   // 5. 総合解釈テキスト生成（超高品質版）
   const shukuData = sukuyou.shukuData;
-  const birthYear = birthDate.getFullYear();
-  const birthMonth = birthDate.getMonth() + 1;
-  const birthDay = birthDate.getDate();
+  const birthYear = birthDate.getUTCFullYear();
+  const birthMonth = birthDate.getUTCMonth() + 1;
+  const birthDay = birthDate.getUTCDate();
   const dateStr = `${birthYear}年${birthMonth}月${birthDay}日`;
 
   let fullInterpretation = `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;

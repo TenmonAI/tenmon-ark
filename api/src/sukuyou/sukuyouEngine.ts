@@ -65,33 +65,33 @@ export type JuniChoku = "建" | "除" | "満" | "平" | "定" | "執" | "破" | 
  * syukuyo.comの表示順序に完全一致
  */
 const MS_TO_NAKSHATRA: Record<number, Nakshatra> = {
-  1: "觜",   // ししゅく
-  2: "畢",   // ひっしゅく
-  3: "昴",   // ぼうしゅく
-  4: "胃",   // いしゅく
-  5: "婁",   // ろうしゅく
+  1: "昴",   // ぼうしゅく
+  2: "畢",   // ひつしゅく
+  3: "觜",   // ししゅく
+  4: "参",   // さんしゅく
+  5: "井",   // せいしゅく
   6: "鬼",   // きしゅく
-  7: "井",   // せいしゅく
-  8: "参",   // さんしゅく
-  9: "奎",   // けいしゅく
-  10: "壁",  // へきしゅく
-  11: "室",  // しつしゅく
-  12: "危",  // きしゅく
-  13: "虚",  // きょしゅく
-  14: "女",  // じょしゅく
-  15: "斗",  // としゅく
+  7: "柳",   // りゅうしゅく
+  8: "星",   // せいしゅく
+  9: "張",   // ちょうしゅく
+  10: "翼",  // よくしゅく
+  11: "軫",  // しんしゅく
+  12: "角",  // かくしゅく
+  13: "亢",  // こうしゅく
+  14: "氐",  // ていしゅく
+  15: "房",  // ぼうしゅく
   16: "心",  // しんしゅく
-  17: "箕",  // きしゅく
-  18: "尾",  // びしゅく
-  19: "房",  // ぼうしゅく
-  20: "氐",  // ていしゅく
-  21: "亢",  // こうしゅく
-  22: "角",  // かくしゅく
-  23: "軫",  // しんしゅく
-  24: "翼",  // よくしゅく
-  25: "張",  // ちょうしゅく
-  26: "星",  // せいしゅく
-  27: "柳",  // りゅうしゅく
+  17: "尾",  // びしゅく
+  18: "箕",  // きしゅく
+  19: "斗",  // としゅく
+  20: "女",  // じょしゅく
+  21: "虚",  // きょしゅく
+  22: "危",  // きしゅく
+  23: "室",  // しつしゅく
+  24: "壁",  // へきしゅく
+  25: "奎",  // けいしゅく
+  26: "婁",  // ろうしゅく
+  27: "胃",  // いしゅく
 };
 
 // ============================================
@@ -729,9 +729,9 @@ export function calculateHonmeiShuku(birthDateOrLunar: Date | LunarDate): Naksha
 
 /** 日付をYYYYMMDD形式のキーに変換 */
 function formatDateKey(date: Date): string {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, "0");
-  const d = String(date.getDate()).padStart(2, "0");
+  const y = date.getUTCFullYear();
+  const m = String(date.getUTCMonth() + 1).padStart(2, "0");
+  const d = String(date.getUTCDate()).padStart(2, "0");
   return `${y}${m}${d}`;
 }
 
@@ -754,7 +754,7 @@ function calculateHonmeiShukuFromLunar(lunarDate: LunarDate): Nakshatra {
  * 本命曜の算出
  */
 export function calculateHonmeiYo(birthDate: Date): Planet {
-  const dayOfWeek = birthDate.getDay();
+  const dayOfWeek = birthDate.getUTCDay();
   return PLANETS[dayOfWeek];
 }
 
@@ -925,7 +925,7 @@ export function calculateDailyNakshatra(date: Date): Nakshatra {
 }
 
 export function calculateDailyPlanet(date: Date): Planet {
-  return PLANETS[date.getDay()];
+  return PLANETS[date.getUTCDay()];
 }
 
 // ============================================
@@ -980,7 +980,7 @@ export function runFullDiagnosis(birthDate: Date): FullDiagnosisResult {
   const juniChoku = calculateJuniChoku(todayLunar.month, todayLunar.day);
 
   // 7. 年運算出
-  const yunenHakke = calculateYunenHakke(today.getFullYear());
+  const yunenHakke = calculateYunenHakke(today.getUTCFullYear());
 
   return {
     lunarDate, honmeiShuku, shukuData, honmeiYo, planetData, kyusei,
