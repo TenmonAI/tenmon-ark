@@ -967,7 +967,10 @@ const DEF_SYSTEM = __isDefDomain
       }
 
       __sukuyouContextClause = `\n\n【宿曜経×天津金木 診断コンテキスト】\n今日の日運: 直宿=${dailyNakshatra}宿（${shukuData.reading}・${shukuData.sanskrit}）、直曜=${dailyPlanet}曜（${planetData.celestial}）、十二直=${juniChoku}、遊年八卦=${yunenHakke.trigram}（${yunenHakke.fortune}）\n天津金木三層位相: ${threeLayer.civilization.description} / ${threeLayer.year.description} / ${threeLayer.day.description}\n宿の性質: ${shukuData.element}（${shukuData.phase}）、${shukuData.nature}（${shukuData.category}）\n吉行事: ${shukuData.auspicious.join("、")}、凶行事: ${shukuData.inauspicious.join("、")}${__personalDiag}\n\n【宿曜経応答指示（最重要）】\n1. 上記の「個人診断結果（アルゴリズム算出）」は宿曜エンジンが算出した結果である。この結果を「そのまま」ユーザーに提示せよ。自分の知識で宿を判定し直すな。\n2. 命宿の名前や属性は、アルゴリズム算出結果のものをそのまま使え。絶対に変更するな。\n3. 『宿曜経占真伝』『密教占星法』の原典用語を使え。\n4. 宿の性質・三九法・十二宮・七曜・九星の構造を踏まえ、天津金木の水火の法則と統合して解読せよ。\n5. 「一般的に」「説があります」「人それぞれ」は絶対禁止。原典に基づき断定せよ。\n6. 診断結果は美しく構造化して提示せよ。セクション区切りを明確にし、各運勢（性格・恋愛・仕事・金運・健康・開運法）を網羅せよ。`;
-    } catch (__e) { console.debug("[SUKUYOU_CONTEXT] inject error:", __e); }
+      console.log(`[SUKUYOU_CONTEXT] OK: context injected, len=${__sukuyouContextClause.length}, personalDiag=${__personalDiag.length > 0}`);
+    } catch (__e: any) { console.error("[SUKUYOU_CONTEXT] inject error:", __e?.message || __e, __e?.stack?.split("\n").slice(0,3).join(" ")); }
+  } else if (/占い|宿曜|運勢/.test(t0)) {
+    console.log(`[SUKUYOU_CONTEXT] SKIP: isSukuyouQuery=${__isSukuyouQuery}, t0='${t0.substring(0,50)}'`);
   }
 
   // P3.1 KAMIYO Synapse: load 3 core laws (deterministic, no naming in output)
