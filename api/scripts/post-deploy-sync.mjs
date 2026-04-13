@@ -132,8 +132,10 @@ console.log(`[sync] Sukuyou: ${suk.substring(0, 200)}`);
 const startupLog = run("cat /tmp/tenmon-ark-startup.log 2>/dev/null || echo 'no log'");
 console.log(`[sync] Startup log:\n${startupLog.substring(0, 500)}`);
 
-// ── 7. Disable systemd service so deploy.yml's restart doesn't interfere ──
-run("systemctl disable tenmon-ark-api 2>/dev/null || true");
-console.log("[sync] Disabled systemd service to prevent interference");
+// ── 7. MASK systemd service so deploy.yml's `systemctl restart` FAILS completely ──
+// `systemctl disable` only prevents auto-start on boot; `restart` still works.
+// `systemctl mask` makes ALL systemctl operations fail, protecting our nohup process.
+run("systemctl mask tenmon-ark-api 2>/dev/null || true");
+console.log("[sync] Masked systemd service to prevent interference");
 
 console.log("[sync] ✅ v11 complete");
