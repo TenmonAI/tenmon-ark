@@ -1,45 +1,78 @@
 /**
  * ============================================================
- *  SUKUYOU PAGE — 宿曜鑑定専用ページ
- * ============================================================
- *
- * 入力フォーム → guidance API → レポート表示 → コピー → チャットへ送る
+ *  SUKUYOU PAGE — 宿曜鑑定専用ページ (web/ 版)
+ *  UX v2: 初期表示簡素化 + 折りたたみ + 鑑定直下チャット
  * ============================================================
  */
-import { useState, useCallback } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { toast } from "sonner";
-import { ArrowLeft, Copy, Send, Loader2, Star } from "lucide-react";
-import { useLocation } from "wouter";
+import React, { useState, useCallback, useRef, useEffect } from "react";
 
 interface GuidanceResult {
   success: boolean;
   honmeiShuku: string;
   disasterType: string;
   reversalAxis: string;
-  oracle: string;
+  oracle: { shortOracle: string; longOracle: string; oneActionNow?: string } | string;
   report: {
-    chapters: Array<{ title: string; body: string }>;
+    chapters: Array<{ number: number; title: string; content: string; source?: string }>;
     fullText: string;
     charCount: number;
   };
   premise: {
     birthDate: string;
     name: string | null;
-    nakshatra: string;
-    nakshatraJp: string;
     confidence: number;
+    mode?: string;
   };
   warnings: string[];
+  sukuyouSeedV1?: {
+    version: string;
+    birthDate: string;
+    name: string | null;
+    honmeiShuku: string;
+    disasterType: string;
+    reversalAxis: string;
+    userConcern: string | null;
+    coreQuestion: string;
+    deepChatPrompts: string[];
+    lifeAlgo: {
+      outerPersona: string;
+      innerPersona: string;
+      motivationRoot: string;
+      fearRoot: string;
+      repeatingFailurePattern: string;
+    };
+  };
 }
 
-export default function SukuyouPage() {
-  const [, navigate] = useLocation();
+interface ChatMessage {
+  role: "user" | "assistant";
+  text: string;
+}
 
+interface SukuyouPageProps {
+  onBack: () => void;
+  onSendToChat?: (displayText: string, rawSeed: string, deepChatPrompt?: string) => void;
+}
+
+/* ── 質問チップ定義 ── */
+const QUESTION_CHIPS = [
+  "仕事への活かし方を教えて",
+  "人間関係の注意点を詳しく",
+  "お金の流れを読み解いて",
+  "反転軸を明日からどう使う？",
+  "言霊の意味をやさしく教えて",
+  "今の一手だけ教えて",
+];
+
+/* ── 用語ツールチップ定義 ── */
+const GLOSSARY: Record<string, string> = {
+  "反転軸": "今の自分の偏りを反対方向へ切り替えるための軸のこと。外へ出しすぎている力を内へ向けることなどを指します",
+  "躰用": "今の自分のエネルギーが、守りの時期（躰）か攻めの時期（用）かを示す指標",
+  "水火属性": "水（受容・内向）と火（発動・外向）の性質のバランスを表す概念",
+  "潜象": "目には見えないエネルギーの世界のこと。カタカムナでは現象の背後にある力の源として語られます",
+};
+
+export function SukuyouPage({ onBack, onSendToChat }: SukuyouPageProps) {
   // Form state
   const [birthYear, setBirthYear] = useState("");
   const [birthMonth, setBirthMonth] = useState("");
@@ -51,6 +84,22 @@ export default function SukuyouPage() {
   const [result, setResult] = useState<GuidanceResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [copyMsg, setCopyMsg] = useState<string | null>(null);
+
+  // UI state
+  const [showChapters, setShowChapters] = useState(false);
+  const [expandedChapters, setExpandedChapters] = useState<Set<number>>(new Set());
+
+  // Inline chat state
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [chatInput, setChatInput] = useState("");
+  const [chatLoading, setChatLoading] = useState(false);
+  const chatEndRef = useRef<HTMLDivElement>(null);
+  const chatThreadId = useRef<string>(`sukuyou-${Date.now()}`);
+
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [chatMessages]);
 
   const handleSubmit = useCallback(async () => {
     if (!birthYear || !birthMonth || !birthDay) {
@@ -69,11 +118,14 @@ export default function SukuyouPage() {
     setLoading(true);
     setError(null);
     setResult(null);
+    setChatMessages([]);
+    chatThreadId.current = `sukuyou-${Date.now()}`;
 
     try {
       const res = await fetch("/api/sukuyou/guidance", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({
           birthDate,
           name: name.trim() || null,
@@ -87,6 +139,28 @@ export default function SukuyouPage() {
       }
       const data = await res.json();
       setResult(data);
+
+      // 鑑定完了時にseedをチャットAPIに送信して文脈を確立
+      const sv = data.sukuyouSeedV1;
+      if (sv) {
+        const rawSeed = `[SUKUYOU_SEED] ${JSON.stringify(sv)}`;
+        try {
+          const seedRes = await fetch("/api/chat", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({
+              message: rawSeed,
+              sessionId: chatThreadId.current,
+              threadId: chatThreadId.current,
+            }),
+          });
+          // seedの応答は表示しない（文脈確立のみ）
+          await seedRes.json().catch(() => {});
+        } catch {
+          // seed送信失敗は無視
+        }
+      }
     } catch (err: any) {
       setError(err.message || "鑑定中にエラーが発生しました");
     } finally {
@@ -98,240 +172,534 @@ export default function SukuyouPage() {
     if (!result?.report?.fullText) return;
     try {
       await navigator.clipboard.writeText(result.report.fullText);
-      toast.success("鑑定レポートをクリップボードにコピーしました");
+      setCopyMsg("コピーしました");
     } catch {
-      // Fallback for non-HTTPS
       const textarea = document.createElement("textarea");
       textarea.value = result.report.fullText;
       document.body.appendChild(textarea);
       textarea.select();
       document.execCommand("copy");
       document.body.removeChild(textarea);
-      toast.success("鑑定レポートをクリップボードにコピーしました");
+      setCopyMsg("コピーしました");
     }
+    setTimeout(() => setCopyMsg(null), 2000);
   }, [result]);
 
   const handleSendToChat = useCallback(() => {
     if (!result) return;
-    const seed = `[SUKUYOU_SEED] ${result.premise?.birthDate || ""} / ${result.honmeiShuku || ""} / ${result.disasterType || ""}`;
-    // Navigate to chat with the seed as a query parameter
-    navigate(`/chat?sukuyouSeed=${encodeURIComponent(seed)}`);
-  }, [result, navigate]);
+    const sv = result.sukuyouSeedV1;
+    const rawSeed = sv
+      ? `[SUKUYOU_SEED] ${JSON.stringify(sv)}`
+      : `[SUKUYOU_SEED] ${result.premise?.birthDate || ""} / ${result.honmeiShuku || ""} / ${result.disasterType || ""}`;
+    const displayText = `宿曜鑑定の結果を土台に、これから真相解析を深めます。本命宿は${result.honmeiShuku || "不明"}、災い分類は${result.disasterType || "不明"}、反転軸は${result.reversalAxis || "不明"}です。`;
+    const deepPrompt = sv?.deepChatPrompts?.[0] || undefined;
+    if (onSendToChat) {
+      onSendToChat(displayText, rawSeed, deepPrompt);
+    }
+  }, [result, onSendToChat]);
+
+  /* ── 鑑定直下チャット送信 ── */
+  const sendChatMessage = useCallback(async (text: string) => {
+    if (!text.trim() || chatLoading || !result) return;
+
+    const userMsg: ChatMessage = { role: "user", text: text.trim() };
+    setChatMessages(prev => [...prev, userMsg]);
+    setChatInput("");
+    setChatLoading(true);
+
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          message: text.trim(),
+          sessionId: chatThreadId.current,
+          threadId: chatThreadId.current,
+        }),
+      });
+      const data = await res.json();
+      const assistantMsg: ChatMessage = {
+        role: "assistant",
+        text: data.response || "応答を取得できませんでした",
+      };
+      setChatMessages(prev => [...prev, assistantMsg]);
+    } catch {
+      setChatMessages(prev => [...prev, { role: "assistant", text: "通信エラーが発生しました。もう一度お試しください。" }]);
+    } finally {
+      setChatLoading(false);
+    }
+  }, [chatLoading, result]);
+
+  const toggleChapter = (num: number) => {
+    setExpandedChapters(prev => {
+      const next = new Set(prev);
+      if (next.has(num)) next.delete(num);
+      else next.add(num);
+      return next;
+    });
+  };
+
+  /* ── 御神託テキスト取得 ── */
+  const getOracleShort = () => {
+    if (!result?.oracle) return "";
+    if (typeof result.oracle === "string") return result.oracle;
+    return result.oracle.shortOracle || "";
+  };
+  const getOneAction = () => {
+    if (!result?.oracle || typeof result.oracle === "string") return "";
+    return result.oracle.oneActionNow || "";
+  };
+
+  /* ── スタイル定数 ── */
+  const cardStyle: React.CSSProperties = {
+    background: "var(--gpt-hover-bg, rgba(255,255,255,0.04))",
+    border: "1px solid rgba(212, 175, 55, 0.2)",
+    borderRadius: 12,
+    padding: "1.25rem",
+    marginBottom: "1rem",
+  };
+  const goldText: React.CSSProperties = { color: "#d4af37" };
+  const subText: React.CSSProperties = { color: "var(--text-sub, #888)" };
+  const chipStyle: React.CSSProperties = {
+    padding: "6px 14px",
+    borderRadius: 20,
+    fontSize: 12,
+    background: "rgba(212, 175, 55, 0.08)",
+    border: "1px solid rgba(212, 175, 55, 0.25)",
+    color: "#d4af37",
+    cursor: "pointer",
+    whiteSpace: "nowrap",
+  };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 text-slate-100">
+    <div className="sukuyou-page" style={{ height: "100%", overflowY: "auto", color: "var(--text)", padding: "0 0 2rem" }}>
       {/* Header */}
-      <div className="sticky top-0 z-10 bg-slate-950/80 backdrop-blur-md border-b border-amber-500/20 px-4 py-3">
-        <div className="max-w-3xl mx-auto flex items-center gap-3">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => navigate("/chat")}
-            className="text-amber-400 hover:text-amber-300"
+      <div style={{
+        position: "sticky", top: 0, zIndex: 10,
+        background: "var(--bg)", borderBottom: "1px solid rgba(212, 175, 55, 0.2)",
+        padding: "0.75rem 1rem",
+      }}>
+        <div style={{ maxWidth: 720, margin: "0 auto", display: "flex", alignItems: "center", gap: 12 }}>
+          <button
+            type="button"
+            onClick={onBack}
+            style={{
+              background: "none", border: "none", color: "#d4af37", cursor: "pointer",
+              fontSize: 18, padding: "4px 8px", borderRadius: 4,
+            }}
+            aria-label="戻る"
           >
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
+            ← 戻る
+          </button>
           <div>
-            <h1 className="text-lg font-bold text-amber-400 flex items-center gap-2">
-              <Star className="w-5 h-5" />
+            <h1 style={{ fontSize: 18, fontWeight: 700, ...goldText, margin: 0 }}>
               宿曜鑑定
             </h1>
-            <p className="text-xs text-slate-400">天聞アーク御神託パイプライン</p>
+            <p style={{ fontSize: 11, ...subText, margin: 0 }}>
+              天聞アーク御神託パイプライン
+            </p>
           </div>
         </div>
       </div>
 
-      <div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
-        {/* Input Form */}
-        <Card className="bg-slate-800/50 border-amber-500/20">
-          <CardHeader>
-            <CardTitle className="text-amber-400 text-base">基本情報</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {/* Birth Date */}
-            <div>
-              <Label className="text-slate-300 text-sm">生年月日（必須）</Label>
-              <div className="flex gap-2 mt-1">
-                <Input
-                  type="number"
-                  placeholder="1979"
-                  value={birthYear}
-                  onChange={(e) => setBirthYear(e.target.value)}
-                  className="bg-slate-700/50 border-slate-600 text-slate-100 w-24"
-                  min={1900}
-                  max={2025}
-                />
-                <span className="text-slate-400 self-center">年</span>
-                <Input
-                  type="number"
-                  placeholder="9"
-                  value={birthMonth}
-                  onChange={(e) => setBirthMonth(e.target.value)}
-                  className="bg-slate-700/50 border-slate-600 text-slate-100 w-16"
-                  min={1}
-                  max={12}
-                />
-                <span className="text-slate-400 self-center">月</span>
-                <Input
-                  type="number"
-                  placeholder="20"
-                  value={birthDay}
-                  onChange={(e) => setBirthDay(e.target.value)}
-                  className="bg-slate-700/50 border-slate-600 text-slate-100 w-16"
-                  min={1}
-                  max={31}
-                />
-                <span className="text-slate-400 self-center">日</span>
-              </div>
-            </div>
+      <div style={{ maxWidth: 720, margin: "0 auto", padding: "1.5rem 1rem" }}>
+        {/* ── 入力フォーム ── */}
+        <div style={cardStyle}>
+          <h2 style={{ fontSize: 15, fontWeight: 600, ...goldText, marginBottom: 16 }}>
+            基本情報
+          </h2>
 
-            {/* Name */}
-            <div>
-              <Label className="text-slate-300 text-sm">名前（任意）</Label>
-              <Input
-                type="text"
-                placeholder="横山航介"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="bg-slate-700/50 border-slate-600 text-slate-100 mt-1"
+          {/* Birth Date */}
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ fontSize: 13, ...subText, display: "block", marginBottom: 6 }}>
+              生年月日（必須）
+            </label>
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <input
+                type="number" placeholder="1990" value={birthYear}
+                onChange={(e) => setBirthYear(e.target.value)}
+                min={1900} max={2025}
+                style={{
+                  width: 80, padding: "8px 10px", borderRadius: 6,
+                  background: "var(--gpt-input-bg, rgba(255,255,255,0.06))",
+                  border: "1px solid var(--gpt-border, rgba(255,255,255,0.12))",
+                  color: "var(--text)", fontSize: 14,
+                }}
               />
-            </div>
-
-            {/* Concern */}
-            <div>
-              <Label className="text-slate-300 text-sm">現在の悩み・相談内容（任意）</Label>
-              <Textarea
-                placeholder="最近、仕事の方向性に迷いがあります…"
-                value={concern}
-                onChange={(e) => setConcern(e.target.value)}
-                className="bg-slate-700/50 border-slate-600 text-slate-100 mt-1 min-h-[80px]"
+              <span style={subText}>年</span>
+              <input
+                type="number" placeholder="1" value={birthMonth}
+                onChange={(e) => setBirthMonth(e.target.value)}
+                min={1} max={12}
+                style={{
+                  width: 56, padding: "8px 10px", borderRadius: 6,
+                  background: "var(--gpt-input-bg, rgba(255,255,255,0.06))",
+                  border: "1px solid var(--gpt-border, rgba(255,255,255,0.12))",
+                  color: "var(--text)", fontSize: 14,
+                }}
               />
+              <span style={subText}>月</span>
+              <input
+                type="number" placeholder="1" value={birthDay}
+                onChange={(e) => setBirthDay(e.target.value)}
+                min={1} max={31}
+                style={{
+                  width: 56, padding: "8px 10px", borderRadius: 6,
+                  background: "var(--gpt-input-bg, rgba(255,255,255,0.06))",
+                  border: "1px solid var(--gpt-border, rgba(255,255,255,0.12))",
+                  color: "var(--text)", fontSize: 14,
+                }}
+              />
+              <span style={subText}>日</span>
             </div>
+          </div>
 
-            {/* Submit */}
-            <Button
-              onClick={handleSubmit}
-              disabled={loading}
-              className="w-full bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold"
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  鑑定中…
-                </>
-              ) : (
-                "御神託を受ける"
-              )}
-            </Button>
+          {/* Name */}
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ fontSize: 13, ...subText, display: "block", marginBottom: 6 }}>
+              名前（任意）
+            </label>
+            <input
+              type="text" placeholder="お名前（任意）" value={name}
+              onChange={(e) => setName(e.target.value)}
+              style={{
+                width: "100%", padding: "8px 12px", borderRadius: 6,
+                background: "var(--gpt-input-bg, rgba(255,255,255,0.06))",
+                border: "1px solid var(--gpt-border, rgba(255,255,255,0.12))",
+                color: "var(--text)", fontSize: 14, boxSizing: "border-box",
+              }}
+            />
+          </div>
 
-            {error && (
-              <div className="text-red-400 text-sm bg-red-900/20 border border-red-500/30 rounded p-3">
-                {error}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+          {/* Concern */}
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ fontSize: 13, ...subText, display: "block", marginBottom: 6 }}>
+              現在の悩み・相談内容（任意）
+            </label>
+            <textarea
+              placeholder="最近、仕事の方向性に迷いがあります…"
+              value={concern}
+              onChange={(e) => setConcern(e.target.value)}
+              rows={3}
+              style={{
+                width: "100%", padding: "8px 12px", borderRadius: 6,
+                background: "var(--gpt-input-bg, rgba(255,255,255,0.06))",
+                border: "1px solid var(--gpt-border, rgba(255,255,255,0.12))",
+                color: "var(--text)", fontSize: 14, resize: "vertical",
+                boxSizing: "border-box", fontFamily: "inherit",
+              }}
+            />
+          </div>
 
-        {/* Result */}
+          {/* Submit */}
+          <button
+            type="button" onClick={handleSubmit} disabled={loading}
+            style={{
+              width: "100%", padding: "12px 0", borderRadius: 8,
+              background: loading ? "#7a6a20" : "#d4af37",
+              color: "#1a1a1a", fontWeight: 700, fontSize: 15,
+              border: "none", cursor: loading ? "wait" : "pointer",
+              opacity: loading ? 0.7 : 1,
+            }}
+          >
+            {loading ? "鑑定中…" : "鑑定する"}
+          </button>
+
+          {error && (
+            <div style={{
+              marginTop: 12, padding: 12, borderRadius: 8,
+              background: "rgba(220, 38, 38, 0.1)",
+              border: "1px solid rgba(220, 38, 38, 0.3)",
+              color: "#f87171", fontSize: 13,
+            }}>
+              {error}
+            </div>
+          )}
+        </div>
+
+        {/* ════════════════════════════════════════════════════════
+            鑑定結果 — UX v2: 初期表示は要約カードのみ
+           ════════════════════════════════════════════════════════ */}
         {result && (
-          <div className="space-y-4">
-            {/* Summary Card */}
-            <Card className="bg-slate-800/50 border-amber-500/30">
-              <CardHeader>
-                <CardTitle className="text-amber-400 text-base flex items-center gap-2">
-                  <Star className="w-4 h-4" />
-                  鑑定結果
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div>
-                    <span className="text-slate-400">本命宿:</span>
-                    <span className="ml-2 text-amber-300 font-bold">{result.honmeiShuku}</span>
-                  </div>
-                  {result.premise?.name && (
-                    <div>
-                      <span className="text-slate-400">名前:</span>
-                      <span className="ml-2 text-slate-200">{result.premise.name}</span>
-                    </div>
-                  )}
-                  <div>
-                    <span className="text-slate-400">災い分類:</span>
-                    <span className="ml-2 text-slate-200">{result.disasterType}</span>
-                  </div>
-                  <div>
-                    <span className="text-slate-400">反転軸:</span>
-                    <span className="ml-2 text-slate-200">{result.reversalAxis}</span>
-                  </div>
-                </div>
-                {result.oracle && (
-                  <div className="mt-3 p-3 bg-amber-500/10 border border-amber-500/20 rounded">
-                    <p className="text-sm text-amber-200 font-medium">御神託</p>
-                    <p className="text-slate-200 text-sm mt-1">{result.oracle}</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+          <div>
+            {/* ── 第一層: 要約カード ── */}
+            <div style={{
+              ...cardStyle,
+              border: "1px solid rgba(212, 175, 55, 0.4)",
+              background: "linear-gradient(135deg, rgba(212,175,55,0.06) 0%, rgba(212,175,55,0.02) 100%)",
+            }}>
+              <h2 style={{ fontSize: 16, fontWeight: 700, ...goldText, marginBottom: 16, textAlign: "center" }}>
+                鑑定結果
+              </h2>
 
-            {/* Full Report */}
-            <Card className="bg-slate-800/50 border-slate-600/50">
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="text-amber-400 text-base">御神託レポート全文</CardTitle>
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleCopy}
-                    className="border-amber-500/30 text-amber-400 hover:bg-amber-500/10"
-                  >
-                    <Copy className="w-3 h-3 mr-1" />
-                    コピー
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleSendToChat}
-                    className="border-amber-500/30 text-amber-400 hover:bg-amber-500/10"
-                  >
-                    <Send className="w-3 h-3 mr-1" />
-                    チャットへ送る
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="prose prose-invert prose-sm max-w-none">
-                  <pre className="whitespace-pre-wrap text-slate-200 text-sm leading-relaxed font-sans bg-transparent p-0 m-0">
-                    {result.report.fullText}
-                  </pre>
-                </div>
-                <div className="mt-3 text-xs text-slate-500 text-right">
-                  {result.report.charCount.toLocaleString()} 文字
-                </div>
-              </CardContent>
-            </Card>
+              {/* 本命宿 大きく表示 */}
+              <div style={{ textAlign: "center", marginBottom: 16 }}>
+                <div style={{ fontSize: 28, fontWeight: 800, ...goldText }}>{result.honmeiShuku}</div>
+                <div style={{ fontSize: 12, ...subText, marginTop: 4 }}>本命宿</div>
+              </div>
 
-            {/* Chapters (collapsible) */}
-            {result.report.chapters && result.report.chapters.length > 0 && (
-              <Card className="bg-slate-800/50 border-slate-600/50">
-                <CardHeader>
-                  <CardTitle className="text-amber-400 text-base">章別表示</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {result.report.chapters.map((ch, i) => (
-                    <div key={i} className="border-b border-slate-700/50 pb-3 last:border-0">
-                      <h3 className="text-amber-300 text-sm font-bold mb-1">{ch.title}</h3>
-                      <p className="text-slate-300 text-sm whitespace-pre-wrap">{ch.body}</p>
+              {/* 災い分類 + 反転軸 */}
+              <div style={{
+                display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16,
+              }}>
+                <div style={{
+                  padding: "10px 12px", borderRadius: 8,
+                  background: "rgba(212, 175, 55, 0.06)",
+                  border: "1px solid rgba(212, 175, 55, 0.15)",
+                  textAlign: "center",
+                }}>
+                  <div style={{ fontSize: 11, ...subText, marginBottom: 4 }}>災い分類</div>
+                  <div style={{ fontSize: 14, fontWeight: 600 }}>{result.disasterType}</div>
+                </div>
+                <div style={{
+                  padding: "10px 12px", borderRadius: 8,
+                  background: "rgba(212, 175, 55, 0.06)",
+                  border: "1px solid rgba(212, 175, 55, 0.15)",
+                  textAlign: "center",
+                }}>
+                  <div style={{ fontSize: 11, ...subText, marginBottom: 4 }}>反転軸</div>
+                  <div style={{ fontSize: 14, fontWeight: 600 }}>{result.reversalAxis}</div>
+                </div>
+              </div>
+
+              {/* 御神託 */}
+              {getOracleShort() && (
+                <div style={{
+                  padding: "14px 16px", borderRadius: 10,
+                  background: "rgba(212, 175, 55, 0.08)",
+                  border: "1px solid rgba(212, 175, 55, 0.2)",
+                  marginBottom: 12, textAlign: "center",
+                }}>
+                  <div style={{ fontSize: 11, ...goldText, fontWeight: 600, marginBottom: 6 }}>御神託</div>
+                  <div style={{ fontSize: 14, lineHeight: 1.7 }}>{getOracleShort()}</div>
+                </div>
+              )}
+
+              {/* 今すぐの一手 */}
+              {getOneAction() && (
+                <div style={{
+                  padding: "12px 16px", borderRadius: 10,
+                  background: "rgba(212, 175, 55, 0.04)",
+                  border: "1px dashed rgba(212, 175, 55, 0.25)",
+                  textAlign: "center",
+                }}>
+                  <div style={{ fontSize: 11, ...goldText, fontWeight: 600, marginBottom: 4 }}>今すぐの一手</div>
+                  <div style={{ fontSize: 13, lineHeight: 1.6 }}>{getOneAction()}</div>
+                </div>
+              )}
+            </div>
+
+            {/* ── 詳しく読む（折りたたみ） ── */}
+            <div style={cardStyle}>
+              <button
+                type="button"
+                onClick={() => setShowChapters(!showChapters)}
+                style={{
+                  width: "100%", padding: "10px 0",
+                  background: "transparent", border: "none",
+                  color: "#d4af37", fontSize: 14, fontWeight: 600,
+                  cursor: "pointer", display: "flex", justifyContent: "center",
+                  alignItems: "center", gap: 8,
+                }}
+              >
+                {showChapters ? "詳細レポートを閉じる ▲" : "詳しく読む ▼"}
+              </button>
+
+              {showChapters && (
+                <div style={{ marginTop: 16 }}>
+                  {/* コピー・チャットへ送るボタン */}
+                  <div style={{ display: "flex", gap: 8, marginBottom: 16, justifyContent: "flex-end" }}>
+                    <button
+                      type="button" onClick={handleCopy}
+                      style={{
+                        padding: "6px 12px", borderRadius: 6, fontSize: 12,
+                        background: "transparent",
+                        border: "1px solid rgba(212, 175, 55, 0.3)",
+                        ...goldText, cursor: "pointer",
+                      }}
+                    >
+                      {copyMsg || "コピー"}
+                    </button>
+                    {onSendToChat && (
+                      <button
+                        type="button" onClick={handleSendToChat}
+                        style={{
+                          padding: "6px 12px", borderRadius: 6, fontSize: 12,
+                          background: "transparent",
+                          border: "1px solid rgba(212, 175, 55, 0.3)",
+                          ...goldText, cursor: "pointer",
+                        }}
+                      >
+                        チャットへ送る
+                      </button>
+                    )}
+                  </div>
+
+                  {/* 章別表示（アコーディオン） */}
+                  {result.report.chapters.map((ch) => (
+                    <div key={ch.number} style={{
+                      borderBottom: "1px solid var(--gpt-border, rgba(255,255,255,0.08))",
+                      marginBottom: 8,
+                    }}>
+                      <button
+                        type="button"
+                        onClick={() => toggleChapter(ch.number)}
+                        style={{
+                          width: "100%", padding: "10px 0",
+                          background: "transparent", border: "none",
+                          color: "var(--text)", fontSize: 13, fontWeight: 600,
+                          cursor: "pointer", display: "flex",
+                          justifyContent: "space-between", alignItems: "center",
+                          textAlign: "left",
+                        }}
+                      >
+                        <span>
+                          <span style={goldText}>第{ch.number}章</span>
+                          <span style={{ marginLeft: 8 }}>{ch.title}</span>
+                        </span>
+                        <span style={{ ...subText, fontSize: 12 }}>
+                          {expandedChapters.has(ch.number) ? "▲" : "▼"}
+                        </span>
+                      </button>
+                      {expandedChapters.has(ch.number) && (
+                        <div style={{ padding: "0 0 12px", fontSize: 13, lineHeight: 1.7 }}>
+                          {ch.source && (
+                            <span style={{
+                              fontSize: 10, padding: "1px 6px", borderRadius: 4,
+                              background: "rgba(212, 175, 55, 0.12)",
+                              border: "1px solid rgba(212, 175, 55, 0.25)",
+                              ...goldText, display: "inline-block", marginBottom: 8,
+                            }}>
+                              {ch.source}
+                            </span>
+                          )}
+                          <div style={{ whiteSpace: "pre-wrap" }}>{ch.content}</div>
+                        </div>
+                      )}
                     </div>
                   ))}
-                </CardContent>
-              </Card>
-            )}
+
+                  {/* 文字数 */}
+                  <div style={{ fontSize: 11, ...subText, textAlign: "right", marginTop: 8 }}>
+                    {result.report.charCount.toLocaleString()} 文字
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* ── 鑑定直下チャット ── */}
+            <div style={{
+              ...cardStyle,
+              border: "1px solid rgba(212, 175, 55, 0.3)",
+            }}>
+              <h3 style={{ fontSize: 14, fontWeight: 600, ...goldText, marginBottom: 12 }}>
+                この鑑定についてもっと聞く
+              </h3>
+
+              {/* 質問チップ */}
+              {chatMessages.length === 0 && (
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 16 }}>
+                  {QUESTION_CHIPS.map((chip) => (
+                    <button
+                      key={chip} type="button"
+                      onClick={() => sendChatMessage(chip)}
+                      disabled={chatLoading}
+                      style={{
+                        ...chipStyle,
+                        opacity: chatLoading ? 0.5 : 1,
+                      }}
+                    >
+                      {chip}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* チャット履歴 */}
+              {chatMessages.length > 0 && (
+                <div style={{
+                  maxHeight: 400, overflowY: "auto",
+                  marginBottom: 12, padding: "8px 0",
+                }}>
+                  {chatMessages.map((msg, i) => (
+                    <div key={i} style={{
+                      display: "flex",
+                      justifyContent: msg.role === "user" ? "flex-end" : "flex-start",
+                      marginBottom: 8,
+                    }}>
+                      <div style={{
+                        maxWidth: "85%", padding: "10px 14px", borderRadius: 12,
+                        fontSize: 13, lineHeight: 1.7, whiteSpace: "pre-wrap",
+                        background: msg.role === "user"
+                          ? "rgba(212, 175, 55, 0.15)"
+                          : "var(--gpt-hover-bg, rgba(255,255,255,0.06))",
+                        border: msg.role === "user"
+                          ? "1px solid rgba(212, 175, 55, 0.3)"
+                          : "1px solid var(--gpt-border, rgba(255,255,255,0.1))",
+                      }}>
+                        {msg.text}
+                      </div>
+                    </div>
+                  ))}
+                  {chatLoading && (
+                    <div style={{ display: "flex", justifyContent: "flex-start", marginBottom: 8 }}>
+                      <div style={{
+                        padding: "10px 14px", borderRadius: 12, fontSize: 13,
+                        background: "var(--gpt-hover-bg, rgba(255,255,255,0.06))",
+                        border: "1px solid var(--gpt-border, rgba(255,255,255,0.1))",
+                        ...subText,
+                      }}>
+                        考え中…
+                      </div>
+                    </div>
+                  )}
+                  <div ref={chatEndRef} />
+                </div>
+              )}
+
+              {/* チャット入力欄 */}
+              <div style={{ display: "flex", gap: 8 }}>
+                <input
+                  type="text"
+                  placeholder="自由に質問する…"
+                  value={chatInput}
+                  onChange={(e) => setChatInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      sendChatMessage(chatInput);
+                    }
+                  }}
+                  disabled={chatLoading}
+                  style={{
+                    flex: 1, padding: "10px 14px", borderRadius: 8,
+                    background: "var(--gpt-input-bg, rgba(255,255,255,0.06))",
+                    border: "1px solid var(--gpt-border, rgba(255,255,255,0.12))",
+                    color: "var(--text)", fontSize: 13, boxSizing: "border-box",
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => sendChatMessage(chatInput)}
+                  disabled={chatLoading || !chatInput.trim()}
+                  style={{
+                    padding: "10px 16px", borderRadius: 8,
+                    background: chatInput.trim() ? "#d4af37" : "rgba(212, 175, 55, 0.3)",
+                    color: "#1a1a1a", fontWeight: 600, fontSize: 13,
+                    border: "none", cursor: chatInput.trim() ? "pointer" : "default",
+                  }}
+                >
+                  送信
+                </button>
+              </div>
+            </div>
 
             {/* Warnings */}
             {result.warnings && result.warnings.length > 0 && (
-              <div className="text-xs text-slate-500 space-y-1">
+              <div style={{ fontSize: 11, ...subText }}>
                 {result.warnings.map((w, i) => (
-                  <p key={i}>{w}</p>
+                  <p key={i} style={{ margin: "2px 0" }}>{w}</p>
                 ))}
               </div>
             )}

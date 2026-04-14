@@ -934,19 +934,13 @@ function generateLongOracle(
   reversal: AmatsuKanagiReversal,
   kotodama: IrohaKotodamaGuidance
 ): string {
+  // UX v2: 第8章は「魂への祈り」として凝縮。第1/4/5章の繰り返しを削除。
   const lines: string[] = [];
 
   lines.push(`${honmeiShuku}宿に宿る魂よ。`);
   lines.push("");
-  lines.push(`あなたが今感じている苦しみは、偶然ではない。`);
-  lines.push(`それは${honmeiShuku}宿が生まれながらに持つ「${lifeAlgo.motivationRoot}」という力が、`);
-  lines.push(`「${disaster.corePattern}」という形で偏り、災いとして現れたものである。`);
-  lines.push("");
-  lines.push(`この災いの本質は、${reversal.collapseMechanism}。`);
-  lines.push(`しかし、この崩壊の中にこそ、反転の種がある。`);
-  lines.push("");
-  lines.push(`天津金木の理が示す反転軸は「${reversal.reversalAxis}」。`);
-  lines.push(`${reversal.blessingShift}。`);
+  lines.push(`あなたの苦しみは罰ではない。`);
+  lines.push(`それは、あなたが本来の道へ戻るために現れた徴である。`);
   lines.push("");
 
   if (kotodama.soulDirection) {
@@ -954,9 +948,6 @@ function generateLongOracle(
     lines.push("");
   }
 
-  lines.push(`あなたの苦しみは罰ではない。`);
-  lines.push(`それは、あなたが本来の道へ戻るために現れた徴である。`);
-  lines.push("");
   lines.push(`今必要なのは、大きな変化ではない。`);
   lines.push(`「${reversal.actionKeywords[0] || "一歩"}」という、たった一つの選択である。`);
   lines.push(`その一歩が、門になる。`);
@@ -1002,9 +993,8 @@ function formatReport(
       lines.push("");
     }
     lines.push(`${diagnosis.honmeiShuku}宿に宿る魂は、「${lifeAlgo.motivationRoot}」を根源的な動力とする。`);
-    lines.push(`現在の悩みの核心は「${concern.coreQuestion}」であり、これは${disaster.corePattern}の災い構造と深く連動している。`);
-    lines.push(`天津金木の理が示す反転軸は「${reversal.reversalAxis}」。${reversal.blessingShift}。`);
-    lines.push(`この鑑定は、あなたの苦しみの構造を解き明かし、反転の道筋を示すものである。`);
+    lines.push(`現在の悩みの核心は「${concern.coreQuestion}」であり、これは${disaster.corePattern}の構造と深く繋がっている。`);
+    lines.push(`この鑑定では、その構造を解き明かし、変化への道筋を示す。`);
     chapters.push({ number: 1, title: "総合神意サマリー", content: lines.join("\n"), source: "天聞アーク総合裁定" });
   }
 
@@ -1076,53 +1066,87 @@ function formatReport(
     chapters.push({ number: 3, title: "人生アルゴリズム真相解析", content: lines.join("\n"), source: "天聞アーク独自解釈" });
   }
 
-  // === 第4章: 災い分類解析 ===
+  // === 第4章: 今の悩みとの接続 ===
   {
     const lines: string[] = [];
-    lines.push(`【主災い型】${disaster.corePattern}`);
-    lines.push(`【副災い型】${disaster.subPattern}`);
-    lines.push(`【水火の偏り】${disaster.fireWaterImbalance}`);
+    lines.push(`【やさしい説明】`);
+    // 日常語で先に意味を伝える
+    if (disaster.corePattern === "過剰責任型") {
+      lines.push(`あなたには、人のために力を尽くせる素晴らしい性質があります。`);
+      lines.push(`ただ、その力が自分よりも他者へ向きすぎると、気づかないうちに疲れ果ててしまうことがあります。`);
+      lines.push(`天聞アークではこれを「過剰責任型」と呼びます。`);
+    } else if (disaster.corePattern === "孤立暴走型") {
+      lines.push(`あなたには、自分の力で道を切り開く強さがあります。`);
+      lines.push(`ただ、その強さが極端に出ると、周囲との繋がりが薄れ、一人で抱え込みやすくなります。`);
+      lines.push(`天聞アークではこれを「孤立暴走型」と呼びます。`);
+    } else {
+      lines.push(`あなたの持つ力が、ある方向に偏りすぎると、それが悩みの種になることがあります。`);
+      lines.push(`天聞アークではこの偏りを「${disaster.corePattern}」と呼びます。`);
+    }
     lines.push("");
-    lines.push(`【発火条件】`);
+    if (concern.currentConcern && concern.currentConcern !== "特定の悩みは未入力。総合鑑定として解析する。") {
+      lines.push(`あなたが感じている「${concern.coreQuestion}」という悩みは、この構造と深く繋がっています。`);
+      lines.push("");
+    }
+    lines.push(`【専門説明】`);
+    lines.push(`主災い型: ${disaster.corePattern}`);
+    lines.push(`副災い型: ${disaster.subPattern}`);
+    lines.push(`水火の偏り: ${disaster.fireWaterImbalance}`);
+    lines.push("");
+    lines.push(`発火条件:`);
     for (const trigger of disaster.triggerConditions) {
       lines.push(`  ・${trigger}`);
     }
     lines.push("");
-    lines.push(`【崩壊パターン】${disaster.collapsePattern}`);
-    lines.push(`【回復の鍵】${disaster.recoveryKey}`);
+    lines.push(`崩壊パターン: ${disaster.collapsePattern}`);
     lines.push("");
-    lines.push(`【各領域への影響】`);
+    lines.push(`各領域への影響:`);
     lines.push(`  対人リスク: ${disaster.relationRisk}`);
     lines.push(`  金銭リスク: ${disaster.moneyRisk}`);
     lines.push(`  心身リスク: ${disaster.bodyRisk}`);
     lines.push(`  時期リスク: ${disaster.timingRisk}`);
     lines.push("");
-    lines.push(`${diagnosis.honmeiShuku}宿の災いは「${disaster.corePattern}」として現れる。`);
-    lines.push(`これは性格の欠点ではなく、${lifeAlgo.motivationRoot}という力が偏ったときに生じる構造的な崩壊パターンである。`);
-    lines.push(`この災いを知ることが、反転の第一歩となる。`);
-    chapters.push({ number: 4, title: "災い分類解析", content: lines.join("\n"), source: "天聞アーク独自解釈" });
+    lines.push(`この構造を知ることが、次の章で示す変化への入り口となります。`);
+    chapters.push({ number: 4, title: "今の悩みとの接続", content: lines.join("\n"), source: "天聞アーク独自解釈" });
   }
 
-  // === 第5章: 天津金木反転解析 ===
+  // === 第5章: 天津金木による反転法 ===
   {
     const lines: string[] = [];
-    lines.push(`【現在優勢な力】${reversal.dominantForce}`);
-    lines.push(`【補助的な力】${reversal.secondaryForce}`);
-    lines.push(`【崩壊を生む偏り】${reversal.imbalanceAxis}`);
+    // やさしい説明を先に
+    lines.push(`【やさしい説明】`);
+    const axParts = reversal.reversalAxis.split("/").map(s => s.trim());
+    if (axParts[0] && axParts[0].includes("→")) {
+      const [from, to] = axParts[0].split("→").map(s => s.trim());
+      if (from === "外発" && to === "内集") {
+        lines.push(`今のあなたは、外へ力を出し続けて自分の中が空になりやすい状態です。`);
+        lines.push(`次のステップは、外へ出すより先に自分を満たす方向へ切り替えることです。`);
+        lines.push(`まず自分を満たしてから、また外へ向かう。これが反転軸の伝えることです。`);
+      } else if (from === "内集" && to === "外発") {
+        lines.push(`今のあなたは、内側に力を溜め込みすぎて、外への流れが滞っている状態です。`);
+        lines.push(`次のステップは、少しずつ外へ開くことです。`);
+        lines.push(`小さな一歩でも外へ向かうことが、流れを取り戻す鍵になります。`);
+      } else {
+        lines.push(`今のあなたに必要なのは、「${from}」から「${to}」への切り替えです。`);
+        lines.push(`大きな変化ではなく、日常の中で少しずつ方向を変えることが大切です。`);
+      }
+    } else {
+      lines.push(`今のあなたに必要なのは、力の方向を少し変えることです。`);
+    }
     lines.push("");
-    lines.push(`【なぜその偏りが災いになるか】`);
-    lines.push(`${reversal.collapseMechanism}`);
+    lines.push(`これは「悪いものを消す」のではなく、偏った力を本来の方向へ戻すことです。`);
+    if (reversal.actionKeywords[0]) {
+      lines.push(`具体的には、「${reversal.actionKeywords[0]}」を意識することから始めてみてください。`);
+    }
     lines.push("");
-    lines.push(`【反転軸】${reversal.reversalAxis}`);
-    lines.push(`【幸への移行】${reversal.blessingShift}`);
+    lines.push(`【専門説明】`);
+    lines.push(`反転軸: ${reversal.reversalAxis}`);
+    lines.push(`幸への移行: ${reversal.blessingShift}`);
+    lines.push(`行動キーワード: ${reversal.actionKeywords.join("、")}`);
     lines.push("");
-    lines.push(`【行動キーワード】${reversal.actionKeywords.join("、")}`);
-    lines.push("");
-    lines.push(`天津金木の理において、すべての災いは水火の偏りから生じる。`);
-    lines.push(`${disaster.corePattern}は${reversal.imbalanceAxis}の状態であり、${reversal.reversalAxis}への転換が求められている。`);
-    lines.push(`これは「悪いものを消す」のではなく、「偏った力を本来の方向へ戻す」ことである。`);
-    lines.push(`${reversal.blessingShift}。`);
-    chapters.push({ number: 5, title: "天津金木反転解析", content: lines.join("\n"), source: "天津金木解釈" });
+    lines.push(`現在優勢な力: ${reversal.dominantForce}`);
+    lines.push(`補助的な力: ${reversal.secondaryForce}`);
+    chapters.push({ number: 5, title: "天津金木による反転法", content: lines.join("\n"), source: "天津金木解釈" });
   }
 
   // === 第6章: いろは言霊解 ===
