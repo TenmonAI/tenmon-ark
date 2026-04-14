@@ -72,11 +72,15 @@ const title =
           ? "宿曜鑑定"
           : "Profile";
 
-  const handleSukuyouSendToChat = (seed: string) => {
-    // Switch to chat view and inject the seed
+  const handleSukuyouSendToChat = (seed: string, deepChatPrompt?: string) => {
+    // P2: Switch to chat view and inject the structured seed
     setView("chat");
     try {
       sessionStorage.setItem("TENMON_SUKUYOU_SEED", seed);
+      // P4: 深層チャット起動プロンプトも保存
+      if (deepChatPrompt) {
+        sessionStorage.setItem("TENMON_SUKUYOU_DEEP_PROMPT", deepChatPrompt);
+      }
     } catch {}
     switchThreadCanonicalV1(createNewThreadId());
   };

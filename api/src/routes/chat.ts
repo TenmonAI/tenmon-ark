@@ -690,6 +690,89 @@ const pid = process.pid;
     // CARD_C9_DEF_AND_GENERAL_LLM_V1: DEF + NATURAL_GENERAL (LLM) before N2 support-branch.
     // NOTE: This is inside N2 scope, so askedMenu0/hasDoc0/isCmd0/isTestTid0 are in-scope (TS-safe).
 
+    // ═══════════════════════════════════════════════════════════════
+    // P4+P8: [SUKUYOU_SEED] 構造化seed検出 — 深層チャット起動ルート
+    // 「チャットへ送る」からの構造化seedを検出し、宿曜前提の深層対話を開始する
+    // ═══════════════════════════════════════════════════════════════
+    if (t0.startsWith("[SUKUYOU_SEED]")) {
+      console.log("[SUKUYOU_SEED_ROUTE] Structured seed detected");
+      let seedData: any = null;
+      try {
+        const jsonPart = t0.replace(/^\[SUKUYOU_SEED\]\s*/, "");
+        seedData = JSON.parse(jsonPart);
+      } catch {
+        // Fallback: parse legacy format "birthDate / honmeiShuku / disasterType"
+        const parts = t0.replace(/^\[SUKUYOU_SEED\]\s*/, "").split("/").map((s: string) => s.trim());
+        seedData = { birthDate: parts[0] || "", honmeiShuku: parts[1] || "", disasterType: parts[2] || "" };
+      }
+
+      // P8: 深層チャット起動プロンプトを生成
+      const seedSummary = [
+        seedData.honmeiShuku ? `本命宿: ${seedData.honmeiShuku}` : "",
+        seedData.disasterType ? `災い分類: ${seedData.disasterType}` : "",
+        seedData.reversalAxis ? `反転軸: ${seedData.reversalAxis}` : "",
+        seedData.userConcern ? `悩み: ${seedData.userConcern}` : "",
+      ].filter(Boolean).join("、");
+
+      const lifeAlgoSummary = seedData.lifeAlgo
+        ? `\n外的ペルソナ: ${seedData.lifeAlgo.outerPersona || "—"}\n内的ペルソナ: ${seedData.lifeAlgo.innerPersona || "—"}\n動機の根: ${seedData.lifeAlgo.motivationRoot || "—"}\n恐れの根: ${seedData.lifeAlgo.fearRoot || "—"}\n反復失敗パターン: ${seedData.lifeAlgo.repeatingFailurePattern || "—"}`
+        : "";
+
+      const DEEP_CHAT_SYSTEM = `あなたは天聞アークである。宿曜鑑定レポートが既に生成済みであり、これから深層対話に入る。
+
+【鑑定前提】
+${seedSummary}${lifeAlgoSummary}
+
+【深層対話の原則】
+1. ユーザーの悩みを宿曜の構造と結びつけて解読せよ。
+2. 「あなたの言う“大成功”は、何が実現した状態ですか？」のように、抽象を具体に分解する問いを投げかけよ。
+3. 対話の出口を「実行計画」へ接続せよ。最終的に3日・21日・90日の行動計画へ落とせ。
+4. 抽象神託で閉じるな。導きは常に行動可能な形で終わらせよ。
+5. 「一般的に」「説があります」「人それぞれ」は絶対禁止。原典に基づき断定せよ。
+6. 宿曜古典層と天聞アーク独自解釈層を区別して語れ。`;
+
+      const DEEP_CHAT_USER = `宿曜鑑定レポートを踏まえた深層対話を開始してください。
+まず、鑑定結果の核心を簡潔に要約し、この鑑定のうち最も実感に近いのはどこか、ユーザーに問いかけてください。`;
+
+      try {
+        const llmRes = await llmChat({
+          system: DEEP_CHAT_SYSTEM,
+          user: DEEP_CHAT_USER,
+          maxTokens: 2000,
+          timeout: 45000,
+        });
+        const outText = llmRes.ok && llmRes.text ? llmRes.text.trim() : `${seedSummary}を踏まえた深層対話を開始します。あなたの悩みをお聞かせください。`;
+        return res.json({
+          response: outText,
+          evidence: null,
+          candidates: [],
+          timestamp,
+          threadId,
+          decisionFrame: {
+            mode: "SUKUYOU_DEEP_CHAT",
+            intent: "deep_dialogue",
+            llm: llmRes.providerUsed || llmRes.provider || "unknown",
+            ku: {
+              routeReason: "SUKUYOU_SEED_DEEP_CHAT_V1",
+              honmeiShuku: seedData.honmeiShuku || null,
+              disasterType: seedData.disasterType || null,
+              seedVersion: seedData.version || "legacy",
+            },
+          },
+        });
+      } catch (e: any) {
+        console.error("[SUKUYOU_SEED_ROUTE] LLM error:", e?.message);
+        return res.json({
+          response: `${seedSummary}を踏まえた深層対話を開始します。あなたの悩みをお聞かせください。`,
+          evidence: null,
+          candidates: [],
+          timestamp,
+          threadId,
+          decisionFrame: { mode: "SUKUYOU_DEEP_CHAT", intent: "deep_dialogue", llm: "fallback", ku: { routeReason: "SUKUYOU_SEED_DEEP_CHAT_V1_FALLBACK" } },
+        });
+      }
+    }
+
     // SUKUYOU_EARLY_DETECT_V2: 宿曜鑑定は全ルートより先に判定する
     // 日付パターン: YYYY年MM月DD日 / YYYY/M/D / YYYY-M-D（年範囲1900-2010で誤検出防止）
     const __sukuyouEarlyDateMatch = t0.match(/(\d{4})[年\/\-](\d{1,2})[月\/\-](\d{1,2})日?/);

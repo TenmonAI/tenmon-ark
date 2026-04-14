@@ -18,7 +18,7 @@ interface GuidanceResult {
   reversalAxis: string;
   oracle: { shortOracle: string; longOracle: string } | string;
   report: {
-    chapters: Array<{ title: string; body: string }>;
+    chapters: Array<{ number: number; title: string; content: string; source?: string }>;
     fullText: string;
     charCount: number;
   };
@@ -29,11 +29,29 @@ interface GuidanceResult {
     mode?: string;
   };
   warnings: string[];
+  sukuyouSeedV1?: {
+    version: string;
+    birthDate: string;
+    name: string | null;
+    honmeiShuku: string;
+    disasterType: string;
+    reversalAxis: string;
+    userConcern: string | null;
+    coreQuestion: string;
+    deepChatPrompts: string[];
+    lifeAlgo: {
+      outerPersona: string;
+      innerPersona: string;
+      motivationRoot: string;
+      fearRoot: string;
+      repeatingFailurePattern: string;
+    };
+  };
 }
 
 interface SukuyouPageProps {
   onBack: () => void;
-  onSendToChat?: (seed: string) => void;
+  onSendToChat?: (seed: string, deepChatPrompt?: string) => void;
 }
 
 export function SukuyouPage({ onBack, onSendToChat }: SukuyouPageProps) {
@@ -112,9 +130,15 @@ export function SukuyouPage({ onBack, onSendToChat }: SukuyouPageProps) {
 
   const handleSendToChat = useCallback(() => {
     if (!result) return;
-    const seed = `[SUKUYOU_SEED] ${result.premise?.birthDate || ""} / ${result.honmeiShuku || ""} / ${result.disasterType || ""}`;
+    // P2: 構造化seedを生成 — sukuyouSeedV1があればJSONで転送
+    const sv = result.sukuyouSeedV1;
+    const seed = sv
+      ? `[SUKUYOU_SEED] ${JSON.stringify(sv)}`
+      : `[SUKUYOU_SEED] ${result.premise?.birthDate || ""} / ${result.honmeiShuku || ""} / ${result.disasterType || ""}`;
+    // P4: 深層チャット起動プロンプトを添える
+    const deepPrompt = sv?.deepChatPrompts?.[0] || undefined;
     if (onSendToChat) {
-      onSendToChat(seed);
+      onSendToChat(seed, deepPrompt);
     }
   }, [result, onSendToChat]);
 
@@ -388,8 +412,22 @@ export function SukuyouPage({ onBack, onSendToChat }: SukuyouPageProps) {
                     borderBottom: i < result.report.chapters.length - 1 ? "1px solid var(--gpt-border, rgba(255,255,255,0.08))" : "none",
                     paddingBottom: 12, marginBottom: 12,
                   }}>
-                    <h3 style={{ fontSize: 13, fontWeight: 700, color: "#d4af37", marginBottom: 4 }}>{ch.title}</h3>
-                    <p style={{ fontSize: 13, whiteSpace: "pre-wrap", margin: 0, lineHeight: 1.6 }}>{ch.body}</p>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                      <h3 style={{ fontSize: 13, fontWeight: 700, color: "#d4af37", margin: 0 }}>
+                        第{ch.number || i + 1}章: {ch.title}
+                      </h3>
+                      {ch.source && (
+                        <span style={{
+                          fontSize: 10, padding: "1px 6px", borderRadius: 4,
+                          background: "rgba(212, 175, 55, 0.12)",
+                          border: "1px solid rgba(212, 175, 55, 0.25)",
+                          color: "#d4af37", whiteSpace: "nowrap",
+                        }}>
+                          {ch.source}
+                        </span>
+                      )}
+                    </div>
+                    <p style={{ fontSize: 13, whiteSpace: "pre-wrap", margin: 0, lineHeight: 1.6 }}>{ch.content || ch.body}</p>
                   </div>
                 ))}
               </div>

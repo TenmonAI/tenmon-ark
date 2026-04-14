@@ -7,7 +7,7 @@ export function ChatLayout() {
   const { messages, sendMessage, loading, threadId } = useChat();
   const seedSent = useRef(false);
 
-  // Auto-send SUKUYOU_SEED if present in sessionStorage.
+  // P3: Auto-send SUKUYOU_SEED if present in sessionStorage.
   // The effect fires when threadId changes (after switchThreadCanonicalV1).
   // We need a valid threadId before sendMessage will work.
   useEffect(() => {
@@ -17,9 +17,18 @@ export function ChatLayout() {
       if (seed) {
         seedSent.current = true;
         sessionStorage.removeItem("TENMON_SUKUYOU_SEED");
+        // P4: 深層チャット起動プロンプトも読み取る
+        const deepPrompt = sessionStorage.getItem("TENMON_SUKUYOU_DEEP_PROMPT");
+        sessionStorage.removeItem("TENMON_SUKUYOU_DEEP_PROMPT");
         // Use requestAnimationFrame + setTimeout to ensure React state is settled
         requestAnimationFrame(() => {
-          setTimeout(() => sendMessage(seed), 500);
+          setTimeout(() => {
+            sendMessage(seed);
+            // P4: seed送信後、応答を待ってから深層プロンプトを自動送信
+            if (deepPrompt) {
+              setTimeout(() => sendMessage(deepPrompt), 8000);
+            }
+          }, 500);
         });
       }
     } catch {}

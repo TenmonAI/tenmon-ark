@@ -304,6 +304,37 @@ router.post("/guidance", async (req: Request, res: Response) => {
       desiredState,
     });
 
+    // P1: SukuyouSeedV1 構造化IR — チャット転送用の機械可読データ
+    const sukuyouSeedV1 = {
+      version: "1.0",
+      birthDate: req.body.birthDate,
+      name: req.body.name || null,
+      honmeiShuku: result.sukuyoResult.honmeiShuku,
+      honmeiYo: result.sukuyoResult.honmeiYo,
+      kyusei: result.sukuyoResult.kyusei,
+      meikyu: result.sukuyoResult.meikyu,
+      disasterType: result.disasterClassification.corePattern,
+      subDisaster: result.disasterClassification.subPattern,
+      reversalAxis: result.amatsuKanagiReversal.reversalAxis,
+      dominantForce: result.amatsuKanagiReversal.dominantForce,
+      userConcern: req.body.currentConcern || null,
+      coreQuestion: result.concernIntake.coreQuestion,
+      lifeAlgo: {
+        outerPersona: result.lifeAlgorithmAnalysis.outerPersona,
+        innerPersona: result.lifeAlgorithmAnalysis.innerPersona,
+        motivationRoot: result.lifeAlgorithmAnalysis.motivationRoot,
+        fearRoot: result.lifeAlgorithmAnalysis.fearRoot,
+        repeatingFailurePattern: result.lifeAlgorithmAnalysis.repeatingFailurePattern,
+      },
+      deepChatPrompts: [
+        `この鑑定のうち、最も実感に近いのはどこですか？`,
+        req.body.currentConcern
+          ? `あなたの言う「${req.body.currentConcern}」は、何が実現した状態ですか？`
+          : `あなたが今最も変えたいことは何ですか？`,
+        `${result.disasterClassification.corePattern}のパターンに心当たりはありますか？`,
+      ],
+    };
+
     return res.json({
       success: true,
       version: result.version,
@@ -319,6 +350,7 @@ router.post("/guidance", async (req: Request, res: Response) => {
         charCount: result.report.charCount,
       },
       warnings: result.warnings,
+      sukuyouSeedV1,
     });
   } catch (err: any) {
     console.error("[sukuyou/guidance] Error:", err);

@@ -666,12 +666,19 @@ function normalizeConcernIntake(
 }
 
 function extractCoreQuestion(concern: string, domains: string[]): string {
-  if (domains.includes("relationship")) return "なぜ人との関係がうまくいかないのか";
-  if (domains.includes("work")) return "なぜ仕事で行き詰まるのか";
-  if (domains.includes("family")) return "なぜ家族との関係に苦しむのか";
-  if (domains.includes("money")) return "なぜ経済的な不安が消えないのか";
-  if (domains.includes("body")) return "なぜ心身の不調が続くのか";
-  return "なぜこの苦しみが繰り返されるのか";
+  // P6: ユーザー入力を最優先。テンプレ置換を禁止する。
+  // ユーザーが悩みを入力している場合、その原文をそのまま使う。
+  const trimmed = concern.trim();
+  if (trimmed && trimmed !== "特定の悩みは未入力。総合鑑定として解析する。") {
+    return trimmed;
+  }
+  // 悩み未入力の場合のみ、ドメインからデフォルト問いを生成
+  if (domains.includes("relationship")) return "人との関係における本質的な課題";
+  if (domains.includes("work")) return "仕事・キャリアにおける本質的な課題";
+  if (domains.includes("family")) return "家族関係における本質的な課題";
+  if (domains.includes("money")) return "経済・金銭における本質的な課題";
+  if (domains.includes("body")) return "心身の健康における本質的な課題";
+  return "人生全般における本質的な課題";
 }
 
 // ============================================================
@@ -854,7 +861,7 @@ function determineSoulDirection(
   reversal: AmatsuKanagiReversal
 ): string {
   const validSounds = sounds.filter(s => s.attr);
-  if (validSounds.length === 0) return "名前の音が解析できないため、宿曜と天津金木の導きに従う";
+  if (validSounds.length === 0) return `宿曜と天津金木の理が示す導きに従い、${reversal.reversalAxis.split("/")[0].trim()}への転換を歩む`;
 
   const firstSound = validSounds[0];
   const lastSound = validSounds[validSounds.length - 1];
@@ -993,7 +1000,7 @@ function formatReport(
     lines.push(`現在の悩みの核心は「${concern.coreQuestion}」であり、これは${disaster.corePattern}の災い構造と深く連動している。`);
     lines.push(`天津金木の理が示す反転軸は「${reversal.reversalAxis}」。${reversal.blessingShift}。`);
     lines.push(`この鑑定は、あなたの苦しみの構造を解き明かし、反転の道筋を示すものである。`);
-    chapters.push({ number: 1, title: "総合神意サマリー", content: lines.join("\n") });
+    chapters.push({ number: 1, title: "総合神意サマリー", content: lines.join("\n"), source: "天聞アーク総合裁定" } as any);
   }
 
   // === 第2章: 宿曜・宿命構造解析 ===
@@ -1004,16 +1011,16 @@ function formatReport(
     lines.push(`  守護神: ${shukuData.deity || "—"}`);
     lines.push(`  水火属性: ${shukuData.element}（${shukuData.phase}）`);
     lines.push(`  宿の性質: ${shukuData.nature}（${shukuData.category}）`);
-    lines.push(`  四足: ${shukuData.foot || "—"}`);
+    lines.push(`  足数: ${shukuData.palaceFoot || "—"}`);
     lines.push("");
     lines.push(`【本命曜】${diagnosis.honmeiYo}曜`);
     lines.push(`【九星】${diagnosis.kyusei}`);
-    lines.push(`【命宮】${meikyu}宮`);
+    lines.push(`【命宮】${meikyu}`);
     lines.push(`【躰用判定】${taiYou.taiYou}（${taiYou.interpretation}）`);
     lines.push("");
     lines.push(`【十二宮配置】`);
     for (const [key, value] of Object.entries(palaceConfig)) {
-      lines.push(`  ${key}: ${value}宮`);
+      lines.push(`  ${key}: ${value}`);
     }
     lines.push("");
     lines.push(`${diagnosis.honmeiShuku}宿は${shukuData.element}の気を帯び、${shukuData.nature}の性質を持つ。`);
@@ -1038,7 +1045,7 @@ function formatReport(
       lines.push(`特殊運: ${shukuData.fortuneType || ""}`);
       lines.push("");
     }
-    chapters.push({ number: 2, title: "宿曜・宿命構造解析", content: lines.join("\n") });
+    chapters.push({ number: 2, title: "宿曜・宿命構造解析", content: lines.join("\n"), source: "宿曜古典" } as any);
   }
 
   // === 第3章: 人生アルゴリズム真相解析 ===
@@ -1061,7 +1068,7 @@ function formatReport(
     if (concern.repeatPattern) {
       lines.push(`あなたが感じている「繰り返し」の感覚は、まさにこの人生アルゴリズムが作動している証拠である。`);
     }
-    chapters.push({ number: 3, title: "人生アルゴリズム真相解析", content: lines.join("\n") });
+    chapters.push({ number: 3, title: "人生アルゴリズム真相解析", content: lines.join("\n"), source: "天聞アーク独自解釈" } as any);
   }
 
   // === 第4章: 災い分類解析 ===
@@ -1088,7 +1095,7 @@ function formatReport(
     lines.push(`${diagnosis.honmeiShuku}宿の災いは「${disaster.corePattern}」として現れる。`);
     lines.push(`これは性格の欠点ではなく、${lifeAlgo.motivationRoot}という力が偏ったときに生じる構造的な崩壊パターンである。`);
     lines.push(`この災いを知ることが、反転の第一歩となる。`);
-    chapters.push({ number: 4, title: "災い分類解析", content: lines.join("\n") });
+    chapters.push({ number: 4, title: "災い分類解析", content: lines.join("\n"), source: "天聞アーク独自解釈" } as any);
   }
 
   // === 第5章: 天津金木反転解析 ===
@@ -1110,7 +1117,7 @@ function formatReport(
     lines.push(`${disaster.corePattern}は${reversal.imbalanceAxis}の状態であり、${reversal.reversalAxis}への転換が求められている。`);
     lines.push(`これは「悪いものを消す」のではなく、「偏った力を本来の方向へ戻す」ことである。`);
     lines.push(`${reversal.blessingShift}。`);
-    chapters.push({ number: 5, title: "天津金木反転解析", content: lines.join("\n") });
+    chapters.push({ number: 5, title: "天津金木反転解析", content: lines.join("\n"), source: "天津金木解釈" } as any);
   }
 
   // === 第6章: いろは言霊解 ===
@@ -1132,7 +1139,7 @@ function formatReport(
       lines.push(`【開く音】${kotodama.openingTones.join("、")}`);
       lines.push(`【締める音】${kotodama.bindingTones.join("、")}`);
     } else {
-      lines.push(`名前が未入力のため、音の詳細解析は省略。`);
+      lines.push(`名前が未入力のため、宿曜と天津金木の解析結果に基づく導きを示す。`);
     }
     lines.push("");
     lines.push(`【魂の進路】${kotodama.soulDirection}`);
@@ -1141,7 +1148,7 @@ function formatReport(
     lines.push(`言霊の理において、音は単なる記号ではなく、水火の力そのものである。`);
     lines.push(`名前に刻まれた音の配列は、魂がこの世に持ち込んだ設計図であり、`);
     lines.push(`その音の偏りと欠損を知ることで、補正の道が見えてくる。`);
-    chapters.push({ number: 6, title: "いろは言霊解", content: lines.join("\n") });
+    chapters.push({ number: 6, title: "いろは言霊解", content: lines.join("\n"), source: "言霊処方" } as any);
   }
 
   // === 第7章: 日々の実践処方 ===
@@ -1192,7 +1199,7 @@ function formatReport(
       if (shukuData.powerStone) lines.push(`パワーストーン: ${shukuData.powerStone}`);
       lines.push("");
     }
-    chapters.push({ number: 7, title: "日々の実践処方", content: lines.join("\n") });
+    chapters.push({ number: 7, title: "日々の実践処方", content: lines.join("\n"), source: "言霊処方＋天聞アーク独自裁定" } as any);
   }
 
   // === 第8章: 最終御神託 ===
@@ -1210,7 +1217,7 @@ function formatReport(
     lines.push("");
     lines.push(`【今すぐの一手】`);
     lines.push(oracle.oneActionNow);
-    chapters.push({ number: 8, title: "最終御神託", content: lines.join("\n") });
+    chapters.push({ number: 8, title: "最終御神託", content: lines.join("\n"), source: "天聞アーク総合裁定" } as any);
   }
 
   // === 全文テキスト生成 ===
