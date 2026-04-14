@@ -45,7 +45,7 @@ export async function analyzeDependency(
   const result: DependencyToken[] = [];
   const processedIndices = new Set<number>(); // 既に処理されたトークンのインデックス
 
-  tokens.forEach((token, idx) => {
+  tokens.forEach((token: kuromoji.IpadicFeatures, idx: number) => {
     let role: DependencyRole = "UNKNOWN";
 
     // 動詞そのもの

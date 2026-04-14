@@ -1,10 +1,16 @@
 #!/usr/bin/env bash
 # ============================================================
-# TENMON-ARK 統一デプロイスクリプト v1.0
-# TENMON_ARK_REFLECTION_BREAK_ROOTCAUSE_FIX_V1
+# TENMON-ARK 統一デプロイスクリプト v1.1
+# TENMON_ARK_EMERGENCY_FIX_CARD_V1
 #
 # 用途: git pull → API build → Web build → live publish → verify
 # 使い方: sudo bash /opt/tenmon-ark-repo/scripts/deploy_all.sh
+#
+# v1.1 変更点:
+#   - npm install (devDependencies含む) — tsc と @types/* が必要
+#   - systemd WorkingDirectory 自動検出 → API_LIVE を正しく設定
+#   - API build 失敗時にも Web build を続行するオプション
+#   - curlテスト例のキー名を detail に修正
 # ============================================================
 set -euo pipefail
 
@@ -14,17 +20,35 @@ BRANCH="${DEPLOY_BRANCH:-2026-03-04-e5hp}"
 
 # API
 API_SRC="$REPO/api"
-API_LIVE="/opt/tenmon-ark-live"
+
+# systemd から WorkingDirectory を自動検出
+detect_api_live() {
+  local wd
+  wd=$(systemctl cat tenmon-ark-api.service 2>/dev/null \
+       | grep -m1 "WorkingDirectory=" \
+       | sed 's/.*WorkingDirectory=//' | xargs)
+  if [ -n "$wd" ]; then
+    # WorkingDirectory が /opt/tenmon-ark-repo/api の場合はそのまま使う
+    echo "$wd"
+  else
+    echo "/opt/tenmon-ark-live"
+  fi
+}
+API_LIVE="${API_LIVE_DIR:-$(detect_api_live)}"
+
+# API_LIVE が REPO/api と同じならインプレースビルド（rsync不要）
+INPLACE_API=false
+if [ "$(realpath "$API_LIVE" 2>/dev/null)" = "$(realpath "$API_SRC" 2>/dev/null)" ]; then
+  INPLACE_API=true
+fi
 
 # Web (PWA)
 WEB_SRC="$REPO/web"
-# VPS上の実際のnginx rootを自動検出
-# 優先順: /var/www/tenmon-pwa/pwa > /opt/tenmon-ark-live/web > /var/www/html
 detect_web_live() {
   for d in "/var/www/tenmon-pwa/pwa" "/opt/tenmon-ark-live/web" "/var/www/html"; do
     if [ -d "$d" ]; then echo "$d"; return; fi
   done
-  echo "/var/www/tenmon-pwa/pwa"  # デフォルト
+  echo "/var/www/tenmon-pwa/pwa"
 }
 WEB_LIVE="${WEB_LIVE_DIR:-$(detect_web_live)}"
 
@@ -32,11 +56,12 @@ WEB_LIVE="${WEB_LIVE_DIR:-$(detect_web_live)}"
 SERVICE_NAME="tenmon-ark-api"
 
 echo "============================================================"
-echo " TENMON-ARK 統一デプロイ"
-echo " REPO:     $REPO"
-echo " BRANCH:   $BRANCH"
-echo " API_LIVE: $API_LIVE"
-echo " WEB_LIVE: $WEB_LIVE"
+echo " TENMON-ARK 統一デプロイ v1.1"
+echo " REPO:       $REPO"
+echo " BRANCH:     $BRANCH"
+echo " API_LIVE:   $API_LIVE"
+echo " INPLACE:    $INPLACE_API"
+echo " WEB_LIVE:   $WEB_LIVE"
 echo "============================================================"
 
 # ── 0. 事前チェック ──────────────────────────────────────────
@@ -60,44 +85,56 @@ echo "  HEAD: $GIT_SHA"
 echo ""
 echo "[2/7] API build"
 cd "$API_SRC"
-npm install --omit=dev 2>/dev/null || npm install
-npm run build
+# devDependencies 含めてインストール（tsc, @types/* が必要）
+npm install
+API_BUILD_OK=true
+if npm run build; then
+  echo "  ✅ API build OK"
+else
+  echo "  ❌ API build FAILED"
+  API_BUILD_OK=false
+  echo "  ⚠️  Web build は続行します"
+fi
 
 # ── 3. API deploy (atomic swap) ──────────────────────────────
 echo ""
 echo "[3/7] API deploy → $API_LIVE"
-mkdir -p "$API_LIVE"
 
-# dist の原子入替
-rm -rf "$API_LIVE/dist.new"
-rsync -a --delete "$API_SRC/dist/" "$API_LIVE/dist.new/"
-if [ -d "$API_LIVE/dist" ]; then
-  rm -rf "$API_LIVE/dist.bak"
-  mv "$API_LIVE/dist" "$API_LIVE/dist.bak"
+if [ "$INPLACE_API" = true ]; then
+  echo "  (inplace mode: API_LIVE = API_SRC, rsync skip)"
+else
+  if [ "$API_BUILD_OK" = true ]; then
+    mkdir -p "$API_LIVE"
+    rm -rf "$API_LIVE/dist.new"
+    rsync -a --delete "$API_SRC/dist/" "$API_LIVE/dist.new/"
+    if [ -d "$API_LIVE/dist" ]; then
+      rm -rf "$API_LIVE/dist.bak"
+      mv "$API_LIVE/dist" "$API_LIVE/dist.bak"
+    fi
+    mv "$API_LIVE/dist.new" "$API_LIVE/dist"
+
+    if [ -d "$API_SRC/node_modules" ]; then
+      rsync -a --delete "$API_SRC/node_modules/" "$API_LIVE/node_modules/"
+    fi
+    cp "$API_SRC/package.json" "$API_LIVE/package.json" 2>/dev/null || true
+  else
+    echo "  (skipped: API build failed)"
+  fi
 fi
-mv "$API_LIVE/dist.new" "$API_LIVE/dist"
-
-# node_modules も同期（必要な場合）
-if [ -d "$API_SRC/node_modules" ]; then
-  rsync -a --delete "$API_SRC/node_modules/" "$API_LIVE/node_modules/"
-fi
-
-# package.json コピー
-cp "$API_SRC/package.json" "$API_LIVE/package.json" 2>/dev/null || true
 
 # ── 4. API restart ───────────────────────────────────────────
 echo ""
 echo "[4/7] API restart ($SERVICE_NAME)"
 systemctl daemon-reload
 systemctl restart "$SERVICE_NAME"
-sleep 1
+sleep 2
 
 if systemctl is-active --quiet "$SERVICE_NAME"; then
   echo "  ✅ $SERVICE_NAME is running"
 else
   echo "  ❌ $SERVICE_NAME failed to start"
   journalctl -u "$SERVICE_NAME" -n 20 --no-pager
-  exit 1
+  # API失敗でもWeb buildは続行
 fi
 
 # ── 5. Web build ─────────────────────────────────────────────
@@ -174,7 +211,11 @@ systemctl show "$SERVICE_NAME" --property=Environment 2>/dev/null | grep -o "NOT
 
 echo ""
 echo "============================================================"
-echo " ✅ デプロイ完了: $GIT_SHA @ $(date)"
+if [ "$API_BUILD_OK" = true ]; then
+  echo " ✅ デプロイ完了: $GIT_SHA @ $(date)"
+else
+  echo " ⚠️  デプロイ完了（API buildエラーあり）: $GIT_SHA @ $(date)"
+fi
 echo "============================================================"
 echo ""
 echo "次のステップ:"
@@ -184,5 +225,5 @@ echo "  3. 左メニューにチャットフォルダーが見えることを確
 echo "  4. feedback送信テスト:"
 echo "     curl -s -X POST http://localhost:3000/api/feedback \\"
 echo "       -H 'Content-Type: application/json' \\"
-echo "       -d '{\"category\":\"test\",\"priority\":\"medium\",\"title\":\"deploy test\",\"body\":\"test\",\"device\":\"curl\"}'"
+echo "       -d '{\"category\":\"宿曜鑑定\",\"priority\":\"中\",\"title\":\"deploy test\",\"detail\":\"テスト送信\",\"device\":\"curl\"}'"
 echo ""

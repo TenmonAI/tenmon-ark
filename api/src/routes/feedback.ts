@@ -138,7 +138,8 @@ feedbackRouter.post("/feedback", async (req: Request, res: Response) => {
     const {
       title,
       category,
-      detail,
+      detail: rawDetail,
+      body: rawBody,          // curlテスト等で "body" キーが使われた場合のフォールバック
       priority = "中",
       userId,
       userEmail,
@@ -156,8 +157,10 @@ feedbackRouter.post("/feedback", async (req: Request, res: Response) => {
     if (!category || !VALID_CATEGORIES.includes(category)) {
       return res.status(400).json({ ok: false, error: `カテゴリが不正です。選択肢: ${VALID_CATEGORIES.join(", ")}` });
     }
+    // "detail" が無ければ "body" をフォールバックとして使用
+    const detail = rawDetail || rawBody;
     if (!detail || typeof detail !== "string" || detail.trim().length === 0) {
-      return res.status(400).json({ ok: false, error: "詳細内容は必須です" });
+      return res.status(400).json({ ok: false, error: "詳細内容は必須です（detail または body キーで送信してください）" });
     }
     if (priority && !VALID_PRIORITIES.includes(priority)) {
       return res.status(400).json({ ok: false, error: `優先度が不正です。選択肢: ${VALID_PRIORITIES.join(", ")}` });
