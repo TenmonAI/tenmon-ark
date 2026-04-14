@@ -75,6 +75,15 @@ export function ChatMenuSheet({
             {t("chat.new_chat")}
           </Button>
 
+          {/* 宿曜鑑定ボタン */}
+          <Button
+            onClick={() => { window.location.href = "/sukuyou"; }}
+            variant="outline"
+            className="w-full border-amber-500/30 text-amber-400 hover:bg-amber-500/10 font-semibold"
+          >
+            ✨ 宿曜鑑定
+          </Button>
+
           {/* チャットルーム一覧 */}
           <div className="space-y-2 max-h-[60vh] overflow-y-auto">
             {rooms?.map((room) => (

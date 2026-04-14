@@ -90,6 +90,7 @@ import FounderFeedback from "@/pages/FounderFeedback";
 import ConciergeManager from "@/pages/ConciergeManager";
 import { WorldLaunchWizard } from "@/onboarding/worldLaunchWizard";
 import AdminTradePage from "@/pages/admin/trade/page";
+import SukuyouPage from "@/pages/SukuyouPage";
 // ROOT-FIX v1: Global Slots (App.tsxから分離)
 import { HeaderNavigationSlot } from "@/components/global/slots/HeaderNavigationSlot";
 import { FloatingButtonsSlot } from "@/components/global/slots/FloatingButtonsSlot";
@@ -117,6 +118,7 @@ function Router() {
       <Route path={"/subscription/success"} component={SubscriptionSuccess} />
       <Route path={"/developer"} component={DeveloperDashboard} />
       <Route path={"/admin/trade"} component={AdminTradePage} />
+      <Route path={"/sukuyou"} component={SukuyouPage} />
       <Route path={"/kotodama/converter"} component={KotodamaConverter} />
       <Route path={"/kotodama/gojuon"} component={GojuonChart} />
       <Route path={"/kotodama/core"} component={KotodamaCore} />

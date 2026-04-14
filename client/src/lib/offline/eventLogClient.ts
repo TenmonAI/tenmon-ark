@@ -7,8 +7,8 @@
  * ============================================================
  */
 
-import { IndexedDBEventLogStore } from "../../../server/kokuzo/offline/eventLogStore";
-import { LocalKokuzoKernel } from "../../../server/kokuzo/offline/localKokuzoKernel";
+import { IndexedDBEventLogStore } from "./kokuzoOfflineClientStub";
+import { LocalKokuzoKernel } from "./kokuzoOfflineClientStub";
 
 let eventLogStore: IndexedDBEventLogStore | null = null;
 let localKokuzo: LocalKokuzoKernel | null = null;

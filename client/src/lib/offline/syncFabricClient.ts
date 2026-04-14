@@ -7,9 +7,7 @@
  * ============================================================
  */
 
-import { createEventLogStore } from "../../../server/kokuzo/offline/eventLogStore";
-import { SyncFabricImpl } from "../../../server/kokuzo/offline/syncFabric";
-import { OfflineStateMachineImpl } from "../../../server/kokuzo/offline/offlineStateMachine";
+import { createEventLogStore, SyncFabricImpl, OfflineStateMachineImpl } from "./kokuzoOfflineClientStub";
 
 let syncFabric: SyncFabricImpl | null = null;
 let stateMachine: OfflineStateMachineImpl | null = null;

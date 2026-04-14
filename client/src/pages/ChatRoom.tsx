@@ -1015,6 +1015,29 @@ export default function ChatRoom() {
                   >
                     <Streamdown>{msg.content}</Streamdown>
                     
+                    {/* 宿曜鑑定レポートのコピーボタン */}
+                    {msg.role === "assistant" && msg.content && (
+                      /第一章.*総合神意|御神託|本命宿/.test(msg.content) && msg.content.length > 500
+                    ) && (
+                      <button
+                        className="mt-2 px-3 py-1 text-xs bg-amber-500/20 text-amber-400 border border-amber-500/30 rounded hover:bg-amber-500/30 transition-colors"
+                        onClick={async () => {
+                          try {
+                            await navigator.clipboard.writeText(msg.content);
+                          } catch {
+                            const ta = document.createElement("textarea");
+                            ta.value = msg.content;
+                            document.body.appendChild(ta);
+                            ta.select();
+                            document.execCommand("copy");
+                            document.body.removeChild(ta);
+                          }
+                        }}
+                      >
+                        📋 鑑定レポートをコピー
+                      </button>
+                    )}
+
                     {/* 学習されたことの可視化（極小表示、邪魔禁止） */}
                     {msg.role === "assistant" && (
                       <>

@@ -8,7 +8,7 @@
  * ============================================================
  */
 
-import { IndexedDBEventLogStore } from "../../../server/kokuzo/offline/eventLogStore";
+import { IndexedDBEventLogStore } from "../offline/kokuzoOfflineClientStub";
 
 export interface ConversationMessage {
   id: number;
