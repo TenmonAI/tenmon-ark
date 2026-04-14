@@ -152,16 +152,10 @@ function distillThreadCenterMemory(threadId: string): string[] {
           LIMIT 3`,
       )
       .all(threadId) as any[];
+    // THREAD_ISOLATION_FIX_V1: cross-thread fallback を削除
+    // 別スレッドの記憶が混入するのを防止する
     if (rows.length === 0) {
-      rows = db
-        .prepare(
-          `SELECT thread_id, center_type, center_key, center_reason, next_axes_json, source_route_reason, source_scripture_key,
-                  essential_goal, success_criteria_json, constraints_json, confidence, updated_at
-             FROM thread_center_memory
-            ORDER BY updated_at DESC
-            LIMIT 3`,
-        )
-        .all() as any[];
+      return [];
     }
     const ids: string[] = [];
     for (const row of rows) {
@@ -221,15 +215,10 @@ function distillScriptureMemory(threadId: string): string[] {
           LIMIT 6`,
       )
       .all(threadId) as any[];
+    // THREAD_ISOLATION_FIX_V1: cross-thread fallback を削除
+    // 別スレッドの記憶が混入するのを防止する
     if (rows.length === 0) {
-      rows = db
-        .prepare(
-          `SELECT threadId, routeReason, scriptureKey, subconceptKey, conceptKey, resolvedLevel, hasEvidence, hasLawTrace, unresolvedNote, createdAt
-             FROM scripture_learning_ledger
-            ORDER BY createdAt DESC
-            LIMIT 6`,
-        )
-        .all() as any[];
+      return [];
     }
     const ids: string[] = [];
     for (const row of rows) {
