@@ -5,12 +5,16 @@ type TopbarProps = {
   title?: string;
   onOpenSidebar?: () => void;
   isSidebarOpen?: boolean;
+  showBackToChat?: boolean;
+  onBackToChat?: () => void;
 };
 
 export function Topbar({
   title = "TENMON-ARK 1.1",
   onOpenSidebar,
   isSidebarOpen,
+  showBackToChat,
+  onBackToChat,
 }: TopbarProps) {
   const { t } = useI18n();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -74,6 +78,39 @@ export function Topbar({
             aria-label="Open menu"
           >
             <span aria-hidden="true">{isSidebarOpen ? "×" : "☰"}</span>
+          </button>
+        ) : null}
+
+        {showBackToChat && onBackToChat ? (
+          <button
+            type="button"
+            onClick={onBackToChat}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              background: "none",
+              border: "none",
+              color: "var(--gpt-text-secondary, #b8a88a)",
+              cursor: "pointer",
+              fontSize: 13,
+              padding: "4px 8px",
+              borderRadius: 6,
+              transition: "background 0.15s, color 0.15s",
+              marginRight: 8,
+            }}
+            onMouseEnter={(e) => {
+              (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.06)";
+              (e.currentTarget as HTMLElement).style.color = "var(--gpt-text-primary, #f0e6d4)";
+            }}
+            onMouseLeave={(e) => {
+              (e.currentTarget as HTMLElement).style.background = "none";
+              (e.currentTarget as HTMLElement).style.color = "var(--gpt-text-secondary, #b8a88a)";
+            }}
+            title="最後のチャットに戻る"
+          >
+            <span style={{ fontSize: 16 }}>←</span>
+            <span>チャットに戻る</span>
           </button>
         ) : null}
 

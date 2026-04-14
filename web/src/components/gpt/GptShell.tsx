@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { Sidebar, type GptView } from "./Sidebar";
 import { Topbar } from "./Topbar";
 import { ChatRoute } from "../../pages/ChatRoute";
@@ -8,27 +8,56 @@ import { SukuyouPage } from "../../pages/SukuyouPage";
 import { SettingsModal } from "./SettingsModal";
 import FeedbackPage from "../../pages/FeedbackPage";
 import { APP_TITLE } from "../../config/app";
-import { createNewThreadId, switchThreadCanonicalV1 } from "../../hooks/useChat";
+import { createNewThreadId, switchThreadCanonicalV1, getThreadId } from "../../hooks/useChat";
+import { loadNavState, markChatActive, markViewActive, getLastActiveThreadId } from "../../lib/navState";
 
 export function GptShell({ initialView = "chat" }: { initialView?: GptView }) {
-  const [view, setView] = useState<GptView>(initialView);
+  /* ── ナビゲーション状態復元 ── */
+  const savedNav = loadNavState();
+  const resolvedInitialView = initialView !== "chat" ? initialView : (savedNav.lastActiveView || "chat");
+
+  const [view, setView] = useState<GptView>(resolvedInitialView as GptView);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [isOverlayNav, setIsOverlayNav] = useState(false); // <=1024 drawer mode
+  const [isOverlayNav, setIsOverlayNav] = useState(false);
 
   /* ── 宿曜ルーム再開用 state ── */
   const [openRoomId, setOpenRoomId] = useState<string | null>(null);
 
-  /** TENMON_PWA_NEWCHAT_SURFACE_BINDING_V1: ページ再読込なし・useChat.resetThread と同系統 */
+  /* ── ナビゲーション状態の永続化 ── */
+  useEffect(() => {
+    if (view === "chat") {
+      try {
+        const tid = getThreadId();
+        markChatActive(tid);
+      } catch {}
+    } else {
+      markViewActive(view as any);
+    }
+  }, [view]);
+
+  /** チャットに戻る */
+  const handleBackToChat = useCallback(() => {
+    const lastTid = getLastActiveThreadId();
+    if (lastTid) {
+      switchThreadCanonicalV1(lastTid);
+    }
+    setView("chat");
+    setSidebarOpen(false);
+  }, []);
+
+  /** TENMON_PWA_NEWCHAT_SURFACE_BINDING_V1: ページ再読込なし */
   const handleNewChat = () => {
     setView("chat");
     setSidebarOpen(false);
-    switchThreadCanonicalV1(createNewThreadId());
+    const newId = createNewThreadId();
+    switchThreadCanonicalV1(newId);
+    markChatActive(newId);
   };
 
   const handleChangeView = (next: GptView) => {
     if (next === "sukuyou") {
-      setOpenRoomId(null); // 新規鑑定モード
+      setOpenRoomId(null);
     }
     setView(next);
     setSidebarOpen(false);
@@ -87,19 +116,21 @@ export function GptShell({ initialView = "chat" }: { initialView?: GptView }) {
             : "Profile";
 
   const handleSukuyouSendToChat = (displayText: string, rawSeed: string, deepChatPrompt?: string) => {
-    // P2+A6: Switch to chat view and inject the structured seed
-    // A6: 表示用テキストとAPI送信用raw seedを分離保存
     setView("chat");
     try {
-      sessionStorage.setItem("TENMON_SUKUYOU_SEED", rawSeed);           // API送信用
-      sessionStorage.setItem("TENMON_SUKUYOU_SEED_DISPLAY", displayText); // ユーザーバブル表示用
-      // P4: 深層チャット起動プロンプトも保存
+      sessionStorage.setItem("TENMON_SUKUYOU_SEED", rawSeed);
+      sessionStorage.setItem("TENMON_SUKUYOU_SEED_DISPLAY", displayText);
       if (deepChatPrompt) {
         sessionStorage.setItem("TENMON_SUKUYOU_DEEP_PROMPT", deepChatPrompt);
       }
     } catch {}
-    switchThreadCanonicalV1(createNewThreadId());
+    const newId = createNewThreadId();
+    switchThreadCanonicalV1(newId);
+    markChatActive(newId);
   };
+
+  /* ── 非チャットビューかどうか（戻る導線を出すか） ── */
+  const showBackToChat = view !== "chat" && view !== "sukuyou" && view !== "sukuyou-room";
 
   return (
     <div className={`gpt-shell ${isOverlayNav ? "gpt-shell--overlay" : ""} ${sidebarOpen ? "gpt-shell--open" : ""}`}>
@@ -110,9 +141,16 @@ export function GptShell({ initialView = "chat" }: { initialView?: GptView }) {
         onNewChat={handleNewChat}
         onOpenSettings={handleOpenSettings}
         onOpenSukuyouRoom={handleOpenSukuyouRoom}
+        onBackToChat={handleBackToChat}
       />
       <main className="gpt-main">
-        <Topbar title={title} onOpenSidebar={isOverlayNav ? () => setSidebarOpen(true) : undefined} isSidebarOpen={sidebarOpen} />
+        <Topbar
+          title={title}
+          onOpenSidebar={isOverlayNav ? () => setSidebarOpen(true) : undefined}
+          isSidebarOpen={sidebarOpen}
+          showBackToChat={showBackToChat}
+          onBackToChat={handleBackToChat}
+        />
         <div className="gpt-content">
           {view === "chat" && <ChatRoute />}
           {view === "dashboard" && <DashboardPage />}

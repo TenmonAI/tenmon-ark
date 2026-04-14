@@ -1,5 +1,5 @@
 // web/src/lib/db.ts
-export type PersistThread = { id: string; title?: string; updatedAt?: number };
+export type PersistThread = { id: string; title?: string; updatedAt?: number; folderId?: string | null };
 export type PersistMessage = {
   id: string;
   threadId: string;
@@ -17,11 +17,11 @@ export type PersistSeed = {
   [k: string]: unknown;
 };
 
-export const SCHEMA_VERSION = "PWA_MEM_01a_IDB_V3";
+export const SCHEMA_VERSION = "PWA_MEM_01a_IDB_V4";
 
 
 const DB_NAME = "tenmon_ark_pwa_v1";
-const DB_VER = 3;
+const DB_VER = 4;
 
 function openDB(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -77,6 +77,17 @@ function openDB(): Promise<IDBDatabase> {
         if (!db.objectStoreNames.contains("sukuyou_results")) {
           const s = db.createObjectStore("sukuyou_results", { keyPath: "id" });
           s.createIndex("by_createdAt", "createdAt", { unique: false });
+        }
+        try {
+          const meta = (event.target as any).transaction.objectStore("meta");
+          meta.put({ key: "schemaVersion", value: SCHEMA_VERSION });
+        } catch { /* ignore */ }
+      }
+      // v3 -> v4: chat_folders store を追加
+      if (oldVersion < 4) {
+        if (!db.objectStoreNames.contains("chat_folders")) {
+          const s = db.createObjectStore("chat_folders", { keyPath: "id" });
+          s.createIndex("by_sortOrder", "sortOrder", { unique: false });
         }
         try {
           const meta = (event.target as any).transaction.objectStore("meta");

@@ -36,7 +36,7 @@ export type SukuyouResultRoom = {
 };
 
 const DB_NAME = "tenmon_ark_pwa_v1";
-const DB_VER = 3; // v2 → v3: add sukuyou_results store
+const DB_VER = 4; // v3 → v4: add chat_folders store
 const STORE_NAME = "sukuyou_results";
 
 function openDB(): Promise<IDBDatabase> {
@@ -87,6 +87,19 @@ function openDB(): Promise<IDBDatabase> {
           const tx = (event.target as any).transaction;
           if (db.objectStoreNames.contains("meta")) {
             tx.objectStore("meta").put({ key: "schemaVersion", value: "PWA_MEM_01a_IDB_V3" });
+          }
+        } catch { /* ignore */ }
+      }
+      // v3 → v4: chat_folders store
+      if (oldVersion < 4) {
+        if (!db.objectStoreNames.contains("chat_folders")) {
+          const s = db.createObjectStore("chat_folders", { keyPath: "id" });
+          s.createIndex("by_sortOrder", "sortOrder", { unique: false });
+        }
+        try {
+          const tx = (event.target as any).transaction;
+          if (db.objectStoreNames.contains("meta")) {
+            tx.objectStore("meta").put({ key: "schemaVersion", value: "PWA_MEM_01a_IDB_V4" });
           }
         } catch { /* ignore */ }
       }
