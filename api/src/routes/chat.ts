@@ -917,7 +917,7 @@ ${seedSummary}${lifeAlgoSummary}
 
     // R1_FIX: accept-* threads now enter DEF route for testing
     // SUKUYOU_EARLY_BYPASS_V2: 宿曜鑑定トリガーが検出された場合、DEFルートをスキップ
-    if (__isDefinitionQ && !hasDoc0 && !askedMenu0 && !isCmd0 && !__isSukuyouEarlyTrigger) {
+    if (__isDefinitionQ && !hasDoc0 && !askedMenu0 && !isCmd0 && !__isSukuyouEarlyTrigger && !__sukuyouSeedByThread.has(String(threadId || ""))) {
       // [C15] DEF deterministic dictionary gate (no external etymology / bracket-first)
       // Normalize term: if X（Y） exists, treat Y as the internal term.
       const __rawDef = String(t0 || "").trim();
