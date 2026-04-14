@@ -1,5 +1,5 @@
 // LLM ラッパー（天聞アーク人格接続済み）
-// LLM_WRAPPER_V4: OPENAI_BASE_URL対応 + maxTokens/timeout動的指定 + 自動フォールバック
+// LLM_WRAPPER_V5: Gemini retry + abort detection + Oracle OpenAI fixed
 export type LlmProvider = "openai" | "gemini";
 
 export type LlmChatHistoryItem = {
@@ -206,14 +206,22 @@ async function callGemini(input: LlmChatInput, model: string): Promise<LlmChatOu
   }
 }
 
+/** abort/timeout系のエラーかどうかを判定 */
+function __isAbortLikeError(err: any): boolean {
+  const msg = String(err?.message || err || "").toLowerCase();
+  return msg.includes("aborted") || msg.includes("aborterror") || msg.includes("timed out") ||
+    msg.includes("timeout") || msg.includes("abort") || msg.includes("econnreset") ||
+    msg.includes("socket hang up") || msg.includes("network");
+}
+
 /**
  * llmChat — 天聞アーク人格を正しくロール分離して LLM に送信する。
  *
- * V4変更点:
- * 1. maxTokens / timeout をオプションで指定可能
- * 2. OPENAI_BASE_URL 環境変数をサポート
- * 3. Geminiデフォルトモデルを gemini-2.5-flash に更新
- * 4. プロバイダ自動フォールバック: OpenAI失敗時にGeminiへ、Gemini失敗時にOpenAIへ
+ * V5変更点:
+ * 1. Gemini → Gemini retry (timeout延長) → OpenAI の3段階フォールバック
+ * 2. abort/timeout系エラーの場合のみGemini retryを実行
+ * 3. Gemini retryではtimeoutを1.5倍に延長
+ * 4. 宿曜Oracle等で明示的にproviderが指定された場合はretryなしで即座にfallback
  */
 export async function llmChat(input: LlmChatInput): Promise<LlmChatOutput> {
   let primaryProvider: LlmProvider;
@@ -253,7 +261,32 @@ export async function llmChat(input: LlmChatInput): Promise<LlmChatOutput> {
     const primaryErrMsg = String(primaryErr?.message || primaryErr || "primary_failed");
     try { console.error("[llmChat] primary failed:", primaryProvider, primaryModel, primaryErrMsg); } catch {}
 
-    // 2. 代替プロバイダで自動フォールバック
+    // 2. Gemini primary + abort系エラー → Gemini retry（timeout 1.5倍）
+    // 明示的にproviderが指定された場合（Oracle等）はretryスキップ
+    if (primaryProvider === "gemini" && !input.provider && __isAbortLikeError(primaryErr)) {
+      const retryTimeout = Math.round((input.timeout || 30000) * 1.5);
+      const retryInput = { ...input, timeout: retryTimeout };
+      try {
+        console.log(`[llmChat] Gemini retry with timeout=${retryTimeout}ms`);
+        const out = await callGemini(retryInput, primaryModel);
+        if (!String(out.text || "").trim()) {
+          throw new Error("gemini retry empty response");
+        }
+        return {
+          ...out,
+          ok: true,
+          err: "",
+          providerPlanned: primaryProvider,
+          providerUsed: "gemini",
+        };
+      } catch (retryErr: any) {
+        const retryErrMsg = String(retryErr?.message || retryErr || "retry_failed");
+        try { console.error("[llmChat] Gemini retry failed:", retryErrMsg); } catch {}
+        // retryも失敗 → OpenAI fallbackへ
+      }
+    }
+
+    // 3. 代替プロバイダで自動フォールバック
     const alt = alternateProvider(primaryProvider);
     if (alt) {
       const altModel = pickModel(alt);

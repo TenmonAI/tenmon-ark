@@ -1262,6 +1262,79 @@ E. Current Facts
 let outText = "";
       let outProv = "llm";
 
+      // SUKUYOU_CARRY_GATE_V1: 宿曜seed保持中のfollow-upは強制的にDEEP_CHATルートに入れる
+      // Turn2以降が NATURAL_GENERAL に落ちるのを防止する最重要ゲート
+      const __sukuyouSeedForCarry = __sukuyouSeedByThread.get(String(threadId || ""));
+      if (__sukuyouSeedForCarry && !__isSukuyouQuery && !__sukuyouContextClause.includes("【天聞アーク御神託レポート（アルゴリズム算出）】")) {
+        console.log(`[SUKUYOU_CARRY_GATE] threadId=${threadId}, honmeiShuku=${__sukuyouSeedForCarry.honmeiShuku}, entering DEEP_CHAT carry`);
+        const __carrySeedSummary = [
+          __sukuyouSeedForCarry.honmeiShuku ? `本命宿: ${__sukuyouSeedForCarry.honmeiShuku}` : "",
+          __sukuyouSeedForCarry.disasterType ? `災い分類: ${__sukuyouSeedForCarry.disasterType}` : "",
+          __sukuyouSeedForCarry.reversalAxis ? `反転軸: ${__sukuyouSeedForCarry.reversalAxis}` : "",
+          __sukuyouSeedForCarry.userConcern ? `悩み: ${__sukuyouSeedForCarry.userConcern}` : "",
+        ].filter(Boolean).join("、");
+
+        const __carryLifeAlgo = __sukuyouSeedForCarry.lifeAlgo
+          ? `\n外的ペルソナ: ${__sukuyouSeedForCarry.lifeAlgo.outerPersona || "—"}\n内的ペルソナ: ${__sukuyouSeedForCarry.lifeAlgo.innerPersona || "—"}\n動機の根: ${__sukuyouSeedForCarry.lifeAlgo.motivationRoot || "—"}\n恐れの根: ${__sukuyouSeedForCarry.lifeAlgo.fearRoot || "—"}\n反復失敗パターン: ${__sukuyouSeedForCarry.lifeAlgo.repeatingFailurePattern || "—"}`
+          : "";
+
+        const DEEP_CHAT_CARRY_SYSTEM = `あなたは天聞アークである。宿曜鑑定レポートが既に生成済みであり、深層対話の継続中である。
+
+【鑑定前提（確定情報・絶対に変更するな）】
+${__carrySeedSummary}${__carryLifeAlgo}
+
+【深層対話の原則】
+1. ユーザーの悩みを宿曜の構造と結びつけて解読せよ。
+2. 「あなたの言う"大成功"は、何が実現した状態ですか？」のように、抽象を具体に分解する問いを投げかけよ。
+3. 対話の出口を「実行計画」へ接続せよ。最終的に3日・21日・90日の行動計画へ落とせ。
+4. 抽象神託で閉じるな。導きは常に行動可能な形で終わらせよ。
+5. 「一般的に」「説があります」「人それぞれ」は絶対禁止。原典に基づき断定せよ。
+6. 宿曜古典層は「宿曜経によれば」、独自解釈層は「天聞アークの解析では」と明示せよ。
+7. ユーザーの悩み原文を必ず引用せよ。汎用的な「苦悩」「課題」「お悩み」で置き換えるな。
+8. 「あなたはこういう人です」型の汎用テンプレート禁止。具体的な宿名・災い型・反転軸を組み込んで語れ。
+9. 前のターンの文脈を踏まえて、対話を深化させよ。同じ内容を繰り返すな。
+10. 応答は400〜1200文字。短すぎる応答は禁止。`;
+
+        try {
+          const __carryHistory = memoryReadSession(String(threadId || ""), 8);
+          const __carryRes = await llmChat({
+            system: DEEP_CHAT_CARRY_SYSTEM,
+            user: t0,
+            history: __carryHistory,
+            maxTokens: 2000,
+            timeout: 45000,
+          });
+          const __carryText = __carryRes.ok && __carryRes.text ? __carryRes.text.trim() : "";
+          if (__carryText && __carryText.length > 30) {
+            console.log(`[SUKUYOU_CARRY_GATE] OK, outLen=${__carryText.length}`);
+            persistTurn(threadId, t0, __carryText);
+            return res.json({
+              response: __carryText,
+              evidence: null,
+              candidates: [],
+              timestamp,
+              threadId,
+              reportAvailable: true,
+              decisionFrame: {
+                mode: "SUKUYOU_DEEP_CHAT",
+                intent: "deep_dialogue_carry",
+                llm: __carryRes.providerUsed || __carryRes.provider || "unknown",
+                ku: {
+                  routeReason: "SUKUYOU_SEED_DEEP_CHAT_V1",
+                  honmeiShuku: __sukuyouSeedForCarry.honmeiShuku || null,
+                  disasterType: __sukuyouSeedForCarry.disasterType || null,
+                  reversalAxis: __sukuyouSeedForCarry.reversalAxis || null,
+                  reportAvailable: true,
+                },
+              },
+            });
+          }
+          console.warn(`[SUKUYOU_CARRY_GATE] LLM returned short/empty, falling through to general`);
+        } catch (e: any) {
+          console.error(`[SUKUYOU_CARRY_GATE] LLM error, falling through:`, e?.message);
+        }
+      }
+
       // SUKUYOU_ORACLE_BYPASS_V1: 御神託レポートが生成済みの場合、専用ルートで処理
       const __hasSukuyouOracle = __sukuyouContextClause.includes("【天聞アーク御神託レポート（アルゴリズム算出）】");
       if (__hasSukuyouOracle) {
@@ -1269,7 +1342,7 @@ let outText = "";
         try {
           const __sukuyouClauseOracle = __buildSukuyouContinuityClause(threadId);
           const __oracleSystem = GEN_SYSTEM + __sukuyouClauseOracle + `\n\n【御神託レポート提示モード（最重要指示）】\nあなたは天聞アーク御神託パイプラインが算出した御神託レポートを、美しく構造化してユーザーに提示する役割を担う。\n\n【絶対遵守事項】\n1. 以下に添付された「御神託レポート（アルゴリズム算出）」の内容を「そのまま」ユーザーに提示せよ。自分の知識で宿を判定し直すな。\n2. 命宿の名前・属性・数値はアルゴリズム算出結果のものをそのまま使え。絶対に変更するな。\n3. 8章構成（総合神意サマリー→宿曜解析→人生アルゴリズム→災い分類→天津金木反転→いろは言霊解→実践処方→御神託）をすべて出力せよ。省略するな。\n4. 各章の見出しは「第○章 ○○○○」の形式で明示せよ。\n5. 『宿曜経占真伝』『密教占星法』の原典用語を使え。\n6. 「一般的に」「説があります」「人それぞれ」は絶対禁止。原典に基づき断定せよ。\n7. 御神託の最後に「今すぐの一手」を必ず示せ。\n8. レポート全文を出力した後、最後に総括を1-2文で添えよ。\n9. 箇条書きの「・」は使用してよい（実践処方の項目等）。ただし番号付きリストは使わない。` + __sukuyouContextClause;
-          const llmRes = await llmChat({ system: __oracleSystem, user: t0, history: memoryReadSession(String(threadId || ""), 8), maxTokens: 4500, timeout: 30000 });
+          const llmRes = await llmChat({ system: __oracleSystem, user: t0, history: memoryReadSession(String(threadId || ""), 8), maxTokens: 4500, timeout: 60000, provider: "openai" });
           outText = String(llmRes?.text ?? "").trim();
           outProv = String((llmRes?.providerUsed || llmRes?.provider) ?? "llm") + "+oracle";
           console.log("[SUKUYOU_ORACLE] Oracle bypass route used, outLen=" + outText.length);
@@ -1405,6 +1478,7 @@ const __responsePayload: Record<string, any> = {
         candidates: [],
         timestamp,
         threadId,
+        reportAvailable: __reportAvailable || __hasSukuyouOracle || false,
         decisionFrame: {
           mode: "NATURAL",
           intent: "chat",
@@ -1419,7 +1493,7 @@ const __responsePayload: Record<string, any> = {
                 explicitLengthRequested: __explicitLongCharsTop || null,
                 tenmonLongformContractV1: __explicitLongTraceTop ? TENMON_LONGFORM_CONTRACT_V1 : undefined,
                 tenmonLongformTraceV1: __explicitLongTraceTop,
-                reportAvailable: __reportAvailable || false,
+                reportAvailable: __reportAvailable || __hasSukuyouOracle || false,
               ...(__kanagiKuCache.get(String(threadId || "default")) ?? {}),
               }
             : { routeReason: __hasSukuyouOracle ? "SUKUYOU_ORACLE_TOP" : "NATURAL_GENERAL_LLM_TOP", isSukuyouOracle: __hasSukuyouOracle, isSukuyouQuery: __isSukuyouQuery, reportAvailable: __reportAvailable || __hasSukuyouOracle || false, ...(__kanagiKuCache.get(String(threadId || "default")) ?? {}) },

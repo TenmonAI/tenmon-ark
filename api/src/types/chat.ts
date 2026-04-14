@@ -15,6 +15,7 @@ export type ChatResponseBody = {
   error?: string;
   evidence?: unknown;
   threadId?: string;
+  reportAvailable?: boolean;
   detailPlan?: DetailPlanContractP20V1;
   candidates?: KokuzoCandidate[];
   decisionFrame?: {
