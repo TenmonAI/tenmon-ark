@@ -4,12 +4,13 @@ import { Topbar } from "./Topbar";
 import { ChatRoute } from "../../pages/ChatRoute";
 import { DashboardPage } from "../../pages/DashboardPage";
 import { ProfilePage } from "../../pages/ProfilePage";
+import { SukuyouPage } from "../../pages/SukuyouPage";
 import { SettingsModal } from "./SettingsModal";
 import { APP_TITLE } from "../../config/app";
 import { createNewThreadId, switchThreadCanonicalV1 } from "../../hooks/useChat";
 
-export function GptShell() {
-  const [view, setView] = useState<GptView>("chat");
+export function GptShell({ initialView = "chat" }: { initialView?: GptView }) {
+  const [view, setView] = useState<GptView>(initialView);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isOverlayNav, setIsOverlayNav] = useState(false); // <=1024 drawer mode
@@ -67,7 +68,18 @@ const title =
       ? APP_TITLE
       : view === "dashboard"
         ? "Dashboard"
-        : "Profile";
+        : view === "sukuyou"
+          ? "宿曜鑑定"
+          : "Profile";
+
+  const handleSukuyouSendToChat = (seed: string) => {
+    // Switch to chat view and inject the seed
+    setView("chat");
+    try {
+      sessionStorage.setItem("TENMON_SUKUYOU_SEED", seed);
+    } catch {}
+    switchThreadCanonicalV1(createNewThreadId());
+  };
   return (
     <div className={`gpt-shell ${isOverlayNav ? "gpt-shell--overlay" : ""} ${sidebarOpen ? "gpt-shell--open" : ""}`}>
       <div className="gpt-overlay" onClick={() => setSidebarOpen(false)} />
@@ -83,6 +95,7 @@ const title =
           {view === "chat" && <ChatRoute />}
           {view === "dashboard" && <DashboardPage />}
           {view === "profile" && <ProfilePage />}
+          {view === "sukuyou" && <SukuyouPage onBack={() => setView("chat")} onSendToChat={handleSukuyouSendToChat} />}
         </div>
       </main>
       <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />

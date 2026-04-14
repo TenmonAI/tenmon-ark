@@ -6,7 +6,7 @@ import {
   switchThreadCanonicalV1,
 } from "../../hooks/useChat";
 
-export type GptView = "chat" | "dashboard" | "profile";
+export type GptView = "chat" | "dashboard" | "profile" | "sukuyou";
 
 interface SidebarProps {
   view: GptView;
@@ -185,6 +185,9 @@ export function Sidebar({ view, onView, onNewChat, onOpenSettings }: SidebarProp
         </button>
         <button type="button" className={linkClass("profile")} onClick={() => onView("profile")}>
           {t("sidebar.profile")}
+        </button>
+        <button type="button" className={linkClass("sukuyou")} onClick={() => onView("sukuyou")}>
+          ✦ 宿曜鑑定
         </button>
       </nav>
 

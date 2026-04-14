@@ -41,6 +41,7 @@ export default function App() {
   const isRegisterPage = pathname === "/pwa/register-local.html" || pathname === "/pwa/register-local";
   const isPublicAuthPage = isLoginPage || isRegisterPage;
   const isKoshiki = pathname.startsWith("/pwa/koshiki");
+  const isSukuyou = pathname === "/pwa/sukuyou" || pathname === "/pwa/sukuyou/";
 
   useEffect(() => {
     let dead = false;
@@ -144,7 +145,7 @@ export default function App() {
 
   return (
     <I18nProvider>
-      <GptShell />
+      <GptShell initialView={isSukuyou ? "sukuyou" : "chat"} />
     </I18nProvider>
   );
 }
