@@ -7,16 +7,20 @@ export function ChatLayout() {
   const { messages, sendMessage, loading, threadId } = useChat();
   const seedSent = useRef(false);
 
-  // Auto-send SUKUYOU_SEED if present in sessionStorage
+  // Auto-send SUKUYOU_SEED if present in sessionStorage.
+  // The effect fires when threadId changes (after switchThreadCanonicalV1).
+  // We need a valid threadId before sendMessage will work.
   useEffect(() => {
-    if (seedSent.current) return;
+    if (seedSent.current || !threadId) return;
     try {
       const seed = sessionStorage.getItem("TENMON_SUKUYOU_SEED");
       if (seed) {
         seedSent.current = true;
         sessionStorage.removeItem("TENMON_SUKUYOU_SEED");
-        // Small delay to ensure thread is ready
-        setTimeout(() => sendMessage(seed), 300);
+        // Use requestAnimationFrame + setTimeout to ensure React state is settled
+        requestAnimationFrame(() => {
+          setTimeout(() => sendMessage(seed), 500);
+        });
       }
     } catch {}
   }, [threadId, sendMessage]);
