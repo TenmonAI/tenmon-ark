@@ -3,6 +3,9 @@
  * thread identity 解決順（固定）: URL threadId → backend response.threadId → localStorage → 新規生成。
  * send 成功後は backend の threadId を正典順にマージし、URL / React state / localStorage を同期。
  * popstate / TENMON_THREAD_SWITCH_EVENT を尊重。PWA チャット輸送は threadId のみ（旧 session 名義のフィールドは付けない）。
+ *
+ * A6: sendMessage(input, displayText?) — displayText が渡された場合、ユーザーバブルには
+ *     displayText を表示し、API には input（raw seed 等）を送信する。
  */
 import { useEffect, useRef, useState } from "react";
 import { postChat } from "../api/chat";
@@ -299,14 +302,22 @@ export function useChat() {
     }
   }, [threadId, messages]);
 
-  async function sendMessage(input: string) {
+  /**
+   * A6: sendMessage(input, displayText?)
+   * - input: APIに送信するテキスト（raw seed等を含む場合がある）
+   * - displayText: ユーザーバブルに表示するテキスト（省略時はinputをそのまま表示）
+   */
+  async function sendMessage(input: string, displayText?: string) {
     const text = String(input || "").trim();
     if (!text || !threadId) return;
+
+    // A6: ユーザーバブルに表示するコンテンツ（displayText指定時はそちらを使用）
+    const visibleContent = displayText ? String(displayText).trim() : text;
 
     const userMsg: ChatMessage = {
       id: `${threadId}:u:${Date.now()}`,
       role: "user",
-      content: text,
+      content: visibleContent,
       at: new Date().toISOString(),
     };
     setMessages((prev) => [...prev, userMsg]);

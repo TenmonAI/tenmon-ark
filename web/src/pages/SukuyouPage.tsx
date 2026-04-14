@@ -51,7 +51,7 @@ interface GuidanceResult {
 
 interface SukuyouPageProps {
   onBack: () => void;
-  onSendToChat?: (seed: string, deepChatPrompt?: string) => void;
+  onSendToChat?: (displayText: string, rawSeed: string, deepChatPrompt?: string) => void;
 }
 
 export function SukuyouPage({ onBack, onSendToChat }: SukuyouPageProps) {
@@ -132,13 +132,15 @@ export function SukuyouPage({ onBack, onSendToChat }: SukuyouPageProps) {
     if (!result) return;
     // P2: 構造化seedを生成 — sukuyouSeedV1があればJSONで転送
     const sv = result.sukuyouSeedV1;
-    const seed = sv
+    // A6: raw JSON はAPI送信用のみ。ユーザーバブルには自然文サマリーを表示
+    const rawSeed = sv
       ? `[SUKUYOU_SEED] ${JSON.stringify(sv)}`
       : `[SUKUYOU_SEED] ${result.premise?.birthDate || ""} / ${result.honmeiShuku || ""} / ${result.disasterType || ""}`;
+    const displayText = `宿曜鑑定の結果を土台に、これから真相解析を深めます。本命宿は${result.honmeiShuku || "不明"}、災い分類は${result.disasterType || "不明"}、反転軸は${result.reversalAxis || "不明"}です。`;
     // P4: 深層チャット起動プロンプトを添える
     const deepPrompt = sv?.deepChatPrompts?.[0] || undefined;
     if (onSendToChat) {
-      onSendToChat(seed, deepPrompt);
+      onSendToChat(displayText, rawSeed, deepPrompt);
     }
   }, [result, onSendToChat]);
 

@@ -7,23 +7,26 @@ export function ChatLayout() {
   const { messages, sendMessage, loading, threadId } = useChat();
   const seedSent = useRef(false);
 
-  // P3: Auto-send SUKUYOU_SEED if present in sessionStorage.
-  // The effect fires when threadId changes (after switchThreadCanonicalV1).
-  // We need a valid threadId before sendMessage will work.
+  // P3+A6: Auto-send SUKUYOU_SEED if present in sessionStorage.
+  // A6: 表示用テキストとAPI送信用raw seedを分離。
+  // ユーザーバブルには自然文サマリーのみ表示し、APIにはraw seedを送信。
   useEffect(() => {
     if (seedSent.current || !threadId) return;
     try {
-      const seed = sessionStorage.getItem("TENMON_SUKUYOU_SEED");
-      if (seed) {
+      const rawSeed = sessionStorage.getItem("TENMON_SUKUYOU_SEED");
+      if (rawSeed) {
         seedSent.current = true;
+        const displayText = sessionStorage.getItem("TENMON_SUKUYOU_SEED_DISPLAY") || rawSeed;
         sessionStorage.removeItem("TENMON_SUKUYOU_SEED");
+        sessionStorage.removeItem("TENMON_SUKUYOU_SEED_DISPLAY");
         // P4: 深層チャット起動プロンプトも読み取る
         const deepPrompt = sessionStorage.getItem("TENMON_SUKUYOU_DEEP_PROMPT");
         sessionStorage.removeItem("TENMON_SUKUYOU_DEEP_PROMPT");
         // Use requestAnimationFrame + setTimeout to ensure React state is settled
         requestAnimationFrame(() => {
           setTimeout(() => {
-            sendMessage(seed);
+            // A6: sendMessageに表示用テキストとAPI用ペイロードを分離して渡す
+            sendMessage(rawSeed, displayText);
             // P4: seed送信後、応答を待ってから深層プロンプトを自動送信
             if (deepPrompt) {
               setTimeout(() => sendMessage(deepPrompt), 8000);
