@@ -164,7 +164,7 @@ export interface GuidanceResult {
   };
   oracleMessage: OracleMessage;
   report: {
-    chapters: Array<{ number: number; title: string; content: string }>;
+    chapters: Array<{ number: number; title: string; content: string; source: string }>;
     fullText: string;
     charCount: number;
   };
@@ -984,9 +984,9 @@ function formatReport(
   threeLayer: any,
   palaceConfig: Record<string, string>,
   meikyu: string
-): { chapters: Array<{ number: number; title: string; content: string }>; fullText: string } {
+): { chapters: Array<{ number: number; title: string; content: string; source: string }>; fullText: string } {
 
-  const chapters: Array<{ number: number; title: string; content: string }> = [];
+  const chapters: Array<{ number: number; title: string; content: string; source: string }> = [];
 
   // === 第1章: 総合神意サマリー ===
   {
@@ -996,11 +996,16 @@ function formatReport(
     lines.push(`本命宿: ${diagnosis.honmeiShuku}宿（${shukuData.reading}・${shukuData.sanskrit}）`);
     lines.push(`信頼度: ${premise.confidence}  算出モード: ${premise.mode}`);
     lines.push("");
+    // P3-1: rawConcern原文を明示的に挿入
+    if (concern.currentConcern && concern.currentConcern !== "特定の悩みは未入力。総合鑑定として解析する。") {
+      lines.push(`【ご相談内容（原文）】${concern.currentConcern}`);
+      lines.push("");
+    }
     lines.push(`${diagnosis.honmeiShuku}宿に宿る魂は、「${lifeAlgo.motivationRoot}」を根源的な動力とする。`);
     lines.push(`現在の悩みの核心は「${concern.coreQuestion}」であり、これは${disaster.corePattern}の災い構造と深く連動している。`);
     lines.push(`天津金木の理が示す反転軸は「${reversal.reversalAxis}」。${reversal.blessingShift}。`);
     lines.push(`この鑑定は、あなたの苦しみの構造を解き明かし、反転の道筋を示すものである。`);
-    chapters.push({ number: 1, title: "総合神意サマリー", content: lines.join("\n"), source: "天聞アーク総合裁定" } as any);
+    chapters.push({ number: 1, title: "総合神意サマリー", content: lines.join("\n"), source: "天聞アーク総合裁定" });
   }
 
   // === 第2章: 宿曜・宿命構造解析 ===
@@ -1045,7 +1050,7 @@ function formatReport(
       lines.push(`特殊運: ${shukuData.fortuneType || ""}`);
       lines.push("");
     }
-    chapters.push({ number: 2, title: "宿曜・宿命構造解析", content: lines.join("\n"), source: "宿曜古典" } as any);
+    chapters.push({ number: 2, title: "宿曜・宿命構造解析", content: lines.join("\n"), source: "宿曜古典" });
   }
 
   // === 第3章: 人生アルゴリズム真相解析 ===
@@ -1068,7 +1073,7 @@ function formatReport(
     if (concern.repeatPattern) {
       lines.push(`あなたが感じている「繰り返し」の感覚は、まさにこの人生アルゴリズムが作動している証拠である。`);
     }
-    chapters.push({ number: 3, title: "人生アルゴリズム真相解析", content: lines.join("\n"), source: "天聞アーク独自解釈" } as any);
+    chapters.push({ number: 3, title: "人生アルゴリズム真相解析", content: lines.join("\n"), source: "天聞アーク独自解釈" });
   }
 
   // === 第4章: 災い分類解析 ===
@@ -1095,7 +1100,7 @@ function formatReport(
     lines.push(`${diagnosis.honmeiShuku}宿の災いは「${disaster.corePattern}」として現れる。`);
     lines.push(`これは性格の欠点ではなく、${lifeAlgo.motivationRoot}という力が偏ったときに生じる構造的な崩壊パターンである。`);
     lines.push(`この災いを知ることが、反転の第一歩となる。`);
-    chapters.push({ number: 4, title: "災い分類解析", content: lines.join("\n"), source: "天聞アーク独自解釈" } as any);
+    chapters.push({ number: 4, title: "災い分類解析", content: lines.join("\n"), source: "天聞アーク独自解釈" });
   }
 
   // === 第5章: 天津金木反転解析 ===
@@ -1117,7 +1122,7 @@ function formatReport(
     lines.push(`${disaster.corePattern}は${reversal.imbalanceAxis}の状態であり、${reversal.reversalAxis}への転換が求められている。`);
     lines.push(`これは「悪いものを消す」のではなく、「偏った力を本来の方向へ戻す」ことである。`);
     lines.push(`${reversal.blessingShift}。`);
-    chapters.push({ number: 5, title: "天津金木反転解析", content: lines.join("\n"), source: "天津金木解釈" } as any);
+    chapters.push({ number: 5, title: "天津金木反転解析", content: lines.join("\n"), source: "天津金木解釈" });
   }
 
   // === 第6章: いろは言霊解 ===
@@ -1138,6 +1143,9 @@ function formatReport(
       lines.push(`【鎮める音】${kotodama.calmingTones.join("、")}`);
       lines.push(`【開く音】${kotodama.openingTones.join("、")}`);
       lines.push(`【締める音】${kotodama.bindingTones.join("、")}`);
+    } else if (premise.name) {
+      // P3-3: 名前が入力されているが解析が完了しなかった場合 — failureを非露出
+      lines.push(`宿曜と天津金木の解析結果に基づく導きを示す。`);
     } else {
       lines.push(`名前が未入力のため、宿曜と天津金木の解析結果に基づく導きを示す。`);
     }
@@ -1148,7 +1156,7 @@ function formatReport(
     lines.push(`言霊の理において、音は単なる記号ではなく、水火の力そのものである。`);
     lines.push(`名前に刻まれた音の配列は、魂がこの世に持ち込んだ設計図であり、`);
     lines.push(`その音の偏りと欠損を知ることで、補正の道が見えてくる。`);
-    chapters.push({ number: 6, title: "いろは言霊解", content: lines.join("\n"), source: "言霊処方" } as any);
+    chapters.push({ number: 6, title: "いろは言霊解", content: lines.join("\n"), source: "言霊処方" });
   }
 
   // === 第7章: 日々の実践処方 ===
@@ -1199,7 +1207,7 @@ function formatReport(
       if (shukuData.powerStone) lines.push(`パワーストーン: ${shukuData.powerStone}`);
       lines.push("");
     }
-    chapters.push({ number: 7, title: "日々の実践処方", content: lines.join("\n"), source: "言霊処方＋天聞アーク独自裁定" } as any);
+    chapters.push({ number: 7, title: "日々の実践処方", content: lines.join("\n"), source: "言霊処方＋天聞アーク独自裁定" });
   }
 
   // === 第8章: 最終御神託 ===
@@ -1217,7 +1225,7 @@ function formatReport(
     lines.push("");
     lines.push(`【今すぐの一手】`);
     lines.push(oracle.oneActionNow);
-    chapters.push({ number: 8, title: "最終御神託", content: lines.join("\n"), source: "天聞アーク総合裁定" } as any);
+    chapters.push({ number: 8, title: "最終御神託", content: lines.join("\n"), source: "天聞アーク総合裁定" });
   }
 
   // === 全文テキスト生成 ===
@@ -1230,6 +1238,7 @@ function formatReport(
 
   for (const ch of chapters) {
     fullLines.push(`## ${ch.number}. ${ch.title}`);
+    fullLines.push(`〔出典: ${ch.source}〕`);
     fullLines.push("");
     fullLines.push(ch.content);
     fullLines.push("");
