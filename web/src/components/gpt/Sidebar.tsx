@@ -120,6 +120,21 @@ export function Sidebar({ view, onView, onNewChat, onOpenSettings }: SidebarProp
           <span>🔍</span>
           <span>{t("sidebar.search")}</span>
         </button>
+        <button
+          type="button"
+          className={linkClass("sukuyou")}
+          onClick={() => onView("sukuyou")}
+          style={{
+            marginTop: 4,
+            background: view === "sukuyou" ? "rgba(212, 175, 55, 0.15)" : "transparent",
+            border: "1px solid rgba(212, 175, 55, 0.3)",
+            color: "#d4af37",
+            borderRadius: 8,
+            fontWeight: 600,
+          }}
+        >
+          ✦ 宿曜鑑定
+        </button>
       </div>
 
       <nav className="gpt-scroll gpt-sidebar-history">
@@ -185,9 +200,6 @@ export function Sidebar({ view, onView, onNewChat, onOpenSettings }: SidebarProp
         </button>
         <button type="button" className={linkClass("profile")} onClick={() => onView("profile")}>
           {t("sidebar.profile")}
-        </button>
-        <button type="button" className={linkClass("sukuyou")} onClick={() => onView("sukuyou")}>
-          ✦ 宿曜鑑定
         </button>
       </nav>
 

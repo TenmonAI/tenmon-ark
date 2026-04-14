@@ -119,7 +119,7 @@ export function SukuyouPage({ onBack, onSendToChat }: SukuyouPageProps) {
   }, [result, onSendToChat]);
 
   return (
-    <div className="sukuyou-page" style={{ minHeight: "100%", color: "var(--text)", padding: "0 0 2rem" }}>
+    <div className="sukuyou-page" style={{ height: "100%", overflowY: "auto", color: "var(--text)", padding: "0 0 2rem" }}>
       {/* Header */}
       <div style={{
         position: "sticky", top: 0, zIndex: 10,
@@ -168,7 +168,7 @@ export function SukuyouPage({ onBack, onSendToChat }: SukuyouPageProps) {
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
               <input
                 type="number"
-                placeholder="1979"
+                placeholder="1990"
                 value={birthYear}
                 onChange={(e) => setBirthYear(e.target.value)}
                 min={1900} max={2025}
@@ -182,7 +182,7 @@ export function SukuyouPage({ onBack, onSendToChat }: SukuyouPageProps) {
               <span style={{ color: "var(--text-sub, #888)" }}>年</span>
               <input
                 type="number"
-                placeholder="9"
+                placeholder="1"
                 value={birthMonth}
                 onChange={(e) => setBirthMonth(e.target.value)}
                 min={1} max={12}
@@ -196,7 +196,7 @@ export function SukuyouPage({ onBack, onSendToChat }: SukuyouPageProps) {
               <span style={{ color: "var(--text-sub, #888)" }}>月</span>
               <input
                 type="number"
-                placeholder="20"
+                placeholder="1"
                 value={birthDay}
                 onChange={(e) => setBirthDay(e.target.value)}
                 min={1} max={31}
@@ -218,7 +218,7 @@ export function SukuyouPage({ onBack, onSendToChat }: SukuyouPageProps) {
             </label>
             <input
               type="text"
-              placeholder="横山航介"
+              placeholder="お名前（任意）"
               value={name}
               onChange={(e) => setName(e.target.value)}
               style={{
@@ -263,7 +263,7 @@ export function SukuyouPage({ onBack, onSendToChat }: SukuyouPageProps) {
               opacity: loading ? 0.7 : 1,
             }}
           >
-            {loading ? "鑑定中…" : "御神託を受ける"}
+            {loading ? "鑑定中…" : "鑑定開始"}
           </button>
 
           {error && (
