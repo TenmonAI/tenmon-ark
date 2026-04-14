@@ -1262,10 +1262,13 @@ E. Current Facts
 let outText = "";
       let outProv = "llm";
 
-      // SUKUYOU_CARRY_GATE_V1: 宿曜seed保持中のfollow-upは強制的にDEEP_CHATルートに入れる
+      // SUKUYOU_CARRY_GATE_V2: 宿曜seed保持中のfollow-upは強制的にDEEP_CHATルートに入れる
       // Turn2以降が NATURAL_GENERAL に落ちるのを防止する最重要ゲート
+      // V2: !__isSukuyouQuery を削除 — 「本命宿」等の宿曜キーワードを含むfollow-upでもcarry gateを通す
+      // 新規鑑定（御神託レポート生成済み）の場合のみ __hasSukuyouOracle でバイパス
+      const __hasSukuyouOracle = __sukuyouContextClause.includes("【天聞アーク御神託レポート（アルゴリズム算出）】");
       const __sukuyouSeedForCarry = __sukuyouSeedByThread.get(String(threadId || ""));
-      if (__sukuyouSeedForCarry && !__isSukuyouQuery && !__sukuyouContextClause.includes("【天聞アーク御神託レポート（アルゴリズム算出）】")) {
+      if (__sukuyouSeedForCarry && !__hasSukuyouOracle) {
         console.log(`[SUKUYOU_CARRY_GATE] threadId=${threadId}, honmeiShuku=${__sukuyouSeedForCarry.honmeiShuku}, entering DEEP_CHAT carry`);
         const __carrySeedSummary = [
           __sukuyouSeedForCarry.honmeiShuku ? `本命宿: ${__sukuyouSeedForCarry.honmeiShuku}` : "",
@@ -1336,7 +1339,7 @@ ${__carrySeedSummary}${__carryLifeAlgo}
       }
 
       // SUKUYOU_ORACLE_BYPASS_V1: 御神託レポートが生成済みの場合、専用ルートで処理
-      const __hasSukuyouOracle = __sukuyouContextClause.includes("【天聞アーク御神託レポート（アルゴリズム算出）】");
+      // __hasSukuyouOracle is already declared above at carry gate (V2)
       if (__hasSukuyouOracle) {
         // 御神託レポートをLLMに美文化させる専用ルート
         try {
