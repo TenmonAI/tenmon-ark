@@ -60,12 +60,12 @@ interface SukuyouPageProps {
 
 /* ── 質問チップ定義 ── */
 const QUESTION_CHIPS = [
-  "この鑑定をやさしく説明して",
-  "人間関係をもっと詳しく",
-  "仕事への活かし方を知りたい",
-  "金運について深掘りしたい",
-  "この言霊の意味をやさしく教えて",
-  "今すぐの一手だけ教えて",
+  "この鑑定をやさしく教えてほしい",
+  "人との関わりについて聞きたい",
+  "仕事にどう活かせるか知りたい",
+  "お金のことをもう少し詳しく",
+  "御神託の意味をやさしく教えて",
+  "今すぐできることをひとつ教えて",
 ];
 
 /* ── コピーユーティリティ ── */
@@ -576,7 +576,7 @@ export function SukuyouPage({ onBack, onSendToChat }: SukuyouPageProps) {
     } catch {
       const errMsg: ChatMessage = {
         role: "assistant",
-        text: "通信エラーが発生しました。もう一度お試しください。",
+        text: "うまくつながりませんでした。少し時間をおいて、もう一度お試しください。",
         createdAt: new Date().toISOString(),
       };
       setChatMessages(prev => [...prev, errMsg]);
@@ -1027,7 +1027,7 @@ export function SukuyouPage({ onBack, onSendToChat }: SukuyouPageProps) {
               {/* チャット履歴 */}
               {chatMessages.length > 0 && (
                 <div style={{
-                  maxHeight: 420, overflowY: "auto",
+                  maxHeight: "60vh", overflowY: "auto",
                   WebkitOverflowScrolling: "touch",
                   marginBottom: 12, padding: "4px 0",
                 }}>
@@ -1041,7 +1041,7 @@ export function SukuyouPage({ onBack, onSendToChat }: SukuyouPageProps) {
                         maxWidth: "88%",
                         padding: "11px 15px",
                         borderRadius: msg.role === "user" ? "14px 14px 4px 14px" : "14px 14px 14px 4px",
-                        fontSize: 13.5, lineHeight: 1.75, whiteSpace: "pre-wrap",
+                        fontSize: 13.5, lineHeight: 1.85, whiteSpace: "pre-wrap", letterSpacing: "0.01em",
                         background: msg.role === "user"
                           ? "rgba(212, 175, 55, 0.12)"
                           : "var(--gpt-hover-bg, rgba(255,255,255,0.05))",
@@ -1049,6 +1049,7 @@ export function SukuyouPage({ onBack, onSendToChat }: SukuyouPageProps) {
                           ? "1px solid rgba(212, 175, 55, 0.25)"
                           : "1px solid var(--gpt-border, rgba(255,255,255,0.08))",
                         position: "relative",
+                        paddingRight: msg.role === "assistant" ? 30 : 15,
                       }}>
                         {msg.text}
                         {msg.role === "assistant" && (
@@ -1068,7 +1069,18 @@ export function SukuyouPage({ onBack, onSendToChat }: SukuyouPageProps) {
                         border: "1px solid var(--gpt-border, rgba(255,255,255,0.08))",
                         ...subStyle,
                       }}>
-                        <span className="thinking-dots">考え中</span>
+                        <span className="thinking-dots" style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                          <span>{["読み解いています", "宿曜の流れを整えています", "ことばを結んでいます"][Math.floor(Date.now() / 3000) % 3]}</span>
+                          <span style={{ display: "inline-flex", gap: 2 }}>
+                            {[0, 1, 2].map(i => (
+                              <span key={i} style={{
+                                width: 4, height: 4, borderRadius: "50%",
+                                background: "rgba(212, 175, 55, 0.6)",
+                                animation: `sukuyouDot 1.2s ease-in-out ${i * 0.2}s infinite`,
+                              }} />
+                            ))}
+                          </span>
+                        </span>
                       </div>
                     </div>
                   )}
@@ -1101,7 +1113,7 @@ export function SukuyouPage({ onBack, onSendToChat }: SukuyouPageProps) {
                     border: "1px solid var(--gpt-border, rgba(255,255,255,0.12))",
                     color: "var(--text)", fontSize: 14, boxSizing: "border-box",
                     fontFamily: "inherit", lineHeight: 1.5,
-                    resize: "none", overflow: "hidden",
+                    resize: "none", overflow: "auto",
                     minHeight: 44, maxHeight: 120,
                   }}
                 />
