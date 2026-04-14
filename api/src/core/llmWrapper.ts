@@ -38,8 +38,12 @@ function hasGemini(): boolean {
 
 function pickProvider(explicit?: LlmProvider): LlmProvider {
   if (explicit) return explicit;
-  if (hasOpenAI()) return "openai";
+  const rawPref = String(process.env.LLM_PRIMARY_PROVIDER || "gemini").trim();
+  const pref: LlmProvider = rawPref === "openai" ? "openai" : "gemini";
+  if (pref === "gemini" && hasGemini()) return "gemini";
+  if (pref === "openai" && hasOpenAI()) return "openai";
   if (hasGemini()) return "gemini";
+  if (hasOpenAI()) return "openai";
   throw new Error("No LLM provider configured");
 }
 
