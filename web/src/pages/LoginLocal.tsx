@@ -141,6 +141,19 @@ export default function LoginLocal() {
         >
           {submitting ? "ログイン中..." : "ログイン"}
         </button>
+
+        <div style={{ textAlign: "center", marginTop: 16 }}>
+          <a
+            href="/pwa/forgot-password"
+            style={{
+              color: "var(--gpt-text-secondary)",
+              fontSize: 14,
+              textDecoration: "none",
+            }}
+          >
+            パスワードを忘れた方
+          </a>
+        </div>
       </form>
     </div>
   );

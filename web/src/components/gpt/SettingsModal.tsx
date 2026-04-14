@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { SettingsPanel } from "../SettingsPanel";
 import { useI18n } from "../../i18n/useI18n";
+import { PasswordWithEye } from "../PasswordWithEye";
 
 interface SettingsModalProps {
   open: boolean;
@@ -12,8 +13,145 @@ const SECTIONS = [
   { id: "appearance", labelKey: "settings.section.appearance" },
   { id: "language", labelKey: "settings.section.language" },
   { id: "data", labelKey: "settings.section.data" },
+  { id: "account", labelKey: "settings.section.account" },
   { id: "about", labelKey: "settings.section.about" },
 ] as const;
+
+function PasswordChangeForm() {
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [newPasswordConfirm, setNewPasswordConfirm] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (submitting) return;
+    setMessage(null);
+
+    if (!currentPassword) {
+      setMessage({ type: "error", text: "現在のパスワードを入力してください" });
+      return;
+    }
+    if (newPassword.length < 8) {
+      setMessage({ type: "error", text: "新しいパスワードは8文字以上で入力してください" });
+      return;
+    }
+    if (newPassword !== newPasswordConfirm) {
+      setMessage({ type: "error", text: "新しいパスワードが一致しません" });
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const res = await fetch("/api/auth/change-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          currentPassword,
+          newPassword,
+          newPasswordConfirm,
+        }),
+      });
+      const body = await res.json().catch(() => ({}));
+
+      if (!res.ok || !body?.ok) {
+        setMessage({ type: "error", text: body?.message || body?.error || "パスワードの変更に失敗しました" });
+      } else {
+        setMessage({ type: "success", text: "パスワードを変更しました" });
+        setCurrentPassword("");
+        setNewPassword("");
+        setNewPasswordConfirm("");
+      }
+    } catch {
+      setMessage({ type: "error", text: "通信エラーが発生しました。もう一度お試しください。" });
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  const accountEmail =
+    (typeof window !== "undefined" &&
+      window.localStorage.getItem("tenmon_user_display_v1")) ||
+    "";
+
+  return (
+    <div>
+      {accountEmail && (
+        <div className="gpt-page-card" style={{ marginBottom: 16 }}>
+          <h3 className="gpt-page-card-title">メールアドレス</h3>
+          <p style={{ fontSize: 14, color: "var(--gpt-text-secondary)", margin: "8px 0 0" }}>
+            {accountEmail}
+          </p>
+        </div>
+      )}
+
+      <div className="gpt-page-card">
+        <h3 className="gpt-page-card-title">パスワード変更</h3>
+        <p style={{ fontSize: 13, color: "var(--gpt-text-secondary)", margin: "4px 0 16px", lineHeight: 1.6 }}>
+          安全のため、現在のパスワードを入力してください。
+        </p>
+
+        <form onSubmit={handleSubmit}>
+          <PasswordWithEye
+            label="現在のパスワード"
+            value={currentPassword}
+            onChange={setCurrentPassword}
+            placeholder="現在のパスワード"
+            autoComplete="current-password"
+          />
+
+          <PasswordWithEye
+            label="新しいパスワード"
+            value={newPassword}
+            onChange={setNewPassword}
+            placeholder="8文字以上"
+            autoComplete="new-password"
+          />
+
+          <PasswordWithEye
+            label="新しいパスワード（確認）"
+            value={newPasswordConfirm}
+            onChange={setNewPasswordConfirm}
+            placeholder="もう一度入力"
+            autoComplete="new-password"
+          />
+
+          {message && (
+            <div
+              role="alert"
+              style={{
+                marginBottom: 14,
+                padding: "10px 12px",
+                borderRadius: 10,
+                background: message.type === "success"
+                  ? "rgba(102,187,106,0.1)"
+                  : "rgba(185,28,28,0.08)",
+                border: message.type === "success"
+                  ? "1px solid rgba(102,187,106,0.3)"
+                  : "1px solid rgba(185,28,28,0.18)",
+                color: message.type === "success" ? "#66bb6a" : "#ef5350",
+                fontSize: 14,
+              }}
+            >
+              {message.text}
+            </div>
+          )}
+
+          <button
+            type="submit"
+            className="gpt-btn gpt-btn-primary"
+            disabled={submitting || !currentPassword || !newPassword || !newPasswordConfirm}
+            style={{ width: "100%", height: 44, minHeight: 44 }}
+          >
+            {submitting ? "変更中..." : "パスワードを変更する"}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
 
 export function SettingsModal({ open, onClose }: SettingsModalProps) {
   const [section, setSection] = useState<string>("general");
@@ -64,6 +202,8 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
                 </select>
               </label>
             </div>
+          ) : section === "account" ? (
+            <PasswordChangeForm />
           ) : (
             <p className="gpt-page-sub">{t("settings.comingSoon")}</p>
           )}

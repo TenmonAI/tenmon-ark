@@ -3,6 +3,8 @@ import { useEffect, useState } from "react";
 import KoshikiConsolePage from "./pages/KoshikiConsole";
 import LoginLocal from "./pages/LoginLocal";
 import RegisterLocal from "./pages/RegisterLocal";
+import ForgotPasswordPage from "./pages/ForgotPasswordPage";
+import ResetPasswordPage from "./pages/ResetPasswordPage";
 import { GptShell } from "./components/gpt/GptShell";
 import { I18nProvider } from "./i18n/useI18n";
 
@@ -39,7 +41,9 @@ export default function App() {
 
   const isLoginPage = pathname === "/pwa/login-local.html" || pathname === "/pwa/login-local";
   const isRegisterPage = pathname === "/pwa/register-local.html" || pathname === "/pwa/register-local";
-  const isPublicAuthPage = isLoginPage || isRegisterPage;
+  const isForgotPasswordPage = pathname === "/pwa/forgot-password" || pathname === "/pwa/forgot-password/";
+  const isResetPasswordPage = pathname === "/pwa/reset-password" || pathname === "/pwa/reset-password/";
+  const isPublicAuthPage = isLoginPage || isRegisterPage || isForgotPasswordPage || isResetPasswordPage;
   const isKoshiki = pathname.startsWith("/pwa/koshiki");
   const isSukuyou = pathname === "/pwa/sukuyou" || pathname === "/pwa/sukuyou/";
 
@@ -63,7 +67,9 @@ export default function App() {
       const currentPath = typeof window !== "undefined" ? window.location.pathname : "";
       const onLoginPage = currentPath === "/pwa/login-local.html" || currentPath === "/pwa/login-local";
       const onRegisterPage = currentPath === "/pwa/register-local.html" || currentPath === "/pwa/register-local";
-      const allowWithoutAuth = onLoginPage || onRegisterPage;
+      const onForgotPage = currentPath === "/pwa/forgot-password" || currentPath === "/pwa/forgot-password/";
+      const onResetPage = currentPath === "/pwa/reset-password" || currentPath === "/pwa/reset-password/";
+      const allowWithoutAuth = onLoginPage || onRegisterPage || onForgotPage || onResetPage;
       if (!result.ok && !allowWithoutAuth && currentPath.startsWith("/pwa")) {
         window.location.href = "/pwa/login-local.html?next=/pwa/";
       }
@@ -117,6 +123,20 @@ export default function App() {
     })();
   }, [authReady, isPublicAuthPage]);
 
+  if (isForgotPasswordPage) {
+    return (
+      <I18nProvider>
+        <ForgotPasswordPage />
+      </I18nProvider>
+    );
+  }
+  if (isResetPasswordPage) {
+    return (
+      <I18nProvider>
+        <ResetPasswordPage />
+      </I18nProvider>
+    );
+  }
   if (isRegisterPage) {
     return (
       <I18nProvider>

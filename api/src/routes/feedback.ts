@@ -192,10 +192,15 @@ feedbackRouter.post("/feedback", async (req: Request, res: Response) => {
       createdAt: new Date().toISOString(),
     });
 
+    /* FIX-C: 管理向けログ出力 */
+    console.log(`[FEEDBACK] feedbackId=${receiptNumber} notionSaved=${notionResult.ok} notionPageId=${notionResult.notionPageId || "(none)"} saveStatus=${notionResult.ok ? "notion_ok" : "local_fallback"}`);
+
     return res.json({
       ok: true,
       receiptNumber,
       notionSaved: notionResult.ok,
+      notionPageId: notionResult.notionPageId || null,
+      saveStatus: notionResult.ok ? "notion_ok" : "local_fallback",
       message: notionResult.ok
         ? `ご要望を承りました（受付番号: ${receiptNumber}）`
         : `ご要望を承りました（受付番号: ${receiptNumber}）※ 一時的にローカル保存されました。後ほどNotionに同期されます。`,

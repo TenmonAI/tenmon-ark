@@ -150,6 +150,10 @@ body::before {
   display: flex;
   flex-direction: column;
 }
+/* FIX-B: feedback等の長いページはgpt-content直下で独自スクロール */
+.gpt-content > div {
+  min-height: 0;
+}
 
 /* Sidebar */
 .gpt-sidebar {

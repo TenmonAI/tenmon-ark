@@ -8,7 +8,7 @@ type TopbarProps = {
 };
 
 export function Topbar({
-  title = "TENMON-ARK 1.0",
+  title = "TENMON-ARK 1.1",
   onOpenSidebar,
   isSidebarOpen,
 }: TopbarProps) {
