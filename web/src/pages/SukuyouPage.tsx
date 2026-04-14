@@ -16,7 +16,7 @@ interface GuidanceResult {
   honmeiShuku: string;
   disasterType: string;
   reversalAxis: string;
-  oracle: string;
+  oracle: { shortOracle: string; longOracle: string } | string;
   report: {
     chapters: Array<{ title: string; body: string }>;
     fullText: string;
@@ -25,9 +25,8 @@ interface GuidanceResult {
   premise: {
     birthDate: string;
     name: string | null;
-    nakshatra: string;
-    nakshatraJp: string;
     confidence: number;
+    mode?: string;
   };
   warnings: string[];
 }
@@ -318,7 +317,7 @@ export function SukuyouPage({ onBack, onSendToChat }: SukuyouPageProps) {
                   border: "1px solid rgba(212, 175, 55, 0.2)",
                 }}>
                   <p style={{ fontSize: 13, fontWeight: 600, color: "#d4af37", margin: "0 0 4px" }}>御神託</p>
-                  <p style={{ fontSize: 13, margin: 0 }}>{result.oracle}</p>
+                  <p style={{ fontSize: 13, margin: 0 }}>{typeof result.oracle === 'string' ? result.oracle : result.oracle?.shortOracle || ''}</p>
                 </div>
               )}
             </div>
