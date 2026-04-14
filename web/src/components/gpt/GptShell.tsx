@@ -6,6 +6,7 @@ import { DashboardPage } from "../../pages/DashboardPage";
 import { ProfilePage } from "../../pages/ProfilePage";
 import { SukuyouPage } from "../../pages/SukuyouPage";
 import { SettingsModal } from "./SettingsModal";
+import FeedbackPage from "../../pages/FeedbackPage";
 import { APP_TITLE } from "../../config/app";
 import { createNewThreadId, switchThreadCanonicalV1 } from "../../hooks/useChat";
 
@@ -81,7 +82,9 @@ export function GptShell({ initialView = "chat" }: { initialView?: GptView }) {
         ? "Dashboard"
         : view === "sukuyou" || view === "sukuyou-room"
           ? "宿曜鑑定"
-          : "Profile";
+          : view === "feedback"
+            ? "改善のご要望"
+            : "Profile";
 
   const handleSukuyouSendToChat = (displayText: string, rawSeed: string, deepChatPrompt?: string) => {
     // P2+A6: Switch to chat view and inject the structured seed
@@ -127,6 +130,9 @@ export function GptShell({ initialView = "chat" }: { initialView?: GptView }) {
               onSendToChat={handleSukuyouSendToChat}
               restoreRoomId={openRoomId}
             />
+          )}
+          {view === "feedback" && (
+            <FeedbackPage onBack={() => setView("chat")} />
           )}
         </div>
       </main>

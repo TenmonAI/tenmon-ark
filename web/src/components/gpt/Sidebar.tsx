@@ -8,7 +8,7 @@ import {
 import { listSukuyouResults, deleteSukuyouResult, type SukuyouResultRoom } from "../../lib/sukuyouStore";
 import { formatShukuLabel } from "../../lib/shukuLabel";
 
-export type GptView = "chat" | "dashboard" | "profile" | "sukuyou" | "sukuyou-room";
+export type GptView = "chat" | "dashboard" | "profile" | "sukuyou" | "sukuyou-room" | "feedback";
 
 interface SidebarProps {
   view: GptView;
@@ -292,6 +292,18 @@ export function Sidebar({ view, onView, onNewChat, onOpenSettings, onOpenSukuyou
         </button>
         <button type="button" className={linkClass("profile")} onClick={() => onView("profile")}>
           {t("sidebar.profile")}
+        </button>
+        <button
+          type="button"
+          className={linkClass("feedback")}
+          onClick={() => onView("feedback")}
+          style={{
+            marginTop: 4,
+            borderTop: "1px solid rgba(255,255,255,0.06)",
+            paddingTop: 8,
+          }}
+        >
+          ✉ 改善のご要望
         </button>
       </nav>
 
