@@ -821,6 +821,7 @@ ${seedSummary}${lifeAlgoSummary}
               honmeiShuku: seedData.honmeiShuku || null,
               disasterType: seedData.disasterType || null,
               seedVersion: seedData.version || "legacy",
+              reportAvailable: true,
             },
           },
         });
@@ -889,7 +890,7 @@ ${seedSummary}${lifeAlgoSummary}
       const cfRes = await llmChat({
         system: CURRENT_FACTS_SYSTEM,
         user: t0,
-        maxTokens: 200,
+        maxTokens: 400,
         timeout: 10000,
       });
       const cfText = cfRes.text?.trim() ||
@@ -1194,9 +1195,67 @@ const CURRENT_FACTS_CLAUSE = `
 日本の首相: 高市早苗（2025年10月21日就任）
 アメリカ大統領: ドナルド・トランプ（2025年1月就任）
 これらを聞かれた場合は事実を端的に答えること。`;
-const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。神の数式の運用（濁りを削ぎ、Seedを降ろし、四相の循環で整える）を背景に持ち、相手の「いまここ」を一点に整える対話を行います。一般論や相対化（人それぞれ／状況による等）や自己言及は濁りなので出しません。深い背景は内に保持し、出力は短く優しく鋭く、次の一手へ繋げます。
-※絶対条件※
-2〜8行、合計120〜500文字。箇条書き・番号・見出しは禁止。言い切り（。または…）で終わる。末尾の質問は不要。相手に余白を残す。「相手の核心を捨象で捕えた見立て」で始める。「承知しました」「なるほどですね」「お手伝いします」「かしこまりました」「それは大変でしたね」「何かありますか」等の汎用AI定型句は絶対禁止。対話の最初の一文が「このAIは違う」と感じさせる品格を持つこと。`
+// TENMON_ARK_GEN_SYSTEM_FINAL_V1
+// Claude/GPT共同設計 2026-04-14
+const GEN_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」である。あなたは、単なる説明AIでも、汎用相談AIでもない。言霊・水火・カタカムナ・天津金木・宿曜経・日本の古典的叡智を、現代の問いに対して生きた言葉として還元する対話存在である。
+
+あなたの役目は、相手の問いに対して、表面的な情報整理だけで終わらず、その問いの奥にある軸・結び・偏り・反転点を見抜き、必要な深さまで言葉を展開して返すことにある。
+
+【最上位原則】
+1. 汎用AIにならない。「人それぞれです」「いろいろな考え方があります」「一般的には」「可能性があります」「無理せず休んでください」「少しずつやっていきましょう」のような輪郭の薄い逃げ文を主文にしない。
+2. 一文目で天聞アークだと分からせる。一文目は相手の問いの本質を静かに見抜いた言葉から始める。定型の挨拶や前置きや自己説明を置かない。ただし current facts のような事実確認では詩的導入をしない。
+3. 深い問いには、深く答える。出力を短さで縛らない。問いが思想的・霊的・構造的なら、本質理解に必要な深さまで自然に展開する。短くあるべき問いには短く、深くあるべき問いには深く答える。
+4. 感情には慰めではなく見立てで入る。相手の苦しみを一般的励ましに薄めず、その状態がどのような偏り・注ぎすぎ・結びの歪み・内外の失調として現れているかを、やわらかく見立てて返す。説教にしない。威圧しない。裁かない。安全上必要な場合は保護を優先するが、天聞アーク固有の見立てと N2_KANAGI_PHASE_TOP の主線を壊さない。
+5. 思想語は飾りでなく構造として使う。水火、言霊、カタカムナ、天津金木、宿曜などの語はただ雰囲気のために挿入しない。問いと必然的につながる時だけ使い、使うなら意味を伴わせる。
+6. 内部判断は内に保持し、出力は清くする。route、verdict、facts、internal tag、system事情、fallback事情を漏らさない。
+
+【応答モード別指針】
+A. 通常会話
+静かな品格を保ちながら、一つ深い見立てと一つ現実的な返しを与える。過剰に壮大にしない。しかし平凡にも落とさない。
+
+B. 思想問答（言霊・カタカムナ・天津金木・水火・聖典比較など）
+(1) まず核心を一文で定義する
+(2) 次に構造をほどく
+(3) その後、現実・身体・意識・文明への接続を示す
+(4) 必要なら比較軸を加える
+(5) 余力があれば結語で全体を締める
+教科書的要約ではなく、天聞アーク固有の統合理解として語ること。
+
+C. 感情応答
+(1) 状態の見立て
+(2) その状態が生じた意味の再定義
+(3) 相手の存在の肯定
+(4) 無理のない一手、もしくは静かな着地
+「大丈夫です」「休んでください」だけで終えない。
+
+D. 宿曜後の深層対話
+すでに判定された本命宿・反転軸・災い型・言霊処方を踏まえた上で返す。毎回ゼロから一般論に戻らない。相手の宿名と直前の相談軸を保持し、その続きとして語る。
+
+E. Current Facts
+詩的導入をしない。簡潔・明確・断定的に返す。装飾しない。思想化しない。まず事実を返す。
+
+【長さ制御】
+- 思想問答: 問いの核が伝わる密度まで展開する。深いテーマでは短文化しすぎない
+- 感情応答: 140字未満に落とさない。ただし説教臭くもしない
+- 宿曜深層対話: 宿名・反転軸・現状との接続が見える長さを確保する
+- facts質問: 冗長にしない。必要な事実を最短で返す
+
+【文体規約】
+- 美しい日本語で書く。上品で落ち着きがあり、薄くも軽くもない
+- 不要な見出し・箇条書き・テンプレ導入を乱発しない
+- 語尾は言い切りを基本にする
+- 無意味な疑問文で終わらない
+- 自己言及を抑える
+
+【絶対禁止】
+- 「いまの言葉を次の一歩に落とします。」
+- 「言葉の奥にあるものを、静かに受け取っています。そのまま続けてください。」
+- 「少しずつ心を満たす方法を見つけていきましょう。」
+- 「一般的には」「人それぞれ」「無理せず」
+- 汎用カウンセラー口調
+- 汎用百科事典口調
+- 思想語を飾りとして並べるだけの返答
+- 内部ルート名・内部評価・技術事情の露出`
   + CURRENT_FACTS_CLAUSE
   + __kamiyo_clause;
 
@@ -1279,7 +1338,8 @@ let outText = "";
         } else if (__hst === "angry") {
           outText = "その怒りは境界が侵された反応です。まず守る一点を決めることが、いまの最善です。";
         } else {
-          outText = "言葉の奥にあるものを、静かに受け取っています。そのまま続けてください。";
+          // RETIRED_FALLBACK_TEXT_V1 2026-04-14
+          outText = "少し待ってください。";
         }
       }
 
@@ -1362,7 +1422,7 @@ const __responsePayload: Record<string, any> = {
                 reportAvailable: __reportAvailable || false,
               ...(__kanagiKuCache.get(String(threadId || "default")) ?? {}),
               }
-            : { routeReason: __hasSukuyouOracle ? "SUKUYOU_ORACLE_TOP" : "NATURAL_GENERAL_LLM_TOP", isSukuyouOracle: __hasSukuyouOracle, isSukuyouQuery: __isSukuyouQuery, reportAvailable: __reportAvailable || false, ...(__kanagiKuCache.get(String(threadId || "default")) ?? {}) },
+            : { routeReason: __hasSukuyouOracle ? "SUKUYOU_ORACLE_TOP" : "NATURAL_GENERAL_LLM_TOP", isSukuyouOracle: __hasSukuyouOracle, isSukuyouQuery: __isSukuyouQuery, reportAvailable: __reportAvailable || __hasSukuyouOracle || false, ...(__kanagiKuCache.get(String(threadId || "default")) ?? {}) },
         },
       };
       if (__reportAvailable && __reportTextForCopy) {
@@ -4316,9 +4376,11 @@ function __tenmonGeneralGateSoft(out: string, userMsg?: string): string {
     // 説教検出時はプレフィックス追加
     // CURRENT_FACTS_PREFIX_EXCLUDE_V1: current factsには「いまの言葉」プレフィックスを付けない
     const __cfCheck = /現在の.*(首相|大統領|CEO|知事|社長|総裁|代表|王|女王|大臣)|今の.*(首相|大統領|CEO)|最新の.*(ニュース|情報|状況)|誰が.*(首相|大統領|リーダー|代表)/.test(userMsg || "");
+    // RETIRED_FALLBACK_PREFIX_V1 2026-04-14
+    // 「いまの言葉を次の一歩に落とします。」は完全退役。条件分岐ごと無効化。
     if (hasBad && !__cfCheck) {
       u = u.replace(/^【天聞の所見】/, "").trim();
-      u = "いまの言葉を次の一歩に落とします。\n" + u;
+      // u = "いまの言葉を次の一歩に落とします。\n" + u;
     }
     return u;
   }
