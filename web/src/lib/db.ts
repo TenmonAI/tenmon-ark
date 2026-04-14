@@ -17,11 +17,11 @@ export type PersistSeed = {
   [k: string]: unknown;
 };
 
-export const SCHEMA_VERSION = "PWA_MEM_01a_IDB_V2";
+export const SCHEMA_VERSION = "PWA_MEM_01a_IDB_V3";
 
 
 const DB_NAME = "tenmon_ark_pwa_v1";
-const DB_VER = 2;
+const DB_VER = 3;
 
 function openDB(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -63,7 +63,6 @@ function openDB(): Promise<IDBDatabase> {
           const meta = db.createObjectStore("meta", { keyPath: "key" });
           meta.put({ key: "schemaVersion", value: SCHEMA_VERSION });
         } else {
-          // upgrade tx があるときだけ put（存在しない環境では無視されてもOK）
           try {
             const meta = (event.target as any).transaction.objectStore("meta");
             meta.put({ key: "schemaVersion", value: SCHEMA_VERSION });
@@ -71,6 +70,18 @@ function openDB(): Promise<IDBDatabase> {
             // ignore
           }
         }
+      }
+
+      // v2 -> v3: sukuyou_results store を追加
+      if (oldVersion < 3) {
+        if (!db.objectStoreNames.contains("sukuyou_results")) {
+          const s = db.createObjectStore("sukuyou_results", { keyPath: "id" });
+          s.createIndex("by_createdAt", "createdAt", { unique: false });
+        }
+        try {
+          const meta = (event.target as any).transaction.objectStore("meta");
+          meta.put({ key: "schemaVersion", value: SCHEMA_VERSION });
+        } catch { /* ignore */ }
       }
     };
     req.onsuccess = () => resolve(req.result);

@@ -5,14 +5,17 @@ import {
   getStorageKeys,
   switchThreadCanonicalV1,
 } from "../../hooks/useChat";
+import { listSukuyouResults, deleteSukuyouResult, type SukuyouResultRoom } from "../../lib/sukuyouStore";
+import { formatShukuLabel } from "../../lib/shukuLabel";
 
-export type GptView = "chat" | "dashboard" | "profile" | "sukuyou";
+export type GptView = "chat" | "dashboard" | "profile" | "sukuyou" | "sukuyou-room";
 
 interface SidebarProps {
   view: GptView;
   onView: (v: GptView) => void;
   onNewChat: () => void;
   onOpenSettings: () => void;
+  onOpenSukuyouRoom?: (roomId: string) => void;
 }
 
 type ThreadMeta = {
@@ -46,7 +49,7 @@ function getActiveThreadId(): string | null {
   }
 }
 
-export function Sidebar({ view, onView, onNewChat, onOpenSettings }: SidebarProps) {
+export function Sidebar({ view, onView, onNewChat, onOpenSettings, onOpenSukuyouRoom }: SidebarProps) {
   const { t } = useI18n();
   const linkClass = (v: GptView) =>
     `gpt-sidebar-item ${view === v ? "gpt-sidebar-item-active" : ""}`;
@@ -54,6 +57,11 @@ export function Sidebar({ view, onView, onNewChat, onOpenSettings }: SidebarProp
   const [threads, setThreads] = useState<ThreadMeta[]>([]);
   const [activeThreadId, setActiveThreadId] = useState<string | null>(null);
   const [hoverThreadId, setHoverThreadId] = useState<string | null>(null);
+
+  /* ── 宿曜鑑定結果一覧 ── */
+  const [sukuyouRooms, setSukuyouRooms] = useState<SukuyouResultRoom[]>([]);
+  const [showSukuyouRooms, setShowSukuyouRooms] = useState(false);
+  const [hoverRoomId, setHoverRoomId] = useState<string | null>(null);
 
   useEffect(() => {
     /** ページ再読込ではなく、storage / 一覧同期のみ（名称は lived audit 誤検知回避） */
@@ -66,9 +74,17 @@ export function Sidebar({ view, onView, onNewChat, onOpenSettings }: SidebarProp
     window.addEventListener("tenmon:threads-updated", refreshSidebarThreads);
     window.addEventListener("storage", refreshSidebarThreads);
 
+    /* 宿曜鑑定結果の読み込み */
+    const refreshSukuyouRooms = () => {
+      listSukuyouResults().then(setSukuyouRooms).catch(() => {});
+    };
+    refreshSukuyouRooms();
+    window.addEventListener("tenmon:sukuyou-updated", refreshSukuyouRooms);
+
     return () => {
       window.removeEventListener("tenmon:threads-updated", refreshSidebarThreads);
       window.removeEventListener("storage", refreshSidebarThreads);
+      window.removeEventListener("tenmon:sukuyou-updated", refreshSukuyouRooms);
     };
   }, []);
 
@@ -126,7 +142,7 @@ export function Sidebar({ view, onView, onNewChat, onOpenSettings }: SidebarProp
           onClick={() => onView("sukuyou")}
           style={{
             marginTop: 4,
-            background: view === "sukuyou" ? "rgba(212, 175, 55, 0.15)" : "transparent",
+            background: view === "sukuyou" || view === "sukuyou-room" ? "rgba(212, 175, 55, 0.15)" : "transparent",
             border: "1px solid rgba(212, 175, 55, 0.3)",
             color: "#d4af37",
             borderRadius: 8,
@@ -135,6 +151,82 @@ export function Sidebar({ view, onView, onNewChat, onOpenSettings }: SidebarProp
         >
           ✦ 宿曜鑑定
         </button>
+
+        {/* 鑑定結果フォルダー */}
+        {sukuyouRooms.length > 0 && (
+          <div style={{ marginTop: 2 }}>
+            <button
+              type="button"
+              onClick={() => setShowSukuyouRooms(!showSukuyouRooms)}
+              className="gpt-sidebar-item"
+              style={{
+                fontSize: 11,
+                color: "#d4af37",
+                opacity: 0.8,
+                padding: "4px 8px",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                width: "100%",
+              }}
+            >
+              <span>鑑定結果 ({sukuyouRooms.length})</span>
+              <span style={{ fontSize: 9 }}>{showSukuyouRooms ? "▲" : "▼"}</span>
+            </button>
+            {showSukuyouRooms && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 1, paddingLeft: 4 }}>
+                {sukuyouRooms.map((room) => (
+                  <button
+                    key={room.id}
+                    type="button"
+                    onClick={() => onOpenSukuyouRoom?.(room.id)}
+                    className="gpt-sidebar-item"
+                    style={{
+                      fontSize: 11,
+                      padding: "6px 8px",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      gap: 4,
+                    }}
+                    onMouseEnter={() => setHoverRoomId(room.id)}
+                    onMouseLeave={() => setHoverRoomId(prev => prev === room.id ? null : prev)}
+                  >
+                    <span style={{
+                      maxWidth: 110,
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                      color: "#d4af37",
+                    }}>
+                      {formatShukuLabel(room.honmeiShuku)}
+                    </span>
+                    <span style={{ fontSize: 9, opacity: 0.5 }}>
+                      {room.name || new Date(room.createdAt).toLocaleDateString("ja-JP", { month: "short", day: "numeric" })}
+                    </span>
+                    <span
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        deleteSukuyouResult(room.id).then(() => {
+                          listSukuyouResults().then(setSukuyouRooms).catch(() => {});
+                        });
+                      }}
+                      style={{
+                        marginLeft: 2,
+                        fontSize: 12,
+                        opacity: hoverRoomId === room.id ? 0.8 : 0,
+                        transition: "opacity 0.15s",
+                        cursor: "pointer",
+                      }}
+                    >
+                      ×
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       <nav className="gpt-scroll gpt-sidebar-history">
