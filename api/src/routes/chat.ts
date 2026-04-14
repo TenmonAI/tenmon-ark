@@ -823,8 +823,8 @@ ${seedSummary}${lifeAlgoSummary}
         const llmRes = await llmChat({
           system: DEEP_CHAT_SYSTEM,
           user: DEEP_CHAT_USER,
-          maxTokens: 2000,
-          timeout: 45000,
+          maxTokens: 3500,
+          timeout: 60000,
         });
         const outText = llmRes.ok && llmRes.text ? llmRes.text.trim() : `${seedSummary}を踏まえた深層対話を開始します。あなたの悩みをお聞かせください。`;
         return res.json({
@@ -1367,8 +1367,8 @@ ${__carrySeedSummary}${__carryLifeAlgo}
             system: DEEP_CHAT_CARRY_SYSTEM,
             user: t0,
             history: __carryHistory,
-            maxTokens: 2000,
-            timeout: 45000,
+            maxTokens: 3500,
+            timeout: 60000,
           });
           const __carryText = __carryRes.ok && __carryRes.text ? __carryRes.text.trim() : "";
           if (__carryText && __carryText.length > 30) {

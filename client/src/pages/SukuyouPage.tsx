@@ -7,7 +7,7 @@
  */
 import React, { useState, useCallback, useRef, useEffect } from "react";
 import { formatShukuLabel, getShukuKana } from "../lib/shukuLabel";
-import { saveSukuyouResult, type SukuyouResultRoom } from "../lib/sukuyouStore";
+import { saveSukuyouResult, getSukuyouResult, type SukuyouResultRoom } from "../lib/sukuyouStore";
 
 interface GuidanceResult {
   success: boolean;
@@ -56,6 +56,7 @@ interface ChatMessage {
 interface SukuyouPageProps {
   onBack: () => void;
   onSendToChat?: (displayText: string, rawSeed: string, deepChatPrompt?: string) => void;
+  restoreRoomId?: string;
 }
 
 /* ── 質問チップ定義 ── */
@@ -297,7 +298,7 @@ async function generateShareCard(result: GuidanceResult): Promise<Blob | null> {
   });
 }
 
-export function SukuyouPage({ onBack, onSendToChat }: SukuyouPageProps) {
+export function SukuyouPage({ onBack, onSendToChat, restoreRoomId }: SukuyouPageProps) {
   // Form state
   const [birthYear, setBirthYear] = useState("");
   const [birthMonth, setBirthMonth] = useState("");
@@ -309,6 +310,7 @@ export function SukuyouPage({ onBack, onSendToChat }: SukuyouPageProps) {
   const [result, setResult] = useState<GuidanceResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isRestoredRoom, setIsRestoredRoom] = useState(false);
 
   // Toast
   const [toast, setToast] = useState<string | null>(null);
@@ -344,6 +346,90 @@ export function SukuyouPage({ onBack, onSendToChat }: SukuyouPageProps) {
       el.style.height = Math.min(el.scrollHeight, 120) + "px";
     }
   }, [chatInput]);
+
+  /* ── 保存済み鑑定ルーム復元 ── */
+  useEffect(() => {
+    if (!restoreRoomId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const room = await getSukuyouResult(restoreRoomId);
+        if (!room || cancelled) return;
+
+        // GuidanceResult 互換オブジェクトを復元
+        const restored: GuidanceResult = {
+          success: true,
+          honmeiShuku: room.honmeiShuku,
+          disasterType: room.disasterType,
+          reversalAxis: room.reversalAxis,
+          oracle: {
+            shortOracle: room.shortOracle || "",
+            longOracle: room.longOracle || "",
+            oneActionNow: room.immediateAction || "",
+          },
+          report: {
+            chapters: room.chapters || [],
+            fullText: room.fullReport || "",
+            charCount: room.charCount || 0,
+          },
+          premise: {
+            birthDate: room.birthDate || "",
+            name: room.name || null,
+            confidence: 0.85,
+          },
+          warnings: [],
+          sukuyouSeedV1: room.sukuyouSeedV1 as GuidanceResult["sukuyouSeedV1"],
+        };
+
+        setResult(restored);
+        setIsRestoredRoom(true);
+        resultRoomId.current = room.id;
+        chatThreadId.current = room.threadId;
+
+        // チャット履歴復元
+        if (room.chatHistory && room.chatHistory.length > 0) {
+          setChatMessages(room.chatHistory.map(c => ({
+            role: c.role,
+            text: c.text,
+            createdAt: c.createdAt,
+          })));
+        }
+
+        // フォーム値も復元（表示用）
+        if (room.birthDate) {
+          const parts = room.birthDate.split("-");
+          if (parts.length === 3) {
+            setBirthYear(parts[0]);
+            setBirthMonth(String(parseInt(parts[1])));
+            setBirthDay(String(parseInt(parts[2])));
+          }
+        }
+        if (room.name) setName(room.name);
+        if (room.rawConcern) setConcern(room.rawConcern);
+
+        // seed再送信でバックエンド文脈を再確立
+        if (room.sukuyouSeedV1) {
+          const rawSeed = `[SUKUYOU_SEED] ${JSON.stringify(room.sukuyouSeedV1)}`;
+          try {
+            await fetch("/api/chat", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              credentials: "include",
+              body: JSON.stringify({
+                message: rawSeed,
+                sessionId: room.threadId,
+                threadId: room.threadId,
+              }),
+            }).then(r => r.json()).catch(() => {});
+          } catch { /* seed再送信失敗は無視 */ }
+        }
+      } catch (e) {
+        console.error("Room restore failed:", e);
+        setError("鑑定結果の復元に失敗しました");
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [restoreRoomId]);
 
   /* ── IndexedDB保存 ── */
   const saveToIDB = useCallback(async (

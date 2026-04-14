@@ -15,6 +15,8 @@ export function GptShell({ initialView = "chat" }: { initialView?: GptView }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isOverlayNav, setIsOverlayNav] = useState(false); // <=1024 drawer mode
 
+  /* ── 宿曜ルーム再開用 state ── */
+  const [openRoomId, setOpenRoomId] = useState<string | null>(null);
 
   /** TENMON_PWA_NEWCHAT_SURFACE_BINDING_V1: ページ再読込なし・useChat.resetThread と同系統 */
   const handleNewChat = () => {
@@ -24,6 +26,9 @@ export function GptShell({ initialView = "chat" }: { initialView?: GptView }) {
   };
 
   const handleChangeView = (next: GptView) => {
+    if (next === "sukuyou") {
+      setOpenRoomId(null); // 新規鑑定モード
+    }
     setView(next);
     setSidebarOpen(false);
   };
@@ -33,7 +38,13 @@ export function GptShell({ initialView = "chat" }: { initialView?: GptView }) {
     setSettingsOpen(true);
   };
 
-  
+  /* ── 保存済み鑑定ルーム再開 ── */
+  const handleOpenSukuyouRoom = (roomId: string) => {
+    setOpenRoomId(roomId);
+    setView("sukuyou-room");
+    setSidebarOpen(false);
+  };
+
   // GPT-like Responsive Nav (mobile/tablet)
   useEffect(() => {
     const mq = window.matchMedia("(max-width: 1024px)");
@@ -63,12 +74,12 @@ export function GptShell({ initialView = "chat" }: { initialView?: GptView }) {
     return () => window.removeEventListener("keydown", onKey);
   }, [sidebarOpen, isOverlayNav]);
 
-const title =
+  const title =
     view === "chat"
       ? APP_TITLE
       : view === "dashboard"
         ? "Dashboard"
-        : view === "sukuyou"
+        : view === "sukuyou" || view === "sukuyou-room"
           ? "宿曜鑑定"
           : "Profile";
 
@@ -86,6 +97,7 @@ const title =
     } catch {}
     switchThreadCanonicalV1(createNewThreadId());
   };
+
   return (
     <div className={`gpt-shell ${isOverlayNav ? "gpt-shell--overlay" : ""} ${sidebarOpen ? "gpt-shell--open" : ""}`}>
       <div className="gpt-overlay" onClick={() => setSidebarOpen(false)} />
@@ -94,6 +106,7 @@ const title =
         onView={handleChangeView}
         onNewChat={handleNewChat}
         onOpenSettings={handleOpenSettings}
+        onOpenSukuyouRoom={handleOpenSukuyouRoom}
       />
       <main className="gpt-main">
         <Topbar title={title} onOpenSidebar={isOverlayNav ? () => setSidebarOpen(true) : undefined} isSidebarOpen={sidebarOpen} />
@@ -101,7 +114,20 @@ const title =
           {view === "chat" && <ChatRoute />}
           {view === "dashboard" && <DashboardPage />}
           {view === "profile" && <ProfilePage />}
-          {view === "sukuyou" && <SukuyouPage onBack={() => setView("chat")} onSendToChat={handleSukuyouSendToChat} />}
+          {view === "sukuyou" && (
+            <SukuyouPage
+              onBack={() => setView("chat")}
+              onSendToChat={handleSukuyouSendToChat}
+            />
+          )}
+          {view === "sukuyou-room" && openRoomId && (
+            <SukuyouPage
+              key={openRoomId}
+              onBack={() => setView("chat")}
+              onSendToChat={handleSukuyouSendToChat}
+              restoreRoomId={openRoomId}
+            />
+          )}
         </div>
       </main>
       <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
