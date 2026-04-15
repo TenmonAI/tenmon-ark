@@ -119,7 +119,8 @@ export function ChatLayout() {
       data-chat-layout-bound="1"
       data-thread-id={threadId || ""}
     >
-      <SukuyouContextBar context={sukuyouCtx} />
+      {/* MANUS-UI-07: 新規チャット（メッセージ0件）の場合はコンテキストバーを非表示 */}
+      {messages.length > 0 && <SukuyouContextBar context={sukuyouCtx} />}
       {isEmpty ? (
         <EmptyState onSuggestion={(text) => sendMessage(text)} />
       ) : (
