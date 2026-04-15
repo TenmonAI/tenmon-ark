@@ -59,7 +59,7 @@ export function Topbar({
       localStorage.removeItem("tenmon_user_display_v1");
     } catch {}
 
-    window.location.href = "/pwa/login";
+    window.location.href = "/pwa/login-local";
   }
 
   const accountName =
