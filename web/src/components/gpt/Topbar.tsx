@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useI18n } from "../../i18n/useI18n";
+import { stopPeriodicSync } from "../../lib/crossDeviceSync";
 
 type TopbarProps = {
   title?: string;
@@ -52,11 +53,19 @@ export function Topbar({
     }
 
     try {
+      // Stop periodic sync before clearing state
+      stopPeriodicSync();
+    } catch {}
+
+    try {
       localStorage.removeItem("TENMON_AUTH_OK_V1");
       localStorage.removeItem("TENMON_AUTOLOGIN_DONE");
       localStorage.removeItem("TENMON_FOUNDER_KEY");
       localStorage.removeItem("TENMON_USER_KEY");
       localStorage.removeItem("tenmon_user_display_v1");
+      // Clear sync state so re-login triggers fresh bootstrap
+      localStorage.removeItem("TENMON_SYNC_PENDING_CHANGES");
+      localStorage.removeItem("TENMON_SYNC_LAST_PULL_AT");
     } catch {}
 
     window.location.href = "/pwa/login-local";

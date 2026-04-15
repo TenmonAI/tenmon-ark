@@ -190,27 +190,223 @@ export async function syncPull(): Promise<PullResponse | null> {
 /**
  * push — pending queue の変更をサーバーに送信。
  */
+const PUSH_CHUNK_SIZE = 200;
+
 export async function syncPush(): Promise<PushResponse | null> {
   const pending = getPendingChanges();
   if (pending.length === 0) return null;
 
-  try {
-    const deviceId = getDeviceId();
-    const data = await fetchJson<PushResponse>(
-      `${API_BASE}/sync/push`,
-      {
-        method: "POST",
-        body: JSON.stringify({ deviceId, changes: pending }),
+  const deviceId = getDeviceId();
+  let totalApplied = 0;
+  let totalSkipped = 0;
+  let lastAt = "";
+  let successCount = 0; // number of items successfully pushed so far
+
+  for (let i = 0; i < pending.length; i += PUSH_CHUNK_SIZE) {
+    const chunk = pending.slice(i, i + PUSH_CHUNK_SIZE);
+    try {
+      const data = await fetchJson<PushResponse>(
+        `${API_BASE}/sync/push`,
+        {
+          method: "POST",
+          body: JSON.stringify({ deviceId, changes: chunk }),
+        }
+      );
+      if (data.ok) {
+        totalApplied += data.applied;
+        totalSkipped += data.skipped;
+        lastAt = data.at;
+        successCount += chunk.length;
+        // Remove only the successfully pushed items from pending
+        const remaining = getPendingChanges();
+        // The first `successCount` items have been sent; keep the rest
+        setPendingChanges(remaining.slice(successCount));
+      } else {
+        // Server returned ok=false; stop sending further chunks
+        console.warn("[SYNC] push chunk rejected by server", data.error);
+        break;
       }
-    );
-    if (data.ok) {
-      // clear pushed changes
-      setPendingChanges([]);
+    } catch (e) {
+      // Network/fetch error; stop sending further chunks
+      // Already-succeeded chunks have been removed from pending
+      console.warn("[SYNC] push chunk failed", e);
+      break;
     }
-    return data;
-  } catch (e) {
-    console.warn("[SYNC] push failed", e);
-    return null;
+  }
+
+  if (totalApplied > 0 || totalSkipped > 0) {
+    return { ok: true, applied: totalApplied, skipped: totalSkipped, at: lastAt };
+  }
+  return null;
+}
+
+/* ── IDB helpers for shallow-merge apply ── */
+
+const IDB_NAME = "tenmon_ark_pwa_v1";
+const IDB_VER = 4;
+
+function openSyncIDB(): Promise<IDBDatabase> {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(IDB_NAME, IDB_VER);
+    req.onupgradeneeded = (event: IDBVersionChangeEvent) => {
+      const db = req.result;
+      const old = event.oldVersion;
+      if (old === 0) {
+        db.createObjectStore("threads", { keyPath: "id" });
+        const ms = db.createObjectStore("messages", { keyPath: "id" });
+        ms.createIndex("by_threadId", "threadId", { unique: false });
+        db.createObjectStore("seeds", { keyPath: "id" });
+        db.createObjectStore("meta", { keyPath: "key" });
+      }
+      if (old < 3 && !db.objectStoreNames.contains("sukuyou_results")) {
+        const s = db.createObjectStore("sukuyou_results", { keyPath: "id" });
+        s.createIndex("by_createdAt", "createdAt", { unique: false });
+      }
+      if (old < 4 && !db.objectStoreNames.contains("chat_folders")) {
+        const s = db.createObjectStore("chat_folders", { keyPath: "id" });
+        s.createIndex("by_sortOrder", "sortOrder", { unique: false });
+      }
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+/**
+ * Shallow-merge remote folders into IndexedDB chat_folders.
+ * Preserves local-only fields; only overwrites remote meta fields.
+ */
+async function applyFoldersToIDB(folders: SyncFolder[]): Promise<void> {
+  const db = await openSyncIDB();
+  try {
+    if (!db.objectStoreNames.contains("chat_folders")) return;
+
+    // 1. Read all existing records into a map
+    const readTx = db.transaction(["chat_folders"], "readonly");
+    const existingMap = await new Promise<Map<string, Record<string, unknown>>>((resolve, reject) => {
+      const req = readTx.objectStore("chat_folders").getAll();
+      req.onsuccess = () => {
+        const map = new Map<string, Record<string, unknown>>();
+        for (const row of (req.result ?? []) as Record<string, unknown>[]) {
+          if (row && typeof row.id === "string") map.set(row.id, row);
+        }
+        resolve(map);
+      };
+      req.onerror = () => reject(req.error);
+    });
+
+    // 2. Write with shallow merge
+    const writeTx = db.transaction(["chat_folders"], "readwrite");
+    const store = writeTx.objectStore("chat_folders");
+
+    for (const f of folders) {
+      if (f.isDeleted) {
+        store.delete(f.folderId);
+        continue;
+      }
+      const local = existingMap.get(f.folderId) || {};
+      // shallow merge: local fields preserved, remote meta overwrites
+      const merged: Record<string, unknown> = {
+        ...local,
+        id: f.folderId,
+        name: f.name,
+        kind: f.kind || (local as any).kind || "chat",
+        color: f.color ?? (local as any).color ?? null,
+        sortOrder: f.sortOrder ?? (local as any).sortOrder ?? 0,
+        isDefault: !!f.isDefault,
+        updatedAt: f.updatedAt,
+      };
+      // Preserve createdAt if local has it
+      if (!merged.createdAt && (local as any).createdAt) {
+        merged.createdAt = (local as any).createdAt;
+      }
+      if (!merged.createdAt) {
+        merged.createdAt = f.updatedAt;
+      }
+      store.put(merged);
+    }
+
+    await new Promise<void>((resolve, reject) => {
+      writeTx.oncomplete = () => resolve();
+      writeTx.onerror = () => reject(writeTx.error);
+    });
+
+    // 3. Dispatch event for sidebar refresh
+    window.dispatchEvent(new CustomEvent("tenmon:folders-updated"));
+  } finally {
+    db.close();
+  }
+}
+
+/**
+ * Shallow-merge remote sukuyou rooms into IndexedDB sukuyou_results.
+ * Preserves local-only detail fields (fullReport, chapters, chatHistory, etc.);
+ * only overwrites remote meta fields.
+ */
+async function applySukuyouRoomsToIDB(rooms: SyncSukuyouRoom[]): Promise<void> {
+  const db = await openSyncIDB();
+  try {
+    if (!db.objectStoreNames.contains("sukuyou_results")) return;
+
+    // 1. Read all existing records into a map
+    const readTx = db.transaction(["sukuyou_results"], "readonly");
+    const existingMap = await new Promise<Map<string, Record<string, unknown>>>((resolve, reject) => {
+      const req = readTx.objectStore("sukuyou_results").getAll();
+      req.onsuccess = () => {
+        const map = new Map<string, Record<string, unknown>>();
+        for (const row of (req.result ?? []) as Record<string, unknown>[]) {
+          if (row && typeof row.id === "string") map.set(row.id, row);
+        }
+        resolve(map);
+      };
+      req.onerror = () => reject(req.error);
+    });
+
+    // 2. Write with shallow merge
+    const writeTx = db.transaction(["sukuyou_results"], "readwrite");
+    const store = writeTx.objectStore("sukuyou_results");
+
+    for (const r of rooms) {
+      if (r.isDeleted) {
+        store.delete(r.roomId);
+        continue;
+      }
+      const local = existingMap.get(r.roomId) || {};
+      // shallow merge: local detail fields (fullReport, chapters, chatHistory, etc.) preserved
+      // remote meta fields overwrite
+      const merged: Record<string, unknown> = {
+        ...local,
+        id: r.roomId,
+        threadId: r.threadId ?? (local as any).threadId ?? null,
+        birthDate: r.birthDate ?? (local as any).birthDate ?? null,
+        honmeiShuku: r.honmeiShuku ?? (local as any).honmeiShuku ?? null,
+        disasterType: r.disasterType ?? (local as any).disasterType ?? null,
+        reversalAxis: r.reversalAxis ?? (local as any).reversalAxis ?? null,
+        shortOracle: r.shortOracle ?? (local as any).shortOracle ?? null,
+        updatedAt: r.updatedAt,
+      };
+      // Preserve createdAt if local has it
+      if (!merged.createdAt && (local as any).createdAt) {
+        merged.createdAt = (local as any).createdAt;
+      }
+      if (!merged.createdAt) {
+        merged.createdAt = r.updatedAt;
+      }
+      // IMPORTANT: local-only detail fields are preserved via spread:
+      // fullReport, chapters, chatHistory, longOracle, immediateAction,
+      // honmeiShukuKana, rawConcern, charCount, sukuyouSeedV1, name
+      store.put(merged);
+    }
+
+    await new Promise<void>((resolve, reject) => {
+      writeTx.oncomplete = () => resolve();
+      writeTx.onerror = () => reject(writeTx.error);
+    });
+
+    // 3. Dispatch event for UI refresh
+    window.dispatchEvent(new CustomEvent("tenmon:sukuyou-updated"));
+  } finally {
+    db.close();
   }
 }
 
@@ -223,7 +419,7 @@ function applyRemoteData(
 ): void {
   // Apply threads to localStorage (THREADS_META)
   try {
-    const userKey = localStorage.getItem("TENMON_PWA_USER_ID") || "";
+    const userKey = localStorage.getItem("TENMON_USER_KEY") || localStorage.getItem("TENMON_PWA_USER_ID") || "";
     const metaKey = userKey
       ? `TENMON_PWA_THREADS_META_V1:${userKey}`
       : "TENMON_PWA_THREADS_META_V1";
@@ -259,23 +455,18 @@ function applyRemoteData(
     console.warn("[SYNC] failed to apply threads", e);
   }
 
-  // Apply folders to IndexedDB (dispatches event for sidebar refresh)
+  // Apply folders to IndexedDB with shallow merge
   if (folders.length > 0) {
-    try {
-      // We dispatch the event so the sidebar picks up changes
-      window.dispatchEvent(new CustomEvent("tenmon:folders-updated"));
-    } catch {
-      // ignore
-    }
+    applyFoldersToIDB(folders).catch((e) =>
+      console.warn("[SYNC] failed to apply folders to IDB", e)
+    );
   }
 
-  // Apply sukuyou rooms (dispatch event)
+  // Apply sukuyou rooms to IndexedDB with shallow merge
   if (sukuyouRooms.length > 0) {
-    try {
-      window.dispatchEvent(new CustomEvent("tenmon:sukuyou-updated"));
-    } catch {
-      // ignore
-    }
+    applySukuyouRoomsToIDB(sukuyouRooms).catch((e) =>
+      console.warn("[SYNC] failed to apply sukuyou rooms to IDB", e)
+    );
   }
 
   // Notify threads updated
@@ -302,7 +493,7 @@ export async function syncPushAllExistingData(): Promise<{ threads: number; fold
 
   // 1. localStorage の threads meta を一括登録
   try {
-    const userKey = localStorage.getItem("TENMON_USER_KEY") || "";
+    const userKey = localStorage.getItem("TENMON_USER_KEY") || localStorage.getItem("TENMON_PWA_USER_ID") || "";
     const metaKey = userKey
       ? `TENMON_PWA_THREADS_META_V1:${userKey}`
       : "TENMON_PWA_THREADS_META_V1";
@@ -442,13 +633,62 @@ export function stopPeriodicSync(): void {
 export async function initSync(): Promise<void> {
   try {
     // 1. サーバーから最新データを取得
-    await syncBootstrap();
+    const bootstrapResult = await syncBootstrap();
     // 2. この端末の既存データを全てサーバーに送信（完全自動）
     await syncPushAllExistingData();
     // 3. 定期同期開始
     startPeriodicSync();
     console.log("[SYNC] initSync complete — full auto sync active");
+
+    // 4. トースト通知: bootstrapで他デバイスのデータが取得できた場合のみ表示
+    if (bootstrapResult?.ok) {
+      const totalItems =
+        (bootstrapResult.threads?.length || 0) +
+        (bootstrapResult.folders?.length || 0) +
+        (bootstrapResult.sukuyouRooms?.length || 0);
+      if (totalItems > 0) {
+        showSyncToast("他のデバイスのデータを同期しました");
+      }
+    }
   } catch (e) {
     console.warn("[SYNC] initSync failed", e);
+  }
+}
+
+/**
+ * 控えめなトースト通知を表示する。
+ * 2.5秒で自動消去。ページロード時の初回のみ表示。
+ */
+function showSyncToast(message: string): void {
+  try {
+    const el = document.createElement("div");
+    el.textContent = message;
+    Object.assign(el.style, {
+      position: "fixed",
+      bottom: "24px",
+      left: "50%",
+      transform: "translateX(-50%)",
+      background: "rgba(30, 30, 40, 0.92)",
+      color: "#e0e0e0",
+      padding: "10px 24px",
+      borderRadius: "8px",
+      fontSize: "13px",
+      fontWeight: "500",
+      zIndex: "99999",
+      boxShadow: "0 2px 12px rgba(0,0,0,0.3)",
+      opacity: "0",
+      transition: "opacity 0.3s ease",
+      pointerEvents: "none",
+    });
+    document.body.appendChild(el);
+    // fade in
+    requestAnimationFrame(() => { el.style.opacity = "1"; });
+    // fade out and remove after 2.5s
+    setTimeout(() => {
+      el.style.opacity = "0";
+      setTimeout(() => { el.remove(); }, 400);
+    }, 2500);
+  } catch {
+    // ignore — toast is non-critical
   }
 }
