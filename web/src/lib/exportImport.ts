@@ -1,5 +1,6 @@
 // web/src/lib/exportImport.ts
 // PWA-MEM-01c: snapshot export + overwrite import (no silent corruption)
+// V3: 宿曜鑑定結果 + フォルダーを含む完全エクスポート
 
 import {
   dbGetAllThreads,
@@ -9,11 +10,16 @@ import {
   dbClearAll,
   upsertThread,
   replaceThreadMessages,
+  dbGetAllSukuyouResults,
+  dbPutAllSukuyouResults,
+  dbGetAllChatFolders,
+  dbPutAllChatFolders,
   type PersistThread,
   type PersistMessage,
   type PersistSeed,
 } from "./db";
 
+/** V2 (legacy) — threads + messages + seeds のみ */
 export type ExportPayloadV2 = {
   schemaVersion: 2;
   exportedAt: string;
@@ -22,9 +28,24 @@ export type ExportPayloadV2 = {
   seeds: PersistSeed[];
 };
 
-export async function exportForDownload(): Promise<ExportPayloadV2> {
+/** V3 — V2 + 宿曜鑑定結果 + フォルダー */
+export type ExportPayloadV3 = {
+  schemaVersion: 3;
+  exportedAt: string;
+  threads: PersistThread[];
+  messages: Record<string, PersistMessage[]>;
+  seeds: PersistSeed[];
+  sukuyouResults: Record<string, unknown>[];
+  chatFolders: Record<string, unknown>[];
+};
+
+export type ExportPayload = ExportPayloadV2 | ExportPayloadV3;
+
+export async function exportForDownload(): Promise<ExportPayloadV3> {
   const threads = await dbGetAllThreads();
   const seeds = await dbGetAllSeeds();
+  const sukuyouResults = await dbGetAllSukuyouResults();
+  const chatFolders = await dbGetAllChatFolders();
   const messages: Record<string, PersistMessage[]> = {};
 
   for (const t of threads) {
@@ -32,23 +53,27 @@ export async function exportForDownload(): Promise<ExportPayloadV2> {
   }
 
   return {
-    schemaVersion: 2,
+    schemaVersion: 3,
     exportedAt: new Date().toISOString(),
     threads,
     messages,
     seeds,
+    sukuyouResults,
+    chatFolders,
   };
 }
 
 /**
- * Overwrite import only. schemaVersion must be 2.
- * NOTE: atomic overwrite uses dbClearAll (already present in db.ts)
+ * Overwrite import. Supports schemaVersion 2 (legacy) and 3.
+ * V2 imports threads/messages/seeds only.
+ * V3 also imports sukuyouResults and chatFolders.
  */
 export async function importOverwrite(data: unknown): Promise<void> {
   if (!data || typeof data !== "object") throw new Error("invalid json");
-  const payload = data as Partial<ExportPayloadV2>;
-  if (payload.schemaVersion !== 2) {
-    throw new Error(`UNSUPPORTED_SCHEMA_VERSION:${String(payload.schemaVersion ?? "unknown")}`);
+  const payload = data as Partial<ExportPayloadV3>;
+  const version = (payload as any).schemaVersion;
+  if (version !== 2 && version !== 3) {
+    throw new Error(`UNSUPPORTED_SCHEMA_VERSION:${String(version ?? "unknown")}`);
   }
 
   const threads = Array.isArray(payload.threads) ? (payload.threads as PersistThread[]) : [];
@@ -58,7 +83,15 @@ export async function importOverwrite(data: unknown): Promise<void> {
       : {};
   const seeds = Array.isArray(payload.seeds) ? (payload.seeds as PersistSeed[]) : [];
 
-  // clear first (atomic overwrite)
+  // V3 追加フィールド（V2の場合は空配列）
+  const sukuyouResults = version >= 3 && Array.isArray(payload.sukuyouResults)
+    ? (payload.sukuyouResults as Record<string, unknown>[])
+    : [];
+  const chatFolders = version >= 3 && Array.isArray(payload.chatFolders)
+    ? (payload.chatFolders as Record<string, unknown>[])
+    : [];
+
+  // clear first (atomic overwrite — V2: sukuyou_results/chat_folders も含めてクリア)
   await dbClearAll();
 
   // threads
@@ -99,6 +132,16 @@ export async function importOverwrite(data: unknown): Promise<void> {
     ss.push(seed);
   }
   await dbPutSeeds(ss);
+
+  // V3: 宿曜鑑定結果
+  if (sukuyouResults.length > 0) {
+    await dbPutAllSukuyouResults(sukuyouResults);
+  }
+
+  // V3: フォルダー
+  if (chatFolders.length > 0) {
+    await dbPutAllChatFolders(chatFolders);
+  }
 }
 
 /**
@@ -153,6 +196,15 @@ export async function syncIdbToLocalStorageAfterImportV1(): Promise<string | nul
     /* ignore */
   }
   writeThreadIdToUrl(primaryId);
+
+  // V3: 宿曜鑑定結果のイベント通知（サイドバー更新用）
+  try {
+    window.dispatchEvent(new CustomEvent("tenmon:sukuyou-updated"));
+    window.dispatchEvent(new CustomEvent("tenmon:folders-updated"));
+  } catch {
+    /* ignore */
+  }
+
   return primaryId;
 }
 

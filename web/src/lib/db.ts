@@ -201,13 +201,82 @@ export async function dbGetAllSeeds(): Promise<PersistSeed[]> {
 
 
 // PWA-MEM-01c: clear all stores for atomic overwrite import
+// V2: sukuyou_results と chat_folders も含めてクリア
 export async function dbClearAll(): Promise<void> {
   const db = await openDB();
   try {
-    const tx = db.transaction(["threads", "messages", "seeds"], "readwrite");
-    tx.objectStore("threads").clear();
-    tx.objectStore("messages").clear();
-    tx.objectStore("seeds").clear();
+    const storeNames = ["threads", "messages", "seeds", "sukuyou_results", "chat_folders"];
+    const available = storeNames.filter(s => db.objectStoreNames.contains(s));
+    const tx = db.transaction(available, "readwrite");
+    for (const name of available) {
+      tx.objectStore(name).clear();
+    }
+    await txDone(tx);
+  } finally {
+    db.close();
+  }
+}
+
+// --- 宿曜結果の一括取得・書き込み（export/import用） ---
+export async function dbGetAllSukuyouResults(): Promise<Record<string, unknown>[]> {
+  const db = await openDB();
+  try {
+    if (!db.objectStoreNames.contains("sukuyou_results")) return [];
+    const tx = db.transaction(["sukuyou_results"], "readonly");
+    const req = tx.objectStore("sukuyou_results").getAll();
+    const rows = await new Promise<Record<string, unknown>[]>((resolve, reject) => {
+      req.onsuccess = () => resolve((req.result ?? []) as Record<string, unknown>[]);
+      req.onerror = () => reject(req.error);
+    });
+    await txDone(tx);
+    return rows;
+  } finally {
+    db.close();
+  }
+}
+
+export async function dbPutAllSukuyouResults(results: Record<string, unknown>[]): Promise<void> {
+  const db = await openDB();
+  try {
+    if (!db.objectStoreNames.contains("sukuyou_results")) return;
+    const tx = db.transaction(["sukuyou_results"], "readwrite");
+    const store = tx.objectStore("sukuyou_results");
+    for (const r of results) {
+      if (r && typeof r.id === "string") store.put(r);
+    }
+    await txDone(tx);
+  } finally {
+    db.close();
+  }
+}
+
+// --- フォルダーの一括取得・書き込み（export/import用） ---
+export async function dbGetAllChatFolders(): Promise<Record<string, unknown>[]> {
+  const db = await openDB();
+  try {
+    if (!db.objectStoreNames.contains("chat_folders")) return [];
+    const tx = db.transaction(["chat_folders"], "readonly");
+    const req = tx.objectStore("chat_folders").getAll();
+    const rows = await new Promise<Record<string, unknown>[]>((resolve, reject) => {
+      req.onsuccess = () => resolve((req.result ?? []) as Record<string, unknown>[]);
+      req.onerror = () => reject(req.error);
+    });
+    await txDone(tx);
+    return rows;
+  } finally {
+    db.close();
+  }
+}
+
+export async function dbPutAllChatFolders(folders: Record<string, unknown>[]): Promise<void> {
+  const db = await openDB();
+  try {
+    if (!db.objectStoreNames.contains("chat_folders")) return;
+    const tx = db.transaction(["chat_folders"], "readwrite");
+    const store = tx.objectStore("chat_folders");
+    for (const f of folders) {
+      if (f && typeof f.id === "string") store.put(f);
+    }
     await txDone(tx);
   } finally {
     db.close();
