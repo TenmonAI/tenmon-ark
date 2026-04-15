@@ -10,7 +10,7 @@ import path from "path";
 const feedbackRouter = Router();
 
 /* ── Notion DB 設定 ── */
-const NOTION_DB_ID = "860b3ca8-2286-49b1-ad67-c2c168a87148";
+const NOTION_DB_ID = process.env.NOTION_FEEDBACK_DB_ID || "860b3ca8-2286-49b1-ad67-c2c168a87148";
 const NOTION_VERSION = "2022-06-28";
 
 /* ── フォールバック保存先 ── */

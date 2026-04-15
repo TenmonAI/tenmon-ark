@@ -1,3 +1,10 @@
+/**
+ * ============================================================
+ *  SETTINGS PANEL — データのエクスポート/インポート
+ *  TENMON_MANUS_FINAL_ADJUSTMENT_DIRECTIVE_V4
+ *  ライトテーマ対応 + 日本語統一
+ * ============================================================
+ */
 import React, { useRef, useState } from "react";
 import { exportForDownload, importOverwrite, syncIdbToLocalStorageAfterImportV1 } from "../lib/exportImport";
 import { TENMON_THREAD_SWITCH_EVENT } from "../hooks/useChat";
@@ -7,6 +14,17 @@ interface SettingsPanelProps {
   onClose: () => void;
   onImported: () => void;
 }
+
+const C = {
+  bg: "#fafaf7",
+  card: "#ffffff",
+  text: "#1f2937",
+  textSub: "#6b7280",
+  textMuted: "#9ca3af",
+  border: "#e5e7eb",
+  arkGold: "#c9a14a",
+  overlay: "rgba(0, 0, 0, 0.4)",
+} as const;
 
 export function SettingsPanel({ open, onClose, onImported }: SettingsPanelProps) {
   const fileRef = useRef<HTMLInputElement>(null);
@@ -27,7 +45,7 @@ export function SettingsPanel({ open, onClose, onImported }: SettingsPanelProps)
       a.click();
       URL.revokeObjectURL(url);
 
-      setMessage({ type: "success", text: "エクスポート成功" });
+      setMessage({ type: "success", text: "エクスポートが完了しました" });
       setTimeout(() => setMessage(null), 3000);
     } catch (err) {
       console.error("Export failed:", err);
@@ -43,9 +61,9 @@ export function SettingsPanel({ open, onClose, onImported }: SettingsPanelProps)
     try {
       const text = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
-        reader.onload = (e) => {
+        reader.onload = (ev) => {
           try {
-            resolve(e.target?.result as string);
+            resolve(ev.target?.result as string);
           } catch (err) {
             reject(err);
           }
@@ -67,11 +85,11 @@ export function SettingsPanel({ open, onClose, onImported }: SettingsPanelProps)
           /* ignore */
         }
       }
-      setMessage({ type: "success", text: "Importしました（再読み込みなしで同期）" });
+      setMessage({ type: "success", text: "インポートが完了しました（自動で同期されます）" });
       onImported();
     } catch (err) {
       console.error("Import failed:", err);
-      setMessage({ type: "error", text: "インポートに失敗しました（形式が違う可能性）" });
+      setMessage({ type: "error", text: "インポートに失敗しました（ファイル形式をご確認ください）" });
       setTimeout(() => setMessage(null), 3000);
     }
   };
@@ -84,7 +102,7 @@ export function SettingsPanel({ open, onClose, onImported }: SettingsPanelProps)
         left: 0,
         right: 0,
         bottom: 0,
-        background: "rgba(0, 0, 0, 0.8)",
+        background: C.overlay,
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -94,23 +112,24 @@ export function SettingsPanel({ open, onClose, onImported }: SettingsPanelProps)
     >
       <div
         style={{
-          background: "#1a1a1a",
+          background: C.card,
           padding: 24,
           borderRadius: 12,
           maxWidth: 500,
           width: "90%",
-          border: "1px solid #333",
+          border: `1px solid ${C.border}`,
+          boxShadow: "0 8px 32px rgba(0,0,0,0.12)",
         }}
         onClick={(e) => e.stopPropagation()}
       >
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-          <h3 style={{ margin: 0, color: "#e5e7eb" }}>設定</h3>
+          <h3 style={{ margin: 0, color: C.text, fontSize: 18, fontWeight: 600 }}>設定</h3>
           <button
             onClick={onClose}
             style={{
               background: "none",
               border: "none",
-              color: "#e5e7eb",
+              color: C.textMuted,
               cursor: "pointer",
               fontSize: 20,
               padding: "4px 8px",
@@ -121,9 +140,12 @@ export function SettingsPanel({ open, onClose, onImported }: SettingsPanelProps)
         </div>
 
         <div style={{ marginBottom: 24 }}>
-          <h4 style={{ margin: "0 0 8px 0", fontSize: 14, color: "#e5e7eb" }}>データのエクスポート/インポート</h4>
-          <p style={{ margin: "0 0 16px 0", fontSize: 12, opacity: 0.8, color: "#e5e7eb" }}>
-            会話データをJSONファイルで保存し、別端末で復元できます。
+          <h4 style={{ margin: "0 0 8px 0", fontSize: 14, fontWeight: 600, color: C.text }}>
+            データのエクスポート / インポート
+          </h4>
+          <p style={{ margin: "0 0 16px 0", fontSize: 13, color: C.textSub, lineHeight: 1.7 }}>
+            会話データをJSONファイルとして保存し、別の端末で復元できます。
+            端末を変更するときや、バックアップとしてご利用ください。
           </p>
 
           <div style={{ display: "flex", gap: 12, marginBottom: 16 }}>
@@ -132,32 +154,36 @@ export function SettingsPanel({ open, onClose, onImported }: SettingsPanelProps)
               style={{
                 flex: 1,
                 padding: 12,
-                background: "#2563eb",
-                color: "white",
+                background: C.text,
+                color: "#ffffff",
                 border: "none",
-                borderRadius: 6,
+                borderRadius: 8,
                 cursor: "pointer",
                 fontSize: 14,
                 fontWeight: 500,
+                fontFamily: "inherit",
+                transition: "opacity 0.2s",
               }}
             >
-              Export JSON
+              書き出す
             </button>
             <button
               onClick={() => fileRef.current?.click()}
               style={{
                 flex: 1,
                 padding: 12,
-                background: "#059669",
-                color: "white",
-                border: "none",
-                borderRadius: 6,
+                background: C.card,
+                color: C.text,
+                border: `1px solid ${C.border}`,
+                borderRadius: 8,
                 cursor: "pointer",
                 fontSize: 14,
                 fontWeight: 500,
+                fontFamily: "inherit",
+                transition: "all 0.2s",
               }}
             >
-              Import JSON
+              読み込む
             </button>
             <input
               ref={fileRef}
@@ -172,10 +198,11 @@ export function SettingsPanel({ open, onClose, onImported }: SettingsPanelProps)
             <div
               style={{
                 padding: 12,
-                borderRadius: 6,
+                borderRadius: 8,
                 marginBottom: 12,
-                background: message.type === "success" ? "#059669" : "#dc2626",
-                color: "white",
+                background: message.type === "success" ? "#f0fdf4" : "#fef2f2",
+                border: `1px solid ${message.type === "success" ? "#86efac" : "#fca5a5"}`,
+                color: message.type === "success" ? "#166534" : "#991b1b",
                 fontSize: 14,
               }}
             >
@@ -183,8 +210,18 @@ export function SettingsPanel({ open, onClose, onImported }: SettingsPanelProps)
             </div>
           )}
 
-          <p style={{ margin: 0, fontSize: 11, opacity: 0.7, color: "#fbbf24" }}>
-            ⚠️ Importすると端末内データが置き換わります
+          <p style={{
+            margin: 0,
+            fontSize: 12,
+            color: "#d97706",
+            lineHeight: 1.6,
+            background: "#fffbeb",
+            border: "1px solid #fcd34d",
+            borderRadius: 6,
+            padding: "8px 12px",
+          }}>
+            読み込みを行うと、この端末の会話データが置き換わります。
+            事前に書き出しでバックアップを取ることをお勧めします。
           </p>
         </div>
       </div>

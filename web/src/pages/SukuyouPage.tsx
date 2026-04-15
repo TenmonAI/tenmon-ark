@@ -1,8 +1,8 @@
 /**
  * ============================================================
- *  SUKUYOU PAGE — 宿曜鑑定結果OS v1
- *  TENMON_ARK_SUKUYOU_RESULT_OS_V1 準拠
- *  ふりがな・IME対応・個別コピー・PDF・シェア・IndexedDB保存
+ *  SUKUYOU PAGE — 宿曜鑑定結果OS v1.1
+ *  TENMON_ARK_SUKUYOU_RESULT_OS_V1 + FINAL_ADJUSTMENT_V4 準拠
+ *  ライトテーマ対応・名前案内・ふりがな・断定回避・第5/6章特別表示
  * ============================================================
  */
 import React, { useState, useCallback, useRef, useEffect } from "react";
@@ -12,6 +12,8 @@ import { saveSukuyouResult, getSukuyouResult, type SukuyouResultRoom } from "../
 interface GuidanceResult {
   success: boolean;
   honmeiShuku: string;
+  shukuSanskrit?: string | null;
+  shukuReading?: string | null;
   disasterType: string;
   reversalAxis: string;
   oracle: { shortOracle: string; longOracle: string; oneActionNow?: string } | string;
@@ -91,47 +93,31 @@ async function copyToClipboard(text: string): Promise<boolean> {
 
 /* ── PDF生成（フロントエンドのみ） ── */
 async function generatePDF(result: GuidanceResult): Promise<void> {
-  // Dynamic import to avoid bundle bloat
   const [{ default: jsPDF }, { default: html2canvas }] = await Promise.all([
     import("jspdf"),
     import("html2canvas"),
   ]);
 
   const container = document.createElement("div");
-  container.style.cssText = `
-    position: fixed; left: -9999px; top: 0;
-    width: 595px; padding: 40px;
-    background: #fff; color: #1a1a1a;
-    font-family: "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif;
-    font-size: 13px; line-height: 1.8;
-  `;
+  container.style.cssText = "width:595px;padding:40px;font-family:sans-serif;color:#1a1a1a;background:#fff;position:absolute;left:-9999px;top:0;";
 
   const shukuLabel = formatShukuLabel(result.honmeiShuku);
   const oracleShort = typeof result.oracle === "string" ? result.oracle : result.oracle?.shortOracle || "";
-  const oneAction = typeof result.oracle === "string" ? "" : result.oracle?.oneActionNow || "";
   const longOracle = typeof result.oracle === "string" ? "" : result.oracle?.longOracle || "";
-  const now = new Date().toLocaleDateString("ja-JP", { year: "numeric", month: "long", day: "numeric" });
+  const oneAction = typeof result.oracle === "string" ? "" : result.oracle?.oneActionNow || "";
 
   let html = `
-    <div style="text-align:center;margin-bottom:28px;">
-      <div style="font-size:22px;font-weight:800;color:#8b6914;letter-spacing:0.1em;">天聞アーク</div>
-      <div style="font-size:11px;color:#888;margin-top:4px;">宿曜鑑定レポート</div>
-      <div style="font-size:10px;color:#aaa;margin-top:2px;">${now}</div>
-    </div>
-    <div style="text-align:center;margin-bottom:20px;">
-      ${result.premise?.name ? `<div style="font-size:14px;margin-bottom:4px;">${result.premise.name} 様</div>` : ""}
-      <div style="font-size:11px;color:#666;">生年月日: ${result.premise?.birthDate || ""}</div>
-    </div>
-    <div style="text-align:center;margin-bottom:24px;padding:16px;border:2px solid #d4af37;border-radius:12px;">
-      <div style="font-size:28px;font-weight:800;color:#8b6914;letter-spacing:0.08em;">${shukuLabel}</div>
-      <div style="font-size:11px;color:#888;margin-top:4px;">本命宿</div>
+    <div style="text-align:center;margin-bottom:24px;">
+      <div style="font-size:10px;color:#888;letter-spacing:0.1em;margin-bottom:4px;">天聞アーク 宿曜鑑定</div>
+      <div style="font-size:28px;font-weight:800;color:#8b6914;letter-spacing:0.05em;">${shukuLabel}</div>
+      <div style="font-size:10px;color:#888;margin-top:4px;">本命宿</div>
     </div>
     <div style="display:flex;gap:12px;margin-bottom:20px;">
-      <div style="flex:1;padding:12px;border:1px solid #ddd;border-radius:8px;text-align:center;">
+      <div style="flex:1;padding:12px;border-radius:8px;background:#f9f6ef;border:1px solid #e8d48b;text-align:center;">
         <div style="font-size:10px;color:#888;margin-bottom:4px;">災い分類</div>
         <div style="font-size:13px;font-weight:600;">${result.disasterType}</div>
       </div>
-      <div style="flex:1;padding:12px;border:1px solid #ddd;border-radius:8px;text-align:center;">
+      <div style="flex:1;padding:12px;border-radius:8px;background:#f9f6ef;border:1px solid #e8d48b;text-align:center;">
         <div style="font-size:10px;color:#888;margin-bottom:4px;">反転軸</div>
         <div style="font-size:13px;font-weight:600;">${result.reversalAxis}</div>
       </div>
@@ -149,19 +135,19 @@ async function generatePDF(result: GuidanceResult): Promise<void> {
 
   if (oneAction) {
     html += `
-      <div style="padding:12px;border-radius:8px;border:1px dashed #d4af37;margin-bottom:20px;text-align:center;">
+      <div style="padding:12px;border-radius:8px;border:1px dashed #c9a14a;margin-bottom:20px;text-align:center;">
         <div style="font-size:10px;color:#8b6914;font-weight:600;margin-bottom:4px;letter-spacing:0.08em;">今すぐの一手</div>
         <div style="font-size:12px;line-height:1.7;">${oneAction}</div>
       </div>
     `;
   }
 
-  // Chapters
   for (const ch of result.report.chapters) {
+    const isNameChapter = ch.number >= 5;
     html += `
       <div style="margin-bottom:20px;page-break-inside:avoid;">
         <div style="font-size:14px;font-weight:700;color:#8b6914;margin-bottom:8px;border-bottom:1px solid #e8d48b;padding-bottom:4px;">
-          第${ch.number}章　${ch.title}
+          第${ch.number}章　${ch.title}${isNameChapter ? ' <span style="font-size:10px;color:#2f6f5e;font-weight:500;">名前解読</span>' : ''}
         </div>
         ${ch.source ? `<div style="font-size:9px;color:#888;margin-bottom:6px;">${ch.source}</div>` : ""}
         <div style="font-size:12px;line-height:1.9;white-space:pre-wrap;">${ch.content}</div>
@@ -169,7 +155,6 @@ async function generatePDF(result: GuidanceResult): Promise<void> {
     `;
   }
 
-  // Long oracle
   if (longOracle) {
     html += `
       <div style="margin-top:20px;padding:16px;border-radius:8px;background:#fdf8e8;border:1px solid #e8d48b;">
@@ -179,7 +164,6 @@ async function generatePDF(result: GuidanceResult): Promise<void> {
     `;
   }
 
-  // Footer
   html += `
     <div style="margin-top:30px;padding-top:12px;border-top:1px solid #ddd;text-align:center;">
       <div style="font-size:10px;color:#888;">天聞アーク ─ 宿曜経 × 天津金木 × 言霊秘書</div>
@@ -191,26 +175,20 @@ async function generatePDF(result: GuidanceResult): Promise<void> {
 
   try {
     const canvas = await html2canvas(container, {
-      scale: 2,
-      useCORS: true,
-      logging: false,
-      windowWidth: 595,
+      scale: 2, useCORS: true, logging: false, windowWidth: 595,
     });
-
     const imgData = canvas.toDataURL("image/png");
     const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
     const pdfW = pdf.internal.pageSize.getWidth();
     const pdfH = pdf.internal.pageSize.getHeight();
     const imgW = pdfW;
     const imgH = (canvas.height * pdfW) / canvas.width;
-
     let yOffset = 0;
     while (yOffset < imgH) {
       if (yOffset > 0) pdf.addPage();
       pdf.addImage(imgData, "PNG", 0, -yOffset, imgW, imgH);
       yOffset += pdfH;
     }
-
     const fileName = result.premise?.name
       ? `宿曜鑑定_${result.premise.name}_${shukuLabel}.pdf`
       : `宿曜鑑定_${shukuLabel}.pdf`;
@@ -228,20 +206,20 @@ async function generateShareCard(result: GuidanceResult): Promise<Blob | null> {
   const ctx = canvas.getContext("2d");
   if (!ctx) return null;
 
-  // Background
+  // Background — ライトテーマ
   const grad = ctx.createLinearGradient(0, 0, 600, 400);
-  grad.addColorStop(0, "#1a1a2e");
-  grad.addColorStop(1, "#16213e");
+  grad.addColorStop(0, "#fafaf7");
+  grad.addColorStop(1, "#f5f0e6");
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, 600, 400);
 
   // Gold border
-  ctx.strokeStyle = "#d4af37";
+  ctx.strokeStyle = "#c9a14a";
   ctx.lineWidth = 2;
   ctx.strokeRect(16, 16, 568, 368);
 
   // Title
-  ctx.fillStyle = "#d4af37";
+  ctx.fillStyle = "#c9a14a";
   ctx.font = "bold 14px sans-serif";
   ctx.textAlign = "center";
   ctx.fillText("天聞アーク 宿曜鑑定", 300, 50);
@@ -249,7 +227,7 @@ async function generateShareCard(result: GuidanceResult): Promise<Blob | null> {
   // Shuku name
   const shukuLabel = formatShukuLabel(result.honmeiShuku);
   ctx.font = "bold 36px sans-serif";
-  ctx.fillStyle = "#d4af37";
+  ctx.fillStyle = "#8b6914";
   ctx.fillText(shukuLabel, 300, 110);
 
   // Subtitle
@@ -259,19 +237,18 @@ async function generateShareCard(result: GuidanceResult): Promise<Blob | null> {
 
   // Disaster + Reversal
   ctx.font = "16px sans-serif";
-  ctx.fillStyle = "#e0e0e0";
+  ctx.fillStyle = "#111827";
   ctx.fillText(`災い分類: ${result.disasterType}`, 300, 180);
   ctx.fillText(`反転軸: ${result.reversalAxis}`, 300, 210);
 
   // Oracle
   const oracleShort = typeof result.oracle === "string" ? result.oracle : result.oracle?.shortOracle || "";
   if (oracleShort) {
-    ctx.fillStyle = "#d4af37";
+    ctx.fillStyle = "#c9a14a";
     ctx.font = "bold 11px sans-serif";
     ctx.fillText("御神託", 300, 250);
-    ctx.fillStyle = "#e0e0e0";
+    ctx.fillStyle = "#111827";
     ctx.font = "14px sans-serif";
-    // Word wrap oracle text
     const words = oracleShort.split("");
     let line = "";
     let y = 275;
@@ -289,7 +266,7 @@ async function generateShareCard(result: GuidanceResult): Promise<Blob | null> {
   }
 
   // Footer
-  ctx.fillStyle = "#666";
+  ctx.fillStyle = "#888";
   ctx.font = "10px sans-serif";
   ctx.fillText("天聞アーク ─ 宿曜経 × 天津金木 × 言霊秘書", 300, 380);
 
@@ -304,6 +281,7 @@ export function SukuyouPage({ onBack, onSendToChat, restoreRoomId }: SukuyouPage
   const [birthMonth, setBirthMonth] = useState("");
   const [birthDay, setBirthDay] = useState("");
   const [name, setName] = useState("");
+  const [furigana, setFurigana] = useState("");
   const [concern, setConcern] = useState("");
 
   // Result state
@@ -328,7 +306,7 @@ export function SukuyouPage({ onBack, onSendToChat, restoreRoomId }: SukuyouPage
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState("");
   const [chatLoading, setChatLoading] = useState(false);
-  const [isComposing, setIsComposing] = useState(false); // IME対応
+  const [isComposing, setIsComposing] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const chatInputRef = useRef<HTMLTextAreaElement>(null);
   const chatThreadId = useRef<string>(`sukuyou-${Date.now()}`);
@@ -338,7 +316,6 @@ export function SukuyouPage({ onBack, onSendToChat, restoreRoomId }: SukuyouPage
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chatMessages]);
 
-  /* ── auto-resize textarea ── */
   useEffect(() => {
     const el = chatInputRef.current;
     if (el) {
@@ -355,8 +332,6 @@ export function SukuyouPage({ onBack, onSendToChat, restoreRoomId }: SukuyouPage
       try {
         const room = await getSukuyouResult(restoreRoomId);
         if (!room || cancelled) return;
-
-        // GuidanceResult 互換オブジェクトを復元
         const restored: GuidanceResult = {
           success: true,
           honmeiShuku: room.honmeiShuku,
@@ -380,22 +355,15 @@ export function SukuyouPage({ onBack, onSendToChat, restoreRoomId }: SukuyouPage
           warnings: [],
           sukuyouSeedV1: room.sukuyouSeedV1 as GuidanceResult["sukuyouSeedV1"],
         };
-
         setResult(restored);
         setIsRestoredRoom(true);
         resultRoomId.current = room.id;
         chatThreadId.current = room.threadId;
-
-        // チャット履歴復元
         if (room.chatHistory && room.chatHistory.length > 0) {
           setChatMessages(room.chatHistory.map(c => ({
-            role: c.role,
-            text: c.text,
-            createdAt: c.createdAt,
+            role: c.role, text: c.text, createdAt: c.createdAt,
           })));
         }
-
-        // フォーム値も復元（表示用）
         if (room.birthDate) {
           const parts = room.birthDate.split("-");
           if (parts.length === 3) {
@@ -406,8 +374,6 @@ export function SukuyouPage({ onBack, onSendToChat, restoreRoomId }: SukuyouPage
         }
         if (room.name) setName(room.name);
         if (room.rawConcern) setConcern(room.rawConcern);
-
-        // seed再送信でバックエンド文脈を再確立
         if (room.sukuyouSeedV1) {
           const rawSeed = `[SUKUYOU_SEED] ${JSON.stringify(room.sukuyouSeedV1)}`;
           try {
@@ -415,11 +381,7 @@ export function SukuyouPage({ onBack, onSendToChat, restoreRoomId }: SukuyouPage
               method: "POST",
               headers: { "Content-Type": "application/json" },
               credentials: "include",
-              body: JSON.stringify({
-                message: rawSeed,
-                sessionId: room.threadId,
-                threadId: room.threadId,
-              }),
+              body: JSON.stringify({ message: rawSeed, sessionId: room.threadId, threadId: room.threadId }),
             }).then(r => r.json()).catch(() => {});
           } catch { /* seed再送信失敗は無視 */ }
         }
@@ -433,18 +395,14 @@ export function SukuyouPage({ onBack, onSendToChat, restoreRoomId }: SukuyouPage
 
   /* ── IndexedDB保存 ── */
   const saveToIDB = useCallback(async (
-    data: GuidanceResult,
-    chats: ChatMessage[],
-    roomId: string,
-    threadId: string,
+    data: GuidanceResult, chats: ChatMessage[], roomId: string, threadId: string,
   ) => {
     try {
       const oracleObj = typeof data.oracle === "string"
         ? { shortOracle: data.oracle, longOracle: "", oneActionNow: "" }
         : data.oracle;
       const room: SukuyouResultRoom = {
-        id: roomId,
-        threadId,
+        id: roomId, threadId,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         name: data.premise?.name || undefined,
@@ -460,14 +418,10 @@ export function SukuyouPage({ onBack, onSendToChat, restoreRoomId }: SukuyouPage
         fullReport: data.report?.fullText || "",
         chapters: data.report?.chapters || [],
         charCount: data.report?.charCount || 0,
-        chatHistory: chats.map(c => ({
-          ...c,
-          createdAt: c.createdAt || new Date().toISOString(),
-        })),
+        chatHistory: chats.map(c => ({ ...c, createdAt: c.createdAt || new Date().toISOString() })),
         sukuyouSeedV1: data.sukuyouSeedV1 as Record<string, unknown> | undefined,
       };
       await saveSukuyouResult(room);
-      // Notify sidebar
       window.dispatchEvent(new CustomEvent("tenmon:sukuyou-updated"));
     } catch { /* ignore save errors */ }
   }, []);
@@ -504,6 +458,7 @@ export function SukuyouPage({ onBack, onSendToChat, restoreRoomId }: SukuyouPage
         body: JSON.stringify({
           birthDate,
           name: name.trim() || null,
+          furigana: furigana.trim() || null,
           currentConcern: concern.trim() || null,
           confidence: 0.85,
         }),
@@ -515,7 +470,6 @@ export function SukuyouPage({ onBack, onSendToChat, restoreRoomId }: SukuyouPage
       const data = await res.json();
       setResult(data);
 
-      // 鑑定完了時にseedをチャットAPIに送信して文脈を確立
       const sv = data.sukuyouSeedV1;
       if (sv) {
         const rawSeed = `[SUKUYOU_SEED] ${JSON.stringify(sv)}`;
@@ -524,25 +478,18 @@ export function SukuyouPage({ onBack, onSendToChat, restoreRoomId }: SukuyouPage
             method: "POST",
             headers: { "Content-Type": "application/json" },
             credentials: "include",
-            body: JSON.stringify({
-              message: rawSeed,
-              sessionId: tid,
-              threadId: tid,
-            }),
+            body: JSON.stringify({ message: rawSeed, sessionId: tid, threadId: tid }),
           }).then(r => r.json()).catch(() => {});
         } catch { /* seed送信失敗は無視 */ }
       }
-
-      // IndexedDB自動保存
       await saveToIDB(data, [], resultRoomId.current, tid);
     } catch (err: any) {
       setError(err.message || "鑑定中にエラーが発生しました");
     } finally {
       setLoading(false);
     }
-  }, [birthYear, birthMonth, birthDay, name, concern, saveToIDB]);
+  }, [birthYear, birthMonth, birthDay, name, furigana, concern, saveToIDB]);
 
-  /* ── 個別コピー ── */
   const handleCopyItem = useCallback(async (text: string, label: string) => {
     const ok = await copyToClipboard(text);
     showToast(ok ? "コピーしました" : "コピーに失敗しました");
@@ -560,7 +507,6 @@ export function SukuyouPage({ onBack, onSendToChat, restoreRoomId }: SukuyouPage
     if (onSendToChat) onSendToChat(displayText, rawSeed, deepPrompt);
   }, [result, onSendToChat]);
 
-  /* ── PDF出力 ── */
   const handlePDF = useCallback(async () => {
     if (!result) return;
     setPdfLoading(true);
@@ -575,7 +521,6 @@ export function SukuyouPage({ onBack, onSendToChat, restoreRoomId }: SukuyouPage
     }
   }, [result]);
 
-  /* ── シェア ── */
   const handleShare = useCallback(async () => {
     if (!result) return;
     const shuku = formatShukuLabel(result.honmeiShuku);
@@ -588,8 +533,6 @@ export function SukuyouPage({ onBack, onSendToChat, restoreRoomId }: SukuyouPage
       `反転軸: ${result.reversalAxis}`,
       oracleShort ? `\n御神託: ${oracleShort}` : "",
     ].filter(Boolean).join("\n");
-
-    // Try Web Share API first
     if (navigator.share) {
       try {
         const blob = await generateShareCard(result);
@@ -601,16 +544,13 @@ export function SukuyouPage({ onBack, onSendToChat, restoreRoomId }: SukuyouPage
         });
         return;
       } catch (e: any) {
-        if (e.name === "AbortError") return; // User cancelled
+        if (e.name === "AbortError") return;
       }
     }
-
-    // Fallback: copy text
     const ok = await copyToClipboard(shareText);
     showToast(ok ? "共有テキストをコピーしました" : "共有に失敗しました");
   }, [result]);
 
-  /* ── シェアカード画像保存 ── */
   const handleSaveShareCard = useCallback(async () => {
     if (!result) return;
     try {
@@ -628,7 +568,6 @@ export function SukuyouPage({ onBack, onSendToChat, restoreRoomId }: SukuyouPage
     }
   }, [result]);
 
-  /* ── 鑑定直下チャット送信 ── */
   const sendChatMessage = useCallback(async (text: string) => {
     if (!text.trim() || chatLoading || !result) return;
     const userMsg: ChatMessage = { role: "user", text: text.trim(), createdAt: new Date().toISOString() };
@@ -641,11 +580,7 @@ export function SukuyouPage({ onBack, onSendToChat, restoreRoomId }: SukuyouPage
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({
-          message: text.trim(),
-          sessionId: chatThreadId.current,
-          threadId: chatThreadId.current,
-        }),
+        body: JSON.stringify({ message: text.trim(), sessionId: chatThreadId.current, threadId: chatThreadId.current }),
       });
       const data = await res.json();
       const assistantMsg: ChatMessage = {
@@ -655,7 +590,6 @@ export function SukuyouPage({ onBack, onSendToChat, restoreRoomId }: SukuyouPage
       };
       const updatedMsgs = [...newMsgs, assistantMsg];
       setChatMessages(updatedMsgs);
-      // Update IDB with chat history
       if (resultRoomId.current && result) {
         saveToIDB(result, updatedMsgs, resultRoomId.current, chatThreadId.current);
       }
@@ -690,16 +624,25 @@ export function SukuyouPage({ onBack, onSendToChat, restoreRoomId }: SukuyouPage
   };
 
   /* ═══════════════════════════════════════════
-     CSS-in-JS: モバイルファースト設計
+     CSS-in-JS: ライトテーマ対応
      ═══════════════════════════════════════════ */
+
+  const arkGold = "var(--ark-gold, #c9a14a)";
+  const arkGreen = "var(--ark-green, #2f6f5e)";
+  const textPrimary = "var(--text, #111827)";
+  const textMuted = "var(--muted, rgba(17,24,39,0.65))";
+  const bgPage = "var(--bg, #fafaf7)";
+  const bgInput = "var(--input-bg, #ffffff)";
+  const borderLight = "var(--border, rgba(0,0,0,0.08))";
+  const borderInput = "var(--input-border, rgba(0,0,0,0.12))";
 
   const pageStyle: React.CSSProperties = {
     height: "100%",
     overflowY: "auto",
     WebkitOverflowScrolling: "touch",
-    color: "var(--text, #e0e0e0)",
+    color: textPrimary,
     padding: "0 0 env(safe-area-inset-bottom, 0px)",
-    background: "var(--bg, #1a1a1a)",
+    background: bgPage,
   };
 
   const containerStyle: React.CSSProperties = {
@@ -712,22 +655,33 @@ export function SukuyouPage({ onBack, onSendToChat, restoreRoomId }: SukuyouPage
     position: "sticky",
     top: 0,
     zIndex: 10,
-    background: "var(--bg, #1a1a1a)",
-    borderBottom: "1px solid rgba(212, 175, 55, 0.15)",
+    background: bgPage,
+    borderBottom: `1px solid ${borderLight}`,
     padding: "0.625rem 0.875rem",
   };
 
   const cardBase: React.CSSProperties = {
-    background: "var(--gpt-hover-bg, rgba(255,255,255,0.04))",
-    border: "1px solid rgba(212, 175, 55, 0.18)",
+    background: "var(--sidebar-bg, #f7f7f8)",
+    border: `1px solid ${borderLight}`,
     borderRadius: 14,
     padding: "1.125rem 1rem",
     marginBottom: "0.875rem",
   };
 
-  const gold = "#d4af37";
-  const goldStyle: React.CSSProperties = { color: gold };
-  const subStyle: React.CSSProperties = { color: "var(--text-sub, #888)" };
+  const goldStyle: React.CSSProperties = { color: arkGold };
+  const greenStyle: React.CSSProperties = { color: arkGreen };
+  const subStyle: React.CSSProperties = { color: textMuted, fontSize: 12 };
+
+  const inputStyle: React.CSSProperties = {
+    padding: "10px 12px",
+    borderRadius: 8,
+    background: bgInput,
+    border: `1px solid ${borderInput}`,
+    color: textPrimary,
+    fontSize: 15,
+    minHeight: 44,
+    boxSizing: "border-box" as const,
+  };
 
   const btnBase: React.CSSProperties = {
     minHeight: 44,
@@ -745,9 +699,19 @@ export function SukuyouPage({ onBack, onSendToChat, restoreRoomId }: SukuyouPage
     borderRadius: 22,
     fontSize: 13,
     fontWeight: 500,
-    background: "rgba(212, 175, 55, 0.08)",
-    border: "1px solid rgba(212, 175, 55, 0.25)",
-    color: gold,
+    background: "rgba(201, 161, 74, 0.08)",
+    border: "1px solid rgba(201, 161, 74, 0.25)",
+    color: arkGold,
+  };
+
+  const outlineBtn: React.CSSProperties = {
+    ...btnBase,
+    minHeight: 40,
+    padding: "8px 16px",
+    fontSize: 12,
+    background: "transparent",
+    border: `1px solid rgba(201, 161, 74, 0.25)`,
+    color: arkGold,
   };
 
   /* ── 小さなコピーボタン ── */
@@ -758,7 +722,7 @@ export function SukuyouPage({ onBack, onSendToChat, restoreRoomId }: SukuyouPage
       title="コピー"
       style={{
         background: "none", border: "none", cursor: "pointer",
-        color: "var(--text-sub, #888)", fontSize: 12, padding: "4px 6px",
+        color: textMuted, fontSize: 12, padding: "4px 6px",
         borderRadius: 4, transition: "color 0.15s",
         minHeight: 32, minWidth: 32,
         display: "inline-flex", alignItems: "center", justifyContent: "center",
@@ -773,50 +737,56 @@ export function SukuyouPage({ onBack, onSendToChat, restoreRoomId }: SukuyouPage
 
   /* ── 操作ボタン群 ── */
   const ActionBar = () => (
-    <div style={{
-      display: "flex", gap: 8, marginTop: 16, flexWrap: "wrap",
-      justifyContent: "center",
-    }}>
+    <div style={{ display: "flex", gap: 8, marginTop: 16, flexWrap: "wrap", justifyContent: "center" }}>
       <button type="button" onClick={handlePDF} disabled={pdfLoading}
-        style={{
-          ...btnBase, minHeight: 40, padding: "8px 16px", fontSize: 12,
-          background: "transparent",
-          border: "1px solid rgba(212, 175, 55, 0.25)",
-          color: gold, opacity: pdfLoading ? 0.5 : 1,
-        }}>
+        style={{ ...outlineBtn, opacity: pdfLoading ? 0.5 : 1 }}>
         {pdfLoading ? "PDF生成中…" : "PDFで保存"}
       </button>
-      <button type="button" onClick={handleShare}
-        style={{
-          ...btnBase, minHeight: 40, padding: "8px 16px", fontSize: 12,
-          background: "transparent",
-          border: "1px solid rgba(212, 175, 55, 0.25)",
-          color: gold,
-        }}>
-        シェア
-      </button>
-      <button type="button" onClick={handleSaveShareCard}
-        style={{
-          ...btnBase, minHeight: 40, padding: "8px 16px", fontSize: 12,
-          background: "transparent",
-          border: "1px solid rgba(212, 175, 55, 0.25)",
-          color: gold,
-        }}>
-        画像保存
-      </button>
+      <button type="button" onClick={handleShare} style={outlineBtn}>シェア</button>
+      <button type="button" onClick={handleSaveShareCard} style={outlineBtn}>画像保存</button>
       {onSendToChat && (
-        <button type="button" onClick={handleSendToChat}
-          style={{
-            ...btnBase, minHeight: 40, padding: "8px 16px", fontSize: 12,
-            background: "transparent",
-            border: "1px solid rgba(212, 175, 55, 0.25)",
-            color: gold,
-          }}>
-          チャットへ送る
-        </button>
+        <button type="button" onClick={handleSendToChat} style={outlineBtn}>チャットへ送る</button>
       )}
     </div>
   );
+
+  /* ── 第5/6章の特別バッジ ── */
+  const NameChapterBadge = () => (
+    <span style={{
+      display: "inline-flex", alignItems: "center", gap: 4,
+      fontSize: 10, fontWeight: 500, color: arkGreen,
+      background: "rgba(47, 111, 94, 0.08)",
+      border: "1px solid rgba(47, 111, 94, 0.2)",
+      borderRadius: 4, padding: "2px 8px", marginLeft: 8,
+    }}>
+      名前解読
+    </span>
+  );
+
+  /* ── confidence表示（断定回避） ── */
+  const ConfidenceHint = ({ confidence }: { confidence: number }) => {
+    const pct = Math.round(confidence * 100);
+    const label = pct >= 80 ? "高い整合性" : pct >= 60 ? "一定の整合性" : "参考程度";
+    return (
+      <div style={{
+        display: "flex", alignItems: "center", gap: 8,
+        fontSize: 11, color: textMuted, marginTop: 8,
+      }}>
+        <span>{label}</span>
+        <div style={{
+          flex: 1, maxWidth: 80, height: 4, borderRadius: 2,
+          background: "rgba(0,0,0,0.06)",
+          overflow: "hidden",
+        }}>
+          <div style={{
+            width: `${pct}%`, height: "100%", borderRadius: 2,
+            background: pct >= 80 ? arkGreen : pct >= 60 ? arkGold : textMuted,
+          }} />
+        </div>
+        <span style={{ fontSize: 10 }}>{pct}%</span>
+      </div>
+    );
+  };
 
   return (
     <div className="sukuyou-page" style={pageStyle}>
@@ -825,10 +795,10 @@ export function SukuyouPage({ onBack, onSendToChat, restoreRoomId }: SukuyouPage
         <div style={{
           position: "fixed", bottom: 80, left: "50%", transform: "translateX(-50%)",
           zIndex: 9999, padding: "10px 24px", borderRadius: 10,
-          background: "rgba(30, 30, 30, 0.95)",
-          border: "1px solid rgba(212, 175, 55, 0.3)",
-          color: "#e0e0e0", fontSize: 13, fontWeight: 500,
-          boxShadow: "0 4px 20px rgba(0,0,0,0.4)",
+          background: "rgba(255, 255, 255, 0.97)",
+          border: `1px solid ${borderLight}`,
+          color: textPrimary, fontSize: 13, fontWeight: 500,
+          boxShadow: "0 4px 20px rgba(0,0,0,0.1)",
           animation: "fadeIn 0.2s ease",
         }}>
           {toast}
@@ -841,7 +811,7 @@ export function SukuyouPage({ onBack, onSendToChat, restoreRoomId }: SukuyouPage
           <button
             type="button" onClick={onBack}
             style={{
-              ...btnBase, background: "none", color: gold, fontSize: 15,
+              ...btnBase, background: "none", color: arkGold, fontSize: 15,
               padding: "8px 4px", minWidth: 44, minHeight: 44,
             }}
           >
@@ -863,66 +833,85 @@ export function SukuyouPage({ onBack, onSendToChat, restoreRoomId }: SukuyouPage
 
           {/* 生年月日 */}
           <div style={{ marginBottom: 14 }}>
-            <label style={{ fontSize: 12, ...subStyle, display: "block", marginBottom: 6 }}>生年月日</label>
+            <label style={{ ...subStyle, display: "block", marginBottom: 6 }}>
+              生年月日
+              <span style={{
+                fontSize: 10, color: arkGreen, fontWeight: 500,
+                marginLeft: 6, letterSpacing: "0.02em",
+              }}>
+                鑑定に必要です
+              </span>
+            </label>
             <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
               <input
                 type="number" inputMode="numeric" placeholder="1990" value={birthYear}
                 onChange={(e) => setBirthYear(e.target.value)}
                 min={1900} max={2025}
-                style={{
-                  width: 76, padding: "10px 10px", borderRadius: 8,
-                  background: "var(--gpt-input-bg, rgba(255,255,255,0.06))",
-                  border: "1px solid var(--gpt-border, rgba(255,255,255,0.12))",
-                  color: "var(--text)", fontSize: 15, minHeight: 44, boxSizing: "border-box",
-                }}
+                style={{ ...inputStyle, width: 76 }}
               />
               <span style={subStyle}>年</span>
               <input
                 type="number" inputMode="numeric" placeholder="1" value={birthMonth}
                 onChange={(e) => setBirthMonth(e.target.value)}
                 min={1} max={12}
-                style={{
-                  width: 54, padding: "10px 10px", borderRadius: 8,
-                  background: "var(--gpt-input-bg, rgba(255,255,255,0.06))",
-                  border: "1px solid var(--gpt-border, rgba(255,255,255,0.12))",
-                  color: "var(--text)", fontSize: 15, minHeight: 44, boxSizing: "border-box",
-                }}
+                style={{ ...inputStyle, width: 54 }}
               />
               <span style={subStyle}>月</span>
               <input
                 type="number" inputMode="numeric" placeholder="1" value={birthDay}
                 onChange={(e) => setBirthDay(e.target.value)}
                 min={1} max={31}
-                style={{
-                  width: 54, padding: "10px 10px", borderRadius: 8,
-                  background: "var(--gpt-input-bg, rgba(255,255,255,0.06))",
-                  border: "1px solid var(--gpt-border, rgba(255,255,255,0.12))",
-                  color: "var(--text)", fontSize: 15, minHeight: 44, boxSizing: "border-box",
-                }}
+                style={{ ...inputStyle, width: 54 }}
               />
               <span style={subStyle}>日</span>
             </div>
           </div>
 
           {/* 名前 */}
-          <div style={{ marginBottom: 14 }}>
-            <label style={{ fontSize: 12, ...subStyle, display: "block", marginBottom: 6 }}>名前（任意）</label>
+          <div style={{ marginBottom: 6 }}>
+            <label style={{ ...subStyle, display: "block", marginBottom: 6 }}>
+              名前
+              <span style={{ fontSize: 10, color: textMuted, marginLeft: 6 }}>任意</span>
+            </label>
             <input
               type="text" placeholder="お名前" value={name}
               onChange={(e) => setName(e.target.value)}
-              style={{
-                width: "100%", padding: "10px 12px", borderRadius: 8,
-                background: "var(--gpt-input-bg, rgba(255,255,255,0.06))",
-                border: "1px solid var(--gpt-border, rgba(255,255,255,0.12))",
-                color: "var(--text)", fontSize: 14, minHeight: 44, boxSizing: "border-box",
-              }}
+              style={{ ...inputStyle, width: "100%", fontSize: 14 }}
             />
           </div>
 
+          {/* 名前入力案内 */}
+          <div style={{
+            fontSize: 11, color: textMuted, lineHeight: 1.6,
+            marginBottom: 14, paddingLeft: 2,
+          }}>
+            名前を入力すると、言霊による名前解読（第5章・第6章）が追加されます。
+            <br />
+            入力しなくても宿曜鑑定（第1〜4章）は受けられます。
+          </div>
+
+          {/* ふりがな */}
+          {name.trim() && (
+            <div style={{ marginBottom: 14 }}>
+              <label style={{ ...subStyle, display: "block", marginBottom: 6 }}>
+                ふりがな
+                <span style={{ fontSize: 10, color: textMuted, marginLeft: 6 }}>
+                  読みが正確なほど解読の精度が高まります
+                </span>
+              </label>
+              <input
+                type="text" placeholder="おなまえ" value={furigana}
+                onChange={(e) => setFurigana(e.target.value)}
+                style={{ ...inputStyle, width: "100%", fontSize: 14 }}
+              />
+            </div>
+          )}
+
           {/* 悩み */}
           <div style={{ marginBottom: 14 }}>
-            <label style={{ fontSize: 12, ...subStyle, display: "block", marginBottom: 6 }}>
-              現在の悩み・相談内容（任意）
+            <label style={{ ...subStyle, display: "block", marginBottom: 6 }}>
+              現在の悩み・相談内容
+              <span style={{ fontSize: 10, color: textMuted, marginLeft: 6 }}>任意</span>
             </label>
             <textarea
               placeholder="最近、仕事の方向性に迷いがあります…"
@@ -930,11 +919,9 @@ export function SukuyouPage({ onBack, onSendToChat, restoreRoomId }: SukuyouPage
               onChange={(e) => setConcern(e.target.value)}
               rows={3}
               style={{
-                width: "100%", padding: "10px 12px", borderRadius: 8,
-                background: "var(--gpt-input-bg, rgba(255,255,255,0.06))",
-                border: "1px solid var(--gpt-border, rgba(255,255,255,0.12))",
-                color: "var(--text)", fontSize: 14, resize: "vertical",
-                boxSizing: "border-box", fontFamily: "inherit", lineHeight: 1.6,
+                ...inputStyle,
+                width: "100%", fontSize: 14, resize: "vertical",
+                fontFamily: "inherit", lineHeight: 1.6,
               }}
             />
           </div>
@@ -944,8 +931,8 @@ export function SukuyouPage({ onBack, onSendToChat, restoreRoomId }: SukuyouPage
             type="button" onClick={handleSubmit} disabled={loading}
             style={{
               ...btnBase, width: "100%", padding: "14px 0",
-              background: loading ? "#7a6a20" : gold,
-              color: "#1a1a1a", fontSize: 15,
+              background: loading ? "rgba(201, 161, 74, 0.5)" : arkGold,
+              color: "#ffffff", fontSize: 15,
               opacity: loading ? 0.7 : 1,
             }}
           >
@@ -955,9 +942,9 @@ export function SukuyouPage({ onBack, onSendToChat, restoreRoomId }: SukuyouPage
           {error && (
             <div style={{
               marginTop: 12, padding: "12px 14px", borderRadius: 10,
-              background: "rgba(220, 38, 38, 0.08)",
-              border: "1px solid rgba(220, 38, 38, 0.25)",
-              color: "#f87171", fontSize: 13, lineHeight: 1.5,
+              background: "rgba(220, 38, 38, 0.05)",
+              border: "1px solid rgba(220, 38, 38, 0.2)",
+              color: "#dc2626", fontSize: 13, lineHeight: 1.5,
             }}>
               {error}
             </div>
@@ -965,15 +952,15 @@ export function SukuyouPage({ onBack, onSendToChat, restoreRoomId }: SukuyouPage
         </div>
 
         {/* ═══════════════════════════════════════════════════════
-            鑑定結果 — 結果OS v1
+            鑑定結果 — 結果OS v1.1
            ═══════════════════════════════════════════════════════ */}
         {result && (
           <div>
             {/* ── 第一層: 要約カード ── */}
             <div style={{
               ...cardBase,
-              border: "1px solid rgba(212, 175, 55, 0.35)",
-              background: "linear-gradient(135deg, rgba(212,175,55,0.06) 0%, rgba(212,175,55,0.015) 100%)",
+              border: "1px solid rgba(201, 161, 74, 0.25)",
+              background: "linear-gradient(135deg, rgba(201,161,74,0.04) 0%, rgba(201,161,74,0.01) 100%)",
               padding: "1.25rem 1rem",
             }}>
               <h2 style={{
@@ -989,40 +976,50 @@ export function SukuyouPage({ onBack, onSendToChat, restoreRoomId }: SukuyouPage
                   <CopyBtn text={formatShukuLabel(result.honmeiShuku)} label="本命宿" />
                 </div>
                 <div style={{
-                  fontSize: 32, fontWeight: 800, ...goldStyle,
+                  fontSize: 32, fontWeight: 800, color: "var(--ark-gold, #c9a14a)",
                   letterSpacing: "0.08em",
                 }}>
                   {formatShukuLabel(result.honmeiShuku)}
                 </div>
-                <div style={{ fontSize: 11, ...subStyle, marginTop: 4 }}>本命宿</div>
+                <div style={{ fontSize: 11, color: textMuted, marginTop: 4 }}>本命宿</div>
+                {result.shukuSanskrit && (
+                  <div style={{
+                    fontSize: 11, color: textMuted, marginTop: 6,
+                    fontStyle: "italic", letterSpacing: "0.03em",
+                  }}>
+                    <span style={{ fontSize: 10, color: arkGold, fontWeight: 500, marginRight: 6 }}>梵名</span>
+                    {result.shukuSanskrit}
+                    {result.shukuReading && (
+                      <span style={{ marginLeft: 6, fontSize: 10, color: textMuted }}>({result.shukuReading})</span>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* 災い分類 + 反転軸: 2カラム */}
-              <div style={{
-                display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 16,
-              }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 16 }}>
                 <div style={{
                   padding: "12px", borderRadius: 10,
-                  background: "rgba(212, 175, 55, 0.05)",
-                  border: "1px solid rgba(212, 175, 55, 0.12)",
+                  background: "rgba(201, 161, 74, 0.04)",
+                  border: "1px solid rgba(201, 161, 74, 0.12)",
                   textAlign: "center", position: "relative",
                 }}>
                   <div style={{ position: "absolute", top: 4, right: 4 }}>
                     <CopyBtn text={result.disasterType} label="災い分類" />
                   </div>
-                  <div style={{ fontSize: 10, ...subStyle, marginBottom: 5, letterSpacing: "0.03em" }}>災い分類</div>
+                  <div style={{ fontSize: 10, color: textMuted, marginBottom: 5, letterSpacing: "0.03em" }}>災い分類</div>
                   <div style={{ fontSize: 14, fontWeight: 600, lineHeight: 1.4 }}>{result.disasterType}</div>
                 </div>
                 <div style={{
                   padding: "12px", borderRadius: 10,
-                  background: "rgba(212, 175, 55, 0.05)",
-                  border: "1px solid rgba(212, 175, 55, 0.12)",
+                  background: "rgba(201, 161, 74, 0.04)",
+                  border: "1px solid rgba(201, 161, 74, 0.12)",
                   textAlign: "center", position: "relative",
                 }}>
                   <div style={{ position: "absolute", top: 4, right: 4 }}>
                     <CopyBtn text={result.reversalAxis} label="反転軸" />
                   </div>
-                  <div style={{ fontSize: 10, ...subStyle, marginBottom: 5, letterSpacing: "0.03em" }}>反転軸</div>
+                  <div style={{ fontSize: 10, color: textMuted, marginBottom: 5, letterSpacing: "0.03em" }}>反転軸</div>
                   <div style={{ fontSize: 14, fontWeight: 600, lineHeight: 1.4 }}>{result.reversalAxis}</div>
                 </div>
               </div>
@@ -1031,8 +1028,8 @@ export function SukuyouPage({ onBack, onSendToChat, restoreRoomId }: SukuyouPage
               {getOracleShort() && (
                 <div style={{
                   padding: "14px 16px", borderRadius: 12,
-                  background: "rgba(212, 175, 55, 0.07)",
-                  border: "1px solid rgba(212, 175, 55, 0.18)",
+                  background: "rgba(201, 161, 74, 0.05)",
+                  border: "1px solid rgba(201, 161, 74, 0.15)",
                   marginBottom: 14, textAlign: "center", position: "relative",
                 }}>
                   <div style={{ position: "absolute", top: 8, right: 8 }}>
@@ -1052,8 +1049,8 @@ export function SukuyouPage({ onBack, onSendToChat, restoreRoomId }: SukuyouPage
               {getOneAction() && (
                 <div style={{
                   padding: "12px 16px", borderRadius: 12,
-                  background: "rgba(212, 175, 55, 0.03)",
-                  border: "1px dashed rgba(212, 175, 55, 0.22)",
+                  background: "rgba(201, 161, 74, 0.03)",
+                  border: "1px dashed rgba(201, 161, 74, 0.2)",
                   textAlign: "center", position: "relative",
                 }}>
                   <div style={{ position: "absolute", top: 8, right: 8 }}>
@@ -1069,40 +1066,35 @@ export function SukuyouPage({ onBack, onSendToChat, restoreRoomId }: SukuyouPage
                 </div>
               )}
 
-              {/* 操作ボタン群 */}
+              {/* confidence表示 */}
+              {result.premise?.confidence != null && (
+                <ConfidenceHint confidence={result.premise.confidence} />
+              )}
+
               <ActionBar />
             </div>
 
             {/* ═══ 鑑定直下チャット ═══ */}
             <div style={{
               ...cardBase,
-              border: "1px solid rgba(212, 175, 55, 0.3)",
+              border: `1px solid rgba(201, 161, 74, 0.2)`,
               padding: "1.125rem 1rem",
             }}>
-              <h3 style={{
-                fontSize: 14, fontWeight: 600, ...goldStyle,
-                marginBottom: 4,
-              }}>
+              <h3 style={{ fontSize: 14, fontWeight: 600, ...goldStyle, marginBottom: 4 }}>
                 この鑑定について続けて聞く
               </h3>
-              <p style={{ fontSize: 11, ...subStyle, marginBottom: 14, lineHeight: 1.5 }}>
+              <p style={{ fontSize: 11, color: textMuted, marginBottom: 14, lineHeight: 1.5 }}>
                 鑑定結果を踏まえて、気になることを自由に質問できます
               </p>
 
-              {/* 質問チップ: 会話開始前のみ表示 */}
               {chatMessages.length === 0 && (
-                <div style={{
-                  display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 16,
-                }}>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 16 }}>
                   {QUESTION_CHIPS.map((chip) => (
                     <button
                       key={chip} type="button"
                       onClick={() => sendChatMessage(chip)}
                       disabled={chatLoading}
-                      style={{
-                        ...chipBase,
-                        opacity: chatLoading ? 0.5 : 1,
-                      }}
+                      style={{ ...chipBase, opacity: chatLoading ? 0.5 : 1 }}
                     >
                       {chip}
                     </button>
@@ -1110,7 +1102,6 @@ export function SukuyouPage({ onBack, onSendToChat, restoreRoomId }: SukuyouPage
                 </div>
               )}
 
-              {/* チャット履歴 */}
               {chatMessages.length > 0 && (
                 <div style={{
                   maxHeight: "60vh", overflowY: "auto",
@@ -1129,11 +1120,11 @@ export function SukuyouPage({ onBack, onSendToChat, restoreRoomId }: SukuyouPage
                         borderRadius: msg.role === "user" ? "14px 14px 4px 14px" : "14px 14px 14px 4px",
                         fontSize: 13.5, lineHeight: 1.85, whiteSpace: "pre-wrap", letterSpacing: "0.01em",
                         background: msg.role === "user"
-                          ? "rgba(212, 175, 55, 0.12)"
-                          : "var(--gpt-hover-bg, rgba(255,255,255,0.05))",
+                          ? "rgba(201, 161, 74, 0.08)"
+                          : "var(--sidebar-bg, #f7f7f8)",
                         border: msg.role === "user"
-                          ? "1px solid rgba(212, 175, 55, 0.25)"
-                          : "1px solid var(--gpt-border, rgba(255,255,255,0.08))",
+                          ? "1px solid rgba(201, 161, 74, 0.2)"
+                          : `1px solid ${borderLight}`,
                         position: "relative",
                         paddingRight: msg.role === "assistant" ? 30 : 15,
                       }}>
@@ -1151,9 +1142,9 @@ export function SukuyouPage({ onBack, onSendToChat, restoreRoomId }: SukuyouPage
                       <div style={{
                         padding: "11px 15px", borderRadius: "14px 14px 14px 4px",
                         fontSize: 13.5,
-                        background: "var(--gpt-hover-bg, rgba(255,255,255,0.05))",
-                        border: "1px solid var(--gpt-border, rgba(255,255,255,0.08))",
-                        ...subStyle,
+                        background: "var(--sidebar-bg, #f7f7f8)",
+                        border: `1px solid ${borderLight}`,
+                        color: textMuted,
                       }}>
                         <span className="thinking-dots" style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
                           <span>{["読み解いています", "宿曜の流れを整えています", "ことばを結んでいます"][Math.floor(Date.now() / 3000) % 3]}</span>
@@ -1161,7 +1152,7 @@ export function SukuyouPage({ onBack, onSendToChat, restoreRoomId }: SukuyouPage
                             {[0, 1, 2].map(i => (
                               <span key={i} style={{
                                 width: 4, height: 4, borderRadius: "50%",
-                                background: "rgba(212, 175, 55, 0.6)",
+                                background: "rgba(201, 161, 74, 0.6)",
                                 animation: `sukuyouDot 1.2s ease-in-out ${i * 0.2}s infinite`,
                               }} />
                             ))}
@@ -1174,10 +1165,7 @@ export function SukuyouPage({ onBack, onSendToChat, restoreRoomId }: SukuyouPage
                 </div>
               )}
 
-              {/* チャット入力欄: IME対応 textarea + 送信ボタン */}
-              <div style={{
-                display: "flex", gap: 8, alignItems: "flex-end",
-              }}>
+              <div style={{ display: "flex", gap: 8, alignItems: "flex-end" }}>
                 <textarea
                   ref={chatInputRef}
                   placeholder="自由に質問する…"
@@ -1195,9 +1183,9 @@ export function SukuyouPage({ onBack, onSendToChat, restoreRoomId }: SukuyouPage
                   rows={1}
                   style={{
                     flex: 1, padding: "11px 14px", borderRadius: 10,
-                    background: "var(--gpt-input-bg, rgba(255,255,255,0.06))",
-                    border: "1px solid var(--gpt-border, rgba(255,255,255,0.12))",
-                    color: "var(--text)", fontSize: 14, boxSizing: "border-box",
+                    background: bgInput,
+                    border: `1px solid ${borderInput}`,
+                    color: textPrimary, fontSize: 14, boxSizing: "border-box",
                     fontFamily: "inherit", lineHeight: 1.5,
                     resize: "none", overflow: "auto",
                     minHeight: 44, maxHeight: 120,
@@ -1209,12 +1197,9 @@ export function SukuyouPage({ onBack, onSendToChat, restoreRoomId }: SukuyouPage
                   disabled={chatLoading || !chatInput.trim()}
                   style={{
                     ...btnBase,
-                    padding: "0 18px",
-                    minHeight: 44,
-                    background: chatInput.trim() ? gold : "rgba(212, 175, 55, 0.25)",
-                    color: "#1a1a1a",
-                    fontSize: 14,
-                    flexShrink: 0,
+                    padding: "0 18px", minHeight: 44,
+                    background: chatInput.trim() ? arkGreen : "rgba(47, 111, 94, 0.25)",
+                    color: "#ffffff", fontSize: 14, flexShrink: 0,
                   }}
                 >
                   送信
@@ -1228,12 +1213,8 @@ export function SukuyouPage({ onBack, onSendToChat, restoreRoomId }: SukuyouPage
                 type="button"
                 onClick={() => setShowDetail(!showDetail)}
                 style={{
-                  ...btnBase,
-                  width: "100%",
-                  padding: "12px 0",
-                  background: "transparent",
-                  color: gold,
-                  fontSize: 14,
+                  ...btnBase, width: "100%", padding: "12px 0",
+                  background: "transparent", color: arkGold, fontSize: 14,
                   display: "flex", justifyContent: "center", alignItems: "center", gap: 8,
                   border: "none",
                 }}
@@ -1243,7 +1224,6 @@ export function SukuyouPage({ onBack, onSendToChat, restoreRoomId }: SukuyouPage
 
               {showDetail && (
                 <div style={{ marginTop: 14 }}>
-                  {/* 全文コピー */}
                   <div style={{
                     display: "flex", gap: 8, marginBottom: 14,
                     justifyContent: "flex-end", flexWrap: "wrap",
@@ -1251,97 +1231,88 @@ export function SukuyouPage({ onBack, onSendToChat, restoreRoomId }: SukuyouPage
                     <button
                       type="button"
                       onClick={() => handleCopyItem(result.report.fullText, "レポート全文")}
-                      style={{
-                        ...btnBase, minHeight: 36,
-                        padding: "8px 14px", fontSize: 12,
-                        background: "transparent",
-                        border: "1px solid rgba(212, 175, 55, 0.25)",
-                        color: gold,
-                      }}
+                      style={outlineBtn}
                     >
                       レポート全文をコピー
                     </button>
                   </div>
 
                   {/* 章別アコーディオン */}
-                  {result.report.chapters.map((ch) => (
-                    <div key={ch.number} style={{
-                      borderBottom: "1px solid var(--gpt-border, rgba(255,255,255,0.06))",
-                      marginBottom: 4,
-                    }}>
-                      <button
-                        type="button"
-                        onClick={() => toggleChapter(ch.number)}
-                        style={{
-                          ...btnBase,
-                          width: "100%",
-                          padding: "12px 4px",
-                          background: "transparent",
-                          color: "var(--text)",
-                          fontSize: 13,
-                          display: "flex", justifyContent: "space-between", alignItems: "center",
-                          textAlign: "left",
-                          border: "none",
-                        }}
-                      >
-                        <span>
-                          <span style={goldStyle}>第{ch.number}章</span>
-                          <span style={{ marginLeft: 8 }}>{ch.title}</span>
-                        </span>
-                        <span style={{ ...subStyle, fontSize: 11, flexShrink: 0, marginLeft: 8 }}>
-                          {expandedChapters.has(ch.number) ? "▲" : "▼"}
-                        </span>
-                      </button>
-                      {expandedChapters.has(ch.number) && (
-                        <div style={{
-                          padding: "0 4px 14px",
-                          fontSize: 13.5, lineHeight: 1.8,
-                        }}>
-                          {ch.source && (
-                            <span style={{
-                              fontSize: 10, padding: "2px 8px", borderRadius: 4,
-                              background: "rgba(212, 175, 55, 0.1)",
-                              border: "1px solid rgba(212, 175, 55, 0.2)",
-                              ...goldStyle, display: "inline-block", marginBottom: 10,
-                            }}>
-                              {ch.source}
-                            </span>
-                          )}
-                          <div style={{ whiteSpace: "pre-wrap" }}>{ch.content}</div>
-                          {/* 章末ボタン群 */}
-                          <div style={{ display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" }}>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                sendChatMessage(`第${ch.number}章「${ch.title}」について詳しく教えてください`);
-                                setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: "smooth" }), 300);
-                              }}
-                              disabled={chatLoading}
-                              style={{
-                                ...chipBase, fontSize: 12,
-                                opacity: chatLoading ? 0.5 : 1,
-                              }}
-                            >
-                              この章について聞く
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleCopyItem(ch.content, `第${ch.number}章`)}
-                              style={{
-                                ...chipBase, fontSize: 12,
-                                background: "transparent",
-                              }}
-                            >
-                              この章をコピー
-                            </button>
+                  {result.report.chapters.map((ch) => {
+                    const isNameChapter = ch.number >= 5;
+                    return (
+                      <div key={ch.number} style={{
+                        borderBottom: `1px solid ${borderLight}`,
+                        marginBottom: 4,
+                      }}>
+                        <button
+                          type="button"
+                          onClick={() => toggleChapter(ch.number)}
+                          style={{
+                            ...btnBase, width: "100%", padding: "12px 4px",
+                            background: "transparent", color: textPrimary, fontSize: 13,
+                            display: "flex", justifyContent: "space-between", alignItems: "center",
+                            textAlign: "left", border: "none",
+                          }}
+                        >
+                          <span style={{ display: "flex", alignItems: "center", flexWrap: "wrap" }}>
+                            <span style={goldStyle}>第{ch.number}章</span>
+                            <span style={{ marginLeft: 8 }}>{ch.title}</span>
+                            {isNameChapter && <NameChapterBadge />}
+                          </span>
+                          <span style={{ color: textMuted, fontSize: 11, flexShrink: 0, marginLeft: 8 }}>
+                            {expandedChapters.has(ch.number) ? "▲" : "▼"}
+                          </span>
+                        </button>
+                        {expandedChapters.has(ch.number) && (
+                          <div style={{ padding: "0 4px 14px", fontSize: 13.5, lineHeight: 1.8 }}>
+                            {ch.source && (
+                              <span style={{
+                                fontSize: 10, padding: "2px 8px", borderRadius: 4,
+                                background: "rgba(201, 161, 74, 0.06)",
+                                border: "1px solid rgba(201, 161, 74, 0.15)",
+                                ...goldStyle, display: "inline-block", marginBottom: 10,
+                              }}>
+                                {ch.source}
+                              </span>
+                            )}
+                            {isNameChapter && (
+                              <div style={{
+                                fontSize: 11, color: arkGreen, lineHeight: 1.5,
+                                marginBottom: 10, fontStyle: "italic",
+                              }}>
+                                この章は名前の言霊解読に基づく読み解きです。
+                                解釈の一つの視点としてお受け取りください。
+                              </div>
+                            )}
+                            <div style={{ whiteSpace: "pre-wrap" }}>{ch.content}</div>
+                            <div style={{ display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" }}>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  sendChatMessage(`第${ch.number}章「${ch.title}」について詳しく教えてください`);
+                                  setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: "smooth" }), 300);
+                                }}
+                                disabled={chatLoading}
+                                style={{ ...chipBase, fontSize: 12, opacity: chatLoading ? 0.5 : 1 }}
+                              >
+                                この章について聞く
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleCopyItem(ch.content, `第${ch.number}章`)}
+                                style={{ ...chipBase, fontSize: 12, background: "transparent" }}
+                              >
+                                この章をコピー
+                              </button>
+                            </div>
                           </div>
-                        </div>
-                      )}
-                    </div>
-                  ))}
+                        )}
+                      </div>
+                    );
+                  })}
 
-                  {/* 文字数 */}
-                  <div style={{ fontSize: 10, ...subStyle, textAlign: "right", marginTop: 8 }}>
+                  <div style={{ fontSize: 10, color: textMuted, textAlign: "right", marginTop: 8 }}>
                     {result.report.charCount.toLocaleString()} 文字
                   </div>
                 </div>
@@ -1350,7 +1321,7 @@ export function SukuyouPage({ onBack, onSendToChat, restoreRoomId }: SukuyouPage
 
             {/* Warnings */}
             {result.warnings && result.warnings.length > 0 && (
-              <div style={{ fontSize: 11, ...subStyle, padding: "0 4px" }}>
+              <div style={{ fontSize: 11, color: textMuted, padding: "0 4px" }}>
                 {result.warnings.map((w, i) => (
                   <p key={i} style={{ margin: "3px 0", lineHeight: 1.5 }}>{w}</p>
                 ))}

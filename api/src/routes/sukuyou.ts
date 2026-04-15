@@ -341,6 +341,8 @@ router.post("/guidance", async (req: Request, res: Response) => {
       generatedAt: result.generatedAt,
       premise: result.premise,
       honmeiShuku: result.sukuyoResult.honmeiShuku,
+      shukuSanskrit: result.sukuyoResult.shukuSanskrit || null,
+      shukuReading: result.sukuyoResult.shukuReading || null,
       disasterType: result.disasterClassification.corePattern,
       reversalAxis: result.amatsuKanagiReversal.reversalAxis,
       oracle: result.oracleMessage,
