@@ -907,6 +907,17 @@ ${seedSummary}${lifeAlgoSummary}
       return /現在の.*(首相|大統領|CEO|知事|社長|総裁|代表|王|女王|大臣)|今の.*(首相|大統領|CEO)|最新の.*(ニュース|情報|状況)|誰が.*(首相|大統領|リーダー|代表)|(首相|大統領|総理大臣|プレジデント).*誰|(首相|大統領|総理大臣).*は.*(誰|だれ)|(日本|アメリカ|米国).*(首相|大統領|総理)/.test(msg);
     };
 
+    /** 天気・速報などリアルタイム外部情報が必要で、別ルート未捕捉の質問（NATURAL_GENERAL 短文フォールバック用） */
+    const __isRealtimeUnavailableIntent = (msg: string): boolean => {
+      const m = String(msg || "").trim();
+      if (!m) return false;
+      if (/天気|気温|降水|降雪|雨量|積雪|台風|熱帯低気圧|警報|注意報|雷雨|湿度|ＵＶ|UV|紫外線/.test(m)) return true;
+      if (/(今|現在|いま|本日|今日).{0,12}(天気|気温|気候)/.test(m)) return true;
+      if (/今日の.*天気/.test(m)) return true;
+      if (/ニュース|速報/.test(m) && /(何|いくつ|誰|どこ|いつ|最新)/.test(m)) return true;
+      return false;
+    };
+
     // ---------- DEF: definition questions (〜とは何？/って何？) ----------
     // R1_DEF_ROUTE_FIX_V1: 「〜とは何か」「〜って何か」パターンを追加
     const __isDefinitionQ =
@@ -1567,9 +1578,11 @@ ${__carrySeedSummary}${__carryLifeAlgo}
           outText = "情報が散っているだけです。焦点は一つでいい。いま一番引っかかっているものだけを、静かに見つめてみてください。";
         } else if (__hst === "angry") {
           outText = "その怒りは境界が侵された反応です。まず守る一点を決めることが、いまの最善です。";
+        } else if (__isRealtimeUnavailableIntent(t0)) {
+          outText =
+            "現在のリアルタイム情報（天気・ニュース等）への対応は現時点では準備中です。他にお聞きしたいことがあれば、ぜひお話しください。";
         } else {
-          // RETIRED_FALLBACK_TEXT_V1 2026-04-14
-          outText = "少し待ってください。";
+          outText = "今のご質問に対して、もう少し詳しく教えていただけますか。";
         }
       }
 
