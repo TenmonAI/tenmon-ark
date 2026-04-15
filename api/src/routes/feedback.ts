@@ -317,16 +317,27 @@ feedbackRouter.post("/feedback/generate-card", async (req: Request, res: Respons
     /* LLMレスポンスからJSONを抽出 */
     let card: Record<string, any> = {};
     try {
-      // JSON部分を抽出（```json ... ``` やプレーンJSON対応）
-      const jsonMatch = llmResult.text.match(/\{[\s\S]*\}/);
+      if (!llmResult?.text || llmResult.text.trim().length === 0) {
+        throw new Error("LLM returned empty response (possible 429 rate limit)");
+      }
+      // ```json ... ``` フェンスを除去
+      let cleaned = llmResult.text.trim();
+      cleaned = cleaned.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "");
+      // JSON部分を抽出
+      const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         card = JSON.parse(jsonMatch[0]);
       } else {
         throw new Error("JSON not found in LLM response");
       }
     } catch (parseErr: any) {
-      console.error(`[FEEDBACK] Card generation JSON parse error:`, parseErr?.message, llmResult.text.slice(0, 200));
-      return res.status(500).json({ ok: false, error: "修正カードの生成に失敗しました（JSON解析エラー）" });
+      const snippet = llmResult?.text?.slice(0, 200) ?? "(empty)";
+      console.error(`[FEEDBACK] Card generation JSON parse error:`, parseErr?.message, snippet);
+      const isRateLimit = parseErr?.message?.includes("429") || parseErr?.message?.includes("rate limit") || parseErr?.message?.includes("empty");
+      const userMsg = isRateLimit
+        ? "現在AIが混み合っています。しばらく時間をおいてから再度お試しください。"
+        : "修正カードの生成に失敗しました（JSON解析エラー）";
+      return res.status(isRateLimit ? 503 : 500).json({ ok: false, error: userMsg });
     }
 
     /* Notion DBに追加プロパティを更新（notionPageIdがある場合） */
