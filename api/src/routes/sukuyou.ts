@@ -353,6 +353,18 @@ router.post("/guidance", async (req: Request, res: Response) => {
       },
       warnings: result.warnings,
       sukuyouSeedV1,
+      /* 宿名統合サマリー用 — 言霊解読の表示情報（ロジック変更なし） */
+      kotodamaSummary: result.irohaKotodamaGuidance ? {
+        guidingAxis: result.irohaKotodamaGuidance.guidingAxis || null,
+        soulDirection: result.irohaKotodamaGuidance.soulDirection || null,
+        guidingMessage: result.irohaKotodamaGuidance.guidingMessage || null,
+        deficientTones: result.irohaKotodamaGuidance.deficientTones || [],
+        supportiveTones: result.irohaKotodamaGuidance.supportiveTones || [],
+        nameAnalysis: result.irohaKotodamaGuidance.nameAnalysis ? {
+          soulVibration: result.irohaKotodamaGuidance.nameAnalysis.soulVibration || null,
+          fireWaterBalance: result.irohaKotodamaGuidance.nameAnalysis.fireWaterBalance || null,
+        } : null,
+      } : null,
     });
   } catch (err: any) {
     console.error("[sukuyou/guidance] Error:", err);

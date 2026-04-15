@@ -94,7 +94,7 @@ export default function LoginLocal() {
         </div>
 
         <div style={{ marginBottom: 16, color: "var(--gpt-text-secondary)", fontSize: 14 }}>
-          ログインしてチャットを再開します。
+          星と音と言葉で、あなたの存在を読み解く。
         </div>
 
         <label style={{ display: "block", marginBottom: 8, fontSize: 14 }}>メールアドレス</label>

@@ -47,6 +47,17 @@ interface GuidanceResult {
       repeatingFailurePattern: string;
     };
   };
+  kotodamaSummary?: {
+    guidingAxis: string | null;
+    soulDirection: string | null;
+    guidingMessage: string | null;
+    deficientTones: string[];
+    supportiveTones: string[];
+    nameAnalysis: {
+      soulVibration: string | null;
+      fireWaterBalance: { fire: number; water: number } | null;
+    } | null;
+  } | null;
 }
 
 interface ChatMessage {
@@ -984,14 +995,25 @@ export function SukuyouPage({ onBack, onSendToChat, restoreRoomId }: SukuyouPage
                 <div style={{ fontSize: 11, color: textMuted, marginTop: 4 }}>本命宿</div>
                 {result.shukuSanskrit && (
                   <div style={{
-                    fontSize: 11, color: textMuted, marginTop: 6,
-                    fontStyle: "italic", letterSpacing: "0.03em",
+                    marginTop: 10, padding: "8px 12px", borderRadius: 8,
+                    background: "rgba(201, 161, 74, 0.03)",
+                    border: "1px solid rgba(201, 161, 74, 0.08)",
                   }}>
-                    <span style={{ fontSize: 10, color: arkGold, fontWeight: 500, marginRight: 6 }}>梵名</span>
-                    {result.shukuSanskrit}
-                    {result.shukuReading && (
-                      <span style={{ marginLeft: 6, fontSize: 10, color: textMuted }}>({result.shukuReading})</span>
-                    )}
+                    <div style={{
+                      fontSize: 12, color: textPrimary, letterSpacing: "0.03em",
+                      display: "flex", alignItems: "baseline", gap: 6, flexWrap: "wrap",
+                    }}>
+                      <span style={{ fontSize: 10, color: arkGold, fontWeight: 600 }}>梵名</span>
+                      <span style={{ fontStyle: "italic", fontWeight: 500 }}>{result.shukuSanskrit}</span>
+                      {result.shukuReading && (
+                        <span style={{ fontSize: 10, color: textMuted }}>({result.shukuReading})</span>
+                      )}
+                    </div>
+                    <div style={{
+                      fontSize: 9.5, color: textMuted, marginTop: 4, lineHeight: 1.5,
+                    }}>
+                      宿曜経に基づく対応名です。音韻の対照は参考情報としてお受け取りください。
+                    </div>
                   </div>
                 )}
               </div>
@@ -1073,6 +1095,135 @@ export function SukuyouPage({ onBack, onSendToChat, restoreRoomId }: SukuyouPage
 
               <ActionBar />
             </div>
+
+            {/* ═══ 宿名統合サマリー ═══ */}
+            {result.premise?.name && result.kotodamaSummary && (
+              <div style={{
+                ...cardBase,
+                border: `1px solid rgba(47, 111, 94, 0.15)`,
+                background: "rgba(47, 111, 94, 0.02)",
+                padding: "1.125rem 1rem",
+              }}>
+                <h3 style={{
+                  fontSize: 14, fontWeight: 600, color: arkGreen,
+                  marginBottom: 12, display: "flex", alignItems: "center", gap: 8,
+                }}>
+                  <span style={{ fontSize: 16 }}>✦</span>
+                  宿曜と名前の統合読み
+                </h3>
+                <p style={{
+                  fontSize: 11, color: textMuted, marginBottom: 14, lineHeight: 1.5,
+                  fontStyle: "italic",
+                }}>
+                  宿曜鑑定と名前の言霊解読を重ね合わせた、ひとつの視点です。
+                  絶対的な判定ではなく、自己理解の手がかりとしてお受け取りください。
+                </p>
+
+                {/* 統合サマリーカード */}
+                <div style={{
+                  display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14,
+                }}>
+                  {result.kotodamaSummary.soulDirection && (
+                    <div style={{
+                      padding: "12px", borderRadius: 10,
+                      background: "rgba(47, 111, 94, 0.04)",
+                      border: "1px solid rgba(47, 111, 94, 0.1)",
+                    }}>
+                      <div style={{ fontSize: 10, color: textMuted, marginBottom: 5, letterSpacing: "0.03em" }}>魂の方向性</div>
+                      <div style={{ fontSize: 13, fontWeight: 500, lineHeight: 1.5 }}>{result.kotodamaSummary.soulDirection}</div>
+                    </div>
+                  )}
+                  {result.kotodamaSummary.guidingAxis && (
+                    <div style={{
+                      padding: "12px", borderRadius: 10,
+                      background: "rgba(47, 111, 94, 0.04)",
+                      border: "1px solid rgba(47, 111, 94, 0.1)",
+                    }}>
+                      <div style={{ fontSize: 10, color: textMuted, marginBottom: 5, letterSpacing: "0.03em" }}>導きの軸</div>
+                      <div style={{ fontSize: 13, fontWeight: 500, lineHeight: 1.5 }}>{result.kotodamaSummary.guidingAxis}</div>
+                    </div>
+                  )}
+                </div>
+
+                {/* 名前の音の特徴 */}
+                {result.kotodamaSummary.nameAnalysis?.soulVibration && (
+                  <div style={{
+                    padding: "12px 14px", borderRadius: 10,
+                    background: "rgba(47, 111, 94, 0.03)",
+                    border: "1px solid rgba(47, 111, 94, 0.08)",
+                    marginBottom: 14,
+                  }}>
+                    <div style={{ fontSize: 10, color: textMuted, marginBottom: 5, letterSpacing: "0.03em" }}>名前の音が持つ振動</div>
+                    <div style={{ fontSize: 13, lineHeight: 1.7 }}>{result.kotodamaSummary.nameAnalysis.soulVibration}</div>
+                  </div>
+                )}
+
+                {/* 補う音・支える音 */}
+                {(result.kotodamaSummary.supportiveTones.length > 0 || result.kotodamaSummary.deficientTones.length > 0) && (
+                  <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 14 }}>
+                    {result.kotodamaSummary.supportiveTones.length > 0 && (
+                      <div style={{ flex: 1, minWidth: 140 }}>
+                        <div style={{ fontSize: 10, color: arkGreen, marginBottom: 6, fontWeight: 500 }}>支える音</div>
+                        <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+                          {result.kotodamaSummary.supportiveTones.map((t, i) => (
+                            <span key={i} style={{
+                              fontSize: 12, padding: "3px 10px", borderRadius: 12,
+                              background: "rgba(47, 111, 94, 0.06)",
+                              border: "1px solid rgba(47, 111, 94, 0.12)",
+                              color: arkGreen, fontWeight: 500,
+                            }}>{t}</span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {result.kotodamaSummary.deficientTones.length > 0 && (
+                      <div style={{ flex: 1, minWidth: 140 }}>
+                        <div style={{ fontSize: 10, color: textMuted, marginBottom: 6, fontWeight: 500 }}>補いたい音</div>
+                        <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+                          {result.kotodamaSummary.deficientTones.map((t, i) => (
+                            <span key={i} style={{
+                              fontSize: 12, padding: "3px 10px", borderRadius: 12,
+                              background: "rgba(0, 0, 0, 0.03)",
+                              border: `1px solid ${borderLight}`,
+                              color: textMuted, fontWeight: 500,
+                            }}>{t}</span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* 導きのメッセージ */}
+                {result.kotodamaSummary.guidingMessage && (
+                  <div style={{
+                    padding: "14px 16px", borderRadius: 12,
+                    background: "rgba(47, 111, 94, 0.04)",
+                    border: "1px solid rgba(47, 111, 94, 0.12)",
+                    fontSize: 13, lineHeight: 1.8,
+                    fontStyle: "italic",
+                  }}>
+                    {result.kotodamaSummary.guidingMessage}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* 名前未入力時の案内（自然に） */}
+            {result && !result.premise?.name && (
+              <div style={{
+                ...cardBase,
+                border: `1px dashed rgba(47, 111, 94, 0.15)`,
+                background: "transparent",
+                padding: "0.875rem 1rem",
+                textAlign: "center",
+              }}>
+                <p style={{ fontSize: 12, color: textMuted, lineHeight: 1.6, margin: 0 }}>
+                  名前を入力して鑑定すると、宿曜と名前の言霊を重ね合わせた
+                  <span style={{ color: arkGreen, fontWeight: 500 }}>統合読み</span>が表示されます。
+                </p>
+              </div>
+            )}
 
             {/* ═══ 鑑定直下チャット ═══ */}
             <div style={{
@@ -1238,10 +1389,34 @@ export function SukuyouPage({ onBack, onSendToChat, restoreRoomId }: SukuyouPage
                   </div>
 
                   {/* 章別アコーディオン */}
-                  {result.report.chapters.map((ch) => {
+                  {result.report.chapters.map((ch, idx) => {
                     const isNameChapter = ch.number >= 5;
+                    const prevChapter = idx > 0 ? result.report.chapters[idx - 1] : null;
+                    const isTransitionToName = isNameChapter && prevChapter && prevChapter.number < 5;
                     return (
-                      <div key={ch.number} style={{
+                      <React.Fragment key={ch.number}>
+                      {/* 第4章→第5章の自然な区切り */}
+                      {isTransitionToName && (
+                        <div style={{
+                          margin: "18px 0 14px",
+                          padding: "12px 16px",
+                          borderRadius: 10,
+                          background: "rgba(47, 111, 94, 0.03)",
+                          border: `1px solid rgba(47, 111, 94, 0.1)`,
+                          display: "flex", alignItems: "center", gap: 10,
+                        }}>
+                          <span style={{ fontSize: 14, color: arkGreen }}>✦</span>
+                          <div>
+                            <div style={{ fontSize: 12, fontWeight: 600, color: arkGreen, marginBottom: 2 }}>
+                              ここからは名前の言霊解読です
+                            </div>
+                            <div style={{ fontSize: 10, color: textMuted, lineHeight: 1.5 }}>
+                              宿曜鑑定に名前の音の解読を重ねた、より深い読み解きです。
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                      <div style={{
                         borderBottom: `1px solid ${borderLight}`,
                         marginBottom: 4,
                       }}>
@@ -1309,6 +1484,7 @@ export function SukuyouPage({ onBack, onSendToChat, restoreRoomId }: SukuyouPage
                           </div>
                         )}
                       </div>
+                      </React.Fragment>
                     );
                   })}
 
