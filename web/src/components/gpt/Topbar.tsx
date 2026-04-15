@@ -91,7 +91,7 @@ export function Topbar({
               gap: 6,
               background: "none",
               border: "none",
-              color: "var(--gpt-text-secondary, #b8a88a)",
+              color: "var(--muted, rgba(17,24,39,0.65))",
               cursor: "pointer",
               fontSize: 13,
               padding: "4px 8px",
@@ -100,12 +100,12 @@ export function Topbar({
               marginRight: 8,
             }}
             onMouseEnter={(e) => {
-              (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.06)";
-              (e.currentTarget as HTMLElement).style.color = "var(--gpt-text-primary, #f0e6d4)";
+              (e.currentTarget as HTMLElement).style.background = "var(--hover, rgba(0,0,0,0.04))";
+              (e.currentTarget as HTMLElement).style.color = "var(--text, #111827)";
             }}
             onMouseLeave={(e) => {
               (e.currentTarget as HTMLElement).style.background = "none";
-              (e.currentTarget as HTMLElement).style.color = "var(--gpt-text-secondary, #b8a88a)";
+              (e.currentTarget as HTMLElement).style.color = "var(--muted, rgba(17,24,39,0.65))";
             }}
             title="最後のチャットに戻る"
           >

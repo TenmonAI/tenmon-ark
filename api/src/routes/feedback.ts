@@ -50,8 +50,10 @@ async function saveToNotion(payload: {
 }): Promise<{ ok: boolean; notionPageId?: string; error?: string }> {
   const notionToken = process.env.NOTION_TOKEN || process.env.NOTION_API_KEY;
   if (!notionToken) {
+    console.error(`[FEEDBACK] NOTION_TOKEN not configured. Available env keys: ${Object.keys(process.env).filter(k => k.includes("NOTION")).join(", ") || "(none)"}`);
     return { ok: false, error: "NOTION_TOKEN not configured" };
   }
+  console.log(`[FEEDBACK] Notion token present (length=${notionToken.length}, prefix=${notionToken.slice(0, 8)}...)`);
 
   const properties: Record<string, any> = {
     "タイトル": { title: [{ text: { content: payload.title } }] },
@@ -86,32 +88,54 @@ async function saveToNotion(payload: {
     properties["添付画像URL"] = { rich_text: [{ text: { content: payload.imageUrl } }] };
   }
 
-  try {
-    const resp = await fetch("https://api.notion.com/v1/pages", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${notionToken}`,
-        "Notion-Version": NOTION_VERSION,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        parent: { database_id: NOTION_DB_ID },
-        properties,
-      }),
-    });
+  const requestBody = JSON.stringify({
+    parent: { database_id: NOTION_DB_ID },
+    properties,
+  });
 
-    if (!resp.ok) {
-      const errBody = await resp.text();
-      console.error(`[FEEDBACK] Notion API error ${resp.status}: ${errBody}`);
-      return { ok: false, error: `Notion API ${resp.status}` };
+  // 最大2回リトライ（ネットワーク一時障害対策）
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      console.log(`[FEEDBACK] Notion API call attempt=${attempt} dbId=${NOTION_DB_ID}`);
+      const resp = await fetch("https://api.notion.com/v1/pages", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${notionToken}`,
+          "Notion-Version": NOTION_VERSION,
+          "Content-Type": "application/json",
+        },
+        body: requestBody,
+      });
+
+      if (!resp.ok) {
+        const errBody = await resp.text();
+        console.error(`[FEEDBACK] Notion API error attempt=${attempt} status=${resp.status} body=${errBody}`);
+        // 400系はリトライ不要（プロパティ名不一致等）
+        if (resp.status >= 400 && resp.status < 500) {
+          return { ok: false, error: `Notion API ${resp.status}: ${errBody.slice(0, 200)}` };
+        }
+        // 500系は1回だけリトライ
+        if (attempt < 2) {
+          await new Promise(r => setTimeout(r, 1000));
+          continue;
+        }
+        return { ok: false, error: `Notion API ${resp.status}` };
+      }
+
+      const data = (await resp.json()) as any;
+      console.log(`[FEEDBACK] Notion save success: pageId=${data.id}`);
+      return { ok: true, notionPageId: data.id };
+    } catch (e: any) {
+      console.error(`[FEEDBACK] Notion save failed attempt=${attempt}:`, e?.message);
+      if (attempt < 2) {
+        await new Promise(r => setTimeout(r, 1000));
+        continue;
+      }
+      return { ok: false, error: String(e?.message ?? e) };
     }
-
-    const data = (await resp.json()) as any;
-    return { ok: true, notionPageId: data.id };
-  } catch (e: any) {
-    console.error(`[FEEDBACK] Notion save failed:`, e?.message);
-    return { ok: false, error: String(e?.message ?? e) };
   }
+
+  return { ok: false, error: "Notion save: max retries exceeded" };
 }
 
 /* ── ローカルフォールバック保存 ── */
@@ -233,6 +257,155 @@ feedbackRouter.get("/feedback/history", async (_req: Request, res: Response) => 
         return null;
       }
     }).filter(Boolean);
+
+    return res.json({ ok: true, items, count: items.length });
+  } catch (e: any) {
+    return res.status(500).json({ ok: false, error: String(e?.message ?? e) });
+  }
+});
+
+/* ── POST /api/feedback/generate-card ── */
+/* FIX-D: 改善要望から修正カードを自動生成する */
+feedbackRouter.post("/feedback/generate-card", async (req: Request, res: Response) => {
+  try {
+    const { receiptNumber } = req.body;
+    if (!receiptNumber) {
+      return res.status(400).json({ ok: false, error: "receiptNumber は必須です" });
+    }
+
+    /* ローカルJSONから要望データを取得 */
+    const filePath = path.join(FALLBACK_DIR, `${receiptNumber}.json`);
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ ok: false, error: `要望 ${receiptNumber} が見つかりません` });
+    }
+    const feedback = JSON.parse(fs.readFileSync(filePath, "utf-8"));
+
+    /* LLM でカード生成 */
+    const { llmChat } = await import("../core/llmWrapper.js");
+    const prompt = `あなたは天聞アーク（TENMON-ARK）のプロダクト改善アシスタントです。
+以下のユーザー改善要望を分析し、構造化された修正カードを生成してください。
+
+## ユーザー改善要望
+- 受付番号: ${feedback.receiptNumber}
+- カテゴリ: ${feedback.category}
+- タイトル: ${feedback.title}
+- 詳細内容: ${feedback.detail}
+- 優先度: ${feedback.priority}
+- 再現手順: ${feedback.reproSteps || "なし"}
+- デバイス: ${feedback.device || "不明"}
+
+## 出力フォーマット（JSON）
+以下のJSON形式で出力してください。JSON以外の文字は出力しないでください。
+{
+  "ai_summary": "要望の要約（1-2文）",
+  "problem_type": "bug | ux | feature | content | performance | other のいずれか",
+  "ai_priority": "critical | high | medium | low のいずれか",
+  "impact_scope": "影響範囲の説明（1文）",
+  "suggested_fix_title": "修正カードのタイトル案",
+  "suggested_fix_detail": "修正内容の提案（2-3文）",
+  "acceptance_test": "受入テスト条件（1-2文）",
+  "user_facing_note": "ユーザーへの返答文案（丁寧な日本語で）"
+}`;
+
+    const llmResult = await llmChat({
+      system: "あなたはプロダクト改善の専門家です。JSON形式で回答してください。",
+      user: prompt,
+      maxTokens: 1000,
+      timeout: 30000,
+    });
+
+    /* LLMレスポンスからJSONを抽出 */
+    let card: Record<string, any> = {};
+    try {
+      // JSON部分を抽出（```json ... ``` やプレーンJSON対応）
+      const jsonMatch = llmResult.text.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        card = JSON.parse(jsonMatch[0]);
+      } else {
+        throw new Error("JSON not found in LLM response");
+      }
+    } catch (parseErr: any) {
+      console.error(`[FEEDBACK] Card generation JSON parse error:`, parseErr?.message, llmResult.text.slice(0, 200));
+      return res.status(500).json({ ok: false, error: "修正カードの生成に失敗しました（JSON解析エラー）" });
+    }
+
+    /* Notion DBに追加プロパティを更新（notionPageIdがある場合） */
+    if (feedback.notionPageId) {
+      const notionToken = process.env.NOTION_TOKEN || process.env.NOTION_API_KEY;
+      if (notionToken) {
+        try {
+          const updateResp = await fetch(`https://api.notion.com/v1/pages/${feedback.notionPageId}`, {
+            method: "PATCH",
+            headers: {
+              Authorization: `Bearer ${notionToken}`,
+              "Notion-Version": NOTION_VERSION,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              properties: {
+                ...(card.ai_summary ? { "AI要約": { rich_text: [{ text: { content: card.ai_summary } }] } } : {}),
+                ...(card.ai_priority ? { "AI優先度": { select: { name: card.ai_priority } } } : {}),
+                ...(card.suggested_fix_title ? { "修正カード案": { rich_text: [{ text: { content: `${card.suggested_fix_title}: ${card.suggested_fix_detail || ""}`.slice(0, 2000) } }] } } : {}),
+                "構築タスク化": { checkbox: true },
+              },
+            }),
+          });
+          if (!updateResp.ok) {
+            const errText = await updateResp.text();
+            console.warn(`[FEEDBACK] Notion update warning: ${updateResp.status} ${errText.slice(0, 200)}`);
+          } else {
+            console.log(`[FEEDBACK] Notion page updated with card: ${feedback.notionPageId}`);
+          }
+        } catch (notionErr: any) {
+          console.warn(`[FEEDBACK] Notion update failed:`, notionErr?.message);
+        }
+      }
+    }
+
+    /* ローカルJSONにもカード情報を追記 */
+    feedback.fixCard = card;
+    feedback.fixCardGeneratedAt = new Date().toISOString();
+    fs.writeFileSync(filePath, JSON.stringify(feedback, null, 2), "utf-8");
+
+    console.log(`[FEEDBACK] Fix card generated for ${receiptNumber}: ${card.suggested_fix_title}`);
+
+    return res.json({
+      ok: true,
+      receiptNumber,
+      card,
+      notionUpdated: !!feedback.notionPageId,
+      provider: llmResult.provider,
+      model: llmResult.model,
+    });
+  } catch (e: any) {
+    console.error(`[FEEDBACK] Card generation error:`, e);
+    return res.status(500).json({ ok: false, error: "修正カード生成中にエラーが発生しました" });
+  }
+});
+
+/* ── GET /api/feedback/cards ── */
+/* 生成済み修正カード一覧を取得 */
+feedbackRouter.get("/feedback/cards", async (_req: Request, res: Response) => {
+  try {
+    if (!fs.existsSync(FALLBACK_DIR)) {
+      return res.json({ ok: true, items: [], count: 0 });
+    }
+    const files = fs.readdirSync(FALLBACK_DIR)
+      .filter(f => f.endsWith(".json"))
+      .sort()
+      .reverse();
+
+    const items = files
+      .map(f => {
+        try {
+          const data = JSON.parse(fs.readFileSync(path.join(FALLBACK_DIR, f), "utf-8"));
+          if (data.fixCard) return data;
+          return null;
+        } catch {
+          return null;
+        }
+      })
+      .filter(Boolean);
 
     return res.json({ ok: true, items, count: items.length });
   } catch (e: any) {

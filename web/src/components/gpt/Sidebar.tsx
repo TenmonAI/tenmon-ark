@@ -40,6 +40,24 @@ type ThreadMeta = {
   pinned?: boolean;
 };
 
+/* ── ライトテーマ対応カラーパレット ── */
+const C = {
+  textPrimary: "var(--text, #111827)",
+  textSecondary: "var(--muted, rgba(17,24,39,0.65))",
+  textMuted: "rgba(17,24,39,0.45)",
+  accent: "var(--ark-gold, #c9a14a)",
+  accentBg: "rgba(201,161,74,0.12)",
+  accentBorder: "rgba(201,161,74,0.35)",
+  hoverBg: "var(--hover, rgba(0,0,0,0.04))",
+  hoverBgStrong: "var(--gpt-hover-bg-strong, rgba(0,0,0,0.06))",
+  inputBg: "var(--input-bg, #ffffff)",
+  inputBorder: "var(--input-border, rgba(0,0,0,0.12))",
+  border: "var(--border, rgba(0,0,0,0.08))",
+  sidebarBg: "var(--sidebar-bg, #f7f7f8)",
+  danger: "#dc2626",
+  white: "#ffffff",
+} as const;
+
 function loadThreads(): ThreadMeta[] {
   if (typeof window === "undefined") return [];
   try {
@@ -300,10 +318,10 @@ export function Sidebar({ view, onView, onNewChat, onOpenSettings, onOpenSukuyou
             }}
             style={{
               width: "100%",
-              background: "rgba(255,255,255,0.08)",
-              border: "1px solid rgba(212,175,55,0.4)",
+              background: C.inputBg,
+              border: `1px solid ${C.accentBorder}`,
               borderRadius: 4,
-              color: "#f0e6d4",
+              color: C.textPrimary,
               fontSize: 12,
               padding: "4px 6px",
               outline: "none",
@@ -313,65 +331,74 @@ export function Sidebar({ view, onView, onNewChat, onOpenSettings, onOpenSukuyou
       );
     }
 
+    const isActive = th.id === activeThreadId;
+    const label = th.title || "新しいチャット";
+    const truncated = label.length > 22 ? label.slice(0, 22) + "…" : label;
+    const timeStr = th.updatedAt
+      ? new Date(th.updatedAt).toLocaleDateString("ja-JP", { month: "short", day: "numeric" })
+      : "";
+
     return (
-      <button
+      <div
         key={th.id}
-        type="button"
         onClick={() => handleSelectThread(th.id)}
         onContextMenu={(e) => handleThreadContextMenu(th.id, e)}
-        className="gpt-sidebar-item"
+        onMouseEnter={() => setHoverThreadId(th.id)}
+        onMouseLeave={() => setHoverThreadId(null)}
         style={{
-          justifyContent: "space-between",
-          background: th.id === activeThreadId ? "var(--gpt-hover-bg-strong)" : "transparent",
           display: "flex",
           alignItems: "center",
-          gap: 4,
-          paddingLeft: 12,
+          justifyContent: "space-between",
+          padding: "6px 8px",
+          borderRadius: 6,
+          cursor: "pointer",
+          background: isActive ? C.hoverBgStrong : "transparent",
+          transition: "background 0.1s",
+          position: "relative",
         }}
-        onMouseEnter={() => setHoverThreadId(th.id)}
-        onMouseLeave={() => setHoverThreadId((prev) => (prev === th.id ? null : prev))}
       >
-        <span style={{ display: "flex", alignItems: "center", gap: 4, minWidth: 0, flex: 1 }}>
-          {th.pinned && <span style={{ fontSize: 10, color: "#d4af37" }}>📌</span>}
-          <span
-            style={{
-              maxWidth: 110,
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-            }}
-          >
-            {th.title || t("sidebar.chat")}
-          </span>
+        <span style={{
+          fontSize: 12,
+          color: isActive ? C.textPrimary : C.textSecondary,
+          fontWeight: isActive ? 600 : 400,
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap",
+          flex: 1,
+          minWidth: 0,
+        }}>
+          {th.pinned && <span style={{ fontSize: 10, color: C.accent, marginRight: 3 }}>📌</span>}
+          {truncated}
         </span>
-        <span style={{ display: "flex", alignItems: "center", gap: 2, flexShrink: 0 }}>
-          <span style={{ fontSize: 10, opacity: 0.5 }}>
-            {th.updatedAt ? new Date(th.updatedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : ""}
+        <span style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
+          <span style={{ fontSize: 10, color: C.textMuted }}>
+            {timeStr}
           </span>
           <span
             onClick={(e) => handleThreadMenuClick(th.id, e)}
             style={{
-              fontSize: 14,
-              opacity: hoverThreadId === th.id ? 0.8 : 0,
+              opacity: hoverThreadId === th.id ? 0.7 : 0,
               transition: "opacity 0.15s",
               cursor: "pointer",
+              fontSize: 14,
               padding: "0 2px",
+              color: C.textSecondary,
             }}
           >
             ⋯
           </span>
         </span>
-      </button>
+      </div>
     );
   };
 
-  /* ── フォルダー内スレッド ── */
+  /* ── フォルダー内スレッド描画 ── */
   const renderFolderThreads = (folderId: string) => {
     const folderThreads = threads.filter((t) => t.folderId === folderId);
     if (folderThreads.length === 0) {
       return (
-        <div style={{ fontSize: 10, opacity: 0.4, padding: "4px 16px", fontStyle: "italic" }}>
-          空のフォルダー
+        <div style={{ fontSize: 11, color: C.textMuted, padding: "4px 16px", fontStyle: "italic" }}>
+          チャットなし
         </div>
       );
     }
@@ -379,7 +406,9 @@ export function Sidebar({ view, onView, onNewChat, onOpenSettings, onOpenSukuyou
   };
 
   /* ── 未分類スレッド ── */
-  const uncategorizedThreads = threads.filter((t) => !t.folderId);
+  const uncategorizedThreads = threads.filter(
+    (t) => !t.folderId || !folders.some((f) => f.id === t.folderId)
+  );
 
   return (
     <aside className="gpt-sidebar">
@@ -387,126 +416,121 @@ export function Sidebar({ view, onView, onNewChat, onOpenSettings, onOpenSukuyou
         <button type="button" className="gpt-btn gpt-btn-primary gpt-sidebar-new-chat" onClick={onNewChat}>
           + {t("sidebar.newChat")}
         </button>
-        <button type="button" className="gpt-sidebar-search" aria-label="Search">
-          <span>🔍</span>
-          <span>{t("sidebar.search")}</span>
-        </button>
-        <button
-          type="button"
-          className={linkClass("sukuyou")}
-          onClick={() => onView("sukuyou")}
-          style={{
-            marginTop: 4,
-            background: view === "sukuyou" || view === "sukuyou-room" ? "rgba(212, 175, 55, 0.15)" : "transparent",
-            border: "1px solid rgba(212, 175, 55, 0.3)",
-            color: "#d4af37",
-            borderRadius: 8,
-            fontWeight: 600,
-          }}
-        >
-          ✦ 宿曜鑑定
-        </button>
+      </div>
 
-        {/* 鑑定結果フォルダー */}
-        {sukuyouRooms.length > 0 && (
-          <div style={{ marginTop: 2 }}>
-            <button
-              type="button"
-              onClick={() => setShowSukuyouRooms(!showSukuyouRooms)}
-              className="gpt-sidebar-item"
-              style={{
-                fontSize: 11,
-                color: "#d4af37",
-                opacity: 0.8,
-                padding: "4px 8px",
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                width: "100%",
-              }}
-            >
-              <span>鑑定結果 ({sukuyouRooms.length})</span>
-              <span style={{ fontSize: 9 }}>{showSukuyouRooms ? "▲" : "▼"}</span>
-            </button>
-            {showSukuyouRooms && (
-              <div style={{ display: "flex", flexDirection: "column", gap: 1, paddingLeft: 4 }}>
-                {sukuyouRooms.map((room) => (
-                  <button
-                    key={room.id}
-                    type="button"
-                    onClick={() => onOpenSukuyouRoom?.(room.id)}
-                    className="gpt-sidebar-item"
-                    style={{
-                      fontSize: 11,
-                      padding: "6px 8px",
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      gap: 4,
-                    }}
-                    onMouseEnter={() => setHoverRoomId(room.id)}
-                    onMouseLeave={() => setHoverRoomId(prev => prev === room.id ? null : prev)}
-                  >
-                    <span style={{
-                      maxWidth: 110,
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      whiteSpace: "nowrap",
-                      color: "#d4af37",
-                    }}>
-                      {formatShukuLabel(room.honmeiShuku)}
-                    </span>
-                    <span style={{ fontSize: 9, opacity: 0.5 }}>
-                      {room.name || new Date(room.createdAt).toLocaleDateString("ja-JP", { month: "short", day: "numeric" })}
-                    </span>
-                    <span
-                      onClick={(e) => {
-                        e.stopPropagation();
+      <nav className="gpt-sidebar-history">
+        {/* ── 宿曜鑑定結果セクション ── */}
+        <div style={{ marginBottom: 4 }}>
+          <button
+            type="button"
+            onClick={() => {
+              setShowSukuyouRooms(!showSukuyouRooms);
+              if (!showSukuyouRooms) onView("sukuyou");
+            }}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              width: "100%",
+              background: view === "sukuyou" || view === "sukuyou-room" ? C.accentBg : "transparent",
+              border: `1px solid ${view === "sukuyou" || view === "sukuyou-room" ? C.accentBorder : "transparent"}`,
+              borderRadius: 6,
+              padding: "8px 10px",
+              cursor: "pointer",
+              color: C.accent,
+              fontSize: 13,
+              fontWeight: 600,
+              textAlign: "left",
+              fontFamily: "inherit",
+            }}
+          >
+            <span style={{ fontSize: 14 }}>☽</span>
+            <span>宿曜鑑定結果</span>
+            <span style={{
+              marginLeft: "auto",
+              fontSize: 11,
+              color: C.textMuted,
+              fontWeight: 400,
+            }}>
+              {sukuyouRooms.length > 0 ? `${sukuyouRooms.length}件` : ""}
+            </span>
+          </button>
+
+          {showSukuyouRooms && sukuyouRooms.length > 0 && (
+            <div style={{ paddingLeft: 8, marginTop: 2 }}>
+              {sukuyouRooms.map((room) => (
+                <div
+                  key={room.id}
+                  onClick={() => onOpenSukuyouRoom?.(room.id)}
+                  onMouseEnter={() => setHoverRoomId(room.id)}
+                  onMouseLeave={() => setHoverRoomId(null)}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    padding: "5px 8px",
+                    borderRadius: 5,
+                    cursor: "pointer",
+                    background: "transparent",
+                    transition: "background 0.1s",
+                  }}
+                >
+                  <span style={{ fontSize: 12, color: C.textSecondary }}>
+                    {formatShukuLabel(room.shukuName)} — {room.targetName || "鑑定結果"}
+                  </span>
+                  <span
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (confirm(`「${room.targetName || "鑑定結果"}」を削除しますか？`)) {
                         deleteSukuyouResult(room.id).then(() => {
                           listSukuyouResults().then(setSukuyouRooms).catch(() => {});
                         });
-                      }}
-                      style={{
-                        marginLeft: 2,
-                        fontSize: 12,
-                        opacity: hoverRoomId === room.id ? 0.8 : 0,
-                        transition: "opacity 0.15s",
-                        cursor: "pointer",
-                      }}
-                    >
-                      ×
-                    </span>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-      </div>
+                      }
+                    }}
+                    style={{
+                      opacity: hoverRoomId === room.id ? 0.7 : 0,
+                      transition: "opacity 0.15s",
+                      cursor: "pointer",
+                      fontSize: 12,
+                      padding: "0 2px",
+                      color: C.danger,
+                    }}
+                  >
+                    ×
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
 
-      <nav className="gpt-scroll gpt-sidebar-history">
-        {/* ── チャットセクション ── */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 4px" }}>
+        {/* ── チャットセクションヘッダー ── */}
+        <div style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          padding: "4px 4px 2px",
+        }}>
           <button
             type="button"
             onClick={() => setShowChatSection(!showChatSection)}
-            className="gpt-sidebar-section-label"
             style={{
-              cursor: "pointer",
-              background: "none",
-              border: "none",
               display: "flex",
               alignItems: "center",
-              gap: 4,
+              gap: 6,
+              border: "none",
+              cursor: "pointer",
               padding: "6px 4px",
-              color: "inherit",
-              fontSize: "inherit",
-              fontWeight: "inherit",
+              color: C.textSecondary,
+              fontSize: 12,
+              fontWeight: 600,
+              background: "none",
+              fontFamily: "inherit",
             }}
           >
             <span style={{ fontSize: 9 }}>{showChatSection ? "▼" : "▶"}</span>
             <span>チャット</span>
-            <span style={{ fontSize: 10, opacity: 0.5 }}>({threads.length})</span>
+            <span style={{ fontSize: 10, color: C.textMuted }}>({threads.length})</span>
           </button>
           <button
             type="button"
@@ -515,7 +539,7 @@ export function Sidebar({ view, onView, onNewChat, onOpenSettings, onOpenSukuyou
             style={{
               background: "none",
               border: "none",
-              color: "var(--gpt-text-secondary, #b8a88a)",
+              color: C.textSecondary,
               cursor: "pointer",
               fontSize: 16,
               padding: "2px 6px",
@@ -545,10 +569,10 @@ export function Sidebar({ view, onView, onNewChat, onOpenSettings, onOpenSukuyou
                   }}
                   style={{
                     width: "100%",
-                    background: "rgba(255,255,255,0.08)",
-                    border: "1px solid rgba(212,175,55,0.4)",
+                    background: C.inputBg,
+                    border: `1px solid ${C.accentBorder}`,
                     borderRadius: 4,
-                    color: "#f0e6d4",
+                    color: C.textPrimary,
                     fontSize: 12,
                     padding: "4px 6px",
                     outline: "none",
@@ -572,12 +596,12 @@ export function Sidebar({ view, onView, onNewChat, onOpenSettings, onOpenSukuyou
                     transition: "background 0.1s",
                   }}
                   onClick={() => toggleFolder(folder.id)}
-                  onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.04)"; }}
+                  onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = C.hoverBg; }}
                   onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}
                 >
                   <span style={{ display: "flex", alignItems: "center", gap: 4, minWidth: 0 }}>
-                    <span style={{ fontSize: 9 }}>{expandedFolders.has(folder.id) ? "▼" : "▶"}</span>
-                    <span style={{ fontSize: 12, color: folder.color || "#d4af37" }}>📁</span>
+                    <span style={{ fontSize: 9, color: C.textMuted }}>{expandedFolders.has(folder.id) ? "▼" : "▶"}</span>
+                    <span style={{ fontSize: 12 }}>📁</span>
                     {renamingFolderId === folder.id ? (
                       <input
                         ref={renameFolderInputRef}
@@ -591,10 +615,10 @@ export function Sidebar({ view, onView, onNewChat, onOpenSettings, onOpenSukuyou
                           if (e.key === "Escape") setRenamingFolderId(null);
                         }}
                         style={{
-                          background: "rgba(255,255,255,0.08)",
-                          border: "1px solid rgba(212,175,55,0.4)",
+                          background: C.inputBg,
+                          border: `1px solid ${C.accentBorder}`,
                           borderRadius: 3,
-                          color: "#f0e6d4",
+                          color: C.textPrimary,
                           fontSize: 11,
                           padding: "2px 4px",
                           outline: "none",
@@ -603,9 +627,9 @@ export function Sidebar({ view, onView, onNewChat, onOpenSettings, onOpenSukuyou
                       />
                     ) : (
                       <span style={{
-                        fontSize: 11,
+                        fontSize: 12,
                         fontWeight: 600,
-                        color: "var(--gpt-text-secondary, #b8a88a)",
+                        color: C.textPrimary,
                         maxWidth: 90,
                         overflow: "hidden",
                         textOverflow: "ellipsis",
@@ -614,7 +638,7 @@ export function Sidebar({ view, onView, onNewChat, onOpenSettings, onOpenSukuyou
                         {folder.name}
                       </span>
                     )}
-                    <span style={{ fontSize: 9, opacity: 0.4 }}>
+                    <span style={{ fontSize: 9, color: C.textMuted }}>
                       ({threads.filter((t) => t.folderId === folder.id).length})
                     </span>
                   </span>
@@ -626,7 +650,7 @@ export function Sidebar({ view, onView, onNewChat, onOpenSettings, onOpenSukuyou
                         setRenamingFolderId(folder.id);
                       }}
                       title="名前変更"
-                      style={{ fontSize: 10, cursor: "pointer", opacity: 0.5, padding: "0 2px" }}
+                      style={{ fontSize: 10, cursor: "pointer", color: C.textMuted, padding: "0 2px" }}
                     >
                       ✏
                     </span>
@@ -638,7 +662,7 @@ export function Sidebar({ view, onView, onNewChat, onOpenSettings, onOpenSukuyou
                         }
                       }}
                       title="削除"
-                      style={{ fontSize: 10, cursor: "pointer", opacity: 0.5, padding: "0 2px" }}
+                      style={{ fontSize: 10, cursor: "pointer", color: C.textMuted, padding: "0 2px" }}
                     >
                       ×
                     </span>
@@ -659,10 +683,11 @@ export function Sidebar({ view, onView, onNewChat, onOpenSettings, onOpenSukuyou
                 {folders.length > 0 && (
                   <div style={{
                     fontSize: 10,
-                    opacity: 0.5,
+                    color: C.textMuted,
                     padding: "6px 8px 2px",
                     fontWeight: 600,
                     letterSpacing: 0.5,
+                    textTransform: "uppercase",
                   }}>
                     未分類
                   </div>
@@ -676,20 +701,21 @@ export function Sidebar({ view, onView, onNewChat, onOpenSettings, onOpenSukuyou
             {/* 空状態 */}
             {threads.length === 0 && folders.length === 0 && (
               <div style={{ padding: "12px 8px", textAlign: "center" }}>
-                <div style={{ fontSize: 11, opacity: 0.5, marginBottom: 8 }}>
+                <div style={{ fontSize: 11, color: C.textMuted, marginBottom: 8 }}>
                   チャットがまだありません
                 </div>
                 <button
                   type="button"
                   onClick={onNewChat}
                   style={{
-                    background: "rgba(212,175,55,0.15)",
-                    border: "1px solid rgba(212,175,55,0.3)",
-                    color: "#d4af37",
+                    background: C.accentBg,
+                    border: `1px solid ${C.accentBorder}`,
+                    color: C.accent,
                     borderRadius: 6,
                     padding: "6px 12px",
                     fontSize: 11,
                     cursor: "pointer",
+                    fontFamily: "inherit",
                   }}
                 >
                   新しいチャットを始める
@@ -712,7 +738,7 @@ export function Sidebar({ view, onView, onNewChat, onOpenSettings, onOpenSukuyou
           onClick={() => onView("feedback")}
           style={{
             marginTop: 4,
-            borderTop: "1px solid rgba(255,255,255,0.06)",
+            borderTop: `1px solid ${C.border}`,
             paddingTop: 8,
           }}
         >
@@ -746,13 +772,13 @@ export function Sidebar({ view, onView, onNewChat, onOpenSettings, onOpenSukuyou
             position: "fixed",
             left: contextMenu.x,
             top: contextMenu.y,
-            background: "var(--sidebar-bg, #1a1612)",
-            border: "1px solid rgba(212,175,55,0.3)",
+            background: C.white,
+            border: `1px solid ${C.border}`,
             borderRadius: 8,
             padding: "4px 0",
             zIndex: 9999,
             minWidth: 140,
-            boxShadow: "0 4px 16px rgba(0,0,0,0.5)",
+            boxShadow: "0 4px 16px rgba(0,0,0,0.12)",
           }}
           onClick={(e) => e.stopPropagation()}
         >
@@ -777,11 +803,11 @@ export function Sidebar({ view, onView, onNewChat, onOpenSettings, onOpenSukuyou
           >
             📌 {threads.find((t) => t.id === contextMenu.threadId)?.pinned ? "ピン解除" : "ピン留め"}
           </button>
-          <div style={{ height: 1, background: "rgba(255,255,255,0.08)", margin: "2px 0" }} />
+          <div style={{ height: 1, background: C.border, margin: "2px 0" }} />
           <button
             type="button"
             onClick={() => { handleDeleteThread(contextMenu.threadId); setContextMenu(null); }}
-            style={{ ...ctxMenuItemStyle, color: "#e74c3c" }}
+            style={{ ...ctxMenuItemStyle, color: C.danger }}
           >
             🗑 削除
           </button>
@@ -796,17 +822,17 @@ export function Sidebar({ view, onView, onNewChat, onOpenSettings, onOpenSukuyou
             left: "50%",
             top: "50%",
             transform: "translate(-50%, -50%)",
-            background: "var(--sidebar-bg, #1a1612)",
-            border: "1px solid rgba(212,175,55,0.3)",
+            background: C.white,
+            border: `1px solid ${C.border}`,
             borderRadius: 10,
             padding: "12px",
             zIndex: 10000,
             minWidth: 200,
-            boxShadow: "0 8px 32px rgba(0,0,0,0.6)",
+            boxShadow: "0 8px 32px rgba(0,0,0,0.15)",
           }}
           onClick={(e) => e.stopPropagation()}
         >
-          <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 8, color: "#f0e6d4" }}>
+          <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8, color: C.textPrimary }}>
             移動先フォルダー
           </div>
           <button
@@ -832,12 +858,13 @@ export function Sidebar({ view, onView, onNewChat, onOpenSettings, onOpenSukuyou
               onClick={() => setMovingThreadId(null)}
               style={{
                 background: "none",
-                border: "1px solid rgba(255,255,255,0.15)",
-                color: "#b8a88a",
+                border: `1px solid ${C.border}`,
+                color: C.textSecondary,
                 borderRadius: 4,
                 padding: "4px 10px",
                 fontSize: 11,
                 cursor: "pointer",
+                fontFamily: "inherit",
               }}
             >
               キャンセル
@@ -855,10 +882,11 @@ const ctxMenuItemStyle: React.CSSProperties = {
   width: "100%",
   background: "none",
   border: "none",
-  color: "#f0e6d4",
+  color: "var(--text, #111827)",
   fontSize: 12,
   padding: "6px 12px",
   textAlign: "left",
   cursor: "pointer",
   transition: "background 0.1s",
+  fontFamily: "inherit",
 };

@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { randomBytes, scryptSync, timingSafeEqual, createHash } from "node:crypto";
 import { getDb } from "../db/index.js";
+import { sendMail } from "../lib/mailer.js";
 
 export const authLocalRouter = Router();
 
@@ -316,28 +317,43 @@ authLocalRouter.post("/auth/forgot-password", async (req, res) => {
     const proto = req.headers["x-forwarded-proto"] || "https";
     const resetUrl = `${proto}://${host}/pwa/reset-password?token=${rawToken}`;
 
-    // メール送信（内部API経由 — /api/auth/internal/send-reset-email を呼ぶ代わりに
-    // ここではメール送信キューファイルに書き出し、後でGmail MCP等で送信可能にする）
-    const emailPayload = {
+    // メール送信（nodemailer SMTP / Resend / console fallback）
+    const emailText = [
+      "TENMON-ARK をご利用いただきありがとうございます。",
+      "",
+      "パスワード再設定をご希望の場合は、以下のリンクからお手続きください。",
+      "",
+      resetUrl,
+      "",
+      "このリンクの有効期限は60分です。",
+      "心当たりがない場合は、このメールを破棄してください。",
+      "",
+      "— TENMON-ARK",
+    ].join("\n");
+
+    const emailHtml = `
+      <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; padding: 24px;">
+        <h2 style="color: #1f1f1f;">TENMON-ARK パスワード再設定</h2>
+        <p>TENMON-ARK をご利用いただきありがとうございます。</p>
+        <p>パスワード再設定をご希望の場合は、以下のボタンからお手続きください。</p>
+        <p style="text-align: center; margin: 24px 0;">
+          <a href="${resetUrl}" style="background: #b8860b; color: #fff; padding: 12px 32px; border-radius: 6px; text-decoration: none; font-weight: bold;">パスワードを再設定する</a>
+        </p>
+        <p style="font-size: 13px; color: #666;">このリンクの有効期限は60分です。</p>
+        <p style="font-size: 13px; color: #666;">心当たりがない場合は、このメールを破棄してください。</p>
+        <hr style="border: none; border-top: 1px solid #ddd; margin: 24px 0;" />
+        <p style="font-size: 12px; color: #999;">— TENMON-ARK</p>
+      </div>
+    `;
+
+    const mailResult = await sendMail({
       to: String(account.email),
       subject: "TENMON-ARK パスワード再設定のご案内",
-      body: [
-        "TENMON-ARK をご利用いただきありがとうございます。",
-        "",
-        "パスワード再設定をご希望の場合は、以下のリンクからお手続きください。",
-        "",
-        resetUrl,
-        "",
-        "このリンクの有効期限は60分です。",
-        "心当たりがない場合は、このメールを破棄してください。",
-        "",
-        "— TENMON-ARK",
-      ].join("\n"),
-      createdAt: now,
-      tokenId,
-    };
+      text: emailText,
+      html: emailHtml,
+    });
 
-    // メール送信キューに保存
+    // メール送信キューにも保存（バックアップ兼監査用）
     const fs = await import("fs");
     const path = await import("path");
     const queueDir = path.join(process.cwd(), "data", "email_queue");
@@ -346,7 +362,17 @@ authLocalRouter.post("/auth/forgot-password", async (req, res) => {
     }
     fs.writeFileSync(
       path.join(queueDir, `${tokenId}.json`),
-      JSON.stringify(emailPayload, null, 2),
+      JSON.stringify({
+        to: String(account.email),
+        subject: "TENMON-ARK パスワード再設定のご案内",
+        body: emailText,
+        createdAt: now,
+        tokenId,
+        mailSent: mailResult.ok,
+        mailTransport: mailResult.transport,
+        mailMessageId: mailResult.messageId,
+        mailError: mailResult.error,
+      }, null, 2),
       "utf-8"
     );
 
@@ -356,7 +382,7 @@ authLocalRouter.post("/auth/forgot-password", async (req, res) => {
       VALUES (?, 'RESET_REQUESTED', ?, ?, ?)
     `).run(String(account.userId), now, ip, ua);
 
-    console.log(`[AUTH] forgot-password: token created userId=${account.userId} tokenId=${tokenId}`);
+    console.log(`[AUTH] forgot-password: token created userId=${account.userId} tokenId=${tokenId} mailSent=${mailResult.ok} transport=${mailResult.transport}`);
 
     return res.json({ ok: true, message: "ご案内を送信しました" });
   } catch (e: any) {
