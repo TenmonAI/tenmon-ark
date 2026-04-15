@@ -424,14 +424,25 @@ textarea.gpt-composer-input {
 .gpt-typing-wrap {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   padding: var(--gpt-space-md) 0;
 }
+.gpt-typing-label {
+  font-size: 12.5px;
+  letter-spacing: 0.02em;
+  color: var(--gpt-text-muted, #9ca3af);
+  transition: opacity 0.4s ease;
+}
+.gpt-typing-dots {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
 .gpt-typing-dot {
-  width: 8px;
-  height: 8px;
+  width: 5px;
+  height: 5px;
   border-radius: 50%;
-  background: var(--gpt-text-muted);
+  background: rgba(201, 161, 74, 0.6);
   animation: gpt-typing-blink 1.4s ease-in-out infinite;
 }
 .gpt-typing-dot:nth-child(2) { animation-delay: 0.2s; }
@@ -859,4 +870,37 @@ textarea.gpt-composer-input {
 .gpt-empty-state-chip-icon {
   font-size: 18px;
   flex-shrink: 0;
+}
+
+/* Chat error bar + retry */
+.gpt-chat-error-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 var(--gpt-space-md);
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: rgba(180, 60, 60, 0.03);
+  border: 1px solid rgba(180, 60, 60, 0.1);
+}
+.gpt-chat-error-text {
+  font-size: 11px;
+  color: rgba(140, 50, 50, 0.7);
+  line-height: 1.5;
+  flex: 1;
+}
+.gpt-chat-retry-btn {
+  flex-shrink: 0;
+  padding: 5px 12px;
+  font-size: 11px;
+  font-weight: 500;
+  border-radius: 6px;
+  background: rgba(180, 60, 60, 0.06);
+  border: 1px solid rgba(180, 60, 60, 0.15);
+  color: rgba(140, 50, 50, 0.8);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.gpt-chat-retry-btn:hover {
+  background: rgba(180, 60, 60, 0.12);
 }

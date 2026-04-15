@@ -206,6 +206,8 @@ export function useChat() {
   const [threadId, setThreadId] = useState<string>("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(false);
+  const [lastFailedInput, setLastFailedInput] = useState<string | null>(null);
   const hydratedRef = useRef(false);
   const threadIdRef = useRef<string>("");
 
@@ -328,6 +330,8 @@ export function useChat() {
 
     try {
       setLoading(true);
+      setError(false);
+      setLastFailedInput(null);
       const out = await postChat({ message: text, threadId });
       const backendTid = out?.threadId != null ? String(out.threadId).trim() : "";
       const { THREAD_KEY } = getStorageKeys();
@@ -365,9 +369,33 @@ export function useChat() {
       } else {
         setMessages((prev) => [...prev, assistantMsg]);
       }
+    } catch (err) {
+      setError(true);
+      setLastFailedInput(text);
+      const errorMsg: ChatMessage = {
+        id: `${threadId}:err:${Date.now()}`,
+        role: "assistant",
+        content: "通信が不安定な状態です。少し時間をおいてから再度お試しください。",
+        at: new Date().toISOString(),
+      };
+      setMessages((prev) => [...prev, errorMsg]);
     } finally {
       setLoading(false);
     }
+  }
+
+  function retryLastMessage() {
+    if (!lastFailedInput) return;
+    // エラーメッセージを削除して再送
+    setMessages((prev) => {
+      const last = prev[prev.length - 1];
+      if (last?.id?.includes(":err:")) return prev.slice(0, -1);
+      return prev;
+    });
+    const input = lastFailedInput;
+    setLastFailedInput(null);
+    setError(false);
+    sendMessage(input);
   }
 
   /**
@@ -382,7 +410,10 @@ export function useChat() {
     threadId,
     messages,
     loading,
+    error,
+    lastFailedInput,
     sendMessage,
     resetThread,
+    retryLastMessage,
   };
 }

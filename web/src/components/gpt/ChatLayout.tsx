@@ -5,7 +5,7 @@ import { Composer } from "./Composer";
 import { EmptyState } from "./EmptyState";
 
 export function ChatLayout() {
-  const { messages, sendMessage, loading, threadId } = useChat();
+  const { messages, sendMessage, loading, error, lastFailedInput, retryLastMessage, threadId } = useChat();
   const seedSent = useRef(false);
 
   // P3+A6: Auto-send SUKUYOU_SEED if present in sessionStorage.
@@ -50,6 +50,20 @@ export function ChatLayout() {
         <EmptyState onSuggestion={(text) => sendMessage(text)} />
       ) : (
         <MessageList messages={messages} loading={loading} />
+      )}
+      {error && lastFailedInput && !loading && (
+        <div className="gpt-chat-error-bar">
+          <span className="gpt-chat-error-text">
+            通信が不安定な場合は、少し時間をおいてから再度お試しください。
+          </span>
+          <button
+            type="button"
+            className="gpt-chat-retry-btn"
+            onClick={retryLastMessage}
+          >
+            もう一度送る
+          </button>
+        </div>
       )}
       <Composer onSend={sendMessage} loading={loading} />
     </div>

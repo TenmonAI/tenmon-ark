@@ -242,8 +242,8 @@ export function DashboardPage({ onNavigate }: DashboardPageProps) {
           paddingTop: 12,
           borderTop: `1px solid ${C.border}`,
         }}>
-          各機能は段階的に公開されます。
-          ご要望がありましたら、改善要望ページからお知らせください。
+          天聞アークの各機能は、あなたの存在の深まりとともに順次解放されます。
+          ご意見やご要望がありましたら、改善要望ページよりお聞かせください。
         </div>
       </div>
     </div>
