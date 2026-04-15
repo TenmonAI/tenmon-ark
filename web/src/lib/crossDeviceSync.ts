@@ -414,7 +414,7 @@ export async function syncPushAllExistingData(): Promise<{ threads: number; fold
 /* ── periodic sync ── */
 
 let pullInterval: ReturnType<typeof setInterval> | null = null;
-const PULL_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
+const PULL_INTERVAL_MS = 15 * 1000; // 15 seconds — near-realtime sync
 
 export function startPeriodicSync(): void {
   if (pullInterval) return;
