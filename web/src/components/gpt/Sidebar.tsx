@@ -28,6 +28,7 @@ interface SidebarProps {
   view: GptView;
   onView: (v: GptView) => void;
   onNewChat: () => void;
+  onNewSukuyou?: () => void;
   onOpenSettings: () => void;
   onOpenSukuyouRoom?: (roomId: string) => void;
   onBackToChat?: () => void;
@@ -101,7 +102,7 @@ function getActiveThreadId(): string | null {
   }
 }
 
-export function Sidebar({ view, onView, onNewChat, onOpenSettings, onOpenSukuyouRoom, onBackToChat }: SidebarProps) {
+export function Sidebar({ view, onView, onNewChat, onNewSukuyou, onOpenSettings, onOpenSukuyouRoom, onBackToChat }: SidebarProps) {
   const { t } = useI18n();
   const linkClass = (v: GptView) =>
     `gpt-sidebar-item ${view === v ? "gpt-sidebar-item-active" : ""}`;
@@ -447,6 +448,16 @@ export function Sidebar({ view, onView, onNewChat, onOpenSettings, onOpenSukuyou
         <button type="button" className="gpt-btn gpt-btn-primary gpt-sidebar-new-chat" onClick={onNewChat}>
           + {t("sidebar.newChat")}
         </button>
+        <button
+          type="button"
+          className="gpt-btn gpt-sidebar-new-chat gpt-btn-sukuyou"
+          onClick={() => {
+            if (onNewSukuyou) onNewSukuyou();
+            else onView("sukuyou");
+          }}
+        >
+          ☽ 新しい鑑定を始める
+        </button>
       </div>
 
       <nav className="gpt-sidebar-history">
@@ -489,33 +500,7 @@ export function Sidebar({ view, onView, onNewChat, onOpenSettings, onOpenSukuyou
 
           {showSukuyouRooms && (
             <div style={{ paddingLeft: 8, marginTop: 2 }}>
-              {/* ── 新規鑑定CTA ── */}
-              <button
-                type="button"
-                onClick={() => onView("sukuyou")}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 5,
-                  width: "100%",
-                  background: "none",
-                  border: `1px dashed ${C.accentBorder}`,
-                  borderRadius: 5,
-                  padding: "6px 8px",
-                  cursor: "pointer",
-                  color: C.accent,
-                  fontSize: 12,
-                  fontWeight: 500,
-                  fontFamily: "inherit",
-                  marginBottom: 4,
-                  transition: "background 0.15s",
-                }}
-                onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = C.accentBg; }}
-                onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "none"; }}
-              >
-                <span style={{ fontSize: 14 }}>+</span>
-                <span>新しい鑑定を始める</span>
-              </button>
+              {/* 新規鑑定CTA は上部に移動済み */}
 
               {/* ── 鑑定記録一覧 ── */}
               {sukuyouRooms.length > 0 ? sukuyouRooms.map((room) => {

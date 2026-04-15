@@ -176,6 +176,24 @@ body::before {
   width: 100%;
   justify-content: center;
 }
+
+/* ===============================
+   Sukuyou CTA Button — 金色系
+   =============================== */
+.gpt-btn-sukuyou {
+  background-color: #8b6914;
+  border: 1px solid #a67c1a;
+  color: #ffffff;
+  font-weight: var(--gpt-font-semibold);
+}
+.gpt-btn-sukuyou:hover:not(:disabled) {
+  background-color: #a67c1a;
+  border-color: #c9a14a;
+}
+.gpt-btn-sukuyou:active:not(:disabled) {
+  background-color: #6b5010;
+  border-color: #8b6914;
+}
 .gpt-sidebar-search {
   display: flex;
   align-items: center;

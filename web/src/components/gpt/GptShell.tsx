@@ -158,6 +158,7 @@ export function GptShell({ initialView = "chat" }: { initialView?: GptView }) {
         view={view}
         onView={handleChangeView}
         onNewChat={handleNewChat}
+        onNewSukuyou={handleNewSukuyou}
         onOpenSettings={handleOpenSettings}
         onOpenSukuyouRoom={handleOpenSukuyouRoom}
         onBackToChat={handleBackToChat}

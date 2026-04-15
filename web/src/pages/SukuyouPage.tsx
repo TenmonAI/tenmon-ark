@@ -105,7 +105,14 @@ async function copyToClipboard(text: string): Promise<boolean> {
   }
 }
 
-/* ── PDF生成（フロントエンドのみ） ── */
+/* ── iOS Safari 検出 ── */
+function isIOSSafari(): boolean {
+  if (typeof navigator === "undefined") return false;
+  const ua = navigator.userAgent;
+  return /iPad|iPhone|iPod/.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+}
+
+/* ── PDF生成（フロントエンドのみ・iOS Safari対応） ── */
 async function generatePDF(result: GuidanceResult): Promise<void> {
   const [{ default: jsPDF }, { default: html2canvas }] = await Promise.all([
     import("jspdf"),
@@ -206,7 +213,33 @@ async function generatePDF(result: GuidanceResult): Promise<void> {
     const fileName = result.premise?.name
       ? `宿曜鑑定_${result.premise.name}_${shukuLabel}.pdf`
       : `宿曜鑑定_${shukuLabel}.pdf`;
-    pdf.save(fileName);
+
+    // iOS Safari: pdf.save() がブロックされるため Blob URL を新タブで開く
+    // ユーザーが「共有」ボタンから保存可能
+    if (isIOSSafari()) {
+      const pdfBlob = pdf.output("blob");
+      // iOS: navigator.share で PDF ファイルを共有する方法を試みる
+      if (navigator.share) {
+        try {
+          const file = new File([pdfBlob], fileName, { type: "application/pdf" });
+          if (navigator.canShare?.({ files: [file] })) {
+            await navigator.share({ files: [file], title: fileName });
+            return;
+          }
+        } catch (e: any) {
+          if (e.name === "AbortError") return;
+          // share 失敗時は Blob URL フォールバックへ
+        }
+      }
+      // Blob URL を新タブで開く（iOS Safari は PDF をインライン表示）
+      const blobUrl = URL.createObjectURL(pdfBlob);
+      window.open(blobUrl, "_blank");
+      // メモリリーク防止: 少し待ってから revoke
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
+    } else {
+      // PC / Android: 通常のダウンロード
+      pdf.save(fileName);
+    }
   } finally {
     document.body.removeChild(container);
   }
@@ -554,7 +587,7 @@ export function SukuyouPage({ onBack, onSendToChat, restoreRoomId, onNewDiagnosi
     setPdfLoading(true);
     try {
       await generatePDF(result);
-      showToast("PDFを生成しました");
+      showToast(isIOSSafari() ? "PDFを開きました。共有ボタンから保存できます" : "PDFを生成しました");
     } catch (e: any) {
       showToast("PDF生成に失敗しました");
       console.error("PDF generation error:", e);
@@ -577,16 +610,28 @@ export function SukuyouPage({ onBack, onSendToChat, restoreRoomId, onNewDiagnosi
     ].filter(Boolean).join("\n");
     if (navigator.share) {
       try {
-        const blob = await generateShareCard(result);
-        const files = blob ? [new File([blob], "tenmon-sukuyou.png", { type: "image/png" })] : [];
-        await navigator.share({
+        // まずテキストのみでシェアを試みる（iOS Safari で最も安定）
+        const shareData: ShareData = {
           title: `宿曜鑑定 - ${shuku}`,
           text: shareText,
-          ...(files.length > 0 && navigator.canShare?.({ files }) ? { files } : {}),
-        });
+        };
+        // 画像ファイル付きシェアを試みる（対応デバイスのみ）
+        try {
+          const blob = await generateShareCard(result);
+          if (blob) {
+            const file = new File([blob], "tenmon-sukuyou.png", { type: "image/png" });
+            if (navigator.canShare?.({ files: [file] })) {
+              shareData.files = [file];
+            }
+          }
+        } catch {
+          // 画像生成失敗時はテキストのみで続行
+        }
+        await navigator.share(shareData);
         return;
       } catch (e: any) {
         if (e.name === "AbortError") return;
+        // iOS Safari で share 自体が失敗した場合はコピーへフォールバック
       }
     }
     const ok = await copyToClipboard(shareText);
@@ -598,10 +643,33 @@ export function SukuyouPage({ onBack, onSendToChat, restoreRoomId, onNewDiagnosi
     try {
       const blob = await generateShareCard(result);
       if (!blob) { showToast("画像生成に失敗しました"); return; }
+      const fileName = `tenmon-sukuyou-${formatShukuLabel(result.honmeiShuku)}.png`;
+
+      // iOS Safari: <a download> が無視されるため navigator.share で保存導線を提供
+      if (isIOSSafari() && navigator.share) {
+        try {
+          const file = new File([blob], fileName, { type: "image/png" });
+          if (navigator.canShare?.({ files: [file] })) {
+            await navigator.share({ files: [file] });
+            return;
+          }
+        } catch (e: any) {
+          if (e.name === "AbortError") return;
+          // share失敗時は Blob URL フォールバック
+        }
+        // フォールバック: Blob URL を新タブで開く（長押しで保存可能）
+        const blobUrl = URL.createObjectURL(blob);
+        window.open(blobUrl, "_blank");
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
+        showToast("画像を開きました。長押しで保存できます");
+        return;
+      }
+
+      // PC / Android: 通常のダウンロード
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `tenmon-sukuyou-${formatShukuLabel(result.honmeiShuku)}.png`;
+      a.download = fileName;
       a.click();
       URL.revokeObjectURL(url);
       showToast("画像を保存しました");
