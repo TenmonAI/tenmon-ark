@@ -8,6 +8,7 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
 import { formatShukuLabel, getShukuKana } from "../lib/shukuLabel";
 import { saveSukuyouResult, getSukuyouResult, type SukuyouResultRoom } from "../lib/sukuyouStore";
+import { queueSyncChange, syncPush } from "../lib/crossDeviceSync";
 
 interface GuidanceResult {
   success: boolean;
@@ -447,6 +448,22 @@ export function SukuyouPage({ onBack, onSendToChat, restoreRoomId, onNewDiagnosi
         sukuyouSeedV1: data.sukuyouSeedV1 as Record<string, unknown> | undefined,
       };
       await saveSukuyouResult(room);
+      // SYNC_PHASE_A_FRONTEND_CONNECT_V1 FIX-3: 宿曜鑑定完了時にsync登録
+      queueSyncChange({
+        kind: "sukuyou_room_upsert",
+        payload: {
+          roomId: room.id,
+          threadId: room.threadId ?? null,
+          birthDate: room.birthDate || null,
+          honmeiShuku: room.honmeiShuku || null,
+          disasterType: room.disasterType || null,
+          reversalAxis: room.reversalAxis || null,
+          shortOracle: room.shortOracle || null,
+          updatedAt: new Date().toISOString(),
+          version: 1,
+        },
+      });
+      syncPush().catch(() => {});
       window.dispatchEvent(new CustomEvent("tenmon:sukuyou-updated"));
     } catch { /* ignore save errors */ }
   }, []);

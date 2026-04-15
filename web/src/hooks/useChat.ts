@@ -9,6 +9,7 @@
  */
 import { useEffect, useRef, useState } from "react";
 import { postChat } from "../api/chat";
+import { queueSyncChange, syncPush } from "../lib/crossDeviceSync";
 
 export type ChatRole = "user" | "assistant";
 export type ChatMessage = {
@@ -334,6 +335,24 @@ export function useChat() {
       setLastFailedInput(null);
       const out = await postChat({ message: text, threadId });
       const backendTid = out?.threadId != null ? String(out.threadId).trim() : "";
+
+      // SYNC_PHASE_A_FRONTEND_CONNECT_V1 FIX-1: チャット作成時にsync登録
+      const syncTid = backendTid || threadId;
+      if (syncTid) {
+        queueSyncChange({
+          kind: "chat_thread_upsert",
+          payload: {
+            threadId: syncTid,
+            title: (displayText || text).slice(0, 40) || "新規チャット",
+            folderId: null,
+            pinned: 0,
+            updatedAt: new Date().toISOString(),
+            version: 1,
+          },
+        });
+        syncPush().catch(() => {});
+      }
+
       const { THREAD_KEY } = getStorageKeys();
       let storageRaw = "";
       try {

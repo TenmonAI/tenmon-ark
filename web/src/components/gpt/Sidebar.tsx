@@ -20,6 +20,7 @@ import {
   FOLDER_UPDATE_EVENT,
   type ChatFolder,
 } from "../../lib/chatFolderStore";
+import { queueSyncChange, syncPush } from "../../lib/crossDeviceSync";
 
 export type GptView = "chat" | "dashboard" | "profile" | "sukuyou" | "sukuyou-room" | "feedback";
 
@@ -236,6 +237,21 @@ export function Sidebar({ view, onView, onNewChat, onOpenSettings, onOpenSukuyou
     const name = newFolderName.trim();
     if (!name) { setCreatingFolder(false); return; }
     const folder = await createChatFolder(name);
+    // SYNC_PHASE_A_FRONTEND_CONNECT_V1 FIX-2: フォルダー作成時にsync登録
+    queueSyncChange({
+      kind: "chat_folder_upsert",
+      payload: {
+        folderId: folder.id,
+        name: folder.name,
+        kind: "chat",
+        color: folder.color ?? null,
+        sortOrder: folder.sortOrder ?? 0,
+        isDefault: 0,
+        updatedAt: new Date().toISOString(),
+        version: 1,
+      },
+    });
+    syncPush().catch(() => {});
     setExpandedFolders((prev) => new Set([...prev, folder.id]));
     setNewFolderName("");
     setCreatingFolder(false);
