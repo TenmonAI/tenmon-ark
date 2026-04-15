@@ -31,6 +31,7 @@ const pillars = [
     statusColor: "#16a34a",
     navigable: true,
     action: "sukuyou" as const,
+    cta: "鑑定を始める →",
   },
   {
     icon: "音",
@@ -40,6 +41,7 @@ const pillars = [
     statusColor: "#16a34a",
     navigable: true,
     action: "sukuyou" as const,
+    cta: "名前を読み解く →",
   },
   {
     icon: "蔵",
@@ -49,6 +51,7 @@ const pillars = [
     statusColor: C.arkGold,
     navigable: false,
     action: null,
+    cta: null,
   },
 ] as const;
 
@@ -200,7 +203,7 @@ export function DashboardPage({ onNavigate }: DashboardPageProps) {
                   fontWeight: 500,
                   letterSpacing: "0.02em",
                 }}>
-                  鑑定を始める →
+                  {p.cta}
                 </div>
               )}
             </div>

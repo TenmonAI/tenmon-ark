@@ -1,8 +1,8 @@
 /**
  * ============================================================
  *  SETTINGS PANEL — データのエクスポート/インポート
- *  TENMON_MANUS_FINAL_ADJUSTMENT_DIRECTIVE_V4
- *  ライトテーマ対応 + 日本語統一
+ *  TENMON_MANUS_FINAL_COMPLETION_V3
+ *  インライン表示対応（SettingsModal内で使用）
  * ============================================================
  */
 import React, { useRef, useState } from "react";
@@ -14,17 +14,6 @@ interface SettingsPanelProps {
   onClose: () => void;
   onImported: () => void;
 }
-
-const C = {
-  bg: "#fafaf7",
-  card: "#ffffff",
-  text: "#1f2937",
-  textSub: "#6b7280",
-  textMuted: "#9ca3af",
-  border: "#e5e7eb",
-  arkGold: "#c9a14a",
-  overlay: "rgba(0, 0, 0, 0.4)",
-} as const;
 
 export function SettingsPanel({ open, onClose, onImported }: SettingsPanelProps) {
   const fileRef = useRef<HTMLInputElement>(null);
@@ -95,135 +84,94 @@ export function SettingsPanel({ open, onClose, onImported }: SettingsPanelProps)
   };
 
   return (
-    <div
-      style={{
-        position: "fixed",
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        background: C.overlay,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        zIndex: 1000,
-      }}
-      onClick={onClose}
-    >
-      <div
-        style={{
-          background: C.card,
-          padding: 24,
-          borderRadius: 12,
-          maxWidth: 500,
-          width: "90%",
-          border: `1px solid ${C.border}`,
-          boxShadow: "0 8px 32px rgba(0,0,0,0.12)",
-        }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-          <h3 style={{ margin: 0, color: C.text, fontSize: 18, fontWeight: 600 }}>設定</h3>
+    <div>
+      <div className="gpt-page-card">
+        <h3 className="gpt-page-card-title">データのエクスポート / インポート</h3>
+        <p style={{
+          margin: "4px 0 16px",
+          fontSize: 13,
+          color: "var(--gpt-text-secondary, #6b7280)",
+          lineHeight: 1.7,
+        }}>
+          会話データ・宿曜鑑定結果・フォルダー構成をまとめてJSONファイルとして保存し、
+          別の端末で復元できます。端末を変更するときや、バックアップとしてご利用ください。
+        </p>
+
+        <div style={{ display: "flex", gap: 12, marginBottom: 16 }}>
           <button
-            onClick={onClose}
+            onClick={handleExport}
             style={{
-              background: "none",
+              flex: 1,
+              padding: 12,
+              background: "var(--text, #1f2937)",
+              color: "#ffffff",
               border: "none",
-              color: C.textMuted,
+              borderRadius: 8,
               cursor: "pointer",
-              fontSize: 20,
-              padding: "4px 8px",
+              fontSize: 14,
+              fontWeight: 500,
+              fontFamily: "inherit",
+              transition: "opacity 0.2s",
             }}
           >
-            ×
+            書き出す
           </button>
+          <button
+            onClick={() => fileRef.current?.click()}
+            style={{
+              flex: 1,
+              padding: 12,
+              background: "var(--card, #ffffff)",
+              color: "var(--text, #1f2937)",
+              border: "1px solid var(--border, #e5e7eb)",
+              borderRadius: 8,
+              cursor: "pointer",
+              fontSize: 14,
+              fontWeight: 500,
+              fontFamily: "inherit",
+              transition: "all 0.2s",
+            }}
+          >
+            読み込む
+          </button>
+          <input
+            ref={fileRef}
+            type="file"
+            accept="application/json"
+            style={{ display: "none" }}
+            onChange={handleImport}
+          />
         </div>
 
-        <div style={{ marginBottom: 24 }}>
-          <h4 style={{ margin: "0 0 8px 0", fontSize: 14, fontWeight: 600, color: C.text }}>
-            データのエクスポート / インポート
-          </h4>
-          <p style={{ margin: "0 0 16px 0", fontSize: 13, color: C.textSub, lineHeight: 1.7 }}>
-            会話データをJSONファイルとして保存し、別の端末で復元できます。
-            端末を変更するときや、バックアップとしてご利用ください。
-          </p>
-
-          <div style={{ display: "flex", gap: 12, marginBottom: 16 }}>
-            <button
-              onClick={handleExport}
-              style={{
-                flex: 1,
-                padding: 12,
-                background: C.text,
-                color: "#ffffff",
-                border: "none",
-                borderRadius: 8,
-                cursor: "pointer",
-                fontSize: 14,
-                fontWeight: 500,
-                fontFamily: "inherit",
-                transition: "opacity 0.2s",
-              }}
-            >
-              書き出す
-            </button>
-            <button
-              onClick={() => fileRef.current?.click()}
-              style={{
-                flex: 1,
-                padding: 12,
-                background: C.card,
-                color: C.text,
-                border: `1px solid ${C.border}`,
-                borderRadius: 8,
-                cursor: "pointer",
-                fontSize: 14,
-                fontWeight: 500,
-                fontFamily: "inherit",
-                transition: "all 0.2s",
-              }}
-            >
-              読み込む
-            </button>
-            <input
-              ref={fileRef}
-              type="file"
-              accept="application/json"
-              style={{ display: "none" }}
-              onChange={handleImport}
-            />
+        {message && (
+          <div
+            style={{
+              padding: 12,
+              borderRadius: 8,
+              marginBottom: 12,
+              background: message.type === "success" ? "#f0fdf4" : "#fef2f2",
+              border: `1px solid ${message.type === "success" ? "#86efac" : "#fca5a5"}`,
+              color: message.type === "success" ? "#166534" : "#991b1b",
+              fontSize: 14,
+            }}
+          >
+            {message.text}
           </div>
+        )}
 
-          {message && (
-            <div
-              style={{
-                padding: 12,
-                borderRadius: 8,
-                marginBottom: 12,
-                background: message.type === "success" ? "#f0fdf4" : "#fef2f2",
-                border: `1px solid ${message.type === "success" ? "#86efac" : "#fca5a5"}`,
-                color: message.type === "success" ? "#166534" : "#991b1b",
-                fontSize: 14,
-              }}
-            >
-              {message.text}
-            </div>
-          )}
-
-          <p style={{
-            margin: 0,
-            fontSize: 12,
-            color: "#d97706",
-            lineHeight: 1.6,
-            background: "#fffbeb",
-            border: "1px solid #fcd34d",
-            borderRadius: 6,
-            padding: "8px 12px",
-          }}>
-            読み込みを行うと、この端末の会話データが置き換わります。
-            事前に書き出しでバックアップを取ることをお勧めします。
-          </p>
-        </div>
+        <p style={{
+          margin: 0,
+          fontSize: 12,
+          color: "#d97706",
+          lineHeight: 1.6,
+          background: "#fffbeb",
+          border: "1px solid #fcd34d",
+          borderRadius: 6,
+          padding: "8px 12px",
+        }}>
+          読み込みを行うと、この端末の会話データ・鑑定結果・フォルダー構成がすべて置き換わります。
+          事前に書き出しでバックアップを取ることをお勧めします。
+        </p>
       </div>
     </div>
   );

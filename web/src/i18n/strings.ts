@@ -24,14 +24,14 @@ const ja: Dict = {
   "sidebar.search": "検索",
   "sidebar.today": "今日",
   "sidebar.chat": "チャット",
-  "sidebar.explore": "探索",
+  "sidebar.explore": "メニュー",
   "sidebar.dashboard": "ダッシュボード",
   "sidebar.profile": "プロフィール",
   "sidebar.settings": "設定",
   "sidebar.brandLine1": "TENMON-ARK",
   "sidebar.brandLine2": "天聞アーク",
 
-  "topbar.chatMeta": "/api/chat （同一オリジン）",
+  "topbar.chatMeta": "",
 
   "composer.placeholder": "天聞アークにメッセージを送る…",
 
@@ -61,14 +61,14 @@ const en: Dict = {
   "sidebar.search": "Search",
   "sidebar.today": "Today",
   "sidebar.chat": "Chat",
-  "sidebar.explore": "Explore",
+  "sidebar.explore": "Menu",
   "sidebar.dashboard": "Dashboard",
   "sidebar.profile": "Profile",
   "sidebar.settings": "Settings",
   "sidebar.brandLine1": "TENMON-ARK",
   "sidebar.brandLine2": "Tenmon Ark",
 
-  "topbar.chatMeta": "/api/chat (same-origin)",
+  "topbar.chatMeta": "",
 
   "composer.placeholder": "Message TENMON-ARK...",
 
@@ -98,14 +98,14 @@ const es: Dict = {
   "sidebar.search": "Buscar",
   "sidebar.today": "Hoy",
   "sidebar.chat": "Chat",
-  "sidebar.explore": "Explorar",
+  "sidebar.explore": "Menú",
   "sidebar.dashboard": "Panel",
   "sidebar.profile": "Perfil",
   "sidebar.settings": "Ajustes",
   "sidebar.brandLine1": "TENMON-ARK",
   "sidebar.brandLine2": "Tenmon Ark",
 
-  "topbar.chatMeta": "/api/chat (origen común)",
+  "topbar.chatMeta": "",
 
   "composer.placeholder": "Escribe a TENMON-ARK…",
 
@@ -133,16 +133,16 @@ const es: Dict = {
 const fr: Dict = {
   "sidebar.newChat": "Nouvelle discussion",
   "sidebar.search": "Recherche",
-  "sidebar.today": "Aujourd’hui",
+  "sidebar.today": "Aujourd'hui",
   "sidebar.chat": "Discussion",
-  "sidebar.explore": "Explorer",
+  "sidebar.explore": "Menu",
   "sidebar.dashboard": "Tableau de bord",
   "sidebar.profile": "Profil",
   "sidebar.settings": "Paramètres",
   "sidebar.brandLine1": "TENMON-ARK",
   "sidebar.brandLine2": "Tenmon Ark",
 
-  "topbar.chatMeta": "/api/chat (même origine)",
+  "topbar.chatMeta": "",
 
   "composer.placeholder": "Écrire à TENMON-ARK…",
 
@@ -154,7 +154,7 @@ const fr: Dict = {
   "settings.section.data": "Données",
   "settings.section.account": "Compte",
   "settings.section.about": "À propos",
-  "settings.language.title": "Langue de l’interface",
+  "settings.language.title": "Langue de l'interface",
   "settings.language.subtitle": "Choisissez la langue de TENMON-ARK.",
   "settings.language.label": "Langue",
   "settings.language.option.ja": "日本語 / Japanese",
@@ -172,14 +172,14 @@ const zhHans: Dict = {
   "sidebar.search": "搜索",
   "sidebar.today": "今天",
   "sidebar.chat": "对话",
-  "sidebar.explore": "探索",
+  "sidebar.explore": "菜单",
   "sidebar.dashboard": "控制面板",
   "sidebar.profile": "个人资料",
   "sidebar.settings": "设置",
   "sidebar.brandLine1": "TENMON-ARK",
   "sidebar.brandLine2": "天闻方舟",
 
-  "topbar.chatMeta": "/api/chat（同源）",
+  "topbar.chatMeta": "",
 
   "composer.placeholder": "向 TENMON-ARK 发送消息…",
 
@@ -209,14 +209,14 @@ const zhHant: Dict = {
   "sidebar.search": "搜尋",
   "sidebar.today": "今天",
   "sidebar.chat": "對話",
-  "sidebar.explore": "探索",
+  "sidebar.explore": "選單",
   "sidebar.dashboard": "控制台",
   "sidebar.profile": "個人資料",
   "sidebar.settings": "設定",
   "sidebar.brandLine1": "TENMON-ARK",
   "sidebar.brandLine2": "天聞方舟",
 
-  "topbar.chatMeta": "/api/chat（同源）",
+  "topbar.chatMeta": "",
 
   "composer.placeholder": "向 TENMON-ARK 發送訊息…",
 
@@ -246,14 +246,14 @@ const ko: Dict = {
   "sidebar.search": "검색",
   "sidebar.today": "오늘",
   "sidebar.chat": "채팅",
-  "sidebar.explore": "탐색",
+  "sidebar.explore": "메뉴",
   "sidebar.dashboard": "대시보드",
   "sidebar.profile": "프로필",
   "sidebar.settings": "설정",
   "sidebar.brandLine1": "TENMON-ARK",
   "sidebar.brandLine2": "텐몬 아크",
 
-  "topbar.chatMeta": "/api/chat (same-origin)",
+  "topbar.chatMeta": "",
 
   "composer.placeholder": "TENMON-ARK 에게 메시지를 보내세요…",
 
@@ -287,4 +287,3 @@ export const STRINGS: Record<Lang, Dict> = {
   "zh-Hant": zhHant,
   ko,
 };
-

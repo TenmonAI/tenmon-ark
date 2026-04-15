@@ -10,7 +10,7 @@ type TopbarProps = {
 };
 
 export function Topbar({
-  title = "TENMON-ARK 1.1",
+  title = "天聞アーク",
   onOpenSidebar,
   isSidebarOpen,
   showBackToChat,
