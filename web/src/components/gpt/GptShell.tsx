@@ -160,7 +160,7 @@ export function GptShell({ initialView = "chat" }: { initialView?: GptView }) {
         />
         <div className="gpt-content">
           {view === "chat" && <ChatRoute />}
-          {view === "dashboard" && <DashboardPage />}
+          {view === "dashboard" && <DashboardPage onNavigate={(v) => handleChangeView(v as GptView)} />}
           {view === "profile" && <ProfilePage />}
           {view === "sukuyou" && (
             <SukuyouPage

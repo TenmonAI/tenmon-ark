@@ -29,6 +29,8 @@ const pillars = [
     desc: "宿曜経に基づき、生年月日から本命宿を導き出します。星の配置があなたの存在構造を映し出します。",
     status: "稼働中",
     statusColor: "#16a34a",
+    navigable: true,
+    action: "sukuyou" as const,
   },
   {
     icon: "音",
@@ -36,6 +38,8 @@ const pillars = [
     desc: "名前の音韻を五十音の水火構造で読み解きます。名前に宿る響きが、宿曜と重なり合う深層を示します。",
     status: "稼働中",
     statusColor: "#16a34a",
+    navigable: true,
+    action: "sukuyou" as const,
   },
   {
     icon: "蔵",
@@ -43,10 +47,16 @@ const pillars = [
     desc: "書籍や資料をお預けいただくと、知恵の種として保管し、会話の中で自然に活かします。",
     status: "準備中",
     statusColor: C.arkGold,
+    navigable: false,
+    action: null,
   },
 ] as const;
 
-export function DashboardPage() {
+interface DashboardPageProps {
+  onNavigate?: (view: string) => void;
+}
+
+export function DashboardPage({ onNavigate }: DashboardPageProps) {
   return (
     <div style={{
       width: "100%",
@@ -106,13 +116,29 @@ export function DashboardPage() {
           marginBottom: 32,
         }}>
           {pillars.map((p, i) => (
-            <div key={i} style={{
-              background: C.card,
-              border: `1px solid ${C.border}`,
-              borderRadius: 12,
-              padding: "20px 24px",
-              transition: "box-shadow 0.2s",
-            }}>
+            <div
+              key={i}
+              onClick={p.navigable && onNavigate && p.action ? () => onNavigate(p.action) : undefined}
+              style={{
+                background: C.card,
+                border: `1px solid ${C.border}`,
+                borderRadius: 12,
+                padding: "20px 24px",
+                transition: "box-shadow 0.2s, transform 0.15s",
+                cursor: p.navigable ? "pointer" : "default",
+                ...(p.navigable ? {
+                  boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+                } : {}),
+              }}
+              onMouseEnter={p.navigable ? (e) => {
+                (e.currentTarget as HTMLDivElement).style.boxShadow = "0 4px 12px rgba(201,161,74,0.15)";
+                (e.currentTarget as HTMLDivElement).style.borderColor = C.arkGoldBorder;
+              } : undefined}
+              onMouseLeave={p.navigable ? (e) => {
+                (e.currentTarget as HTMLDivElement).style.boxShadow = "0 1px 3px rgba(0,0,0,0.04)";
+                (e.currentTarget as HTMLDivElement).style.borderColor = C.border;
+              } : undefined}
+            >
               <div style={{
                 display: "flex",
                 alignItems: "center",
@@ -166,6 +192,17 @@ export function DashboardPage() {
               }}>
                 {p.desc}
               </p>
+              {p.navigable && (
+                <div style={{
+                  marginTop: 10,
+                  fontSize: 12,
+                  color: C.arkGold,
+                  fontWeight: 500,
+                  letterSpacing: "0.02em",
+                }}>
+                  鑑定を始める →
+                </div>
+              )}
             </div>
           ))}
         </div>

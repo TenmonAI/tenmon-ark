@@ -204,6 +204,38 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
             </div>
           ) : section === "account" ? (
             <PasswordChangeForm />
+          ) : section === "general" ? (
+            <div className="gpt-page-card">
+              <h3 className="gpt-page-card-title">全般</h3>
+              <p className="gpt-page-sub" style={{ lineHeight: 1.8 }}>
+                全般設定は現在準備中です。今後のアップデートで、通知設定や応答の詳細度などを調整できるようになります。
+              </p>
+            </div>
+          ) : section === "appearance" ? (
+            <div className="gpt-page-card">
+              <h3 className="gpt-page-card-title">外観</h3>
+              <p className="gpt-page-sub" style={{ lineHeight: 1.8 }}>
+                外観設定は現在準備中です。今後のアップデートで、ダークモードやフォントサイズの調整が可能になります。
+              </p>
+            </div>
+          ) : section === "about" ? (
+            <div className="gpt-page-card">
+              <h3 className="gpt-page-card-title">このアプリについて</h3>
+              <div style={{ marginTop: 12 }}>
+                <p style={{ fontSize: 14, fontWeight: 600, margin: "0 0 4px", color: "var(--gpt-text-primary)" }}>
+                  天聞アーク
+                </p>
+                <p style={{ fontSize: 13, color: "var(--gpt-text-secondary)", margin: "0 0 12px", lineHeight: 1.7 }}>
+                  存在構造の総合解読AI
+                </p>
+                <p style={{ fontSize: 12, color: "var(--gpt-text-secondary)", margin: "0 0 4px" }}>
+                  バージョン: 1.1
+                </p>
+                <p style={{ fontSize: 12, color: "var(--gpt-text-secondary)", margin: 0, lineHeight: 1.7 }}>
+                  宿曜経の星の智慧と、五十音の言霊構造を重ね合わせ、あなたの存在の深層を多角的に照らし出します。
+                </p>
+              </div>
+            </div>
           ) : (
             <p className="gpt-page-sub">{t("settings.comingSoon")}</p>
           )}

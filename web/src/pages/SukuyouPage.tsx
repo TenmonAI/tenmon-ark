@@ -860,7 +860,7 @@ export function SukuyouPage({ onBack, onSendToChat, restoreRoomId, onNewDiagnosi
           <div style={{ flex: 1 }}>
             <h1 style={{ fontSize: 17, fontWeight: 700, ...goldStyle, margin: 0 }}>宿曜鑑定</h1>
             <p style={{ fontSize: 10, ...subStyle, margin: 0, letterSpacing: "0.02em" }}>
-              天聞アーク御神託パイプライン
+              あなたの宿曜を読み解きます
             </p>
           </div>
           {/* 結果表示中 or 復元中: 新規鑑定CTA */}
@@ -906,7 +906,7 @@ export function SukuyouPage({ onBack, onSendToChat, restoreRoomId, onNewDiagnosi
               <input
                 type="number" inputMode="numeric" placeholder="1990" value={birthYear}
                 onChange={(e) => setBirthYear(e.target.value)}
-                min={1900} max={2025}
+                min={1900} max={2026}
                 style={{ ...inputStyle, width: 76 }}
               />
               <span style={subStyle}>年</span>

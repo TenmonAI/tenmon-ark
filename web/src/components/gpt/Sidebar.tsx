@@ -332,7 +332,9 @@ export function Sidebar({ view, onView, onNewChat, onOpenSettings, onOpenSukuyou
     }
 
     const isActive = th.id === activeThreadId;
-    const label = th.title || "新しいチャット";
+    const rawLabel = th.title || "新しいチャット";
+    // [SUKUYOU_SEED] プレフィックスが露出している場合はユーザー向けに置換
+    const label = rawLabel.startsWith("[SUKUYOU_SEED]") ? "☆ 宿曜鑑定" : rawLabel;
     const truncated = label.length > 22 ? label.slice(0, 22) + "…" : label;
     const timeStr = th.updatedAt
       ? new Date(th.updatedAt).toLocaleDateString("ja-JP", { month: "short", day: "numeric" })
