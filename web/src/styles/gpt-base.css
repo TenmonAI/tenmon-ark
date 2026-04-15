@@ -448,6 +448,11 @@ textarea.gpt-composer-input {
 @keyframes gpt-spin {
   to { transform: rotate(360deg); }
 }
+@keyframes sukuyouPulseBar {
+  0% { width: 0%; opacity: 0.4; }
+  50% { width: 70%; opacity: 0.7; }
+  100% { width: 100%; opacity: 0.3; }
+}
 
 .gpt-spinner {
   width: 18px;

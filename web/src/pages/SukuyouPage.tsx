@@ -64,6 +64,7 @@ interface ChatMessage {
   role: "user" | "assistant";
   text: string;
   createdAt?: string;
+  isError?: boolean;
 }
 
 interface SukuyouPageProps {
@@ -318,6 +319,9 @@ export function SukuyouPage({ onBack, onSendToChat, restoreRoomId, onNewDiagnosi
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState("");
   const [chatLoading, setChatLoading] = useState(false);
+  const [chatError, setChatError] = useState(false);
+  const [lastFailedText, setLastFailedText] = useState<string | null>(null);
+  const [loadingPhase, setLoadingPhase] = useState(0);
   const [isComposing, setIsComposing] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const chatInputRef = useRef<HTMLTextAreaElement>(null);
@@ -327,6 +331,15 @@ export function SukuyouPage({ onBack, onSendToChat, restoreRoomId, onNewDiagnosi
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chatMessages]);
+
+  // ローディング文言ローテーション
+  useEffect(() => {
+    if (!chatLoading) { setLoadingPhase(0); return; }
+    const timer = setInterval(() => {
+      setLoadingPhase(p => (p + 1) % 3);
+    }, 2800);
+    return () => clearInterval(timer);
+  }, [chatLoading]);
 
   useEffect(() => {
     const el = chatInputRef.current;
@@ -582,19 +595,26 @@ export function SukuyouPage({ onBack, onSendToChat, restoreRoomId, onNewDiagnosi
 
   const sendChatMessage = useCallback(async (text: string) => {
     if (!text.trim() || chatLoading || !result) return;
+    setChatError(false);
+    setLastFailedText(null);
     const userMsg: ChatMessage = { role: "user", text: text.trim(), createdAt: new Date().toISOString() };
     const newMsgs = [...chatMessages, userMsg];
     setChatMessages(newMsgs);
     setChatInput("");
     setChatLoading(true);
     try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 60000);
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({ message: text.trim(), sessionId: chatThreadId.current, threadId: chatThreadId.current }),
+        signal: controller.signal,
       });
+      clearTimeout(timeout);
       const data = await res.json();
+      if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
       const assistantMsg: ChatMessage = {
         role: "assistant",
         text: data.response || "応答を取得できませんでした",
@@ -602,16 +622,24 @@ export function SukuyouPage({ onBack, onSendToChat, restoreRoomId, onNewDiagnosi
       };
       const updatedMsgs = [...newMsgs, assistantMsg];
       setChatMessages(updatedMsgs);
+      setChatError(false);
       if (resultRoomId.current && result) {
         saveToIDB(result, updatedMsgs, resultRoomId.current, chatThreadId.current);
       }
-    } catch {
+    } catch (err: any) {
+      const isTimeout = err?.name === "AbortError";
+      const errText = isTimeout
+        ? "応答に時間がかかっています。通信環境を確認のうえ、再度お試しください。"
+        : "うまくつながりませんでした。少し時間をおいて、もう一度お試しください。";
       const errMsg: ChatMessage = {
         role: "assistant",
-        text: "うまくつながりませんでした。少し時間をおいて、もう一度お試しください。",
+        text: errText,
         createdAt: new Date().toISOString(),
+        isError: true,
       };
       setChatMessages(prev => [...prev, errMsg]);
+      setChatError(true);
+      setLastFailedText(text.trim());
     } finally {
       setChatLoading(false);
     }
@@ -1252,12 +1280,17 @@ export function SukuyouPage({ onBack, onSendToChat, restoreRoomId, onNewDiagnosi
               border: `1px solid rgba(201, 161, 74, 0.2)`,
               padding: "1.125rem 1rem",
             }}>
-              <h3 style={{ fontSize: 14, fontWeight: 600, ...goldStyle, marginBottom: 4 }}>
-                この鑑定について続けて聞く
-              </h3>
-              <p style={{ fontSize: 11, color: textMuted, marginBottom: 14, lineHeight: 1.5 }}>
-                鑑定結果を踏まえて、気になることを自由に質問できます
-              </p>
+              {/* ヘッダー: 鑑定深掘り用であることを自然に伝える */}
+              <div style={{ marginBottom: 14 }}>
+                <h3 style={{ fontSize: 14, fontWeight: 600, ...goldStyle, marginBottom: 6, display: "flex", alignItems: "center", gap: 6 }}>
+                  <span style={{ fontSize: 13, opacity: 0.7 }}>✧</span>
+                  この鑑定について続けて聞く
+                </h3>
+                <p style={{ fontSize: 11, color: textMuted, lineHeight: 1.6, margin: 0 }}>
+                  鑑定結果を踏まえた専用の対話空間です。
+                  気になった章や、日常への活かし方など、自由に聞いてみてください。
+                </p>
+              </div>
 
               {chatMessages.length === 0 && (
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 16 }}>
@@ -1280,56 +1313,119 @@ export function SukuyouPage({ onBack, onSendToChat, restoreRoomId, onNewDiagnosi
                   WebkitOverflowScrolling: "touch",
                   marginBottom: 12, padding: "4px 0",
                 }}>
-                  {chatMessages.map((msg, i) => (
-                    <div key={i} style={{
-                      display: "flex",
-                      justifyContent: msg.role === "user" ? "flex-end" : "flex-start",
-                      marginBottom: 10,
-                    }}>
-                      <div style={{
-                        maxWidth: "88%",
-                        padding: "11px 15px",
-                        borderRadius: msg.role === "user" ? "14px 14px 4px 14px" : "14px 14px 14px 4px",
-                        fontSize: 13.5, lineHeight: 1.85, whiteSpace: "pre-wrap", letterSpacing: "0.01em",
-                        background: msg.role === "user"
-                          ? "rgba(201, 161, 74, 0.08)"
-                          : "var(--sidebar-bg, #f7f7f8)",
-                        border: msg.role === "user"
-                          ? "1px solid rgba(201, 161, 74, 0.2)"
-                          : `1px solid ${borderLight}`,
-                        position: "relative",
-                        paddingRight: msg.role === "assistant" ? 30 : 15,
+                  {chatMessages.map((msg, i) => {
+                    const isMsgError = msg.isError === true;
+                    return (
+                      <div key={i} style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: msg.role === "user" ? "flex-end" : "flex-start",
+                        marginBottom: 10,
                       }}>
-                        {msg.text}
-                        {msg.role === "assistant" && (
-                          <span style={{ position: "absolute", top: 4, right: 4 }}>
-                            <CopyBtn text={msg.text} label="応答" />
-                          </span>
+                        <div style={{
+                          maxWidth: "88%",
+                          padding: "11px 15px",
+                          borderRadius: msg.role === "user" ? "14px 14px 4px 14px" : "14px 14px 14px 4px",
+                          fontSize: 13.5, lineHeight: 1.85, whiteSpace: "pre-wrap", letterSpacing: "0.01em",
+                          background: isMsgError
+                            ? "rgba(180, 60, 60, 0.04)"
+                            : msg.role === "user"
+                              ? "rgba(201, 161, 74, 0.08)"
+                              : "var(--sidebar-bg, #f7f7f8)",
+                          border: isMsgError
+                            ? "1px solid rgba(180, 60, 60, 0.18)"
+                            : msg.role === "user"
+                              ? "1px solid rgba(201, 161, 74, 0.2)"
+                              : `1px solid ${borderLight}`,
+                          position: "relative",
+                          paddingRight: msg.role === "assistant" && !isMsgError ? 30 : 15,
+                          ...(isMsgError ? { color: "rgba(140, 50, 50, 0.85)" } : {}),
+                        }}>
+                          {msg.text}
+                          {msg.role === "assistant" && !isMsgError && (
+                            <span style={{ position: "absolute", top: 4, right: 4 }}>
+                              <CopyBtn text={msg.text} label="応答" />
+                            </span>
+                          )}
+                        </div>
+                        {/* エラーメッセージ直下の再送ボタン */}
+                        {isMsgError && i === chatMessages.length - 1 && lastFailedText && !chatLoading && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              // エラーメッセージを削除して再送
+                              setChatMessages(prev => prev.filter((_, idx) => idx !== i));
+                              sendChatMessage(lastFailedText);
+                            }}
+                            style={{
+                              ...btnBase,
+                              minHeight: 32,
+                              padding: "6px 14px",
+                              fontSize: 11,
+                              fontWeight: 500,
+                              marginTop: 6,
+                              background: "rgba(180, 60, 60, 0.06)",
+                              border: "1px solid rgba(180, 60, 60, 0.15)",
+                              color: "rgba(140, 50, 50, 0.8)",
+                              borderRadius: 8,
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: 5,
+                            }}
+                          >
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <polyline points="23 4 23 10 17 10" />
+                              <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+                            </svg>
+                            もう一度送る
+                          </button>
                         )}
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                   {chatLoading && (
                     <div style={{ display: "flex", justifyContent: "flex-start", marginBottom: 10 }}>
                       <div style={{
-                        padding: "11px 15px", borderRadius: "14px 14px 14px 4px",
-                        fontSize: 13.5,
+                        padding: "12px 16px", borderRadius: "14px 14px 14px 4px",
+                        fontSize: 13,
                         background: "var(--sidebar-bg, #f7f7f8)",
                         border: `1px solid ${borderLight}`,
                         color: textMuted,
+                        minWidth: 140,
                       }}>
-                        <span className="thinking-dots" style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-                          <span>{["読み解いています", "宿曜の流れを整えています", "ことばを結んでいます"][Math.floor(Date.now() / 3000) % 3]}</span>
-                          <span style={{ display: "inline-flex", gap: 2 }}>
-                            {[0, 1, 2].map(i => (
-                              <span key={i} style={{
+                        <div className="sukuyou-loading-text" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                          <span style={{
+                            transition: "opacity 0.4s ease",
+                            fontSize: 12.5,
+                            letterSpacing: "0.02em",
+                          }}>
+                            {["読み解いています", "宿曜の流れを整えています", "ことばを結んでいます"][loadingPhase]}
+                          </span>
+                          <span style={{ display: "inline-flex", gap: 3, alignItems: "center" }}>
+                            {[0, 1, 2].map(dotIdx => (
+                              <span key={dotIdx} style={{
                                 width: 4, height: 4, borderRadius: "50%",
                                 background: "rgba(201, 161, 74, 0.6)",
-                                animation: `sukuyouDot 1.2s ease-in-out ${i * 0.2}s infinite`,
+                                animation: `sukuyouDot 1.2s ease-in-out ${dotIdx * 0.2}s infinite`,
                               }} />
                             ))}
                           </span>
-                        </span>
+                        </div>
+                        {/* 応答待ちの脈動バー */}
+                        <div style={{
+                          marginTop: 8,
+                          height: 2,
+                          borderRadius: 1,
+                          background: "rgba(201, 161, 74, 0.1)",
+                          overflow: "hidden",
+                        }}>
+                          <div style={{
+                            height: "100%",
+                            borderRadius: 1,
+                            background: "rgba(201, 161, 74, 0.35)",
+                            animation: "sukuyouPulseBar 2.4s ease-in-out infinite",
+                          }} />
+                        </div>
                       </div>
                     </div>
                   )}
@@ -1337,10 +1433,11 @@ export function SukuyouPage({ onBack, onSendToChat, restoreRoomId, onNewDiagnosi
                 </div>
               )}
 
+              {/* 入力欄・送信ボタン */}
               <div style={{ display: "flex", gap: 8, alignItems: "flex-end" }}>
                 <textarea
                   ref={chatInputRef}
-                  placeholder="自由に質問する…"
+                  placeholder={chatLoading ? "応答を待っています…" : "自由に質問する…"}
                   value={chatInput}
                   onChange={(e) => setChatInput(e.target.value)}
                   onCompositionStart={() => setIsComposing(true)}
@@ -1355,12 +1452,14 @@ export function SukuyouPage({ onBack, onSendToChat, restoreRoomId, onNewDiagnosi
                   rows={1}
                   style={{
                     flex: 1, padding: "11px 14px", borderRadius: 10,
-                    background: bgInput,
-                    border: `1px solid ${borderInput}`,
+                    background: chatLoading ? "rgba(0,0,0,0.02)" : bgInput,
+                    border: `1px solid ${chatLoading ? "rgba(0,0,0,0.06)" : borderInput}`,
                     color: textPrimary, fontSize: 14, boxSizing: "border-box",
                     fontFamily: "inherit", lineHeight: 1.5,
                     resize: "none", overflow: "auto",
                     minHeight: 44, maxHeight: 120,
+                    opacity: chatLoading ? 0.6 : 1,
+                    transition: "opacity 0.2s, background 0.2s, border-color 0.2s",
                   }}
                 />
                 <button
@@ -1370,13 +1469,51 @@ export function SukuyouPage({ onBack, onSendToChat, restoreRoomId, onNewDiagnosi
                   style={{
                     ...btnBase,
                     padding: "0 18px", minHeight: 44,
-                    background: chatInput.trim() ? arkGreen : "rgba(47, 111, 94, 0.25)",
+                    background: chatLoading
+                      ? "rgba(47, 111, 94, 0.35)"
+                      : chatInput.trim()
+                        ? arkGreen
+                        : "rgba(47, 111, 94, 0.25)",
                     color: "#ffffff", fontSize: 14, flexShrink: 0,
+                    transition: "opacity 0.2s, background 0.2s",
+                    display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
                   }}
                 >
-                  送信
+                  {chatLoading ? (
+                    <>
+                      <span style={{
+                        width: 14, height: 14,
+                        border: "2px solid rgba(255,255,255,0.3)",
+                        borderTopColor: "#fff",
+                        borderRadius: "50%",
+                        animation: "gpt-spin 0.8s linear infinite",
+                        flexShrink: 0,
+                      }} />
+                      <span style={{ fontSize: 12 }}>応答待ち</span>
+                    </>
+                  ) : "送信"}
                 </button>
               </div>
+
+              {/* エラー状態のヒント（再送導線補助） */}
+              {chatError && !chatLoading && (
+                <div style={{
+                  marginTop: 8,
+                  padding: "8px 12px",
+                  borderRadius: 8,
+                  background: "rgba(180, 60, 60, 0.03)",
+                  border: "1px solid rgba(180, 60, 60, 0.1)",
+                  fontSize: 11,
+                  color: "rgba(140, 50, 50, 0.7)",
+                  lineHeight: 1.5,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                }}>
+                  <span style={{ fontSize: 13, flexShrink: 0 }}>○</span>
+                  通信が不安定な場合は、少し時間をおいてから再度お試しください。
+                </div>
+              )}
             </div>
 
             {/* ═══ 詳細レポート（折りたたみ） ═══ */}
