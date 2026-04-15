@@ -404,6 +404,15 @@ body::before {
   background: var(--gpt-bg-message-assistant);
 }
 
+/* Message enter animation */
+@keyframes fadeUpSoft {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.gpt-message-enter {
+  animation: fadeUpSoft 0.22s ease-out forwards;
+}
+
 /* Composer */
 .gpt-composer-wrap {
   padding: var(--gpt-space-lg);
@@ -445,8 +454,19 @@ textarea.gpt-composer-input {
   gap: 8px;
   padding: var(--gpt-space-md) 0;
 }
-.gpt-typing-label {
-  font-size: 12.5px;
+.gpt-typing-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.gpt-typing-main {
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+  color: var(--gpt-text-primary, #374151);
+}
+.gpt-typing-sub {
+  font-size: 11.5px;
   letter-spacing: 0.02em;
   color: var(--gpt-text-muted, #9ca3af);
   transition: opacity 0.4s ease;
@@ -953,7 +973,10 @@ textarea.gpt-composer-input {
 }
 
 /* MANUS-UI-05: Deep mode typing indicator */
-.gpt-typing-deep .gpt-typing-label {
+.gpt-typing-deep .gpt-typing-main {
+  color: rgba(161, 128, 55, 0.9);
+}
+.gpt-typing-deep .gpt-typing-sub {
   color: rgba(201, 161, 74, 0.75);
 }
 .gpt-typing-deep .gpt-typing-dot {

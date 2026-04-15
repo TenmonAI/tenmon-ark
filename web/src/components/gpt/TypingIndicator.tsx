@@ -1,6 +1,8 @@
 /**
- * MANUS-UI-05: 応答状態インジケータ
- * 4段階の状態表現で「精度落ちた？」「壊れた？」と感じさせない。
+ * MANUS-UI-05: 応答状態インジケータ（共通化済み）
+ *
+ * 主ラベル: 常に「天聞アーク思考中」
+ * 副文言: mode に応じて自然に切り替わる
  *
  * mode:
  *   "normal"  — 通常応答生成中
@@ -9,7 +11,7 @@
  */
 import React, { useState, useEffect } from "react";
 
-const PHASE_SETS: Record<string, string[]> = {
+const SUB_PHASES: Record<string, string[]> = {
   normal: [
     "読み解いています",
     "流れを整えています",
@@ -30,7 +32,7 @@ interface Props {
 }
 
 export function TypingIndicator({ mode = "normal" }: Props) {
-  const phases = PHASE_SETS[mode] || PHASE_SETS.normal;
+  const subs = SUB_PHASES[mode] || SUB_PHASES.normal;
   const [phase, setPhase] = useState(0);
 
   useEffect(() => {
@@ -38,18 +40,21 @@ export function TypingIndicator({ mode = "normal" }: Props) {
   }, [mode]);
 
   useEffect(() => {
-    if (phases.length <= 1) return;
+    if (subs.length <= 1) return;
     const id = setInterval(() => {
-      setPhase((p) => (p + 1) % phases.length);
+      setPhase((p) => (p + 1) % subs.length);
     }, mode === "deep" ? 4000 : 3200);
     return () => clearInterval(id);
-  }, [phases, mode]);
+  }, [subs, mode]);
 
   return (
     <div className={`gpt-typing-wrap ${mode === "deep" ? "gpt-typing-deep" : ""}`}>
-      <span className="gpt-typing-label">
-        {phases[phase % phases.length]}
-      </span>
+      <div className="gpt-typing-content">
+        <span className="gpt-typing-main">天聞アーク思考中</span>
+        <span className="gpt-typing-sub">
+          {subs[phase % subs.length]}
+        </span>
+      </div>
       <span className="gpt-typing-dots">
         <span className="gpt-typing-dot" />
         <span className="gpt-typing-dot" />

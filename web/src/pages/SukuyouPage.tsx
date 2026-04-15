@@ -9,6 +9,7 @@ import React, { useState, useCallback, useRef, useEffect } from "react";
 import { formatShukuLabel, getShukuKana } from "../lib/shukuLabel";
 import { saveSukuyouResult, getSukuyouResult, type SukuyouResultRoom } from "../lib/sukuyouStore";
 import { queueSyncChange, syncPush } from "../lib/crossDeviceSync";
+import { TypingIndicator } from "../components/gpt/TypingIndicator";
 
 interface GuidanceResult {
   success: boolean;
@@ -355,7 +356,7 @@ export function SukuyouPage({ onBack, onSendToChat, restoreRoomId, onNewDiagnosi
   const [chatLoading, setChatLoading] = useState(false);
   const [chatError, setChatError] = useState(false);
   const [lastFailedText, setLastFailedText] = useState<string | null>(null);
-  const [loadingPhase, setLoadingPhase] = useState(0);
+
   const [isComposing, setIsComposing] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const chatInputRef = useRef<HTMLTextAreaElement>(null);
@@ -366,14 +367,7 @@ export function SukuyouPage({ onBack, onSendToChat, restoreRoomId, onNewDiagnosi
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chatMessages]);
 
-  // ローディング文言ローテーション
-  useEffect(() => {
-    if (!chatLoading) { setLoadingPhase(0); return; }
-    const timer = setInterval(() => {
-      setLoadingPhase(p => (p + 1) % 3);
-    }, 2800);
-    return () => clearInterval(timer);
-  }, [chatLoading]);
+
 
   useEffect(() => {
     const el = chatInputRef.current;
@@ -1401,7 +1395,7 @@ export function SukuyouPage({ onBack, onSendToChat, restoreRoomId, onNewDiagnosi
                   {chatMessages.map((msg, i) => {
                     const isMsgError = msg.isError === true;
                     return (
-                      <div key={i} style={{
+                      <div key={i} className="gpt-message-enter" style={{
                         display: "flex",
                         flexDirection: "column",
                         alignItems: msg.role === "user" ? "flex-end" : "flex-start",
@@ -1475,42 +1469,9 @@ export function SukuyouPage({ onBack, onSendToChat, restoreRoomId, onNewDiagnosi
                         fontSize: 13,
                         background: "var(--sidebar-bg, #f7f7f8)",
                         border: `1px solid ${borderLight}`,
-                        color: textMuted,
                         minWidth: 140,
                       }}>
-                        <div className="sukuyou-loading-text" style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                          <span style={{
-                            transition: "opacity 0.4s ease",
-                            fontSize: 12.5,
-                            letterSpacing: "0.02em",
-                          }}>
-                            {["読み解いています", "宿曜の流れを整えています", "ことばを結んでいます"][loadingPhase]}
-                          </span>
-                          <span style={{ display: "inline-flex", gap: 3, alignItems: "center" }}>
-                            {[0, 1, 2].map(dotIdx => (
-                              <span key={dotIdx} style={{
-                                width: 4, height: 4, borderRadius: "50%",
-                                background: "rgba(201, 161, 74, 0.6)",
-                                animation: `sukuyouDot 1.2s ease-in-out ${dotIdx * 0.2}s infinite`,
-                              }} />
-                            ))}
-                          </span>
-                        </div>
-                        {/* 応答待ちの脈動バー */}
-                        <div style={{
-                          marginTop: 8,
-                          height: 2,
-                          borderRadius: 1,
-                          background: "rgba(201, 161, 74, 0.1)",
-                          overflow: "hidden",
-                        }}>
-                          <div style={{
-                            height: "100%",
-                            borderRadius: 1,
-                            background: "rgba(201, 161, 74, 0.35)",
-                            animation: "sukuyouPulseBar 2.4s ease-in-out infinite",
-                          }} />
-                        </div>
+                        <TypingIndicator mode="deep" />
                       </div>
                     </div>
                   )}
@@ -1565,17 +1526,7 @@ export function SukuyouPage({ onBack, onSendToChat, restoreRoomId, onNewDiagnosi
                   }}
                 >
                   {chatLoading ? (
-                    <>
-                      <span style={{
-                        width: 14, height: 14,
-                        border: "2px solid rgba(255,255,255,0.3)",
-                        borderTopColor: "#fff",
-                        borderRadius: "50%",
-                        animation: "gpt-spin 0.8s linear infinite",
-                        flexShrink: 0,
-                      }} />
-                      <span style={{ fontSize: 12 }}>応答待ち</span>
-                    </>
+                    <span className="gpt-spinner" style={{ width: 16, height: 16 }} aria-hidden />
                   ) : "送信"}
                 </button>
               </div>
