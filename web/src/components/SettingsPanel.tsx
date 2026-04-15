@@ -8,6 +8,7 @@
 import React, { useRef, useState } from "react";
 import { exportForDownload, importOverwrite, syncIdbToLocalStorageAfterImportV1 } from "../lib/exportImport";
 import { TENMON_THREAD_SWITCH_EVENT } from "../hooks/useChat";
+import { syncPushAllExistingData } from "../lib/crossDeviceSync";
 
 interface SettingsPanelProps {
   open: boolean;
@@ -18,6 +19,7 @@ interface SettingsPanelProps {
 export function SettingsPanel({ open, onClose, onImported }: SettingsPanelProps) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [syncing, setSyncing] = useState(false);
 
   if (!open) return null;
 
@@ -172,6 +174,59 @@ export function SettingsPanel({ open, onClose, onImported }: SettingsPanelProps)
           読み込みを行うと、この端末の会話データ・鑑定結果・フォルダー構成がすべて置き換わります。
           事前に書き出しでバックアップを取ることをお勧めします。
         </p>
+      </div>
+
+      {/* SYNC_PHASE_A_FRONTEND_CONNECT_V1: クロスデバイス同期セクション */}
+      <div className="gpt-page-card" style={{ marginTop: 16 }}>
+        <h3 className="gpt-page-card-title">クロスデバイス同期</h3>
+        <p style={{
+          margin: "4px 0 16px",
+          fontSize: 13,
+          color: "var(--gpt-text-secondary, #6b7280)",
+          lineHeight: 1.7,
+        }}>
+          この端末にある会話・フォルダー・宿曜鑑定結果をサーバーに送信し、
+          他の端末（PC↔スマホ）と共有します。新規作成分は自動同期されますが、
+          既存データをまとめて送る場合はこちらをお使いください。
+        </p>
+
+        <button
+          onClick={async () => {
+            setSyncing(true);
+            setMessage(null);
+            try {
+              const result = await syncPushAllExistingData();
+              const total = result.threads + result.folders + result.rooms;
+              setMessage({
+                type: "success",
+                text: `同期完了: 会話 ${result.threads}件・フォルダー ${result.folders}件・宿曜鑑定 ${result.rooms}件を送信しました`,
+              });
+              setTimeout(() => setMessage(null), 5000);
+            } catch (err) {
+              console.error("Bulk sync failed:", err);
+              setMessage({ type: "error", text: "同期に失敗しました。ネットワークを確認してください" });
+              setTimeout(() => setMessage(null), 5000);
+            } finally {
+              setSyncing(false);
+            }
+          }}
+          disabled={syncing}
+          style={{
+            width: "100%",
+            padding: 12,
+            background: syncing ? "#9ca3af" : "var(--ark-gold, #c9a14a)",
+            color: "#ffffff",
+            border: "none",
+            borderRadius: 8,
+            cursor: syncing ? "not-allowed" : "pointer",
+            fontSize: 14,
+            fontWeight: 500,
+            fontFamily: "inherit",
+            transition: "all 0.2s",
+          }}
+        >
+          {syncing ? "同期中…" : "この端末のデータを他の端末と共有"}
+        </button>
       </div>
     </div>
   );

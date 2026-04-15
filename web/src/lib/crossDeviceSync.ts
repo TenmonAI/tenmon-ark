@@ -288,6 +288,129 @@ function applyRemoteData(
   }
 }
 
+/* ── bulk push existing data ── */
+
+/**
+ * syncPushAllExistingData — 既存のローカルデータを一括でsync queueに登録してpush。
+ * PCやスマホに既にあるトークルーム・フォルダー・宿曜鑑定結果を他デバイスと共有する。
+ * 既存関数は一切変更せず、queueSyncChange + syncPush のみ使用。
+ */
+export async function syncPushAllExistingData(): Promise<{ threads: number; folders: number; rooms: number }> {
+  let threadCount = 0;
+  let folderCount = 0;
+  let roomCount = 0;
+
+  // 1. localStorage の threads meta を一括登録
+  try {
+    const userKey = localStorage.getItem("TENMON_USER_KEY") || "";
+    const metaKey = userKey
+      ? `TENMON_PWA_THREADS_META_V1:${userKey}`
+      : "TENMON_PWA_THREADS_META_V1";
+    const raw = localStorage.getItem(metaKey);
+    const map: Record<string, any> = raw ? JSON.parse(raw) : {};
+    for (const [tid, meta] of Object.entries(map)) {
+      if (!tid || !meta) continue;
+      queueSyncChange({
+        kind: "chat_thread_upsert",
+        payload: {
+          threadId: tid,
+          title: (meta as any).title || "新規チャット",
+          folderId: (meta as any).folderId ?? null,
+          pinned: (meta as any).pinned ? 1 : 0,
+          updatedAt: (meta as any).updatedAt
+            ? new Date((meta as any).updatedAt).toISOString()
+            : new Date().toISOString(),
+          version: 1,
+        },
+      });
+      threadCount++;
+    }
+  } catch (e) {
+    console.warn("[SYNC] bulk threads queue failed", e);
+  }
+
+  // 2. IndexedDB の chat_folders を一括登録
+  try {
+    const db = await new Promise<IDBDatabase>((resolve, reject) => {
+      const req = indexedDB.open("tenmon_ark_pwa_v1", 4);
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+    if (db.objectStoreNames.contains("chat_folders")) {
+      const tx = db.transaction(["chat_folders"], "readonly");
+      const folders = await new Promise<any[]>((resolve, reject) => {
+        const req = tx.objectStore("chat_folders").getAll();
+        req.onsuccess = () => resolve(req.result ?? []);
+        req.onerror = () => reject(req.error);
+      });
+      for (const f of folders) {
+        if (!f || !f.id) continue;
+        queueSyncChange({
+          kind: "chat_folder_upsert",
+          payload: {
+            folderId: f.id,
+            name: f.name || "",
+            kind: f.kind || "chat",
+            color: f.color ?? null,
+            sortOrder: f.sortOrder ?? 0,
+            isDefault: f.isDefault ? 1 : 0,
+            updatedAt: f.updatedAt || new Date().toISOString(),
+            version: 1,
+          },
+        });
+        folderCount++;
+      }
+    }
+    db.close();
+  } catch (e) {
+    console.warn("[SYNC] bulk folders queue failed", e);
+  }
+
+  // 3. IndexedDB の sukuyou_results を一括登録
+  try {
+    const db = await new Promise<IDBDatabase>((resolve, reject) => {
+      const req = indexedDB.open("tenmon_ark_pwa_v1", 4);
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+    if (db.objectStoreNames.contains("sukuyou_results")) {
+      const tx = db.transaction(["sukuyou_results"], "readonly");
+      const rooms = await new Promise<any[]>((resolve, reject) => {
+        const req = tx.objectStore("sukuyou_results").getAll();
+        req.onsuccess = () => resolve(req.result ?? []);
+        req.onerror = () => reject(req.error);
+      });
+      for (const r of rooms) {
+        if (!r || !r.id) continue;
+        queueSyncChange({
+          kind: "sukuyou_room_upsert",
+          payload: {
+            roomId: r.id,
+            threadId: r.threadId ?? null,
+            birthDate: r.birthDate || null,
+            honmeiShuku: r.honmeiShuku || null,
+            disasterType: r.disasterType || null,
+            reversalAxis: r.reversalAxis || null,
+            shortOracle: r.shortOracle || null,
+            updatedAt: r.updatedAt || new Date().toISOString(),
+            version: 1,
+          },
+        });
+        roomCount++;
+      }
+    }
+    db.close();
+  } catch (e) {
+    console.warn("[SYNC] bulk sukuyou queue failed", e);
+  }
+
+  // 4. 一括push
+  await syncPush();
+
+  console.log(`[SYNC] bulk push complete: ${threadCount} threads, ${folderCount} folders, ${roomCount} rooms`);
+  return { threads: threadCount, folders: folderCount, rooms: roomCount };
+}
+
 /* ── periodic sync ── */
 
 let pullInterval: ReturnType<typeof setInterval> | null = null;
