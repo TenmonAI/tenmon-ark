@@ -7,6 +7,7 @@ import ForgotPasswordPage from "./pages/ForgotPasswordPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
 import { GptShell } from "./components/gpt/GptShell";
 import { I18nProvider } from "./i18n/useI18n";
+import { initSync, stopPeriodicSync } from "./lib/crossDeviceSync";
 
 const TENMON_AUTH_OK_V1 = "TENMON_AUTH_OK_V1";
 const TENMON_USER_KEY = "TENMON_USER_KEY";
@@ -60,9 +61,17 @@ export default function App() {
         localStorage.setItem(TENMON_AUTH_OK_V1, result.ok ? "1" : "0");
         const ukey = userKeyFromUser(result.user);
         if (ukey) localStorage.setItem(TENMON_USER_KEY, ukey);
+        if (ukey) localStorage.setItem("TENMON_PWA_USER_ID", ukey);
         const email = result.user?.email;
         if (email) localStorage.setItem("tenmon_user_display_v1", String(email));
       } catch {}
+
+      // CROSS_DEVICE_SYNC: start sync after successful auth
+      if (result.ok) {
+        initSync().catch(() => {});
+      } else {
+        stopPeriodicSync();
+      }
 
       const currentPath = typeof window !== "undefined" ? window.location.pathname : "";
       const onLoginPage = currentPath === "/pwa/login-local.html" || currentPath === "/pwa/login-local";

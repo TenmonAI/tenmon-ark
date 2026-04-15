@@ -34,6 +34,7 @@ import { personaStudioRouter } from "./routes/personaStudio.js";
 import { connectorsRouter } from "./routes/connectors.js";
 import { feedbackRouter } from "./routes/feedback.js";
 import healthRouter from "./routes/health.js";
+import { syncPhaseARouter } from "./routes/syncPhaseA.js";
 
 // Debug: 未処理例外のハンドリング
 const pid = process.pid;
@@ -128,6 +129,7 @@ app.use("/api", personaStudioRouter);
 app.use("/api", connectorsRouter);
 app.use("/api", feedbackRouter);
 app.use("/api", healthRouter);
+app.use("/api", syncPhaseARouter);
 app.use("/api", writerStoreRouter);
 app.use("/api", writerCommitRouter);
 app.use("/api", readerRouter);
