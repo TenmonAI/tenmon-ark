@@ -419,14 +419,9 @@ const PULL_INTERVAL_MS = 15 * 1000; // 15 seconds — near-realtime sync
 export function startPeriodicSync(): void {
   if (pullInterval) return;
   pullInterval = setInterval(async () => {
-    // 毎回の定期syncでも既存データをpushしてからpull
-    // → 新規作成分はFIX-1/2/3で即時queue済み、それ以外の変更も拾う
-    try {
-      await syncPushAllExistingData();
-    } catch {
-      // bulk push失敗時はpendingのみをpush
-      await syncPush().catch(() => {});
-    }
+    // 定期sync: pending queue のみ push（軽量）→ pull
+    // 全データ push は initSync（ログイン時）の1回のみ
+    await syncPush().catch(() => {});
     await syncPull();
   }, PULL_INTERVAL_MS);
 }
