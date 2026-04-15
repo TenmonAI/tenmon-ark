@@ -419,7 +419,14 @@ const PULL_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 export function startPeriodicSync(): void {
   if (pullInterval) return;
   pullInterval = setInterval(async () => {
-    await syncPush();
+    // 毎回の定期syncでも既存データをpushしてからpull
+    // → 新規作成分はFIX-1/2/3で即時queue済み、それ以外の変更も拾う
+    try {
+      await syncPushAllExistingData();
+    } catch {
+      // bulk push失敗時はpendingのみをpush
+      await syncPush().catch(() => {});
+    }
     await syncPull();
   }, PULL_INTERVAL_MS);
 }
@@ -432,13 +439,20 @@ export function stopPeriodicSync(): void {
 }
 
 /**
- * initSync — login 直後に呼ぶ。bootstrap → push pending → start periodic。
+ * initSync — login 直後に呼ぶ。
+ * 1. bootstrap（サーバーから全データ取得）
+ * 2. 既存ローカルデータを全自動push（ボタン不要）
+ * 3. 定期同期開始（5分間隔）
  */
 export async function initSync(): Promise<void> {
   try {
+    // 1. サーバーから最新データを取得
     await syncBootstrap();
-    await syncPush();
+    // 2. この端末の既存データを全てサーバーに送信（完全自動）
+    await syncPushAllExistingData();
+    // 3. 定期同期開始
     startPeriodicSync();
+    console.log("[SYNC] initSync complete — full auto sync active");
   } catch (e) {
     console.warn("[SYNC] initSync failed", e);
   }
