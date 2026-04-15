@@ -115,12 +115,12 @@ export function GptShell({ initialView = "chat" }: { initialView?: GptView }) {
     view === "chat"
       ? APP_TITLE
       : view === "dashboard"
-        ? "Dashboard"
+        ? "ダッシュボード"
         : view === "sukuyou" || view === "sukuyou-room"
           ? "宿曜鑑定"
           : view === "feedback"
             ? "改善のご要望"
-            : "Profile";
+            : "プロフィール";
 
   const handleSukuyouSendToChat = (displayText: string, rawSeed: string, deepChatPrompt?: string) => {
     setView("chat");

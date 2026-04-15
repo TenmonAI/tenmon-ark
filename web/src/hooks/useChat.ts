@@ -59,11 +59,15 @@ function saveThreadMetaMap(map: Record<string, ThreadMeta>) {
 }
 
 function inferTitle(msgs: ChatMessage[]): string | undefined {
-  const firstUser = msgs.find((m) => m.role === "user");
+  // TITLE_SANITIZE_V1: [SUKUYOU_SEED]や内部文字列を含むメッセージをスキップ
+  const firstUser = msgs.find((m) => m.role === "user" && !m.content?.includes("[SUKUYOU_SEED]"));
   const firstAssistant = msgs.find((m) => m.role === "assistant");
   const base = (firstUser || firstAssistant)?.content?.trim();
   if (!base) return undefined;
-  const oneLine = base.split(/\r?\n/)[0] || base;
+  let oneLine = base.split(/\r?\n/)[0] || base;
+  // 内部タグ・seed文字列の除去
+  oneLine = oneLine.replace(/\[SUKUYOU_SEED\][^]*/g, "").replace(/\[.*?\]/g, "").trim();
+  if (!oneLine) return undefined;
   return oneLine.length > 40 ? `${oneLine.slice(0, 40)}…` : oneLine;
 }
 

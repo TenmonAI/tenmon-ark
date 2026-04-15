@@ -741,15 +741,43 @@ const pid = process.pid;
     // 「チャットへ送る」からの構造化seedを検出し、宿曜前提の深層対話を開始する
     // ═══════════════════════════════════════════════════════════════
     if (t0.startsWith("[SUKUYOU_SEED]")) {
-      console.log("[SUKUYOU_SEED_ROUTE] Structured seed detected");
+      console.log("[SUKUYOU-SEED-PARSE] Structured seed detected, raw length=", t0.length);
       let seedData: any = null;
       try {
         const jsonPart = t0.replace(/^\[SUKUYOU_SEED\]\s*/, "");
         seedData = JSON.parse(jsonPart);
+        console.log("[SUKUYOU-SEED-PARSE] JSON parse OK, honmeiShuku=", seedData?.honmeiShuku);
       } catch {
-        // Fallback: parse legacy format "birthDate / honmeiShuku / disasterType"
-        const parts = t0.replace(/^\[SUKUYOU_SEED\]\s*/, "").split("/").map((s: string) => s.trim());
-        seedData = { birthDate: parts[0] || "", honmeiShuku: parts[1] || "", disasterType: parts[2] || "" };
+        // SEED_PARSER_RECOVERY_V1: key=value 形式を優先的に解釈
+        const rawBody = t0.replace(/^\[SUKUYOU_SEED\]\s*/, "");
+        const parts = rawBody.split("/").map((s: string) => s.trim());
+        const hasKeyValue = parts.some((p: string) => p.includes("="));
+        if (hasKeyValue) {
+          // key=value 形式: "honmeiShuku=翼宿 / disasterType=過剰責任型 / reversalAxis=外発→内集 / rawConcern=..."
+          const kvMap: Record<string, string> = {};
+          for (const part of parts) {
+            const eqIdx = part.indexOf("=");
+            if (eqIdx > 0) {
+              const key = part.slice(0, eqIdx).trim();
+              const val = part.slice(eqIdx + 1).trim();
+              kvMap[key] = val;
+            }
+          }
+          seedData = {
+            birthDate: kvMap.birthDate || "",
+            honmeiShuku: kvMap.honmeiShuku || "",
+            disasterType: kvMap.disasterType || "",
+            reversalAxis: kvMap.reversalAxis || "",
+            userConcern: kvMap.userConcern || kvMap.rawConcern || "",
+            rawConcern: kvMap.rawConcern || "",
+            coreQuestion: kvMap.coreQuestion || "",
+          };
+          console.log("[SUKUYOU-SEED-PARSE-KEYVALUE] Parsed key=value format, honmeiShuku=", seedData.honmeiShuku, "disasterType=", seedData.disasterType, "reversalAxis=", seedData.reversalAxis);
+        } else {
+          // Legacy positional format: "birthDate / honmeiShuku / disasterType"
+          seedData = { birthDate: parts[0] || "", honmeiShuku: parts[1] || "", disasterType: parts[2] || "" };
+          console.log("[SUKUYOU-SEED-PARSE] Legacy positional parse, honmeiShuku=", seedData.honmeiShuku);
+        }
       }
 
       // A7/A8: thread単位でseedを保存—follow-upルートでの継続注入用
@@ -763,7 +791,7 @@ const pid = process.pid;
           lifeAlgo: seedData.lifeAlgo || undefined,
           storedAt: Date.now(),
         });
-        console.log(`[SUKUYOU_SEED_STORE] Stored seed for threadId=${threadId}, honmeiShuku=${seedData.honmeiShuku}`);
+        console.log(`[SUKUYOU-SEED-CARRY] Stored seed for threadId=${threadId}, honmeiShuku=${seedData.honmeiShuku}, disasterType=${seedData.disasterType}, reversalAxis=${seedData.reversalAxis}`);
       } catch (e: any) {
         console.warn(`[SUKUYOU_SEED_STORE] Failed to store seed:`, e?.message);
       }
@@ -1311,7 +1339,7 @@ let outText = "";
       const __hasSukuyouOracle = __sukuyouContextClause.includes("【天聞アーク御神託レポート（アルゴリズム算出）】");
       const __sukuyouSeedForCarry = __sukuyouSeedByThread.get(String(threadId || ""));
       if (__sukuyouSeedForCarry && !__hasSukuyouOracle) {
-        console.log(`[SUKUYOU_CARRY_GATE] threadId=${threadId}, honmeiShuku=${__sukuyouSeedForCarry.honmeiShuku}, entering DEEP_CHAT carry`);
+        console.log(`[SUKUYOU-SEED-CARRY] CARRY_GATE entering DEEP_CHAT carry, threadId=${threadId}, honmeiShuku=${__sukuyouSeedForCarry.honmeiShuku}, disasterType=${__sukuyouSeedForCarry.disasterType}, reversalAxis=${__sukuyouSeedForCarry.reversalAxis}`);
         const __carrySeedSummary = [
           __sukuyouSeedForCarry.honmeiShuku ? `本命宿: ${__sukuyouSeedForCarry.honmeiShuku}` : "",
           __sukuyouSeedForCarry.disasterType ? `災い分類: ${__sukuyouSeedForCarry.disasterType}` : "",
@@ -1372,7 +1400,7 @@ ${__carrySeedSummary}${__carryLifeAlgo}
           });
           const __carryText = __carryRes.ok && __carryRes.text ? __carryRes.text.trim() : "";
           if (__carryText && __carryText.length > 30) {
-            console.log(`[SUKUYOU_CARRY_GATE] OK, outLen=${__carryText.length}`);
+            console.log(`[SUKUYOU-SEED-CARRY-LLM] OK, outLen=${__carryText.length}, honmeiShuku=${__sukuyouSeedForCarry.honmeiShuku}`);
             persistTurn(threadId, t0, __carryText);
             return res.json({
               response: __carryText,
@@ -1395,9 +1423,9 @@ ${__carrySeedSummary}${__carryLifeAlgo}
               },
             });
           }
-          console.warn(`[SUKUYOU_CARRY_GATE] LLM returned short/empty, falling through to general`);
+          console.warn(`[SUKUYOU-SEED-CARRY-FALLBACK] LLM returned short/empty, falling through to general, honmeiShuku=${__sukuyouSeedForCarry.honmeiShuku}`);
         } catch (e: any) {
-          console.error(`[SUKUYOU_CARRY_GATE] LLM error, falling through:`, e?.message);
+          console.error(`[SUKUYOU-SEED-CARRY-FALLBACK] LLM error, falling through:`, e?.message);
         }
       }
 
