@@ -6,9 +6,10 @@ import type { Message } from "../../types/chat";
 interface MessageListProps {
   messages: Message[];
   loading: boolean;
+  typingMode?: "normal" | "deep" | "simple";
 }
 
-export function MessageList({ messages, loading }: MessageListProps) {
+export function MessageList({ messages, loading, typingMode }: MessageListProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -24,7 +25,7 @@ export function MessageList({ messages, loading }: MessageListProps) {
         {loading && (
           <div className="gpt-message-row gpt-message-row-assistant">
             <div className="gpt-message-bubble gpt-message-bubble-assistant">
-              <TypingIndicator />
+              <TypingIndicator mode={typingMode} />
             </div>
           </div>
         )}

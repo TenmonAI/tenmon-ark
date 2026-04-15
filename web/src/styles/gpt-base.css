@@ -904,3 +904,40 @@ textarea.gpt-composer-input {
 .gpt-chat-retry-btn:hover {
   background: rgba(180, 60, 60, 0.12);
 }
+
+/* MANUS-UI-04: Sukuyou Context Bar */
+.sukuyou-context-bar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: linear-gradient(135deg, rgba(201, 161, 74, 0.06) 0%, rgba(201, 161, 74, 0.02) 100%);
+  border-bottom: 1px solid rgba(201, 161, 74, 0.15);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+.sukuyou-context-icon {
+  font-size: 13px;
+  color: rgba(201, 161, 74, 0.8);
+  flex-shrink: 0;
+}
+.sukuyou-context-text {
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  color: rgba(120, 100, 60, 0.85);
+  line-height: 1.4;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* MANUS-UI-05: Deep mode typing indicator */
+.gpt-typing-deep .gpt-typing-label {
+  color: rgba(201, 161, 74, 0.75);
+}
+.gpt-typing-deep .gpt-typing-dot {
+  background: rgba(201, 161, 74, 0.55);
+}

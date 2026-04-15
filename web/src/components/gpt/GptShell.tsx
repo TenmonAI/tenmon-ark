@@ -130,6 +130,18 @@ export function GptShell({ initialView = "chat" }: { initialView?: GptView }) {
       if (deepChatPrompt) {
         sessionStorage.setItem("TENMON_SUKUYOU_DEEP_PROMPT", deepChatPrompt);
       }
+      // MANUS-UI-04: 宿名チャット文脈情報を保存
+      try {
+        const seedJson = rawSeed.replace(/^\[SUKUYOU_SEED\]\s*/, "");
+        const parsed = JSON.parse(seedJson);
+        if (parsed?.honmeiShuku) {
+          sessionStorage.setItem("TENMON_SUKUYOU_CONTEXT", JSON.stringify({
+            honmeiShuku: parsed.honmeiShuku || "",
+            disasterType: parsed.disasterType || "",
+            reversalAxis: parsed.reversalAxis || "",
+          }));
+        }
+      } catch { /* seed parse fail — non-critical */ }
     } catch {}
     const newId = createNewThreadId();
     switchThreadCanonicalV1(newId);
