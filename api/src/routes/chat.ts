@@ -1423,9 +1423,64 @@ ${__carrySeedSummary}${__carryLifeAlgo}
               },
             });
           }
-          console.warn(`[SUKUYOU-SEED-CARRY-FALLBACK] LLM returned short/empty, falling through to general, honmeiShuku=${__sukuyouSeedForCarry.honmeiShuku}`);
+          console.warn(`[SUKUYOU-SEED-CARRY-FALLBACK] LLM returned short/empty, using failsoft template, honmeiShuku=${__sukuyouSeedForCarry.honmeiShuku}`);
+          // CARRY_FAILSOFT_V2: LLM短応答時は宿曜文脈を保持した丁寧なfailsoft応答を返す
+          const __failsoftShuku = __sukuyouSeedForCarry.honmeiShuku || "（未判定）";
+          const __failsoftDisaster = __sukuyouSeedForCarry.disasterType || "";
+          const __failsoftReversal = __sukuyouSeedForCarry.reversalAxis || "";
+          const __failsoftContext = [
+            __failsoftShuku !== "（未判定）" ? `${__failsoftShuku}宿の鑑定を踏まえて` : "鑑定を踏まえて",
+            __failsoftDisaster ? `（${__failsoftDisaster}）` : "",
+          ].filter(Boolean).join("");
+          const __failsoftText = `${__failsoftContext}、お話を伺っています。\n\nいま応答の生成に少し時間がかかっています。もう一度、聞きたいことを短く送っていただけますか。`;
+          persistTurn(threadId, t0, __failsoftText);
+          return res.json({
+            response: __failsoftText,
+            evidence: null,
+            candidates: [],
+            timestamp,
+            threadId,
+            reportAvailable: true,
+            decisionFrame: {
+              mode: "SUKUYOU_DEEP_CHAT",
+              intent: "deep_dialogue_carry_failsoft",
+              llm: "failsoft",
+              ku: {
+                routeReason: "SUKUYOU_SEED_CARRY_FAILSOFT_V2",
+                honmeiShuku: __sukuyouSeedForCarry.honmeiShuku || null,
+                disasterType: __sukuyouSeedForCarry.disasterType || null,
+                reversalAxis: __sukuyouSeedForCarry.reversalAxis || null,
+                reportAvailable: true,
+              },
+            },
+          });
         } catch (e: any) {
-          console.error(`[SUKUYOU-SEED-CARRY-FALLBACK] LLM error, falling through:`, e?.message);
+          console.error(`[SUKUYOU-SEED-CARRY-FALLBACK] LLM error, using failsoft template:`, e?.message);
+          // CARRY_FAILSOFT_V2_CATCH: LLMエラー時も同様にfailsoft応答を返す
+          const __failsoftShukuC = __sukuyouSeedForCarry.honmeiShuku || "（未判定）";
+          const __failsoftContextC = __failsoftShukuC !== "（未判定）" ? `${__failsoftShukuC}宿の鑑定を踏まえて` : "鑑定を踏まえて";
+          const __failsoftTextC = `${__failsoftContextC}、お話を伺っています。\n\nいま応答の準備中に問題が発生しました。お手数ですが、もう一度送信してみてください。`;
+          persistTurn(threadId, t0, __failsoftTextC);
+          return res.json({
+            response: __failsoftTextC,
+            evidence: null,
+            candidates: [],
+            timestamp,
+            threadId,
+            reportAvailable: true,
+            decisionFrame: {
+              mode: "SUKUYOU_DEEP_CHAT",
+              intent: "deep_dialogue_carry_failsoft",
+              llm: "failsoft_error",
+              ku: {
+                routeReason: "SUKUYOU_SEED_CARRY_FAILSOFT_V2",
+                honmeiShuku: __sukuyouSeedForCarry.honmeiShuku || null,
+                disasterType: __sukuyouSeedForCarry.disasterType || null,
+                reversalAxis: __sukuyouSeedForCarry.reversalAxis || null,
+                reportAvailable: true,
+              },
+            },
+          });
         }
       }
 
