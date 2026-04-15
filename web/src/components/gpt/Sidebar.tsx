@@ -456,50 +456,125 @@ export function Sidebar({ view, onView, onNewChat, onOpenSettings, onOpenSukuyou
             </span>
           </button>
 
-          {showSukuyouRooms && sukuyouRooms.length > 0 && (
+          {showSukuyouRooms && (
             <div style={{ paddingLeft: 8, marginTop: 2 }}>
-              {sukuyouRooms.map((room) => (
-                <div
-                  key={room.id}
-                  onClick={() => onOpenSukuyouRoom?.(room.id)}
-                  onMouseEnter={() => setHoverRoomId(room.id)}
-                  onMouseLeave={() => setHoverRoomId(null)}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    padding: "5px 8px",
-                    borderRadius: 5,
-                    cursor: "pointer",
-                    background: "transparent",
-                    transition: "background 0.1s",
-                  }}
-                >
-                  <span style={{ fontSize: 12, color: C.textSecondary }}>
-                    {formatShukuLabel(room.shukuName)} — {room.targetName || "鑑定結果"}
-                  </span>
-                  <span
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (confirm(`「${room.targetName || "鑑定結果"}」を削除しますか？`)) {
-                        deleteSukuyouResult(room.id).then(() => {
-                          listSukuyouResults().then(setSukuyouRooms).catch(() => {});
-                        });
-                      }
-                    }}
+              {/* ── 新規鑑定CTA ── */}
+              <button
+                type="button"
+                onClick={() => onView("sukuyou")}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 5,
+                  width: "100%",
+                  background: "none",
+                  border: `1px dashed ${C.accentBorder}`,
+                  borderRadius: 5,
+                  padding: "6px 8px",
+                  cursor: "pointer",
+                  color: C.accent,
+                  fontSize: 12,
+                  fontWeight: 500,
+                  fontFamily: "inherit",
+                  marginBottom: 4,
+                  transition: "background 0.15s",
+                }}
+                onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = C.accentBg; }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "none"; }}
+              >
+                <span style={{ fontSize: 14 }}>+</span>
+                <span>新しい鑑定を始める</span>
+              </button>
+
+              {/* ── 鑑定記録一覧 ── */}
+              {sukuyouRooms.length > 0 ? sukuyouRooms.map((room) => {
+                const shukuLabel = formatShukuLabel(room.honmeiShuku);
+                /* タイトル: 名前あり→「名前 — 本命宿」、名前なし→「本命宿」のみ */
+                const titleLine = room.name
+                  ? `${room.name} — ${shukuLabel}`
+                  : shukuLabel || "鑑定結果";
+                const dateStr = room.createdAt
+                  ? new Date(room.createdAt).toLocaleDateString("ja-JP", { month: "short", day: "numeric" })
+                  : "";
+                const birthStr = room.birthDate || "";
+                const subLine = [birthStr, dateStr].filter(Boolean).join(" ・ ");
+                return (
+                  <div
+                    key={room.id}
+                    onClick={() => onOpenSukuyouRoom?.(room.id)}
+                    onMouseEnter={() => setHoverRoomId(room.id)}
+                    onMouseLeave={() => setHoverRoomId(null)}
                     style={{
-                      opacity: hoverRoomId === room.id ? 0.7 : 0,
-                      transition: "opacity 0.15s",
+                      display: "flex",
+                      alignItems: "flex-start",
+                      justifyContent: "space-between",
+                      padding: "7px 8px",
+                      borderRadius: 6,
                       cursor: "pointer",
-                      fontSize: 12,
-                      padding: "0 2px",
-                      color: C.danger,
+                      background: hoverRoomId === room.id ? C.hoverBg : "transparent",
+                      transition: "background 0.1s",
+                      marginBottom: 2,
                     }}
                   >
-                    ×
-                  </span>
+                    <div style={{ display: "flex", alignItems: "flex-start", gap: 7, minWidth: 0, flex: 1 }}>
+                      <span style={{
+                        fontSize: 13, flexShrink: 0, marginTop: 1,
+                        opacity: 0.6,
+                      }}>☆</span>
+                      <div style={{ minWidth: 0, flex: 1 }}>
+                        <div style={{
+                          fontSize: 12,
+                          fontWeight: 600,
+                          color: C.textPrimary,
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}>
+                          {titleLine}
+                        </div>
+                        {subLine && (
+                          <div style={{
+                            fontSize: 10,
+                            color: C.textMuted,
+                            marginTop: 1,
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                          }}>
+                            {subLine}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <span
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (confirm(`「${titleLine}」の鑑定記録を削除しますか？`)) {
+                          deleteSukuyouResult(room.id).then(() => {
+                            listSukuyouResults().then(setSukuyouRooms).catch(() => {});
+                          });
+                        }
+                      }}
+                      style={{
+                        opacity: hoverRoomId === room.id ? 0.7 : 0,
+                        transition: "opacity 0.15s",
+                        cursor: "pointer",
+                        fontSize: 12,
+                        padding: "0 2px",
+                        color: C.danger,
+                        flexShrink: 0,
+                        marginTop: 2,
+                      }}
+                    >
+                      ×
+                    </span>
+                  </div>
+                );
+              }) : (
+                <div style={{ fontSize: 11, color: C.textMuted, padding: "4px 8px", fontStyle: "italic" }}>
+                  鑑定記録がまだありません
                 </div>
-              ))}
+              )}
             </div>
           )}
         </div>

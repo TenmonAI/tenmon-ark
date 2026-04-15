@@ -70,6 +70,7 @@ interface SukuyouPageProps {
   onBack: () => void;
   onSendToChat?: (displayText: string, rawSeed: string, deepChatPrompt?: string) => void;
   restoreRoomId?: string;
+  onNewDiagnosis?: () => void;
 }
 
 /* ── 質問チップ定義 ── */
@@ -286,7 +287,7 @@ async function generateShareCard(result: GuidanceResult): Promise<Blob | null> {
   });
 }
 
-export function SukuyouPage({ onBack, onSendToChat, restoreRoomId }: SukuyouPageProps) {
+export function SukuyouPage({ onBack, onSendToChat, restoreRoomId, onNewDiagnosis }: SukuyouPageProps) {
   // Form state
   const [birthYear, setBirthYear] = useState("");
   const [birthMonth, setBirthMonth] = useState("");
@@ -828,12 +829,32 @@ export function SukuyouPage({ onBack, onSendToChat, restoreRoomId }: SukuyouPage
           >
             ← 戻る
           </button>
-          <div>
+          <div style={{ flex: 1 }}>
             <h1 style={{ fontSize: 17, fontWeight: 700, ...goldStyle, margin: 0 }}>宿曜鑑定</h1>
             <p style={{ fontSize: 10, ...subStyle, margin: 0, letterSpacing: "0.02em" }}>
               天聞アーク御神託パイプライン
             </p>
           </div>
+          {/* 結果表示中 or 復元中: 新規鑑定CTA */}
+          {(result || isRestoredRoom) && onNewDiagnosis && (
+            <button
+              type="button"
+              onClick={onNewDiagnosis}
+              style={{
+                ...btnBase,
+                background: "rgba(201, 161, 74, 0.08)",
+                border: `1px solid rgba(201, 161, 74, 0.25)`,
+                color: arkGold,
+                fontSize: 12,
+                fontWeight: 600,
+                padding: "7px 14px",
+                borderRadius: 8,
+                whiteSpace: "nowrap",
+              }}
+            >
+              + 新しい鑑定
+            </button>
+          )}
         </div>
       </div>
 
@@ -1501,6 +1522,36 @@ export function SukuyouPage({ onBack, onSendToChat, restoreRoomId }: SukuyouPage
                 {result.warnings.map((w, i) => (
                   <p key={i} style={{ margin: "3px 0", lineHeight: 1.5 }}>{w}</p>
                 ))}
+              </div>
+            )}
+
+            {/* ── 結果末尾の新規鑑定CTA ── */}
+            {onNewDiagnosis && (
+              <div style={{
+                textAlign: "center",
+                marginTop: 20,
+                paddingTop: 20,
+                borderTop: `1px solid ${borderLight}`,
+              }}>
+                <button
+                  type="button"
+                  onClick={onNewDiagnosis}
+                  style={{
+                    ...btnBase,
+                    background: "rgba(201, 161, 74, 0.06)",
+                    border: `1px dashed rgba(201, 161, 74, 0.3)`,
+                    color: arkGold,
+                    fontSize: 13,
+                    fontWeight: 600,
+                    padding: "12px 28px",
+                    borderRadius: 10,
+                  }}
+                >
+                  + 別の方の鑑定を始める
+                </button>
+                <p style={{ fontSize: 10, color: textMuted, marginTop: 8, lineHeight: 1.5 }}>
+                  新しい生年月日で鑑定を行います
+                </p>
               </div>
             )}
           </div>

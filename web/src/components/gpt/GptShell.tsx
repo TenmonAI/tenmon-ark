@@ -75,6 +75,13 @@ export function GptShell({ initialView = "chat" }: { initialView?: GptView }) {
     setSidebarOpen(false);
   };
 
+  /* ── 新規宿曜鑑定を始める ── */
+  const handleNewSukuyou = useCallback(() => {
+    setOpenRoomId(null);
+    setView("sukuyou");
+    setSidebarOpen(false);
+  }, []);
+
   // GPT-like Responsive Nav (mobile/tablet)
   useEffect(() => {
     const mq = window.matchMedia("(max-width: 1024px)");
@@ -159,6 +166,7 @@ export function GptShell({ initialView = "chat" }: { initialView?: GptView }) {
             <SukuyouPage
               onBack={() => setView("chat")}
               onSendToChat={handleSukuyouSendToChat}
+              onNewDiagnosis={handleNewSukuyou}
             />
           )}
           {view === "sukuyou-room" && openRoomId && (
@@ -167,6 +175,7 @@ export function GptShell({ initialView = "chat" }: { initialView?: GptView }) {
               onBack={() => setView("chat")}
               onSendToChat={handleSukuyouSendToChat}
               restoreRoomId={openRoomId}
+              onNewDiagnosis={handleNewSukuyou}
             />
           )}
           {view === "feedback" && (
