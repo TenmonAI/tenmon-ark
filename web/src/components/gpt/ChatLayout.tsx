@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from "react";
 import { useChat } from "../../hooks/useChat";
 import { MessageList } from "./MessageList";
 import { Composer } from "./Composer";
+import { EmptyState } from "./EmptyState";
 
 export function ChatLayout() {
   const { messages, sendMessage, loading, threadId } = useChat();
@@ -37,13 +38,19 @@ export function ChatLayout() {
     } catch {}
   }, [threadId, sendMessage]);
 
+  const isEmpty = messages.length === 0 && !loading;
+
   return (
     <div
       className="gpt-chat-layout"
       data-chat-layout-bound="1"
       data-thread-id={threadId || ""}
     >
-      <MessageList messages={messages} loading={loading} />
+      {isEmpty ? (
+        <EmptyState onSuggestion={(text) => sendMessage(text)} />
+      ) : (
+        <MessageList messages={messages} loading={loading} />
+      )}
       <Composer onSend={sendMessage} loading={loading} />
     </div>
   );

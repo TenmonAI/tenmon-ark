@@ -787,3 +787,76 @@ textarea.gpt-composer-input {
     min-height: 48px;
   }
 }
+
+/* ── Empty State (Welcome Screen) ── */
+.gpt-empty-state {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow-y: auto;
+  padding: var(--gpt-space-xl) var(--gpt-space-lg);
+}
+.gpt-empty-state-inner {
+  max-width: 480px;
+  text-align: center;
+}
+.gpt-empty-state-mark {
+  width: 48px;
+  height: 48px;
+  margin: 0 auto var(--gpt-space-md);
+  opacity: 0.7;
+}
+.gpt-empty-state-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0 0 4px;
+  letter-spacing: 0.02em;
+}
+.gpt-empty-state-sub {
+  font-size: 13px;
+  color: var(--muted);
+  margin: 0 0 var(--gpt-space-lg);
+  letter-spacing: 0.04em;
+}
+.gpt-empty-state-desc {
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--muted);
+  margin: 0 0 var(--gpt-space-xl);
+}
+.gpt-empty-state-suggestions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+@media (max-width: 480px) {
+  .gpt-empty-state-suggestions {
+    grid-template-columns: 1fr;
+  }
+}
+.gpt-empty-state-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md, 10px);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.4;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+}
+.gpt-empty-state-chip:hover {
+  border-color: var(--ark-gold, #c9a14a);
+  box-shadow: 0 1px 4px rgba(201, 161, 74, 0.15);
+  background: rgba(201, 161, 74, 0.04);
+}
+.gpt-empty-state-chip-icon {
+  font-size: 18px;
+  flex-shrink: 0;
+}

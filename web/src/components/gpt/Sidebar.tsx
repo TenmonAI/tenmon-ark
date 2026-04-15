@@ -61,11 +61,24 @@ const C = {
 function loadThreads(): ThreadMeta[] {
   if (typeof window === "undefined") return [];
   try {
-    const { THREADS_META_KEY } = getStorageKeys();
+    const { THREADS_META_KEY, MSGS_KEY_PREFIX } = getStorageKeys();
     const raw = window.localStorage.getItem(THREADS_META_KEY);
     const map = raw ? (JSON.parse(raw) as Record<string, ThreadMeta>) : {};
     return Object.values(map)
-      .filter((t) => t && typeof t.id === "string")
+      .filter((t) => {
+        if (!t || typeof t.id !== "string") return false;
+        // MANUS-UI-03: メッセージ0件かつタイトルなし（または「新しいチャット」）のゴミスレッドを非表示
+        const hasTitle = t.title && t.title.trim() && t.title.trim() !== "新しいチャット" && t.title.trim() !== "New Chat";
+        if (hasTitle) return true;
+        // タイトルがない場合、メッセージが存在するか確認
+        try {
+          const msgs = window.localStorage.getItem(MSGS_KEY_PREFIX + t.id);
+          const arr = msgs ? JSON.parse(msgs) : [];
+          return Array.isArray(arr) && arr.length > 0;
+        } catch {
+          return false;
+        }
+      })
       .sort((a, b) => {
         if (a.pinned && !b.pinned) return -1;
         if (!a.pinned && b.pinned) return 1;
