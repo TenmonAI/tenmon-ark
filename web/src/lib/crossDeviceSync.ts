@@ -56,6 +56,9 @@ interface BootstrapResponse {
   sukuyouRooms: SyncSukuyouRoom[];
   at: string;
   error?: string;
+  deletedThreadIds?: string[];
+  deletedFolderIds?: string[];
+  deletedSukuyouRoomIds?: string[];
 }
 
 interface PullResponse {
@@ -130,19 +133,100 @@ export function queueSyncChange(change: SyncChange): void {
 
 /* ── API calls ── */
 
-async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
+async function fetchJson<T>(url: string, init?: RequestInit): Promise<T & { _httpStatus?: number }> {
   const res = await fetch(url, {
     credentials: "include",
     headers: { "Content-Type": "application/json" },
     ...init,
   });
-  return res.json() as Promise<T>;
+  const data = await res.json() as T & { _httpStatus?: number };
+  data._httpStatus = res.status;
+  return data;
+}
+
+/* ── device limit error handling ── */
+
+let deviceLimitBlocked = false;
+
+function isDeviceLimitError(data: any): boolean {
+  return data?._httpStatus === 403 && data?.error === "DEVICE_LIMIT_EXCEEDED";
+}
+
+function handleDeviceLimitError(data: any): void {
+  if (deviceLimitBlocked) return; // already shown
+  deviceLimitBlocked = true;
+  stopPeriodicSync();
+  const msg = data?.message || "デバイス登録は2台までです。既存のデバイスを解除してから、新しいデバイスでログインしてください。";
+  showDeviceLimitAlert(msg);
+  console.error("[SYNC] DEVICE_LIMIT_EXCEEDED — sync stopped");
+}
+
+function showDeviceLimitAlert(message: string): void {
+  try {
+    const overlay = document.createElement("div");
+    Object.assign(overlay.style, {
+      position: "fixed",
+      top: "0",
+      left: "0",
+      width: "100%",
+      height: "100%",
+      background: "rgba(0,0,0,0.6)",
+      zIndex: "100000",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: "20px",
+    });
+    const card = document.createElement("div");
+    Object.assign(card.style, {
+      background: "#1a1a2e",
+      color: "#e0e0e0",
+      borderRadius: "12px",
+      padding: "28px 24px",
+      maxWidth: "380px",
+      width: "100%",
+      textAlign: "center",
+      boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
+      fontFamily: "'Noto Sans JP', sans-serif",
+    });
+    const icon = document.createElement("div");
+    icon.textContent = "\u26A0";
+    Object.assign(icon.style, { fontSize: "36px", marginBottom: "12px" });
+    const title = document.createElement("div");
+    title.textContent = "\u30C7\u30D0\u30A4\u30B9\u4E0A\u9650\u306B\u9054\u3057\u307E\u3057\u305F";
+    Object.assign(title.style, { fontSize: "16px", fontWeight: "700", marginBottom: "12px", color: "#ff9800" });
+    const body = document.createElement("div");
+    body.textContent = message;
+    Object.assign(body.style, { fontSize: "13px", lineHeight: "1.6", marginBottom: "20px", color: "#ccc" });
+    const btn = document.createElement("button");
+    btn.textContent = "\u9589\u3058\u308B";
+    Object.assign(btn.style, {
+      background: "#ff9800",
+      color: "#000",
+      border: "none",
+      borderRadius: "8px",
+      padding: "10px 32px",
+      fontSize: "14px",
+      fontWeight: "600",
+      cursor: "pointer",
+    });
+    btn.onclick = () => overlay.remove();
+    card.appendChild(icon);
+    card.appendChild(title);
+    card.appendChild(body);
+    card.appendChild(btn);
+    overlay.appendChild(card);
+    document.body.appendChild(overlay);
+  } catch {
+    alert(message);
+  }
 }
 
 /**
  * bootstrap — 初回同期。サーバーの全データを取得して local cache に反映。
  */
 export async function syncBootstrap(): Promise<BootstrapResponse | null> {
+  if (deviceLimitBlocked) return null;
   try {
     const deviceId = getDeviceId();
     const data = await fetchJson<BootstrapResponse>(
@@ -152,8 +236,20 @@ export async function syncBootstrap(): Promise<BootstrapResponse | null> {
         body: JSON.stringify({ deviceId }),
       }
     );
+    if (isDeviceLimitError(data)) {
+      handleDeviceLimitError(data);
+      return null;
+    }
     if (data.ok) {
       applyRemoteData(data.threads, data.folders, data.sukuyouRooms);
+      // Remove locally-cached items that were deleted on another device
+      if (data.deletedThreadIds?.length || data.deletedFolderIds?.length || data.deletedSukuyouRoomIds?.length) {
+        applyRemoteDeletions(
+          data.deletedThreadIds || [],
+          data.deletedFolderIds || [],
+          data.deletedSukuyouRoomIds || []
+        );
+      }
       setLastPullAt(data.at);
     }
     return data;
@@ -167,6 +263,7 @@ export async function syncBootstrap(): Promise<BootstrapResponse | null> {
  * pull — 差分取得。since 以降の変更をサーバーから取得。
  */
 export async function syncPull(): Promise<PullResponse | null> {
+  if (deviceLimitBlocked) return null;
   try {
     const deviceId = getDeviceId();
     const since = getLastPullAt();
@@ -176,6 +273,10 @@ export async function syncPull(): Promise<PullResponse | null> {
     const data = await fetchJson<PullResponse>(
       `${API_BASE}/sync/pull?${params.toString()}`
     );
+    if (isDeviceLimitError(data)) {
+      handleDeviceLimitError(data);
+      return null;
+    }
     if (data.ok) {
       applyRemoteData(data.threads, data.folders, data.sukuyouRooms);
       setLastPullAt(data.at);
@@ -193,6 +294,7 @@ export async function syncPull(): Promise<PullResponse | null> {
 const PUSH_CHUNK_SIZE = 200;
 
 export async function syncPush(): Promise<PushResponse | null> {
+  if (deviceLimitBlocked) return null;
   const pending = getPendingChanges();
   if (pending.length === 0) return null;
 
@@ -212,6 +314,10 @@ export async function syncPush(): Promise<PushResponse | null> {
           body: JSON.stringify({ deviceId, changes: chunk }),
         }
       );
+      if (isDeviceLimitError(data)) {
+        handleDeviceLimitError(data);
+        return null;
+      }
       if (data.ok) {
         totalApplied += data.applied;
         totalSkipped += data.skipped;
@@ -477,6 +583,96 @@ function applyRemoteData(
       // ignore
     }
   }
+}
+
+/* ── apply remote deletions (bootstrap) ── */
+
+/**
+ * Remove locally-cached items that were deleted on another device.
+ * Called after bootstrap to ensure local state respects server-side tombstones.
+ */
+async function applyRemoteDeletions(
+  deletedThreadIds: string[],
+  deletedFolderIds: string[],
+  deletedSukuyouRoomIds: string[]
+): Promise<void> {
+  // 1. Remove deleted threads from localStorage
+  if (deletedThreadIds.length > 0) {
+    try {
+      const userKey = localStorage.getItem("TENMON_USER_KEY") || localStorage.getItem("TENMON_PWA_USER_ID") || "";
+      const metaKey = userKey
+        ? `TENMON_PWA_THREADS_META_V1:${userKey}`
+        : "TENMON_PWA_THREADS_META_V1";
+      const existing: Record<string, any> = (() => {
+        try { return JSON.parse(localStorage.getItem(metaKey) || "{}"); } catch { return {}; }
+      })();
+      let changed = false;
+      for (const tid of deletedThreadIds) {
+        if (existing[tid]) {
+          delete existing[tid];
+          changed = true;
+        }
+      }
+      if (changed) {
+        localStorage.setItem(metaKey, JSON.stringify(existing));
+        window.dispatchEvent(new CustomEvent("tenmon:threads-updated"));
+      }
+    } catch (e) {
+      console.warn("[SYNC] failed to apply thread deletions", e);
+    }
+  }
+
+  // 2. Remove deleted folders from IndexedDB
+  if (deletedFolderIds.length > 0) {
+    try {
+      const db = await openSyncIDB();
+      try {
+        if (db.objectStoreNames.contains("chat_folders")) {
+          const tx = db.transaction(["chat_folders"], "readwrite");
+          const store = tx.objectStore("chat_folders");
+          for (const fid of deletedFolderIds) {
+            store.delete(fid);
+          }
+          await new Promise<void>((resolve, reject) => {
+            tx.oncomplete = () => resolve();
+            tx.onerror = () => reject(tx.error);
+          });
+          window.dispatchEvent(new CustomEvent("tenmon:folders-updated"));
+        }
+      } finally {
+        db.close();
+      }
+    } catch (e) {
+      console.warn("[SYNC] failed to apply folder deletions", e);
+    }
+  }
+
+  // 3. Remove deleted sukuyou rooms from IndexedDB
+  if (deletedSukuyouRoomIds.length > 0) {
+    try {
+      const db = await openSyncIDB();
+      try {
+        if (db.objectStoreNames.contains("sukuyou_results")) {
+          const tx = db.transaction(["sukuyou_results"], "readwrite");
+          const store = tx.objectStore("sukuyou_results");
+          for (const rid of deletedSukuyouRoomIds) {
+            store.delete(rid);
+          }
+          await new Promise<void>((resolve, reject) => {
+            tx.oncomplete = () => resolve();
+            tx.onerror = () => reject(tx.error);
+          });
+          window.dispatchEvent(new CustomEvent("tenmon:sukuyou-updated"));
+        }
+      } finally {
+        db.close();
+      }
+    } catch (e) {
+      console.warn("[SYNC] failed to apply sukuyou deletions", e);
+    }
+  }
+
+  console.log(`[SYNC] applied remote deletions: ${deletedThreadIds.length} threads, ${deletedFolderIds.length} folders, ${deletedSukuyouRoomIds.length} sukuyou rooms`);
 }
 
 /* ── bulk push existing data ── */

@@ -78,6 +78,56 @@ function rejectHeavyPayload(body: unknown, res: Response): boolean {
   return false;
 }
 
+/* ── device limit ── */
+
+const MAX_DEVICES_PER_USER = 2;
+const OWNER_EMAIL = "kouyoo4444@gmail.com";
+
+/**
+ * Check if the device is allowed. Returns true if OK.
+ * - If the device is already registered → always OK (update lastSeen)
+ * - If new device and user already has MAX_DEVICES → reject
+ * - Owner (kouyoo4444@gmail.com) is exempt from the limit
+ */
+function checkDeviceLimit(
+  db: ReturnType<typeof getDb>,
+  userId: string,
+  deviceId: string,
+  res: Response
+): boolean {
+  // Check if this device is already registered for this user
+  const existing = db.prepare(
+    `SELECT deviceId FROM sync_devices WHERE userId = ? AND deviceId = ?`
+  ).get(userId, deviceId) as any;
+  if (existing) return true; // already registered
+
+  // Check if owner (exempt from limit)
+  try {
+    const userRow = db.prepare(
+      `SELECT email FROM auth_users WHERE userId = ?`
+    ).get(userId) as any;
+    if (userRow?.email === OWNER_EMAIL) return true;
+  } catch { /* auth_users may not exist in this db */ }
+
+  // Count existing devices
+  const countRow = db.prepare(
+    `SELECT COUNT(*) as cnt FROM sync_devices WHERE userId = ?`
+  ).get(userId) as any;
+  const currentCount = countRow?.cnt ?? 0;
+
+  if (currentCount >= MAX_DEVICES_PER_USER) {
+    res.status(403).json({
+      ok: false,
+      error: "DEVICE_LIMIT_EXCEEDED",
+      message: `デバイス登録は${MAX_DEVICES_PER_USER}台までです。既存のデバイスを解除してから、新しいデバイスでログインしてください。`,
+      maxDevices: MAX_DEVICES_PER_USER,
+      currentDevices: currentCount,
+    });
+    return false;
+  }
+  return true;
+}
+
 /* ── POST /sync/bootstrap ── */
 
 syncPhaseARouter.post("/sync/bootstrap", (req: Request, res: Response) => {
@@ -91,6 +141,9 @@ syncPhaseARouter.post("/sync/bootstrap", (req: Request, res: Response) => {
   const t = nowIso();
 
   try {
+    // Device limit check
+    if (!checkDeviceLimit(db, userId, deviceId, res)) return;
+
     // Register device
     db.prepare(
       `INSERT INTO sync_devices (userId, deviceId, lastSeenAt, createdAt)
@@ -117,6 +170,17 @@ syncPhaseARouter.post("/sync/bootstrap", (req: Request, res: Response) => {
        FROM synced_sukuyou_rooms WHERE userId = ? AND isDeleted = 0 ORDER BY updatedAt DESC`
     ).all(userId) as any[];
 
+    // Fetch deleted item IDs (tombstones) so clients can remove stale local copies
+    const deletedThreadIds = (db.prepare(
+      `SELECT threadId FROM synced_chat_threads WHERE userId = ? AND isDeleted = 1`
+    ).all(userId) as any[]).map(r => r.threadId);
+    const deletedFolderIds = (db.prepare(
+      `SELECT folderId FROM synced_chat_folders WHERE userId = ? AND isDeleted = 1`
+    ).all(userId) as any[]).map(r => r.folderId);
+    const deletedSukuyouRoomIds = (db.prepare(
+      `SELECT roomId FROM synced_sukuyou_rooms WHERE userId = ? AND isDeleted = 1`
+    ).all(userId) as any[]).map(r => r.roomId);
+
     // Log event
     db.prepare(
       `INSERT INTO sync_events (userId, deviceId, eventType, detailJson, createdAt)
@@ -132,6 +196,9 @@ syncPhaseARouter.post("/sync/bootstrap", (req: Request, res: Response) => {
       threads,
       folders,
       sukuyouRooms,
+      deletedThreadIds,
+      deletedFolderIds,
+      deletedSukuyouRoomIds,
     });
   } catch (e: any) {
     console.error("[SYNC_PHASE_A] bootstrap failed", e);
@@ -153,6 +220,9 @@ syncPhaseARouter.get("/sync/pull", (req: Request, res: Response) => {
   const t = nowIso();
 
   try {
+    // Device limit check
+    if (!checkDeviceLimit(db, userId, deviceId, res)) return;
+
     // Update device lastSeen
     db.prepare(
       `INSERT INTO sync_devices (userId, deviceId, lastSeenAt, createdAt)
@@ -246,6 +316,14 @@ syncPhaseARouter.post("/sync/push", (req: Request, res: Response) => {
         case "chat_thread_upsert": {
           const threadId = String(p.threadId ?? "").trim();
           if (!threadId) { skipped++; break; }
+          // Check if tombstoned — do not resurrect deleted items
+          const existingThread = db.prepare(
+            `SELECT isDeleted FROM synced_chat_threads WHERE userId = ? AND threadId = ?`
+          ).get(userId, threadId) as any;
+          if (existingThread?.isDeleted === 1) {
+            skipped++;
+            break;
+          }
           const title = String(p.title ?? "").slice(0, 500);
           const folderId = p.folderId ? String(p.folderId).slice(0, 100) : null;
           const pinned = p.pinned ? 1 : 0;
@@ -257,8 +335,7 @@ syncPhaseARouter.post("/sync/push", (req: Request, res: Response) => {
                folderId = excluded.folderId,
                pinned = excluded.pinned,
                updatedAt = excluded.updatedAt,
-               version = synced_chat_threads.version + 1,
-               isDeleted = 0`
+               version = synced_chat_threads.version + 1`
           ).run(userId, threadId, title, folderId, pinned, t);
           applied++;
           break;
@@ -276,6 +353,14 @@ syncPhaseARouter.post("/sync/push", (req: Request, res: Response) => {
         case "chat_folder_upsert": {
           const folderId = String(p.folderId ?? "").trim();
           if (!folderId) { skipped++; break; }
+          // Check if tombstoned — do not resurrect deleted items
+          const existingFolder = db.prepare(
+            `SELECT isDeleted FROM synced_chat_folders WHERE userId = ? AND folderId = ?`
+          ).get(userId, folderId) as any;
+          if (existingFolder?.isDeleted === 1) {
+            skipped++;
+            break;
+          }
           const name = String(p.name ?? "").slice(0, 200);
           const fkind = String(p.kind ?? "user").slice(0, 50);
           const color = p.color ? String(p.color).slice(0, 50) : null;
@@ -291,8 +376,7 @@ syncPhaseARouter.post("/sync/push", (req: Request, res: Response) => {
                sortOrder = excluded.sortOrder,
                isDefault = excluded.isDefault,
                updatedAt = excluded.updatedAt,
-               version = synced_chat_folders.version + 1,
-               isDeleted = 0`
+               version = synced_chat_folders.version + 1`
           ).run(userId, folderId, name, fkind, color, sortOrder, isDefault, t);
           applied++;
           break;
@@ -310,6 +394,14 @@ syncPhaseARouter.post("/sync/push", (req: Request, res: Response) => {
         case "sukuyou_room_upsert": {
           const roomId = String(p.roomId ?? "").trim();
           if (!roomId) { skipped++; break; }
+          // Check if tombstoned — do not resurrect deleted items
+          const existingRoom = db.prepare(
+            `SELECT isDeleted FROM synced_sukuyou_rooms WHERE userId = ? AND roomId = ?`
+          ).get(userId, roomId) as any;
+          if (existingRoom?.isDeleted === 1) {
+            skipped++;
+            break;
+          }
           const threadId = p.threadId ? String(p.threadId).slice(0, 100) : null;
           const birthDate = p.birthDate ? String(p.birthDate).slice(0, 20) : null;
           const honmeiShuku = p.honmeiShuku ? String(p.honmeiShuku).slice(0, 50) : null;
@@ -327,8 +419,7 @@ syncPhaseARouter.post("/sync/push", (req: Request, res: Response) => {
                reversalAxis = excluded.reversalAxis,
                shortOracle = excluded.shortOracle,
                updatedAt = excluded.updatedAt,
-               version = synced_sukuyou_rooms.version + 1,
-               isDeleted = 0`
+               version = synced_sukuyou_rooms.version + 1`
           ).run(userId, roomId, threadId, birthDate, honmeiShuku, disasterType, reversalAxis, shortOracle, t);
           applied++;
           break;
@@ -348,7 +439,8 @@ syncPhaseARouter.post("/sync/push", (req: Request, res: Response) => {
       }
     }
 
-    // Update device
+    // Device limit check + Update device
+    if (!checkDeviceLimit(db, userId, deviceId, res)) return;
     db.prepare(
       `INSERT INTO sync_devices (userId, deviceId, lastSeenAt, createdAt)
        VALUES (?,?,?,?)
