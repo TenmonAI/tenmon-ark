@@ -24,6 +24,7 @@ import { selfImproveRouter } from "./routes/selfImprove.js";
 import { councilRouter } from "./routes/council.js";
 import { authRouter } from "./routes/auth.js";
 import { authLocalRouter } from "./routes/auth_local.js";
+import { inviteRouter } from "./routes/invite.js";
 import meRouter from "./routes/me.js";
 import { registerFounderAuth } from "./routes/auth_founder.js";
 import { markListenReady } from "./health/readiness.js";
@@ -107,6 +108,7 @@ registerFounderAuth(app);
 
 app.use("/api", authRouter);
 app.use("/api", authLocalRouter);
+app.use("/api", inviteRouter);
 app.use("/api", meRouter);
 app.use("/api", auditRouter);
 app.use("/api", chatRouter);
