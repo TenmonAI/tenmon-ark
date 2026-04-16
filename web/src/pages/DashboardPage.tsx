@@ -5,7 +5,9 @@
  *  価値言語化 + 三つの柱紹介 + LP的ブランドメッセージ
  * ============================================================
  */
-import React from "react";
+import React, { useState } from "react";
+
+const OWNER_EMAIL = "kouyoo4444@gmail.com";
 
 /* ── ライトテーマカラー ── */
 const C = {
@@ -57,6 +59,125 @@ const pillars = [
 
 interface DashboardPageProps {
   onNavigate?: (view: string) => void;
+}
+
+/* ── オーナー専用: 招待リンク発行コンポーネント ── */
+function OwnerInviteSection() {
+  const [url, setUrl] = useState<string | null>(null);
+  const [expiry, setExpiry] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleGenerate = async () => {
+    setLoading(true);
+    setError(null);
+    setCopied(false);
+    try {
+      const res = await fetch("/api/auth/invite/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ note: "オーナー招待" }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      const inviteUrl = data.inviteUrl || data.url || "";
+      setUrl(inviteUrl);
+      const d = new Date();
+      d.setDate(d.getDate() + 7);
+      setExpiry(d.toLocaleDateString("ja-JP", { year: "numeric", month: "long", day: "numeric" }));
+      if (inviteUrl && navigator.clipboard) {
+        await navigator.clipboard.writeText(inviteUrl);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      }
+    } catch (err) {
+      console.error("Invite generation failed:", err);
+      setError("招待リンクの生成に失敗しました");
+      setTimeout(() => setError(null), 3000);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCopy = async () => {
+    if (url && navigator.clipboard) {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  return (
+    <div style={{
+      background: C.card,
+      border: `1px solid ${C.border}`,
+      borderRadius: 12,
+      padding: "20px 24px",
+      marginBottom: 24,
+    }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+        <span style={{
+          display: "inline-flex", alignItems: "center", justifyContent: "center",
+          width: 36, height: 36, borderRadius: 8,
+          background: C.arkGoldBg, border: `1px solid ${C.arkGoldBorder}`,
+          fontSize: 16, fontWeight: 700, color: C.arkGold, flexShrink: 0,
+        }}>🔗</span>
+        <h2 style={{ fontSize: 15, fontWeight: 600, margin: 0, color: C.text }}>招待リンク発行</h2>
+      </div>
+      <p style={{ fontSize: 13, color: C.textSub, lineHeight: 1.8, margin: "0 0 16px" }}>
+        天聞アークへの招待リンクを生成します。リンクは7日間有効です。
+      </p>
+
+      <button
+        onClick={handleGenerate}
+        disabled={loading}
+        style={{
+          width: "100%", padding: "12px 16px",
+          background: loading ? C.textMuted : C.text,
+          color: "#ffffff", border: "none", borderRadius: 8,
+          cursor: loading ? "not-allowed" : "pointer",
+          fontSize: 14, fontWeight: 500, fontFamily: "inherit",
+          transition: "all 0.2s",
+        }}
+      >
+        {loading ? "生成中…" : "招待リンクを生成する"}
+      </button>
+
+      {error && (
+        <p style={{ marginTop: 10, fontSize: 13, color: "#dc2626", fontWeight: 500 }}>{error}</p>
+      )}
+
+      {url && (
+        <div style={{
+          marginTop: 14, padding: "14px 16px", borderRadius: 8,
+          background: C.arkGoldBg, border: `1px solid ${C.arkGoldBorder}`,
+        }}>
+          <p style={{ margin: "0 0 6px", fontSize: 12, color: C.textSub, fontWeight: 500 }}>生成されたURL:</p>
+          <p style={{
+            margin: "0 0 10px", fontSize: 12.5, color: C.text,
+            wordBreak: "break-all", lineHeight: 1.6, fontFamily: "monospace",
+          }}>{url}</p>
+          {expiry && (
+            <p style={{ margin: "0 0 10px", fontSize: 12, color: C.textSub }}>有効期限: {expiry}まで</p>
+          )}
+          <button
+            onClick={handleCopy}
+            style={{
+              padding: "7px 16px",
+              background: copied ? "#166534" : C.text,
+              color: "#ffffff", border: "none", borderRadius: 6,
+              cursor: "pointer", fontSize: 12, fontWeight: 500,
+              fontFamily: "inherit", transition: "all 0.2s",
+            }}
+          >
+            {copied ? "コピーしました ✓" : "URLをコピー"}
+          </button>
+        </div>
+      )}
+    </div>
+  );
 }
 
 export function DashboardPage({ onNavigate }: DashboardPageProps) {
@@ -232,6 +353,14 @@ export function DashboardPage({ onNavigate }: DashboardPageProps) {
             大切な情報が意図せず外部に出ることのないよう配慮しています。
           </p>
         </div>
+
+        {/* ── オーナー専用: 招待リンク発行 ── */}
+        {(() => {
+          try {
+            if (localStorage.getItem("tenmon_user_display_v1") !== OWNER_EMAIL) return null;
+          } catch { return null; }
+          return <OwnerInviteSection />;
+        })()}
 
         {/* ── 補足 ── */}
         <div style={{
