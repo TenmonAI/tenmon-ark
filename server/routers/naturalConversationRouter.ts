@@ -155,7 +155,7 @@ export const naturalConversationRouter = router({
         {
           contextId: 'CONTEXT-001',
           userId: ctx.user.id,
-          lastMessage: 'こんにちは、天聞アーク。',
+          lastMessage: 'こんにちは、TENMON-ARK。',
           lastUpdated: Date.now() - 3600000,
           turnCount: 5,
         },
@@ -191,7 +191,7 @@ export const naturalConversationRouter = router({
             {
               turnNumber: 1,
               speaker: 'user' as const,
-              text: 'こんにちは、天聞アーク。',
+              text: 'こんにちは、TENMON-ARK。',
               timestamp: Date.now() - 3600000,
             },
             {

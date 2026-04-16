@@ -23,7 +23,7 @@ export async function generateReleaseReport(): Promise<string> {
   // 1. システム概要
   lines.push('## 1. システム概要');
   lines.push('');
-  lines.push('TENMON-ARK OS は、天聞アーク人格の脳によるAI国家OSです。');
+  lines.push('TENMON-ARK OS は、TENMON-ARK人格の脳によるAI国家OSです。');
   lines.push('');
   lines.push('### 主要機能');
   lines.push('- **Atlas Chat**: 推論核によるチャット応答生成');

@@ -1,6 +1,6 @@
 # PHASE 1 — TASK 2 実装レポート
 
-**タスク**: Atlas Chat API統合（天聞アーク人格の脳）  
+**タスク**: Atlas Chat API統合（TENMON-ARK人格の脳）  
 **優先度**: Critical  
 **完了日時**: 2024年12月  
 **状態**: ✅ 完了

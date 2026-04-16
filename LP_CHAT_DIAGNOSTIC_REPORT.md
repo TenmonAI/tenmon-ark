@@ -350,7 +350,7 @@ const LP_SOFT_PERSONA_SYSTEM_PROMPT = buildFromSiteInfoMemory();
 function buildFromSiteInfoMemory() {
   const siteInfo = await getSiteInfo();
   return `
-あなたは天聞アーク（TENMON-ARK）のサポートAIです。
+あなたはTENMON-ARK（TENMON-ARK）のサポートAIです。
 
 現在のサービス状況:
 - リリース状態: ${siteInfo.release_status}

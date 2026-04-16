@@ -1,7 +1,7 @@
 /**
  * 宿曜経 × 天津金木 × 言霊 統合診断モジュール
  * 
- * 天聞アーク意識OS の宿曜診断機能
+ * TENMON-ARK意識OS の宿曜診断機能
  */
 
 export { solarToLunar, daysFromBaseDate, getAmatsuKanagiBaseDate, calculateKanshi } from "./lunarCalendar.js";

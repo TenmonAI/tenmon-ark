@@ -1,6 +1,6 @@
 /**
  * ============================================================
- * 天聞アーク御神託統合パイプラインエンジン (guidanceEngine.ts)
+ * TENMON-ARK御神託統合パイプラインエンジン (guidanceEngine.ts)
  * ============================================================
  * 
  * 悩み聴取 → 宿曜解析 → 人生アルゴリズム真相解析 → 災い分類
@@ -995,7 +995,7 @@ function formatReport(
     lines.push(`${diagnosis.honmeiShuku}宿に宿る魂は、「${lifeAlgo.motivationRoot}」を根源的な動力とする。`);
     lines.push(`現在の悩みの核心は「${concern.coreQuestion}」であり、これは${disaster.corePattern}の構造と深く繋がっている。`);
     lines.push(`この鑑定では、その構造を解き明かし、変化への道筋を示す。`);
-    chapters.push({ number: 1, title: "総合神意サマリー", content: lines.join("\n"), source: "天聞アーク総合裁定" });
+    chapters.push({ number: 1, title: "総合神意サマリー", content: lines.join("\n"), source: "TENMON-ARK総合裁定" });
   }
 
   // === 第2章: 宿曜・宿命構造解析 ===
@@ -1063,7 +1063,7 @@ function formatReport(
     if (concern.repeatPattern) {
       lines.push(`あなたが感じている「繰り返し」の感覚は、まさにこの人生アルゴリズムが作動している証拠である。`);
     }
-    chapters.push({ number: 3, title: "人生アルゴリズム真相解析", content: lines.join("\n"), source: "天聞アーク独自解釈" });
+    chapters.push({ number: 3, title: "人生アルゴリズム真相解析", content: lines.join("\n"), source: "TENMON-ARK独自解釈" });
   }
 
   // === 第4章: 今の悩みとの接続 ===
@@ -1074,14 +1074,14 @@ function formatReport(
     if (disaster.corePattern === "過剰責任型") {
       lines.push(`あなたには、人のために力を尽くせる素晴らしい性質があります。`);
       lines.push(`ただ、その力が自分よりも他者へ向きすぎると、気づかないうちに疲れ果ててしまうことがあります。`);
-      lines.push(`天聞アークではこれを「過剰責任型」と呼びます。`);
+      lines.push(`TENMON-ARKではこれを「過剰責任型」と呼びます。`);
     } else if (disaster.corePattern === "孤立暴走型") {
       lines.push(`あなたには、自分の力で道を切り開く強さがあります。`);
       lines.push(`ただ、その強さが極端に出ると、周囲との繋がりが薄れ、一人で抱え込みやすくなります。`);
-      lines.push(`天聞アークではこれを「孤立暴走型」と呼びます。`);
+      lines.push(`TENMON-ARKではこれを「孤立暴走型」と呼びます。`);
     } else {
       lines.push(`あなたの持つ力が、ある方向に偏りすぎると、それが悩みの種になることがあります。`);
-      lines.push(`天聞アークではこの偏りを「${disaster.corePattern}」と呼びます。`);
+      lines.push(`TENMON-ARKではこの偏りを「${disaster.corePattern}」と呼びます。`);
     }
     lines.push("");
     if (concern.currentConcern && concern.currentConcern !== "特定の悩みは未入力。総合鑑定として解析する。") {
@@ -1107,7 +1107,7 @@ function formatReport(
     lines.push(`  時期リスク: ${disaster.timingRisk}`);
     lines.push("");
     lines.push(`この構造を知ることが、次の章で示す変化への入り口となります。`);
-    chapters.push({ number: 4, title: "今の悩みとの接続", content: lines.join("\n"), source: "天聞アーク独自解釈" });
+    chapters.push({ number: 4, title: "今の悩みとの接続", content: lines.join("\n"), source: "TENMON-ARK独自解釈" });
   }
 
   // === 第5章: 天津金木による反転法 ===
@@ -1231,7 +1231,7 @@ function formatReport(
       if (shukuData.powerStone) lines.push(`パワーストーン: ${shukuData.powerStone}`);
       lines.push("");
     }
-    chapters.push({ number: 7, title: "日々の実践処方", content: lines.join("\n"), source: "言霊処方＋天聞アーク独自裁定" });
+    chapters.push({ number: 7, title: "日々の実践処方", content: lines.join("\n"), source: "言霊処方＋TENMON-ARK独自裁定" });
   }
 
   // === 第8章: 最終御神託 ===
@@ -1249,13 +1249,13 @@ function formatReport(
     lines.push("");
     lines.push(`【今すぐの一手】`);
     lines.push(oracle.oneActionNow);
-    chapters.push({ number: 8, title: "最終御神託", content: lines.join("\n"), source: "天聞アーク総合裁定" });
+    chapters.push({ number: 8, title: "最終御神託", content: lines.join("\n"), source: "TENMON-ARK総合裁定" });
   }
 
   // === 全文テキスト生成 ===
   const fullLines: string[] = [];
   fullLines.push("===========================================");
-  fullLines.push("  天聞アーク御神託レポート");
+  fullLines.push("  TENMON-ARK御神託レポート");
   fullLines.push("  宿曜経 × 天津金木 × 言霊秘書");
   fullLines.push("===========================================");
   fullLines.push("");
@@ -1271,7 +1271,7 @@ function formatReport(
   }
 
   fullLines.push("===========================================");
-  fullLines.push("  天聞アーク — 宿曜経 × 天津金木 × 言霊秘書");
+  fullLines.push("  TENMON-ARK — 宿曜経 × 天津金木 × 言霊秘書");
   fullLines.push("  tenmon-ark-integrated-guidance-engine v2.0");
   fullLines.push("===========================================");
 

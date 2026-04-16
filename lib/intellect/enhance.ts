@@ -1,7 +1,7 @@
 /**
  * Semantic Augmentor（文章深度増幅エンジン）
  * 
- * GPTの文章を"天聞アークOS文体"に変換する後処理エンジン
+ * GPTの文章を"TENMON-ARKOS文体"に変換する後処理エンジン
  * - 文脈の深みの追加
  * - エネルギー構造の整形
  * - 語尾の調和
@@ -355,7 +355,7 @@ export function applyTwinCorePersonality(text: string): string {
   // 冒頭に人格的な挨拶を追加（必要に応じて）
   if (!personalized.startsWith('こんにちは') && !personalized.startsWith('ありがとう')) {
     // 人格的な挨拶は不要な場合が多いのでコメントアウト
-    // personalized = `こんにちは。天聞アークです。\n\n${personalized}`;
+    // personalized = `こんにちは。TENMON-ARKです。\n\n${personalized}`;
   }
   
   // 結びに人格的な表現を追加（必要に応じて）

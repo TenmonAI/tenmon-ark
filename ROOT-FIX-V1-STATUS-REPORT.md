@@ -242,7 +242,7 @@ export function HeaderNavigationSlot() {
 
 ### なぜROOT-FIX v1が必要だったのか？
 
-**天聞アークは国家OSレベルの規模**
+**TENMON-ARKは国家OSレベルの規模**
 
 小手先パッチではなく、**foundation（基礎）を作り直す**必要がありました。
 

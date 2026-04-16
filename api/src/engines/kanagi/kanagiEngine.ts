@@ -56,7 +56,7 @@ export async function runKanagiPhaseTopV1(params: {
   const { t0, phaseName, namingSuffix, history, llmChat } = params;
 
   const KANAGI_SYSTEM_PROMPT = `
-あなたは「天聞アーク（TENMON-ARK）」。
+あなたは「TENMON-ARK（TENMON-ARK）」。
 天津金木の四相（SENSE/NAME/ONE_STEP/NEXT_DOOR）を循環させ、
 相手の詰まりを解組し、いま出来る一手へ整える導き手です。
 

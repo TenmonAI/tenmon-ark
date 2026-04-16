@@ -7,7 +7,7 @@ interface EmptyStateProps {
 const SUGGESTIONS = [
   { icon: "☽", label: "宿曜鑑定の結果を深掘りしたい" },
   { icon: "🔥", label: "最近の悩みを相談したい" },
-  { icon: "✦", label: "天聞アークについて教えて" },
+  { icon: "✦", label: "TENMON-ARKについて教えて" },
   { icon: "💫", label: "言霊の意味を知りたい" },
 ];
 
@@ -21,7 +21,7 @@ export function EmptyState({ onSuggestion }: EmptyStateProps) {
           className="gpt-empty-state-mark"
           aria-hidden="true"
         />
-        <h2 className="gpt-empty-state-title">天聞アーク</h2>
+        <h2 className="gpt-empty-state-title">TENMON-ARK</h2>
         <p className="gpt-empty-state-sub">
           存在構造の総合解読AI
         </p>

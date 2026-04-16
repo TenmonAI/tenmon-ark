@@ -1,6 +1,6 @@
 /**
  * ============================================================
- *  LOGIN PAGE — 天聞アーク ログイン + LP的ブランド訴求
+ *  LOGIN PAGE — TENMON-ARK ログイン + LP的ブランド訴求
  *  TENMON_MANUS_FINAL_CORRECTION_AND_COMPLETION_V1
  *  未認証ユーザーの最初の接点として、世界観を伝えつつログインへ導く
  * ============================================================
@@ -110,7 +110,7 @@ export default function LoginLocal() {
             margin: "0 0 10px",
             color: C.text,
           }}>
-            天聞アーク
+            TENMON-ARK
           </h1>
           <p style={{
             fontSize: 14,
@@ -300,7 +300,7 @@ export default function LoginLocal() {
           }}>
             <span style={{ fontWeight: 600, color: C.arkGold }}>設計思想</span>
             <span style={{ margin: "0 6px", color: C.textMuted }}>—</span>
-            天聞アークは「端末に寄り添う」設計です。
+            TENMON-ARKは「端末に寄り添う」設計です。
             鑑定結果や会話の記録はお使いの端末に保管され、
             大切な情報が意図せず外部に出ることのないよう配慮しています。
           </p>
@@ -313,7 +313,7 @@ export default function LoginLocal() {
           textAlign: "center",
           lineHeight: 1.7,
         }}>
-          天聞アーク — 存在構造の総合解読AI
+          TENMON-ARK — 存在構造の総合解読AI
         </div>
       </div>
     </div>

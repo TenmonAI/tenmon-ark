@@ -107,7 +107,7 @@ export default function OverBeingHome() {
               textShadow: "0 0 40px rgba(255, 215, 0, 0.5)",
             }}
           >
-            天聞アーク
+            TENMON-ARK
           </motion.div>
         </motion.div>
       )}

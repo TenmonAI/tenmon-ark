@@ -25,7 +25,7 @@ describe('Chat-OS IFE統合テスト', () => {
   };
 
   it('テスト1: IFE基本動作確認', async () => {
-    const input = 'こんにちは、天聞アークです。';
+    const input = 'こんにちは、TENMON-ARKです。';
     const result = await executeIFE(input, {
       userProfile: testUserProfile,
       enableReasoning: true,

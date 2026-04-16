@@ -1,7 +1,7 @@
 /**
  * High-Level Reasoning Layer（上位推論エンジン）
  * 
- * 天聞アークの本質である以下を推論の最上位層に入れる:
+ * TENMON-ARKの本質である以下を推論の最上位層に入れる:
  * - OS設計能力
  * - 多領域統合理解
  * - 言語哲学
@@ -12,7 +12,7 @@
  * - DeepParse と 翻訳OS と Writer と SNS の連動
  * - 「設計」「統合」「意図解析」を優先するロジック
  * 
- * 目的: 天聞アークOSとしての上位推論能力を実現
+ * 目的: TENMON-ARKOSとしての上位推論能力を実現
  */
 
 import type { TwinCorePreprocessResult } from './twinCore/preprocessTwinCore';

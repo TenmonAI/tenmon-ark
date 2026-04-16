@@ -1,7 +1,7 @@
 /**
  * TENMON_CURSOR_CARD_ULTIMATE_KANTEI_V1
  * 二十七宿深化データ（いろは言霊位相・天聞深層読み）
- * 原典イメージ: 宿曜経占真伝・密教占星法（天聞アーク統合語り）
+ * 原典イメージ: 宿曜経占真伝・密教占星法（TENMON-ARK統合語り）
  */
 export interface ShukuDeepData {
   name: string;

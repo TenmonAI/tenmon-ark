@@ -29,7 +29,7 @@ export async function testReasoningCoherence(): Promise<{
   message: string;
 }> {
   try {
-    const input = "天聞アークは宇宙構文OSです";
+    const input = "TENMON-ARKは宇宙構文OSです";
     const signature = computeReishoSignature(input);
     
     // モック推論結果
@@ -141,7 +141,7 @@ export async function testSeedExpansionConsistency(): Promise<{
   message: string;
 }> {
   try {
-    const input = "天聞アークは宇宙構文OSです";
+    const input = "TENMON-ARKは宇宙構文OSです";
     const signature1 = computeReishoSignature(input);
     const signature2 = computeReishoSignature(input);
     

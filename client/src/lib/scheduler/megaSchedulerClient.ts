@@ -4,7 +4,7 @@
  * UI → Scheduler ブリッジ。
  * 
  * 注意: /api/scheduler/* は Cursor が MegaScheduler を動かすための内部エンドポイント。
- * 天聞アーク側では UI 状態可視化のみを行う。
+ * TENMON-ARK側では UI 状態可視化のみを行う。
  */
 
 export interface SchedulerTask {

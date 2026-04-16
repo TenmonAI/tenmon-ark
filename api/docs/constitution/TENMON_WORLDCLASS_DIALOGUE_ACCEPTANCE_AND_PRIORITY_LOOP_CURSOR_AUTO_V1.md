@@ -2,7 +2,7 @@
 
 ## 目的
 
-会話品質分析・next card 生成・acceptance scorecard を **同一 current-run** で束ね、天聞アークの完成度を queue-driven で上げ続ける運転系の入口を固定する。
+会話品質分析・next card 生成・acceptance scorecard を **同一 current-run** で束ね、TENMON-ARKの完成度を queue-driven で上げ続ける運転系の入口を固定する。
 
 ## 実行
 

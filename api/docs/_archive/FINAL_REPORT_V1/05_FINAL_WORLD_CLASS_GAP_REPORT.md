@@ -26,7 +26,7 @@
 
 ---
 
-## 天聞アークが独自に勝てる層と、まだ弱い層
+## TENMON-ARKが独自に勝てる層と、まだ弱い層
 
 - **勝てる層（現状でも主権がある）**: support, explicit 文字数指定, katakamuna 正典, abstract 4 概念, 一音言霊（統合後）。正典・canon JSON・binder 接続が存在し、KHS を唯一の言灵中枢とする設計と整合する。
 - **まだ弱い層**: continuity（DB 0）、memory（DB 0）、follow-up の深さ（固定 1 文）、book 本文生成（placeholder）、evidence の表面貫通（正典の一句が response に含まれる経路が少ない）、style variation（固定文中心）。

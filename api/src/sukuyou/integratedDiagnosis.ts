@@ -414,7 +414,7 @@ export interface CompleteDiagnosisResult {
 }
 
 /**
- * 天聞アーク 完全統合診断
+ * TENMON-ARK 完全統合診断
  * 
  * 宿曜経 × 天津金木 × 言霊の三体系を統合した精密診断
  */
@@ -443,7 +443,7 @@ export function runCompleteDiagnosis(
   const dateStr = `${birthYear}年${birthMonth}月${birthDay}日`;
 
   let fullInterpretation = `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
-  fullInterpretation += `　　天聞アーク 宿曜経×天津金木 精密統合診断\n`;
+  fullInterpretation += `　　TENMON-ARK 宿曜経×天津金木 精密統合診断\n`;
   fullInterpretation += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
   fullInterpretation += `　生年月日: ${dateStr}\n`;
   fullInterpretation += `　旧暦: ${sukuyou.lunarDate.year}年${sukuyou.lunarDate.month}月${sukuyou.lunarDate.day}日\n`;

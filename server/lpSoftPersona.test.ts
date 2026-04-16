@@ -6,7 +6,7 @@ import { filterLpSoftResponse, LP_SOFT_PERSONA_SYSTEM_PROMPT } from './prompts/l
  * 
  * 【重要な変更】
  * - Minimal Persona を廃止
- * - フル機能の天聞アーク人格を使用
+ * - フル機能のTENMON-ARK人格を使用
  * - 全知識を参照可能
  * - Twin-Core 思考をフル稼働
  * - 長文回答も可能
@@ -110,7 +110,7 @@ describe('LP Soft Persona vΩ-FULL', () => {
     });
 
     it('システムプロンプトに応答例が含まれている', () => {
-      expect(LP_SOFT_PERSONA_SYSTEM_PROMPT).toContain('天聞アークとは何ですか？');
+      expect(LP_SOFT_PERSONA_SYSTEM_PROMPT).toContain('TENMON-ARKとは何ですか？');
       expect(LP_SOFT_PERSONA_SYSTEM_PROMPT).toContain('料金はいくら？');
       expect(LP_SOFT_PERSONA_SYSTEM_PROMPT).toContain('Twin-Coreとは何ですか？');
       expect(LP_SOFT_PERSONA_SYSTEM_PROMPT).toContain('言霊とは何ですか？');

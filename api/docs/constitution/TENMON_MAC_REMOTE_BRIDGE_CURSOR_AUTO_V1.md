@@ -2,7 +2,7 @@
 
 ## 目的
 
-VPS（天聞アーク）から自宅 Mac の受信エージェントへ、**正規化済み build job manifest** を配送し、**受領 ack** と **キュー状態 `delivered`** までを記録する（**Cursor 実行はしない**）。
+VPS（TENMON-ARK）から自宅 Mac の受信エージェントへ、**正規化済み build job manifest** を配送し、**受領 ack** と **キュー状態 `delivered`** までを記録する（**Cursor 実行はしない**）。
 
 ## 構成
 

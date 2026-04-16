@@ -89,7 +89,7 @@ function buildRawResponse(params: {
       `確認対象: ${clip(userMessage, 180)}`,
       axisHint ? `軸（Kokūzō）: ${axisHint}` : undefined,
       "",
-      "天聞アークは次の順で確認する:",
+      "TENMON-ARKは次の順で確認する:",
       "- 事実（ログ/設定/再現手順）",
       "- 期待値（成功条件）",
       "- 差分（どこがズレたか）",
@@ -124,7 +124,7 @@ function buildRawResponse(params: {
     axisHint ? `軸（Kokūzō）: ${axisHint}` : undefined,
     recentUser ? `直近: ${clip(recentUser, 140)}` : undefined,
     "",
-    "天聞アークは、必要なら要点を絞って返す。",
+    "TENMON-ARKは、必要なら要点を絞って返す。",
   ]
     .filter(Boolean)
     .join("\n");

@@ -2,7 +2,7 @@
 
 ## 目的
 
-天聞アーク **自己構築 OS の最上流** として、`api` 配下の **automation / scripts / constitution / generated_cursor_apply** を横断観測し、**machine-readable な唯一の起点 manifest** を生成する。以後の親カード・子カードは **`self_build_manifest.json` を入力**として参照できる状態にする。
+TENMON-ARK **自己構築 OS の最上流** として、`api` 配下の **automation / scripts / constitution / generated_cursor_apply** を横断観測し、**machine-readable な唯一の起点 manifest** を生成する。以後の親カード・子カードは **`self_build_manifest.json` を入力**として参照できる状態にする。
 
 ## 非対象（DO NOT TOUCH）
 

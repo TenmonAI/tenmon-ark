@@ -3,7 +3,7 @@
  * Site-Specific Concierge Persona（サイト特化モード）
  * 
  * 目的:
- * - LP 埋め込み時は、天聞アークが「そのサイトだけを理解する」
+ * - LP 埋め込み時は、TENMON-ARKが「そのサイトだけを理解する」
  * - 外部知識（世の中の一般知識・深い推論）を禁止
  * - Semantic Index（siteId専用）だけで回答
  */

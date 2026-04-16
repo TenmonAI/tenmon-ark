@@ -178,7 +178,7 @@ export const KATAKAMUNA_SOURCE_AUDIT_ENTRIES_V1: readonly KatakamunaSourceAuditE
   {
     schema: "TENMON_KATAKAMUNA_SOURCE_AUDIT_ENTRY_V1",
     id: "tenmon_ark_reintegration_corpus",
-    title: "天聞アーク・再統合写像・内部正典メモ（代表）",
+    title: "TENMON-ARK・再統合写像・内部正典メモ（代表）",
     author: null,
     source_origin: "tenmon_ark_internal",
     medium_type: "parsed_text",

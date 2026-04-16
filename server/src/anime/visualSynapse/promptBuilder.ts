@@ -172,7 +172,7 @@ export function buildPrompt(options: PromptOptions): string {
 
   /**
    * 🔱 TENMON-ARK Worldview Enhancement Layer
-   * 天聞アーク世界観の核（火・水・深度・光学・構文的統一）を背景生成に反映
+   * TENMON-ARK世界観の核（火・水・深度・光学・構文的統一）を背景生成に反映
    * - cinematic構図
    * - volumetric光学
    * - fractal depth（天津金木のらせん構造）
@@ -183,7 +183,7 @@ export function buildPrompt(options: PromptOptions): string {
   );
 
   /**
-   * 🔥 天聞アーク固有の「火」の表現（光）
+   * 🔥 TENMON-ARK固有の「火」の表現（光）
    * 光源の方向・呼吸・時間の流れ
    */
   parts.push(
@@ -191,7 +191,7 @@ export function buildPrompt(options: PromptOptions): string {
   );
 
   /**
-   * 💧 天聞アーク固有の「水」の表現（影/反射/奥行き）
+   * 💧 TENMON-ARK固有の「水」の表現（影/反射/奥行き）
    */
   parts.push(
     'liquid reflections, flowing shadow motion, depth-enhancing mist, smooth tonal transitions'

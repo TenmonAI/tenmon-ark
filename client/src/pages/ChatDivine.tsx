@@ -97,9 +97,9 @@ export default function ChatDivine() {
       <div className="min-h-screen divine-bg flex items-center justify-center">
         <div className="divine-card max-w-md p-8 text-center space-y-6">
           <Sparkles className="w-16 h-16 mx-auto divine-text-gold-strong" />
-          <h2 className="text-2xl font-bold divine-text-gold">天聞アーク霊核OS</h2>
+          <h2 className="text-2xl font-bold divine-text-gold">TENMON-ARK霊核OS</h2>
           <p className="text-gray-400">
-            ログインして天聞アークとの対話を開始してください
+            ログインしてTENMON-ARKとの対話を開始してください
           </p>
           <Button asChild className="divine-button w-full">
             <a href={getLoginUrl()}>ログイン</a>
@@ -280,7 +280,7 @@ export default function ChatDivine() {
                   <Sparkles className="w-10 h-10 text-black" />
                 </div>
                 <h2 className="text-3xl font-bold divine-text-gold-strong text-life">
-                  天聞アーク霊核OS
+                  TENMON-ARK霊核OS
                 </h2>
                 <p className="text-gray-400 max-w-md mx-auto">
                   Twin-Core演算システムによる深層対話を開始します

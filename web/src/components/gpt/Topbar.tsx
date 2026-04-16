@@ -8,14 +8,16 @@ type TopbarProps = {
   isSidebarOpen?: boolean;
   showBackToChat?: boolean;
   onBackToChat?: () => void;
+  onSukuyouAbout?: () => void;
 };
 
 export function Topbar({
-  title = "天聞アーク",
+  title = "TENMON-ARK",
   onOpenSidebar,
   isSidebarOpen,
   showBackToChat,
   onBackToChat,
+  onSukuyouAbout,
 }: TopbarProps) {
   const { t } = useI18n();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -129,6 +131,41 @@ export function Topbar({
           className="gpt-brand-mark"
         />
         <span className="gpt-topbar-title">{title}</span>
+        <button
+          type="button"
+          className="gpt-topbar-sukuyou-banner"
+          onClick={(e) => {
+            e.preventDefault();
+            onSukuyouAbout?.();
+          }}
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 4,
+            marginLeft: 12,
+            padding: "3px 10px",
+            fontSize: 11,
+            fontWeight: 600,
+            color: "#92400e",
+            background: "linear-gradient(135deg, #fef3c7, #fde68a)",
+            border: "1px solid #f59e0b",
+            borderRadius: 12,
+            cursor: "pointer",
+            whiteSpace: "nowrap",
+            transition: "transform 0.15s, box-shadow 0.15s",
+            fontFamily: "inherit",
+          }}
+          onMouseEnter={(e) => {
+            (e.currentTarget as HTMLElement).style.transform = "scale(1.05)";
+            (e.currentTarget as HTMLElement).style.boxShadow = "0 2px 8px rgba(245,158,11,0.3)";
+          }}
+          onMouseLeave={(e) => {
+            (e.currentTarget as HTMLElement).style.transform = "scale(1)";
+            (e.currentTarget as HTMLElement).style.boxShadow = "none";
+          }}
+        >
+          ☆ 宿曜経とは
+        </button>
       </div>
 
       <div

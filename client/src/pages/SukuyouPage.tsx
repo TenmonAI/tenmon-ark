@@ -114,7 +114,7 @@ async function generatePDF(result: GuidanceResult): Promise<void> {
 
   let html = `
     <div style="text-align:center;margin-bottom:28px;">
-      <div style="font-size:22px;font-weight:800;color:#8b6914;letter-spacing:0.1em;">天聞アーク</div>
+      <div style="font-size:22px;font-weight:800;color:#8b6914;letter-spacing:0.1em;">TENMON-ARK</div>
       <div style="font-size:11px;color:#888;margin-top:4px;">宿曜鑑定レポート</div>
       <div style="font-size:10px;color:#aaa;margin-top:2px;">${now}</div>
     </div>
@@ -182,7 +182,7 @@ async function generatePDF(result: GuidanceResult): Promise<void> {
   // Footer
   html += `
     <div style="margin-top:30px;padding-top:12px;border-top:1px solid #ddd;text-align:center;">
-      <div style="font-size:10px;color:#888;">天聞アーク ─ 宿曜経 × 天津金木 × 言霊秘書</div>
+      <div style="font-size:10px;color:#888;">TENMON-ARK ─ 宿曜経 × 天津金木 × 言霊秘書</div>
     </div>
   `;
 
@@ -244,7 +244,7 @@ async function generateShareCard(result: GuidanceResult): Promise<Blob | null> {
   ctx.fillStyle = "#d4af37";
   ctx.font = "bold 14px sans-serif";
   ctx.textAlign = "center";
-  ctx.fillText("天聞アーク 宿曜鑑定", 300, 50);
+  ctx.fillText("TENMON-ARK 宿曜鑑定", 300, 50);
 
   // Shuku name
   const shukuLabel = formatShukuLabel(result.honmeiShuku);
@@ -291,7 +291,7 @@ async function generateShareCard(result: GuidanceResult): Promise<Blob | null> {
   // Footer
   ctx.fillStyle = "#666";
   ctx.font = "10px sans-serif";
-  ctx.fillText("天聞アーク ─ 宿曜経 × 天津金木 × 言霊秘書", 300, 380);
+  ctx.fillText("TENMON-ARK ─ 宿曜経 × 天津金木 × 言霊秘書", 300, 380);
 
   return new Promise((resolve) => {
     canvas.toBlob((blob) => resolve(blob), "image/png");
@@ -581,7 +581,7 @@ export function SukuyouPage({ onBack, onSendToChat, restoreRoomId }: SukuyouPage
     const shuku = formatShukuLabel(result.honmeiShuku);
     const oracleShort = typeof result.oracle === "string" ? result.oracle : result.oracle?.shortOracle || "";
     const shareText = [
-      `天聞アーク 宿曜鑑定`,
+      `TENMON-ARK 宿曜鑑定`,
       ``,
       `本命宿: ${shuku}`,
       `災い分類: ${result.disasterType}`,
@@ -850,7 +850,7 @@ export function SukuyouPage({ onBack, onSendToChat, restoreRoomId }: SukuyouPage
           <div>
             <h1 style={{ fontSize: 17, fontWeight: 700, ...goldStyle, margin: 0 }}>宿曜鑑定</h1>
             <p style={{ fontSize: 10, ...subStyle, margin: 0, letterSpacing: "0.02em" }}>
-              天聞アーク御神託パイプライン
+              TENMON-ARK御神託パイプライン
             </p>
           </div>
         </div>

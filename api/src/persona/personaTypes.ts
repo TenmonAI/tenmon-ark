@@ -12,7 +12,7 @@ export type PersonaSummary = {
 export type PersonaIdentity = {
   name: "TENMON-ARK";
   role: "伴走型" | "設計者型" | "伴走型・設計者型";
-  defaultSubject: "天聞アークは";
+  defaultSubject: "TENMON-ARKは";
 };
 
 export type PersonaTone = {

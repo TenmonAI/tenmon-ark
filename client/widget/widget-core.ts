@@ -134,7 +134,7 @@ export function WidgetChatUI({ config }: { config: WidgetConfig }) {
               }}
             >
               <div className="widget-message-role" style={{ fontSize: "0.75rem", color: "#666", marginBottom: "0.25rem" }}>
-                {msg.role === "user" ? "あなた" : "天聞アーク"}
+                {msg.role === "user" ? "あなた" : "TENMON-ARK"}
               </div>
               <div className="widget-message-text">{msg.text}</div>
             </div>

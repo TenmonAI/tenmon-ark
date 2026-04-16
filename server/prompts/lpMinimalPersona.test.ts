@@ -50,7 +50,7 @@ describe('filterLpMinimalResponse', () => {
 
   describe('セールス文・誘導文削除', () => {
     it('should remove Founder Edition sales text', () => {
-      const input = '天聞アークです。今すぐFounder\'s Editionに参加して特典を受け取ってください。';
+      const input = 'TENMON-ARKです。今すぐFounder\'s Editionに参加して特典を受け取ってください。';
       const output = filterLpMinimalResponse(input);
       expect(output).not.toContain('Founder');
       expect(output).not.toContain('参加して');
@@ -71,13 +71,13 @@ describe('filterLpMinimalResponse', () => {
 
   describe('関連コンテンツ削除', () => {
     it('should remove "関連コンテンツ:" blocks', () => {
-      const input = '天聞アークです。\n\n関連コンテンツ: TENMON-ARKとは何か';
+      const input = 'TENMON-ARKです。\n\n関連コンテンツ: TENMON-ARKとは何か';
       const output = filterLpMinimalResponse(input);
       expect(output).not.toContain('関連コンテンツ');
     });
 
     it('should remove "TENMON-ARKとは" blocks', () => {
-      const input = 'はい、天聞アークです。\n\nTENMON-ARKとは、火水統合型AIシステムです。';
+      const input = 'はい、TENMON-ARKです。\n\nTENMON-ARKとは、火水統合型AIシステムです。';
       const output = filterLpMinimalResponse(input);
       expect(output).not.toContain('TENMON-ARKとは');
     });
@@ -109,9 +109,9 @@ describe('filterLpMinimalResponse', () => {
     });
 
     it('should keep short responses unchanged', () => {
-      const input = 'はい、天聞アークです。';
+      const input = 'はい、TENMON-ARKです。';
       const output = filterLpMinimalResponse(input);
-      expect(output).toBe('はい、天聞アークです。');
+      expect(output).toBe('はい、TENMON-ARKです。');
     });
   });
 
@@ -119,7 +119,7 @@ describe('filterLpMinimalResponse', () => {
     it('should handle response with all prohibited elements', () => {
       const input = `
         <fire_layer>
-        天聞アークは、Twin-Coreシステムを搭載したAIです。
+        TENMON-ARKは、Twin-Coreシステムを搭載したAIです。
         火と水の二つの思考エンジンを統合しています。
         今すぐFounder's Editionに参加してください。
         詳しくは[公式サイト](https://example.com)をご覧ください。
@@ -147,9 +147,9 @@ describe('filterLpMinimalResponse', () => {
     });
 
     it('should preserve clean minimal response', () => {
-      const input = 'はい、天聞アークです。質問にお答えします。';
+      const input = 'はい、TENMON-ARKです。質問にお答えします。';
       const output = filterLpMinimalResponse(input);
-      expect(output).toBe('はい、天聞アークです。質問にお答えします。');
+      expect(output).toBe('はい、TENMON-ARKです。質問にお答えします。');
     });
   });
 
@@ -209,6 +209,6 @@ describe('LP_MINIMAL_PERSONA_SYSTEM_PROMPT', () => {
   });
 
   it('should contain minimal self-introduction example', () => {
-    expect(LP_MINIMAL_PERSONA_SYSTEM_PROMPT).toContain('はい、天聞アークです。');
+    expect(LP_MINIMAL_PERSONA_SYSTEM_PROMPT).toContain('はい、TENMON-ARKです。');
   });
 });

@@ -223,7 +223,7 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
               <h3 className="gpt-page-card-title">このアプリについて</h3>
               <div style={{ marginTop: 12 }}>
                 <p style={{ fontSize: 14, fontWeight: 600, margin: "0 0 4px", color: "var(--gpt-text-primary)" }}>
-                  天聞アーク
+                  TENMON-ARK
                 </p>
                 <p style={{ fontSize: 13, color: "var(--gpt-text-secondary)", margin: "0 0 12px", lineHeight: 1.7 }}>
                   存在構造の総合解読AI

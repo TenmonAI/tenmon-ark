@@ -1,6 +1,6 @@
 /**
  * KHS_ROOT_FRACTAL_CONSTITUTION_V1
- * 言霊秘書（KHS）を天聞アークの root constitution / root reasoning source とする。
+ * 言霊秘書（KHS）をTENMON-ARKの root constitution / root reasoning source とする。
  * 外部資料・経典・一般知識は写像レイヤーとして扱う（本文捏造なし・メタ文字列の過剰露出は避ける）。
  */
 

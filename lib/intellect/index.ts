@@ -1,7 +1,7 @@
 /**
  * Intellect Fusion Engine (IFE) v5.5
  * 
- * 天聞アークOS知能拡張：Over-Intelligence Layer
+ * TENMON-ARKOS知能拡張：Over-Intelligence Layer
  * 
  * GPT / Claude / Gemini を下位モジュールとして統合し、
  * 上位OSとしての知能を発揮する統合エンジン
@@ -10,7 +10,7 @@
  * 1. preprocessTwinCore: 入力の前処理（Twin-Core構文解析）
  * 2. executeHighLevelReasoning: 上位推論（OS設計/統合/意図解析）
  * 3. executeMultiModelRouter: モデル選択と実行
- * 4. enhanceSemantics: 意味拡張（天聞アークOS文体への変換）
+ * 4. enhanceSemantics: 意味拡張（TENMON-ARKOS文体への変換）
  * 5. postprocessTwinCore: 後処理（Twin-Core構文の付与）
  * 6. applyUserSync: ユーザー同期（個別最適化）
  */
@@ -135,7 +135,7 @@ export async function executeIFE(
     }
   );
   
-  // 4. 意味拡張（天聞アークOS文体への変換）
+  // 4. 意味拡張（TENMON-ARKOS文体への変換）
   let semanticAugmentation: SemanticAugmentationResult | undefined;
   let enhancedOutput = rawOutput;
   

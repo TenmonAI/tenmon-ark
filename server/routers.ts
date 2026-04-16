@@ -124,7 +124,7 @@ export const appRouter = router({
   lpQa: lpQaRouter,
   fileUpload: fileUploadRouter,
   lpQaV3: lpQaRouterV3, // v3.0: TENMON-ARK人格フルパワー版
-  lpQaV3_1: lpQaRouterV3_1, // v3.1: 天聞アーク国家OSレベルの完全実用化
+  lpQaV3_1: lpQaRouterV3_1, // v3.1: TENMON-ARK国家OSレベルの完全実用化
   lpQaV4: lpQaRouterV4, // v4.0: PERSONA UNITY vΩ - ChatOS Persona Engine統合版
   lpFieldTest: lpFieldTestRouter, // MEMORY UNITY vΦ Phase 8: LP実地テスト
   personaUnityTest: personaUnityTestRouter, // MEMORY UNITY vΦ Phase 10: Persona Unity Test vΩ
@@ -138,7 +138,7 @@ export const appRouter = router({
   lpQaSimple: lpQaRouterSimple, // LP Q&A Simple: シンプルなLP用Q&Aチャット
   lpQaStream: lpQaRouterStream, // LP Q&A Stream: ストリーミング対応のLP用Q&Aチャット
   animeBackground: animeBackgroundRouter, // Anime Background: Visual Synapse背景生成
-  atlasChat: atlasChatRouter, // Atlas Chat: 天聞アーク人格の脳
+  atlasChat: atlasChatRouter, // Atlas Chat: TENMON-ARK人格の脳
   kokuzo: kokuzoRouter, // Kokūzō Server: Eternal Structural Memory OS
   offlineSync: offlineSyncRouter, // Offline Sync: オフライン同期
   seedBundle: seedBundleRouter, // Seed Bundle: オフライン用 Seed Bundle

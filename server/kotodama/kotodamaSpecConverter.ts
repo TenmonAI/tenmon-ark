@@ -317,7 +317,7 @@ export const KOTODAMA_SPEC_MAPPING: Record<string, string> = {
   
   // TENMON-ARK独自の概念
   "天聞": "天聞", // Already correct
-  "天聞アーク": "天聞アーク", // Already correct
+  "TENMON-ARK": "TENMON-ARK", // Already correct
   "天聞ARK": "天聞ARK", // Already correct
   "TENMON-ARK": "TENMON-ARK", // Already correct
   "天津金木": "天津金木", // Already correct

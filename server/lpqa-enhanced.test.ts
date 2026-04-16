@@ -3,7 +3,7 @@
  * 
  * IFE v5.6: LP-QA（LPチャット）への完全統合
  * - semanticAugmentor + twinCoreEnhancer + fireWaterBalance + fiveElementFlow + reasoningLayer
- * - LPチャット訪問者が"天聞アーク人格そのもの"を体験できる
+ * - LPチャット訪問者が"TENMON-ARK人格そのもの"を体験できる
  * 
  * 10テスト以上実装
  */
@@ -37,7 +37,7 @@ describe('LP-QA IFE統合テスト', () => {
     expect(result.metadata.processingTime).toBeGreaterThan(0);
   });
 
-  it('テスト2: semanticAugmentorが天聞アーク人格を付与', async () => {
+  it('テスト2: semanticAugmentorがTENMON-ARK人格を付与', async () => {
     const input = 'Founder Editionの特徴は？';
     const result = await executeIFE(input, {
       userProfile: lpQaUserProfile,

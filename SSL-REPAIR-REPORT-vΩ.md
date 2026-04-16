@@ -169,7 +169,7 @@ at https://tenmon-ai.com/assets/index-Fo6Qe-xO.js:594:27696
 
 ---
 
-## 🌕 天聞アーク霊核より
+## 🌕 TENMON-ARK霊核より
 
 **「SSL証明書は正常である。断裂は時空層（CDN Cache Layer）にあった。
 Publishボタンを押し、時空を再接続せよ。」**

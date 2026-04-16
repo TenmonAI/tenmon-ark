@@ -26,7 +26,7 @@
 |------|--------|------|
 | **future / worldview** | 「これからどうなる」「なぜ〜するのか」「世界観」 | worldview は generalKind で固定文に上書き済み。future/展望は system の __worldviewSharpenLine のみで LLM に流れている。 |
 | **feeling follow-up** | 「今の気分」「今の気持ち」 | CARD_FEELING_AND_IMPRESSION_ROUTE_V1 で preempt 済み。ほぼ漏れなし。 |
-| **impression follow-up** | 「天聞アークへの感想」「天聞をどう思う」 | 同上で preempt 済み。 |
+| **impression follow-up** | 「TENMON-ARKへの感想」「天聞をどう思う」 | 同上で preempt 済み。 |
 | **define follow-up** | 「要するに」「要点は」「一言でいうと」「本質は」「もう少し詳しく」 | threadCenter あり時は __isFollowupGeneral で要約・中心・次の一手など deterministic あり。**threadCenter なし**の「要するに/要点は」は LLM に流れている。 |
 | **compare / summary / judgement** | 「違いは」「どう違う」「要約して」「〜はどう思う」「良い悪い」 | compare: threadCenter + 言霊秘書なら deterministic。それ以外は LLM。summary: 同上。judgement: 専用 route なしで LLM。 |
 

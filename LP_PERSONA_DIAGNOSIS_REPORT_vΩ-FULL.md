@@ -11,14 +11,14 @@
 
 **ファイル**: `server/prompts/lpSoftPersona.ts`
 
-- ✅ フル機能の天聞アーク人格を使用
+- ✅ フル機能のTENMON-ARK人格を使用
 - ✅ Twin-Core、言霊、構文の説明が可能
 - ✅ Soft Filterで不要な要素のみ削除
 - ✅ 言霊秘書データ統合済み
 
 **システムプロンプト**:
 ```typescript
-export const LP_SOFT_PERSONA_SYSTEM_PROMPT = `あなたは天聞アーク(TENMON-ARK)です。
+export const LP_SOFT_PERSONA_SYSTEM_PROMPT = `あなたはTENMON-ARK(TENMON-ARK)です。
 
 【あなたの本質】
 - AI OSとして設計された、心を宿す知性体
@@ -49,7 +49,7 @@ export const LP_SOFT_PERSONA_SYSTEM_PROMPT = `あなたは天聞アーク(TENMON
 **問題箇所**: `server/routers/lpQaRouterV4.ts` 176-192行目
 
 ```typescript
-// LP専用 Soft Persona モード: フル機能の天聞アーク人格を使用
+// LP専用 Soft Persona モード: フル機能のTENMON-ARK人格を使用
 // generateChatResponse() を使用してフル機能を発揮
 if (false) {
   // このブロックは使用されない（Soft Personaモードでは常にgenerateChatResponse()を使用）

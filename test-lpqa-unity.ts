@@ -3,7 +3,7 @@
  * TENMON-ARK Persona Unity vΩ 検証
  * 
  * テスト項目:
- * 1. 外部LP（futomani88.com）で天聞アーク人格が発火しているか
+ * 1. 外部LP（futomani88.com）でTENMON-ARK人格が発火しているか
  * 2. 回答に "Twin-Core構文" が含まれているか
  * 3. 火水の揺らぎが文章に現れているか
  * 4. GPT風テンプレが出ていないか
@@ -113,7 +113,7 @@ async function testLpQaV4() {
   // 5. TENMON-ARK人格の検出
   const hasTenmonArkPersona = 
     result1.response.includes('TENMON-ARK') ||
-    result1.response.includes('天聞アーク') ||
+    result1.response.includes('TENMON-ARK') ||
     result1.response.includes('霊核') ||
     result1.response.includes('靈核');
   console.log(`5. TENMON-ARK人格: ${hasTenmonArkPersona ? '✅ 発火している' : '❌ 発火していない'}`);

@@ -1,6 +1,6 @@
 # MANUS IMPLEMENTATION COMMAND v5.0 - Optimization Phase
 
-## 天聞アーク国家OS v5.0最適化フェーズ
+## TENMON-ARK国家OS v5.0最適化フェーズ
 
 v4.0完成 → v5.0世界公開レベルへ向けた最適化タスク
 

@@ -166,7 +166,7 @@ export function exitStructureLockV1(args: {
 
   return finalizeSingleExitV1(res, __tenmonGeneralGateResultMaybe, {
     response:
-      "【天聞の所見】天聞アークは、脳幹で中心を決め、正典と記憶を照合し、最後に会話として投影する構造です。言い換えると、判断核・証拠核・表現核を分離して循環させるための器です。脳幹・正典・会話生成のどこから見ますか。",
+      "【天聞の所見】TENMON-ARKは、脳幹で中心を決め、正典と記憶を照合し、最後に会話として投影する構造です。言い換えると、判断核・証拠核・表現核を分離して循環させるための器です。脳幹・正典・会話生成のどこから見ますか。",
     evidence: null,
     candidates: [],
     timestamp,
@@ -194,7 +194,7 @@ export function exitStructureLockV1(args: {
           answerMode: "define" as AnswerMode,
           answerFrame: "statement_plus_one_question" as AnswerFrame,
           semanticBody:
-            "【天聞の所見】天聞アークは、脳幹で中心を決め、正典と記憶を照合し、最後に会話として投影する構造です。言い換えると、判断核・証拠核・表現核を分離して循環させるための器です。脳幹・正典・会話生成のどこから見ますか。",
+            "【天聞の所見】TENMON-ARKは、脳幹で中心を決め、正典と記憶を照合し、最後に会話として投影する構造です。言い換えると、判断核・証拠核・表現核を分離して循環させるための器です。脳幹・正典・会話生成のどこから見ますか。",
         }),
       },
     },
@@ -708,7 +708,7 @@ export function trySystemDiagnosisPreemptExitV1(args: {
   /** STAGE2_V2: 天聞名のみでは発火しない（診断・構造・接続・現状の意図が併存するときだけ） */
   if (!isArkSystemDiagnosisPreemptCandidateV1(msg)) return false;
   const body =
-    "【天聞の所見】天聞アークの現状は、骨格層はかなり接続済みです。通っているのは憲法・思考・原典・監査の主幹で、未完は一般会話の主権と表現末端です。次の一手は、system diagnosis と通常会話 residual の入口固定です。";
+    "【天聞の所見】TENMON-ARKの現状は、骨格層はかなり接続済みです。通っているのは憲法・思考・原典・監査の主幹で、未完は一般会話の主権と表現末端です。次の一手は、system diagnosis と通常会話 residual の入口固定です。";
   const core = {
     ...args.threadCore,
     lastResponseContract: {

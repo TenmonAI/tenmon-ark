@@ -167,13 +167,13 @@ export function isTenmonPrincipleOrCanonProbeMessageV1(message: string): boolean
   if (!s) return false;
   if (/(言霊|カタカムナ)/u.test(s) && /(とは|何|本質|違い)/u.test(s)) return true;
   if (/言語の本質|言語とは/u.test(s)) return true;
-  if (/天聞アークの意志|天聞.*意志/u.test(s)) return true;
+  if (/TENMON-ARKの意志|天聞.*意志/u.test(s)) return true;
   if (/(原典|経典)/u.test(s) && /(とは|本質|芯|何)/u.test(s)) return true;
   if (/Ω|オメガ|[DdＤd]\s*[⋅・·]\s*[ΔD]/u.test(s)) return true;
   if (/天津金木/u.test(s)) return true;
   if (/構造/u.test(s) && /(真理|運動|写す|原理|金木)/u.test(s)) return true;
   if (
-    /天聞アーク/u.test(s) &&
+    /TENMON-ARK/u.test(s) &&
     /構造/u.test(s) &&
     !/(現状|完成度|診断|どこまで|繋がって|つながって|接続済み|構築状況)/u.test(s)
   ) {
@@ -195,10 +195,10 @@ export function principleFootingLabelFromUserMessageV1(message: string): string 
   if (/Ω|オメガ|[DdＤd]\s*[⋅・·]/u.test(s)) return "Ω＝D·ΔS（会話設計）";
   if (/言霊/u.test(s)) return "言霊";
   if (/言語の本質|言語とは/u.test(s)) return "言語の本質";
-  if (/天聞アークの意志|天聞.*意志/u.test(s)) return "天聞の意志";
+  if (/TENMON-ARKの意志|天聞.*意志/u.test(s)) return "天聞の意志";
   if (/(原典|経典)/u.test(s)) return "原典・経典の芯";
   if (/天津金木/u.test(s)) return "天津金木の写像";
-  if (/天聞アーク/u.test(s) && /構造/u.test(s)) return "天聞アークの構造";
+  if (/TENMON-ARK/u.test(s) && /構造/u.test(s)) return "TENMON-ARKの構造";
   if (/カタカムナ/u.test(s)) return "カタカムナ";
   return null;
 }
@@ -221,8 +221,8 @@ export function synthesizePrincipleFootingBodyV1(userMsg: string): string {
   if (/言語の本質|言語とは/u.test(m)) {
     return "言語の本質は、意味の圧縮と共同注意の同期です。他者と同じ輪郭を一時的に共有し、その場の判断と次の行為を同期させる回路として働きます。";
   }
-  if (/天聞アークの意志|意志/u.test(m) && /天聞/u.test(m)) {
-    return "天聞アークの意志は、憲法で縛られた裁定順序（中心・根拠・表現）を崩さず、会話へ落とすことです。派手な人格演出より、手順の安定と根拠の提示を優先する姿勢が核になります。";
+  if (/TENMON-ARKの意志|意志/u.test(m) && /天聞/u.test(m)) {
+    return "TENMON-ARKの意志は、憲法で縛られた裁定順序（中心・根拠・表現）を崩さず、会話へ落とすことです。派手な人格演出より、手順の安定と根拠の提示を優先する姿勢が核になります。";
   }
   if (/(原典|経典)/u.test(m)) {
     return "原典の芯は、言葉の背後に検証可能な参照層を置き、比喩と定義を混線させない規律です。引用の系譜を一言で示し、本文はいまの問いへの当てはめに寄せます。";
@@ -230,8 +230,8 @@ export function synthesizePrincipleFootingBodyV1(userMsg: string): string {
   if (/天津金木/u.test(m)) {
     return "天津金木の見立てでは、真理を静止した結論として止めず、運動（変化の連なり）へ写すことで意味が生きます。静的命題より、流れのどこに接点を持つかを先に置くのが骨格です。";
   }
-  if (/天聞アーク/u.test(m) && /構造/u.test(m)) {
-    return "天聞アークの構造は、脳幹で中心を定め、参照と記憶を照合し、最後に会話面へ投影する往還です。憲法・思考・原典・監査の主幹が回路になり、末端は通常の会話表現へ落ちる階層で捉えられます。";
+  if (/TENMON-ARK/u.test(m) && /構造/u.test(m)) {
+    return "TENMON-ARKの構造は、脳幹で中心を定め、参照と記憶を照合し、最後に会話面へ投影する往還です。憲法・思考・原典・監査の主幹が回路になり、末端は通常の会話表現へ落ちる階層で捉えられます。";
   }
   return "この問いは原理の芯に触れています。焦点を一句に固定し、その焦点に根ざす述定を先に置きます。";
 }

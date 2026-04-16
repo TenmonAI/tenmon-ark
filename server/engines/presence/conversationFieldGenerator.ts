@@ -2,7 +2,7 @@
  * Conversation Field Generator
  * 会話空間フィールド生成エンジン
  * 
- * 天聞アークとの会話を"場"として記憶する。
+ * TENMON-ARKとの会話を"場"として記憶する。
  */
 
 import type { EmotionalPresence } from "./emotionalPresenceDetector";

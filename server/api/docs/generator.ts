@@ -141,7 +141,7 @@ export function scanApiRoutes(): ApiRoute[] {
   routes.push({
     method: 'POST',
     path: '/api/trpc/atlasChat.chat',
-    description: 'Atlas Chat API - 天聞アーク人格の脳によるチャット応答生成',
+    description: 'Atlas Chat API - TENMON-ARK人格の脳によるチャット応答生成',
     category: 'atlasChat',
     input: {
       type: 'json',

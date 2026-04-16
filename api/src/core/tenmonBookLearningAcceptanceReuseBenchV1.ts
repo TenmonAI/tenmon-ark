@@ -48,7 +48,7 @@ export const TENMON_BOOK_LEARNING_BENCH_PROBES_V1: readonly TenmonBookLearningBe
   {
     id: "bench_tenmon_reintegration",
     category: "tenmon_reintegration",
-    message: "天聞アークでカタカムナを再統合するときの位置づけを一文で",
+    message: "TENMON-ARKでカタカムナを再統合するときの位置づけを一文で",
     routeReason: "KATAKAMUNA_CANON_ROUTE_V1",
     centerKey: "katakamuna",
   },

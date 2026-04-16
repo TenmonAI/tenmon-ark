@@ -100,7 +100,7 @@
 ### API エンドポイント（将来実装予定）
 
 **注意**: 以下のエンドポイントは Cursor が MegaScheduler を動かすための内部エンドポイントです。
-天聞アーク側では UI 状態可視化のみを行います。
+TENMON-ARK側では UI 状態可視化のみを行います。
 
 - `GET /api/scheduler/tasks`: タスク一覧取得
 - `POST /api/scheduler/next`: 次のタスク開始

@@ -102,12 +102,12 @@ sudo systemctl reload nginx
 # 1. Node 直接アクセス
 curl -i -X POST http://127.0.0.1:3000/api/chat \
   -H "Content-Type: application/json" \
-  -d '{"message":"こんにちは、天聞アーク"}'
+  -d '{"message":"こんにちは、TENMON-ARK"}'
 
 # 2. HTTPS 経由アクセス
 curl -i -X POST https://tenmon-ark.com/api/chat \
   -H "Content-Type: application/json" \
-  -d '{"message":"こんにちは、天聞アーク"}'
+  -d '{"message":"こんにちは、TENMON-ARK"}'
 ```
 
 ### 期待される結果
@@ -126,7 +126,7 @@ server: nginx/1.18.0 (Ubuntu)
 content-type: application/json; charset=utf-8
 content-length: 85
 
-{"response":"Received: こんにちは、天聞アーク","timestamp":"2025-12-16T..."}
+{"response":"Received: こんにちは、TENMON-ARK","timestamp":"2025-12-16T..."}
 ```
 
 ## 🔍 トラブルシューティング

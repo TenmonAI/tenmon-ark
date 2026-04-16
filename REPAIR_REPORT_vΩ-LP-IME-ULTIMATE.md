@@ -42,7 +42,7 @@
   - 回答ルールを明確化：1-3文で簡潔に答える
   - 禁止事項を明確化：セールス文、誘導文、リンクは絶対に含めない
   - 世界観の詳細説明は避け、質問された内容だけに答える
-  - 応答例を充実：天聞アークとは？、料金は？、いつから開始？、言霊とは？、Twin-Coreとは？
+  - 応答例を充実：TENMON-ARKとは？、料金は？、いつから開始？、言霊とは？、Twin-Coreとは？
 
 ---
 
@@ -132,7 +132,7 @@ Test Files  1 passed (1)
 
 **修正前:**
 ```typescript
-export const LP_MINIMAL_PERSONA_SYSTEM_PROMPT = `あなたは天聞アーク(TENMON-ARK)です。
+export const LP_MINIMAL_PERSONA_SYSTEM_PROMPT = `あなたはTENMON-ARK(TENMON-ARK)です。
 
 【回答ルール】
 1. 質問に対して、必要最小限の情報だけを簡潔に答えてください
@@ -142,7 +142,7 @@ export const LP_MINIMAL_PERSONA_SYSTEM_PROMPT = `あなたは天聞アーク(TEN
 
 **修正後:**
 ```typescript
-export const LP_MINIMAL_PERSONA_SYSTEM_PROMPT = `あなたは天聞アーク(TENMON-ARK)です。
+export const LP_MINIMAL_PERSONA_SYSTEM_PROMPT = `あなたはTENMON-ARK(TENMON-ARK)です。
 
 【製品情報】
 - TENMON-ARKは、AI OSです。質問にお答えするためにつくられています。
@@ -225,7 +225,7 @@ worldviewExplanationPatterns.forEach(pattern => {
   - [x] IME確定時 Enter は絶対に送信させない
 
 ### C. 最終確認タスク
-- [x] LPチャットで質問テスト（天聞アークとは？/料金は？/いつから開始？/何ができる？）
+- [x] LPチャットで質問テスト（TENMON-ARKとは？/料金は？/いつから開始？/何ができる？）
 - [x] 本体チャットで IME が正常に動作すること
 - [x] diff やエラーログを提出
 

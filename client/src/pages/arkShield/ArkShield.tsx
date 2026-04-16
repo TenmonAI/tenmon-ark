@@ -124,7 +124,7 @@ export default function ArkShield() {
         <CardContent>
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              天聞アークは、検知された脅威に対して靈核倫理に基づいた中和戦略を自動生成します。
+              TENMON-ARKは、検知された脅威に対して靈核倫理に基づいた中和戦略を自動生成します。
               すべての戦略は、人類の安全と平和を最優先に設計されています。
             </p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

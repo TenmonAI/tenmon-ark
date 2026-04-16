@@ -198,7 +198,7 @@ export function SettingsPanel({ open, onClose, onImported }: SettingsPanelProps)
             color: "var(--gpt-text-secondary, #6b7280)",
             lineHeight: 1.7,
           }}>
-            天聞アークへの招待リンクを生成します。リンクは7日間有効です。
+            TENMON-ARKへの招待リンクを生成します。リンクは7日間有効です。
           </p>
 
           <button

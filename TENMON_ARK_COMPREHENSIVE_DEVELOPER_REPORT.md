@@ -27,7 +27,7 @@
                           ↓
 ┌─────────────────────────────────────────────────────────┐
 │ 第3層: 推論・応答層（Reasoning & Response Layer）      │
-│ - Atlas Chat Router: 天聞アーク人格の脳                │
+│ - Atlas Chat Router: TENMON-ARK人格の脳                │
 │ - Chat Streaming V3: GPT同等ストリーミング             │
 │ - Activation-Centering Hybrid Engine                   │
 │ - Soul Sync: 魂特性分析・人格同期                      │
@@ -89,7 +89,7 @@
 
 **推論エンジン**:
 - `server/twinCoreEngine.ts`: Twin-Core統合推論
-- `server/chat/atlasChatRouter.ts`: 天聞アーク人格の脳
+- `server/chat/atlasChatRouter.ts`: TENMON-ARK人格の脳
 - `server/chat/chatStreamingV3Engine.ts`: ストリーミング応答
 - `server/chat/chatAI.ts`: チャット応答生成
 

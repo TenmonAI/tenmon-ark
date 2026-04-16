@@ -2,7 +2,7 @@
 
 ## 目的
 
-会話完成後に天聞アークへ **新機能を自己構築** させるため、**要求 → 仕様 → カード分解 → 依存順キュー → 検証 → デプロイ可否** までを automation でつなぐ Feature Autobuild OS。
+会話完成後にTENMON-ARKへ **新機能を自己構築** させるため、**要求 → 仕様 → カード分解 → 依存順キュー → 検証 → デプロイ可否** までを automation でつなぐ Feature Autobuild OS。
 
 ## 非対象（DO NOT TOUCH）
 

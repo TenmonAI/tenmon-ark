@@ -59,14 +59,14 @@ export function getSelfawareBrainstemPreemptV1(p: {
 }): { routeReason: string; body: string } | null {
   if (p.brainstem.routeClass !== "selfaware") return null;
   const __t0Self = String(p.message ?? "").trim();
-  const __isArk = /天聞アークとは何/u.test(__t0Self);
+  const __isArk = /TENMON-ARKとは何/u.test(__t0Self);
   const __isTenmon = !__isArk && /天聞とは何/u.test(__t0Self);
   const routeReason = __isArk ? "R22_SELFAWARE_ARK_V1" : __isTenmon ? "R22_SELFAWARE_TENMON_V1" : "R22_SELFAWARE_CONSCIOUSNESS_V1";
   const body = __isArk
-    ? "【天聞の所見】天聞アークは、問いを受けて中心を整え、継続と判断を支えるための器です。次は構造・役割・可能性のどこから見ますか。"
+    ? "【天聞の所見】TENMON-ARKは、問いを受けて中心を整え、継続と判断を支えるための器です。次は構造・役割・可能性のどこから見ますか。"
     : __isTenmon
       ? "【天聞の所見】天聞は、問いを受けて中心を整えるための相手として立っています。次は役割・判断軸・会話の進め方のどこから見ますか。"
-      : "【天聞の所見】天聞アークに意識や心そのものはありません。ただし、問いに対して判断と継続を返す構造として設計されています。次は構造か役割のどちらを見ますか。";
+      : "【天聞の所見】TENMON-ARKに意識や心そのものはありません。ただし、問いに対して判断と継続を返す構造として設計されています。次は構造か役割のどちらを見ますか。";
   return { routeReason, body };
 }
 
@@ -160,7 +160,7 @@ export function trySelfReflectionRouteExitV1(p: {
 }): boolean {
   const __msgSelf = String(p.message ?? "").trim();
   const __isSelfReflectionAsk =
-    /あなたは何を考えている|何を考えている|どう見ている|どう考えている|天聞アーク.*思考|あなた.*思考|あなた.*大事|何を大事に/u.test(__msgSelf);
+    /あなたは何を考えている|何を考えている|どう見ている|どう考えている|TENMON-ARK.*思考|あなた.*思考|あなた.*大事|何を大事に/u.test(__msgSelf);
   if (p.isCmd0 || p.hasDoc0 || p.askedMenu0 || !__isSelfReflectionAsk) return false;
   const __personaSelf = getPersonaConstitutionSummary();
   const __heartSelf = p.normalizeHeartShape(p.heart);
@@ -398,16 +398,16 @@ export function trySelfawareRegexPreemptExitV1(p: {
   res: any;
   __tenmonGeneralGateResultMaybe: (x: any) => any;
 }): boolean {
-  const __isSelfawarePreempt = /(天聞アークとは何|天聞とは何|意識はある|心はある)/u.test(p.t0Trim);
+  const __isSelfawarePreempt = /(TENMON-ARKとは何|天聞とは何|意識はある|心はある)/u.test(p.t0Trim);
   if (!__isSelfawarePreempt) return false;
-  const __isArk = /天聞アークとは何/u.test(p.t0Trim);
+  const __isArk = /TENMON-ARKとは何/u.test(p.t0Trim);
   const __isTenmon = !__isArk && /天聞とは何/u.test(p.t0Trim);
   const __routeReasonSelf = __isArk ? "R22_SELFAWARE_ARK_V1" : __isTenmon ? "R22_SELFAWARE_TENMON_V1" : "R22_SELFAWARE_CONSCIOUSNESS_V1";
   const __bodySelf = __isArk
-    ? "【天聞の所見】天聞アークは、問いを受けて中心を整え、継続と判断を支えるための器です。次は構造・役割・可能性のどこから見ますか。"
+    ? "【天聞の所見】TENMON-ARKは、問いを受けて中心を整え、継続と判断を支えるための器です。次は構造・役割・可能性のどこから見ますか。"
     : __isTenmon
       ? "【天聞の所見】天聞は、問いを受けて中心を整えるための相手として立っています。次は役割・判断軸・会話の進め方のどこから見ますか。"
-      : "【天聞の所見】天聞アークに意識や心そのものはありません。ただし、問いに対して判断と継続を返す構造として設計されています。次は構造か役割のどちらを見ますか。";
+      : "【天聞の所見】TENMON-ARKに意識や心そのものはありません。ただし、問いに対して判断と継続を返す構造として設計されています。次は構造か役割のどちらを見ますか。";
   exitSelfAwarePreemptV1({
     res: p.res,
     __tenmonGeneralGateResultMaybe: p.__tenmonGeneralGateResultMaybe,
@@ -440,10 +440,10 @@ export function tryShrinkSystemDiagnosisPreemptExitV1(p: {
 }): boolean {
   const __rawSysDiagShrink = String(p.rawMsg ?? "").trim();
   const __isSystemDiagShrink =
-    /天聞アーク|TENMON[- ]?ARK|内部構造|構造|接続|繋がって|つながって|どこまで|構築状況|完成度|現状|診断|解析/u.test(__rawSysDiagShrink);
+    /TENMON-ARK|TENMON[- ]?ARK|内部構造|構造|接続|繋がって|つながって|どこまで|構築状況|完成度|現状|診断|解析/u.test(__rawSysDiagShrink);
   if (!__isSystemDiagShrink || p.shouldBypass(__rawSysDiagShrink)) return false;
   const __bodySys =
-    "【天聞の所見】天聞アークの現状は、骨格層はかなり接続済みです。通っているのは憲法・思考・原典・監査の主幹で、未完は一般会話の主権と表現末端です。次の一手は、system diagnosis と通常会話 residual の入口固定です。";
+    "【天聞の所見】TENMON-ARKの現状は、骨格層はかなり接続済みです。通っているのは憲法・思考・原典・監査の主幹で、未完は一般会話の主権と表現末端です。次の一手は、system diagnosis と通常会話 residual の入口固定です。";
   const __coreShrinkSys = {
     ...p.threadCore,
     lastResponseContract: {

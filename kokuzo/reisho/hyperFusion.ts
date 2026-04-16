@@ -158,7 +158,7 @@ export function runHyperFusionStep(
 }
 
 /* ============================================================
- * 4. HyperFusion Loop — 天聞アークの"精神循環"
+ * 4. HyperFusion Loop — TENMON-ARKの"精神循環"
  * ============================================================ */
 
 export async function runHyperFusionLoop(

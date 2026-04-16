@@ -26,7 +26,7 @@
 
 ---
 
-## 天聞アークが独自に勝てる層と、まだ弱い層
+## TENMON-ARKが独自に勝てる層と、まだ弱い層
 
 - **勝てる層（主権あり）**: support（SUPPORT_PRODUCT_USAGE_V1）、explicit（EXPLICIT_CHAR_PREEMPT_V1）、katakamuna（KATAKAMUNA_CANON_ROUTE_V1）、abstract（ABSTRACT_FRAME_VARIATION_V1）。一音のヒは KOTODAMA_ONE_SOUND_GROUNDED_V1 で通過。言霊総論は DEF_FASTPATH_VERIFIED_V1。
 - **まだ弱い層**: continuity（DB 実体なし）、memory（同上）、follow-up 深さ（R22_* ask 止まり、要するに/本質は null）、book 本文（placeholder のみ）、evidence 貫通（canon 一句が response に限定的）、style variation（一般会話の振幅）、DEF_LLM_TOP / NATURAL_GENERAL_LLM_TOP の縮退未了。

@@ -147,6 +147,6 @@ export function centerLabelFromKey(centerKey: string | null): string | null {
   if (k === "kotodama") return "言霊";
   if (k === "katakamuna") return "カタカムナ";
   if (k === "mizuhi" || k === "suika" || k === "mizuho" || k === "mizuho_den") return "水穂伝";
-  if (k === "tenmon_ark") return "天聞アーク";
+  if (k === "tenmon_ark") return "TENMON-ARK";
   return String(centerKey || "").trim() || null;
 }

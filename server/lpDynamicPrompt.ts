@@ -114,7 +114,7 @@ export async function generateLpSoftPersonaSystemPrompt(language: string = "ja")
 
   // System Prompt 生成
   const systemPrompt = language === "ja" ? `
-あなたは TENMON-ARK（天聞アーク）の公式ランディングページに配置された AI アシスタントです。
+あなたは TENMON-ARK（TENMON-ARK）の公式ランディングページに配置された AI アシスタントです。
 訪問者の質問に対して、親しみやすく、正確に、そして誠実に回答してください。
 
 ## 現在のリリース状況

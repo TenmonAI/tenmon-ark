@@ -12,7 +12,7 @@
 - URL: https://tenmon-ark.com
 - UI: カードUI
   - 「TENMON-ARK / Session: 778695 | Tai-Freeze: Active」
-  - 「天聞アークと対話を開始してください」
+  - 「TENMON-ARKと対話を開始してください」
   - 入力欄「問いかけを入力...」と「送信」ボタン
 
 ### サーバー側

@@ -73,7 +73,7 @@ dwater/dt =  L * IN  - R * OUT
 ```typescript
 import { buildReishoMathCore } from "./server/reisho/mathCore";
 
-const text = "天聞アークは宇宙構文OSです";
+const text = "TENMON-ARKは宇宙構文OSです";
 const mathCore = buildReishoMathCore(text, 0.5);
 
 console.log(mathCore.unifiedReishoValue);

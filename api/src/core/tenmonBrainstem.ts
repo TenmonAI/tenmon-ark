@@ -84,7 +84,7 @@ const RE_JUDGEMENT =
 const RE_FEELING = /(気分|どんな気分|どう感じる|感情)/u;
 const RE_IMPRESSION = /(感想|印象)/u;
 const RE_SELFAWARE =
-  /(天聞アークとは何|天聞とは何|天聞アークに意識|天聞に意識|意識はある|心はある|意識はないの|心はないの|意識と心)/u;
+  /(TENMON-ARKとは何|天聞とは何|TENMON-ARKに意識|天聞に意識|意識はある|心はある|意識はないの|心はないの|意識と心)/u;
 /** STAGE2_ROUTE_AUTHORITY_V2: 経題＋言霊秘書・カタカムナ解系を原典／source pack 主命題として define / diagnosis より先に拾う */
 const RE_SCRIPTURE_CORE_PROBE =
   /(法華経|涅槃経|般若心経|華厳経|金剛経|阿弥陀経|無量義経|言[霊灵靈]秘書|いろは言[霊灵靈]解|イロハ言[霊灵靈]解|カタカムナ言[霊灵靈]解|水穂伝)/u;

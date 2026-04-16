@@ -1,6 +1,6 @@
 # TENMON-NODE
 
-天聞アークの端末側プロセス（MVP）
+TENMON-ARKの端末側プロセス（MVP）
 
 ## 目的
 

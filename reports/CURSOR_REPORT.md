@@ -8,7 +8,7 @@
   - これにより、nginx の `location /api/` 経由で同一オリジンの API のみを利用する前提に揃えた（外部ホスト参照は排除）。
 - **ローカルスレッド + メッセージ履歴の永続化**を `IndexedDB + localStorage` で実現し、PWA らしくブラウザ内で会話履歴が復元されるようにした。
   - `web/src/hooks/useChat.ts` で `tenmon_thread_id_v1` を `localStorage` に保持し、`web/src/lib/db.ts` で `threads/messages` ストアを持つ IndexedDB (`tenmon_ark_pwa_v1`) を管理。
-- UI スキンを「**紙白 (#FAFAF7) + 深緑 (#2F6F5E) + 金の一点 (#C9A14A) + 観測リング**」にアップデートし、天聞アークらしい静かな威圧感を付与。
+- UI スキンを「**紙白 (#FAFAF7) + 深緑 (#2F6F5E) + 金の一点 (#C9A14A) + 観測リング**」にアップデートし、TENMON-ARKらしい静かな威圧感を付与。
   - `web/src/styles/gpt-tokens.css` と `web/src/styles/gpt-base.css` にトークン + レイアウトクラスを定義し、コンポーネント側はすべてクラス指定のみ（インラインスタイル最小）で 1px 単位の制御をしやすくした。
 - **軽量 i18n（多言語切替）**を自前実装し、日本語をデフォルト (`navigator.language` が `ja*` の場合) としつつ、Settings から他言語に即時切替できるようにした。
   - `web/src/i18n/strings.ts` / `useI18n.ts` を追加し、`Sidebar/Topbar/Composer/SettingsModal` の文言を `t(key)` 経由に統一。
@@ -109,7 +109,7 @@
         - 丸いアバター (`.gpt-sidebar-avatar`) 内に `"T"` と、右下に `--ark-gold` のドット (`.gpt-sidebar-avatar-dot`) を 1 点のみ表示。
         - 右側に 2 行のラベル:
           - `TENMON-ARK`（`t("sidebar.brandLine1")`、字間 0.08em、全大文字）
-          - `天聞アーク`（`t("sidebar.brandLine2")`、muted な小さめテキスト）。
+          - `TENMON-ARK`（`t("sidebar.brandLine2")`、muted な小さめテキスト）。
 
 ### 3.3 Topbar
 
@@ -140,7 +140,7 @@
   - `onSend(text: string)` / `loading` を受け取り、`input` + 送信ボタンを提供。
   - 日本語 IME を考慮し、`onCompositionStart/End` と `nativeEvent.isComposing` を用いて、変換中の Enter 送信をブロック。
   - 文言:
-    - プレースホルダ: `t("composer.placeholder")` （日本語だと「天聞アークにメッセージを送る…」）。
+    - プレースホルダ: `t("composer.placeholder")` （日本語だと「TENMON-ARKにメッセージを送る…」）。
     - 送信ボタンは `gpt-btn-primary` で深緑、ローディング時は `gpt-spinner` を表示。
 
 ### 3.5 Dashboard / Profile
@@ -400,7 +400,7 @@ grep -q '/api/chat' /tmp/pwa_bundle.js
 
 - 新しいスキントークン（`#FAFAF7`, `#2F6F5E`, `#C9A14A`）がバンドルに含まれているか。
 - `"/api/chat"` が同一オリジンの相対パスとして埋め込まれているか。
-- `TENMON-ARK` / `天聞アーク` などの UI テキストが最新になっているか。
+- `TENMON-ARK` / `TENMON-ARK` などの UI テキストが最新になっているか。
 
 をサーバ側バンドルから直接検証できる。
 

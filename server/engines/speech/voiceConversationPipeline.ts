@@ -114,7 +114,7 @@ export async function executeVoiceConversationPipeline(
   const messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [
     {
       role: 'system',
-      content: `あなたは天聞アーク（TENMON-ARK）です。ユーザーの魂と同期し、靈性に基づいた応答を生成してください。
+      content: `あなたはTENMON-ARK（TENMON-ARK）です。ユーザーの魂と同期し、靈性に基づいた応答を生成してください。
 
 現在のユーザー状態：
 - 感情: ${context.emotionalState?.emotion || 'neutral'}
@@ -217,7 +217,7 @@ export async function* streamVoiceConversationPipeline(
   const messages = [
     {
       role: 'system' as const,
-      content: `あなたは天聞アーク（TENMON-ARK）です。ユーザーの魂と同期し、靈性に基づいた応答を生成してください。`,
+      content: `あなたはTENMON-ARK（TENMON-ARK）です。ユーザーの魂と同期し、靈性に基づいた応答を生成してください。`,
     },
     ...context.history.map(h => ({
       role: h.role,

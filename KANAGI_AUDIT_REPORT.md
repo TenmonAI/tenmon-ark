@@ -541,7 +541,7 @@ git diff --name-only origin/main...HEAD
 - `api/src/routes/tenmon.ts:46-54`: リクエスト前に isSafeMode をチェックしている
 - `api/src/core/secureTrace.ts:21-28`: trace に tai_hash, integrity_verified, violation_flags を付与している
 
-### 8.6 天聞アークの思考中枢は「固まった」と言える状態か
+### 8.6 TENMON-ARKの思考中枢は「固まった」と言える状態か
 
 **判定: ほぼYES（一部未実装あり）**
 

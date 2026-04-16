@@ -1436,7 +1436,7 @@ export default function DashboardV3() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Code className="w-5 h-5" />
-                カスタム天聞アーク
+                カスタムTENMON-ARK
               </CardTitle>
               <CardDescription>独自のPersona・知識ベース作成</CardDescription>
             </CardHeader>

@@ -116,7 +116,7 @@ export default function DashboardV3() {
               />
               <Button variant="outline" onClick={() => setLocation("/chat")}>
                 <MessageSquare className="w-4 h-4 mr-2" />
-                天聞アークに話しかける
+                TENMON-ARKに話しかける
               </Button>
             </div>
           </div>
@@ -311,7 +311,7 @@ export default function DashboardV3() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <MessageSquare className="w-5 h-5" />
-                天聞アークに話しかける
+                TENMON-ARKに話しかける
               </CardTitle>
               <CardDescription>
                 Atlas Chat × Twin-Core × 言灵 × 天津金木エンジン搭載
@@ -408,7 +408,7 @@ export default function DashboardV3() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Code className="w-5 h-5" />
-                カスタム天聞アーク
+                カスタムTENMON-ARK
               </CardTitle>
               <CardDescription>独自のPersona・知識ベース作成</CardDescription>
             </CardHeader>

@@ -71,7 +71,7 @@ export function naturalRouter(input: { message: string; mode: string }): { handl
   if (typ === "greeting") {
     return {
       handled: false,
-      responseText: ja ? "おはようございます。天聞アークです。" : "Hello. How can I help you today?",
+      responseText: ja ? "おはようございます。TENMON-ARKです。" : "Hello. How can I help you today?",
     };
   }
 

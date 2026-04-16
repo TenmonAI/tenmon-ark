@@ -5,7 +5,7 @@ export async function polishText(
 
   const prompt = `
 次の文章を
-天聞アークらしい
+TENMON-ARKらしい
 静かで美しい日本語に整えてください。
 140文字以内。
 

@@ -1,7 +1,7 @@
 /**
  * MANUS-UI-05: 応答状態インジケータ（共通化済み）
  *
- * 主ラベル: 常に「天聞アーク思考中」
+ * 主ラベル: 常に「TENMON-ARK 思考中」
  * 副文言: mode に応じて自然に切り替わる
  *
  * mode:
@@ -50,7 +50,7 @@ export function TypingIndicator({ mode = "normal" }: Props) {
   return (
     <div className={`gpt-typing-wrap ${mode === "deep" ? "gpt-typing-deep" : ""}`}>
       <div className="gpt-typing-content">
-        <span className="gpt-typing-main">天聞アーク思考中</span>
+        <span className="gpt-typing-main">TENMON-ARK 思考中</span>
         <span className="gpt-typing-sub">
           {subs[phase % subs.length]}
         </span>

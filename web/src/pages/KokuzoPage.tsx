@@ -182,7 +182,7 @@ export function KokuzoPage() {
           lineHeight: 1.8,
           marginBottom: 24,
         }}>
-          天聞アークの「知恵の器」です。書籍や資料をお預けいただくと、
+          TENMON-ARKの「知恵の器」です。書籍や資料をお預けいただくと、
           内容を読み解き、会話の中で活かせる「知恵の種」として保管します。
         </p>
 
@@ -392,7 +392,7 @@ export function KokuzoPage() {
           paddingTop: 16,
           borderTop: `1px solid ${C.border}`,
         }}>
-          虚空蔵（KOKŪZŌ）は、天聞アークの記憶と知恵を司る仕組みです。
+          虚空蔵（KOKŪZŌ）は、TENMON-ARKの記憶と知恵を司る仕組みです。
           お預けいただいた資料は端末内に保管され、会話の文脈に応じて自然に活用されます。
           データの取り扱いについてご不明な点がありましたら、改善要望からお知らせください。
         </div>

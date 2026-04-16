@@ -5,7 +5,7 @@
  * - 分析タスク → Claude
  * - 創造タスク → GPT
  * - 精密タスク → Gemini
- * - 霊核タスク → TACore（天聞アーク内部構文）
+ * - 霊核タスク → TACore（TENMON-ARK内部構文）
  * 
  * 目的: 各モデルの強みを活かし、最適な出力を実現
  */
@@ -37,7 +37,7 @@ export type ModelType =
   | 'claude-3-haiku'
   | 'gemini-pro'
   | 'gemini-flash'
-  | 'ta-core'; // 天聞アーク内部構文エンジン
+  | 'ta-core'; // TENMON-ARK内部構文エンジン
 
 /**
  * ルーティング結果
@@ -176,7 +176,7 @@ export function routeToModel(
       
     case 'spirit-core':
       selectedModel = 'ta-core';
-      reason = 'TACore（天聞アーク内部構文エンジン）は霊核タスクに最適です。Twin-Core構文と火水循環に基づいた深い世界観を持ちます。';
+      reason = 'TACore（TENMON-ARK内部構文エンジン）は霊核タスクに最適です。Twin-Core構文と火水循環に基づいた深い世界観を持ちます。';
       fallbackModels = ['gpt-4o', 'claude-3.5-sonnet'];
       break;
       
@@ -224,7 +224,7 @@ export function routeToModel(
     if (depth.level === 'cosmic' || depth.level === 'deep') {
       if (taskType !== 'spirit-core') {
         selectedModel = 'ta-core';
-        reason = `深度が${depth.level}のため、TACore（天聞アーク内部構文エンジン）を使用します。`;
+        reason = `深度が${depth.level}のため、TACore（TENMON-ARK内部構文エンジン）を使用します。`;
       }
     }
     
@@ -232,7 +232,7 @@ export function routeToModel(
     if (fireWater.balance !== 'balanced' && Math.abs(fireWater.fireScore - fireWater.waterScore) > 50) {
       if (taskType !== 'spirit-core') {
         selectedModel = 'ta-core';
-        reason = `火水バランスが極端なため、TACore（天聞アーク内部構文エンジン）を使用します。`;
+        reason = `火水バランスが極端なため、TACore（TENMON-ARK内部構文エンジン）を使用します。`;
       }
     }
   }
@@ -360,7 +360,7 @@ export async function executeMultiModelRouter(
   let output: string;
   
   if (routing.selectedModel === 'ta-core') {
-    // TACore（天聞アーク内部構文エンジン）で実行
+    // TACore（TENMON-ARK内部構文エンジン）で実行
     output = await executeTACore(prompt, preprocessResult);
   } else {
     // 外部LLMで実行
@@ -380,7 +380,7 @@ export async function executeMultiModelRouter(
 }
 
 /**
- * TACore（天聞アーク内部構文エンジン）で実行
+ * TACore（TENMON-ARK内部構文エンジン）で実行
  */
 async function executeTACore(
   prompt: string,
@@ -390,7 +390,7 @@ async function executeTACore(
   // 現在は簡易実装（GPTを使用）
   
   const taCoreSystemPrompt = `
-あなたは天聞アーク（TENMON-ARK）の内部構文エンジン「TACore」です。
+あなたはTENMON-ARK（TENMON-ARK）の内部構文エンジン「TACore」です。
 
 以下の原理に基づいて応答してください：
 - Twin-Core構文（火水の調和）

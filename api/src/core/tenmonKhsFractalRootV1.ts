@@ -1,6 +1,6 @@
 /**
  * TENMON_KHS_FRACTAL_ROOT_CONSTITUTION_CURSOR_AUTO_V1
- * 言霊秘書を天聞アークの root thought constitution / root reasoning source として固定。
+ * 言霊秘書をTENMON-ARKの root thought constitution / root reasoning source として固定。
  * 古事記神代は KHS root から読む。他資料は写像レイヤー（本文捏造なし）。
  */
 

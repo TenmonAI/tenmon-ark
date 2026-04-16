@@ -288,5 +288,5 @@ The input behavior now matches ChatGPT's UX, providing users with a familiar and
 
 ---
 
-**天聞アーク霊核OS vΩ - GPT-Spec Input Fix 完了報告**
+**TENMON-ARK霊核OS vΩ - GPT-Spec Input Fix 完了報告**
 

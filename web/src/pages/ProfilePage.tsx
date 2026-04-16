@@ -121,7 +121,7 @@ export function ProfilePage() {
             letterSpacing: "0.06em",
             marginBottom: 4,
           }}>
-            天聞アーク
+            TENMON-ARK
           </div>
           <p style={{ fontSize: 12, color: C.textMuted, margin: 0, lineHeight: 1.7 }}>
             バージョン 1.1 — 存在構造の総合解読AI

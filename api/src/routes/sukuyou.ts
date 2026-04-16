@@ -232,7 +232,7 @@ router.get("/nakshatras", async (_req: Request, res: Response) => {
 });
 
 // ============================================
-// POST /api/sukuyou/report — 天聞アーク統合鑑定レポート
+// POST /api/sukuyou/report — TENMON-ARK統合鑑定レポート
 // ============================================
 router.post("/report", async (req: Request, res: Response) => {
   try {
@@ -280,7 +280,7 @@ router.post("/report", async (req: Request, res: Response) => {
 
 /**
  * POST /api/sukuyou/guidance
- * 天聞アーク御神託統合パイプライン
+ * TENMON-ARK御神託統合パイプライン
  * 悩み聴取→宿曜解析→天津金木反転→言霊処方→御神託
  */
 router.post("/guidance", async (req: Request, res: Response) => {

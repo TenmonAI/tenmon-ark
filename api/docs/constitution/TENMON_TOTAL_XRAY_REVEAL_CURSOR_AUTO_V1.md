@@ -2,7 +2,7 @@
 
 ## 目的
 
-天聞アーク（TENMON-ARK）の **会話・学習・自己改善・自己修復・虚空蔵・NAS/backup・automation・認知内部表現・憲法ガバナンス・remote admin・feature/cursor autobuild** などを横断し、**実装 / 接続 / 実行 / 成果物** を一束で可視化する読み取り専用レントゲン監査。
+TENMON-ARK（TENMON-ARK）の **会話・学習・自己改善・自己修復・虚空蔵・NAS/backup・automation・認知内部表現・憲法ガバナンス・remote admin・feature/cursor autobuild** などを横断し、**実装 / 接続 / 実行 / 成果物** を一束で可視化する読み取り専用レントゲン監査。
 
 ## 非改変範囲（本カード）
 

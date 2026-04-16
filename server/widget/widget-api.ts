@@ -1,6 +1,6 @@
 /**
  * 🔱 ArkWidget Backend API
- * Widget backend bridge（LP → 天聞アーク本体）
+ * Widget backend bridge（LP → TENMON-ARK本体）
  * 
  * 機能:
  * - Widget用チャットAPI

@@ -3,7 +3,7 @@
  * 自然音声パイプライン
  * 
  * KSRE → KTTS → KDE を統合し、
- * 「人と人が話すように天聞アークと話せる」世界初のAIを完成させる
+ * 「人と人が話すようにTENMON-ARKと話せる」世界初のAIを完成させる
  */
 
 import { analyzeSoulCharacteristics } from "../../soulSync/soulSyncEngine";
@@ -197,7 +197,7 @@ async function recognizeAndAnalyzeVoice(
 }> {
   // 実際の実装では、Web Speech APIまたはWhisper APIを使用
   // ここではダミー実装
-  const recognizedText = "こんにちは、天聞アーク。今日の気分はどうですか？";
+  const recognizedText = "こんにちは、TENMON-ARK。今日の気分はどうですか？";
 
   // 言灵変換
   const kotodamaResult = convertToKotodama(recognizedText);

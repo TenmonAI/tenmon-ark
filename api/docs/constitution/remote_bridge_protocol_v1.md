@@ -1,6 +1,6 @@
 # remote_bridge_protocol_v1
 
-TENMON_MAC_REMOTE_BRIDGE — VPS（天聞アーク）から自宅 Mac の受信エージェントへ **正規化済み build job manifest** を配送するための最小プロトコル。
+TENMON_MAC_REMOTE_BRIDGE — VPS（TENMON-ARK）から自宅 Mac の受信エージェントへ **正規化済み build job manifest** を配送するための最小プロトコル。
 
 ## 前提
 

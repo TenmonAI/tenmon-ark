@@ -2,7 +2,7 @@
 
 ## 目的
 
-親 1〜7（観測・分類・Cursor kernel・VPS acceptance・自己修復/学習ブリッジ・遠隔投入・周期 governor）を**一束**で監査し、天聞アークが**自己構築 OS として実装圏に到達したか**を最終判定する。
+親 1〜7（観測・分類・Cursor kernel・VPS acceptance・自己修復/学習ブリッジ・遠隔投入・周期 governor）を**一束**で監査し、TENMON-ARKが**自己構築 OS として実装圏に到達したか**を最終判定する。
 
 ## 非対象（DO NOT TOUCH）
 

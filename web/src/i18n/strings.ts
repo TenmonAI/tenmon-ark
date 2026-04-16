@@ -29,11 +29,11 @@ const ja: Dict = {
   "sidebar.profile": "プロフィール",
   "sidebar.settings": "設定",
   "sidebar.brandLine1": "TENMON-ARK",
-  "sidebar.brandLine2": "天聞アーク",
+  "sidebar.brandLine2": "TENMON-ARK",
 
   "topbar.chatMeta": "",
 
-  "composer.placeholder": "天聞アークにメッセージを送る…",
+  "composer.placeholder": "TENMON-ARKにメッセージを送る...",
 
   "settings.title": "設定",
   "settings.close": "閉じる",

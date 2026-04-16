@@ -5,7 +5,7 @@ export function LandingPage() {
   return (
     <div style={{ padding: "2rem", maxWidth: 720, margin: "0 auto" }}>
       <h1 style={{ fontSize: "1.75rem", marginBottom: "0.5rem" }}>TENMON-ARK</h1>
-      <p style={{ color: "#666", marginBottom: "1.5rem" }}>天聞アーク — 導線</p>
+      <p style={{ color: "#666", marginBottom: "1.5rem" }}>TENMON-ARK — 導線</p>
       <p style={{ marginBottom: "1rem" }}>
         Founder プランでアプリを解禁し、チャットを利用できます。
       </p>

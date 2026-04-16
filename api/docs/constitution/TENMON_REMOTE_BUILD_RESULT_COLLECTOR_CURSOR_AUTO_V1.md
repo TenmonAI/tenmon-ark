@@ -2,7 +2,7 @@
 
 ## 目的
 
-Mac 上の Cursor / build 実行結果を **天聞アーク（VPS）側へ返送**し、`build` / `diff` / `acceptance` / ログを **1 つの result bundle** に束ねて保存する（PDCA 完了用）。
+Mac 上の Cursor / build 実行結果を **TENMON-ARK（VPS）側へ返送**し、`build` / `diff` / `acceptance` / ログを **1 つの result bundle** に束ねて保存する（PDCA 完了用）。
 
 ## 成果物（VPS）
 

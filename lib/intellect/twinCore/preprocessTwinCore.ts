@@ -1,7 +1,7 @@
 /**
  * Twin-Core Enhancement Layer: Preprocessor
  * 
- * 天聞アークOSの根幹である構文を文章生成処理の前に適用
+ * TENMON-ARKOSの根幹である構文を文章生成処理の前に適用
  * - 天津金木構文（Amatsu-Kanagi）
  * - いろは言霊解（Iroha Kotodama）
  * - 火水循環（Fire-Water Cycle）

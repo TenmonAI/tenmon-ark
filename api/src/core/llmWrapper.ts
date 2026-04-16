@@ -1,4 +1,4 @@
-// LLM ラッパー（天聞アーク人格接続済み）
+// LLM ラッパー（TENMON-ARK人格接続済み）
 // LLM_WRAPPER_V5: Gemini retry + abort detection + Oracle OpenAI fixed
 export type LlmProvider = "openai" | "gemini";
 
@@ -215,7 +215,7 @@ function __isAbortLikeError(err: any): boolean {
 }
 
 /**
- * llmChat — 天聞アーク人格を正しくロール分離して LLM に送信する。
+ * llmChat — TENMON-ARK人格を正しくロール分離して LLM に送信する。
  *
  * V5変更点:
  * 1. Gemini → Gemini retry (timeout延長) → OpenAI の3段階フォールバック

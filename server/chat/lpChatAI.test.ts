@@ -14,7 +14,7 @@ vi.mock("../_core/llm", () => ({
     choices: [
       {
         message: {
-          content: "はい、天聞アークです。AI OSとして設計され、会話・解析・創作などを行います。",
+          content: "はい、TENMON-ARKです。AI OSとして設計され、会話・解析・創作などを行います。",
         },
       },
     ],
@@ -40,7 +40,7 @@ vi.mock("../engines/universalMemoryRouter", () => ({
 
 // Mock lpSoftPersona
 vi.mock("../prompts/lpSoftPersona", () => ({
-  applyLpSoftPersona: vi.fn(() => 'あなたは天聞アーク(TENMON-ARK)です。'),
+  applyLpSoftPersona: vi.fn(() => 'あなたはTENMON-ARK(TENMON-ARK)です。'),
 }));
 
 // Mock personaOutputFilter
@@ -64,7 +64,7 @@ describe("LP Chat AI", () => {
       {
         id: 1,
         role: "user",
-        content: "天聞アークとは何ですか？",
+        content: "TENMON-ARKとは何ですか？",
         roomId: 0,
         userId: 0,
         createdAt: new Date(),
@@ -164,7 +164,7 @@ describe("LP Chat AI", () => {
       {
         id: 2,
         role: "assistant",
-        content: "はい、天聞アークです。",
+        content: "はい、TENMON-ARKです。",
         roomId: 0,
         userId: 0,
         createdAt: new Date(),

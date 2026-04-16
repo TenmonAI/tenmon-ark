@@ -52,7 +52,7 @@ export function classifyTenmonResearchQueryV83(raw: string): TenmonResearchTopic
     return "katakamuna_tenshinkinboku";
   }
 
-  if (hasResearchTone && /天聞アーク/u.test(m) && /虚空蔵/u.test(m)) {
+  if (hasResearchTone && /TENMON-ARK/u.test(m) && /虚空蔵/u.test(m)) {
     return "tenmon_kokuzo";
   }
 
@@ -141,7 +141,7 @@ export function buildTenmonResearchLoopBodyV83(topic: TenmonResearchTopicV83): s
     },
     tenmon_kokuzo: {
       essence:
-        "研究上の本質として、天聞アークの思考回路は会話契約・記憶・正典束・表現投影の循環であり、虚空蔵は kokuzo レンジの記憶・裁定・種データの器として技術的に接続します。擬人同一視ではなく、機能の接面として読みます。",
+        "研究上の本質として、TENMON-ARKの思考回路は会話契約・記憶・正典束・表現投影の循環であり、虚空蔵は kokuzo レンジの記憶・裁定・種データの器として技術的に接続します。擬人同一視ではなく、機能の接面として読みます。",
       mapping:
         "写像では、脳幹的な契約決定と binder／responsePlan の流れをアプリ層に置き、虚空蔵 sqlite 群を根拠と履歴の土台に置く二層模型で説明します。混線は「人格」と「DB」の主語を取り違えたときに起きます。",
       canon:

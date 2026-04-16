@@ -454,7 +454,7 @@ textarea {
   margin-right: auto;
 }
 
-/* 天聞アークメッセージ（右寄せ） */
+/* TENMON-ARKメッセージ（右寄せ） */
 .chat-bubble.ark-message {
   margin-left: auto;
   margin-right: 0;
@@ -591,7 +591,7 @@ textarea {
   transform-origin: left center;
 }
 
-/* 右（天聞アーク・火）配置 */
+/* 右（TENMON-ARK・火）配置 */
 .chat-bubble.ark-message {
   align-self: flex-end;
   margin-left: auto;
@@ -662,7 +662,7 @@ textarea {
 
 /* 9. 色反応の調整 */
 
-/* 天聞アーク（火）側のバブル：薄いゴールド・白 */
+/* TENMON-ARK（火）側のバブル：薄いゴールド・白 */
 .chat-message-fire {
   background: linear-gradient(
     135deg,

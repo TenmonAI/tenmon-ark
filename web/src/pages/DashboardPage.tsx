@@ -1,6 +1,6 @@
 /**
  * ============================================================
- *  DASHBOARD PAGE — 天聞アーク ダッシュボード
+ *  DASHBOARD PAGE — TENMON-ARK ダッシュボード
  *  TENMON_MANUS_FINAL_EXECUTION_DIRECTIVE_V5
  *  価値言語化 + 三つの柱紹介 + LP的ブランドメッセージ
  * ============================================================
@@ -127,7 +127,7 @@ function OwnerInviteSection() {
         <h2 style={{ fontSize: 15, fontWeight: 600, margin: 0, color: C.text }}>招待リンク発行</h2>
       </div>
       <p style={{ fontSize: 13, color: C.textSub, lineHeight: 1.8, margin: "0 0 16px" }}>
-        天聞アークへの招待リンクを生成します。リンクは7日間有効です。
+        TENMON-ARKへの招待リンクを生成します。リンクは7日間有効です。
       </p>
 
       <button
@@ -371,7 +371,7 @@ export function DashboardPage({ onNavigate }: DashboardPageProps) {
             margin: "0 0 12px",
             color: C.text,
           }}>
-            天聞アーク
+            TENMON-ARK
           </h1>
           <p style={{
             fontSize: 14,
@@ -507,7 +507,7 @@ export function DashboardPage({ onNavigate }: DashboardPageProps) {
           }}>
             <span style={{ fontWeight: 600, color: C.arkGold }}>設計思想</span>
             <span style={{ margin: "0 8px", color: C.textMuted }}>&mdash;</span>
-            天聞アークは「端末に寄り添う」設計です。
+            TENMON-ARKは「端末に寄り添う」設計です。
             鑑定結果や会話の記録はお使いの端末に保管され、
             サーバーとの同期は必要最小限にとどめています。
             大切な情報が意図せず外部に出ることのないよう配慮しています。
@@ -536,7 +536,7 @@ export function DashboardPage({ onNavigate }: DashboardPageProps) {
           paddingTop: 12,
           borderTop: `1px solid ${C.border}`,
         }}>
-          天聞アークの各機能は、あなたの存在の深まりとともに順次解放されます。
+          TENMON-ARKの各機能は、あなたの存在の深まりとともに順次解放されます。
           ご意見やご要望がありましたら、改善要望ページよりお聞かせください。
         </div>
       </div>

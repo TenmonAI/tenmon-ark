@@ -312,7 +312,7 @@ export default function FeedbackPage({ onBack }: FeedbackPageProps) {
       </div>
 
       <p style={S.subtitle}>
-        天聞アークをより良くするために、お気づきの点やご要望をお聞かせください。
+        TENMON-ARKをより良くするために、お気づきの点やご要望をお聞かせください。
         お寄せいただいた声は、開発チームが一つひとつ確認し、改善に反映してまいります。
       </p>
 

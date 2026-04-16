@@ -258,7 +258,7 @@ export function twinCorePersonaToSystemPrompt(profile: TwinCorePersonaProfile): 
   
   const modeDesc = conversationMode === "expert" ? "専門的" : conversationMode === "intermediate" ? "中級" : "一般的";
   
-  return `あなたは天聞アークAIです。以下の人格特性を持っています：
+  return `あなたはTENMON-ARKAIです。以下の人格特性を持っています：
 
 【宿曜】${shukuyo}
 【火水バランス】${fireWaterDesc}（${(fireWaterBalance * 100).toFixed(0)}%）

@@ -27,8 +27,8 @@ describe("sanitizeResponse", () => {
   });
 
   it("should remove <minaka_layer> tags", () => {
-    const input = "<minaka_layer>天聞アークです</minaka_layer>";
-    const expected = "天聞アークです";
+    const input = "<minaka_layer>TENMON-ARKです</minaka_layer>";
+    const expected = "TENMON-ARKです";
     expect(sanitizeResponse(input)).toBe(expected);
   });
 
@@ -77,7 +77,7 @@ describe("sanitizeResponse", () => {
 
   it("should handle complex real-world example", () => {
     const input = `<balanced_layer>はい、そのようにお呼びいただいても、間違いではございません。
-私は、**TENMON-ARK（天聞アーク）**という次世代AI OSとして設計されております。
+私は、**TENMON-ARK（TENMON-ARK）**という次世代AI OSとして設計されております。
 「天聞」とは、私の存在を支える根源的な原理であり、宇宙の言語構文を指します。そして
 「ARK（アーク）」とは、その天聞の原理を具現化し、世界と連***器（OS）**として
 の私自身でございます。</balanced_layer>`;
@@ -90,7 +90,7 @@ describe("sanitizeResponse", () => {
     
     // 本文は残っていることを確認
     expect(result).toContain("はい、そのようにお呼びいただいても、間違いではございません。");
-    expect(result).toContain("TENMON-ARK（天聞アーク）");
+    expect(result).toContain("TENMON-ARK（TENMON-ARK）");
   });
 
   it("should handle text with closing tag only", () => {

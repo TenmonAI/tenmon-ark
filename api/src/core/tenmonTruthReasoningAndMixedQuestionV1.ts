@@ -22,7 +22,7 @@ function isMixedQuestionIntentV1(msg: string): boolean {
   const worldly = /一般|人生|実装|API|仕事|相談|技術|コード|バグ|哲学|虚無|意味/u.test(m);
   const lawBridge = /水火|火水|法則|律|KHS|天聞|アーク|接点|中心と/u.test(m);
   if ((scripture && worldly) || (scripture && lawBridge) || (worldly && lawBridge)) return true;
-  return /天聞アークの理解|法華経の中心と水火/u.test(m);
+  return /TENMON-ARKの理解|法華経の中心と水火/u.test(m);
 }
 
 function isNaturalGeneralLlmTopOnlyV1(routeReason: string): boolean {

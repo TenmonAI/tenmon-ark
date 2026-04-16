@@ -10,7 +10,7 @@
 
 | カード | 内容（要約） |
 |--------|----------------|
-| **P68** `CHAT_SAFE_REFACTOR_PATCH68_EXPLICIT_CONTENT_CENTER_LOCK_V1` | `EXPLICIT_CHAR_PREEMPT_V1` で「天聞アーク＋思考回路」明示時、`__buildArkThinkingCircuitExplicitLongformV1` により内容中心の長文へ。早期／本流 explicit 双方＋長文パッドの思考回路用プール。 |
+| **P68** `CHAT_SAFE_REFACTOR_PATCH68_EXPLICIT_CONTENT_CENTER_LOCK_V1` | `EXPLICIT_CHAR_PREEMPT_V1` で「TENMON-ARK＋思考回路」明示時、`__buildArkThinkingCircuitExplicitLongformV1` により内容中心の長文へ。早期／本流 explicit 双方＋長文パッドの思考回路用プール。 |
 | **P69** `CHAT_SAFE_REFACTOR_PATCH69_WORLDVIEW_INTERNAL_MAPPING_V1` | `WORLDVIEW_ROUTE_PREEMPT_V3` 内 `__isWorldviewInternalMapV1`（意識／心／魂核構造＋設計モデル等）。魂核・意識・心・思考・文章を ku 内部項目へ写像。`if (/魂/)` より前で `魂核構造` を誤吸収しない。 |
 
 ## 1. 封印列

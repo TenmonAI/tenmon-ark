@@ -27,7 +27,7 @@
   - `canon/tenmon_intention_constitution_v1.json`
   - `core/personaConstitution.ts`（`getPersonaConstitutionSummary`）
   - `core/sourceGraph.ts` の route → sourcePack / thoughtGuideKey / notionRoute マップ
-  - **位置づけ**: 「天津金木に先立つ、天聞アーク自身の存在憲法」。改変ではなく **天津金木視点からの「解釈レイヤー」を上に載せる**方向で再利用可能。
+  - **位置づけ**: 「天津金木に先立つ、TENMON-ARK自身の存在憲法」。改変ではなく **天津金木視点からの「解釈レイヤー」を上に載せる**方向で再利用可能。
 
 - **Heart 層（受容・感情・安定性）**
   - `heart` フィールド: `chat.ts` の各ルートで `normalizeHeartShape(__heart)` から生成。

@@ -1180,7 +1180,7 @@ export function inferImplicitLongformCharTargetFromUserMessageV1(raw: string): n
   const t = String(raw ?? "").trim();
   if (!t || parseExplicitCharTargetFromUserMessageV1(t) != null) return null;
   if (t.length < 18) return null;
-  if (!/(天聞アーク|天聞|TENMON[- ]?ARK)/iu.test(t)) return null;
+  if (!/(TENMON-ARK|天聞|TENMON[- ]?ARK)/iu.test(t)) return null;
   if (
     /(未達点|改善点|ギャップ|世界最高.{0,32}AI|なるための)/u.test(t) &&
     /(詳しく|くわしく|説明|解説|列挙|整理|述べて)/u.test(t)
@@ -1189,7 +1189,7 @@ export function inferImplicitLongformCharTargetFromUserMessageV1(raw: string): n
   }
   /** STAGE3: 設計・構造の長説明（字数未指定でも longform 帯へ） */
   if (
-    /(天聞アーク|天聞|TENMON[- ]?ARK)/iu.test(t) &&
+    /(TENMON-ARK|天聞|TENMON[- ]?ARK)/iu.test(t) &&
     /(設計|内部構造|構造|アーキテクチャ|モジュール|ルーティング)/u.test(t) &&
     /(詳しく|くわしく|説明|解説|列挙|整理|述べて)/u.test(t)
   ) {
@@ -1220,7 +1220,7 @@ export const TENMON_LONGFORM_ARC_SUBSTANTIVE_POOL_V1: readonly string[] = [
 export function isWorldclassLongformProbeMessageV1(raw: string): boolean {
   const t = String(raw ?? "").trim();
   if (t.length < 12) return false;
-  if (!/(天聞アーク|天聞|TENMON[- ]?ARK)/iu.test(t)) return false;
+  if (!/(TENMON-ARK|天聞|TENMON[- ]?ARK)/iu.test(t)) return false;
   if (!/(世界最高|未達点|改善点|ギャップ|最高AI)/u.test(t)) return false;
   return /(詳しく|くわしく|説明|解説|列挙|整理|述べ)/u.test(t);
 }
@@ -1237,7 +1237,7 @@ export function isLongformTriArcIntentMessageV1(raw: string): boolean {
     /(詳しく|くわしく|十分に|丁寧に|長く|論じて|説明して|解説|整理|列挙|述べ)/u.test(t);
   if (!wantsDepth) return false;
   if (
-    /(天聞アーク|天聞|TENMON[- ]?ARK)/iu.test(t) &&
+    /(TENMON-ARK|天聞|TENMON[- ]?ARK)/iu.test(t) &&
     /(設計|構造|内部|アーキテクチャ|モジュール|ルート|比較|対比|未達|改善|ギャップ|最高)/u.test(t)
   ) {
     return true;

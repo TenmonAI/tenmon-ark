@@ -131,7 +131,7 @@ export default function EmbedManagement() {
             Embed OS 管理
           </h1>
           <p className="text-gray-400">
-            外部サイトに天聞アークを埋め込むためのEmbed URLを管理します
+            外部サイトにTENMON-ARKを埋め込むためのEmbed URLを管理します
           </p>
         </div>
 

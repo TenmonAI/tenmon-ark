@@ -282,7 +282,7 @@ feedbackRouter.post("/feedback/generate-card", async (req: Request, res: Respons
 
     /* LLM でカード生成 */
     const { llmChat } = await import("../core/llmWrapper.js");
-    const prompt = `あなたは天聞アーク（TENMON-ARK）のプロダクト改善アシスタントです。
+    const prompt = `あなたはTENMON-ARK（TENMON-ARK）のプロダクト改善アシスタントです。
 以下のユーザー改善要望を分析し、構造化された修正カードを生成してください。
 
 ## ユーザー改善要望

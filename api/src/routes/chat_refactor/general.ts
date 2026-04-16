@@ -89,7 +89,7 @@ export function shouldBypassArkConversationDiagnosticsPreemptV1(message: string)
   if (/断捨離/u.test(m) && /(説明|教え|定義|として|片付け)/u.test(m)) return true;
   /**
    * STAGE2_ROUTE_AUTHORITY_RECOVERY_V1:
-   * trySystemDiagnosisPreemptExitV1 は「天聞アーク」単独一致で発火するため、
+   * trySystemDiagnosisPreemptExitV1 は「TENMON-ARK」単独一致で発火するため、
    * selfaware / 長文説明 / 比較 / 思考回路系は診断 preempt から除外し本来 route へ回す。
    */
   if (/天聞(アーク)?/u.test(m) && /(意識|心)/u.test(m) && /(ないの|あるの|ですか|でしょうか|か\?|か？)/u.test(m)) {
@@ -109,7 +109,7 @@ export function shouldBypassArkConversationDiagnosticsPreemptV1(message: string)
     return true;
   }
   if (
-    /天聞アーク/u.test(m) &&
+    /TENMON-ARK/u.test(m) &&
     /(世界観|意識|心構造|魂核|設計モデル|内部)(の|を|は|、|で)?/u.test(m) &&
     /(説明|要約|教え|どうなって|どういう|一文|設計)/u.test(m)
   ) {
@@ -120,14 +120,14 @@ export function shouldBypassArkConversationDiagnosticsPreemptV1(message: string)
 
 /**
  * STAGE2_ROUTE_AUTHORITY_V2:
- * 「天聞アーク」を含むだけで system diagnosis preempt / shrink が発火しないよう、
+ * 「TENMON-ARK」を含むだけで system diagnosis preempt / shrink が発火しないよう、
  * **現状・接続・構造・診断**いずれかの意図があるときだけ候補とする。
  */
 export function isArkSystemDiagnosisPreemptCandidateV1(message: string): boolean {
   const m = String(message ?? "").trim();
   if (!m) return false;
   const mentionsArk =
-    /天聞アーク|TENMON[- ]?ARK|天聞の(?:現状|構造|内部|接続|診断)/u.test(m);
+    /TENMON-ARK|TENMON[- ]?ARK|天聞の(?:現状|構造|内部|接続|診断)/u.test(m);
   if (!mentionsArk) return false;
   return /内部構造|構造|接続|繋がって|つながって|どこまで|構築状況|完成度|現状|診断|解析/u.test(m);
 }

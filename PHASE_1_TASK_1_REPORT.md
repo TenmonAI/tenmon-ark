@@ -143,7 +143,7 @@
 
 ## 🚀 次のステップ
 
-**TASK 2**: Atlas Chat API統合（天聞アーク人格の脳）
+**TASK 2**: Atlas Chat API統合（TENMON-ARK人格の脳）
 
 ---
 

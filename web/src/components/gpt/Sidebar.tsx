@@ -22,7 +22,7 @@ import {
 } from "../../lib/chatFolderStore";
 import { queueSyncChange, syncPush } from "../../lib/crossDeviceSync";
 
-export type GptView = "chat" | "dashboard" | "profile" | "sukuyou" | "sukuyou-room" | "feedback";
+export type GptView = "chat" | "dashboard" | "profile" | "sukuyou" | "sukuyou-room" | "sukuyou-about" | "feedback";
 
 interface SidebarProps {
   view: GptView;

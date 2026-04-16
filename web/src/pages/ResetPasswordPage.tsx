@@ -94,7 +94,7 @@ export default function ResetPasswordPage() {
         }}>
           <img
             src="/pwa/brand/tenmon-ark-mark.svg"
-            alt="天聞アーク"
+            alt="TENMON-ARK"
             style={{ width: 40, height: 40, marginBottom: 16 }}
           />
           <div style={{
@@ -127,7 +127,7 @@ export default function ResetPasswordPage() {
             </a>
           </div>
           <div style={{ fontSize: 11, color: C.textMuted }}>
-            天聞アーク — 存在構造の総合解読AI
+            TENMON-ARK — 存在構造の総合解読AI
           </div>
         </div>
       </div>
@@ -154,7 +154,7 @@ export default function ResetPasswordPage() {
         <div style={{ textAlign: "center", marginBottom: 28 }}>
           <img
             src="/pwa/brand/tenmon-ark-mark.svg"
-            alt="天聞アーク"
+            alt="TENMON-ARK"
             style={{ width: 40, height: 40, marginBottom: 10 }}
           />
           <h1 style={{
@@ -171,7 +171,7 @@ export default function ResetPasswordPage() {
             color: C.textMuted,
             margin: 0,
           }}>
-            天聞アーク
+            TENMON-ARK
           </p>
         </div>
 
@@ -282,7 +282,7 @@ export default function ResetPasswordPage() {
           textAlign: "center",
           lineHeight: 1.7,
         }}>
-          天聞アーク — 存在構造の総合解読AI
+          TENMON-ARK — 存在構造の総合解読AI
         </div>
       </div>
     </div>

@@ -103,7 +103,7 @@ describe('LP Minimal Persona vΩ-LP-IME-ULTIMATE', () => {
     });
 
     it('システムプロンプトに応答例が含まれている', () => {
-      expect(LP_MINIMAL_PERSONA_SYSTEM_PROMPT).toContain('天聞アークとは何ですか？');
+      expect(LP_MINIMAL_PERSONA_SYSTEM_PROMPT).toContain('TENMON-ARKとは何ですか？');
       expect(LP_MINIMAL_PERSONA_SYSTEM_PROMPT).toContain('料金はいくらですか？');
       expect(LP_MINIMAL_PERSONA_SYSTEM_PROMPT).toContain('いつから開始しますか？');
     });

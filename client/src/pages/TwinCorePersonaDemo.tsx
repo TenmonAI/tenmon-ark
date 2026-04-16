@@ -17,7 +17,7 @@ import { TwinCoreVisualizer } from "@/components/overbeing/TwinCoreVisualizer";
 export default function TwinCorePersonaDemo() {
   const [shukuyo, setShukuyo] = useState("角");
   const [conversationMode, setConversationMode] = useState<"general" | "intermediate" | "expert">("general");
-  const [inputText, setInputText] = useState("こんにちは、天聞アークです。");
+  const [inputText, setInputText] = useState("こんにちは、TENMON-ARKです。");
   
   // 宿曜27宿のリスト
   const shukuyoList = [

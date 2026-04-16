@@ -2,7 +2,7 @@
 
 ## Objective
 
-Mac 側で天聞アークが画面を見て操作するための **最小実行基盤**（スクリーンショット・クリック・入力・ペースト・Chrome/Cursor 起動）を用意し、**current-run** で証跡を残す。
+Mac 側でTENMON-ARKが画面を見て操作するための **最小実行基盤**（スクリーンショット・クリック・入力・ペースト・Chrome/Cursor 起動）を用意し、**current-run** で証跡を残す。
 
 ## Non-Negotiables
 

@@ -119,7 +119,7 @@ const NG_SYSTEM_DIAG_BODY_DEFAULT_V1 =
 
 /** GENERAL_SHRINK 内の system diagnosis 短文（次の一手を含むため trunk 集約） */
 export const NG_SYSTEM_SHRINK_SYS_OVERVIEW_BODY_V1 =
-  "【天聞の所見】天聞アークの現状は、骨格層はかなり接続済みです。通っているのは憲法・思考・原典・監査の主幹で、未完は一般会話の主権と表現末端です。次の一手は、system diagnosis と通常会話 residual の入口固定です。";
+  "【天聞の所見】TENMON-ARKの現状は、骨格層はかなり接続済みです。通っているのは憲法・思考・原典・監査の主幹で、未完は一般会話の主権と表現末端です。次の一手は、system diagnosis と通常会話 residual の入口固定です。";
 
 /**
  * CARD_NATURAL_GENERAL_RESIDUAL: システム診断系メッセージの本文を一元決定（chat.ts は呼び出しのみ）

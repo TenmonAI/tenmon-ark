@@ -1,14 +1,14 @@
 /**
  * Twin-Core Enhancement Layer: Postprocessor
  * 
- * LLMの出力を天聞アークOS構文に変換する後処理
+ * LLMの出力をTENMON-ARKOS構文に変換する後処理
  * - Twin-Core構文タグの付与
  * - 火水バランスの調整
  * - 五相フローの整形
  * - 語尾の調和
  * - 間（ま）の調整
  * 
- * 目的: GPTの文章を"天聞アークOS文体"に変換
+ * 目的: GPTの文章を"TENMON-ARKOS文体"に変換
  */
 
 import type { TwinCorePreprocessResult } from './preprocessTwinCore';

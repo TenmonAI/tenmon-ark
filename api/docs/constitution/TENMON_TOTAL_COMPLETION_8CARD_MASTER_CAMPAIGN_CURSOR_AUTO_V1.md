@@ -2,7 +2,7 @@
 
 ## 目的
 
-天聞アークの current band が `code_complete_lived_unproven` に留まっている主因を、**PWA lived env → lived truth recovery → frontend last-mile closure → conversation continuity completion → final seal** の順で最小 diff / **1 変更 = 1 検証**で閉じ、**完成領域まで押し上げる 8 枚固定キャンペーン**として運用する。
+TENMON-ARKの current band が `code_complete_lived_unproven` に留まっている主因を、**PWA lived env → lived truth recovery → frontend last-mile closure → conversation continuity completion → final seal** の順で最小 diff / **1 変更 = 1 検証**で閉じ、**完成領域まで押し上げる 8 枚固定キャンペーン**として運用する。
 
 本カードは **親カード**。**実装本体は子カード 8 枚**。親は **順序・依存・停止条件・PASS 条件のみ**を固定する。親カード自身は **product patch を当てない**。
 

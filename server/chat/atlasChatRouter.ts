@@ -1,6 +1,6 @@
 /**
  * Atlas Chat Router
- * 天聞アーク人格の脳 - Atlas Chat API統合
+ * TENMON-ARK人格の脳 - Atlas Chat API統合
  * 
  * 処理フロー:
  * 1. 認証・プランチェック
@@ -136,7 +136,7 @@ export interface AtlasChatResponse {
 export const atlasChatRouter = router({
   /**
    * Atlas Chat API
-   * 天聞アーク人格の脳によるチャット応答生成
+   * TENMON-ARK人格の脳によるチャット応答生成
    */
   chat: protectedProcedure
     .input(chatInputSchema)
