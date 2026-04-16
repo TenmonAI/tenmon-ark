@@ -16,10 +16,22 @@ interface SettingsPanelProps {
   onImported: () => void;
 }
 
+const OWNER_EMAIL = "kouyoo4444@gmail.com";
+
 export function SettingsPanel({ open, onClose, onImported }: SettingsPanelProps) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [syncing, setSyncing] = useState(false);
+  const [inviteUrl, setInviteUrl] = useState<string | null>(null);
+  const [inviteExpiry, setInviteExpiry] = useState<string | null>(null);
+  const [inviteLoading, setInviteLoading] = useState(false);
+  const [inviteCopied, setInviteCopied] = useState(false);
+
+  const isOwner = (() => {
+    try {
+      return localStorage.getItem("tenmon_user_display_v1") === OWNER_EMAIL;
+    } catch { return false; }
+  })();
 
   if (!open) return null;
 
@@ -175,6 +187,124 @@ export function SettingsPanel({ open, onClose, onImported }: SettingsPanelProps)
           事前に書き出しでバックアップを取ることをお勧めします。
         </p>
       </div>
+
+      {/* OWNER_INVITE_UI_V1: オーナー専用 招待リンク発行 */}
+      {isOwner && (
+        <div className="gpt-page-card" style={{ marginTop: 16 }}>
+          <h3 className="gpt-page-card-title">招待リンク発行</h3>
+          <p style={{
+            margin: "4px 0 16px",
+            fontSize: 13,
+            color: "var(--gpt-text-secondary, #6b7280)",
+            lineHeight: 1.7,
+          }}>
+            天聞アークへの招待リンクを生成します。リンクは7日間有効です。
+          </p>
+
+          <button
+            onClick={async () => {
+              setInviteLoading(true);
+              setInviteCopied(false);
+              try {
+                const res = await fetch("/api/auth/invite/generate", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  credentials: "include",
+                  body: JSON.stringify({ note: "オーナー招待" }),
+                });
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const data = await res.json();
+                const url = data.inviteUrl || data.url || "";
+                setInviteUrl(url);
+                const expDate = new Date();
+                expDate.setDate(expDate.getDate() + 7);
+                setInviteExpiry(expDate.toLocaleDateString("ja-JP", { year: "numeric", month: "long", day: "numeric" }));
+                if (url && navigator.clipboard) {
+                  await navigator.clipboard.writeText(url);
+                  setInviteCopied(true);
+                  setTimeout(() => setInviteCopied(false), 2000);
+                }
+              } catch (err) {
+                console.error("Invite generation failed:", err);
+                setInviteUrl(null);
+                setInviteExpiry(null);
+                setMessage({ type: "error", text: "招待リンクの生成に失敗しました" });
+                setTimeout(() => setMessage(null), 3000);
+              } finally {
+                setInviteLoading(false);
+              }
+            }}
+            disabled={inviteLoading}
+            style={{
+              width: "100%",
+              padding: 12,
+              background: inviteLoading ? "#9ca3af" : "#1a1a1a",
+              color: "#ffffff",
+              border: "none",
+              borderRadius: 8,
+              cursor: inviteLoading ? "not-allowed" : "pointer",
+              fontSize: 14,
+              fontWeight: 500,
+              fontFamily: "inherit",
+              transition: "all 0.2s",
+            }}
+          >
+            {inviteLoading ? "生成中…" : "招待リンクを生成する"}
+          </button>
+
+          {inviteUrl && (
+            <div style={{
+              marginTop: 12,
+              padding: 12,
+              borderRadius: 8,
+              background: "#f9fafb",
+              border: "1px solid var(--border, #e5e7eb)",
+            }}>
+              <p style={{ margin: "0 0 6px", fontSize: 12, color: "#6b7280", fontWeight: 500 }}>
+                生成されたURL:
+              </p>
+              <p style={{
+                margin: "0 0 8px",
+                fontSize: 12.5,
+                color: "var(--text, #1f2937)",
+                wordBreak: "break-all",
+                lineHeight: 1.6,
+                fontFamily: "monospace",
+              }}>
+                {inviteUrl}
+              </p>
+              {inviteExpiry && (
+                <p style={{ margin: "0 0 8px", fontSize: 12, color: "#6b7280" }}>
+                  有効期限: {inviteExpiry}まで
+                </p>
+              )}
+              <button
+                onClick={async () => {
+                  if (inviteUrl && navigator.clipboard) {
+                    await navigator.clipboard.writeText(inviteUrl);
+                    setInviteCopied(true);
+                    setTimeout(() => setInviteCopied(false), 2000);
+                  }
+                }}
+                style={{
+                  padding: "6px 14px",
+                  background: inviteCopied ? "#166534" : "var(--text, #1f2937)",
+                  color: "#ffffff",
+                  border: "none",
+                  borderRadius: 6,
+                  cursor: "pointer",
+                  fontSize: 12,
+                  fontWeight: 500,
+                  fontFamily: "inherit",
+                  transition: "all 0.2s",
+                }}
+              >
+                {inviteCopied ? "コピーしました \u2713" : "URLをコピー"}
+              </button>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* SYNC_PHASE_A_FRONTEND_CONNECT_V1: クロスデバイス同期セクション */}
       <div className="gpt-page-card" style={{ marginTop: 16 }}>
