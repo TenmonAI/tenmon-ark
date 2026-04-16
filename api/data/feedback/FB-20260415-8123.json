@@ -1,0 +1,12 @@
+{
+  "title": "generate-card forensic",
+  "category": "UI/デザイン",
+  "detail": "JSON parse failure check",
+  "priority": "中",
+  "receiptNumber": "FB-20260415-8123",
+  "isFounder": true,
+  "device": "curl",
+  "notionSaved": true,
+  "notionPageId": "34365146-58e6-816d-945a-fcfe13521f3d",
+  "createdAt": "2026-04-15T04:38:01.271Z"
+}

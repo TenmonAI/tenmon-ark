@@ -1,0 +1,12 @@
+{
+  "title": "TENMON_CHAT_INTELLIGENCE_RECOVERY_V1 acceptance probe",
+  "category": "UI/デザイン",
+  "detail": "generate-card JSON parse recovery verification",
+  "priority": "中",
+  "receiptNumber": "FB-20260415-2663",
+  "isFounder": true,
+  "device": "cursor-cli",
+  "notionSaved": true,
+  "notionPageId": "34365146-58e6-8160-89fa-eb31f379ff3d",
+  "createdAt": "2026-04-15T04:40:12.060Z"
+}

@@ -1,0 +1,10 @@
+{
+  "to": "cafe_sattin@yahoo.co.jp",
+  "subject": "TENMON-ARK パスワード再設定のご案内",
+  "body": "TENMON-ARK をご利用いただきありがとうございます。\n\nパスワード再設定をご希望の場合は、以下のリンクからお手続きください。\n\nhttps://tenmon-ark.com/pwa/reset-password?token=31fec27c451e0ad82a3af5ffaa4459ce6d621872c1e172e58ecc176f87de1735734790642ae1e8e91fa94f10a08f1d73\n\nこのリンクの有効期限は60分です。\n心当たりがない場合は、このメールを破棄してください。\n\n— TENMON-ARK",
+  "createdAt": "2026-04-15T11:18:54.846Z",
+  "tokenId": "prt_mnzyjgji_789e8aced546",
+  "mailSent": true,
+  "mailTransport": "smtp",
+  "mailMessageId": "<21abdbee-5dba-3aea-47ac-3dbd691a08f0@gmail.com>"
+}

@@ -1,0 +1,47 @@
+{
+  "title": "self improvement loop e2e",
+  "category": "同期",
+  "detail": "Cross-device sync の一覧反映が遅い",
+  "priority": "中",
+  "receiptNumber": "FB-20260415-4487",
+  "isFounder": true,
+  "device": "curl",
+  "createdAt": "2026-04-15T02:16:15.561Z",
+  "ownerType": "cursor",
+  "status": "passed",
+  "sourcePage": "feedback page",
+  "relatedRoute": "sync",
+  "acceptanceNeeded": "__YES__",
+  "notionSaved": true,
+  "notionPageId": "34365146-58e6-81d9-8c7a-eea5af50321b",
+  "saveStatus": "notion_ok",
+  "groupedIssueKey": "cursor:sync:sync",
+  "designNote": "routing/api/db/sync/contract レーンで最小diff修正を優先",
+  "triageSummary": "self improvement loop e2e / 同期 / 中",
+  "generatedCardDraft": {
+    "cardType": "cursor",
+    "title": "TENMON_FEEDBACK_FB-20260415-4487_CURSOR_CARD_V1",
+    "purpose": "不具合/契約/同期系の再現パスを最小差分で塞ぎ、再発を防ぐ",
+    "verify": [
+      "再現手順で改善前症状が消えていることを確認",
+      "関連APIまたは主要画面の回帰を確認",
+      "receiptNumber=FB-20260415-4487 / notionPageId=34365146-58e6-81d9-8c7a-eea5af50321b で追跡可能であること"
+    ],
+    "pass": "認証・入力境界・契約・同期が成立し、症状が再現しない",
+    "fail": "再現継続、契約崩れ、関連回帰が残る",
+    "source": {
+      "receiptNumber": "FB-20260415-4487",
+      "notionPageId": "34365146-58e6-81d9-8c7a-eea5af50321b",
+      "category": "同期",
+      "priority": "中",
+      "detail": "Cross-device sync の一覧反映が遅い"
+    }
+  },
+  "generatedCardType": "cursor",
+  "triagedAt": "2026-04-15T02:16:23.840Z",
+  "acceptanceResult": "PASS",
+  "acceptanceSummary": "loop e2e verified",
+  "relatedCommitSha": "HEAD",
+  "buildMark": "runtime",
+  "lastRunAt": "2026-04-15T02:16:36.226Z"
+}

@@ -1,0 +1,28 @@
+{
+  "title": "TENMON_CHAT_RUNTIME_RECOVERY_PRIORITY_REORDER_V1",
+  "category": "UI/デザイン",
+  "detail": "priority reorder runtime acceptance",
+  "priority": "中",
+  "receiptNumber": "FB-20260415-1489",
+  "isFounder": true,
+  "device": "cursor-cli",
+  "notionSaved": true,
+  "notionPageId": "34365146-58e6-812d-86cb-c58dbe38950a",
+  "createdAt": "2026-04-15T04:48:19.181Z",
+  "fixCard": {
+    "ai_summary": "受付番号 FB-20260415-1489 の要望を基に、暫定カードを自動生成しました。",
+    "problem_type": "other",
+    "ai_priority": "medium",
+    "impact_scope": "カテゴリ「UI/デザイン」に関連する体験品質へ影響",
+    "suggested_fix_title": "TENMON_FEEDBACK_RECOVERY_FB-20260415-1489",
+    "suggested_fix_detail": "priority reorder runtime acceptance",
+    "acceptance_test": "対象機能で再現手順を実行し、同症状が再発しないことを確認する。",
+    "user_facing_note": "ご要望を受理し、改善カードへ反映しました。",
+    "title": "TENMON_FEEDBACK_RECOVERY_FB-20260415-1489",
+    "purpose": "受付番号 FB-20260415-1489 の要望を基に、暫定カードを自動生成しました。",
+    "verify": "対象機能で再現手順を実行し、同症状が再発しないことを確認する。",
+    "pass": "期待動作が再現し、エラーが発生しない。",
+    "fail": "同症状が再発する、または応答が不整合。"
+  },
+  "fixCardGeneratedAt": "2026-04-15T04:48:19.787Z"
+}

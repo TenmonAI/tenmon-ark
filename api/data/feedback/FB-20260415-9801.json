@@ -1,0 +1,12 @@
+{
+  "title": "acceptance test",
+  "category": "チャット機能",
+  "detail": "Cursor acceptance TASK-4",
+  "priority": "低",
+  "receiptNumber": "FB-20260415-9801",
+  "isFounder": true,
+  "device": "curl",
+  "notionSaved": true,
+  "notionPageId": "34365146-58e6-814e-ad03-ea4a6a3f1e9c",
+  "createdAt": "2026-04-15T20:40:46.146Z"
+}

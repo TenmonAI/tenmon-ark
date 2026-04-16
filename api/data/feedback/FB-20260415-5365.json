@@ -1,0 +1,31 @@
+{
+  "title": "PUBLIC_RELEASE_ACCEPTANCE",
+  "category": "チャット機能",
+  "detail": "generate-card public release acceptance",
+  "priority": "中",
+  "receiptNumber": "FB-20260415-5365",
+  "isFounder": true,
+  "device": "curl",
+  "notionSaved": true,
+  "notionPageId": "34365146-58e6-81e4-80ad-eb5fdb72c3a1",
+  "createdAt": "2026-04-15T09:18:10.894Z",
+  "fixCard": {
+    "title": "改善要望 FB-20260415-5365",
+    "body": "generate-card public release acceptance",
+    "priority": "中",
+    "_parseError": true,
+    "ai_summary": "受付番号 FB-20260415-5365 の要望を基に暫定カードを生成しました。",
+    "problem_type": "other",
+    "ai_priority": "medium",
+    "impact_scope": "カテゴリ「チャット機能」に関連する体験品質へ影響",
+    "suggested_fix_title": "TENMON_FEEDBACK_RECOVERY_FB-20260415-5365",
+    "suggested_fix_detail": "generate-card public release acceptance",
+    "acceptance_test": "対象機能で再現手順を実行し、同症状が再発しないことを確認する。",
+    "user_facing_note": "ご要望を受理し、改善カードへ反映しました。",
+    "purpose": "受付番号 FB-20260415-5365 の要望を基に暫定カードを生成しました。",
+    "verify": "対象機能で再現手順を実行し、同症状が再発しないことを確認する。",
+    "pass": "期待動作が再現し、エラーが発生しない。",
+    "fail": "同症状が再発する、または応答が不整合。"
+  },
+  "fixCardGeneratedAt": "2026-04-15T09:18:11.270Z"
+}

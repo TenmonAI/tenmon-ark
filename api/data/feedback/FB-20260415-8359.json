@@ -1,0 +1,12 @@
+{
+  "title": "STEPテスト",
+  "category": "チャット機能",
+  "detail": "generate-card安定化テスト",
+  "priority": "中",
+  "receiptNumber": "FB-20260415-8359",
+  "isFounder": true,
+  "device": "curl",
+  "notionSaved": true,
+  "notionPageId": "34365146-58e6-815e-94c6-e909cd3e2641",
+  "createdAt": "2026-04-15T06:57:21.828Z"
+}

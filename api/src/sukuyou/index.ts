@@ -14,12 +14,25 @@ export {
   calculateMeikyu, calculatePalaceConfig,
   calculateDailyNakshatra, calculateDailyPlanet,
   calculateJuniChoku, calculateYunenHakke,
-  runFullDiagnosis
+  runFullDiagnosis,
+  calcChukyuStar,
+  calcNenUn,
+  kyuseiToGogyoElement,
+  palaceRulerToGogyoElement,
+  analyzeGogyoRelation,
+  resolveKyuseiForSeed,
+  honmeiDisplayToNakshatra,
+  buildSukuyouGogyoSeedIntegrationV2,
+  buildUltimateKanteiClause,
+  buildDeepContinuityClause,
 } from "./sukuyouEngine.js";
 export type {
   Nakshatra, Palace, Planet, RelationshipType, TaiYou, Kyusei, JuniChoku,
   NakshatraData, PalaceData, PlanetData,
-  FullDiagnosisResult
+  FullDiagnosisResult,
+  GogyoAnalysis,
+  NenUnResult,
+  SukuyouGogyoSeedIntegrationV2,
 } from "./sukuyouEngine.js";
 
 export { getSukuyouMs, getShukuName, SHUKU_NAMES } from "./sukuyouLookup.js";

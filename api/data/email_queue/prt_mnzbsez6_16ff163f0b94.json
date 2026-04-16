@@ -1,0 +1,10 @@
+{
+  "to": "danyouko55@gmail.com",
+  "subject": "TENMON-ARK パスワード再設定のご案内",
+  "body": "TENMON-ARK をご利用いただきありがとうございます。\n\nパスワード再設定をご希望の場合は、以下のリンクからお手続きください。\n\nhttps://tenmon-ark.com/pwa/reset-password?token=21ce48beafd9ce89086ba1b25557883fc5ae772fcd00c28744118d2edcda599cf7df16b602bf6b39842c9022d1205214\n\nこのリンクの有効期限は60分です。\n心当たりがない場合は、このメールを破棄してください。\n\n— TENMON-ARK",
+  "createdAt": "2026-04-15T00:42:01.554Z",
+  "tokenId": "prt_mnzbsez6_16ff163f0b94",
+  "mailSent": true,
+  "mailTransport": "smtp",
+  "mailMessageId": "<0b1021ea-75fc-5368-ebf9-1530ff72fbfe@gmail.com>"
+}

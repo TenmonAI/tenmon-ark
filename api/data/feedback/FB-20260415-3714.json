@@ -1,0 +1,40 @@
+{
+  "title": "notion recovery test",
+  "category": "UI/デザイン",
+  "detail": "Notion token acceptance",
+  "priority": "中",
+  "receiptNumber": "FB-20260415-3714",
+  "isFounder": true,
+  "device": "curl",
+  "notionSaved": true,
+  "notionPageId": "34365146-58e6-817b-91cb-e6d956b3a80c",
+  "createdAt": "2026-04-15T02:09:04.050Z",
+  "ownerType": "manus",
+  "relatedRoute": "ui",
+  "acceptanceNeeded": "__YES__",
+  "groupedIssueKey": "manus:ui:ui/デザイン",
+  "designNote": "UI/UX/文言/導線の改善レーンで設計する",
+  "triageSummary": "notion recovery test / UI/デザイン / 中",
+  "generatedCardDraft": {
+    "cardType": "manus",
+    "title": "TENMON_FEEDBACK_FB-20260415-3714_MANUS_CARD_V1",
+    "purpose": "UI/UX/文言導線を改善し、利用者の理解コストと操作負荷を下げる",
+    "verify": [
+      "再現手順で改善前症状が消えていることを確認",
+      "関連APIまたは主要画面の回帰を確認",
+      "receiptNumber=FB-20260415-3714 / notionPageId=34365146-58e6-817b-91cb-e6d956b3a80c で追跡可能であること"
+    ],
+    "pass": "視認性/文言/導線が改善し、迷いが減る",
+    "fail": "改善前と同じ読みにくさ・操作ロスが残る",
+    "source": {
+      "receiptNumber": "FB-20260415-3714",
+      "notionPageId": "34365146-58e6-817b-91cb-e6d956b3a80c",
+      "category": "UI/デザイン",
+      "priority": "中",
+      "detail": "Notion token acceptance"
+    }
+  },
+  "generatedCardType": "manus",
+  "status": "triaged",
+  "triagedAt": "2026-04-15T02:17:33.394Z"
+}

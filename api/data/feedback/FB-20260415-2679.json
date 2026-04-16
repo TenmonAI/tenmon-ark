@@ -1,0 +1,12 @@
+{
+  "title": "調査テスト",
+  "category": "チャット機能",
+  "detail": "Notion保存動作確認テスト",
+  "priority": "中",
+  "receiptNumber": "FB-20260415-2679",
+  "isFounder": true,
+  "device": "curl-check",
+  "notionSaved": true,
+  "notionPageId": "34365146-58e6-813b-8f48-e5789a0f1a9b",
+  "createdAt": "2026-04-15T20:43:30.261Z"
+}

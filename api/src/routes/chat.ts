@@ -50,6 +50,11 @@ import {
 } from "../core/tenmonLongformComposerV1.js";
 
 import { getDbPath } from "../db/index.js";
+import {
+  buildSukuyouGogyoSeedIntegrationV2,
+  buildUltimateKanteiClause,
+  buildDeepContinuityClause,
+} from "../sukuyou/sukuyouEngine.js";
 
 import { DatabaseSync } from "node:sqlite";
 const router: IRouter = Router();
@@ -65,6 +70,9 @@ interface __SukuyouSeedContext {
   reversalAxis: string;
   userConcern: string;
   coreQuestion: string;
+  /** 九星（例: 三碧木星）。未指定時は birthDate から算出を試みる */
+  kyusei?: string;
+  birthDate?: string;
   lifeAlgo?: {
     outerPersona: string;
     innerPersona: string;
@@ -72,6 +80,8 @@ interface __SukuyouSeedContext {
     fearRoot: string;
     repeatingFailurePattern: string;
   };
+  /** 深化継続（問答往還）: CARRY ターンごとに増分 */
+  turnCount?: number;
   storedAt: number;
 }
 const __sukuyouSeedByThread = new Map<string, __SukuyouSeedContext>();
@@ -97,6 +107,16 @@ function __buildSukuyouContinuityClause(threadId: string): string {
   }
   parts.push(`※上記の宿曜情報は鑑定アルゴリズムが算出した確定情報である。絶対に変更するな。本命宿名・災い分類・反転軸を応答内で言い換えたり別の宿名を出したりすることは禁止。`);
   parts.push(`※ユーザーの悩み原文を必ず引用せよ。汎用的な「苦悩」「課題」「お悩み」で置き換えるな。「あなたはこういう人です」型の汎用テンプレート禁止。`);
+  try {
+    const __g = buildSukuyouGogyoSeedIntegrationV2({
+      honmeiShukuDisplay: seed.honmeiShuku,
+      kyuseiRaw: seed.kyusei,
+      birthDateRaw: seed.birthDate,
+    });
+    if (__g?.systemClause) parts.push(__g.systemClause);
+  } catch {
+    /* ignore */
+  }
   parts.push(`※宿曜古典層は「宿曜経によれば」、天聞アーク独自解釈層は「天聞アークの解析では」と明示せよ。`);
   return parts.join("\n");
 }
@@ -771,6 +791,7 @@ const pid = process.pid;
             userConcern: kvMap.userConcern || kvMap.rawConcern || "",
             rawConcern: kvMap.rawConcern || "",
             coreQuestion: kvMap.coreQuestion || "",
+            kyusei: kvMap.kyusei || "",
           };
           console.log("[SUKUYOU-SEED-PARSE-KEYVALUE] Parsed key=value format, honmeiShuku=", seedData.honmeiShuku, "disasterType=", seedData.disasterType, "reversalAxis=", seedData.reversalAxis);
         } else {
@@ -788,6 +809,8 @@ const pid = process.pid;
           reversalAxis: String(seedData.reversalAxis || ""),
           userConcern: String(seedData.userConcern || seedData.rawConcern || ""),
           coreQuestion: String(seedData.coreQuestion || ""),
+          kyusei: String(seedData.kyusei || ""),
+          birthDate: String(seedData.birthDate || ""),
           lifeAlgo: seedData.lifeAlgo || undefined,
           storedAt: Date.now(),
         });
@@ -844,12 +867,34 @@ ${seedSummary}${lifeAlgoSummary}
 7. ユーザーの悩み原文を引用してください。汎用的な「苦悩」「課題」で置き換えないでください。
 8. 具体的な宿名・災い型・反転軸を組み込んで語ってください。`;
 
+      const __gogSeedFirst = buildSukuyouGogyoSeedIntegrationV2({
+        honmeiShukuDisplay: String(seedData.honmeiShuku || ""),
+        kyuseiRaw: String(seedData.kyusei || ""),
+        birthDateRaw: String(seedData.birthDate || ""),
+      });
+      const __ultimateSeedFirst = buildUltimateKanteiClause({
+        honmeiShuku: String(seedData.honmeiShuku || ""),
+        kyusei: __gogSeedFirst?.ku?.kyusei,
+        gogyoRelation: __gogSeedFirst?.ku?.gogyoRelation,
+        nenUn: __gogSeedFirst?.ku?.nenUn,
+        reversalAxis: String(seedData.reversalAxis || ""),
+        disasterType: String(seedData.disasterType || ""),
+        rawConcern: String(seedData.userConcern || seedData.rawConcern || ""),
+      });
+      const DEEP_CHAT_SYSTEM_GOGYO =
+        DEEP_CHAT_SYSTEM + (__gogSeedFirst?.systemClause || "") + __ultimateSeedFirst;
+
       const DEEP_CHAT_USER = `宿曜鑑定レポートを踏まえた深層対話を開始してください。
-まず、鑑定結果の核心を簡潔に要約し、この鑑定のうち最も実感に近いのはどこか、ユーザーに問いかけてください。`;
+まず、鑑定結果の核心を簡潔に要約し、この鑑定のうち最も実感に近いのはどこか、ユーザーに問いかけてください。
+
+【出力要件（終極統合鑑定）】
+・systemに添付された「終極統合鑑定データ」の根源音（カタカナ一字）を本文に必ず明示すること。
+・年運として示された宮（例: 兌宮）と方位（例: 西）を本文に必ず明示すること。
+・全体で600文字以上。`;
 
       try {
         const llmRes = await llmChat({
-          system: DEEP_CHAT_SYSTEM,
+          system: DEEP_CHAT_SYSTEM_GOGYO,
           user: DEEP_CHAT_USER,
           maxTokens: 3500,
           timeout: 60000,
@@ -871,6 +916,14 @@ ${seedSummary}${lifeAlgoSummary}
               disasterType: seedData.disasterType || null,
               seedVersion: seedData.version || "legacy",
               reportAvailable: true,
+              ...( __gogSeedFirst?.ku
+                ? {
+                    gogyoRelation: __gogSeedFirst.ku.gogyoRelation,
+                    nenUn: __gogSeedFirst.ku.nenUn,
+                    gogyoMeikyu: __gogSeedFirst.ku.meikyu,
+                    gogyoKyusei: __gogSeedFirst.ku.kyusei,
+                  }
+                : {}),
             },
           },
         });
@@ -882,7 +935,22 @@ ${seedSummary}${lifeAlgoSummary}
           candidates: [],
           timestamp,
           threadId,
-          decisionFrame: { mode: "SUKUYOU_DEEP_CHAT", intent: "deep_dialogue", llm: "fallback", ku: { routeReason: "SUKUYOU_SEED_DEEP_CHAT_V1_FALLBACK" } },
+          decisionFrame: {
+            mode: "SUKUYOU_DEEP_CHAT",
+            intent: "deep_dialogue",
+            llm: "fallback",
+            ku: {
+              routeReason: "SUKUYOU_SEED_DEEP_CHAT_V1_FALLBACK",
+              ...( __gogSeedFirst?.ku
+                ? {
+                    gogyoRelation: __gogSeedFirst.ku.gogyoRelation,
+                    nenUn: __gogSeedFirst.ku.nenUn,
+                    gogyoMeikyu: __gogSeedFirst.ku.meikyu,
+                    gogyoKyusei: __gogSeedFirst.ku.kyusei,
+                  }
+                : {}),
+            },
+          },
         });
       }
     }
@@ -930,8 +998,6 @@ ${seedSummary}${lifeAlgoSummary}
       || /って何ですか[?？]?$/.test(t0)
       || (/とは\s*何\s*ですか[?？]?$/.test(t0) && t0.length <= 60)
       || (/^.{1,60}（.{1,40}）\s*とは何(ですか|でしょう|か)[?？]?$/.test(t0));
-;
-
 
     // CURRENT_FACTS_DEMUX_V1
     if (__isCurrentFacts(t0)) {
@@ -1250,6 +1316,8 @@ const DEF_SYSTEM = `あなたは「天聞アーク（TENMON-ARK）」。言霊�
               reversalAxis: String(guidanceResult.amatsuKanagiReversal?.reversalAxis || ""),
               userConcern: __concernText || "",
               coreQuestion: "",
+              kyusei: String(guidanceResult.sukuyoResult?.kyusei || ""),
+              birthDate: birthDate.toISOString().slice(0, 10),
               lifeAlgo: {
                 outerPersona: String(guidanceResult.lifeAlgorithmAnalysis?.outerPersona || ""),
                 innerPersona: String(guidanceResult.lifeAlgorithmAnalysis?.innerPersona || ""),
@@ -1403,12 +1471,44 @@ ${__carrySeedSummary}${__carryLifeAlgo}
 7. ユーザーの悩み原文を引用してください。汎用的な「苦悩」「課題」で置き換えないでください。
 8. 具体的な宿名・災い型・反転軸を組み込んで語ってください。
 9. 前のターンの文脈を踏まえて、対話を深化させてください。同じ内容を繰り返さないでください。
-10. 応答は400〜1200文字。意味の通る単位まで返し切ってください。短すぎる応答は避けてください。`;
+10. 応答は400〜1200文字。意味の通る単位まで返し切ってください。短すぎる応答は避けてください。
+11. 問答往還として、ユーザーが今回入力した語りを宿の深化データ（核心の葛藤・問い）に接続して読み解くこと。
+12. 中黒「・」や番号付きリストで並べず、流れる散文で書くこと（見出しの###は可）。
+13. 「大変でしたね」「お疲れ様です」などの汎用共感だけで埋めないこと。`;
+
+        const __gogCarry = buildSukuyouGogyoSeedIntegrationV2({
+          honmeiShukuDisplay: String(__sukuyouSeedForCarry.honmeiShuku || ""),
+          kyuseiRaw: String(__sukuyouSeedForCarry.kyusei || ""),
+          birthDateRaw: String(__sukuyouSeedForCarry.birthDate || ""),
+        });
+        const __ultimateCarry = buildUltimateKanteiClause({
+          honmeiShuku: String(__sukuyouSeedForCarry.honmeiShuku || ""),
+          kyusei: __gogCarry?.ku?.kyusei,
+          gogyoRelation: __gogCarry?.ku?.gogyoRelation,
+          nenUn: __gogCarry?.ku?.nenUn,
+          reversalAxis: String(__sukuyouSeedForCarry.reversalAxis || ""),
+          disasterType: String(__sukuyouSeedForCarry.disasterType || ""),
+          rawConcern: String(__sukuyouSeedForCarry.userConcern || ""),
+        });
+        const __carryTurn = __sukuyouSeedForCarry.turnCount ?? 1;
+        const __deepContinuityCarry = buildDeepContinuityClause({
+          honmeiShuku: String(__sukuyouSeedForCarry.honmeiShuku || ""),
+          previousDepth: __carryTurn,
+          userResponse: t0,
+        });
+        __sukuyouSeedForCarry.turnCount = __carryTurn + 1;
+        __sukuyouSeedByThread.set(String(threadId || ""), __sukuyouSeedForCarry);
+
+        const DEEP_CHAT_CARRY_SYSTEM_FULL =
+          DEEP_CHAT_CARRY_SYSTEM +
+          (__gogCarry?.systemClause || "") +
+          __ultimateCarry +
+          __deepContinuityCarry;
 
         try {
           const __carryHistory = memoryReadSession(String(threadId || ""), 8);
           const __carryRes = await llmChat({
-            system: DEEP_CHAT_CARRY_SYSTEM,
+            system: DEEP_CHAT_CARRY_SYSTEM_FULL,
             user: t0,
             history: __carryHistory,
             maxTokens: 3500,
@@ -1435,6 +1535,14 @@ ${__carrySeedSummary}${__carryLifeAlgo}
                   disasterType: __sukuyouSeedForCarry.disasterType || null,
                   reversalAxis: __sukuyouSeedForCarry.reversalAxis || null,
                   reportAvailable: true,
+                  ...( __gogCarry?.ku
+                    ? {
+                        gogyoRelation: __gogCarry.ku.gogyoRelation,
+                        nenUn: __gogCarry.ku.nenUn,
+                        gogyoMeikyu: __gogCarry.ku.meikyu,
+                        gogyoKyusei: __gogCarry.ku.kyusei,
+                      }
+                    : {}),
                 },
               },
             });
@@ -1467,6 +1575,14 @@ ${__carrySeedSummary}${__carryLifeAlgo}
                 disasterType: __sukuyouSeedForCarry.disasterType || null,
                 reversalAxis: __sukuyouSeedForCarry.reversalAxis || null,
                 reportAvailable: true,
+                ...( __gogCarry?.ku
+                  ? {
+                      gogyoRelation: __gogCarry.ku.gogyoRelation,
+                      nenUn: __gogCarry.ku.nenUn,
+                      gogyoMeikyu: __gogCarry.ku.meikyu,
+                      gogyoKyusei: __gogCarry.ku.kyusei,
+                    }
+                  : {}),
               },
             },
           });
@@ -1494,6 +1610,14 @@ ${__carrySeedSummary}${__carryLifeAlgo}
                 disasterType: __sukuyouSeedForCarry.disasterType || null,
                 reversalAxis: __sukuyouSeedForCarry.reversalAxis || null,
                 reportAvailable: true,
+                ...( __gogCarry?.ku
+                  ? {
+                      gogyoRelation: __gogCarry.ku.gogyoRelation,
+                      nenUn: __gogCarry.ku.nenUn,
+                      gogyoMeikyu: __gogCarry.ku.meikyu,
+                      gogyoKyusei: __gogCarry.ku.kyusei,
+                    }
+                  : {}),
               },
             },
           });

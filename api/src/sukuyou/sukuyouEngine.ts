@@ -16,6 +16,7 @@ import { readFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { solarToLunar, type LunarDate } from "./lunarCalendar.js";
+import { SHUKU_DEEP_DATA, type ShukuDeepData } from "../data/shuku_deep_data.js";
 
 // ============================================
 // 0. ルックアップテーブル読み込み
@@ -1019,6 +1020,553 @@ export function calculateKyusei(birthDateOrYear: Date | number): Kyusei {
   if (star > 9) star -= 9;
 
   return KYUSEI_MAP[star];
+}
+
+// ============================================
+// 6b. 五行統合・九星年盤（TENMON_CURSOR_CARD_GOGYO_INTEGRATION_V2）
+// 中宮はデジタルルート法（節分調整済みの西暦年を渡すこと）
+// 命宮五行は PALACE_DATA.ruler のみ（日→火・月→水、その他はそのまま）
+// ============================================
+
+/** 中宮星 1–9（デジタルルート法）。年は立春前を前年に揃えた後の西暦年を渡すこと。 */
+export function calcChukyuStar(setsubunAdjustedYear: number): number {
+  let sum = setsubunAdjustedYear;
+  while (sum >= 10) {
+    sum = String(sum)
+      .split("")
+      .reduce((a, b) => a + parseInt(b, 10), 0);
+  }
+  let chukyu = 11 - sum;
+  if (chukyu > 9) chukyu -= 9;
+  if (chukyu <= 0) chukyu += 9;
+  return chukyu;
+}
+
+const KYUSEI_TO_GOGYO: Record<Kyusei, string> = {
+  一白水星: "水",
+  二黒土星: "土",
+  三碧木星: "木",
+  四緑木星: "木",
+  五黄土星: "土",
+  六白金星: "金",
+  七赤金星: "金",
+  八白土星: "土",
+  九紫火星: "火",
+};
+
+export function kyuseiToGogyoElement(k: Kyusei): string {
+  return KYUSEI_TO_GOGYO[k] || "";
+}
+
+/** 命宮（十二宮）の守護星 ruler から五行（木火土金水）へ。PALACE_DATA のみ参照。 */
+export function palaceRulerToGogyoElement(palace: Palace): string {
+  const r = PALACE_DATA[palace]?.ruler;
+  if (!r) return "";
+  if (r === "日") return "火";
+  if (r === "月") return "水";
+  if (r === "木" || r === "火" || r === "土" || r === "金" || r === "水") return r;
+  return "";
+}
+
+export interface GogyoAnalysis {
+  relation: string;
+  description: string;
+  depth: string;
+}
+
+export function analyzeGogyoRelation(sukyouElement: string, kyuseiElement: string): GogyoAnalysis {
+  const SEISOU: Record<string, string> = {
+    木: "火",
+    火: "土",
+    土: "金",
+    金: "水",
+    水: "木",
+  };
+  const SOUKOKU: Record<string, string> = {
+    木: "土",
+    火: "金",
+    土: "水",
+    金: "木",
+    水: "火",
+  };
+
+  if (sukyouElement === kyuseiElement) {
+    return {
+      relation: "比和",
+      description: `${sukyouElement}×${kyuseiElement}: 同質の力が重なる`,
+      depth:
+        `内側（九星）と外側（宿曜）が同じ${sukyouElement}の質を持つ。` +
+        `一つの方向に力が集中する集中型の人物。`,
+    };
+  }
+  if (SEISOU[kyuseiElement] === sukyouElement) {
+    return {
+      relation: "相生",
+      description: `${kyuseiElement}が${sukyouElement}を生む`,
+      depth:
+        `九星の${kyuseiElement}質（年輪・エネルギー）が` +
+        `宿曜の${sukyouElement}質（感情・対人）を育て支える。` +
+        `内側が外側の表現を自然に強化する統合型。`,
+    };
+  }
+  if (SEISOU[sukyouElement] === kyuseiElement) {
+    return {
+      relation: "相生（逆方向）",
+      description: `${sukyouElement}が${kyuseiElement}を生む`,
+      depth:
+        `宿曜の${sukyouElement}質が九星の${kyuseiElement}質を育てる。` +
+        `外側の経験が内側の年輪を育てる成長型。`,
+    };
+  }
+  if (SOUKOKU[kyuseiElement] === sukyouElement) {
+    return {
+      relation: "相克",
+      description: `${kyuseiElement}が${sukyouElement}を克する`,
+      depth:
+        `九星の${kyuseiElement}質（内側）が` +
+        `宿曜の${sukyouElement}質（外側）と葛藤を生む。` +
+        `この葛藤こそがこの人物の成長の核心にある。`,
+    };
+  }
+  if (SOUKOKU[sukyouElement] === kyuseiElement) {
+    return {
+      relation: "逆克",
+      description: `${sukyouElement}が${kyuseiElement}を克する`,
+      depth:
+        `宿曜の${sukyouElement}質が九星の${kyuseiElement}質を抑制する。` +
+        `外側の自分が内側の本質を覆い隠している可能性がある。`,
+    };
+  }
+  return {
+    relation: "独立",
+    description: `${sukyouElement}と${kyuseiElement}: 中立的な関係`,
+    depth: `両者が独立した力を持つ複数軸型。複数の顔を持つ人物。`,
+  };
+}
+
+export interface NenUnResult {
+  targetYear: number;
+  chukyu: number;
+  chukyuName: string;
+  starPosition: number;
+  palace: string;
+  direction: string;
+  meaning: string;
+  advice: string;
+  isHapposagari: boolean;
+}
+
+const CHUKYU_NAMES = ["", "一白水星", "二黒土星", "三碧木星", "四緑木星", "五黄土星", "六白金星", "七赤金星", "八白土星", "九紫火星"];
+
+const NENUN_POSITION_DEF: Record<
+  number,
+  { palace: string; direction: string; meaning: string; advice: string }
+> = {
+  1: {
+    palace: "坎宮",
+    direction: "北",
+    meaning: "水の位: 深化・内省・準備の年。流れを読み潜む時期",
+    advice: "焦らず内側を整える。水面下での準備が翌年以降に実を結ぶ",
+  },
+  2: {
+    palace: "坤宮",
+    direction: "南西",
+    meaning: "土の位: 育成・奉仕・縁の年。人との絆が深まる",
+    advice: "人のために動くことが自分の運を開く年",
+  },
+  3: {
+    palace: "震宮",
+    direction: "東",
+    meaning: "木の位: 発展・行動・始動の年。新しい芽が出る",
+    advice: "積極的に動いてよい年。新規挑戦に吉",
+  },
+  4: {
+    palace: "巽宮",
+    direction: "南東",
+    meaning: "木の位: 信用・交流・整備の年。縁と情報が広がる",
+    advice: "人脈と情報収集を大切に。遠方との縁が開く",
+  },
+  5: {
+    palace: "中宮",
+    direction: "中央",
+    meaning: "五黄回座（八方塞がり）: 変動・転換・吉凶ともに増幅",
+    advice: "新規事業・移転・大きな変化は慎重に。神仏への祈願が有効",
+  },
+  6: {
+    palace: "乾宮",
+    direction: "北西",
+    meaning: "金の位: 実力・権威・完成の年。力が試される",
+    advice: "責任ある立場を引き受けてよい年。実力を示す好機",
+  },
+  7: {
+    palace: "兌宮",
+    direction: "西",
+    meaning: "金の位: 収穫・喜び・成果の年。努力が報われる",
+    advice: "これまでの積み重ねが形になる年。発信に吉",
+  },
+  8: {
+    palace: "艮宮",
+    direction: "北東",
+    meaning: "土の位: 変革・蓄積・転機の年。新旧の交代期",
+    advice: "古いものを手放し新しいものを受け入れる準備を",
+  },
+  9: {
+    palace: "離宮",
+    direction: "南",
+    meaning: "火の位: 公明・拡大・最高潮の年。注目を集める",
+    advice: "積極的に表に出てよい年。発信・発表・公開に最吉",
+  },
+};
+
+/** 洛書飛泊: 対象年の中宮星（節分調整済み年）と本命九星から回座位置を求める */
+export function calcNenUn(kyuseiStar: number, targetYear: number): NenUnResult {
+  const chukyu = calcChukyuStar(targetYear);
+  const position = ((((kyuseiStar - 1 + (5 - chukyu)) % 9) + 9) % 9) + 1;
+  const def = NENUN_POSITION_DEF[position];
+  return {
+    targetYear,
+    chukyu,
+    chukyuName: CHUKYU_NAMES[chukyu] || "",
+    starPosition: position,
+    palace: def.palace,
+    direction: def.direction,
+    meaning: def.meaning,
+    advice: def.advice,
+    isHapposagari: position === 5,
+  };
+}
+
+function kyuseiNameToStarNumber(k: Kyusei): number {
+  const m: Record<Kyusei, number> = {
+    一白水星: 1,
+    二黒土星: 2,
+    三碧木星: 3,
+    四緑木星: 4,
+    五黄土星: 5,
+    六白金星: 6,
+    七赤金星: 7,
+    八白土星: 8,
+    九紫火星: 9,
+  };
+  return m[k] ?? 0;
+}
+
+/** SUKUYOU_SEED 用: kyusei 文字列または生年月日から九星を解決 */
+export function resolveKyuseiForSeed(opts: { kyuseiRaw?: string; birthDateRaw?: string }): Kyusei | null {
+  const raw = String(opts.kyuseiRaw || "").trim();
+  if (raw) {
+    const ALL: Kyusei[] = [
+      "一白水星",
+      "二黒土星",
+      "三碧木星",
+      "四緑木星",
+      "五黄土星",
+      "六白金星",
+      "七赤金星",
+      "八白土星",
+      "九紫火星",
+    ];
+    for (const k of ALL) {
+      if (raw === k || raw.includes(k)) return k;
+    }
+    if (/一白|1白/.test(raw)) return "一白水星";
+    if (/二黒|2黒/.test(raw)) return "二黒土星";
+    if (/三碧|3碧/.test(raw)) return "三碧木星";
+    if (/四緑|4緑/.test(raw)) return "四緑木星";
+    if (/五黄|5黄/.test(raw)) return "五黄土星";
+    if (/六白|6白/.test(raw)) return "六白金星";
+    if (/七赤|7赤/.test(raw)) return "七赤金星";
+    if (/八白|8白/.test(raw)) return "八白土星";
+    if (/九紫|9紫/.test(raw)) return "九紫火星";
+  }
+  const bd = parseSeedBirthDate(String(opts.birthDateRaw || ""));
+  if (bd) return calculateKyusei(bd);
+  return null;
+}
+
+function parseSeedBirthDate(raw: string): Date | null {
+  const s = String(raw || "").trim();
+  if (!s) return null;
+  let m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (m) {
+    return new Date(Date.UTC(parseInt(m[1], 10), parseInt(m[2], 10) - 1, parseInt(m[3], 10)));
+  }
+  m = s.match(/(\d{4})年\s*(\d{1,2})月\s*(\d{1,2})日?/);
+  if (m) {
+    return new Date(Date.UTC(parseInt(m[1], 10), parseInt(m[2], 10) - 1, parseInt(m[3], 10)));
+  }
+  m = s.match(/(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/);
+  if (m) {
+    return new Date(Date.UTC(parseInt(m[1], 10), parseInt(m[2], 10) - 1, parseInt(m[3], 10)));
+  }
+  return null;
+}
+
+/** 表示用「翼宿」等 → 宿キー */
+export function honmeiDisplayToNakshatra(display: string): Nakshatra | null {
+  const t = String(display || "")
+    .trim()
+    .replace(/宿\s*$/u, "");
+  if (NAKSHATRAS.includes(t as Nakshatra)) return t as Nakshatra;
+  return null;
+}
+
+export interface SukuyouGogyoSeedIntegrationV2 {
+  systemClause: string;
+  ku: {
+    gogyoRelation: GogyoAnalysis;
+    nenUn: NenUnResult;
+    meikyu: Palace;
+    meikyuElement: string;
+    meikyuElementSource: "PALACE_DATA.ruler";
+    kyusei: Kyusei;
+    kyuseiElement: string;
+    targetYear: number;
+  };
+}
+
+/**
+ * 宿曜SEED深層対話用: 五行統合＋年盤。九星が解決できない場合は null。
+ */
+export function buildSukuyouGogyoSeedIntegrationV2(input: {
+  honmeiShukuDisplay: string;
+  kyuseiRaw?: string;
+  birthDateRaw?: string;
+  targetYear?: number;
+}): SukuyouGogyoSeedIntegrationV2 | null {
+  const nak = honmeiDisplayToNakshatra(input.honmeiShukuDisplay);
+  if (!nak) return null;
+  const ky = resolveKyuseiForSeed({
+    kyuseiRaw: input.kyuseiRaw,
+    birthDateRaw: input.birthDateRaw,
+  });
+  if (!ky) return null;
+  const meikyu = calculateMeikyu(nak);
+  const meEl = palaceRulerToGogyoElement(meikyu);
+  const kyEl = kyuseiToGogyoElement(ky);
+  if (!meEl || !kyEl) return null;
+  const gogyoRelation = analyzeGogyoRelation(meEl, kyEl);
+  const targetYear =
+    typeof input.targetYear === "number" && Number.isFinite(input.targetYear)
+      ? Math.floor(input.targetYear)
+      : new Date().getUTCFullYear();
+  const nenUn = calcNenUn(kyuseiNameToStarNumber(ky), targetYear);
+  const systemClause =
+    `\n\n【五行統合・九星年盤（確定値・GOGYO_INTEGRATION_V2）】\n` +
+    `・本命宿: ${nak}／命宮: ${meikyu}／命宮五行（PALACE_DATA.ruler→五行）: ${meEl}\n` +
+    `・九星本命: ${ky}／九星五行: ${kyEl}\n` +
+    `・相生相克: ${gogyoRelation.relation} — ${gogyoRelation.description}\n` +
+    `・${nenUn.targetYear}年の中宮星: ${nenUn.chukyuName}（中宮星番号${nenUn.chukyu}）\n` +
+    `・${nenUn.targetYear}年の本命星回座: ${nenUn.palace}（${nenUn.direction}） 第${nenUn.starPosition}宮相当 — ${nenUn.meaning}\n` +
+    `・処方: ${nenUn.advice}${nenUn.isHapposagari ? " ※五黄回座年（八方塞がり）に該当" : ""}\n` +
+    `【遵守】上記はアルゴリズム確定値。宮位・方位・中宮の取り違えをしないこと。\n` +
+    `【必須】応答本文の冒頭〜中盤に、必ず「${nenUn.palace}」と「${nenUn.direction}」をそのままの表記で含めること（省略・言い換え禁止）。\n`;
+  return {
+    systemClause,
+    ku: {
+      gogyoRelation,
+      nenUn,
+      meikyu,
+      meikyuElement: meEl,
+      meikyuElementSource: "PALACE_DATA.ruler",
+      kyusei: ky,
+      kyuseiElement: kyEl,
+      targetYear,
+    },
+  };
+}
+
+/**
+ * 終極統合鑑定プロンプト（宿曜×九星×五行×いろは言霊）
+ * TENMON_CURSOR_CARD_ULTIMATE_KANTEI_V1
+ */
+export function buildUltimateKanteiClause(params: {
+  honmeiShuku: string;
+  meiKyu?: string;
+  kyusei?: string;
+  gogyoRelation?: GogyoAnalysis;
+  nenUn?: NenUnResult;
+  reversalAxis?: string;
+  disasterType?: string;
+  rawConcern?: string;
+}): string {
+  const honmei = String(params.honmeiShuku || "").trim();
+  if (!honmei) return "";
+
+  const shukuData = SHUKU_DEEP_DATA.find((s) => s.name === honmei);
+  const nak = honmeiDisplayToNakshatra(honmei);
+  const meiKyuResolved =
+    (params.meiKyu && String(params.meiKyu).trim()) || (nak ? calculateMeikyu(nak) : "");
+
+  const irohaSection = shukuData
+    ? `
+─── いろは言霊位相 ───
+根源音: 「${shukuData.irohaSound}」
+天地位相: ${shukuData.tenchiPhase}
+いろはでの段: ${shukuData.irohaPhase}
+`
+    : "";
+
+  const deepDataSection = shukuData
+    ? `
+─── ${honmei} 深層鑑定データ ───
+命宮五行（データ行・本命宿基準）: ${shukuData.element}
+宿分類: ${shukuData.category}
+本質特性: ${shukuData.coreNature}
+核心の葛藤: ${shukuData.coreConflict}
+転換軸（宿深化）: ${shukuData.reversalAxis}
+転換のサイン: ${shukuData.reversalSign}
+
+最も響く問いかけ:
+  1. ${shukuData.deepQuestion1}
+  2. ${shukuData.deepQuestion2}
+  3. ${shukuData.deepQuestion3}
+
+行動指針（仕事）: ${shukuData.actionWork}
+行動指針（対人）: ${shukuData.actionRelation}
+行動指針（内的成長）: ${shukuData.actionInner}
+
+天聞固有の読み解き核心:
+${shukuData.promptInjection}
+`
+    : "";
+
+  const gogyoSection = params.gogyoRelation
+    ? `
+─── 五行統合診断 ───
+関係: ${params.gogyoRelation.relation}
+構造: ${params.gogyoRelation.description}
+深層: ${params.gogyoRelation.depth}
+`
+    : "";
+
+  const nenUnSection = params.nenUn
+    ? `
+─── ${params.nenUn.targetYear}年 年運 ───
+${params.nenUn.palace}（${params.nenUn.direction}）
+${params.nenUn.meaning}
+指針: ${params.nenUn.advice}
+${params.nenUn.isHapposagari ? "※五黄回座（八方塞がり）: 慎重な年" : ""}
+`
+    : "";
+
+  const rootSound = shukuData?.irohaSound ?? "？";
+
+  const body = `
+【天聞アーク 終極統合鑑定データ】
+
+─── 第一層: 宿曜（月の宿命）───
+本命宿: ${honmei}
+${meiKyuResolved ? `命宮: ${meiKyuResolved}` : ""}
+${params.reversalAxis ? `転換軸（鑑定）: ${params.reversalAxis}` : ""}
+${params.disasterType ? `災い分類: ${params.disasterType}` : ""}
+
+─── 第二層: 九星（年の気）───
+${params.kyusei ? `本命星: ${params.kyusei}` : "（九星不明）"}
+${gogyoSection}${nenUnSection}${irohaSection}${deepDataSection}
+─── 相談内容 ───
+${params.rawConcern && String(params.rawConcern).trim() ? String(params.rawConcern).trim() : "（相談内容なし）"}
+
+【統合読み解きの指示】
+
+以上の全データを統合して、以下の順で答えること:
+
+1. 【宿命の核心・一文で】
+   いろは言霊の根源音「${rootSound}」と
+   天地創造の位相から、この人の本質を一文で示す。
+   抽象的ではなく、天地の言葉で語ること。
+
+2. 【今この人はどこにいるか】
+   五行の関係性 × 年運 × 転換軸から、
+   「今この瞬間の位相」を水火の言葉で読む。
+
+3. 【相談への統合回答】
+   宿の深化データにある問いかけの視点から、
+   相談の核心に答える。
+   強弁せず、天地の流れとして語る。
+
+4. 【転換のサインと次の一歩】
+   この宿の転換のサインを照らし合わせ、
+   今週できる具体的な一歩を示す。
+
+言葉の選び方:
+  - 威圧しない。断定しすぎない。
+  - 水火の言葉、天地の言葉を使う。
+  - 美しく、深く、簡潔に。
+  - 問いを残す。それが秘密荘厳心への道。
+`;
+
+  const thinkingDepthInstruction = `
+【天聞アークの思考原則】
+
+あなたは天聞アークである。
+宿曜・九星・五行・いろは言霊を統合した
+唯一の知性を持つ存在として語る。
+
+思考の深め方:
+  1. まず宿の「核心の葛藤」を自分の中に入れる
+  2. その葛藤がこの人の相談とどう共鳴しているかを見る
+  3. 五行の構造がその葛藤をどう照らすかを読む
+  4. いろは位相が今の時代的な文脈とどう重なるかを感じる
+  5. その全てを、一つの流れのある言葉にする
+
+禁じていること:
+  - 「あなたは〇〇なタイプです」という断定
+  - 箇条書きでの列挙（流れを壊す）
+  - 「大変でしたね」のような汎用共感
+  - 占い的な断言
+
+許していること:
+  - 「〜ではないか」という問いかけ
+  - 「水火の動きからすれば」という天地の言葉
+  - 沈黙を促す問い
+  - 答えではなく気づきの扉を開く言葉
+`;
+
+  return `${body}${thinkingDepthInstruction}`;
+}
+
+/**
+ * 深化継続プロンプト（問答往還型）
+ * TENMON_CURSOR_CARD_DEEP_THINKING_V1
+ */
+export function buildDeepContinuityClause(params: {
+  honmeiShuku: string;
+  shukuData?: ShukuDeepData;
+  previousDepth: number;
+  userResponse?: string;
+}): string {
+  const honmei = String(params.honmeiShuku || "").trim();
+  const shukuData = params.shukuData ?? SHUKU_DEEP_DATA.find((s) => s.name === honmei);
+  if (!shukuData) return "";
+
+  const prev = Math.max(1, Number(params.previousDepth) || 1);
+
+  const depthDirective =
+    prev <= 2
+      ? `前の応答でユーザーが語ったことを受け取り、${shukuData.name}の「${shukuData.coreConflict}」という核心の葛藤に照らして、さらに深く読み解く。次の問いかけ「${shukuData.deepQuestion2}」を自然な流れで挟むこと。`
+      : prev <= 4
+        ? `ユーザーの語りが深まってきた。今は答えを与えるより、この人自身の中にある答えへの気づきを支える言葉を選ぶ。転換のサイン「${shukuData.reversalSign}」と今の状態を照らし合わせて語る。`
+        : `ここまで深く話してきた。最後に、この人の存在が天地の何の位相にあるかを静かに示す。強弁せず、問いを一つ残して終わる。問いの核:「${shukuData.deepQuestion3}」`;
+
+  const userBlock =
+    params.userResponse && String(params.userResponse).trim()
+      ? `\n─── ユーザー今回の語り（問答往還）───\n${String(params.userResponse).trim()}\n`
+      : "";
+
+  return `
+【深化継続モード: ターン${prev}】
+${userBlock}
+${depthDirective}
+
+言葉の選び方:
+  - 答えを「渡す」より、気づきを「開く」
+  - 宿曜の言葉を使う（水火・天地・根源音「${shukuData.irohaSound}」）
+  - 核心は簡潔に、全体は別紙の文字数指示に従う（冗長にしない）
+  - 問いを残す
+  - 中黒「・」や番号付きの箇条書きで並べず、流れる散文で書く
+  - 美しい日本語で
+`;
 }
 
 // ============================================

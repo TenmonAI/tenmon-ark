@@ -1,0 +1,68 @@
+{
+  "title": "acceptance loop test",
+  "category": "UI/UX",
+  "detail": "feedback loop acceptance",
+  "priority": "中",
+  "receiptNumber": "FB-20260415-9144",
+  "isFounder": true,
+  "device": "curl",
+  "createdAt": "2026-04-15T02:17:27.553Z",
+  "ownerType": "cursor",
+  "status": "passed",
+  "sourcePage": "feedback page",
+  "relatedRoute": "ui",
+  "acceptanceNeeded": "__YES__",
+  "notionSaved": true,
+  "notionPageId": "34365146-58e6-8130-8b39-cda50d0b77e7",
+  "saveStatus": "notion_ok",
+  "fixCard": {
+    "cardType": "cursor",
+    "title": "TENMON_FEEDBACK_FB-20260415-9144_CURSOR_CARD_V1",
+    "purpose": "不具合/契約/同期系の再現パスを最小差分で塞ぎ、再発を防ぐ",
+    "verify": [
+      "再現手順で改善前症状が消えていることを確認",
+      "関連APIまたは主要画面の回帰を確認",
+      "receiptNumber=FB-20260415-9144 / notionPageId=34365146-58e6-8130-8b39-cda50d0b77e7 で追跡可能であること"
+    ],
+    "pass": "認証・入力境界・契約・同期が成立し、症状が再現しない",
+    "fail": "再現継続、契約崩れ、関連回帰が残る",
+    "source": {
+      "receiptNumber": "FB-20260415-9144",
+      "notionPageId": "34365146-58e6-8130-8b39-cda50d0b77e7",
+      "category": "UI/UX",
+      "priority": "中",
+      "detail": "feedback loop acceptance"
+    }
+  },
+  "fixCardGeneratedAt": "2026-04-15T02:17:28.104Z",
+  "fixCardType": "cursor",
+  "groupedIssueKey": "cursor:ui:ui/ux",
+  "designNote": "routing/api/db/sync/contract レーンで最小diff修正を優先",
+  "triageSummary": "acceptance loop test / UI/UX / 中",
+  "generatedCardDraft": {
+    "cardType": "cursor",
+    "title": "TENMON_FEEDBACK_FB-20260415-9144_CURSOR_CARD_V1",
+    "purpose": "不具合/契約/同期系の再現パスを最小差分で塞ぎ、再発を防ぐ",
+    "verify": [
+      "再現手順で改善前症状が消えていることを確認",
+      "関連APIまたは主要画面の回帰を確認",
+      "receiptNumber=FB-20260415-9144 / notionPageId=34365146-58e6-8130-8b39-cda50d0b77e7 で追跡可能であること"
+    ],
+    "pass": "認証・入力境界・契約・同期が成立し、症状が再現しない",
+    "fail": "再現継続、契約崩れ、関連回帰が残る",
+    "source": {
+      "receiptNumber": "FB-20260415-9144",
+      "notionPageId": "34365146-58e6-8130-8b39-cda50d0b77e7",
+      "category": "UI/UX",
+      "priority": "中",
+      "detail": "feedback loop acceptance"
+    }
+  },
+  "generatedCardType": "cursor",
+  "triagedAt": "2026-04-15T02:17:43.136Z",
+  "acceptanceResult": "PASS",
+  "acceptanceSummary": "post-cards acceptance ok",
+  "relatedCommitSha": "HEAD",
+  "buildMark": "runtime",
+  "lastRunAt": "2026-04-15T02:17:44.636Z"
+}
