@@ -1634,8 +1634,9 @@ ${__carrySeedSummary}${__carryLifeAlgo}
 10. 全8章を省略なく出力せよ。出力は3000字以上を確保し、レポートの情報を削らないこと。
 11. 途中で打ち切らない。最終章「最終御神託」まで必ず出力を完了せよ。` + __sukuyouContextClause;
           // ORACLE_TOKENS_V2: maxTokens 4500→8000, timeout 60s→90s で御神託レポート全文出力を確保
-          const llmRes = await llmChat({ system: __oracleSystem, user: t0, history: memoryReadSession(String(threadId || ""), 8), maxTokens: 8000, timeout: 90000, provider: "openai" });
-          outText = String(llmRes?.text ?? "").trim();
+          const __oracleUserPrompt = `${t0}\n\n【出力補助指示】\n御神託レポートの全8章を、第1章から最終御神託まで省略なく3000字以上で提示してください。`;
+          const llmRes = await llmChat({ system: __oracleSystem, user: __oracleUserPrompt, history: memoryReadSession(String(threadId || ""), 3), maxTokens: 8000, timeout: 90000, provider: "openai" });
+          outText = (llmRes?.ok && llmRes?.text) ? String(llmRes.text).trim() : "";
           outProv = String((llmRes?.providerUsed || llmRes?.provider) ?? "llm") + "+oracle";
           console.log("[SUKUYOU_ORACLE] Oracle bypass route used, outLen=" + outText.length);
         } catch (e: any) {
@@ -1643,8 +1644,12 @@ ${__carrySeedSummary}${__carryLifeAlgo}
           outText = "";
           outProv = "deterministic+oracle";
         }
-        // SUKUYOU_ORACLE_FALLBACK_V2: LLMが空応答を返した場合、rawReportにフォールバック
-        if (!outText) {
+        // SUKUYOU_ORACLE_FALLBACK_V2: LLMが空応答 or 短文化 or 構造欠落の場合、rawReportにフォールバック
+        const __looksTooShortForOracle = outText.length < 2000 || !/第.?1章/.test(outText) || !/最終御神託|最後に|今すぐの一手/.test(outText);
+        if (!outText || __looksTooShortForOracle) {
+          if (outText && __looksTooShortForOracle) {
+            console.warn("[SUKUYOU_ORACLE] LLM response too short or missing structure, outLen=" + outText.length + ", falling back to rawReport");
+          }
           console.warn("[SUKUYOU_ORACLE] LLM returned empty, falling back to raw report");
           const rawReport = __sukuyouContextClause.split("【TENMON-ARK御神託レポート（アルゴリズム算出）】")[1]?.split("【TENMON-ARK御神託応答指示")[0]?.trim() || "";
           if (rawReport) {
