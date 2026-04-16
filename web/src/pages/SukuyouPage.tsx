@@ -5,11 +5,12 @@
  *  ライトテーマ対応・名前案内・ふりがな・断定回避・第5/6章特別表示
  * ============================================================
  */
-import React, { useState, useCallback, useRef, useEffect } from "react";
+import React, { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import { formatShukuLabel, getShukuKana } from "../lib/shukuLabel";
 import { saveSukuyouResult, getSukuyouResult, type SukuyouResultRoom } from "../lib/sukuyouStore";
 import { queueSyncChange, syncPush } from "../lib/crossDeviceSync";
 import { TypingIndicator } from "../components/gpt/TypingIndicator";
+import { computeDeepeningData, type DeepeningData } from "../lib/sukuyouDeepening";
 
 interface GuidanceResult {
   success: boolean;
@@ -41,6 +42,9 @@ interface GuidanceResult {
     userConcern: string | null;
     coreQuestion: string;
     deepChatPrompts: string[];
+    honmeiYo?: string;
+    kyusei?: string;
+    meikyu?: string;
     lifeAlgo: {
       outerPersona: string;
       innerPersona: string;
@@ -344,6 +348,17 @@ export function SukuyouPage({ onBack, onSendToChat, restoreRoomId, onNewDiagnosi
     setToast(msg);
     setTimeout(() => setToast(null), 1200);
   };
+
+  // 深化データ（クライアントサイド計算）
+  const deepeningData: DeepeningData = useMemo(() => {
+    if (!result?.sukuyouSeedV1) return { gogyoRelation: null, nenUn: null, shukuDeep: null };
+    const sv = result.sukuyouSeedV1;
+    return computeDeepeningData({
+      honmeiShuku: sv.honmeiShuku || result.honmeiShuku,
+      kyusei: sv.kyusei,
+      meikyu: sv.meikyu,
+    });
+  }, [result]);
 
   // UI state
   const [showDetail, setShowDetail] = useState(false);
@@ -1352,6 +1367,283 @@ export function SukuyouPage({ onBack, onSendToChat, restoreRoomId, onNewDiagnosi
                 </p>
               </div>
             )}
+
+            {/* ═══ 深化セクション: 五行統合 ═══ */}
+            {deepeningData.gogyoRelation && (() => {
+              const g = deepeningData.gogyoRelation;
+              return (
+                <div style={{
+                  ...cardBase,
+                  border: "1px solid rgba(139, 92, 246, 0.2)",
+                  background: "linear-gradient(135deg, rgba(139,92,246,0.03) 0%, rgba(139,92,246,0.01) 100%)",
+                  padding: "1.125rem 1rem",
+                }}>
+                  <h3 style={{
+                    fontSize: 14, fontWeight: 600, color: "#7c3aed",
+                    marginBottom: 12, display: "flex", alignItems: "center", gap: 8,
+                  }}>
+                    <span style={{ fontSize: 14, opacity: 0.7 }}>☯</span>
+                    五行統合
+                  </h3>
+                  <p style={{ fontSize: 11, color: textMuted, marginBottom: 14, lineHeight: 1.5, fontStyle: "italic" }}>
+                    九星と命宮の五行関係から読み解く、あなたのエネルギー構造です。
+                  </p>
+                  <div style={{
+                    display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 14,
+                  }}>
+                    <div style={{
+                      padding: "12px", borderRadius: 10,
+                      background: "rgba(139, 92, 246, 0.04)",
+                      border: "1px solid rgba(139, 92, 246, 0.1)",
+                      textAlign: "center",
+                    }}>
+                      <div style={{ fontSize: 10, color: textMuted, marginBottom: 5 }}>九星</div>
+                      <div style={{ fontSize: 14, fontWeight: 600 }}>{g.kyuseiElement}</div>
+                    </div>
+                    <div style={{
+                      padding: "12px", borderRadius: 10,
+                      background: "rgba(139, 92, 246, 0.06)",
+                      border: "1px solid rgba(139, 92, 246, 0.15)",
+                      textAlign: "center",
+                    }}>
+                      <div style={{ fontSize: 10, color: textMuted, marginBottom: 5 }}>関係</div>
+                      <div style={{ fontSize: 15, fontWeight: 700, color: "#7c3aed" }}>{g.relation}</div>
+                    </div>
+                    <div style={{
+                      padding: "12px", borderRadius: 10,
+                      background: "rgba(139, 92, 246, 0.04)",
+                      border: "1px solid rgba(139, 92, 246, 0.1)",
+                      textAlign: "center",
+                    }}>
+                      <div style={{ fontSize: 10, color: textMuted, marginBottom: 5 }}>命宮</div>
+                      <div style={{ fontSize: 14, fontWeight: 600 }}>{g.meikyuElement}</div>
+                    </div>
+                  </div>
+                  <div style={{
+                    padding: "12px 14px", borderRadius: 10,
+                    background: "rgba(139, 92, 246, 0.03)",
+                    border: "1px solid rgba(139, 92, 246, 0.08)",
+                    marginBottom: 8,
+                  }}>
+                    <div style={{ fontSize: 12, fontWeight: 500, color: "#7c3aed", marginBottom: 6 }}>{g.description}</div>
+                    <div style={{ fontSize: 13, lineHeight: 1.8 }}>{g.depth}</div>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* ═══ 深化セクション: 年運 ═══ */}
+            {deepeningData.nenUn && (() => {
+              const n = deepeningData.nenUn;
+              return (
+                <div style={{
+                  ...cardBase,
+                  border: n.isHapposagari
+                    ? "1px solid rgba(220, 38, 38, 0.2)"
+                    : "1px solid rgba(16, 185, 129, 0.2)",
+                  background: n.isHapposagari
+                    ? "linear-gradient(135deg, rgba(220,38,38,0.03) 0%, rgba(220,38,38,0.01) 100%)"
+                    : "linear-gradient(135deg, rgba(16,185,129,0.03) 0%, rgba(16,185,129,0.01) 100%)",
+                  padding: "1.125rem 1rem",
+                }}>
+                  <h3 style={{
+                    fontSize: 14, fontWeight: 600,
+                    color: n.isHapposagari ? "#dc2626" : "#059669",
+                    marginBottom: 12, display: "flex", alignItems: "center", gap: 8,
+                  }}>
+                    <span style={{ fontSize: 14, opacity: 0.7 }}>{n.isHapposagari ? "⚠" : "✦"}</span>
+                    {n.targetYear}年の年運
+                  </h3>
+                  <p style={{ fontSize: 11, color: textMuted, marginBottom: 14, lineHeight: 1.5, fontStyle: "italic" }}>
+                    九星気学の年盤配置に基づく、今年のエネルギーの方向性です。
+                  </p>
+                  <div style={{
+                    display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14,
+                  }}>
+                    <div style={{
+                      padding: "12px", borderRadius: 10,
+                      background: n.isHapposagari ? "rgba(220,38,38,0.04)" : "rgba(16,185,129,0.04)",
+                      border: n.isHapposagari ? "1px solid rgba(220,38,38,0.1)" : "1px solid rgba(16,185,129,0.1)",
+                      textAlign: "center",
+                    }}>
+                      <div style={{ fontSize: 10, color: textMuted, marginBottom: 5 }}>回座位置</div>
+                      <div style={{ fontSize: 14, fontWeight: 600 }}>{n.palace}（{n.direction}）</div>
+                    </div>
+                    <div style={{
+                      padding: "12px", borderRadius: 10,
+                      background: n.isHapposagari ? "rgba(220,38,38,0.04)" : "rgba(16,185,129,0.04)",
+                      border: n.isHapposagari ? "1px solid rgba(220,38,38,0.1)" : "1px solid rgba(16,185,129,0.1)",
+                      textAlign: "center",
+                    }}>
+                      <div style={{ fontSize: 10, color: textMuted, marginBottom: 5 }}>中宮星</div>
+                      <div style={{ fontSize: 14, fontWeight: 600 }}>{n.chukyuName}</div>
+                    </div>
+                  </div>
+                  <div style={{
+                    padding: "12px 14px", borderRadius: 10,
+                    background: n.isHapposagari ? "rgba(220,38,38,0.03)" : "rgba(16,185,129,0.03)",
+                    border: n.isHapposagari ? "1px solid rgba(220,38,38,0.08)" : "1px solid rgba(16,185,129,0.08)",
+                    marginBottom: 8,
+                  }}>
+                    <div style={{
+                      fontSize: 12, fontWeight: 500,
+                      color: n.isHapposagari ? "#dc2626" : "#059669",
+                      marginBottom: 6,
+                    }}>
+                      {n.meaning}
+                    </div>
+                    <div style={{ fontSize: 13, lineHeight: 1.8 }}>{n.advice}</div>
+                  </div>
+                  {n.isHapposagari && (
+                    <div style={{
+                      fontSize: 11, color: "#dc2626", lineHeight: 1.6, marginTop: 8,
+                      padding: "8px 12px", borderRadius: 8,
+                      background: "rgba(220,38,38,0.04)",
+                      border: "1px solid rgba(220,38,38,0.1)",
+                    }}>
+                      八方塞がりの年です。大きな変化は慎重に。日々の小さな積み重ねが来年以降の飛躍につながります。
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* ═══ 深化セクション: いろは位相 ═══ */}
+            {deepeningData.shukuDeep && (() => {
+              const s = deepeningData.shukuDeep;
+              return (
+                <div style={{
+                  ...cardBase,
+                  border: "1px solid rgba(217, 119, 6, 0.2)",
+                  background: "linear-gradient(135deg, rgba(217,119,6,0.03) 0%, rgba(217,119,6,0.01) 100%)",
+                  padding: "1.125rem 1rem",
+                }}>
+                  <h3 style={{
+                    fontSize: 14, fontWeight: 600, color: "#b45309",
+                    marginBottom: 12, display: "flex", alignItems: "center", gap: 8,
+                  }}>
+                    <span style={{ fontSize: 14, opacity: 0.7 }}>◈</span>
+                    いろは位相
+                  </h3>
+                  <p style={{ fontSize: 11, color: textMuted, marginBottom: 14, lineHeight: 1.5, fontStyle: "italic" }}>
+                    いろは歌に基づく宿の音韻配置です。宿の持つ根源的な性質を映し出します。
+                  </p>
+                  <div style={{
+                    display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 14,
+                  }}>
+                    <div style={{
+                      padding: "12px", borderRadius: 10,
+                      background: "rgba(217,119,6,0.04)",
+                      border: "1px solid rgba(217,119,6,0.1)",
+                      textAlign: "center",
+                    }}>
+                      <div style={{ fontSize: 10, color: textMuted, marginBottom: 5 }}>音</div>
+                      <div style={{ fontSize: 20, fontWeight: 700, color: "#b45309" }}>{s.irohaSound}</div>
+                    </div>
+                    <div style={{
+                      padding: "12px", borderRadius: 10,
+                      background: "rgba(217,119,6,0.04)",
+                      border: "1px solid rgba(217,119,6,0.1)",
+                      textAlign: "center",
+                    }}>
+                      <div style={{ fontSize: 10, color: textMuted, marginBottom: 5 }}>五行</div>
+                      <div style={{ fontSize: 14, fontWeight: 600 }}>{s.element}</div>
+                    </div>
+                    <div style={{
+                      padding: "12px", borderRadius: 10,
+                      background: "rgba(217,119,6,0.04)",
+                      border: "1px solid rgba(217,119,6,0.1)",
+                      textAlign: "center",
+                    }}>
+                      <div style={{ fontSize: 10, color: textMuted, marginBottom: 5 }}>天地位相</div>
+                      <div style={{ fontSize: 11, fontWeight: 500, lineHeight: 1.4 }}>{s.tenchiPhase}</div>
+                    </div>
+                  </div>
+                  <div style={{
+                    padding: "12px 14px", borderRadius: 10,
+                    background: "rgba(217,119,6,0.03)",
+                    border: "1px solid rgba(217,119,6,0.08)",
+                    marginBottom: 10,
+                  }}>
+                    <div style={{ fontSize: 12, fontWeight: 500, color: "#b45309", marginBottom: 6 }}>宿の核心</div>
+                    <div style={{ fontSize: 13, lineHeight: 1.8 }}>{s.coreNature}</div>
+                  </div>
+                  <div style={{
+                    padding: "12px 14px", borderRadius: 10,
+                    background: "rgba(217,119,6,0.02)",
+                    border: "1px solid rgba(217,119,6,0.06)",
+                    marginBottom: 10,
+                  }}>
+                    <div style={{ fontSize: 12, fontWeight: 500, color: "#92400e", marginBottom: 6 }}>内なる葛藤</div>
+                    <div style={{ fontSize: 13, lineHeight: 1.8 }}>{s.coreConflict}</div>
+                  </div>
+                  <div style={{
+                    fontSize: 11, color: textMuted, lineHeight: 1.6,
+                    padding: "8px 12px", borderRadius: 8,
+                    background: "rgba(217,119,6,0.02)",
+                    border: "1px dashed rgba(217,119,6,0.1)",
+                  }}>
+                    反転の兆し: {s.reversalSign}
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* ═══ 深化セクション: 天聞アークからの問いかけ ═══ */}
+            {deepeningData.shukuDeep?.deepQuestion1 && (() => {
+              const s = deepeningData.shukuDeep;
+              return (
+                <div style={{
+                  ...cardBase,
+                  border: "1px solid rgba(201, 161, 74, 0.25)",
+                  background: "linear-gradient(135deg, rgba(201,161,74,0.05) 0%, rgba(201,161,74,0.02) 100%)",
+                  padding: "1.25rem 1rem",
+                  textAlign: "center",
+                }}>
+                  <div style={{
+                    fontSize: 10, color: arkGold, fontWeight: 600,
+                    letterSpacing: "0.12em", marginBottom: 14,
+                  }}>
+                    天聞アークからの問いかけ
+                  </div>
+                  <div style={{
+                    fontSize: 15, lineHeight: 2, fontWeight: 500,
+                    padding: "16px 12px",
+                    borderTop: `1px solid rgba(201, 161, 74, 0.12)`,
+                    borderBottom: `1px solid rgba(201, 161, 74, 0.12)`,
+                    marginBottom: 16,
+                  }}>
+                    {s.deepQuestion1}
+                  </div>
+                  {onSendToChat && result && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const sv = result.sukuyouSeedV1;
+                        const rawSeed = sv
+                          ? `[SUKUYOU_SEED] ${JSON.stringify(sv)}`
+                          : `[SUKUYOU_SEED] ${result.premise?.birthDate || ""} / ${result.honmeiShuku || ""} / ${result.disasterType || ""}`;
+                        const shuku = formatShukuLabel(result.honmeiShuku);
+                        const displayText = `宿曜鑑定の結果を土台に、深い問いかけに向き合います。本命宿は${shuku}、災い分類は${result.disasterType || "不明"}です。`;
+                        onSendToChat(displayText, rawSeed, s.deepQuestion1);
+                      }}
+                      style={{
+                        ...btnBase,
+                        padding: "12px 28px",
+                        background: "rgba(201, 161, 74, 0.08)",
+                        border: "1px solid rgba(201, 161, 74, 0.25)",
+                        color: arkGold,
+                        fontSize: 13,
+                        fontWeight: 600,
+                        borderRadius: 10,
+                      }}
+                    >
+                      この問いに答えてみる →
+                    </button>
+                  )}
+                </div>
+              );
+            })()}
 
             {/* ═══ 鑑定直下チャット ═══ */}
             <div style={{
