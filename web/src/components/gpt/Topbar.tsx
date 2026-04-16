@@ -9,6 +9,7 @@ type TopbarProps = {
   showBackToChat?: boolean;
   onBackToChat?: () => void;
   onSukuyouAbout?: () => void;
+  onKotodamaAbout?: () => void;
 };
 
 export function Topbar({
@@ -18,6 +19,7 @@ export function Topbar({
   showBackToChat,
   onBackToChat,
   onSukuyouAbout,
+  onKotodamaAbout,
 }: TopbarProps) {
   const { t } = useI18n();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -165,6 +167,41 @@ export function Topbar({
           }}
         >
           ☆ 宿曜経とは
+        </button>
+        <button
+          type="button"
+          className="gpt-topbar-kotodama-banner"
+          onClick={(e) => {
+            e.preventDefault();
+            onKotodamaAbout?.();
+          }}
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 4,
+            marginLeft: 6,
+            padding: "3px 10px",
+            fontSize: 11,
+            fontWeight: 600,
+            color: "#1e3a5f",
+            background: "linear-gradient(135deg, #e0f2fe, #bae6fd)",
+            border: "1px solid #7dd3fc",
+            borderRadius: 12,
+            cursor: "pointer",
+            whiteSpace: "nowrap",
+            transition: "transform 0.15s, box-shadow 0.15s",
+            fontFamily: "inherit",
+          }}
+          onMouseEnter={(e) => {
+            (e.currentTarget as HTMLElement).style.transform = "scale(1.05)";
+            (e.currentTarget as HTMLElement).style.boxShadow = "0 2px 8px rgba(125,211,252,0.4)";
+          }}
+          onMouseLeave={(e) => {
+            (e.currentTarget as HTMLElement).style.transform = "scale(1)";
+            (e.currentTarget as HTMLElement).style.boxShadow = "none";
+          }}
+        >
+          ✦ 言霊秘書とは
         </button>
       </div>
 
