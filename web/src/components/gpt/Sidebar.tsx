@@ -227,6 +227,16 @@ export function Sidebar({ view, onView, onNewChat, onNewSukuyou, onOpenSettings,
       }
       window.localStorage.setItem(THREADS_META_KEY, JSON.stringify(map));
       switchThreadCanonicalV1(nextId);
+      // sync: サーバーにスレッド削除を通知
+      queueSyncChange({
+        kind: "chat_thread_delete",
+        payload: {
+          threadId: id,
+          updatedAt: new Date().toISOString(),
+          version: 1,
+        },
+      });
+      syncPush().catch(() => {});
     } catch {}
     setThreads(loadThreads());
     if (nextId) setActiveThreadId(nextId);
@@ -268,6 +278,16 @@ export function Sidebar({ view, onView, onNewChat, onNewSukuyou, onOpenSettings,
 
   const handleDeleteFolder = async (id: string) => {
     await deleteChatFolder(id);
+    // sync: サーバーにフォルダー削除を通知
+    queueSyncChange({
+      kind: "chat_folder_delete",
+      payload: {
+        folderId: id,
+        updatedAt: new Date().toISOString(),
+        version: 1,
+      },
+    });
+    syncPush().catch(() => {});
     setExpandedFolders((prev) => {
       const next = new Set(prev);
       next.delete(id);
@@ -567,6 +587,16 @@ export function Sidebar({ view, onView, onNewChat, onNewSukuyou, onOpenSettings,
                         e.stopPropagation();
                         if (confirm(`「${titleLine}」の鑑定記録を削除しますか？`)) {
                           deleteSukuyouResult(room.id).then(() => {
+                            // sync: サーバーに削除を通知
+                            queueSyncChange({
+                              kind: "sukuyou_room_delete",
+                              payload: {
+                                roomId: room.id,
+                                updatedAt: new Date().toISOString(),
+                                version: 1,
+                              },
+                            });
+                            syncPush().catch(() => {});
                             listSukuyouResults().then(setSukuyouRooms).catch(() => {});
                           });
                         }

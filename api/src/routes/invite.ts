@@ -140,3 +140,101 @@ inviteRouter.post("/auth/invite/validate", (req: Request, res: Response) => {
     return res.status(500).json({ ok: false, error: "INTERNAL_ERROR" });
   }
 });
+
+// ============================================================
+// OWNER_ADMIN_USERS_V1: オーナー専用ユーザー一覧
+// ============================================================
+
+/** GET /api/auth/admin/users — オーナーのみ全ユーザー情報を取得 */
+inviteRouter.get("/auth/admin/users", (req: Request, res: Response) => {
+  const userId = requireOwner(req, res);
+  if (!userId) return;
+
+  try {
+    const db = getDb("kokuzo");
+    // sync テーブルも kokuzo に存在する（syncPhaseA.ts と同じ）
+    const pwaDb = db;
+
+    // 全ユーザー取得
+    const users = db.prepare(`
+      SELECT u.userId, u.email, la.createdAt, la.updatedAt
+      FROM auth_users u
+      LEFT JOIN auth_local_accounts la ON u.email = la.email
+      ORDER BY la.createdAt DESC
+    `).all() as Array<{
+      userId: string;
+      email: string;
+      createdAt: string | null;
+      updatedAt: string | null;
+    }>;
+
+    // 各ユーザーのデバイス数・最終アクセス・同期データ数を取得
+    const result = users.map((u) => {
+      // デバイス数
+      let deviceCount = 0;
+      let lastSeenAt: string | null = null;
+      try {
+        const devices = pwaDb.prepare(
+          `SELECT deviceId, lastSeenAt FROM sync_devices WHERE userId = ? ORDER BY lastSeenAt DESC`
+        ).all(u.userId) as Array<{ deviceId: string; lastSeenAt: string }>;
+        deviceCount = devices.length;
+        lastSeenAt = devices.length > 0 ? devices[0].lastSeenAt : null;
+      } catch { /* table may not exist yet */ }
+
+      // 同期済みスレッド数
+      let threadCount = 0;
+      try {
+        const tc = pwaDb.prepare(
+          `SELECT COUNT(*) as cnt FROM synced_chat_threads WHERE userId = ? AND isDeleted = 0`
+        ).get(u.userId) as any;
+        threadCount = tc?.cnt ?? 0;
+      } catch { /* table may not exist yet */ }
+
+      // 同期済み宿曜鑑定数
+      let sukuyouCount = 0;
+      try {
+        const sc = pwaDb.prepare(
+          `SELECT COUNT(*) as cnt FROM synced_sukuyou_rooms WHERE userId = ? AND isDeleted = 0`
+        ).get(u.userId) as any;
+        sukuyouCount = sc?.cnt ?? 0;
+      } catch { /* table may not exist yet */ }
+
+      // 同期済みフォルダ数
+      let folderCount = 0;
+      try {
+        const fc = pwaDb.prepare(
+          `SELECT COUNT(*) as cnt FROM synced_chat_folders WHERE userId = ? AND isDeleted = 0`
+        ).get(u.userId) as any;
+        folderCount = fc?.cnt ?? 0;
+      } catch { /* table may not exist yet */ }
+
+      // セッション数（アクティブ）
+      let activeSessionCount = 0;
+      try {
+        const now = new Date().toISOString();
+        const sc2 = db.prepare(
+          `SELECT COUNT(*) as cnt FROM auth_sessions WHERE userId = ? AND expiresAt > ?`
+        ).get(u.userId, now) as any;
+        activeSessionCount = sc2?.cnt ?? 0;
+      } catch { /* */ }
+
+      return {
+        userId: u.userId,
+        email: u.email,
+        registeredAt: u.createdAt,
+        lastPasswordChange: u.updatedAt,
+        deviceCount,
+        lastSeenAt,
+        activeSessionCount,
+        threadCount,
+        sukuyouCount,
+        folderCount,
+      };
+    });
+
+    return res.json({ ok: true, users: result, total: result.length });
+  } catch (e: any) {
+    console.error("[ADMIN] users list error:", e);
+    return res.status(500).json({ ok: false, error: "INTERNAL_ERROR" });
+  }
+});
