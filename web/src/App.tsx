@@ -49,6 +49,7 @@ export default function App() {
   const isSukuyou = pathname === "/pwa/sukuyou" || pathname === "/pwa/sukuyou/";
   const isSukuyouAbout = pathname === "/pwa/sukuyou-about" || pathname === "/pwa/sukuyou-about/";
   const isKotodamaAbout = pathname === "/pwa/kotodama-about" || pathname === "/pwa/kotodama-about/";
+  const isAmatsuKanagiAbout = pathname === "/pwa/amatsu-kanagi-about" || pathname === "/pwa/amatsu-kanagi-about/";
 
   useEffect(() => {
     let dead = false;
@@ -176,7 +177,7 @@ export default function App() {
 
   return (
     <I18nProvider>
-      <GptShell initialView={isKotodamaAbout ? "kotodama-about" : isSukuyouAbout ? "sukuyou-about" : isSukuyou ? "sukuyou" : "chat"} />
+      <GptShell initialView={isAmatsuKanagiAbout ? "amatsu-kanagi-about" : isKotodamaAbout ? "kotodama-about" : isSukuyouAbout ? "sukuyou-about" : isSukuyou ? "sukuyou" : "chat"} />
     </I18nProvider>
   );
 }

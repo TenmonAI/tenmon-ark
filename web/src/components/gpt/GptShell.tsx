@@ -9,6 +9,7 @@ import { SettingsModal } from "./SettingsModal";
 import FeedbackPage from "../../pages/FeedbackPage";
 import { SukuyouAboutPage } from "../../pages/SukuyouAboutPage";
 import { KotodamaAboutPage } from "../../pages/KotodamaAboutPage";
+import { AmatsuKanagiAboutPage } from "../../pages/AmatsuKanagiAboutPage";
 import { APP_TITLE } from "../../config/app";
 import { createNewThreadId, switchThreadCanonicalV1, getThreadId } from "../../hooks/useChat";
 import { loadNavState, markChatActive, markViewActive, getLastActiveThreadId } from "../../lib/navState";
@@ -124,7 +125,9 @@ export function GptShell({ initialView = "chat" }: { initialView?: GptView }) {
             ? "宿曜経とは"
             : view === "kotodama-about"
               ? "言霊秘書とは"
-              : view === "feedback"
+              : view === "amatsu-kanagi-about"
+                ? "天津金木とは"
+                : view === "feedback"
                 ? "改善のご要望"
                 : "プロフィール";
 
@@ -155,7 +158,7 @@ export function GptShell({ initialView = "chat" }: { initialView?: GptView }) {
   };
 
   /* ── 非チャットビューかどうか（戻る導線を出すか） ── */
-  const showBackToChat = view !== "chat" && view !== "sukuyou" && view !== "sukuyou-room" && view !== "sukuyou-about" && view !== "kotodama-about";
+  const showBackToChat = view !== "chat" && view !== "sukuyou" && view !== "sukuyou-room" && view !== "sukuyou-about" && view !== "kotodama-about" && view !== "amatsu-kanagi-about";
 
   return (
     <div className={`gpt-shell ${isOverlayNav ? "gpt-shell--overlay" : ""} ${sidebarOpen ? "gpt-shell--open" : ""}`}>
@@ -178,6 +181,7 @@ export function GptShell({ initialView = "chat" }: { initialView?: GptView }) {
           onBackToChat={handleBackToChat}
           onSukuyouAbout={() => { setView("sukuyou-about"); setSidebarOpen(false); }}
           onKotodamaAbout={() => { setView("kotodama-about"); setSidebarOpen(false); }}
+          onAmatsuKanagiAbout={() => { setView("amatsu-kanagi-about"); setSidebarOpen(false); }}
         />
         <div className="gpt-content">
           {view === "chat" && <ChatRoute />}
@@ -204,6 +208,9 @@ export function GptShell({ initialView = "chat" }: { initialView?: GptView }) {
           )}
           {view === "kotodama-about" && (
             <KotodamaAboutPage onBack={() => setView("chat")} />
+          )}
+          {view === "amatsu-kanagi-about" && (
+            <AmatsuKanagiAboutPage onBack={() => setView("chat")} />
           )}
           {view === "feedback" && (
             <FeedbackPage onBack={() => setView("chat")} />

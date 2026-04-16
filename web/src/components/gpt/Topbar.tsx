@@ -10,6 +10,7 @@ type TopbarProps = {
   onBackToChat?: () => void;
   onSukuyouAbout?: () => void;
   onKotodamaAbout?: () => void;
+  onAmatsuKanagiAbout?: () => void;
 };
 
 export function Topbar({
@@ -20,6 +21,7 @@ export function Topbar({
   onBackToChat,
   onSukuyouAbout,
   onKotodamaAbout,
+  onAmatsuKanagiAbout,
 }: TopbarProps) {
   const { t } = useI18n();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -202,6 +204,41 @@ export function Topbar({
           }}
         >
           ✦ 言霊秘書とは
+        </button>
+        <button
+          type="button"
+          className="gpt-topbar-amatsu-banner"
+          onClick={(e) => {
+            e.preventDefault();
+            onAmatsuKanagiAbout?.();
+          }}
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 4,
+            marginLeft: 6,
+            padding: "3px 10px",
+            fontSize: 11,
+            fontWeight: 600,
+            color: "#14532d",
+            background: "linear-gradient(135deg, #dcfce7, #bbf7d0)",
+            border: "1px solid #86efac",
+            borderRadius: 12,
+            cursor: "pointer",
+            whiteSpace: "nowrap",
+            transition: "transform 0.15s, box-shadow 0.15s",
+            fontFamily: "inherit",
+          }}
+          onMouseEnter={(e) => {
+            (e.currentTarget as HTMLElement).style.transform = "scale(1.05)";
+            (e.currentTarget as HTMLElement).style.boxShadow = "0 2px 8px rgba(134,239,172,0.4)";
+          }}
+          onMouseLeave={(e) => {
+            (e.currentTarget as HTMLElement).style.transform = "scale(1)";
+            (e.currentTarget as HTMLElement).style.boxShadow = "none";
+          }}
+        >
+          ◇ 天津金木とは
         </button>
       </div>
 
