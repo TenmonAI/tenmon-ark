@@ -982,15 +982,43 @@ export function calculateHonmeiYo(birthDate: Date): Planet {
 }
 
 /**
- * 九星の算出（三元法）
+ * 九星の算出（デジタルルート法）
+ * 節分区切り（2月4日が立春）で西暦年を決定し、
+ * 年の各桁を合計して一桁にした後、11から引く。
+ * 参照: kaiunya.jp 九星早見表、令和八年九星早見表PDF
  */
-export function calculateKyusei(birthYear: number): Kyusei {
-  const KYUSEI_LIST: Kyusei[] = [
-    "一白水星", "二黒土星", "三碧木星", "四緑木星", "五黄土星",
-    "六白金星", "七赤金星", "八白土星", "九紫火星"
-  ];
-  const index = (11 - (birthYear + 6) % 9) % 9;
-  return KYUSEI_LIST[index];
+export function calculateKyusei(birthDateOrYear: Date | number): Kyusei {
+  const KYUSEI_MAP: Record<number, Kyusei> = {
+    1: "一白水星", 2: "二黒土星", 3: "三碧木星", 4: "四緑木星", 5: "五黄土星",
+    6: "六白金星", 7: "七赤金星", 8: "八白土星", 9: "九紫火星"
+  };
+
+  let year: number;
+  if (typeof birthDateOrYear === "number") {
+    // 後方互換: 数値が渡された場合はそのまま使用（節分調整済みとみなす）
+    year = birthDateOrYear;
+  } else {
+    // Dateが渡された場合: 節分区切りで西暦年を決定
+    year = birthDateOrYear.getUTCFullYear();
+    const month = birthDateOrYear.getUTCMonth() + 1;
+    const day = birthDateOrYear.getUTCDate();
+    // 立春（2月4日）前は前年扱い
+    if (month === 1 || (month === 2 && day <= 3)) {
+      year -= 1;
+    }
+  }
+
+  // デジタルルート: 年の各桁を合計して一桁にする
+  let sum = year;
+  while (sum >= 10) {
+    sum = String(sum).split("").reduce((a, b) => a + parseInt(b, 10), 0);
+  }
+
+  // 11から引いて1〜9に収める
+  let star = 11 - sum;
+  if (star > 9) star -= 9;
+
+  return KYUSEI_MAP[star];
 }
 
 // ============================================
@@ -1188,8 +1216,8 @@ export function runFullDiagnosis(birthDate: Date): FullDiagnosisResult {
   const honmeiYo = calculateHonmeiYo(birthDate);
   const planetData = PLANET_DATA[honmeiYo];
 
-  // 4. 九星算出
-  const kyusei = calculateKyusei(lunarDate.year);
+  // 4. 九星算出（西暦年・節分区切りで算出）
+  const kyusei = calculateKyusei(birthDate);
 
   // 5. 命宮算出
   const meikyu = calculateMeikyu(honmeiShuku);
