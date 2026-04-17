@@ -1,0 +1,228 @@
+{
+  "total_requests": 15466,
+  "top_endpoints": [
+    {
+      "endpoint": "GET /api/sync/pull",
+      "count": 8005
+    },
+    {
+      "endpoint": "POST /api/sync/push",
+      "count": 3578
+    },
+    {
+      "endpoint": "GET /mc/data/snapshot.json",
+      "count": 372
+    },
+    {
+      "endpoint": "GET /pwa/",
+      "count": 346
+    },
+    {
+      "endpoint": "GET /mc/data/report.txt",
+      "count": 242
+    },
+    {
+      "endpoint": "GET /api/me",
+      "count": 223
+    },
+    {
+      "endpoint": "POST /api/chat",
+      "count": 209
+    },
+    {
+      "endpoint": "GET /mc/style.css",
+      "count": 204
+    },
+    {
+      "endpoint": "GET /mc/data/agent_activities.json",
+      "count": 195
+    },
+    {
+      "endpoint": "GET /pwa/assets/index-XUa39MFc.css",
+      "count": 192
+    },
+    {
+      "endpoint": "POST /api/sync/bootstrap",
+      "count": 173
+    },
+    {
+      "endpoint": "GET /mc/dashboard.html",
+      "count": 143
+    },
+    {
+      "endpoint": "GET /pwa/brand/tenmon-ark-mark.svg",
+      "count": 135
+    },
+    {
+      "endpoint": "GET /mc/dashboard.css",
+      "count": 124
+    },
+    {
+      "endpoint": "GET /mc/",
+      "count": 107
+    },
+    {
+      "endpoint": "GET /",
+      "count": 105
+    },
+    {
+      "endpoint": "GET /mc/dashboard.js",
+      "count": 89
+    },
+    {
+      "endpoint": "GET /pwa/assets/index-B1cnH3bY.js",
+      "count": 60
+    },
+    {
+      "endpoint": "GET /pwa/assets/index-1zRP3Rpy.js",
+      "count": 56
+    },
+    {
+      "endpoint": "GET /favicon.ico",
+      "count": 55
+    },
+    {
+      "endpoint": "GET /pwa/assets/index-ZM7WJk3O.js",
+      "count": 50
+    },
+    {
+      "endpoint": "GET /mc/ai_agents.html",
+      "count": 45
+    },
+    {
+      "endpoint": "GET /pwa/assets/index-B0SZnd9v.css",
+      "count": 36
+    },
+    {
+      "endpoint": "PROPFIND /",
+      "count": 35
+    },
+    {
+      "endpoint": "POST /api/auth/local/login",
+      "count": 32
+    },
+    {
+      "endpoint": "GET /mc/ai_agents.css",
+      "count": 29
+    },
+    {
+      "endpoint": "GET /mc/ai_agents.js",
+      "count": 29
+    },
+    {
+      "endpoint": "POST /api/sukuyou/guidance",
+      "count": 28
+    },
+    {
+      "endpoint": "GET /pwa/assets/index-Cux2Cj7-.js",
+      "count": 24
+    },
+    {
+      "endpoint": "GET /pwa/brand/tenmon-ark-apple-touch.png",
+      "count": 23
+    },
+    {
+      "endpoint": "GET /pwa/assets/index-B7OOOjG1.js",
+      "count": 22
+    },
+    {
+      "endpoint": "GET /pwa/assets/index-Dpd59a5q.js",
+      "count": 19
+    },
+    {
+      "endpoint": "GET /pwa/brand/tenmon-ark-favicon-32.png",
+      "count": 18
+    },
+    {
+      "endpoint": "GET /.git/config",
+      "count": 18
+    },
+    {
+      "endpoint": "GET /pwa/login-local.html",
+      "count": 15
+    },
+    {
+      "endpoint": "GET /robots.txt",
+      "count": 14
+    },
+    {
+      "endpoint": "GET /api/feedback/history",
+      "count": 13
+    },
+    {
+      "endpoint": "GET /brand/tenmon-ark-mark.svg",
+      "count": 12
+    },
+    {
+      "endpoint": "GET /pwa/brand/tenmon-ark-favicon-16.png",
+      "count": 12
+    },
+    {
+      "endpoint": "POST /",
+      "count": 9
+    },
+    {
+      "endpoint": "POST /api/auth/local/register",
+      "count": 9
+    },
+    {
+      "endpoint": "GET /mc/data/timeseries/last_7days.json",
+      "count": 9
+    },
+    {
+      "endpoint": "GET /pwa/login-local",
+      "count": 8
+    },
+    {
+      "endpoint": "GET /pwa/register-local.html",
+      "count": 7
+    },
+    {
+      "endpoint": "GET /index.php",
+      "count": 7
+    },
+    {
+      "endpoint": "GET /pwa/forgot-password",
+      "count": 6
+    },
+    {
+      "endpoint": "GET /apple-touch-icon-precomposed.png",
+      "count": 5
+    },
+    {
+      "endpoint": "GET /apple-touch-icon.png",
+      "count": 5
+    },
+    {
+      "endpoint": "GET /apple-touch-icon-120x120-precomposed.png",
+      "count": 3
+    },
+    {
+      "endpoint": "GET /apple-touch-icon-120x120.png",
+      "count": 3
+    }
+  ],
+  "status_distribution": {
+    "200": 7742,
+    "401": 6983,
+    "404": 394,
+    "304": 167,
+    "302": 132,
+    "301": 25,
+    "400": 14,
+    "403": 5,
+    "409": 3,
+    "499": 1
+  },
+  "method_distribution": {
+    "GET": 11357,
+    "POST": 4072,
+    "PROPFIND": 35,
+    "HEAD": 2
+  },
+  "log_files_checked": [
+    "/var/log/nginx/access.log",
+    "/var/log/nginx/tenmon-ark.com.access.log"
+  ],
+  "note": "All user identifiers removed. Paths anonymized."
+}

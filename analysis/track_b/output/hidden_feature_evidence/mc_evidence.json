@@ -1,0 +1,20 @@
+{
+  "snapshot_exists": true,
+  "snapshot_error": "parse failed",
+  "log_exists": true,
+  "log_size": 1697,
+  "log_lines": 18,
+  "log_last_10": [
+    "parse error: Invalid string: control characters from U+0000 through U+001F must be escaped at line 9, column 8",
+    "parse error: Invalid string: control characters from U+0000 through U+001F must be escaped at line 9, column 8",
+    "parse error: Invalid string: control characters from U+0000 through U+001F must be escaped at line 9, column 8",
+    "parse error: Invalid string: control characters from U+0000 through U+001F must be escaped at line 9, column 8",
+    "parse error: Invalid string: control characters from U+0000 through U+001F must be escaped at line 9, column 8",
+    "parse error: Invalid string: control characters from U+0000 through U+001F must be escaped at line 9, column 8",
+    "parse error: Invalid string: control characters from U+0000 through U+001F must be escaped at line 9, column 8",
+    "parse error: Invalid string: control characters from U+0000 through U+001F must be escaped at line 9, column 8",
+    "parse error: Invalid string: control characters from U+0000 through U+001F must be escaped at line 9, column 8",
+    "parse error: Invalid string: control characters from U+0000 through U+001F must be escaped at line 9, column 8"
+  ],
+  "history_db_exists": false
+}
