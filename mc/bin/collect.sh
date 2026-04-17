@@ -36,7 +36,7 @@ cat > "${DATA_DIR}/snapshot.json" <<JSON
 {
   "generated_at_utc": "${TIMESTAMP}",
   "generated_at_jst": "${TIMESTAMP_JST}",
-  "version": "MC-P2",
+  "version": "MC-P4",
   "sections": {
     "infra": ${INFRA},
     "sukuyou": ${SUKUYOU},
@@ -70,5 +70,8 @@ chmod 644 "${DATA_DIR}/snapshot.json" "${DATA_DIR}/report.txt" 2>/dev/null
 # ── Phase 3: 履歴蓄積 + 時系列JSON生成 ──
 "${SCRIPT_DIR}/aggregate_history.sh" 2>/dev/null || true
 "${SCRIPT_DIR}/generate_timeseries.sh" 2>/dev/null || true
+
+# ── Phase 4: AI Agent Activities JSON 生成 ──
+"${SCRIPT_DIR}/export_agent_activities.sh" 2>/dev/null || true
 
 exit 0

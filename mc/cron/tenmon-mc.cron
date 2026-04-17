@@ -1,9 +1,21 @@
 # ============================================================
-# TENMON-MC Phase 1: 5分ごとにスナップショット取得
+# TENMON-MC Phase 4: cron 設定
 # 配置先: /etc/cron.d/tenmon-mc
 # ============================================================
 
 PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
+# 5分ごと: メインcollect (Phase 1-3)
 */5 * * * * root /opt/tenmon-mc/bin/collect.sh >> /var/log/tenmon-mc.log 2>&1
-0 * * * * root find /var/log/tenmon-mc.log -size +50M -exec truncate -s 10M {} \;
+
+# 1分ごと: AI agent inbox 取り込み (Phase 4)
+* * * * * root /opt/tenmon-mc/bin/ai_ingest.sh >> /var/log/tenmon-mc-ingest.log 2>&1
+
+# 1時間ごと: Notion ミラー (Phase 4)
+0 * * * * root /opt/tenmon-mc/bin/notion_mirror.sh >> /var/log/tenmon-mc-notion.log 2>&1
+
+# 毎日 深夜2時: 対話サンプリング (Phase 5)
+0 2 * * * root /opt/tenmon-mc/bin/sample_dialogues.sh >> /var/log/tenmon-mc-quality.log 2>&1
+
+# 毎日 深夜3時: ログローテート
+0 3 * * * root find /var/log/tenmon-mc*.log -size +50M -exec truncate -s 10M {} \;

@@ -6,10 +6,11 @@
 <title>TENMON-MC / AI Agents</title>
 <link rel="stylesheet" href="style.css">
 <link rel="stylesheet" href="dashboard.css">
+<link rel="stylesheet" href="ai_agents.css">
 </head>
 <body class="dashboard">
 <header>
-  <h1>TENMON-ARK Mission Control</h1>
+  <h1>TENMON-ARK / AI Agent Activity</h1>
   <nav>
     <a href="./">Text Report</a>
     <a href="./dashboard.html">Dashboard</a>
@@ -20,43 +21,40 @@
 
 <main>
   <section class="agent-filter">
-    <label>Agent:</label>
-    <select id="agent-select">
-      <option value="all">All Agents</option>
+    <label>Filter: </label>
+    <select id="agent-filter" onchange="render()">
+      <option value="">All Agents</option>
+      <option value="claude">Claude</option>
+      <option value="gpt-4o">GPT-4o</option>
       <option value="manus">Manus</option>
       <option value="cursor">Cursor</option>
     </select>
-    <label>Type:</label>
-    <select id="type-select">
-      <option value="all">All Types</option>
-      <option value="commit">Commits</option>
-      <option value="deploy">Deploys</option>
-      <option value="observation">Observations</option>
+    <select id="action-filter" onchange="render()">
+      <option value="">All Actions</option>
+      <option value="observation">Observation</option>
+      <option value="analysis">Analysis</option>
+      <option value="proposal">Proposal</option>
+      <option value="concern">Concern</option>
     </select>
+    <select id="priority-filter" onchange="render()">
+      <option value="">All Priorities</option>
+      <option value="critical">Critical</option>
+      <option value="high">High</option>
+      <option value="medium">Medium</option>
+      <option value="low">Low</option>
+    </select>
+    <span id="result-count" style="color:#666; margin-left:12px;"></span>
   </section>
 
-  <section class="activity-list" id="activity-list">
-    <p style="color:#666; text-align:center; padding:40px;">
-      Phase 4 で実装予定。<br>
-      AI エージェントの活動ログがここに表示されます。
-    </p>
+  <section id="activity-list" class="activity-list">
+    Loading...
   </section>
 </main>
 
 <footer>
   <p>TENMON-ARK / Owner Only</p>
-  <p>Phase 4 AI Agent Integration (Placeholder)</p>
 </footer>
 
-<script>
-  fetch('./data/snapshot.json?t=' + Date.now())
-    .then(r => r.json())
-    .then(d => {
-      const ageMin = Math.floor((Date.now() - new Date(d.generated_at_utc).getTime()) / 60000);
-      document.getElementById('last-updated').textContent = 
-        'Last: ' + d.generated_at_jst + ' (' + ageMin + 'min ago)';
-    })
-    .catch(() => {});
-</script>
+<script src="ai_agents.js"></script>
 </body>
 </html>

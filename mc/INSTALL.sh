@@ -1,6 +1,6 @@
 #!/bin/bash
 # ============================================================
-# TENMON-MC Phase 3 — ワンショットインストーラ
+# TENMON-MC Phase 4 — ワンショットインストーラ
 #
 # 冪等設計: 何度実行しても安全
 # root 権限必須
@@ -30,7 +30,7 @@ if [ "$(id -u)" -ne 0 ]; then
 fi
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-log_info "TENMON-MC Phase 3 インストーラ"
+log_info "TENMON-MC Phase 4 インストーラ"
 log_info "ソースディレクトリ: ${SCRIPT_DIR}"
 echo ""
 
@@ -116,7 +116,10 @@ log_info "Step 4: Web ディレクトリ作成..."
 
 mkdir -p /var/www/tenmon-mc/data/history
 mkdir -p /var/www/tenmon-mc/data/timeseries
-log_ok "/var/www/tenmon-mc 作成済み"
+mkdir -p /var/www/tenmon-mc/inbox
+mkdir -p /var/www/tenmon-mc/inbox_archive
+chown www-data:www-data /var/www/tenmon-mc/inbox
+log_ok "/var/www/tenmon-mc 作成済み (inbox ディレクトリ含む)"
 
 # ── Step 5: web/* をコピー ──
 log_info "Step 5: HTML/CSS を配置..."
@@ -127,6 +130,8 @@ cp -f "${SCRIPT_DIR}/web/dashboard.html" /var/www/tenmon-mc/
 cp -f "${SCRIPT_DIR}/web/dashboard.css" /var/www/tenmon-mc/
 cp -f "${SCRIPT_DIR}/web/dashboard.js" /var/www/tenmon-mc/
 cp -f "${SCRIPT_DIR}/web/ai_agents.html" /var/www/tenmon-mc/
+cp -f "${SCRIPT_DIR}/web/ai_agents.js" /var/www/tenmon-mc/
+cp -f "${SCRIPT_DIR}/web/ai_agents.css" /var/www/tenmon-mc/
 chown -R www-data:www-data /var/www/tenmon-mc/
 log_ok "Web資産配置完了 (index, dashboard, ai_agents, css, js)"
 
@@ -269,18 +274,25 @@ chown root:root "$CRON_FILE"
 
 # cron デーモンに通知
 systemctl reload cron 2>/dev/null || service cron reload 2>/dev/null || true
-log_ok "cron 登録完了 (5分間隔)"
+log_ok "cron 登録完了 (collect:5分, ingest:1分, notion:1時間, quality:深夜2時)"
 
 # ログファイル初期化
-touch /var/log/tenmon-mc.log
-chown root:root /var/log/tenmon-mc.log
-chmod 644 /var/log/tenmon-mc.log
-log_ok "ログファイル初期化完了"
+for logfile in /var/log/tenmon-mc.log /var/log/tenmon-mc-ingest.log /var/log/tenmon-mc-notion.log /var/log/tenmon-mc-quality.log; do
+  touch "$logfile"
+  chown root:root "$logfile"
+  chmod 644 "$logfile"
+done
+log_ok "ログファイル初期化完了 (4ファイル)"
 
 # ── Step 8.5: 履歴DB初期化 ──
 log_info "Step 8.5: 履歴DB初期化..."
 /opt/tenmon-mc/bin/init_history_db.sh /var/www/tenmon-mc/history.db
 log_ok "履歴DB初期化完了"
+
+# ── Step 8.6: Agent DB初期化 (Phase 4) ──
+log_info "Step 8.6: Agent DB初期化..."
+/opt/tenmon-mc/bin/init_agent_db.sh /var/www/tenmon-mc/agents.db
+log_ok "Agent DB初期化完了"
 
 # ── Step 9: 初回 collect.sh 実行 ──
 log_info "Step 9: 初回データ収集..."
@@ -328,11 +340,12 @@ log_info "インストール完了"
 echo ""
 echo "  Text:    https://tenmon-ark.com/mc/"
 echo "  Dash:    https://tenmon-ark.com/mc/dashboard.html"
+echo "  Agents:  https://tenmon-ark.com/mc/ai_agents.html"
 echo "  Data:    /var/www/tenmon-mc/data/"
 echo "  Config:  /opt/tenmon-mc/config/mc.env"
 echo "  Logs:    /var/log/tenmon-mc.log"
-echo "  Cron:    /etc/cron.d/tenmon-mc (5分間隔)"
+echo "  Cron:    /etc/cron.d/tenmon-mc (collect:5m, ingest:1m, notion:1h, quality:2am)"
 echo ""
 echo "  次回の自動更新: 約5分後"
 echo ""
-log_ok "TENMON-MC Phase 3 セットアップ完了"
+log_ok "TENMON-MC Phase 4 セットアップ完了"
