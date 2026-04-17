@@ -1,41 +1,57 @@
 # TENMON-ARK Full System Analysis: Executive Summary
 
 **作成者**: Manus AI
-**日付**: 2026-04-17
-**対象**: TENMON-ARK プロジェクト全体 (GitHubリポジトリ + Notion MCP)
+**日付**: 2026-04-17 (最終更新: 2026-04-17)
+**対象**: TENMON-ARK プロジェクト全体 (GitHubリポジトリ + VPS実環境 + Notion MCP)
 
 ## 1. 解析の目的と背景
 
-本解析は、TENMON-ARKプロジェクトの現在の実装状態と、Notion上に定義された「完成像（TENMON_AI_CORE_V1）」との間のギャップを特定し、最終的な完成に向けたロードマップを策定することを目的としています。VPS環境への直接アクセスが制限されているため、GitHubリポジトリの静的解析（Track A）と、VPS上で実行可能なREAD-ONLY解析スクリプトの作成（Track B）を組み合わせたハイブリッド方式を採用しました。
+本解析は、TENMON-ARKプロジェクトの現在の実装状態と、Notion上に定義された「完成像（TENMON_AI_CORE_V1）」との間のギャップを特定し、最終的な完成に向けたロードマップを策定することを目的としている。GitHubリポジトリの静的解析（Track A）、VPS上で実行したREAD-ONLY解析スクリプト（Track B: 8/8ステップ完了）、および統合解析（Track C）の三段階で実施した。
 
 ## 2. 主要な発見 (Key Findings)
 
-### 2.1. 構造的課題: 2コードベース問題
-リポジトリ内に2つの独立したNode.jsアプリケーションが共存しており、これが最大の技術的負債となっています。
-- **api/ (Express)**: PWA版 (`tenmon-ark.com/pwa/`) 用。天津金木エンジンや宿曜エンジンを含む。
-- **server/ (tRPC)**: メインサイト (`tenmon-ark.com/`) 用。多数のエンジンとサービスを含む。
-両者間でコア機能（言霊、虚空蔵、ペルソナ等）の実装が重複しており、保守性の低下と機能の不整合を引き起こすリスクがあります。
+### 2.1. 言霊発火ゼロの真因特定
 
-### 2.2. Notion完成像とのギャップ
-Notionの「TENMON_ARK_MASTER_STATE_INDEX_V1」によれば、現在の最優先事項は `TENMON_AI_CORE_V1` を商品核として成立させることです。
-- **現在の達成率**: 約82%（会話主線/route修理は92〜96%完了）
-- **未完ブロッカー**: acceptanceテストの未通過（10/12がmissing）、continuityのdensity問題、bridge hangなど。
-- **改善要望**: 宿曜鑑定チャットにおける長文切れ、定型説明の優先、ユーザー実感とのズレ補正などが課題として挙げられています。
+言霊エンジン（RouteReason / Evidence Bind）が発火しない問題について、段階的な調査を経て真因を特定した。
 
-### 2.3. データベースとインフラの複雑性
-- **DB**: SQLite（手動SQL定義）とMySQL/TiDB（Drizzle ORM）が混在。
-- **インフラ**: systemdサービスとnginx設定が複数存在し、デプロイメントが複雑化しています。
+当初は `api/src/kotodama/kotodamaConnector.ts` が Git 管理外（untracked）であったことが原因と推測されたが、Git 管理下に追加（commit `42cfa245`）しても問題は解決しなかった。コードを精査した結果、`api/src/routes/chat.ts` のリファクタリング時に `buildKotodamaClause()` の呼び出しが抜け落ちていたことが判明した（定義は存在するが呼び出しが 0 件）。修復は `chat.ts` に数行追加するだけで完了する見込みである。
 
-## 3. 推奨されるアクション (Quick Wins & Critical Issues)
+### 2.2. データベースの肥大化 (42%が死蔵/休眠)
 
-### 3.1. Critical Issues (最優先課題)
-1. **Acceptanceテストの通過**: `TENMON_AI_CORE_V1` の商品化に向けて、未通過のacceptanceテスト（10件）を修正し、最終封印工程（final seal）を完了させる。
-2. **PWA版とメインサイトの境界明確化**: 2コードベースの完全統合は後回しにし、まずは両者の役割を明確に定義し、コアロジック（天津金木エンジン等）の単一情報源（Single Source of Truth）を確立する。
+SQLite データベース（`kokuzo.sqlite`）の 111 テーブルを分類した結果、実際に稼働しているのは 23 テーブル（mainline: 16, active: 7）のみであり、残りの 88 テーブル（dormant: 30, dead: 37, empty: 10, no_ts: 11）は休眠または死蔵状態にあることが判明した。
 
-### 3.2. Quick Wins (短期的な改善)
-1. **チャット機能の改善**: 改善要望DBで指摘されている「長文切れ」や「定型説明の優先」に対処するため、会話還元回路（Two-Pass）のプロンプトやロジックを微調整する。
-2. **Dead Codeの整理**: `server/_archive/` や `offline/` ディレクトリ、多数のTODOコメントなど、不要なコードを整理し、コードベースの可読性を向上させる。
+### 2.3. 隠れた機能の未接続 (13機能診断)
 
-## 4. 次のステップ
+13の高度な機能を個別診断した結果、3機能が mainline、6機能が partial、4機能が absent と判定された。特に **Founder導線 (founder_onboarding)** は販売可能完成に致命的であり、**ハイブリッドLLM (hybrid_llm)** はモデルが `gemini-2.5-flash` に固定されたまま切替ロジックが未実装であった。
 
-本レポート（Track A）およびVPS解析スクリプト（Track B）の成果物を `feature/full-system-analysis-track-b` ブランチにコミット・プッシュします。TENMONによるTrack Bスクリプトの実行結果を待って、最終的な統合解析（Track C）を実施し、90日ロードマップを完成させます。
+### 2.4. クラッシュループの発見と修復
+
+`tenmon-strict-promotion` が直近7日間で 117,887 回の再起動失敗を記録し、Notion タスク関連の3サービスも連鎖的にクラッシュループに陥っていた。これらのサービスは直ちに停止・無効化され、クラッシュループは解消された（117,887回/週 → 0回）。本体 API の健全性（uptime 228日継続）への影響はないことが確認されている。
+
+### 2.5. Notion完成像とのギャップ
+
+Notionの「TENMON_ARK_MASTER_STATE_INDEX_V1」によれば、現在の最優先事項は `TENMON_AI_CORE_V1` を商品核として成立させることである。現在の達成率は約82%（会話主線/route修理は92〜96%完了）であり、acceptanceテストの未通過、continuityのdensity問題、bridge hangなどが未完ブロッカーとして残っている。
+
+## 3. 90日ロードマップ（再調整版）
+
+| 優先度 | 課題 | 時期 | 難易度 |
+| :--- | :--- | :--- | :--- |
+| 1 | `buildKotodamaClause` 呼び戻し（言霊発火ゼロ解消） | Week 2 | 低（数行追加） |
+| 2 | `sync_shuku_data` 型エラー修正（56件） | Week 2 | 低〜中 |
+| 3 | Founder導線の完全実装（最重要） | Week 3-4 | 高 |
+| 4 | ハイブリッドLLMの有効化 | Week 5-6 | 中〜高 |
+| 5 | Dead テーブル退役（42%のDB整理） | Week 7-8 | 中 |
+
+## 4. 成果物一覧
+
+本解析の全成果物は `feature/full-system-analysis-track-b` ブランチに格納されている。
+
+| ファイル | 内容 |
+| :--- | :--- |
+| `analysis/TRACK_C_INTEGRATED_ANALYSIS.md` | Track C 完全版統合レポート |
+| `analysis/ROADMAP_90DAYS.md` | 90日ロードマップ（再調整版） |
+| `analysis/FULL_REPORT.md` | 包括的レポート |
+| `analysis/ARCHITECTURE.mmd` | アーキテクチャ図（Mermaid） |
+| `analysis/track_a/` | Notion読み取り結果 + コード解析レポート |
+| `analysis/track_b/scripts/` | VPS解析スクリプト（8本 + 共通ライブラリ2本） |
+| `analysis/track_b/output/` | VPS実行結果データ（8ステップ分） |
