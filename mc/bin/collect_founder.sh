@@ -35,8 +35,13 @@ ACTIVE_7D=$(sql_ro "SELECT COUNT(DISTINCT userId) FROM synced_chat_threads WHERE
 # 7日間の鑑定数 (synced_sukuyou_rooms)
 KANTEI_7D=$(sql_ro "SELECT COUNT(*) FROM synced_sukuyou_rooms WHERE updatedAt > datetime('now', '-7 days');")
 
-# 宿分布 (synced_sukuyou_rooms.honmeiShuku)
-SHUKU_DIST=$(sql_ro "SELECT honmeiShuku, COUNT(*) FROM synced_sukuyou_rooms WHERE honmeiShuku IS NOT NULL AND honmeiShuku != '' GROUP BY honmeiShuku ORDER BY COUNT(*) DESC;" | awk -F'|' '{printf "\"%s\":%s,", $1, $2}' | sed 's/,$//')
+# 宿分布 (synced_sukuyou_rooms.honmeiShuku) - null安全版
+SHUKU_DIST_RAW=$(sql_ro "SELECT honmeiShuku, COUNT(*) FROM synced_sukuyou_rooms WHERE honmeiShuku IS NOT NULL AND honmeiShuku != '' GROUP BY honmeiShuku ORDER BY COUNT(*) DESC;")
+
+SHUKU_DIST=""
+if [ "$SHUKU_DIST_RAW" != "null" ] && [ -n "$SHUKU_DIST_RAW" ]; then
+  SHUKU_DIST=$(echo "$SHUKU_DIST_RAW" | awk -F'|' 'NF==2 && $1 != "" && $2 != "" {printf "\"%s\":%s,", $1, $2}' | sed 's/,$//')
+fi
 
 # 総鑑定数
 TOTAL_KANTEI=$(sql_ro "SELECT COUNT(*) FROM synced_sukuyou_rooms WHERE honmeiShuku IS NOT NULL AND honmeiShuku != '';")

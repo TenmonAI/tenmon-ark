@@ -177,14 +177,14 @@ if [ -n "$NGINX_CONF" ] && [ -f "$NGINX_CONF" ]; then
         add_header X-Frame-Options DENY always;
         add_header X-Content-Type-Options nosniff always;
         add_header Referrer-Policy no-referrer always;
-    }
 
-    location ~* /mc/data/.*\.(json|txt)$ {
-        alias /var/www/tenmon-mc/data/;
-        auth_basic "TENMON-MC (Owner Only)";
-        auth_basic_user_file /var/www/tenmon-mc/.htpasswd;
-        add_header Cache-Control "no-store, no-cache, must-revalidate" always;
-        expires -1;
+        # JSON/TXT はキャッシュ無効化（alias は親から継承）
+        location ~* \.(json|txt)$ {
+            auth_basic "TENMON-MC (Owner Only)";
+            auth_basic_user_file /var/www/tenmon-mc/.htpasswd;
+            add_header Cache-Control "no-store, no-cache, must-revalidate" always;
+            expires -1;
+        }
     }
     # --- END TENMON-MC ---
 MCBLOCK
@@ -252,6 +252,12 @@ chown root:root "$CRON_FILE"
 # cron デーモンに通知
 systemctl reload cron 2>/dev/null || service cron reload 2>/dev/null || true
 log_ok "cron 登録完了 (5分間隔)"
+
+# ログファイル初期化
+touch /var/log/tenmon-mc.log
+chown root:root /var/log/tenmon-mc.log
+chmod 644 /var/log/tenmon-mc.log
+log_ok "ログファイル初期化完了"
 
 # ── Step 9: 初回 collect.sh 実行 ──
 log_info "Step 9: 初回データ収集..."
