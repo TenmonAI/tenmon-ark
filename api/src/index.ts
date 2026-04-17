@@ -32,6 +32,7 @@ import { markListenReady } from "./health/readiness.js";
 import { initConsciousnessOS } from "./core/consciousnessOS.js";
 import { getDb } from "./db/index.js";
 import koshikiConsoleRouter from "./routes/koshikiConsole.js";
+import guestRouter from "./routes/guest.js";
 import { writeFileSync, appendFileSync, mkdirSync, existsSync } from "fs";
 
 // ── Startup diagnostics ──
@@ -100,6 +101,20 @@ for (const dbName of ["kokuzo", "audit", "persona", "consciousness"] as const) {
 }
 
 // ── Middleware ──
+
+// CORS: ゲストチャット用に futomani88.com を明示的に許可
+// 他のルートは cors() で全許可（既存動作を維持）
+app.use((req, res, next) => {
+  if (req.path.startsWith("/api/guest/")) {
+    res.header("Access-Control-Allow-Origin", "https://futomani88.com");
+    res.header("Access-Control-Allow-Methods", "POST, OPTIONS");
+    res.header("Access-Control-Allow-Headers", "Content-Type");
+    if (req.method === "OPTIONS") {
+      return res.sendStatus(200);
+    }
+  }
+  next();
+});
 app.use(cors());
 app.use(express.json());
 app.use(cookieParser());
@@ -151,6 +166,7 @@ app.use("/api", writerCommitRouter);
 app.use("/api", readerRouter);
 app.use("/api", seedRouter);
 app.use("/api", selfImproveRouter);
+app.use("/api", guestRouter);
 app.use("/api/kanagi", kanagiRoutes);
 app.use("/api/tenmon", tenmonRoutes);
 

@@ -1,0 +1,540 @@
+<!-- ============================================
+     天聞アーク ゲストチャット 埋め込み
+     TENMON_GUEST_CHAT_V1
+     Version: 1.0
+     
+     使い方: ペライチの「HTML 埋め込み」ブロックに
+     このファイルの内容をそのまま貼り付けてください。
+============================================ -->
+
+<div id="tenmon-ark-guest-chat">
+  
+  <!-- ヘッダー -->
+  <div class="tgc-header">
+    <div class="tgc-header-inner">
+      <div class="tgc-logo">&#x1F319; TENMON-ARK</div>
+      <div class="tgc-subtitle">存在構造の総合解読 AI ─ ゲスト体験</div>
+      <div class="tgc-remaining">
+        残 <span id="tgc-remaining-turns">20</span> ターン
+      </div>
+    </div>
+  </div>
+  
+  <!-- メッセージエリア -->
+  <div class="tgc-messages" id="tgc-messages">
+    
+    <!-- 初期ウェルカム -->
+    <div class="tgc-message tgc-assistant">
+      <div class="tgc-message-content">
+        <p><strong>ようこそ、天聞アーク へ。</strong></p>
+        <p>天道仁聞が 10 年研究してきた叡智を、AI として具現化しました。</p>
+        <p>このゲストチャットでは、天聞アーク の哲学・機能・背景について、お気軽にご質問ください。</p>
+        <p style="color: #c9a858; font-size: 0.9em; margin-top: 1em;">
+          ※ 個人の宿曜深層鑑定は Founder 様限定機能となっております。
+        </p>
+      </div>
+    </div>
+    
+  </div>
+  
+  <!-- 起点ボタン (初回のみ表示、後で非表示) -->
+  <div class="tgc-start-buttons" id="tgc-start-buttons">
+    <div class="tgc-start-hint">まずはこんなことを聞いてみてください:</div>
+    <div class="tgc-button-grid">
+      <button class="tgc-start-btn" data-key="about">
+        &#x1F319; 天聞アーク とは何?
+      </button>
+      <button class="tgc-start-btn" data-key="kenkyu">
+        &#x1F4D6; 天道仁聞の研究について
+      </button>
+      <button class="tgc-start-btn" data-key="katakamuna">
+        &#x1F300; カタカムナとは?
+      </button>
+      <button class="tgc-start-btn" data-key="kotodama">
+        &#x2728; 言霊・言霊秘書とは?
+      </button>
+      <button class="tgc-start-btn" data-key="founder">
+        &#x1F3DB; Founder になると?
+      </button>
+      <button class="tgc-start-btn" data-key="progress">
+        &#x1F514; 開発の進捗と展開
+      </button>
+    </div>
+  </div>
+  
+  <!-- 入力欄 -->
+  <div class="tgc-input-area">
+    <input 
+      type="text" 
+      id="tgc-input" 
+      placeholder="天聞アーク に質問する..." 
+      autocomplete="off"
+    />
+    <button id="tgc-send-btn">送信</button>
+  </div>
+  
+  <!-- フッター (体験終了後に表示) -->
+  <div class="tgc-footer" id="tgc-footer" style="display: none;">
+    <p>体験いかがでしたでしょうか?</p>
+    <p>天聞アーク の真価は、Founder 様への深層対話にあります。</p>
+    <a href="#founder-apply" class="tgc-cta-btn">
+      &#x25B6; Founder として参加する (残 22 名)
+    </a>
+  </div>
+  
+</div>
+
+<style>
+/* ============================================
+   天聞アーク ゲストチャット スタイル
+   TENMON_GUEST_CHAT_V1
+============================================ */
+
+#tenmon-ark-guest-chat {
+  max-width: 800px;
+  margin: 2em auto;
+  border: 1px solid #c9a858;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #0a0a1f 0%, #1a1a3a 100%);
+  color: #fff;
+  font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", 
+               "Noto Sans JP", sans-serif;
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+/* ヘッダー */
+.tgc-header {
+  background: linear-gradient(135deg, #1a1a3a, #0a0a2a);
+  padding: 1em 1.5em;
+  border-bottom: 1px solid #c9a858;
+}
+
+.tgc-header-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5em;
+}
+
+.tgc-logo {
+  font-size: 1.3em;
+  font-weight: bold;
+  color: #c9a858;
+}
+
+.tgc-subtitle {
+  font-size: 0.85em;
+  color: #aaa;
+  flex: 1;
+  text-align: center;
+}
+
+.tgc-remaining {
+  font-size: 0.9em;
+  color: #c9a858;
+  background: rgba(201, 168, 88, 0.15);
+  padding: 0.3em 0.8em;
+  border-radius: 20px;
+  border: 1px solid rgba(201, 168, 88, 0.3);
+}
+
+/* メッセージエリア */
+.tgc-messages {
+  padding: 1.5em;
+  height: 400px;
+  overflow-y: auto;
+  scroll-behavior: smooth;
+}
+
+.tgc-messages::-webkit-scrollbar {
+  width: 6px;
+}
+.tgc-messages::-webkit-scrollbar-thumb {
+  background: rgba(201, 168, 88, 0.3);
+  border-radius: 3px;
+}
+
+/* メッセージバブル */
+.tgc-message {
+  margin-bottom: 1.2em;
+  display: flex;
+}
+
+.tgc-message.tgc-user {
+  justify-content: flex-end;
+}
+
+.tgc-message-content {
+  max-width: 85%;
+  padding: 1em 1.2em;
+  border-radius: 12px;
+  line-height: 1.6;
+  font-size: 0.95em;
+}
+
+.tgc-message.tgc-user .tgc-message-content {
+  background: rgba(201, 168, 88, 0.15);
+  border: 1px solid rgba(201, 168, 88, 0.3);
+  color: #fff;
+}
+
+.tgc-message.tgc-assistant .tgc-message-content {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #f0f0f0;
+}
+
+.tgc-message-content p {
+  margin: 0 0 0.8em 0;
+}
+.tgc-message-content p:last-child {
+  margin-bottom: 0;
+}
+
+/* 起点ボタン */
+.tgc-start-buttons {
+  padding: 0 1.5em 1em;
+}
+
+.tgc-start-hint {
+  color: #aaa;
+  font-size: 0.85em;
+  margin-bottom: 0.8em;
+  text-align: center;
+}
+
+.tgc-button-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.6em;
+}
+
+.tgc-start-btn {
+  padding: 0.9em 1em;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(201, 168, 88, 0.3);
+  border-radius: 8px;
+  color: #fff;
+  cursor: pointer;
+  text-align: left;
+  font-size: 0.9em;
+  transition: all 0.2s;
+  font-family: inherit;
+}
+
+.tgc-start-btn:hover {
+  background: rgba(201, 168, 88, 0.15);
+  border-color: #c9a858;
+  transform: translateY(-1px);
+}
+
+.tgc-start-btn:active {
+  transform: translateY(0);
+}
+
+/* 入力欄 */
+.tgc-input-area {
+  display: flex;
+  padding: 1em 1.5em;
+  gap: 0.6em;
+  border-top: 1px solid rgba(201, 168, 88, 0.3);
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.tgc-input-area input {
+  flex: 1;
+  padding: 0.9em 1em;
+  border: 1px solid rgba(201, 168, 88, 0.4);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+  font-size: 0.95em;
+  font-family: inherit;
+  outline: none;
+}
+
+.tgc-input-area input:focus {
+  border-color: #c9a858;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.tgc-input-area input::placeholder {
+  color: #888;
+}
+
+.tgc-input-area button {
+  padding: 0.9em 1.8em;
+  background: #c9a858;
+  color: #000;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: bold;
+  font-family: inherit;
+  transition: all 0.2s;
+}
+
+.tgc-input-area button:hover:not(:disabled) {
+  background: #d4b670;
+  transform: translateY(-1px);
+}
+
+.tgc-input-area button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* フッター */
+.tgc-footer {
+  padding: 1.5em;
+  text-align: center;
+  background: linear-gradient(135deg, rgba(201, 168, 88, 0.1), 
+                              rgba(201, 168, 88, 0.05));
+  border-top: 1px solid rgba(201, 168, 88, 0.3);
+}
+
+.tgc-footer p {
+  margin: 0 0 0.5em 0;
+  color: #f0f0f0;
+}
+
+.tgc-cta-btn {
+  display: inline-block;
+  margin-top: 1em;
+  padding: 1em 2.5em;
+  background: linear-gradient(135deg, #c9a858, #d4b670);
+  color: #000;
+  text-decoration: none;
+  border-radius: 8px;
+  font-weight: bold;
+  transition: all 0.2s;
+  box-shadow: 0 4px 16px rgba(201, 168, 88, 0.3);
+}
+
+.tgc-cta-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(201, 168, 88, 0.4);
+}
+
+/* ローディング表示 */
+.tgc-loading {
+  display: inline-block;
+}
+.tgc-loading::after {
+  content: '...';
+  animation: tgc-dots 1.5s steps(4, end) infinite;
+}
+
+@keyframes tgc-dots {
+  0%, 20% { content: '.'; }
+  40% { content: '..'; }
+  60%, 100% { content: '...'; }
+}
+
+/* スマホ対応 */
+@media (max-width: 600px) {
+  #tenmon-ark-guest-chat {
+    margin: 1em 0;
+    border-radius: 8px;
+  }
+  
+  .tgc-header {
+    padding: 0.8em 1em;
+  }
+  
+  .tgc-subtitle {
+    display: none;
+  }
+  
+  .tgc-messages {
+    padding: 1em;
+    height: 350px;
+  }
+  
+  .tgc-message-content {
+    max-width: 95%;
+    padding: 0.8em 1em;
+    font-size: 0.9em;
+  }
+  
+  .tgc-button-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .tgc-start-btn {
+    padding: 0.8em 1em;
+    font-size: 0.85em;
+  }
+  
+  .tgc-input-area {
+    padding: 0.8em 1em;
+  }
+}
+</style>
+
+<script>
+(function() {
+  'use strict';
+  
+  // ── 設定 ──
+  var API_ENDPOINT = 'https://tenmon-ark.com/api/guest/chat';
+  var SESSION_ID = 'guest_' + Date.now() + '_' + 
+    Math.random().toString(36).substr(2, 9);
+  
+  var isRequestInProgress = false;
+  var turnCount = 0;
+  
+  // ── DOM 要素 ──
+  var messagesEl = document.getElementById('tgc-messages');
+  var inputEl = document.getElementById('tgc-input');
+  var sendBtn = document.getElementById('tgc-send-btn');
+  var startButtonsEl = document.getElementById('tgc-start-buttons');
+  var remainingEl = document.getElementById('tgc-remaining-turns');
+  var footerEl = document.getElementById('tgc-footer');
+  
+  // ── 起点ボタンのクリックイベント ──
+  var startBtns = document.querySelectorAll('.tgc-start-btn');
+  for (var i = 0; i < startBtns.length; i++) {
+    (function(btn) {
+      btn.addEventListener('click', function() {
+        var key = btn.getAttribute('data-key');
+        startButtonsEl.style.display = 'none';
+        appendMessage('user', btn.textContent.trim());
+        sendToApi(null, key);
+      });
+    })(startBtns[i]);
+  }
+  
+  // ── 送信ボタン ──
+  sendBtn.addEventListener('click', function() {
+    sendMessage();
+  });
+  
+  // ── Enter キーで送信 ──
+  inputEl.addEventListener('keypress', function(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  });
+  
+  function sendMessage() {
+    if (isRequestInProgress) return;
+    
+    var message = inputEl.value.trim();
+    if (!message) return;
+    
+    appendMessage('user', message);
+    inputEl.value = '';
+    startButtonsEl.style.display = 'none';
+    sendToApi(message, null);
+  }
+  
+  // ── API 通信 ──
+  function sendToApi(message, startButtonKey) {
+    isRequestInProgress = true;
+    sendBtn.disabled = true;
+    
+    var loadingId = 'loading-' + Date.now();
+    appendMessage('assistant', '<span class="tgc-loading">考えています</span>', loadingId);
+    
+    var body = {
+      sessionId: SESSION_ID,
+      message: message || '',
+      startButtonKey: startButtonKey || ''
+    };
+    
+    fetch(API_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    })
+    .then(function(response) {
+      return response.json().then(function(data) {
+        return { ok: response.ok, data: data };
+      });
+    })
+    .then(function(result) {
+      var loadingEl = document.getElementById(loadingId);
+      if (loadingEl) loadingEl.remove();
+      
+      if (!result.ok) {
+        appendMessage('assistant', 
+          result.data.error || '申し訳ありません、エラーが発生しました。');
+        return;
+      }
+      
+      var data = result.data;
+      
+      // AI 応答を表示
+      appendMessage('assistant', data.response);
+      
+      // ターン数更新
+      turnCount = data.turnCount;
+      remainingEl.textContent = data.remainingTurns;
+      
+      // 残りターンが少なくなったら色を変える
+      if (data.remainingTurns <= 3) {
+        remainingEl.parentElement.style.borderColor = '#e85d5d';
+        remainingEl.parentElement.style.color = '#e85d5d';
+      }
+      
+      // 制限到達時の処理
+      if (data.isLimitReached) {
+        inputEl.disabled = true;
+        sendBtn.disabled = true;
+        inputEl.placeholder = '体験終了 - Founder 申込はこちら';
+        footerEl.style.display = 'block';
+      }
+    })
+    .catch(function(e) {
+      var loadingEl = document.getElementById(loadingId);
+      if (loadingEl) loadingEl.remove();
+      appendMessage('assistant', 
+        '接続エラーが発生しました。しばらくしてからお試しください。');
+      console.error('[TGC] Error:', e);
+    })
+    .finally(function() {
+      isRequestInProgress = false;
+      sendBtn.disabled = false;
+    });
+  }
+  
+  // ── メッセージ追加 ──
+  function appendMessage(role, content, id) {
+    var div = document.createElement('div');
+    div.className = 'tgc-message tgc-' + role;
+    if (id) div.id = id;
+    
+    var contentDiv = document.createElement('div');
+    contentDiv.className = 'tgc-message-content';
+    
+    // XSS 対策: ユーザー入力はテキストノードとして挿入
+    if (role === 'user') {
+      var p = document.createElement('p');
+      p.textContent = content;
+      contentDiv.appendChild(p);
+    } else {
+      // AI 応答は改行をパラグラフに変換（HTML タグは許可）
+      contentDiv.innerHTML = '<p>' + 
+        content.replace(/\n\n/g, '</p><p>')
+               .replace(/\n/g, '<br>') + 
+        '</p>';
+    }
+    
+    div.appendChild(contentDiv);
+    messagesEl.appendChild(div);
+    
+    // スクロール
+    setTimeout(function() {
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+    }, 50);
+  }
+})();
+</script>
+
+<!-- ============================================
+     END: 天聞アーク ゲストチャット 埋め込み
+============================================ -->
