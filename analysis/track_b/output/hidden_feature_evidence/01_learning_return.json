@@ -1,0 +1,94 @@
+{
+  "feature_name": "learning_return",
+  "connection_status": "mainline",
+  "evidence": {
+    "files_found": [
+      "api/src/routes.bak.p2.1770613286/training.ts",
+      "api/src/routes/training.ts",
+      "api/dist/routes/training.js",
+      "api/src/core/evolutionLedgerV1.ts",
+      "api/src/persona/evolution/evolutionEngine.ts",
+      "api/src/routes/evolutionAuditProbesV1.ts",
+      "api/dist/core/evolutionLedgerV1.js",
+      "api/dist/persona/evolution/evolutionEngine.js",
+      "api/dist/routes/evolutionAuditProbesV1.js",
+      "api/scripts/tenmon_book_learning_mainline_seal_emit_v1.ts",
+      "api/scripts/tenmon_book_learning_bench_emit_v1.ts",
+      "api/scripts/tenmon_book_learning_deep_xray_emit_v1.ts"
+    ],
+    "tables_with_data": [
+      {
+        "table": "training_sessions",
+        "rows": 1033
+      },
+      {
+        "table": "training_messages",
+        "rows": 2051
+      },
+      {
+        "table": "kokuzo_synapses",
+        "rows": 886
+      },
+      {
+        "table": "evolution_ledger_v1",
+        "rows": 59987
+      }
+    ],
+    "services_involved": [],
+    "api_endpoints": [
+      "dist/index.js",
+      "dist/public/assets/index-CqXQwYS0-1776126918766.js",
+      "client/dist.bak.1776138648/assets/index-D_7Esf0q.js",
+      "api/src/train/commit.ts",
+      "api/src/train/engine.ts",
+      "api/src/train/session.ts",
+      "api/src/planning/responsePlanCore.ts",
+      "api/src/planning/detailPlanContractP20.ts",
+      "api/src/core/intentionConstitution.ts",
+      "api/src/core/evolutionLedgerV1.ts",
+      "api/src/core/memoryProjection.ts",
+      "api/src/routes.bak.p2.1770613286/train.ts",
+      "api/src/routes.bak.p2.1770613286/training.ts",
+      "api/src/index.ts",
+      "api/src/training/storage.ts",
+      "api/src/routes/chat.ts",
+      "api/src/routes/seedLearningEffectAuditV1.ts",
+      "api/src/routes/train.ts",
+      "api/src/routes/mainlineSupremeCompletionAuditV1.ts",
+      "api/src/routes/autonomousBuildPhaseV1.ts",
+      "api/src/routes/evolutionAuditProbesV1.ts",
+      "api/src/routes/metaOptimizerBundleV1.ts",
+      "api/src/routes/training.ts",
+      "api/src/db/index.ts",
+      "api/dist/train/commit.js",
+      "api/dist/train/engine.js",
+      "api/dist/train/session.js",
+      "api/dist/planning/responsePlanCore.js",
+      "api/dist/core/evolutionLedgerV1.js",
+      "api/dist/core/memoryProjection.js",
+      "api/dist/training/storage.js",
+      "api/dist/index.js",
+      "api/dist/routes/mainlineSupremeCompletionAuditV1.js",
+      "api/dist/routes/metaOptimizerBundleV1.js",
+      "api/dist/routes/seedLearningEffectAuditV1.js",
+      "api/dist/routes/chat.js",
+      "api/dist/routes/training.js",
+      "api/dist/routes/train.js",
+      "api/dist/routes/evolutionAuditProbesV1.js",
+      "api/dist/routes/autonomousBuildPhaseV1.js",
+      "api/dist/db/index.js"
+    ]
+  },
+  "activity": {
+    "count_24h": 60873,
+    "count_7d": 60873,
+    "count_30d": 60873,
+    "last_activity": "created_at"
+  },
+  "diagnosis": {
+    "working_as_designed": true,
+    "root_cause_if_broken": "",
+    "activation_difficulty": "L"
+  },
+  "recommendation": "学習還流パイプラインの接続状態を確認し、training_sessions → kokuzo_synapses への書き戻しフローを有効化する"
+}

@@ -1,0 +1,485 @@
+{
+  "tenmon_related": [
+    {
+      "name": "tenmon-ark-api.service",
+      "is_active": "active",
+      "is_enabled": "enabled",
+      "main_pid": "875715",
+      "memory_current": "73388032",
+      "active_since": "Fri 2026-04-17 09:37:10 JST",
+      "description": "TENMON-ARK API Server",
+      "fragment_path": "/etc/systemd/system/tenmon-ark-api.service",
+      "drop_in_paths": "/etc/systemd/system/tenmon-ark-api.service.d/20-llm.env.conf /etc/systemd/system/tenmon-ark-api.service.d/env.conf",
+      "restart_policy": "always",
+      "load_state": "loaded",
+      "active_state": "active",
+      "sub_state": "running"
+    },
+    {
+      "name": "tenmon-auto-patch.service",
+      "is_active": "active",
+      "is_enabled": "enabled",
+      "main_pid": "2474996",
+      "memory_current": "606208",
+      "active_since": "Fri 2026-04-10 06:36:15 JST",
+      "description": "Tenmon Ark Auto Patch Runner",
+      "fragment_path": "/etc/systemd/system/tenmon-auto-patch.service",
+      "drop_in_paths": "",
+      "restart_policy": "always",
+      "load_state": "loaded",
+      "active_state": "active",
+      "sub_state": "running"
+    },
+    {
+      "name": "tenmon-notion-task-audit.service",
+      "is_active": "activating",
+      "is_enabled": "disabled",
+      "main_pid": "0",
+      "memory_current": "[not set]",
+      "active_since": "Fri 2026-04-17 14:36:17 JST",
+      "description": "TENMON Notion Task Execution Audit",
+      "fragment_path": "/etc/systemd/system/tenmon-notion-task-audit.service",
+      "drop_in_paths": "",
+      "restart_policy": "always",
+      "load_state": "loaded",
+      "active_state": "activating",
+      "sub_state": "auto-restart"
+    },
+    {
+      "name": "tenmon-notion-task-readback.service",
+      "is_active": "activating",
+      "is_enabled": "enabled",
+      "main_pid": "0",
+      "memory_current": "[not set]",
+      "active_since": "Fri 2026-04-17 14:36:17 JST",
+      "description": "TENMON Notion Task Requeue Readback",
+      "fragment_path": "/etc/systemd/system/tenmon-notion-task-readback.service",
+      "drop_in_paths": "",
+      "restart_policy": "always",
+      "load_state": "loaded",
+      "active_state": "activating",
+      "sub_state": "auto-restart"
+    },
+    {
+      "name": "tenmon-notion-task-requeue.service",
+      "is_active": "activating",
+      "is_enabled": "disabled",
+      "main_pid": "0",
+      "memory_current": "[not set]",
+      "active_since": "Fri 2026-04-17 14:36:17 JST",
+      "description": "TENMON Notion Task Requeue Repair Runner",
+      "fragment_path": "/etc/systemd/system/tenmon-notion-task-requeue.service",
+      "drop_in_paths": "",
+      "restart_policy": "always",
+      "load_state": "loaded",
+      "active_state": "activating",
+      "sub_state": "auto-restart"
+    },
+    {
+      "name": "tenmon-notion-task-seed.service",
+      "is_active": "inactive",
+      "is_enabled": "enabled",
+      "main_pid": "0",
+      "memory_current": "[not set]",
+      "active_since": "Fri 2026-04-17 14:36:17 JST",
+      "description": "TENMON Notion Task Seed Runner",
+      "fragment_path": "/etc/systemd/system/tenmon-notion-task-seed.service",
+      "drop_in_paths": "",
+      "restart_policy": "always",
+      "load_state": "loaded",
+      "active_state": "activating",
+      "sub_state": "auto-restart"
+    },
+    {
+      "name": "tenmon-notion-task-status-fix.service",
+      "is_active": "active",
+      "is_enabled": "enabled",
+      "main_pid": "200074",
+      "memory_current": "2404352",
+      "active_since": "Sat 2026-04-04 18:10:10 JST",
+      "description": "TENMON Notion Task Status Fix",
+      "fragment_path": "/etc/systemd/system/tenmon-notion-task-status-fix.service",
+      "drop_in_paths": "",
+      "restart_policy": "always",
+      "load_state": "loaded",
+      "active_state": "active",
+      "sub_state": "running"
+    },
+    {
+      "name": "tenmon-operations-level-autonomy.service",
+      "is_active": "failed",
+      "is_enabled": "static",
+      "main_pid": "0",
+      "memory_current": "[not set]",
+      "active_since": "n/a",
+      "description": "TENMON operations-level autonomy one-shot (tenmon-operations-level-autonomy)",
+      "fragment_path": "/etc/systemd/system/tenmon-operations-level-autonomy.service",
+      "drop_in_paths": "",
+      "restart_policy": "no",
+      "load_state": "loaded",
+      "active_state": "failed",
+      "sub_state": "failed"
+    },
+    {
+      "name": "tenmon-runtime-watchdog.service",
+      "is_active": "active",
+      "is_enabled": "enabled",
+      "main_pid": "2539152",
+      "memory_current": "12238848",
+      "active_since": "Fri 2026-04-10 10:49:18 JST",
+      "description": "TENMON Runtime Watchdog",
+      "fragment_path": "/etc/systemd/system/tenmon-runtime-watchdog.service",
+      "drop_in_paths": "",
+      "restart_policy": "always",
+      "load_state": "loaded",
+      "active_state": "active",
+      "sub_state": "running"
+    },
+    {
+      "name": "tenmon-storage-debug.service",
+      "is_active": "failed",
+      "is_enabled": "transient",
+      "main_pid": "0",
+      "memory_current": "[not set]",
+      "active_since": "Thu 2026-03-12 15:49:36 JST",
+      "description": "/usr/local/bin/tenmon-storage-sync-debug.sh",
+      "fragment_path": "/run/systemd/transient/tenmon-storage-debug.service",
+      "drop_in_paths": "",
+      "restart_policy": "no",
+      "load_state": "loaded",
+      "active_state": "failed",
+      "sub_state": "failed"
+    },
+    {
+      "name": "tenmon-strict-promotion.service",
+      "is_active": "activating",
+      "is_enabled": "enabled",
+      "main_pid": "0",
+      "memory_current": "[not set]",
+      "active_since": "Fri 2026-04-17 14:36:27 JST",
+      "description": "TENMON Strict Promotion Runner",
+      "fragment_path": "/etc/systemd/system/tenmon-strict-promotion.service",
+      "drop_in_paths": "",
+      "restart_policy": "always",
+      "load_state": "loaded",
+      "active_state": "activating",
+      "sub_state": "auto-restart"
+    },
+    {
+      "name": "tenmon-todaycut-stack.service",
+      "is_active": "active",
+      "is_enabled": "enabled",
+      "main_pid": "0",
+      "memory_current": "[not set]",
+      "active_since": "Sat 2026-04-04 17:34:20 JST",
+      "description": "TENMON Today-Cut Stack",
+      "fragment_path": "/etc/systemd/system/tenmon-todaycut-stack.service",
+      "drop_in_paths": "",
+      "restart_policy": "no",
+      "load_state": "loaded",
+      "active_state": "active",
+      "sub_state": "exited"
+    }
+  ],
+  "failed_services": [
+    {
+      "name": "tenmon-operations-level-autonomy.service",
+      "is_active": "failed",
+      "is_enabled": "static",
+      "main_pid": "0",
+      "memory_current": "[not set]",
+      "active_since": "n/a",
+      "description": "TENMON operations-level autonomy one-shot (tenmon-operations-level-autonomy)",
+      "fragment_path": "/etc/systemd/system/tenmon-operations-level-autonomy.service",
+      "drop_in_paths": "",
+      "restart_policy": "no",
+      "load_state": "loaded",
+      "active_state": "failed",
+      "sub_state": "failed"
+    },
+    {
+      "name": "tenmon-storage-debug.service",
+      "is_active": "failed",
+      "is_enabled": "transient",
+      "main_pid": "0",
+      "memory_current": "[not set]",
+      "active_since": "Thu 2026-03-12 15:49:36 JST",
+      "description": "/usr/local/bin/tenmon-storage-sync-debug.sh",
+      "fragment_path": "/run/systemd/transient/tenmon-storage-debug.service",
+      "drop_in_paths": "",
+      "restart_policy": "no",
+      "load_state": "loaded",
+      "active_state": "failed",
+      "sub_state": "failed"
+    }
+  ],
+  "running_services": [
+    {
+      "name": "apparmor.service",
+      "description": "Load AppArmor profiles"
+    },
+    {
+      "name": "apport.service",
+      "description": "LSB: automatic crash report generation"
+    },
+    {
+      "name": "blk-availability.service",
+      "description": "Availability of block devices"
+    },
+    {
+      "name": "cloud-config.service",
+      "description": "Cloud-init: Config Stage"
+    },
+    {
+      "name": "cloud-final.service",
+      "description": "Cloud-init: Final Stage"
+    },
+    {
+      "name": "cloud-init-local.service",
+      "description": "Cloud-init: Local Stage (pre-network)"
+    },
+    {
+      "name": "cloud-init.service",
+      "description": "Cloud-init: Network Stage"
+    },
+    {
+      "name": "console-setup.service",
+      "description": "Set console font and keymap"
+    },
+    {
+      "name": "cron.service",
+      "description": "Regular background program processing daemon"
+    },
+    {
+      "name": "dbus.service",
+      "description": "D-Bus System Message Bus"
+    },
+    {
+      "name": "finalrd.service",
+      "description": "Create final runtime dir for shutdown pivot root"
+    },
+    {
+      "name": "getty@tty1.service",
+      "description": "Getty on tty1"
+    },
+    {
+      "name": "irqbalance.service",
+      "description": "irqbalance daemon"
+    },
+    {
+      "name": "keyboard-setup.service",
+      "description": "Set the console keyboard layout"
+    },
+    {
+      "name": "kmod-static-nodes.service",
+      "description": "Create List of Static Device Nodes"
+    },
+    {
+      "name": "lvm2-monitor.service",
+      "description": "Monitoring of LVM2 mirrors, snapshots etc. using dmeventd or progress polling"
+    },
+    {
+      "name": "ModemManager.service",
+      "description": "Modem Manager"
+    },
+    {
+      "name": "multipathd.service",
+      "description": "Device-Mapper Multipath Device Controller"
+    },
+    {
+      "name": "networkd-dispatcher.service",
+      "description": "Dispatcher daemon for systemd-networkd"
+    },
+    {
+      "name": "nginx.service",
+      "description": "A high performance web server and a reverse proxy server"
+    },
+    {
+      "name": "packagekit.service",
+      "description": "PackageKit Daemon"
+    },
+    {
+      "name": "plymouth-quit-wait.service",
+      "description": "Hold until boot process finishes up"
+    },
+    {
+      "name": "plymouth-quit.service",
+      "description": "Terminate Plymouth Boot Screen"
+    },
+    {
+      "name": "plymouth-read-write.service",
+      "description": "Tell Plymouth To Write Out Runtime Data"
+    },
+    {
+      "name": "polkit.service",
+      "description": "Authorization Manager"
+    },
+    {
+      "name": "qemu-guest-agent.service",
+      "description": "QEMU Guest Agent"
+    },
+    {
+      "name": "rpc-statd-notify.service",
+      "description": "Notify NFS peers of a restart"
+    },
+    {
+      "name": "rpcbind.service",
+      "description": "RPC bind portmap service"
+    },
+    {
+      "name": "rsyslog.service",
+      "description": "System Logging Service"
+    },
+    {
+      "name": "serial-getty@ttyS0.service",
+      "description": "Serial Getty on ttyS0"
+    },
+    {
+      "name": "setvtrgb.service",
+      "description": "Set console scheme"
+    },
+    {
+      "name": "snapd.apparmor.service",
+      "description": "Load AppArmor profiles managed internally by snapd"
+    },
+    {
+      "name": "snapd.seeded.service",
+      "description": "Wait until snapd is fully seeded"
+    },
+    {
+      "name": "snapd.service",
+      "description": "Snap Daemon"
+    },
+    {
+      "name": "ssh.service",
+      "description": "OpenBSD Secure Shell server"
+    },
+    {
+      "name": "systemd-binfmt.service",
+      "description": "Set Up Additional Binary Formats"
+    },
+    {
+      "name": "systemd-fsck@dev-disk-by\\x2dlabel-UEFI.service",
+      "description": "File System Check on /dev/disk/by-label/UEFI"
+    },
+    {
+      "name": "systemd-journal-flush.service",
+      "description": "Flush Journal to Persistent Storage"
+    },
+    {
+      "name": "systemd-journald.service",
+      "description": "Journal Service"
+    },
+    {
+      "name": "systemd-logind.service",
+      "description": "User Login Management"
+    },
+    {
+      "name": "systemd-modules-load.service",
+      "description": "Load Kernel Modules"
+    },
+    {
+      "name": "systemd-networkd-wait-online.service",
+      "description": "Wait for Network to be Configured"
+    },
+    {
+      "name": "systemd-networkd.service",
+      "description": "Network Configuration"
+    },
+    {
+      "name": "systemd-random-seed.service",
+      "description": "Load/Save Random Seed"
+    },
+    {
+      "name": "systemd-remount-fs.service",
+      "description": "Remount Root and Kernel File Systems"
+    },
+    {
+      "name": "systemd-resolved.service",
+      "description": "Network Name Resolution"
+    },
+    {
+      "name": "systemd-sysctl.service",
+      "description": "Apply Kernel Variables"
+    },
+    {
+      "name": "systemd-sysusers.service",
+      "description": "Create System Users"
+    },
+    {
+      "name": "systemd-timesyncd.service",
+      "description": "Network Time Synchronization"
+    },
+    {
+      "name": "systemd-tmpfiles-setup-dev.service",
+      "description": "Create Static Device Nodes in /dev"
+    },
+    {
+      "name": "systemd-tmpfiles-setup.service",
+      "description": "Create Volatile Files and Directories"
+    },
+    {
+      "name": "systemd-udev-trigger.service",
+      "description": "Coldplug All udev Devices"
+    },
+    {
+      "name": "systemd-udevd.service",
+      "description": "Rule-based Manager for Device Events and Files"
+    },
+    {
+      "name": "systemd-update-utmp.service",
+      "description": "Record System Boot/Shutdown in UTMP"
+    },
+    {
+      "name": "systemd-user-sessions.service",
+      "description": "Permit User Sessions"
+    },
+    {
+      "name": "tailscaled.service",
+      "description": "Tailscale node agent"
+    },
+    {
+      "name": "tenmon-ark-api.service",
+      "description": "TENMON-ARK API Server"
+    },
+    {
+      "name": "tenmon-auto-patch.service",
+      "description": "Tenmon Ark Auto Patch Runner"
+    },
+    {
+      "name": "tenmon-notion-task-status-fix.service",
+      "description": "TENMON Notion Task Status Fix"
+    },
+    {
+      "name": "tenmon-runtime-watchdog.service",
+      "description": "TENMON Runtime Watchdog"
+    },
+    {
+      "name": "tenmon-todaycut-stack.service",
+      "description": "TENMON Today-Cut Stack"
+    },
+    {
+      "name": "udisks2.service",
+      "description": "Disk Manager"
+    },
+    {
+      "name": "ufw.service",
+      "description": "Uncomplicated firewall"
+    },
+    {
+      "name": "unattended-upgrades.service",
+      "description": "Unattended Upgrades Shutdown"
+    },
+    {
+      "name": "user-runtime-dir@0.service",
+      "description": "User Runtime Directory /run/user/0"
+    },
+    {
+      "name": "user@0.service",
+      "description": "User Manager for UID 0"
+    }
+  ],
+  "all_services_count": 161,
+  "total_running": 66,
+  "total_failed": 2
+}

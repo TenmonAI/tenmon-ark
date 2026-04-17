@@ -1,0 +1,35 @@
+{
+  "feature_name": "founder_onboarding",
+  "connection_status": "absent",
+  "evidence": {
+    "files_found": [
+      "api/src/routes/invite.ts",
+      "api/dist/routes/invite.js"
+    ],
+    "tables_with_data": [],
+    "services_involved": [],
+    "api_endpoints": [
+      "web/dist/assets/index-B1cnH3bY.js",
+      "site/dist/assets/index-CmMaySvf.js",
+      "client/dist/assets/index-j9bPZevX.js",
+      "api/src/routes/invite.ts",
+      "api/dist/routes/invite.js"
+    ],
+    "endpoint_/api/register_calls": 0,
+    "endpoint_/api/invite_calls": 0,
+    "endpoint_/api/auth/password-reset_calls": 0,
+    "endpoint_/api/auth_calls": 52
+  },
+  "activity": {
+    "count_24h": 0,
+    "count_7d": 0,
+    "count_30d": 0,
+    "last_activity": null
+  },
+  "diagnosis": {
+    "working_as_designed": false,
+    "root_cause_if_broken": "ユーザーテーブルが存在しないか空",
+    "activation_difficulty": "S"
+  },
+  "recommendation": "認証フローの完了率を測定し、LP→登録のドロップオフポイントを特定する"
+}

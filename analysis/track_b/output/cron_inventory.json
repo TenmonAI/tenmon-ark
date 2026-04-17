@@ -1,0 +1,26 @@
+{
+  "cron_entries": [
+    {
+      "source": "/etc/cron.d/certbot",
+      "content": "# /etc/cron.d/certbot: crontab entries for the certbot package\n#\n# Upstream recommends attempting renewal twice a day\n#\n# Eventually, this will be an opportunity to validate certificates\n# haven't been revoked, etc.  Renewal will only occur if expiration\n# is within 30 days.\n#\n# Important Note!  This cronjob will NOT be executed if you are\n# running systemd as your init system.  If you are running systemd,\n# the cronjob.timer function takes precedence over this cronjob.  For\n# more details, see the systemd.timer manpage, or use systemctl show\n# certbot.timer.\nSHELL=/bin/sh\nPATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin\n\n0 */12 * * * root test -x /usr/bin/certbot -a \\! -d /run/systemd/system && perl -e 'sleep int(rand(43200))' && certbot -q renew"
+    },
+    {
+      "source": "/etc/cron.d/e2scrub_all",
+      "content": "30 3 * * 0 root test -e /run/systemd/system || SERVICE_MODE=1 /usr/lib/x86_64-linux-gnu/e2fsprogs/e2scrub_all_cron\n10 3 * * * root test -e /run/systemd/system || SERVICE_MODE=1 /sbin/e2scrub_all -A -r"
+    },
+    {
+      "source": "/etc/cron.d/tenmon-budget-reset",
+      "content": "0 0 * * * root /usr/bin/python3 /opt/tenmon-ark-repo/scripts/reset_daily_budget.py >> /var/log/tenmon-budget-reset.log 2>&1"
+    },
+    {
+      "source": "/etc/cron.d/tenmon-mc",
+      "content": "# ============================================================\n# TENMON-MC Phase 1: 5分ごとにスナップショット取得\n# 配置先: /etc/cron.d/tenmon-mc\n# ============================================================\n\nPATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\n\n*/5 * * * * root /opt/tenmon-mc/bin/collect.sh >> /var/log/tenmon-mc.log 2>&1\n0 * * * * root find /var/log/tenmon-mc.log -size +50M -exec truncate -s 10M {} \\;"
+    },
+    {
+      "source": "crontab -u root",
+      "content": "*/5 * * * * /opt/tenmon-ark-data/sync_members.sh"
+    }
+  ],
+  "systemd_timers": "NEXT                        LEFT           LAST                        PASSED       UNIT                           ACTIVATES\nFri 2026-04-17 19:19:46 JST 4h 43min left  Fri 2026-04-17 00:27:07 JST 14h ago      motd-news.timer                motd-news.service\nFri 2026-04-17 20:05:56 JST 5h 29min left  Fri 2026-04-17 09:18:33 JST 5h 17min ago apt-daily.timer                apt-daily.service\nFri 2026-04-17 21:06:00 JST 6h left        Fri 2026-04-17 05:49:56 JST 8h ago       certbot.timer                  certbot.service\nSat 2026-04-18 00:00:00 JST 9h left        Fri 2026-04-17 00:00:01 JST 14h ago      dpkg-db-backup.timer           dpkg-db-backup.service\nSat 2026-04-18 00:00:00 JST 9h left        Fri 2026-04-17 00:00:01 JST 14h ago      logrotate.timer                logrotate.service\nSat 2026-04-18 00:28:52 JST 9h left        Fri 2026-04-17 05:29:27 JST 9h ago       man-db.timer                   man-db.service\nSat 2026-04-18 02:49:51 JST 12h left       Fri 2026-04-17 09:29:55 JST 5h 6min ago  fwupd-refresh.timer            fwupd-refresh.service\nSat 2026-04-18 06:48:51 JST 16h left       Fri 2026-04-17 06:29:13 JST 8h ago       apt-daily-upgrade.timer        apt-daily-upgrade.service\nSat 2026-04-18 08:02:10 JST 17h left       Fri 2026-04-17 08:02:10 JST 6h ago       update-notifier-download.timer update-notifier-download.service\nSat 2026-04-18 08:14:05 JST 17h left       Fri 2026-04-17 08:14:05 JST 6h ago       systemd-tmpfiles-clean.timer   systemd-tmpfiles-clean.service\nSun 2026-04-19 03:10:33 JST 1 day 12h left Sun 2026-04-12 03:10:30 JST 5 days ago   e2scrub_all.timer              e2scrub_all.service\nMon 2026-04-20 01:38:09 JST 2 days left    Mon 2026-04-13 01:25:03 JST 4 days ago   fstrim.timer                   fstrim.service\nTue 2026-04-21 00:35:16 JST 3 days left    Wed 2026-04-15 08:46:00 JST 2 days ago   update-notifier-motd.timer     update-notifier-motd.service\nn/a                         n/a            n/a                         n/a          apport-autoreport.timer        apport-autoreport.service\nn/a                         n/a            n/a                         n/a          snapd.snap-repair.timer        snapd.snap-repair.service\nn/a                         n/a            n/a                         n/a          ua-timer.timer                 ua-timer.service\n\n16 timers listed.",
+  "total_cron_entries": 5
+}

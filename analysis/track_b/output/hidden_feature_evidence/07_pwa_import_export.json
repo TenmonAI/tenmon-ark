@@ -1,0 +1,28 @@
+{
+  "feature_name": "pwa_import_export",
+  "connection_status": "partial",
+  "evidence": {
+    "files_found": [
+      "web/src/_core/idb_export.ts",
+      "web/src/lib/exportImport.ts",
+      "client/src/utils/exportData.ts"
+    ],
+    "tables_with_data": [],
+    "services_involved": [],
+    "api_endpoints": [],
+    "endpoint_/api/export_calls": 0,
+    "endpoint_/api/import_calls": 0
+  },
+  "activity": {
+    "count_24h": 0,
+    "count_7d": 0,
+    "count_30d": 0,
+    "last_activity": null
+  },
+  "diagnosis": {
+    "working_as_designed": "partial",
+    "root_cause_if_broken": "実装ファイルは存在するがエンドポイント呼び出しが少ない可能性",
+    "activation_difficulty": "M"
+  },
+  "recommendation": "PWAのデータエクスポート/インポート機能の実装状態を確認し、UIからの導線を構築する"
+}

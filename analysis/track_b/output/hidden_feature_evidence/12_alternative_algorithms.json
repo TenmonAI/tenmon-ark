@@ -1,0 +1,43 @@
+{
+  "feature_name": "alternative_algorithms",
+  "connection_status": "absent",
+  "evidence": {
+    "files_found": [],
+    "tables_with_data": [],
+    "services_involved": [],
+    "api_endpoints": [
+      "web/src/lib/sukuyouDeepening.ts",
+      "web/dist/assets/index-B1cnH3bY.js",
+      "dist/public/assets/index-CqXQwYS0-1776126918766.js",
+      "client/dist.bak.1776138648/assets/index-D_7Esf0q.js",
+      "api/src/scripts/sync_shuku_data.ts",
+      "api/src/sukuyou/reportGenerator.ts",
+      "api/src/sukuyou/sukuyouEngine.ts",
+      "api/src/sukuyou/index.ts",
+      "api/src/sukuyou/integratedDiagnosis.ts",
+      "api/src/sukuyou/guidanceEngine.ts",
+      "api/src/routes/chat.ts",
+      "api/src/routes/sukuyou.ts",
+      "api/dist/scripts/sync_shuku_data.js",
+      "api/dist/sukuyou/sukuyouEngine.js",
+      "api/dist/sukuyou/reportGenerator.js",
+      "api/dist/sukuyou/integratedDiagnosis.js",
+      "api/dist/sukuyou/index.js",
+      "api/dist/sukuyou/guidanceEngine.js",
+      "api/dist/routes/chat.js",
+      "api/dist/routes/sukuyou.js"
+    ]
+  },
+  "activity": {
+    "count_24h": 0,
+    "count_7d": 0,
+    "count_30d": 0,
+    "last_activity": null
+  },
+  "diagnosis": {
+    "working_as_designed": false,
+    "root_cause_if_broken": "九星×宿曜DBまたは五行関連テーブルが未構築",
+    "activation_difficulty": "M"
+  },
+  "recommendation": "宿曜以外の深層アルゴリズム（九星気学・五行）のデータ統合を進める"
+}

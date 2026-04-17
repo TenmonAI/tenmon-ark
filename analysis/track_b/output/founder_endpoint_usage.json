@@ -1,85 +1,85 @@
 {
-  "total_requests": 15466,
+  "total_requests": 16659,
   "top_endpoints": [
     {
       "endpoint": "GET /api/sync/pull",
-      "count": 8005
+      "count": 8661
     },
     {
       "endpoint": "POST /api/sync/push",
-      "count": 3578
+      "count": 3905
     },
     {
       "endpoint": "GET /mc/data/snapshot.json",
-      "count": 372
+      "count": 406
     },
     {
       "endpoint": "GET /pwa/",
-      "count": 346
+      "count": 354
     },
     {
       "endpoint": "GET /mc/data/report.txt",
-      "count": 242
+      "count": 275
     },
     {
       "endpoint": "GET /api/me",
-      "count": 223
-    },
-    {
-      "endpoint": "POST /api/chat",
-      "count": 209
-    },
-    {
-      "endpoint": "GET /mc/style.css",
-      "count": 204
+      "count": 237
     },
     {
       "endpoint": "GET /mc/data/agent_activities.json",
-      "count": 195
+      "count": 227
+    },
+    {
+      "endpoint": "POST /api/chat",
+      "count": 224
+    },
+    {
+      "endpoint": "GET /mc/style.css",
+      "count": 205
     },
     {
       "endpoint": "GET /pwa/assets/index-XUa39MFc.css",
-      "count": 192
+      "count": 196
     },
     {
       "endpoint": "POST /api/sync/bootstrap",
-      "count": 173
+      "count": 187
     },
     {
       "endpoint": "GET /mc/dashboard.html",
-      "count": 143
+      "count": 144
     },
     {
       "endpoint": "GET /pwa/brand/tenmon-ark-mark.svg",
-      "count": 135
+      "count": 141
     },
     {
       "endpoint": "GET /mc/dashboard.css",
-      "count": 124
-    },
-    {
-      "endpoint": "GET /mc/",
-      "count": 107
+      "count": 125
     },
     {
       "endpoint": "GET /",
-      "count": 105
+      "count": 110
+    },
+    {
+      "endpoint": "GET /mc/",
+      "count": 108
     },
     {
       "endpoint": "GET /mc/dashboard.js",
-      "count": 89
+      "count": 90
     },
     {
       "endpoint": "GET /pwa/assets/index-B1cnH3bY.js",
-      "count": 60
+      "count": 64
+    },
+    {
+      "endpoint": "GET /favicon.ico",
+      "count": 57
     },
     {
       "endpoint": "GET /pwa/assets/index-1zRP3Rpy.js",
       "count": 56
-    },
-    {
-      "endpoint": "GET /favicon.ico",
-      "count": 55
     },
     {
       "endpoint": "GET /pwa/assets/index-ZM7WJk3O.js",
@@ -87,58 +87,62 @@
     },
     {
       "endpoint": "GET /mc/ai_agents.html",
-      "count": 45
-    },
-    {
-      "endpoint": "GET /pwa/assets/index-B0SZnd9v.css",
-      "count": 36
-    },
-    {
-      "endpoint": "PROPFIND /",
-      "count": 35
+      "count": 46
     },
     {
       "endpoint": "POST /api/auth/local/login",
-      "count": 32
+      "count": 39
     },
     {
-      "endpoint": "GET /mc/ai_agents.css",
-      "count": 29
+      "endpoint": "GET /pwa/assets/index-B0SZnd9v.css",
+      "count": 37
     },
     {
-      "endpoint": "GET /mc/ai_agents.js",
-      "count": 29
+      "endpoint": "PROPFIND /",
+      "count": 37
     },
     {
       "endpoint": "POST /api/sukuyou/guidance",
-      "count": 28
+      "count": 31
+    },
+    {
+      "endpoint": "GET /mc/ai_agents.css",
+      "count": 30
+    },
+    {
+      "endpoint": "GET /mc/ai_agents.js",
+      "count": 30
+    },
+    {
+      "endpoint": "GET /pwa/brand/tenmon-ark-apple-touch.png",
+      "count": 26
     },
     {
       "endpoint": "GET /pwa/assets/index-Cux2Cj7-.js",
       "count": 24
     },
     {
-      "endpoint": "GET /pwa/brand/tenmon-ark-apple-touch.png",
-      "count": 23
-    },
-    {
       "endpoint": "GET /pwa/assets/index-B7OOOjG1.js",
       "count": 22
+    },
+    {
+      "endpoint": "GET /pwa/brand/tenmon-ark-favicon-32.png",
+      "count": 20
+    },
+    {
+      "endpoint": "GET /.git/config",
+      "count": 20
     },
     {
       "endpoint": "GET /pwa/assets/index-Dpd59a5q.js",
       "count": 19
     },
     {
-      "endpoint": "GET /pwa/brand/tenmon-ark-favicon-32.png",
-      "count": 18
-    },
-    {
-      "endpoint": "GET /.git/config",
-      "count": 18
-    },
-    {
       "endpoint": "GET /pwa/login-local.html",
+      "count": 16
+    },
+    {
+      "endpoint": "GET /api/feedback/history",
       "count": 15
     },
     {
@@ -146,16 +150,16 @@
       "count": 14
     },
     {
-      "endpoint": "GET /api/feedback/history",
-      "count": 13
+      "endpoint": "GET /pwa/brand/tenmon-ark-favicon-16.png",
+      "count": 14
     },
     {
       "endpoint": "GET /brand/tenmon-ark-mark.svg",
       "count": 12
     },
     {
-      "endpoint": "GET /pwa/brand/tenmon-ark-favicon-16.png",
-      "count": 12
+      "endpoint": "GET /pwa/login-local",
+      "count": 9
     },
     {
       "endpoint": "POST /",
@@ -170,8 +174,12 @@
       "count": 9
     },
     {
-      "endpoint": "GET /pwa/login-local",
-      "count": 8
+      "endpoint": "GET /apple-touch-icon-precomposed.png",
+      "count": 7
+    },
+    {
+      "endpoint": "GET /apple-touch-icon.png",
+      "count": 7
     },
     {
       "endpoint": "GET /pwa/register-local.html",
@@ -186,14 +194,6 @@
       "count": 6
     },
     {
-      "endpoint": "GET /apple-touch-icon-precomposed.png",
-      "count": 5
-    },
-    {
-      "endpoint": "GET /apple-touch-icon.png",
-      "count": 5
-    },
-    {
       "endpoint": "GET /apple-touch-icon-120x120-precomposed.png",
       "count": 3
     },
@@ -203,21 +203,21 @@
     }
   ],
   "status_distribution": {
-    "200": 7742,
-    "401": 6983,
-    "404": 394,
-    "304": 167,
-    "302": 132,
-    "301": 25,
-    "400": 14,
+    "200": 8289,
+    "401": 7599,
+    "404": 401,
+    "304": 181,
+    "302": 137,
+    "301": 27,
+    "400": 15,
     "403": 5,
     "409": 3,
-    "499": 1
+    "499": 2
   },
   "method_distribution": {
-    "GET": 11357,
-    "POST": 4072,
-    "PROPFIND": 35,
+    "GET": 12181,
+    "POST": 4439,
+    "PROPFIND": 37,
     "HEAD": 2
   },
   "log_files_checked": [

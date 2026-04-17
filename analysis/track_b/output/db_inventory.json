@@ -1,10 +1,10 @@
 {
-  "timestamp": "2026-04-17T05:04:45Z",
+  "timestamp": "2026-04-17T05:36:30Z",
   "sqlite": {
     "db_type": "SQLite",
     "db_path": "/opt/tenmon-ark-data/kokuzo.sqlite",
-    "db_size_bytes": 1471832064,
-    "db_size_mb": 1403.65,
+    "db_size_bytes": 1472061440,
+    "db_size_mb": 1403.87,
     "tables": [
       {
         "table": "ark_seed_ledger",
@@ -63,7 +63,7 @@
       },
       {
         "table": "conversation_log",
-        "row_count": 35258,
+        "row_count": 35280,
         "schema_preview": "CREATE TABLE conversation_log (\n  id INTEGER PRIMARY KEY AUTOINCREMENT,\n  session_id TEXT NOT NULL,\n  turn_index INTEGER NOT NULL,\n  role TEXT NOT NULL CHECK(role IN ('user','assistant')),\n  content TEXT NOT NULL,\n  created_at TEXT NOT NULL,\n  UNIQUE(session_id, turn_index)\n);\nCREATE INDEX idx_conversation_log_session_turn\n  ON conversation_log(session_id, turn_index);"
       },
       {
@@ -188,7 +188,7 @@
       },
       {
         "table": "kokuzo_core",
-        "row_count": 163,
+        "row_count": 164,
         "schema_preview": "CREATE TABLE kokuzo_core (\n  key TEXT PRIMARY KEY,\n  summary TEXT NOT NULL,\n  importance REAL NOT NULL,\n  updated_at TEXT NOT NULL\n);"
       },
       {
@@ -343,7 +343,7 @@
       },
       {
         "table": "password_change_audit",
-        "row_count": 15,
+        "row_count": 16,
         "schema_preview": "CREATE TABLE password_change_audit (\n      id INTEGER PRIMARY KEY AUTOINCREMENT,\n      userId TEXT NOT NULL,\n      actionType TEXT NOT NULL,\n      createdAt TEXT NOT NULL,\n      ip TEXT,\n      userAgent TEXT\n    );\nCREATE INDEX idx_pca_userId ON password_change_audit(userId);"
       },
       {
@@ -423,7 +423,7 @@
       },
       {
         "table": "session_memory",
-        "row_count": 35260,
+        "row_count": 35280,
         "schema_preview": "CREATE TABLE session_memory (\n  id INTEGER PRIMARY KEY AUTOINCREMENT,\n  session_id TEXT NOT NULL,\n  role TEXT NOT NULL CHECK(role IN ('user','assistant')),\n  content TEXT NOT NULL,\n  timestamp TEXT NOT NULL\n);\nCREATE INDEX idx_session_memory_session_time\n  ON session_memory(session_id, timestamp);"
       },
       {
@@ -448,12 +448,12 @@
       },
       {
         "table": "sync_devices",
-        "row_count": 74,
+        "row_count": 76,
         "schema_preview": "CREATE TABLE sync_devices (\n  userId TEXT NOT NULL,\n  deviceId TEXT NOT NULL,\n  lastSeenAt TEXT NOT NULL,\n  createdAt TEXT NOT NULL,\n  PRIMARY KEY (userId, deviceId)\n);"
       },
       {
         "table": "sync_events",
-        "row_count": 13079,
+        "row_count": 13462,
         "schema_preview": "CREATE TABLE sync_events (\n  id INTEGER PRIMARY KEY AUTOINCREMENT,\n  userId TEXT NOT NULL,\n  deviceId TEXT,\n  eventType TEXT NOT NULL,\n  detailJson TEXT,\n  createdAt TEXT NOT NULL\n);\nCREATE INDEX idx_sync_events_user ON sync_events(userId, createdAt);"
       },
       {
@@ -463,12 +463,12 @@
       },
       {
         "table": "synced_chat_threads",
-        "row_count": 112,
+        "row_count": 115,
         "schema_preview": "CREATE TABLE synced_chat_threads (\n  userId TEXT NOT NULL,\n  threadId TEXT NOT NULL,\n  title TEXT,\n  folderId TEXT,\n  pinned INTEGER NOT NULL DEFAULT 0,\n  updatedAt TEXT NOT NULL,\n  version INTEGER NOT NULL DEFAULT 1,\n  isDeleted INTEGER NOT NULL DEFAULT 0,\n  PRIMARY KEY (userId, threadId)\n);\nCREATE INDEX idx_synced_threads_user_updated ON synced_chat_threads(userId, updatedAt);"
       },
       {
         "table": "synced_sukuyou_rooms",
-        "row_count": 38,
+        "row_count": 39,
         "schema_preview": "CREATE TABLE synced_sukuyou_rooms (\n  userId TEXT NOT NULL,\n  roomId TEXT NOT NULL,\n  threadId TEXT,\n  birthDate TEXT,\n  honmeiShuku TEXT,\n  disasterType TEXT,\n  reversalAxis TEXT,\n  shortOracle TEXT,\n  updatedAt TEXT NOT NULL,\n  version INTEGER NOT NULL DEFAULT 1,\n  isDeleted INTEGER NOT NULL DEFAULT 0,\n  PRIMARY KEY (userId, roomId)\n);\nCREATE INDEX idx_synced_sukuyou_user_updated ON synced_sukuyou_rooms(userId, updatedAt);"
       },
       {

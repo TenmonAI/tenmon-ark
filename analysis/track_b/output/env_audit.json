@@ -1,0 +1,401 @@
+{
+  "timestamp": "2026-04-17T05:36:35Z",
+  "env_files": {
+    "/etc/tenmon/llm.env": [
+      {
+        "name": "OPENAI_API_KEY",
+        "is_set": true,
+        "length": "[MASKED]",
+        "looks_like": "secret/token"
+      },
+      {
+        "name": "OPENAI_MODEL",
+        "is_set": true,
+        "length": 6,
+        "looks_like": "string"
+      },
+      {
+        "name": "GEMINI_API_KEY",
+        "is_set": true,
+        "length": "[MASKED]",
+        "looks_like": "secret/token"
+      },
+      {
+        "name": "GEMINI_MODEL",
+        "is_set": true,
+        "length": 23,
+        "looks_like": "string"
+      },
+      {
+        "name": "GEMINI_MODEL_EXPERIMENT",
+        "is_set": true,
+        "length": 36,
+        "looks_like": "string"
+      },
+      {
+        "name": "FOUNDER_KEY",
+        "is_set": true,
+        "length": "[MASKED]",
+        "looks_like": "secret/token"
+      },
+      {
+        "name": "TENMON_MULTI_AI_AUTONOMY_EXPECTED_HEAD",
+        "is_set": true,
+        "length": 40,
+        "looks_like": "string"
+      },
+      {
+        "name": "NOTION_AUTOBUILD_TOKEN",
+        "is_set": true,
+        "length": "[MASKED]",
+        "looks_like": "secret/token"
+      },
+      {
+        "name": "NOTION_TOKEN",
+        "is_set": true,
+        "length": "[MASKED]",
+        "looks_like": "secret/token"
+      },
+      {
+        "name": "AUTH_JWT_SECRET",
+        "is_set": true,
+        "length": "[MASKED]",
+        "looks_like": "secret/token"
+      },
+      {
+        "name": "NOTION_LEDGER_RUNTIME_HEALTH_DB_ID",
+        "is_set": true,
+        "length": 36,
+        "looks_like": "string"
+      },
+      {
+        "name": "NOTION_LEDGER_ACCEPTANCE_DB_ID",
+        "is_set": true,
+        "length": 36,
+        "looks_like": "string"
+      },
+      {
+        "name": "NOTION_LEDGER_AUTHORITY_AUDIT_DB_ID",
+        "is_set": true,
+        "length": "[MASKED]",
+        "looks_like": "secret/token"
+      },
+      {
+        "name": "NOTION_LEDGER_CARD_EXECUTION_DB_ID",
+        "is_set": true,
+        "length": 36,
+        "looks_like": "string"
+      },
+      {
+        "name": "NOTION_LEDGER_FINAL_SEAL_DB_ID",
+        "is_set": true,
+        "length": 36,
+        "looks_like": "string"
+      },
+      {
+        "name": "TENMON_MULTIPASS_REPORT_OS_V1",
+        "is_set": true,
+        "length": "[MASKED]",
+        "looks_like": "secret/token"
+      },
+      {
+        "name": "NOTION_FEEDBACK_DB_ID",
+        "is_set": true,
+        "length": 36,
+        "looks_like": "string"
+      },
+      {
+        "name": "SMTP_HOST",
+        "is_set": true,
+        "length": 14,
+        "looks_like": "url/host"
+      },
+      {
+        "name": "SMTP_PORT",
+        "is_set": true,
+        "length": 3,
+        "looks_like": "port"
+      },
+      {
+        "name": "SMTP_USER",
+        "is_set": true,
+        "length": 20,
+        "looks_like": "string"
+      },
+      {
+        "name": "SMTP_PASS",
+        "is_set": true,
+        "length": "[MASKED]",
+        "looks_like": "secret/token"
+      },
+      {
+        "name": "SMTP_FROM",
+        "is_set": true,
+        "length": 35,
+        "looks_like": "string"
+      },
+      {
+        "name": "APP_BASE_URL",
+        "is_set": true,
+        "length": 22,
+        "looks_like": "url/host"
+      },
+      {
+        "name": "SMTP_HOST",
+        "is_set": true,
+        "length": 14,
+        "looks_like": "url/host"
+      },
+      {
+        "name": "SMTP_PORT",
+        "is_set": true,
+        "length": 3,
+        "looks_like": "port"
+      },
+      {
+        "name": "SMTP_USER",
+        "is_set": true,
+        "length": 25,
+        "looks_like": "string"
+      },
+      {
+        "name": "SMTP_PASS",
+        "is_set": true,
+        "length": "[MASKED]",
+        "looks_like": "secret/token"
+      },
+      {
+        "name": "SMTP_FROM",
+        "is_set": true,
+        "length": 38,
+        "looks_like": "string"
+      },
+      {
+        "name": "APP_BASE_URL",
+        "is_set": true,
+        "length": 22,
+        "looks_like": "url/host"
+      }
+    ],
+    "/etc/systemd/system/tenmon-campaign-os.service.d/env.conf": [
+      {
+        "name": "ANTHROPIC_API_KEY",
+        "is_set": true,
+        "length": "[MASKED]",
+        "looks_like": "secret/token"
+      },
+      {
+        "name": "NOTION_TOKEN",
+        "is_set": true,
+        "length": "[MASKED]",
+        "looks_like": "secret/token"
+      },
+      {
+        "name": "NOTION_PAGE_ID",
+        "is_set": true,
+        "length": 36,
+        "looks_like": "string"
+      },
+      {
+        "name": "OPENAI_API_KEY",
+        "is_set": true,
+        "length": "[MASKED]",
+        "looks_like": "secret/token"
+      }
+    ],
+    "/etc/systemd/system/tenmon-ark-api.service.d/20-llm.env.conf": [
+      {
+        "name": "EnvironmentFile",
+        "is_set": true,
+        "length": 19,
+        "looks_like": "string"
+      }
+    ],
+    "/etc/systemd/system/tenmon-ark-api.service.d/env.conf": [
+      {
+        "name": "EnvironmentFile",
+        "is_set": true,
+        "length": 19,
+        "looks_like": "string"
+      },
+      {
+        "name": "NODE_ENV",
+        "is_set": true,
+        "length": 10,
+        "looks_like": "string"
+      },
+      {
+        "name": "TENMON_DATA_DIR",
+        "is_set": true,
+        "length": 20,
+        "looks_like": "path"
+      },
+      {
+        "name": "NOTION_TOKEN",
+        "is_set": true,
+        "length": "[MASKED]",
+        "looks_like": "secret/token"
+      },
+      {
+        "name": "NOTION_FEEDBACK_DB_ID",
+        "is_set": true,
+        "length": 36,
+        "looks_like": "string"
+      },
+      {
+        "name": "GEMINI_MODEL",
+        "is_set": true,
+        "length": 23,
+        "looks_like": "string"
+      }
+    ]
+  },
+  "env_summary": {
+    "total_candidates": 14,
+    "found": 4,
+    "not_found": 10
+  },
+  "runtime": {
+    "os": "Linux x220-158-23-9 5.15.0-171-generic #181-Ubuntu SMP Fri Feb 6 22:44:50 UTC 2026 x86_64 x86_64 x86_64 GNU/Linux",
+    "os_release": "PRETTY_NAME=\"Ubuntu 22.04.2 LTS\"\nNAME=\"Ubuntu\"\nVERSION_ID=\"22.04\"\nVERSION=\"22.04.2 LTS (Jammy Jellyfish)\"\nVERSION_CODENAME=jammy",
+    "node_version": "v22.22.0",
+    "npm_version": "10.9.4",
+    "pnpm_version": "N/A",
+    "python_version": "Python 3.10.12",
+    "sqlite3_version": "3.37.2 2022-01-06 13:25:41 872ba256cbf61d9290b571c0e6d82a20c224ca3ad82971edc46b29818d5dalt1",
+    "nginx_version": "nginx version: nginx/1.18.0 (Ubuntu)",
+    "uptime": "14:36:35 up 45 days,  6:46,  9 users,  load average: 1.20, 0.63, 0.35",
+    "memory": "total        used        free      shared  buff/cache   available\nMem:            11Gi       4.2Gi       232Mi       9.0Mi       7.3Gi       7.2Gi\nSwap:          2.0Gi       963Mi       1.1Gi",
+    "cpu_info": "6"
+  },
+  "systemd_env_references": [
+    {
+      "service": "tenmon-strict-promotion.service",
+      "env_file_ref": "EnvironmentFile=-/etc/tenmon/llm.env"
+    },
+    {
+      "service": "tenmon-book-quality-loop.service",
+      "env_file_ref": "EnvironmentFile=/etc/tenmon/llm.env"
+    },
+    {
+      "service": "tenmon-notion-task-seed.service",
+      "env_file_ref": "EnvironmentFile=-/etc/tenmon/llm.env"
+    },
+    {
+      "service": "sshd.service",
+      "env_file_ref": "EnvironmentFile=-/etc/default/ssh"
+    },
+    {
+      "service": "tenmon-notion-task-status-fix.service",
+      "env_file_ref": "EnvironmentFile=-/etc/tenmon/llm.env"
+    },
+    {
+      "service": "tenmon-auto-runner.service",
+      "env_file_ref": "EnvironmentFile=/etc/tenmon/llm.env"
+    },
+    {
+      "service": "tenmon-notion-task-requeue.service",
+      "env_file_ref": "EnvironmentFile=-/etc/tenmon/llm.env"
+    },
+    {
+      "service": "tenmon-notion-task-readback.service",
+      "env_file_ref": "EnvironmentFile=-/etc/tenmon/llm.env"
+    },
+    {
+      "service": "tenmon-notion-task-audit.service",
+      "env_file_ref": "EnvironmentFile=-/etc/tenmon/llm.env"
+    },
+    {
+      "service": "tenmon-notion-runtime-sync.service",
+      "env_file_ref": "EnvironmentFile=-/etc/tenmon/llm.env"
+    },
+    {
+      "service": "snap.lxd.user-daemon.service",
+      "env_file_ref": "EnvironmentFile=-/etc/environment"
+    },
+    {
+      "service": "snap.lxd.daemon.service",
+      "env_file_ref": "EnvironmentFile=-/etc/environment"
+    },
+    {
+      "service": "snap.lxd.activate.service",
+      "env_file_ref": "EnvironmentFile=-/etc/environment"
+    },
+    {
+      "service": "networkd-dispatcher.service",
+      "env_file_ref": "EnvironmentFile=-/etc/default/%p"
+    },
+    {
+      "service": "tenmon-strict-promotion.service",
+      "env_file_ref": "EnvironmentFile=-/etc/tenmon/llm.env"
+    },
+    {
+      "service": "tenmon-notion-task-seed.service",
+      "env_file_ref": "EnvironmentFile=-/etc/tenmon/llm.env"
+    },
+    {
+      "service": "irqbalance.service",
+      "env_file_ref": "EnvironmentFile=-/usr/lib/irqbalance/defaults.env"
+    },
+    {
+      "service": "irqbalance.service",
+      "env_file_ref": "EnvironmentFile=-/etc/default/irqbalance"
+    },
+    {
+      "service": "snapd.service",
+      "env_file_ref": "EnvironmentFile=-/etc/environment"
+    },
+    {
+      "service": "snapd.service",
+      "env_file_ref": "EnvironmentFile=-/var/lib/snapd/environment/snapd.conf"
+    },
+    {
+      "service": "tenmon-notion-task-status-fix.service",
+      "env_file_ref": "EnvironmentFile=-/etc/tenmon/llm.env"
+    },
+    {
+      "service": "snapd.autoimport.service",
+      "env_file_ref": "EnvironmentFile=-/var/lib/snapd/environment/snapd.conf"
+    },
+    {
+      "service": "tenmon-notion-task-readback.service",
+      "env_file_ref": "EnvironmentFile=-/etc/tenmon/llm.env"
+    },
+    {
+      "service": "rpcbind.service",
+      "env_file_ref": "EnvironmentFile=-/etc/rpcbind.conf"
+    },
+    {
+      "service": "rpcbind.service",
+      "env_file_ref": "EnvironmentFile=-/etc/default/rpcbind"
+    },
+    {
+      "service": "snapd.apparmor.service",
+      "env_file_ref": "EnvironmentFile=-/etc/environment"
+    },
+    {
+      "service": "snapd.apparmor.service",
+      "env_file_ref": "EnvironmentFile=-/var/lib/snapd/environment/snapd.conf"
+    },
+    {
+      "service": "tailscaled.service",
+      "env_file_ref": "EnvironmentFile=/etc/default/tailscaled"
+    },
+    {
+      "service": "cron.service",
+      "env_file_ref": "EnvironmentFile=-/etc/default/cron"
+    },
+    {
+      "service": "ssh.service",
+      "env_file_ref": "EnvironmentFile=-/etc/default/ssh"
+    },
+    {
+      "service": "20-llm.env.conf",
+      "env_file_ref": "EnvironmentFile=/etc/tenmon/llm.env"
+    },
+    {
+      "service": "env.conf",
+      "env_file_ref": "EnvironmentFile=/etc/tenmon/llm.env"
+    }
+  ]
+}

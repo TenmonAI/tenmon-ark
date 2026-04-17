@@ -1,7 +1,7 @@
 {
-  "total_errors": 487,
+  "total_errors": 512,
   "error_types": {
-    "other": 486,
+    "other": 511,
     "502_bad_gateway": 1
   },
   "log_files_checked": [
