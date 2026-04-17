@@ -126,7 +126,20 @@ chown -R www-data:www-data /var/www/tenmon-mc/
 log_ok "index.html, style.css 配置完了"
 
 # ── Step 6: nginx 設定の追加 ──
-log_info "Step 6: nginx 設定..."
+log_info "Step 6: nginx 設定（include 方式）..."
+
+SNIPPET_SRC="${SCRIPT_DIR}/nginx/tenmon-mc-locations.conf"
+SNIPPET_DST="/etc/nginx/snippets/tenmon-mc-locations.conf"
+INCLUDE_LINE="    include /etc/nginx/snippets/tenmon-mc-locations.conf;"
+MARKER="# --- TENMON-MC INCLUDE ---"
+
+# snippets ディレクトリ作成
+mkdir -p /etc/nginx/snippets
+
+# MC location 定義ファイルを配置（常に最新版で上書き）
+cp -f "$SNIPPET_SRC" "$SNIPPET_DST"
+chmod 644 "$SNIPPET_DST"
+log_ok "snippets/tenmon-mc-locations.conf 配置完了"
 
 # 既存の tenmon-ark.com 設定ファイルを検出
 NGINX_CONF=""
@@ -144,7 +157,6 @@ for candidate in \
 done
 
 if [ -z "$NGINX_CONF" ]; then
-  # 自動検出できない場合は手動入力
   log_warn "tenmon-ark.com の nginx 設定ファイルを自動検出できませんでした"
   echo ""
   echo "nginx 設定ファイル一覧:"
@@ -154,49 +166,49 @@ if [ -z "$NGINX_CONF" ]; then
 fi
 
 if [ -n "$NGINX_CONF" ] && [ -f "$NGINX_CONF" ]; then
-  # 既に MC 設定が含まれているか確認
-  if grep -q "TENMON-MC" "$NGINX_CONF" 2>/dev/null; then
-    log_warn "nginx 設定に既に TENMON-MC ブロックが存在します（スキップ）"
+  # 前回実行で sed が壊した可能性のある設定を復元
+  LATEST_BAK=$(ls -t "${NGINX_CONF}.bak_mc_"* 2>/dev/null | head -1)
+  if [ -n "$LATEST_BAK" ]; then
+    # バックアップが存在し、かつ現在の設定が壊れている場合に復元
+    if ! nginx -t 2>/dev/null; then
+      cp "$LATEST_BAK" "$NGINX_CONF"
+      log_info "前回失敗から復元: $LATEST_BAK → $NGINX_CONF"
+    fi
+  fi
+
+  # 既に include 行が含まれているか確認
+  if grep -qF "tenmon-mc-locations.conf" "$NGINX_CONF" 2>/dev/null; then
+    log_warn "nginx 設定に既に TENMON-MC include が存在します（スキップ）"
   else
     # バックアップ
     cp "$NGINX_CONF" "${NGINX_CONF}.bak_mc_$(date +%Y%m%d_%H%M%S)"
     log_info "バックアップ: ${NGINX_CONF}.bak_mc_*"
 
-    # 最後の closing brace の前に location /mc/ を挿入
-    # server { ... } の最後の } を見つけて、その前に挿入
-    MC_BLOCK=$(cat <<'MCBLOCK'
-
-    # --- BEGIN TENMON-MC ---
-    location /mc/ {
-        alias /var/www/tenmon-mc/;
-        index index.html;
-
-        auth_basic "TENMON-MC (Owner Only)";
-        auth_basic_user_file /var/www/tenmon-mc/.htpasswd;
-
-        add_header X-Frame-Options DENY always;
-        add_header X-Content-Type-Options nosniff always;
-        add_header Referrer-Policy no-referrer always;
-
-        # JSON/TXT はキャッシュ無効化（alias は親から継承）
-        location ~* \.(json|txt)$ {
-            auth_basic "TENMON-MC (Owner Only)";
-            auth_basic_user_file /var/www/tenmon-mc/.htpasswd;
-            add_header Cache-Control "no-store, no-cache, must-revalidate" always;
-            expires -1;
-        }
-    }
-    # --- END TENMON-MC ---
-MCBLOCK
-)
-
-    # server ブロックの最後の } の前に挿入
-    # tac + sed で最後の } を見つけて挿入し、tac で戻す
+    # 最後の } の直前に include 1行を挿入（awk使用、sed不使用）
     TMPFILE=$(mktemp)
-    tac "$NGINX_CONF" | sed "0,/^}/ s/^}/${MC_BLOCK}\n}/" | tac > "$TMPFILE"
+    awk -v marker="$MARKER" -v inc="$INCLUDE_LINE" '
+    {
+      lines[NR] = $0
+    }
+    END {
+      last = 0
+      for (i = NR; i > 0; i--) {
+        if (lines[i] ~ /^}/) {
+          last = i
+          break
+        }
+      }
+      for (i = 1; i <= NR; i++) {
+        if (i == last) {
+          print marker
+          print inc
+        }
+        print lines[i]
+      }
+    }' "$NGINX_CONF" > "$TMPFILE"
     mv "$TMPFILE" "$NGINX_CONF"
 
-    log_ok "nginx 設定に location /mc/ を追加しました"
+    log_ok "nginx 設定に include 1行を追加しました"
   fi
 
   # nginx -t で検証
@@ -210,7 +222,8 @@ MCBLOCK
   fi
 else
   log_warn "nginx 設定をスキップしました"
-  log_warn "手動で mc/nginx/tenmon-mc.conf の内容を追加してください"
+  log_warn "手動で以下を tenmon-ark.com の server {} 内に追加してください:"
+  log_warn "  include /etc/nginx/snippets/tenmon-mc-locations.conf;"
 fi
 echo ""
 
