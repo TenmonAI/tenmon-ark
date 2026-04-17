@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TENMON-MC / Mission Control</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <h1>TENMON-ARK Mission Control</h1>
+  <p>Phase 1 MVP &mdash; Read-Only Observation</p>
+  <p id="last-updated">Loading...</p>
+  <button onclick="loadReport()">Reload</button>
+</header>
+
+<main>
+  <pre id="report">Loading report...</pre>
+</main>
+
+<footer>
+  <p>TENMON-ARK / Owner Only</p>
+  <p>Updates every 5 minutes via cron</p>
+</footer>
+
+<script>
+async function loadReport() {
+  try {
+    const res = await fetch('./data/report.txt?t=' + Date.now(), { cache: 'no-store' });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const text = await res.text();
+    document.getElementById('report').textContent = text;
+
+    const jsonRes = await fetch('./data/snapshot.json?t=' + Date.now(), { cache: 'no-store' });
+    const snap = await jsonRes.json();
+    const ageMin = Math.floor((Date.now() - new Date(snap.generated_at_utc).getTime()) / 60000);
+    document.getElementById('last-updated').textContent =
+      'Last: ' + snap.generated_at_jst + ' (' + ageMin + '\u5206\u524D)';
+  } catch (e) {
+    document.getElementById('report').textContent = 'Error loading report: ' + e.message;
+  }
+}
+
+loadReport();
+setInterval(loadReport, 60000);
+</script>
+</body>
+</html>

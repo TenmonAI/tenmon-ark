@@ -1,0 +1,9 @@
+# ============================================================
+# TENMON-MC Phase 1: 5分ごとにスナップショット取得
+# 配置先: /etc/cron.d/tenmon-mc
+# ============================================================
+
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+*/5 * * * * root /opt/tenmon-mc/bin/collect.sh >> /var/log/tenmon-mc.log 2>&1
+0 * * * * root find /var/log/tenmon-mc.log -size +50M -exec truncate -s 10M {} \;

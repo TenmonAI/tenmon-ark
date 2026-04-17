@@ -1,0 +1,22 @@
+# TENMON-MC .gitignore
+
+# 環境変数・秘密情報
+*.env.local
+*.env.production
+.env
+
+# 認証ファイル
+.htpasswd
+
+# 実行時データ（VPS上で生成される）
+data/
+*.json
+*.log
+
+# バックアップ
+*.bak
+*.bak_*
+
+# OS
+.DS_Store
+Thumbs.db
