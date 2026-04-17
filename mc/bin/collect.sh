@@ -36,7 +36,7 @@ cat > "${DATA_DIR}/snapshot.json" <<JSON
 {
   "generated_at_utc": "${TIMESTAMP}",
   "generated_at_jst": "${TIMESTAMP_JST}",
-  "version": "MC-P4",
+  "version": "MC-P5",
   "sections": {
     "infra": ${INFRA},
     "sukuyou": ${SUKUYOU},
