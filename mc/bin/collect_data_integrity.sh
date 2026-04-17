@@ -41,6 +41,52 @@ fi
 # テーブル数
 TABLE_COUNT=$(sql_ro "SELECT COUNT(*) FROM sqlite_master WHERE type='table';")
 
+# ── 期待テーブル差分検出 ──
+EXPECTED_TABLES=(
+  "auth_users"
+  "synced_chat_threads"
+  "synced_sukuyou_rooms"
+  "member_status"
+  "tenmon_audit_log"
+  "tenmon_training_log"
+  "scripture_learning_ledger"
+  "kanagi_growth_ledger"
+  "synapse_log"
+  "khs_apply_log"
+  "evolution_ledger_v1"
+  "legacy_messages"
+  "ark_thread_seeds"
+  "kokuzo_pages"
+  "reflection_queue_v1"
+  "persona_profiles"
+  "memory_units"
+  "thread_persona_links"
+  "persona_deployments"
+  "sacred_corpus_registry"
+  "sacred_segments"
+  "philology_units"
+  "truth_axes_bindings"
+  "comparative_sacred_links"
+)
+
+MISSING_TABLES=""
+EXPECTED_COUNT=${#EXPECTED_TABLES[@]}
+FOUND_COUNT=0
+
+for tbl in "${EXPECTED_TABLES[@]}"; do
+  EXISTS=$(sql_ro "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='${tbl}';")
+  if [ "$EXISTS" = "1" ]; then
+    FOUND_COUNT=$((FOUND_COUNT + 1))
+  else
+    MISSING_TABLES+="${tbl},"
+  fi
+done
+
+MISSING_TABLES="${MISSING_TABLES%,}"
+if [ -z "$MISSING_TABLES" ]; then
+  MISSING_TABLES="none"
+fi
+
 cat <<JSON
 {
   "section": "data_integrity",
@@ -53,6 +99,9 @@ cat <<JSON
   "backup_files": $(ensure_num "$BAK_COUNT"),
   "feedback_files": $(ensure_num "$FEEDBACK_FILES"),
   "db_file_size": "$(json_escape "$DB_SIZE")",
-  "db_table_count": $(ensure_num "$TABLE_COUNT")
+  "db_table_count": $(ensure_num "$TABLE_COUNT"),
+  "expected_tables_total": ${EXPECTED_COUNT},
+  "expected_tables_found": ${FOUND_COUNT},
+  "expected_tables_missing": "$(json_escape "$MISSING_TABLES")"
 }
 JSON

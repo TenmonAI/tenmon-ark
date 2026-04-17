@@ -1,6 +1,6 @@
 #!/bin/bash
 # ============================================================
-# TENMON-MC Phase 1 MVP — ワンショットインストーラ
+# TENMON-MC Phase 2 — ワンショットインストーラ
 #
 # 冪等設計: 何度実行しても安全
 # root 権限必須
@@ -30,7 +30,7 @@ if [ "$(id -u)" -ne 0 ]; then
 fi
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-log_info "TENMON-MC Phase 1 MVP インストーラ"
+log_info "TENMON-MC Phase 2 インストーラ"
 log_info "ソースディレクトリ: ${SCRIPT_DIR}"
 echo ""
 
@@ -324,4 +324,4 @@ echo "  Cron:    /etc/cron.d/tenmon-mc (5分間隔)"
 echo ""
 echo "  次回の自動更新: 約5分後"
 echo ""
-log_ok "TENMON-MC Phase 1 MVP セットアップ完了"
+log_ok "TENMON-MC Phase 2 セットアップ完了"

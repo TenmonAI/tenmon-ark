@@ -17,10 +17,11 @@ if [ ! -f "$SNAPSHOT" ]; then
 fi
 
 JST_TIME=$(jq -r '.generated_at_jst' "$SNAPSHOT")
+VERSION=$(jq -r '.version // "unknown"' "$SNAPSHOT")
 
 cat <<EOF
 ============================================================
-  TENMON-ARK Mission Control / Phase 1 MVP
+  TENMON-ARK Mission Control / ${VERSION}
   Snapshot: ${JST_TIME}
 ============================================================
 
@@ -103,13 +104,85 @@ jq -r '.sections.data_integrity |
   "│ .bak ファイル:           \(.backup_files)\n" +
   "│ Feedback files:          \(.feedback_files)\n" +
   "│ DB size:                 \(.db_file_size)\n" +
-  "│ DB tables:               \(.db_table_count)"' "$SNAPSHOT" 2>/dev/null || echo "│ [ERROR] data_integrity section parse failed"
+  "│ DB tables:               \(.db_table_count)\n" +
+  "│ Missing tables:          \(.expected_tables_missing // "none")"' "$SNAPSHOT" 2>/dev/null || echo "│ [ERROR] data_integrity section parse failed"
+
+echo "└───────────────────────────────────────────────────────────"
+echo ""
+
+# ── Phase 2 セクション (§7-12) ──
+
+echo "┌─ §7 LLM ROUTING ルーティング内訳 ────────────────────────"
+
+jq -r '.sections.llm_routing |
+  "│ 総Synapse (24h):         \(.total_synapse_24h)\n" +
+  "│ 鑑定Route (24h):         \(.kantei_routes_24h)\n" +
+  "│ Deep Report (24h):       \(.deep_reports_24h)\n" +
+  "│ Route分布:"' "$SNAPSHOT" 2>/dev/null || echo "│ [ERROR] llm_routing section parse failed"
+
+jq -r '.sections.llm_routing.route_distribution // {} | to_entries[] | "│   \(.key): \(.value)回"' "$SNAPSHOT" 2>/dev/null
+
+echo "└───────────────────────────────────────────────────────────"
+echo ""
+echo "┌─ §8 DIALOGUE QUALITY 対話品質 ───────────────────────────"
+
+jq -r '.sections.dialogue_quality |
+  "│ 平均応答長 (24h):        \(.avg_response_length_24h) 字\n" +
+  "│ 最大応答長 (24h):        \(.max_response_length_24h) 字\n" +
+  "│ Longform >5000字 (24h):  \(.longform_count_24h)\n" +
+  "│ 総応答数 (24h):          \(.total_responses_24h)\n" +
+  "│ 深化Seed使用 (24h):      \(.seeds_with_scripture_24h)\n" +
+  "│ 総Seed (24h):            \(.total_seeds_24h)"' "$SNAPSHOT" 2>/dev/null || echo "│ [ERROR] dialogue_quality section parse failed"
+
+echo "└───────────────────────────────────────────────────────────"
+echo ""
+echo "┌─ §9 NOTION SYNC ─────────────────────────────────────────"
+
+jq -r '.sections.notion_sync |
+  "│ Notionページ (cached):   \(.notion_pages_cached)\n" +
+  "│ Pending Reflections:     \(.pending_reflections)\n" +
+  "│ 最終同期:                \(.last_notion_sync)"' "$SNAPSHOT" 2>/dev/null || echo "│ [ERROR] notion_sync section parse failed"
+
+echo "└───────────────────────────────────────────────────────────"
+echo ""
+echo "┌─ §10 PERSONA SYSTEM ─────────────────────────────────────"
+
+jq -r '.sections.persona_system |
+  "│ 総ペルソナ数:            \(.total_personas)\n" +
+  "│ アクティブ:              \(.active_personas)\n" +
+  "│ Memory Units:            \(.total_memory_units)\n" +
+  "│ Thread Links:            \(.thread_persona_links)\n" +
+  "│ 最終デプロイ:            \(.last_deployment)"' "$SNAPSHOT" 2>/dev/null || echo "│ [ERROR] persona_system section parse failed"
+
+echo "└───────────────────────────────────────────────────────────"
+echo ""
+echo "┌─ §11 SACRED CORPUS 神聖典籍 ─────────────────────────────"
+
+jq -r '.sections.sacred_corpus |
+  "│ 登録コーパス:            \(.total_corpus_registered)\n" +
+  "│ セグメント:              \(.total_segments)\n" +
+  "│ 文献学ユニット:          \(.total_philology_units)\n" +
+  "│ 真理軸バインディング:    \(.total_axis_bindings)\n" +
+  "│ 比較リンク:              \(.comparative_links)\n" +
+  "│ 真理軸分布:"' "$SNAPSHOT" 2>/dev/null || echo "│ [ERROR] sacred_corpus section parse failed"
+
+jq -r '.sections.sacred_corpus.truth_axes_distribution // {} | to_entries[] | "│   \(.key): \(.value)"' "$SNAPSHOT" 2>/dev/null
+
+echo "└───────────────────────────────────────────────────────────"
+echo ""
+echo "┌─ §12 USER FEEDBACK ──────────────────────────────────────"
+
+jq -r '.sections.user_feedback |
+  "│ 総フィードバック:        \(.total_feedback_files)\n" +
+  "│ 直近7日:                 \(.feedback_last_7days)\n" +
+  "│ 平均Rating (30d):        \(.avg_rating_last_30days)\n" +
+  "│ Rating サンプル数:       \(.rating_sample_size)"' "$SNAPSHOT" 2>/dev/null || echo "│ [ERROR] user_feedback section parse failed"
 
 echo "└───────────────────────────────────────────────────────────"
 echo ""
 
 # ── ALERTS ──
-echo "┌─ ALERTS (Phase 1 Auto-Detected) ──────────────────────"
+echo "┌─ ALERTS (Auto-Detected) ──────────────────────────────────"
 
 ALERT_COUNT=0
 
@@ -155,12 +228,35 @@ if [ "$SYSTEMD_ST" != "active" ]; then
   ALERT_COUNT=$((ALERT_COUNT + 1))
 fi
 
+# Phase 2 追加アラート
+
+# 期待テーブル欠損
+MISSING_TBLS=$(jq -r '.sections.data_integrity.expected_tables_missing // "none"' "$SNAPSHOT")
+if [ "$MISSING_TBLS" != "none" ] && [ "$MISSING_TBLS" != "null" ] && [ -n "$MISSING_TBLS" ]; then
+  echo "│ [HIGH] 期待テーブル欠損: ${MISSING_TBLS}"
+  ALERT_COUNT=$((ALERT_COUNT + 1))
+fi
+
+# Notion Pending 過多
+PENDING_REF=$(jq -r '.sections.notion_sync.pending_reflections // 0' "$SNAPSHOT")
+if [ "$PENDING_REF" != "null" ] && [ "$PENDING_REF" -gt 20 ] 2>/dev/null; then
+  echo "│ [MED]  Notion pending reflections: ${PENDING_REF}件"
+  ALERT_COUNT=$((ALERT_COUNT + 1))
+fi
+
+# フィードバック急増
+FB_7D=$(jq -r '.sections.user_feedback.feedback_last_7days // 0' "$SNAPSHOT")
+if [ "$FB_7D" != "null" ] && [ "$FB_7D" -gt 10 ] 2>/dev/null; then
+  echo "│ [MED]  フィードバック急増 (7d): ${FB_7D}件 - 確認推奨"
+  ALERT_COUNT=$((ALERT_COUNT + 1))
+fi
+
 if [ "$ALERT_COUNT" -eq 0 ]; then
   echo "│ (none) - 全項目正常"
 fi
 
 echo "└───────────────────────────────────────────────────────────"
 echo ""
-echo "Mission Control / Phase 1 MVP  |  TENMON-ARK"
+echo "Mission Control / ${VERSION}  |  TENMON-ARK"
 echo "Last snapshot: ${JST_TIME}"
 echo "Refreshes every 5 minutes via cron"
