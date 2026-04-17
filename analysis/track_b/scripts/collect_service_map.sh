@@ -4,12 +4,15 @@
 # TENMON_ARK_FULL_SYSTEM_ANALYSIS_V1 / Track B
 # ============================================================
 # 収集対象:
-#   - systemd サービス状態 (status のみ、restart/stop 禁止)
+#   - systemd サービス状態 (status/is-active/is-enabled/cat のみ)
 #   - nginx 設定
 #   - cron ジョブ
 #   - journalctl エラー (直近7日)
 #   - ディスク使用量
 #   - ポートリスニング状態
+# 安全性:
+#   - restart/stop/start/reload/daemon-reload/disable/enable 全面禁止
+#   - 全て READ-ONLY 操作のみ
 # 出力: $OUTPUT_DIR/service_map.json
 # ============================================================
 
@@ -26,97 +29,33 @@ echo "[collect_service_map] Collecting systemd services..." >&2
 
 SYSTEMD_FILE="$OUTPUT_DIR/systemd_inventory.json"
 
-# tenmon関連サービスの状態を取得
-TENMON_SERVICES=$(systemctl list-units --type=service --all --no-pager 2>/dev/null | grep -i "tenmon\|ark\|mc" | awk '{print $1}' || echo "")
-ALL_CUSTOM_SERVICES=$(systemctl list-units --type=service --state=running --no-pager 2>/dev/null | grep -vE "^(systemd-|dbus|ssh|cron|rsyslog|ufw|snap|unattended|polkit|accounts|network|user@)" | awk '{print $1}' | grep ".service" || echo "")
-
 python3 << 'PYEOF'
-import json, subprocess, sys
+import json, subprocess, sys, os
 
 def get_service_info(svc_name):
-    """systemctl status のみ使用（READ-ONLY）"""
+    """systemctl status/is-active/is-enabled/show のみ使用（READ-ONLY）"""
     try:
-        result = subprocess.run(
-            ["systemctl", "is-active", svc_name],
-            capture_output=True, text=True, timeout=5
-        )
-        is_active = result.stdout.strip()
-    except:
-        is_active = "unknown"
-
-    try:
-        result = subprocess.run(
-            ["systemctl", "is-enabled", svc_name],
-            capture_output=True, text=True, timeout=5
-        )
-        is_enabled = result.stdout.strip()
-    except:
-        is_enabled = "unknown"
-
-    try:
-        result = subprocess.run(
-            ["systemctl", "show", svc_name, "--property=MainPID,MemoryAccounting,MemoryCurrent,ActiveEnterTimestamp,Description"],
-            capture_output=True, text=True, timeout=5
-        )
-        props = {}
-        for line in result.stdout.strip().split("\n"):
-            if "=" in line:
-                k, v = line.split("=", 1)
-                props[k] = v
-    except:
-        props = {}
-
-    return {
-        "name": svc_name,
-        "is_active": is_active,
-        "is_enabled": is_enabled,
-        "main_pid": props.get("MainPID", ""),
-        "memory_current": props.get("MemoryCurrent", ""),
-        "active_since": props.get("ActiveEnterTimestamp", ""),
-        "description": props.get("Description", "")
-    }
-
-# tenmon関連
-tenmon_svcs = [s.strip() for s in """TENMON_SERVICES""".strip().split("\n") if s.strip()]
-all_running = [s.strip() for s in """ALL_CUSTOM_SERVICES""".strip().split("\n") if s.strip()]
-
-# 重複除去
-all_svcs = list(set(tenmon_svcs + all_running))
-all_svcs.sort()
-
-services = [get_service_info(s) for s in all_svcs if s]
-
-result = {
-    "tenmon_related": [s for s in services if any(k in s["name"].lower() for k in ["tenmon", "ark", "mc"])],
-    "other_running": [s for s in services if not any(k in s["name"].lower() for k in ["tenmon", "ark", "mc"])],
-    "total_services": len(services)
-}
-
-with open(sys.argv[1], "w") as f:
-    json.dump(result, f, indent=2, ensure_ascii=False)
-PYEOF
-
-# テンプレート変数を置換して実行
-python3 -c "
-import json, subprocess, sys
-
-def get_service_info(svc_name):
-    try:
-        result = subprocess.run(['systemctl', 'is-active', svc_name], capture_output=True, text=True, timeout=5)
+        result = subprocess.run(['systemctl', 'is-active', svc_name],
+                                capture_output=True, text=True, timeout=5)
         is_active = result.stdout.strip()
     except:
         is_active = 'unknown'
     try:
-        result = subprocess.run(['systemctl', 'is-enabled', svc_name], capture_output=True, text=True, timeout=5)
+        result = subprocess.run(['systemctl', 'is-enabled', svc_name],
+                                capture_output=True, text=True, timeout=5)
         is_enabled = result.stdout.strip()
     except:
         is_enabled = 'unknown'
     try:
-        result = subprocess.run(['systemctl', 'show', svc_name, '--property=MainPID,MemoryCurrent,ActiveEnterTimestamp,Description'], capture_output=True, text=True, timeout=5)
+        result = subprocess.run(
+            ['systemctl', 'show', svc_name,
+             '--property=MainPID,MemoryCurrent,ActiveEnterTimestamp,Description,'
+             'FragmentPath,DropInPaths,Restart,RestartUSec'],
+            capture_output=True, text=True, timeout=5)
         props = {}
         for line in result.stdout.strip().split('\n'):
             if '=' in line:
-                k, v = line.split('=', 1)
+                k, _, v = line.partition('=')
                 props[k] = v
     except:
         props = {}
@@ -127,40 +66,69 @@ def get_service_info(svc_name):
         'main_pid': props.get('MainPID', ''),
         'memory_current': props.get('MemoryCurrent', ''),
         'active_since': props.get('ActiveEnterTimestamp', ''),
-        'description': props.get('Description', '')
+        'description': props.get('Description', ''),
+        'fragment_path': props.get('FragmentPath', ''),
+        'drop_in_paths': props.get('DropInPaths', ''),
+        'restart_policy': props.get('Restart', ''),
     }
 
-# systemd全サービス一覧
-result = subprocess.run(['systemctl', 'list-units', '--type=service', '--all', '--no-pager', '--plain'], capture_output=True, text=True, timeout=10)
+# systemd全サービス一覧 (--plain で装飾なし出力)
+result = subprocess.run(
+    ['systemctl', 'list-units', '--type=service', '--all', '--no-pager', '--plain'],
+    capture_output=True, text=True, timeout=15
+)
 all_lines = result.stdout.strip().split('\n')
+
 services = []
 for line in all_lines:
-    parts = line.split()
-    if parts and parts[0].endswith('.service'):
-        svc = parts[0]
-        info = get_service_info(svc)
-        services.append(info)
+    line = line.strip()
+    if not line:
+        continue
+    # --plain 出力: UNIT LOAD ACTIVE SUB DESCRIPTION...
+    # 失敗マーカー ● を除去してから分割
+    line = line.lstrip('\u25cf').lstrip('●').strip()
+    parts = line.split(None, 4)  # maxsplit=4: 最大5要素
+    if len(parts) < 4:
+        continue  # 不完全な行はスキップ
+    unit_name = parts[0]
+    if not unit_name.endswith('.service'):
+        continue
+    info = get_service_info(unit_name)
+    # --plain 出力の列情報も追加
+    info['load_state'] = parts[1] if len(parts) > 1 else 'unknown'
+    info['active_state'] = parts[2] if len(parts) > 2 else 'unknown'
+    info['sub_state'] = parts[3] if len(parts) > 3 else 'unknown'
+    services.append(info)
 
-tenmon_related = [s for s in services if any(k in s['name'].lower() for k in ['tenmon', 'ark', 'mc'])]
+# tenmon-* を優先表示するが、全サービスも収集
+tenmon_related = [s for s in services
+                  if any(k in s['name'].lower() for k in ['tenmon', 'ark', 'mc'])]
 running = [s for s in services if s['is_active'] == 'active']
+failed = [s for s in services if s['active_state'] == 'failed' or s['is_active'] == 'failed']
 
 output = {
     'tenmon_related': tenmon_related,
+    'failed_services': failed,
     'running_services': [{'name': s['name'], 'description': s['description']} for s in running],
-    'total_services': len(services),
-    'total_running': len(running)
+    'all_services_count': len(services),
+    'total_running': len(running),
+    'total_failed': len(failed),
 }
 
-with open('$SYSTEMD_FILE', 'w') as f:
+output_dir = os.environ.get('OUTPUT_DIR', '/opt/tenmon-ark-repo/analysis/track_b/output')
+systemd_file = os.path.join(output_dir, 'systemd_inventory.json')
+with open(systemd_file, 'w') as f:
     json.dump(output, f, indent=2, ensure_ascii=False)
-print(f'[collect_service_map] Found {len(tenmon_related)} tenmon-related, {len(running)} running services', file=sys.stderr)
-"
+
+print(f'[collect_service_map] Found {len(tenmon_related)} tenmon-related, '
+      f'{len(running)} running, {len(failed)} failed services', file=sys.stderr)
+PYEOF
 
 # --- 2. nginx 設定 ---
 echo "[collect_service_map] Collecting nginx config..." >&2
 
 NGINX_FILE="$OUTPUT_DIR/nginx_config.json"
-python3 -c "
+python3 << 'PYEOF'
 import json, subprocess, os, glob
 
 configs = []
@@ -195,15 +163,16 @@ output = {
     'nginx_test': test_output[:3000]
 }
 
-with open('$NGINX_FILE', 'w') as f:
+output_dir = os.environ.get('OUTPUT_DIR', '/opt/tenmon-ark-repo/analysis/track_b/output')
+with open(os.path.join(output_dir, 'nginx_config.json'), 'w') as f:
     json.dump(output, f, indent=2, ensure_ascii=False)
-"
+PYEOF
 
 # --- 3. cron ジョブ ---
 echo "[collect_service_map] Collecting cron jobs..." >&2
 
 CRON_FILE="$OUTPUT_DIR/cron_inventory.json"
-python3 -c "
+python3 << 'PYEOF'
 import json, subprocess, os, glob
 
 crons = []
@@ -220,7 +189,8 @@ for f in sorted(glob.glob('/etc/cron.d/*')):
 # crontab -l for root and www-data
 for user in ['root', 'www-data', 'ubuntu']:
     try:
-        result = subprocess.run(['crontab', '-l', '-u', user], capture_output=True, text=True, timeout=5)
+        result = subprocess.run(['crontab', '-l', '-u', user],
+                                capture_output=True, text=True, timeout=5)
         if result.returncode == 0 and result.stdout.strip():
             crons.append({'source': f'crontab -u {user}', 'content': result.stdout.strip()})
     except:
@@ -228,7 +198,8 @@ for user in ['root', 'www-data', 'ubuntu']:
 
 # systemd timers
 try:
-    result = subprocess.run(['systemctl', 'list-timers', '--all', '--no-pager'], capture_output=True, text=True, timeout=10)
+    result = subprocess.run(['systemctl', 'list-timers', '--all', '--no-pager'],
+                            capture_output=True, text=True, timeout=10)
     timers = result.stdout.strip()
 except:
     timers = 'systemctl not available'
@@ -239,16 +210,17 @@ output = {
     'total_cron_entries': len(crons)
 }
 
-with open('$CRON_FILE', 'w') as f:
+output_dir = os.environ.get('OUTPUT_DIR', '/opt/tenmon-ark-repo/analysis/track_b/output')
+with open(os.path.join(output_dir, 'cron_inventory.json'), 'w') as f:
     json.dump(output, f, indent=2, ensure_ascii=False)
-"
+PYEOF
 
 # --- 4. journalctl エラー (直近7日) ---
 echo "[collect_service_map] Collecting journalctl errors (7 days)..." >&2
 
 JOURNAL_FILE="$OUTPUT_DIR/journalctl_errors.json"
-python3 -c "
-import json, subprocess
+python3 << 'PYEOF'
+import json, subprocess, os
 
 errors = {}
 
@@ -256,11 +228,11 @@ errors = {}
 for svc in ['tenmon-ark-api', 'tenmon-ark', 'nginx']:
     try:
         result = subprocess.run(
-            ['journalctl', '-u', svc, '--since', '7 days ago', '-p', 'err', '--no-pager', '-o', 'short-iso'],
+            ['journalctl', '-u', svc, '--since', '7 days ago',
+             '-p', 'err', '--no-pager', '-o', 'short-iso'],
             capture_output=True, text=True, timeout=30
         )
         lines = result.stdout.strip().split('\n') if result.stdout.strip() else []
-        # 最新50行のみ
         errors[svc] = {
             'total_error_lines': len(lines),
             'recent_errors': lines[-50:] if lines else []
@@ -271,7 +243,8 @@ for svc in ['tenmon-ark-api', 'tenmon-ark', 'nginx']:
 # 全体のcritical/emergency
 try:
     result = subprocess.run(
-        ['journalctl', '--since', '7 days ago', '-p', 'crit', '--no-pager', '-o', 'short-iso'],
+        ['journalctl', '--since', '7 days ago', '-p', 'crit',
+         '--no-pager', '-o', 'short-iso'],
         capture_output=True, text=True, timeout=30
     )
     lines = result.stdout.strip().split('\n') if result.stdout.strip() else []
@@ -282,16 +255,17 @@ try:
 except Exception as e:
     errors['system_critical'] = {'error': str(e)}
 
-with open('$JOURNAL_FILE', 'w') as f:
+output_dir = os.environ.get('OUTPUT_DIR', '/opt/tenmon-ark-repo/analysis/track_b/output')
+with open(os.path.join(output_dir, 'journalctl_errors.json'), 'w') as f:
     json.dump(errors, f, indent=2, ensure_ascii=False)
-"
+PYEOF
 
 # --- 5. ディスク使用量 ---
 echo "[collect_service_map] Collecting disk usage..." >&2
 
 DISK_FILE="$OUTPUT_DIR/disk_usage.json"
-python3 -c "
-import json, subprocess
+python3 << 'PYEOF'
+import json, subprocess, os
 
 # df
 result = subprocess.run(['df', '-h'], capture_output=True, text=True, timeout=10)
@@ -301,6 +275,7 @@ df_output = result.stdout.strip()
 dirs_to_check = [
     '/opt/tenmon-ark',
     '/opt/tenmon-ark-data',
+    '/opt/tenmon-ark-repo',
     '/opt/tenmon-mc',
     '/var/www/tenmon-mc',
     '/var/log',
@@ -320,16 +295,17 @@ output = {
     'directory_sizes': du_results
 }
 
-with open('$DISK_FILE', 'w') as f:
+output_dir = os.environ.get('OUTPUT_DIR', '/opt/tenmon-ark-repo/analysis/track_b/output')
+with open(os.path.join(output_dir, 'disk_usage.json'), 'w') as f:
     json.dump(output, f, indent=2, ensure_ascii=False)
-"
+PYEOF
 
 # --- 6. ポートリスニング ---
 echo "[collect_service_map] Collecting listening ports..." >&2
 
 PORTS_FILE="$OUTPUT_DIR/listening_ports.json"
-python3 -c "
-import json, subprocess
+python3 << 'PYEOF'
+import json, subprocess, os
 
 result = subprocess.run(['ss', '-tlnp'], capture_output=True, text=True, timeout=10)
 lines = result.stdout.strip().split('\n')
@@ -337,34 +313,40 @@ lines = result.stdout.strip().split('\n')
 ports = []
 for line in lines[1:]:  # skip header
     parts = line.split()
-    if len(parts) >= 5:
-        ports.append({
-            'state': parts[0],
-            'recv_q': parts[1],
-            'send_q': parts[2],
-            'local_address': parts[3],
-            'peer_address': parts[4],
-            'process': parts[5] if len(parts) > 5 else ''
-        })
+    if len(parts) >= 4:
+        port_entry = {
+            'state': parts[0] if len(parts) > 0 else '',
+            'recv_q': parts[1] if len(parts) > 1 else '',
+            'send_q': parts[2] if len(parts) > 2 else '',
+            'local_address': parts[3] if len(parts) > 3 else '',
+        }
+        if len(parts) > 4:
+            port_entry['peer_address'] = parts[4]
+        if len(parts) > 5:
+            port_entry['process'] = parts[5]
+        ports.append(port_entry)
 
-with open('$PORTS_FILE', 'w') as f:
+output_dir = os.environ.get('OUTPUT_DIR', '/opt/tenmon-ark-repo/analysis/track_b/output')
+with open(os.path.join(output_dir, 'listening_ports.json'), 'w') as f:
     json.dump({'listening_ports': ports, 'total': len(ports)}, f, indent=2, ensure_ascii=False)
-"
+PYEOF
 
 # --- 統合結果 ---
 echo "[collect_service_map] Merging results..." >&2
 
-python3 -c "
-import json, glob
+python3 << 'PYEOF'
+import json, os, datetime
 
-combined = {'timestamp': '$(date -u +%Y-%m-%dT%H:%M:%SZ)'}
+output_dir = os.environ.get('OUTPUT_DIR', '/opt/tenmon-ark-repo/analysis/track_b/output')
+combined = {'timestamp': datetime.datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')}
+
 files = {
-    'systemd': '$SYSTEMD_FILE',
-    'nginx': '$NGINX_FILE',
-    'cron': '$CRON_FILE',
-    'journalctl_errors': '$JOURNAL_FILE',
-    'disk_usage': '$DISK_FILE',
-    'listening_ports': '$PORTS_FILE'
+    'systemd': os.path.join(output_dir, 'systemd_inventory.json'),
+    'nginx': os.path.join(output_dir, 'nginx_config.json'),
+    'cron': os.path.join(output_dir, 'cron_inventory.json'),
+    'journalctl_errors': os.path.join(output_dir, 'journalctl_errors.json'),
+    'disk_usage': os.path.join(output_dir, 'disk_usage.json'),
+    'listening_ports': os.path.join(output_dir, 'listening_ports.json'),
 }
 
 for key, path in files.items():
@@ -374,8 +356,8 @@ for key, path in files.items():
     except:
         combined[key] = {'error': f'Failed to load {path}'}
 
-with open('$OUTPUT_DIR/service_map.json', 'w') as f:
+with open(os.path.join(output_dir, 'service_map.json'), 'w') as f:
     json.dump(combined, f, indent=2, ensure_ascii=False)
-"
+PYEOF
 
 echo "[collect_service_map] Done. Output: $OUTPUT_DIR/service_map.json" >&2
