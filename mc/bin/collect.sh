@@ -34,8 +34,8 @@ FEEDBACK=$("${SCRIPT_DIR}/collect_feedback.sh" 2>/dev/null || echo '{"section":"
 # 統合JSON (12セクション)
 cat > "${DATA_DIR}/snapshot.json" <<JSON
 {
-  "generated_at_utc": "${TIMESTAMP}",
-  "generated_at_jst": "${TIMESTAMP_JST}",
+  "generated_at_utc": "$(json_string_safe "$TIMESTAMP")",
+  "generated_at_jst": "$(json_string_safe "$TIMESTAMP_JST")",
   "version": "MC-P5",
   "sections": {
     "infra": ${INFRA},

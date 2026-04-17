@@ -18,10 +18,10 @@ MEM_TOTAL=$(free -m | awk 'NR==2{printf "%d", $2}' || echo "0")
 DISK_USED=$(df -h / | awk 'NR==2{print $5}' | tr -d '%' || echo "0")
 
 # 直近24時間のAPI エラー数
-ERR_COUNT_24H=$(journalctl -u "$SERVICE_NAME" --since "24 hours ago" --no-pager 2>/dev/null | grep -icE "error|fatal|crash" || echo "0")
+ERR_COUNT_24H=$(journalctl -u "$SERVICE_NAME" --since "24 hours ago" --no-pager 2>/dev/null | grep -icE "error|fatal|crash" || true)
 
 # Node.js プロセスのCPU/MEM
-# awk で1つだけ表示して拜ける（printf "\n" + exit で即終了）
+# awk で1つだけ表示して抜ける（printf "\n" + exit で即終了）
 PROC_INFO=$(ps aux | grep -E "node.*dist" | grep -v grep | awk '{printf "cpu=%.1f%%,mem=%.1f%%\n", $3, $4; exit}')
 PROC_INFO="${PROC_INFO:-none}"
 
@@ -31,14 +31,14 @@ UPTIME_STR=$(uptime -p 2>/dev/null || echo "unknown")
 cat <<JSON
 {
   "section": "infra",
-  "systemd_state": "${SYSTEMD_STATE}",
-  "api_health_http_code": "${API_HEALTH}",
+  "systemd_state": "$(json_string_safe "$SYSTEMD_STATE")",
+  "api_health_http_code": "$(json_string_safe "$API_HEALTH")",
   "cpu_pct": "$(ensure_num "$CPU_USAGE")",
   "mem_used_mb": $(ensure_num "$MEM_USED"),
   "mem_total_mb": $(ensure_num "$MEM_TOTAL"),
   "disk_pct": "$(ensure_num "$DISK_USED")",
   "error_count_24h": $(ensure_num "$ERR_COUNT_24H"),
-  "process_info": "$(json_escape "$PROC_INFO")",
-  "uptime": "$(json_escape "$UPTIME_STR")"
+  "process_info": "$(json_string_safe "$PROC_INFO")",
+  "uptime": "$(json_string_safe "$UPTIME_STR")"
 }
 JSON

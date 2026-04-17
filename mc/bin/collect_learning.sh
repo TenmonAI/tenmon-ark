@@ -53,9 +53,9 @@ EVOLUTION_24H=$(sql_ro "SELECT COUNT(*) FROM evolution_ledger_v1 WHERE createdAt
 cat <<JSON
 {
   "section": "learning",
-  "learning_tables": "$(json_escape "$LEARN_TABLES")",
+  "learning_tables": "$(json_string_safe "$LEARN_TABLES")",
   "self_audit_count_24h": $(ensure_num "$AUDIT_24H"),
-  "last_audit_timestamp": "$(json_escape "$LAST_AUDIT")",
+  "last_audit_timestamp": "$(json_string_safe "$LAST_AUDIT")",
   "training_count_24h": $(ensure_num "$TRAINING_24H"),
   "scripture_learning_24h": $(ensure_num "$SCRIPTURE_24H"),
   "growth_ledger_24h": $(ensure_num "$GROWTH_24H"),

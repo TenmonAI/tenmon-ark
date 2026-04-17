@@ -51,7 +51,7 @@ cat <<JSON
   "section": "notion_sync",
   "notion_pages_cached": $(ensure_num "$NOTION_PAGES"),
   "pending_reflections": $(ensure_num "$PENDING_REFLECTIONS"),
-  "last_notion_sync": "$(json_escape "$LAST_NOTION_SYNC")",
+  "last_notion_sync": "$(json_string_safe "$LAST_NOTION_SYNC")",
   "known_dbs": {
     "27shuku_db": "faec16f53d024b9fa16ca893e0dd335a",
     "kyusei_sukuyou_matrix": "31daf1ad4d2b41e0964feaa8d9fef2e3"

@@ -45,6 +45,17 @@ sql_ro() {
   fi
 }
 
+# JSON安全なstring値を返す (制御文字を除去・エスケープ)
+json_string_safe() {
+  local v="$1"
+  # 制御文字 (0x00-0x1F) を除去
+  v=$(printf '%s' "$v" | tr -d '\000-\037')
+  # バックスラッシュと"をエスケープ (bash置換)
+  v="${v//\\/\\\\}"
+  v="${v//\"/\\\"}"
+  printf '%s' "$v"
+}
+
 # 数値保証（nullや空文字を0に変換）
 ensure_num() {
   local v="$1"

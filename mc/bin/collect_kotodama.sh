@@ -13,12 +13,12 @@ source "${SCRIPT_DIR}/common.sh"
 CHAT_TS="${REPO_PATH}/api/src/routes/chat.ts"
 KOTODAMA_REFS=0
 if [ -f "$CHAT_TS" ]; then
-  KOTODAMA_REFS=$(grep -c -iE "kotodama|水火|いろは|iroha" "$CHAT_TS" 2>/dev/null || echo 0)
+  KOTODAMA_REFS=$(grep -c -iE "kotodama|水火|いろは|iroha" "$CHAT_TS" 2>/dev/null || true)
 fi
 
 # 直近24時間のログで「水火」が応答に含まれた回数
-FIRE_WATER_24H=$(journalctl -u "$SERVICE_NAME" --since "24 hours ago" --no-pager 2>/dev/null | grep -c "水火" || echo 0)
-KOTODAMA_24H=$(journalctl -u "$SERVICE_NAME" --since "24 hours ago" --no-pager 2>/dev/null | grep -c -E "kotodama_fire|iroha_sound|kotodama" || echo 0)
+FIRE_WATER_24H=$(journalctl -u "$SERVICE_NAME" --since "24 hours ago" --no-pager 2>/dev/null | grep -c "水火" || true)
+KOTODAMA_24H=$(journalctl -u "$SERVICE_NAME" --since "24 hours ago" --no-pager 2>/dev/null | grep -c -E "kotodama_fire|iroha_sound|kotodama" || true)
 
 # kotodamaConnector.ts が git tracked か
 KOTODAMA_TRACKED=0

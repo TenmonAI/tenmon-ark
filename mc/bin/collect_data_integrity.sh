@@ -19,8 +19,8 @@ HEAD_COMMIT=$(git log -1 --format=%h 2>/dev/null || echo "unknown")
 HEAD_MESSAGE=$(git log -1 --format=%s 2>/dev/null | tr '"' "'" | head -c 100)
 HEAD_DATE=$(git log -1 --format=%ci 2>/dev/null || echo "unknown")
 CURRENT_BRANCH=$(git branch --show-current 2>/dev/null || echo "unknown")
-UNTRACKED_COUNT=$(git status --porcelain 2>/dev/null | grep -c "^??" || echo 0)
-MODIFIED_COUNT=$(git status --porcelain 2>/dev/null | grep -c "^ M\|^M " || echo 0)
+UNTRACKED_COUNT=$(git status --porcelain 2>/dev/null | grep -c "^??" || true)
+MODIFIED_COUNT=$(git status --porcelain 2>/dev/null | grep -c "^ M\|^M " || true)
 
 # バックアップファイルの数
 BAK_COUNT=$(find "${REPO_PATH}" -name "*.bak_*" -o -name "*.bak" -type f 2>/dev/null | wc -l)
@@ -90,18 +90,18 @@ fi
 cat <<JSON
 {
   "section": "data_integrity",
-  "git_head": "$(json_escape "$HEAD_COMMIT")",
-  "git_head_message": "$(json_escape "$HEAD_MESSAGE")",
-  "git_head_date": "$(json_escape "$HEAD_DATE")",
-  "git_branch": "$(json_escape "$CURRENT_BRANCH")",
+  "git_head": "$(json_string_safe "$HEAD_COMMIT")",
+  "git_head_message": "$(json_string_safe "$HEAD_MESSAGE")",
+  "git_head_date": "$(json_string_safe "$HEAD_DATE")",
+  "git_branch": "$(json_string_safe "$CURRENT_BRANCH")",
   "untracked_files": $(ensure_num "$UNTRACKED_COUNT"),
   "modified_files": $(ensure_num "$MODIFIED_COUNT"),
   "backup_files": $(ensure_num "$BAK_COUNT"),
   "feedback_files": $(ensure_num "$FEEDBACK_FILES"),
-  "db_file_size": "$(json_escape "$DB_SIZE")",
+  "db_file_size": "$(json_string_safe "$DB_SIZE")",
   "db_table_count": $(ensure_num "$TABLE_COUNT"),
   "expected_tables_total": ${EXPECTED_COUNT},
   "expected_tables_found": ${FOUND_COUNT},
-  "expected_tables_missing": "$(json_escape "$MISSING_TABLES")"
+  "expected_tables_missing": "$(json_string_safe "$MISSING_TABLES")"
 }
 JSON

@@ -40,7 +40,7 @@ cat <<JSON
   "section": "user_feedback",
   "total_feedback_files": $(ensure_num "$TOTAL_FEEDBACK"),
   "feedback_last_7days": $(ensure_num "$RECENT_7D"),
-  "avg_rating_last_30days": "${AVG_RATING}",
+  "avg_rating_last_30days": "$(json_string_safe "$AVG_RATING")",
   "rating_sample_size": $(ensure_num "$RATING_COUNT")
 }
 JSON

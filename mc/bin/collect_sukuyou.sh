@@ -78,12 +78,12 @@ COVERAGE=$(echo "scale=1; $(ensure_num "$DEEP_SHUKU_COUNT")*100/27" | bc 2>/dev/
 cat <<JSON
 {
   "section": "sukuyou",
-  "golden_sample_birthdate": "${GOLDEN_BIRTHDATE:-1990-09-26}",
-  "golden_sample_result": "$(json_escape "$GOLDEN_RESULT")",
-  "golden_sample_expected": "${EXPECTED}",
+  "golden_sample_birthdate": "$(json_string_safe "${GOLDEN_BIRTHDATE:-1990-09-26}")",
+  "golden_sample_result": "$(json_string_safe "$GOLDEN_RESULT")",
+  "golden_sample_expected": "$(json_string_safe "$EXPECTED")",
   "golden_sample_pass": ${GOLDEN_PASS},
   "lookup_table_entries": $(ensure_num "$LOOKUP_ENTRIES"),
   "deep_data_shuku_count": $(ensure_num "$DEEP_SHUKU_COUNT"),
-  "deep_data_coverage_pct": "${COVERAGE}"
+  "deep_data_coverage_pct": "$(json_string_safe "$COVERAGE")"
 }
 JSON

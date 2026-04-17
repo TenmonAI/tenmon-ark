@@ -57,6 +57,6 @@ cat <<JSON
   "active_personas": $(ensure_num "$ACTIVE_PERSONAS"),
   "total_memory_units": $(ensure_num "$TOTAL_MEMORY_UNITS"),
   "thread_persona_links": $(ensure_num "$THREAD_LINKS"),
-  "last_deployment": "$(json_escape "$LAST_DEPLOY")"
+  "last_deployment": "$(json_string_safe "$LAST_DEPLOY")"
 }
 JSON
