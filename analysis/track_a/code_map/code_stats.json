@@ -1,0 +1,21 @@
+{
+  "generated_at": "2026-04-17T10:00:00Z",
+  "scope": "/opt/tenmon-ark-repo/ (excluding node_modules, dist, .git)",
+  "language_stats": {
+    "typescript": { "files": 839, "lines": 167322 },
+    "tsx": { "files": 288, "lines": 46179 },
+    "javascript": { "files": 6, "lines": 616 },
+    "bash": { "files": 42, "lines": 4822 },
+    "sql": { "files": 35, "lines": 1224 },
+    "python": { "files": 4, "lines": 807 },
+    "yaml": { "files": 6 },
+    "json_config": { "files": 71 },
+    "env": { "files": 1 },
+    "css": { "files": 17, "lines": 3885 },
+    "html": { "files": 5 },
+    "markdown": { "files": 243 }
+  },
+  "total_source_files": 1557,
+  "total_source_lines_counted": 224855,
+  "primary_language": "TypeScript (74.4% of counted lines)"
+}
