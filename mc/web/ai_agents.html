@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TENMON-MC / AI Agents</title>
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="dashboard.css">
+</head>
+<body class="dashboard">
+<header>
+  <h1>TENMON-ARK Mission Control</h1>
+  <nav>
+    <a href="./">Text Report</a>
+    <a href="./dashboard.html">Dashboard</a>
+    <a href="./ai_agents.html" class="active">AI Agents</a>
+  </nav>
+  <p id="last-updated">Loading...</p>
+</header>
+
+<main>
+  <section class="agent-filter">
+    <label>Agent:</label>
+    <select id="agent-select">
+      <option value="all">All Agents</option>
+      <option value="manus">Manus</option>
+      <option value="cursor">Cursor</option>
+    </select>
+    <label>Type:</label>
+    <select id="type-select">
+      <option value="all">All Types</option>
+      <option value="commit">Commits</option>
+      <option value="deploy">Deploys</option>
+      <option value="observation">Observations</option>
+    </select>
+  </section>
+
+  <section class="activity-list" id="activity-list">
+    <p style="color:#666; text-align:center; padding:40px;">
+      Phase 4 で実装予定。<br>
+      AI エージェントの活動ログがここに表示されます。
+    </p>
+  </section>
+</main>
+
+<footer>
+  <p>TENMON-ARK / Owner Only</p>
+  <p>Phase 4 AI Agent Integration (Placeholder)</p>
+</footer>
+
+<script>
+  fetch('./data/snapshot.json?t=' + Date.now())
+    .then(r => r.json())
+    .then(d => {
+      const ageMin = Math.floor((Date.now() - new Date(d.generated_at_utc).getTime()) / 60000);
+      document.getElementById('last-updated').textContent = 
+        'Last: ' + d.generated_at_jst + ' (' + ageMin + 'min ago)';
+    })
+    .catch(() => {});
+</script>
+</body>
+</html>

@@ -1,6 +1,6 @@
 #!/bin/bash
 # ============================================================
-# TENMON-MC Phase 2 — ワンショットインストーラ
+# TENMON-MC Phase 3 — ワンショットインストーラ
 #
 # 冪等設計: 何度実行しても安全
 # root 権限必須
@@ -30,7 +30,7 @@ if [ "$(id -u)" -ne 0 ]; then
 fi
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-log_info "TENMON-MC Phase 2 インストーラ"
+log_info "TENMON-MC Phase 3 インストーラ"
 log_info "ソースディレクトリ: ${SCRIPT_DIR}"
 echo ""
 
@@ -115,6 +115,7 @@ echo ""
 log_info "Step 4: Web ディレクトリ作成..."
 
 mkdir -p /var/www/tenmon-mc/data/history
+mkdir -p /var/www/tenmon-mc/data/timeseries
 log_ok "/var/www/tenmon-mc 作成済み"
 
 # ── Step 5: web/* をコピー ──
@@ -122,8 +123,12 @@ log_info "Step 5: HTML/CSS を配置..."
 
 cp -f "${SCRIPT_DIR}/web/index.html" /var/www/tenmon-mc/
 cp -f "${SCRIPT_DIR}/web/style.css" /var/www/tenmon-mc/
+cp -f "${SCRIPT_DIR}/web/dashboard.html" /var/www/tenmon-mc/
+cp -f "${SCRIPT_DIR}/web/dashboard.css" /var/www/tenmon-mc/
+cp -f "${SCRIPT_DIR}/web/dashboard.js" /var/www/tenmon-mc/
+cp -f "${SCRIPT_DIR}/web/ai_agents.html" /var/www/tenmon-mc/
 chown -R www-data:www-data /var/www/tenmon-mc/
-log_ok "index.html, style.css 配置完了"
+log_ok "Web資産配置完了 (index, dashboard, ai_agents, css, js)"
 
 # ── Step 6: nginx 設定の追加 ──
 log_info "Step 6: nginx 設定（include 方式）..."
@@ -272,6 +277,11 @@ chown root:root /var/log/tenmon-mc.log
 chmod 644 /var/log/tenmon-mc.log
 log_ok "ログファイル初期化完了"
 
+# ── Step 8.5: 履歴DB初期化 ──
+log_info "Step 8.5: 履歴DB初期化..."
+/opt/tenmon-mc/bin/init_history_db.sh /var/www/tenmon-mc/history.db
+log_ok "履歴DB初期化完了"
+
 # ── Step 9: 初回 collect.sh 実行 ──
 log_info "Step 9: 初回データ収集..."
 echo ""
@@ -316,7 +326,8 @@ echo "============================================================"
 echo ""
 log_info "インストール完了"
 echo ""
-echo "  Web UI:  https://tenmon-ark.com/mc/"
+echo "  Text:    https://tenmon-ark.com/mc/"
+echo "  Dash:    https://tenmon-ark.com/mc/dashboard.html"
 echo "  Data:    /var/www/tenmon-mc/data/"
 echo "  Config:  /opt/tenmon-mc/config/mc.env"
 echo "  Logs:    /var/log/tenmon-mc.log"
@@ -324,4 +335,4 @@ echo "  Cron:    /etc/cron.d/tenmon-mc (5分間隔)"
 echo ""
 echo "  次回の自動更新: 約5分後"
 echo ""
-log_ok "TENMON-MC Phase 2 セットアップ完了"
+log_ok "TENMON-MC Phase 3 セットアップ完了"

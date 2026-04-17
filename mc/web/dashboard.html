@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TENMON-MC / Dashboard</title>
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="dashboard.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+</head>
+<body class="dashboard">
+<header>
+  <h1>TENMON-ARK Mission Control</h1>
+  <nav>
+    <a href="./">Text Report</a>
+    <a href="./dashboard.html" class="active">Dashboard</a>
+    <a href="./ai_agents.html">AI Agents</a>
+  </nav>
+  <p id="last-updated">Loading...</p>
+  <button onclick="location.reload()">Reload</button>
+</header>
+
+<main>
+  <section class="stat-grid">
+    <div class="stat-card" id="stat-users"><h3>Users</h3><p class="num">-</p></div>
+    <div class="stat-card" id="stat-active"><h3>Active (7d)</h3><p class="num">-</p></div>
+    <div class="stat-card" id="stat-kantei"><h3>Kantei Total</h3><p class="num">-</p></div>
+    <div class="stat-card" id="stat-uptime"><h3>Uptime</h3><p class="num">-</p></div>
+    <div class="stat-card" id="stat-errors"><h3>Errors (24h)</h3><p class="num">-</p></div>
+    <div class="stat-card alert-card" id="stat-alerts"><h3>Alerts</h3><p class="num">-</p></div>
+  </section>
+
+  <section class="chart-grid">
+    <div class="chart-container"><h2>Users Growth (7d)</h2><canvas id="chart-users"></canvas></div>
+    <div class="chart-container"><h2>Active Users (7d)</h2><canvas id="chart-active"></canvas></div>
+    <div class="chart-container"><h2>Kantei Count (7d)</h2><canvas id="chart-kantei"></canvas></div>
+    <div class="chart-container"><h2>Synapse Log (7d)</h2><canvas id="chart-synapse"></canvas></div>
+    <div class="chart-container"><h2>Learning Events (7d)</h2><canvas id="chart-learning"></canvas></div>
+    <div class="chart-container"><h2>Errors (24h)</h2><canvas id="chart-errors"></canvas></div>
+  </section>
+
+  <section class="distribution">
+    <h2>Shuku Distribution</h2>
+    <canvas id="chart-shuku"></canvas>
+  </section>
+
+  <section class="raw-text">
+    <h2>Full Text Report</h2>
+    <pre id="report">Loading report...</pre>
+  </section>
+</main>
+
+<footer>
+  <p>TENMON-ARK / Owner Only</p>
+  <p>Phase 3 Dashboard | Updates every 5 minutes</p>
+</footer>
+
+<script src="dashboard.js"></script>
+</body>
+</html>

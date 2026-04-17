@@ -67,4 +67,8 @@ find "${DATA_DIR}/history" -name "*.json" -type f -mmin +"${HISTORY_RETENTION_MI
 # ファイル権限
 chmod 644 "${DATA_DIR}/snapshot.json" "${DATA_DIR}/report.txt" 2>/dev/null
 
+# ── Phase 3: 履歴蓄積 + 時系列JSON生成 ──
+"${SCRIPT_DIR}/aggregate_history.sh" 2>/dev/null || true
+"${SCRIPT_DIR}/generate_timeseries.sh" 2>/dev/null || true
+
 exit 0

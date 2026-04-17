@@ -1,0 +1,232 @@
+.dashboard {
+  padding: 0;
+}
+
+.dashboard header {
+  padding: 20px;
+  border-bottom: 1px solid #333;
+}
+
+.dashboard nav {
+  display: flex;
+  gap: 16px;
+  margin: 12px 0;
+}
+
+.dashboard nav a {
+  color: #999;
+  text-decoration: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  border: 1px solid #444;
+}
+
+.dashboard nav a.active {
+  color: #c9a14a;
+  border-color: #c9a14a;
+}
+
+.dashboard nav a:hover {
+  color: #c9a14a;
+  border-color: #c9a14a;
+}
+
+.dashboard header button {
+  background: #333;
+  color: #c9a14a;
+  border: 1px solid #c9a14a;
+  padding: 6px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-top: 8px;
+}
+
+.dashboard header button:hover {
+  background: #c9a14a;
+  color: #111;
+}
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+  padding: 20px;
+}
+
+.stat-card {
+  background: #222;
+  padding: 20px;
+  border-radius: 8px;
+  border: 1px solid #333;
+  text-align: center;
+}
+
+.stat-card h3 {
+  margin: 0 0 8px 0;
+  font-size: 13px;
+  color: #999;
+  text-transform: uppercase;
+}
+
+.stat-card .num {
+  font-size: 28px;
+  margin: 0;
+  color: #c9a14a;
+  font-weight: bold;
+}
+
+.stat-card.alert-card .num {
+  color: #c96a6a;
+}
+
+.chart-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  gap: 16px;
+  padding: 20px;
+}
+
+.chart-container {
+  background: #1a1a1a;
+  padding: 16px;
+  border-radius: 8px;
+  border: 1px solid #333;
+  height: 280px;
+}
+
+.chart-container h2 {
+  font-size: 14px;
+  color: #c9a14a;
+  margin: 0 0 12px 0;
+}
+
+.distribution {
+  padding: 20px;
+  background: #1a1a1a;
+  margin: 20px;
+  border-radius: 8px;
+  height: 400px;
+}
+
+.distribution h2 {
+  color: #c9a14a;
+  font-size: 14px;
+  margin: 0 0 12px 0;
+}
+
+.raw-text {
+  padding: 20px;
+}
+
+.raw-text h2 {
+  color: #c9a14a;
+  font-size: 14px;
+}
+
+.raw-text pre {
+  background: #111;
+  padding: 16px;
+  border-radius: 8px;
+  border: 1px solid #333;
+  overflow-x: auto;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #ccc;
+}
+
+footer {
+  padding: 20px;
+  text-align: center;
+  border-top: 1px solid #333;
+  color: #666;
+  font-size: 12px;
+}
+
+/* Agent Activity styles (shared) */
+.agent-filter {
+  padding: 20px;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.agent-filter label {
+  color: #999;
+}
+
+.agent-filter select {
+  background: #222;
+  color: #ccc;
+  border: 1px solid #444;
+  padding: 6px 12px;
+  border-radius: 4px;
+}
+
+.activity-list {
+  padding: 0 20px 20px;
+}
+
+.activity-item {
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 12px;
+}
+
+.activity-item header {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 8px;
+  padding: 0;
+  border: none;
+}
+
+.activity-item h3 {
+  margin: 0 0 8px 0;
+  color: #c9a14a;
+  font-size: 16px;
+}
+
+.activity-item p {
+  margin: 0;
+  color: #ccc;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.activity-item small {
+  color: #666;
+}
+
+.agent-badge {
+  background: #333;
+  color: #c9a14a;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.action-type {
+  color: #999;
+  font-size: 12px;
+}
+
+.priority {
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 3px;
+}
+
+.priority-critical { background: #c96a6a; color: #fff; }
+.priority-high { background: #c9a14a; color: #111; }
+.priority-medium { background: #444; color: #ccc; }
+.priority-low { background: #333; color: #999; }
+
+.activity-item time {
+  color: #666;
+  font-size: 12px;
+  margin-left: auto;
+}
