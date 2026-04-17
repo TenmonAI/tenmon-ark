@@ -83,8 +83,43 @@ else
   log_ok "mc.env 配置完了"
 fi
 
-# mc.env の DB_PATH を対話式で確認
+# mc.env の値を検証・対話式で確認
 echo ""
+log_info "Step 3.5a: mc.env の設定値を検証..."
+
+# SERVICE_NAME 検証
+CURRENT_SERVICE=$(grep "^SERVICE_NAME=" /opt/tenmon-mc/config/mc.env 2>/dev/null | cut -d'"' -f2)
+CURRENT_SERVICE="${CURRENT_SERVICE:-tenmon-ark-api}"
+if systemctl list-unit-files "${CURRENT_SERVICE}.service" &>/dev/null && systemctl is-active "$CURRENT_SERVICE" &>/dev/null; then
+  log_ok "SERVICE_NAME=\"${CURRENT_SERVICE}\" — systemd サービス存在確認済み"
+else
+  log_warn "SERVICE_NAME=\"${CURRENT_SERVICE}\" — systemd サービスが見つからないか停止中です"
+  echo "  利用可能なサービス:"
+  systemctl list-units --type=service --state=active 2>/dev/null | grep -i "tenmon\|ark" | head -5
+  read -r -p "  SERVICE_NAME [${CURRENT_SERVICE}]: " INPUT_SERVICE
+  INPUT_SERVICE="${INPUT_SERVICE:-$CURRENT_SERVICE}"
+  sed -i "s|^SERVICE_NAME=.*|SERVICE_NAME=\"${INPUT_SERVICE}\"|" /opt/tenmon-mc/config/mc.env
+  log_ok "SERVICE_NAME = ${INPUT_SERVICE}"
+fi
+
+# API_URL 検証
+CURRENT_API_URL=$(grep "^API_URL=" /opt/tenmon-mc/config/mc.env 2>/dev/null | cut -d'"' -f2)
+CURRENT_API_URL="${CURRENT_API_URL:-http://127.0.0.1:3000}"
+API_CHECK=$(timeout 5 curl -s -o /dev/null -w "%{http_code}" "${CURRENT_API_URL}/api/health" 2>/dev/null || echo "timeout")
+if [ "$API_CHECK" != "timeout" ] && [ "$API_CHECK" != "000" ]; then
+  log_ok "API_URL=\"${CURRENT_API_URL}\" — 到達確認済み (HTTP ${API_CHECK})"
+else
+  log_warn "API_URL=\"${CURRENT_API_URL}\" — 到達できません"
+  echo "  リッスン中のポート:"
+  ss -tlnp 2>/dev/null | grep -E ":(3000|3001|8080)" | head -5
+  read -r -p "  API_URL [${CURRENT_API_URL}]: " INPUT_API_URL
+  INPUT_API_URL="${INPUT_API_URL:-$CURRENT_API_URL}"
+  sed -i "s|^API_URL=.*|API_URL=\"${INPUT_API_URL}\"|" /opt/tenmon-mc/config/mc.env
+  log_ok "API_URL = ${INPUT_API_URL}"
+fi
+echo ""
+
+# DB_PATH 検証
 CURRENT_DB_PATH=$(grep "^DB_PATH=" /opt/tenmon-mc/config/mc.env 2>/dev/null | cut -d'"' -f2)
 CURRENT_DB_PATH="${CURRENT_DB_PATH:-/opt/tenmon-ark-data/kokuzo.sqlite}"
 
