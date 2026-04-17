@@ -21,7 +21,8 @@ DISK_USED=$(df -h / | awk 'NR==2{print $5}' | tr -d '%' || echo "0")
 ERR_COUNT_24H=$(journalctl -u "$SERVICE_NAME" --since "24 hours ago" --no-pager 2>/dev/null | grep -icE "error|fatal|crash" || echo "0")
 
 # Node.js プロセスのCPU/MEM
-PROC_INFO=$(ps aux | grep -E "node.*dist" | grep -v grep | awk '{printf "cpu=%.1f%%,mem=%.1f%%", $3, $4}' | head -1)
+# awk で1つだけ表示して拜ける（printf "\n" + exit で即終了）
+PROC_INFO=$(ps aux | grep -E "node.*dist" | grep -v grep | awk '{printf "cpu=%.1f%%,mem=%.1f%%\n", $3, $4; exit}')
 PROC_INFO="${PROC_INFO:-none}"
 
 # uptime

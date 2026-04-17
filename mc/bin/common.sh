@@ -48,7 +48,9 @@ sql_ro() {
 # 数値保証（nullや空文字を0に変換）
 ensure_num() {
   local v="$1"
-  if [ "$v" = "null" ] || [ -z "$v" ]; then
+  # 改行・CR・非数字を除去し、最初の整数トークンだけを取得
+  v=$(printf '%s' "$v" | tr -d '\r\n' | grep -oE '^-?[0-9]+' | head -1)
+  if [ -z "$v" ]; then
     echo "0"
   else
     echo "$v"
