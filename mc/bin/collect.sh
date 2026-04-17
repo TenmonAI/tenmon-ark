@@ -64,6 +64,15 @@ cp "${DATA_DIR}/snapshot.json" "${HIST_FILE}"
 # 古い履歴削除
 find "${DATA_DIR}/history" -name "*.json" -type f -mmin +"${HISTORY_RETENTION_MIN}" -delete 2>/dev/null
 
+# jq 正規化: 制御文字・先頭ゼロ等の残留を最終防術として除去
+if command -v jq > /dev/null 2>&1 && [ -f "${DATA_DIR}/snapshot.json" ]; then
+  if jq . "${DATA_DIR}/snapshot.json" > "${DATA_DIR}/snapshot.json.tmp" 2>/dev/null; then
+    mv "${DATA_DIR}/snapshot.json.tmp" "${DATA_DIR}/snapshot.json"
+  else
+    rm -f "${DATA_DIR}/snapshot.json.tmp"
+  fi
+fi
+
 # ファイル権限
 chmod 644 "${DATA_DIR}/snapshot.json" "${DATA_DIR}/report.txt" 2>/dev/null
 
