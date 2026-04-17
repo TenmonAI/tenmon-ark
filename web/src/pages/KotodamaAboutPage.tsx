@@ -56,78 +56,78 @@ interface KanaData {
 }
 
 const VOWELS: KanaData[] = [
-  { kana: "ア", element: "空中の水霊", meaning: "命也。万物の根源、始まりの息吹" },
-  { kana: "イ", element: "空中の水霊", meaning: "出島也・勢也。外へ出る力、勢い" },
-  { kana: "ウ", element: "水火の霊", meaning: "動也。水火が交わり動き出す根源の力" },
-  { kana: "エ", element: "空中の水霊", meaning: "天地総栄也・磐也・技也。天地を栄えさせる力" },
-  { kana: "オ", element: "空中の水火霊", meaning: "高也・旅也。高みへ向かう水火の統合" },
+  { kana: "ア", element: "空中の水灵", meaning: "命也。万物の根源、始まりの息吹。七つの法則" },
+  { kana: "イ", element: "空中の水灵", meaning: "出島也・勢也。外へ出る力、勢い" },
+  { kana: "ウ", element: "水火の灵", meaning: "動也。水火が交わり動き出す根源の力" },
+  { kana: "エ", element: "空中の水灵", meaning: "天地総栄也・磐也・技也。天地を栄えさせる力" },
+  { kana: "オ", element: "空中の水火灵", meaning: "高也・起也・貴也。高みへ向かう水火の統合。四つの法則" },
 ];
 
 const KA_ROW: KanaData[] = [
-  { kana: "カ", element: "影の火霊", meaning: "暗也・影也・明也・大也・上也" },
-  { kana: "キ", element: "水中の火霊", meaning: "起也・書也・観音也・高也" },
-  { kana: "ク", element: "影の火霊", meaning: "影の火霊。組む、くぐる、暗がりの力" },
-  { kana: "ケ", element: "影の火霊", meaning: "影の火霊。気配、兆し" },
-  { kana: "コ", element: "影の火霊", meaning: "影の火霊。凝る、固まる" },
+  { kana: "カ", element: "暉火の灵", meaning: "暗也・影也・明也・大也・上也。十九の法則" },
+  { kana: "キ", element: "影の火灵", meaning: "起也・氣也・正中也・生也・草也・貴也・来也。九つの法則" },
+  { kana: "ク", element: "影の火灵", meaning: "影の火灵。與む、暗き、凝る。六つの法則" },
+  { kana: "ケ", element: "影の火灵", meaning: "影の火灵。異也・差別也・正也・香也・器也。七つの法則" },
+  { kana: "コ", element: "影の火灵", meaning: "影の火灵。凝也・固也。九つの法則" },
 ];
 
 const SA_ROW: KanaData[] = [
-  { kana: "サ", element: "昇水の霊", meaning: "水が昇る力。差す、裂く" },
-  { kana: "シ", element: "昇水の霊", meaning: "水が昇る力。締める、知る" },
-  { kana: "ス", element: "水中の火霊", meaning: "水の中の火。澄む、進む" },
-  { kana: "セ", element: "影の火霊", meaning: "影の火霊。迫る、競う" },
-  { kana: "ソ", element: "水火の霊", meaning: "水火の霊。外へ向かう、反る" },
+  { kana: "サ", element: "昇水の灵", meaning: "昇水の灵。差す、裂く。八つの法則" },
+  { kana: "シ", element: "昇水の灵", meaning: "昇水の灵。締める、知る。十三の法則" },
+  { kana: "ス", element: "水中の火灵", meaning: "水中の火灵。澄む、進む。十の法則" },
+  { kana: "セ", element: "水中の火灵", meaning: "水中の火灵。與也・助也・背也・為也・甲也。六つの法則" },
+  { kana: "ソ", element: "水火の灵", meaning: "水火の灵。外へ向かう、反る。十一の法則" },
 ];
 
 const TA_ROW: KanaData[] = [
-  { kana: "タ", element: "水中の火霊", meaning: "水の中の火。立つ、正す" },
-  { kana: "チ", element: "水中の火霊", meaning: "水の中の火。血、乳、力の根" },
-  { kana: "ツ", element: "火中の水霊", meaning: "火の中の水。連なる、伝わる" },
-  { kana: "テ", element: "火水の霊", meaning: "火水の霊。手、照らす" },
-  { kana: "ト", element: "水中の火霊", meaning: "水の中の火。止まる、戸、統べる" },
+  { kana: "タ", element: "水中の火灵", meaning: "水中の火灵。立つ、正す。九つの法則" },
+  { kana: "チ", element: "水中の火灵", meaning: "水中の火灵。血、乳、力の根。十三の法則" },
+  { kana: "ツ", element: "火中の水灵", meaning: "火中の水灵。連なる、伝わる。五つの法則" },
+  { kana: "テ", element: "火水の灵", meaning: "火水の灵。手、照らす。六つの法則" },
+  { kana: "ト", element: "水中の火灵", meaning: "水中の火灵。止まる、戸、統べる。十二の法則" },
 ];
 
 const NA_ROW: KanaData[] = [
-  { kana: "ナ", element: "水の霊", meaning: "水の霊。成す、名、中" },
-  { kana: "ニ", element: "火水の霊", meaning: "火水の霊。似る、和ぐ" },
-  { kana: "ヌ", element: "火水の霊", meaning: "火水の霊。抜く、脱ぐ" },
-  { kana: "ネ", element: "水中の火霊", meaning: "水の中の火。根、寝、音" },
-  { kana: "ノ", element: "水中の火霊", meaning: "水の中の火。伸びる、野" },
+  { kana: "ナ", element: "火水の灵", meaning: "火水の灵。和也・並也・流也・女也・正中也・凝也。十五の法則" },
+  { kana: "ニ", element: "火水の灵", meaning: "火水の灵。天地也・水火の凝也・丹也・非也・従也。六つの法則" },
+  { kana: "ヌ", element: "火水の灵", meaning: "火水の灵。黒也・文分らぬ也。七つの法則" },
+  { kana: "ネ", element: "火水の灵", meaning: "火水の灵。水火の根也・母の灵也・土也・鎮也。四つの法則" },
+  { kana: "ノ", element: "水の灵", meaning: "水の灵。回水也・差別を宰也・切也・割別也。六つの法則" },
 ];
 
 const HA_ROW: KanaData[] = [
-  { kana: "ハ", element: "正火の霊", meaning: "正火の霊。発する、母、葉" },
-  { kana: "ヒ", element: "正火の霊", meaning: "正火の霊。火、日、霊" },
-  { kana: "フ", element: "正火の霊", meaning: "正火の霊。吹く、振る、風" },
-  { kana: "ヘ", element: "正火の霊", meaning: "正火の霊。経る、減る、辺" },
-  { kana: "ホ", element: "正火の霊", meaning: "正火の霊。穂、秀、火の本" },
+  { kana: "ハ", element: "正火の灵", meaning: "正火の灵。発くこと、母也、葉也" },
+  { kana: "ヒ", element: "正火の灵", meaning: "正火の灵。火也、日也、霊也" },
+  { kana: "フ", element: "正火の灵", meaning: "正火の灵。吹く、振る、風" },
+  { kana: "ヘ", element: "正火の灵", meaning: "正火の灵。経る、減る、辺" },
+  { kana: "ホ", element: "正火の灵", meaning: "正火の灵。穂也、秀也、火の本。九つの法則" },
 ];
 
 const MA_ROW: KanaData[] = [
-  { kana: "マ", element: "火中の水霊", meaning: "火の中の水。間、真、廻る" },
-  { kana: "ミ", element: "火中の水霊", meaning: "火の中の水。身、実、水" },
-  { kana: "ム", element: "火中の水霊", meaning: "火の中の水。結ぶ、蒸す" },
-  { kana: "メ", element: "火中の水霊", meaning: "火の中の水。芽、目、女" },
-  { kana: "モ", element: "火中の水霊", meaning: "火の中の水。藻、持つ、本" },
+  { kana: "マ", element: "火中の水灵", meaning: "火中の水灵。向也・眼也・間也・曲也・大也・広也・円也。十四の法則" },
+  { kana: "ミ", element: "火中の水灵", meaning: "火中の水灵。身、実、水" },
+  { kana: "ム", element: "火中の水灵", meaning: "火中の水灵。無也・空也・結也・睦也・渦巻也。九つの法則" },
+  { kana: "メ", element: "火中の水灵", meaning: "火中の水灵。回也・芽也・正中也・女也・米也。十の法則" },
+  { kana: "モ", element: "火中の水灵", meaning: "火中の水灵。紡也・場也・亦也・者也。七つの法則" },
 ];
 
 const YA_ROW: KanaData[] = [
-  { kana: "ヤ", element: "火水の霊", meaning: "火水の霊。矢、家、弥" },
-  { kana: "ユ", element: "水中の火霊", meaning: "水の中の火。湯、結う、揺れる" },
-  { kana: "ヨ", element: "火水の霊", meaning: "火水の霊。世、代、四方" },
+  { kana: "ヤ", element: "火水の灵", meaning: "火水の灵。文也・和也・家也。七つの法則" },
+  { kana: "ユ", element: "水中の火灵", meaning: "水中の火灵。寛也・湯也。三つの法則" },
+  { kana: "ヨ", element: "火水の灵", meaning: "火水の灵。與也・師也・女男の契り也。五つの法則" },
 ];
 
 const RA_ROW: KanaData[] = [
-  { kana: "ラ", element: "火水の霊", meaning: "火水の霊。螺旋、裸" },
-  { kana: "リ", element: "火水の霊", meaning: "火水の霊。理、利、離" },
-  { kana: "ル", element: "濁水の霊", meaning: "濁水の霊。流れる、留まる" },
-  { kana: "レ", element: "濁水の霊", meaning: "濁水の霊。連なる、列" },
-  { kana: "ロ", element: "濁水の霊", meaning: "濁水の霊。炉、路、漏る" },
+  { kana: "ラ", element: "濁水の灵", meaning: "濁水の灵。降也・遅也・唾也。三つの法則" },
+  { kana: "リ", element: "濁水の灵", meaning: "濁水の灵。息息の両也・人也・理也。五つの法則" },
+  { kana: "ル", element: "濁水の灵", meaning: "濁水の灵。流れる、留まる。二つの法則" },
+  { kana: "レ", element: "濁水の灵", meaning: "濁水の灵。連なる、列。二つの法則" },
+  { kana: "ロ", element: "濁水の灵", meaning: "濁水の灵。炉、路、漏る。一つの法則" },
 ];
 
 const WA_ROW: KanaData[] = [
-  { kana: "ワ", element: "水火霊", meaning: "水火霊。和、輪、環" },
-  { kana: "ヰ", element: "正火の霊", meaning: "正火の霊。居る、井" },
+  { kana: "ワ", element: "水火の灵", meaning: "水火の灵。国土也・水火水也。四つの法則" },
+  { kana: "ヰ", element: "正火の灵", meaning: "正火の灵。居る、井" },
 ];
 
 /* ── セクション見出しコンポーネント ── */
@@ -414,8 +414,8 @@ export function KotodamaAboutPage({ onBack }: KotodamaAboutPageProps) {
         <p style={{ fontSize: 14, lineHeight: 1.9, marginBottom: 12 }}>
           五十音の各音は、この水と火のどちらに属するか、
           あるいはどのような配合で成り立つかによって分類されます。
-          「正火の霊」「影の火霊」「水中の火霊」「火中の水霊」「昇水の霊」「濁水の霊」
-          「水火の霊」「火水の霊」など、水火の配合が音ごとに異なります。
+          「正火の灵」「影の火灵」「水中の火灵」「火中の水灵」「昇水の灵」「濁水の灵」
+          「水火の灵」「火水の灵」「暉火の灵」など、水火の配合が音ごとに異なります。
         </p>
         <QuoteBlock>
           水火伝には「火之巻」と「水之巻」があり、火の原理と水の原理がそれぞれ三巻ずつ、
@@ -451,61 +451,61 @@ export function KotodamaAboutPage({ onBack }: KotodamaAboutPageProps) {
         </p>
 
         <KanaRowCard
-          title="母音（ア行）— 空中の水霊・水火の霊"
+          title="母音（ア行）— 空中の水灵・水火の灵"
           kanaList={VOWELS}
           bgColor={C.fireWaterBg}
           borderColor={C.fireWaterBorder}
         />
         <KanaRowCard
-          title="カ行 — 影の火霊・水中の火霊"
+          title="カ行 — 暉火の灵・影の火灵"
           kanaList={KA_ROW}
           bgColor={C.fireBg}
           borderColor={C.fireBorder}
         />
         <KanaRowCard
-          title="サ行 — 昇水の霊・水中の火霊"
+          title="サ行 — 昇水の灵・水中の火灵"
           kanaList={SA_ROW}
           bgColor={C.waterBg}
           borderColor={C.waterBorder}
         />
         <KanaRowCard
-          title="タ行 — 水中の火霊・火中の水霊"
+          title="タ行 — 水中の火灵・火中の水灵"
           kanaList={TA_ROW}
           bgColor={C.fireWaterBg}
           borderColor={C.fireWaterBorder}
         />
         <KanaRowCard
-          title="ナ行 — 水の霊・火水の霊"
+          title="ナ行 — 火水の灵・水の灵"
           kanaList={NA_ROW}
           bgColor={C.waterBg}
           borderColor={C.waterBorder}
         />
         <KanaRowCard
-          title="ハ行 — 正火の霊"
+          title="ハ行 — 正火の灵"
           kanaList={HA_ROW}
           bgColor={C.fireBg}
           borderColor={C.fireBorder}
         />
         <KanaRowCard
-          title="マ行 — 火中の水霊"
+          title="マ行 — 火中の水灵"
           kanaList={MA_ROW}
           bgColor={C.fireWaterBg}
           borderColor={C.fireWaterBorder}
         />
         <KanaRowCard
-          title="ヤ行 — 火水の霊・水中の火霊"
+          title="ヤ行 — 火水の灵・水中の火灵"
           kanaList={YA_ROW}
           bgColor={C.fireWaterBg}
           borderColor={C.fireWaterBorder}
         />
         <KanaRowCard
-          title="ラ行 — 火水の霊・濁水の霊"
+          title="ラ行 — 濁水の灵"
           kanaList={RA_ROW}
           bgColor={C.waterBg}
           borderColor={C.waterBorder}
         />
         <KanaRowCard
-          title="ワ行 — 水火霊・正火の霊"
+          title="ワ行 — 水火の灵・正火の灵"
           kanaList={WA_ROW}
           bgColor={C.fireWaterBg}
           borderColor={C.fireWaterBorder}

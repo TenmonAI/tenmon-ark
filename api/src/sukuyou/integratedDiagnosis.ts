@@ -273,20 +273,22 @@ export function determineTaiYou(
   let taiYou: TaiYou = "均衡";
   let interpretation: string;
 
-  if (totalWater > totalFire + 8) {
+  if (totalFire > totalWater + 8) {
+    // 原典準拠: 躰＝火＝外発（正火の灵・本体・根源的存在）
     taiYou = "躰";
-    interpretation = `現在の総合エネルギー状態は「躰（水・内集）」が優位です（火${Math.round(totalFire)}:水${Math.round(totalWater)}）。`
-      + `今は根幹を守り、内面を充実させ、エネルギーを蓄える時期です。`
-      + `${honmeiShuku}宿の${shukuData.element}の性質と、`
-      + `年の言霊「${threeLayer.year.kotodama.sound}」（${threeLayer.year.kotodama.attribute}）が水の方向に合流しています。`
-      + `躰を固め、次の外発の時期に備えてください。`;
-  } else if (totalFire > totalWater + 8) {
-    taiYou = "用";
-    interpretation = `現在の総合エネルギー状態は「用（火・外発）」が優位です（火${Math.round(totalFire)}:水${Math.round(totalWater)}）。`
-      + `今は外に向けて表現し、行動を起こし、世界を広げていく時期です。`
+    interpretation = `現在の総合エネルギー状態は「躰（火・外発）」が優位です（火${Math.round(totalFire)}:水${Math.round(totalWater)}）。`
+      + `今は火の灵が強く、本体の力が充実し、外に向けて表現・行動する時期です。`
       + `${honmeiShuku}宿の${shukuData.element}の性質と、`
       + `年の言霊「${threeLayer.year.kotodama.sound}」（${threeLayer.year.kotodama.attribute}）が火の方向に合流しています。`
-      + `用を発揮し、積極的に動いてください。`;
+      + `躰の力を発揮し、積極的に動いてください。`;
+  } else if (totalWater > totalFire + 8) {
+    // 原典準拠: 用＝水＝内集（火中の水灵・はたらき・活用・顕現）
+    taiYou = "用";
+    interpretation = `現在の総合エネルギー状態は「用（水・内集）」が優位です（火${Math.round(totalFire)}:水${Math.round(totalWater)}）。`
+      + `今は水の灵が強く、はたらきの力が充実し、内面を深め蓄える時期です。`
+      + `${honmeiShuku}宿の${shukuData.element}の性質と、`
+      + `年の言霊「${threeLayer.year.kotodama.sound}」（${threeLayer.year.kotodama.attribute}）が水の方向に合流しています。`
+      + `用の力を活かし、内なる充実を図ってください。`;
   } else {
     interpretation = `現在の総合エネルギー状態は「水火均衡」です（火${Math.round(totalFire)}:水${Math.round(totalWater)}）。`
       + `内集と外発のバランスが取れた調和の状態にあります。`
