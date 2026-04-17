@@ -55,6 +55,7 @@ import {
   buildUltimateKanteiClause,
   buildDeepContinuityClause,
 } from "../sukuyou/sukuyouEngine.js";
+import { buildKotodamaClause } from "../kotodama/kotodamaConnector.js";
 
 import { DatabaseSync } from "node:sqlite";
 const router: IRouter = Router();
@@ -1507,6 +1508,12 @@ ${__carrySeedSummary}${__carryLifeAlgo}
           previousDepth: __carryTurn,
           userResponse: t0,
         });
+        // KOTODAMA_RESURRECTION_V1: reconnect buildKotodamaClause (was orphan).
+        // Safe by design: returns empty string if first char not in one-sound index.
+        const __kotodamaClauseCarry = buildKotodamaClause(
+          t0,
+          String(__sukuyouSeedForCarry.honmeiShuku || "")
+        );
         __sukuyouSeedForCarry.turnCount = __carryTurn + 1;
         __sukuyouSeedByThread.set(String(threadId || ""), __sukuyouSeedForCarry);
 
@@ -1514,7 +1521,8 @@ ${__carrySeedSummary}${__carryLifeAlgo}
           DEEP_CHAT_CARRY_SYSTEM +
           (__gogCarry?.systemClause || "") +
           __ultimateCarry +
-          __deepContinuityCarry;
+          __deepContinuityCarry +
+          __kotodamaClauseCarry;
 
         try {
           const __carryHistory = memoryReadSession(String(threadId || ""), 8);
