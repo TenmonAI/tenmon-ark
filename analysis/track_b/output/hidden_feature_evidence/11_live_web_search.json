@@ -1,0 +1,44 @@
+{
+  "feature_name": "live_web_search",
+  "connection_status": "partial",
+  "evidence": {
+    "files_found": [
+      "client/src/lib/semantic/search.ts",
+      "server/api/concierge/semantic-search.ts",
+      "api/src/kokuzo/search.ts",
+      "api/src/routes/chat_refactor/researchResponseLoopV83.ts",
+      "api/dist/kokuzo/search.js",
+      "api/dist/routes/chat_refactor/researchResponseLoopV83.js"
+    ],
+    "tables_with_data": [],
+    "services_involved": [],
+    "api_endpoints": [
+      "web/dist/assets/index-B1cnH3bY.js",
+      "web/dist/assets/purify.es-B5CD4DQe.js",
+      "dist/public/assets/index-CqXQwYS0-1776126918766.js",
+      "dist/public/assets/dash.all.min-DZdVffIc-1776126918766.js",
+      "dist/public/assets/index-BGMYO5VM-1776126918766.js",
+      "dist/public/assets/hls-CiLLo4G9-1776126918766.js",
+      "site/dist/assets/index-CmMaySvf.js",
+      "client/dist.bak.1776138648/assets/index-D_7Esf0q.js",
+      "client/dist.bak.1776138648/assets/hls-Cp2x8l1r.js",
+      "client/dist.bak.1776138648/assets/index-m2WHTEyM.js",
+      "client/dist.bak.1776138648/assets/dash.all.min-Oikk9St1.js",
+      "client/dist/assets/index-j9bPZevX.js",
+      "server/_core/map.ts"
+    ],
+    "web_in_evidence_files": []
+  },
+  "activity": {
+    "count_24h": 0,
+    "count_7d": 0,
+    "count_30d": 0,
+    "last_activity": null
+  },
+  "diagnosis": {
+    "working_as_designed": "partial",
+    "root_cause_if_broken": "",
+    "activation_difficulty": "M"
+  },
+  "recommendation": "Web検索APIの統合を実装し、evidence packに時事情報を含める"
+}

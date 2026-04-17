@@ -1,0 +1,117 @@
+{
+  "listening_ports": [
+    {
+      "state": "LISTEN",
+      "recv_q": "0",
+      "send_q": "511",
+      "local_address": "127.0.0.1:39957",
+      "peer_address": "0.0.0.0:*",
+      "process": "users:((\"node\",pid=2395808,fd=19))"
+    },
+    {
+      "state": "LISTEN",
+      "recv_q": "0",
+      "send_q": "4096",
+      "local_address": "100.81.60.38:57751",
+      "peer_address": "0.0.0.0:*",
+      "process": "users:((\"tailscaled\",pid=2354502,fd=22))"
+    },
+    {
+      "state": "LISTEN",
+      "recv_q": "0",
+      "send_q": "511",
+      "local_address": "127.0.0.1:45447",
+      "peer_address": "0.0.0.0:*",
+      "process": "users:((\"node\",pid=3286019,fd=31))"
+    },
+    {
+      "state": "LISTEN",
+      "recv_q": "0",
+      "send_q": "511",
+      "local_address": "0.0.0.0:3997",
+      "peer_address": "0.0.0.0:*",
+      "process": "users:((\"node\",pid=126630,fd=46))"
+    },
+    {
+      "state": "LISTEN",
+      "recv_q": "0",
+      "send_q": "511",
+      "local_address": "0.0.0.0:3000",
+      "peer_address": "0.0.0.0:*",
+      "process": "users:((\"node\",pid=875715,fd=30))"
+    },
+    {
+      "state": "LISTEN",
+      "recv_q": "0",
+      "send_q": "4096",
+      "local_address": "127.0.0.53%lo:53",
+      "peer_address": "0.0.0.0:*",
+      "process": "users:((\"systemd-resolve\",pid=891139,fd=14))"
+    },
+    {
+      "state": "LISTEN",
+      "recv_q": "0",
+      "send_q": "511",
+      "local_address": "127.0.0.1:34097",
+      "peer_address": "0.0.0.0:*",
+      "process": "users:((\"node\",pid=390936,fd=19))"
+    },
+    {
+      "state": "LISTEN",
+      "recv_q": "0",
+      "send_q": "511",
+      "local_address": "0.0.0.0:443",
+      "peer_address": "0.0.0.0:*",
+      "process": "users:((\"nginx\",pid=906351,fd=7),(\"nginx\",pid=906350,fd=7),(\"nginx\",pid=906349,fd=7),(\"nginx\",pid=906348,fd=7),(\"nginx\",pid=906347,fd=7),(\"nginx\",pid=906346,fd=7),(\"nginx\",pid=891111,fd=7))"
+    },
+    {
+      "state": "LISTEN",
+      "recv_q": "0",
+      "send_q": "511",
+      "local_address": "0.0.0.0:80",
+      "peer_address": "0.0.0.0:*",
+      "process": "users:((\"nginx\",pid=906351,fd=6),(\"nginx\",pid=906350,fd=6),(\"nginx\",pid=906349,fd=6),(\"nginx\",pid=906348,fd=6),(\"nginx\",pid=906347,fd=6),(\"nginx\",pid=906346,fd=6),(\"nginx\",pid=891111,fd=6))"
+    },
+    {
+      "state": "LISTEN",
+      "recv_q": "0",
+      "send_q": "4096",
+      "local_address": "0.0.0.0:111",
+      "peer_address": "0.0.0.0:*",
+      "process": "users:((\"rpcbind\",pid=2347810,fd=4),(\"systemd\",pid=1,fd=58))"
+    },
+    {
+      "state": "LISTEN",
+      "recv_q": "0",
+      "send_q": "128",
+      "local_address": "0.0.0.0:22",
+      "peer_address": "0.0.0.0:*",
+      "process": "users:((\"sshd\",pid=891120,fd=3))"
+    },
+    {
+      "state": "LISTEN",
+      "recv_q": "0",
+      "send_q": "4096",
+      "local_address": "[fd7a:115c:a1e0::6337:3c26]:54789",
+      "peer_address": "[::]:*",
+      "process": "users:((\"tailscaled\",pid=2354502,fd=23))"
+    },
+    {
+      "state": "LISTEN",
+      "recv_q": "0",
+      "send_q": "4096",
+      "local_address": "[::]:111",
+      "peer_address": "[::]:*",
+      "process": "users:((\"rpcbind\",pid=2347810,fd=6),(\"systemd\",pid=1,fd=60))"
+    },
+    {
+      "state": "LISTEN",
+      "recv_q": "0",
+      "send_q": "128",
+      "local_address": "[::]:22",
+      "peer_address": "[::]:*",
+      "process": "users:((\"sshd\",pid=891120,fd=4))"
+    }
+  ],
+  "total": 14
+}

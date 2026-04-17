@@ -1,0 +1,715 @@
+{
+  "timestamp": "2026-04-17T05:38:37Z",
+  "total_tenmon_services": 17,
+  "services": [
+    {
+      "name": "tenmon-ark-api",
+      "file_path": "/etc/systemd/system/tenmon-ark-api.service",
+      "state": "active",
+      "after": [
+        "network.target"
+      ],
+      "requires": [],
+      "wants": [],
+      "part_of": [],
+      "binds_to": [],
+      "drop_ins": [
+        "/etc/systemd/system/tenmon-ark-api.service.d/20-llm.env.conf",
+        "/etc/systemd/system/tenmon-ark-api.service.d/env.conf"
+      ],
+      "exec_start": "/usr/bin/node /opt/tenmon-ark-repo/api/dist/index.js",
+      "environment_files": [
+        "/etc/tenmon/llm.env",
+        "/etc/tenmon/llm.env"
+      ],
+      "environment_vars": [
+        "NODE_ENV",
+        "TENMON_DATA_DIR",
+        "NODE_ENV",
+        "TENMON_DATA_DIR",
+        "NOTION_TOKEN",
+        "NOTION_FEEDBACK_DB_ID",
+        "GEMINI_MODEL"
+      ],
+      "working_directory": "/opt/tenmon-ark-repo/api",
+      "user": "root",
+      "restart_policy": "always",
+      "restart_sec": "5",
+      "service_type": "simple",
+      "last_fail_count_7d": 30319
+    },
+    {
+      "name": "tenmon-auto-patch",
+      "file_path": "/etc/systemd/system/tenmon-auto-patch.service",
+      "state": "active",
+      "after": [
+        "tenmon-ark-api.service"
+      ],
+      "requires": [],
+      "wants": [],
+      "part_of": [],
+      "binds_to": [],
+      "drop_ins": [],
+      "exec_start": "/opt/tenmon-ark-repo/auto_patch_runner.sh",
+      "environment_files": [],
+      "environment_vars": [],
+      "working_directory": "/opt/tenmon-ark-repo",
+      "user": "",
+      "restart_policy": "always",
+      "restart_sec": "5",
+      "service_type": "simple",
+      "last_fail_count_7d": 0
+    },
+    {
+      "name": "tenmon-auto-runner",
+      "file_path": "/etc/systemd/system/tenmon-auto-runner.service",
+      "state": "inactive",
+      "after": [
+        "network-online.target",
+        "tenmon-ark-api.service"
+      ],
+      "requires": [],
+      "wants": [
+        "network-online.target"
+      ],
+      "part_of": [],
+      "binds_to": [],
+      "drop_ins": [],
+      "exec_start": "/usr/bin/python3 /opt/tenmon-ark-repo/api/automation/tenmon_mainline_governor_v1.py",
+      "environment_files": [
+        "/etc/tenmon/llm.env"
+      ],
+      "environment_vars": [],
+      "working_directory": "/opt/tenmon-ark-repo",
+      "user": "",
+      "restart_policy": "",
+      "restart_sec": "",
+      "service_type": "oneshot",
+      "last_fail_count_7d": 0
+    },
+    {
+      "name": "tenmon-book-quality-loop",
+      "file_path": "/etc/systemd/system/tenmon-book-quality-loop.service",
+      "state": "inactive",
+      "after": [
+        "tenmon-ark-api.service"
+      ],
+      "requires": [],
+      "wants": [],
+      "part_of": [],
+      "binds_to": [],
+      "drop_ins": [],
+      "exec_start": "/usr/bin/python3 /opt/tenmon-ark-repo/api/automation/tenmon_book_quality_loop_v1.py",
+      "environment_files": [
+        "/etc/tenmon/llm.env"
+      ],
+      "environment_vars": [],
+      "working_directory": "",
+      "user": "",
+      "restart_policy": "",
+      "restart_sec": "",
+      "service_type": "oneshot",
+      "last_fail_count_7d": 0
+    },
+    {
+      "name": "tenmon-campaign-os",
+      "file_path": "/etc/systemd/system/tenmon-campaign-os.service",
+      "state": "inactive",
+      "after": [
+        "tenmon-ark-api.service",
+        "tenmon-auto-patch.service"
+      ],
+      "requires": [],
+      "wants": [],
+      "part_of": [],
+      "binds_to": [],
+      "drop_ins": [
+        "/etc/systemd/system/tenmon-campaign-os.service.d/env.conf"
+      ],
+      "exec_start": "",
+      "environment_files": [],
+      "environment_vars": [
+        "ANTHROPIC_API_KEY",
+        "NOTION_TOKEN",
+        "NOTION_PAGE_ID",
+        "OPENAI_API_KEY"
+      ],
+      "working_directory": "",
+      "user": "",
+      "restart_policy": "",
+      "restart_sec": "",
+      "service_type": "simple",
+      "last_fail_count_7d": 0
+    },
+    {
+      "name": "tenmon-infra-audit",
+      "file_path": "/etc/systemd/system/tenmon-infra-audit.service",
+      "state": "inactive",
+      "after": [
+        "network.target",
+        "tenmon-ark-api.service"
+      ],
+      "requires": [],
+      "wants": [],
+      "part_of": [],
+      "binds_to": [],
+      "drop_ins": [],
+      "exec_start": "/usr/local/bin/tenmon-infra-audit.sh",
+      "environment_files": [],
+      "environment_vars": [],
+      "working_directory": "",
+      "user": "root",
+      "restart_policy": "",
+      "restart_sec": "",
+      "service_type": "oneshot",
+      "last_fail_count_7d": 0
+    },
+    {
+      "name": "tenmon-notion-runtime-sync",
+      "file_path": "/etc/systemd/system/tenmon-notion-runtime-sync.service",
+      "state": "inactive",
+      "after": [
+        "network-online.target",
+        "tenmon-ark-api.service",
+        "tenmon-runtime-watchdog.service"
+      ],
+      "requires": [],
+      "wants": [
+        "network-online.target"
+      ],
+      "part_of": [],
+      "binds_to": [],
+      "drop_ins": [],
+      "exec_start": "/usr/bin/python3 /opt/tenmon-ark-repo/api/automation/tenmon_notion_runtime_sync_v1.py",
+      "environment_files": [
+        "/etc/tenmon/llm.env"
+      ],
+      "environment_vars": [],
+      "working_directory": "/opt/tenmon-ark-repo",
+      "user": "",
+      "restart_policy": "",
+      "restart_sec": "",
+      "service_type": "oneshot",
+      "last_fail_count_7d": 0
+    },
+    {
+      "name": "tenmon-notion-task-audit",
+      "file_path": "/etc/systemd/system/tenmon-notion-task-audit.service",
+      "state": "activating",
+      "after": [
+        "tenmon-notion-task-seed.service",
+        "tenmon-strict-promotion.service"
+      ],
+      "requires": [],
+      "wants": [
+        "tenmon-notion-task-seed.service",
+        "tenmon-strict-promotion.service"
+      ],
+      "part_of": [],
+      "binds_to": [],
+      "drop_ins": [],
+      "exec_start": "/opt/tenmon-ark-repo/auto_build_system/notion_task_execution_audit_loop_v1.sh",
+      "environment_files": [
+        "/etc/tenmon/llm.env"
+      ],
+      "environment_vars": [],
+      "working_directory": "/opt/tenmon-ark-repo",
+      "user": "",
+      "restart_policy": "always",
+      "restart_sec": "20",
+      "service_type": "simple",
+      "last_fail_count_7d": 59028
+    },
+    {
+      "name": "tenmon-notion-task-readback",
+      "file_path": "/etc/systemd/system/tenmon-notion-task-readback.service",
+      "state": "activating",
+      "after": [
+        "tenmon-notion-task-requeue.service"
+      ],
+      "requires": [],
+      "wants": [
+        "tenmon-notion-task-requeue.service"
+      ],
+      "part_of": [],
+      "binds_to": [],
+      "drop_ins": [],
+      "exec_start": "/opt/tenmon-ark-repo/auto_build_system/notion_task_requeue_readback_loop_v1.sh",
+      "environment_files": [
+        "/etc/tenmon/llm.env"
+      ],
+      "environment_vars": [],
+      "working_directory": "/opt/tenmon-ark-repo",
+      "user": "",
+      "restart_policy": "always",
+      "restart_sec": "20",
+      "service_type": "simple",
+      "last_fail_count_7d": 58958
+    },
+    {
+      "name": "tenmon-notion-task-requeue",
+      "file_path": "/etc/systemd/system/tenmon-notion-task-requeue.service",
+      "state": "activating",
+      "after": [
+        "tenmon-notion-task-audit.service"
+      ],
+      "requires": [],
+      "wants": [
+        "tenmon-notion-task-audit.service"
+      ],
+      "part_of": [],
+      "binds_to": [],
+      "drop_ins": [],
+      "exec_start": "/opt/tenmon-ark-repo/auto_build_system/notion_task_requeue_repair_loop_v2.sh",
+      "environment_files": [
+        "/etc/tenmon/llm.env"
+      ],
+      "environment_vars": [],
+      "working_directory": "/opt/tenmon-ark-repo",
+      "user": "",
+      "restart_policy": "always",
+      "restart_sec": "20",
+      "service_type": "simple",
+      "last_fail_count_7d": 59013
+    },
+    {
+      "name": "tenmon-notion-task-seed",
+      "file_path": "/etc/systemd/system/tenmon-notion-task-seed.service",
+      "state": "inactive",
+      "after": [
+        "tenmon-todaycut-stack.service",
+        "tenmon-strict-promotion.service"
+      ],
+      "requires": [],
+      "wants": [
+        "tenmon-todaycut-stack.service",
+        "tenmon-strict-promotion.service"
+      ],
+      "part_of": [],
+      "binds_to": [],
+      "drop_ins": [],
+      "exec_start": "/opt/tenmon-ark-repo/auto_build_system/notion_task_seed_loop_v1.sh",
+      "environment_files": [
+        "/etc/tenmon/llm.env"
+      ],
+      "environment_vars": [],
+      "working_directory": "/opt/tenmon-ark-repo",
+      "user": "",
+      "restart_policy": "always",
+      "restart_sec": "15",
+      "service_type": "simple",
+      "last_fail_count_7d": 59023
+    },
+    {
+      "name": "tenmon-notion-task-status-fix",
+      "file_path": "/etc/systemd/system/tenmon-notion-task-status-fix.service",
+      "state": "active",
+      "after": [
+        "tenmon-notion-task-readback.service"
+      ],
+      "requires": [],
+      "wants": [
+        "tenmon-notion-task-readback.service"
+      ],
+      "part_of": [],
+      "binds_to": [],
+      "drop_ins": [],
+      "exec_start": "/bin/bash -lc 'while true; do python3 /opt/tenmon-ark-repo/auto_build_system/notion_task_requeue_status_fix_v1.py; sleep 300; done'",
+      "environment_files": [
+        "/etc/tenmon/llm.env"
+      ],
+      "environment_vars": [],
+      "working_directory": "/opt/tenmon-ark-repo",
+      "user": "",
+      "restart_policy": "always",
+      "restart_sec": "20",
+      "service_type": "simple",
+      "last_fail_count_7d": 0
+    },
+    {
+      "name": "tenmon-operations-level-autonomy",
+      "file_path": "/etc/systemd/system/tenmon-operations-level-autonomy.service",
+      "state": "failed",
+      "after": [
+        "network-online.target"
+      ],
+      "requires": [],
+      "wants": [
+        "network-online.target"
+      ],
+      "part_of": [],
+      "binds_to": [],
+      "drop_ins": [],
+      "exec_start": "/opt/tenmon-ark-repo/api/scripts/tenmon_operations_level_autonomy_v1.sh",
+      "environment_files": [],
+      "environment_vars": [
+        "TENMON_REPO_ROOT",
+        "TENMON_GATE_BASE"
+      ],
+      "working_directory": "/opt/tenmon-ark-repo",
+      "user": "",
+      "restart_policy": "",
+      "restart_sec": "",
+      "service_type": "oneshot",
+      "last_fail_count_7d": 0
+    },
+    {
+      "name": "tenmon-runtime-watchdog",
+      "file_path": "/etc/systemd/system/tenmon-runtime-watchdog.service",
+      "state": "active",
+      "after": [
+        "network-online.target",
+        "tenmon-ark-api.service"
+      ],
+      "requires": [],
+      "wants": [
+        "network-online.target"
+      ],
+      "part_of": [],
+      "binds_to": [],
+      "drop_ins": [],
+      "exec_start": "/usr/bin/python3 /opt/tenmon-ark-repo/api/automation/tenmon_runtime_watchdog_v1.py",
+      "environment_files": [],
+      "environment_vars": [],
+      "working_directory": "/opt/tenmon-ark-repo",
+      "user": "",
+      "restart_policy": "always",
+      "restart_sec": "5",
+      "service_type": "simple",
+      "last_fail_count_7d": 0
+    },
+    {
+      "name": "tenmon-storage",
+      "file_path": "/etc/systemd/system/tenmon-storage.service",
+      "state": "inactive",
+      "after": [
+        "network.target"
+      ],
+      "requires": [],
+      "wants": [],
+      "part_of": [],
+      "binds_to": [],
+      "drop_ins": [],
+      "exec_start": "/usr/local/bin/tenmon-storage-sync.sh",
+      "environment_files": [],
+      "environment_vars": [],
+      "working_directory": "",
+      "user": "root",
+      "restart_policy": "",
+      "restart_sec": "",
+      "service_type": "oneshot",
+      "last_fail_count_7d": 0
+    },
+    {
+      "name": "tenmon-strict-promotion",
+      "file_path": "/etc/systemd/system/tenmon-strict-promotion.service",
+      "state": "activating",
+      "after": [
+        "tenmon-todaycut-stack.service"
+      ],
+      "requires": [],
+      "wants": [
+        "tenmon-todaycut-stack.service"
+      ],
+      "part_of": [],
+      "binds_to": [],
+      "drop_ins": [],
+      "exec_start": "/opt/tenmon-ark-repo/auto_build_system/strict_promotion_runner_v1.sh",
+      "environment_files": [
+        "/etc/tenmon/llm.env"
+      ],
+      "environment_vars": [],
+      "working_directory": "/opt/tenmon-ark-repo",
+      "user": "",
+      "restart_policy": "always",
+      "restart_sec": "10",
+      "service_type": "simple",
+      "last_fail_count_7d": 117887
+    },
+    {
+      "name": "tenmon-todaycut-stack",
+      "file_path": "/etc/systemd/system/tenmon-todaycut-stack.service",
+      "state": "active",
+      "after": [
+        "network-online.target",
+        "tenmon-ark-api.service"
+      ],
+      "requires": [],
+      "wants": [
+        "network-online.target"
+      ],
+      "part_of": [],
+      "binds_to": [],
+      "drop_ins": [],
+      "exec_start": "/opt/tenmon-ark-repo/auto_build_system/today_cut_stack_boot_v1.sh",
+      "environment_files": [],
+      "environment_vars": [],
+      "working_directory": "/opt/tenmon-ark-repo",
+      "user": "",
+      "restart_policy": "",
+      "restart_sec": "",
+      "service_type": "oneshot",
+      "last_fail_count_7d": 0
+    }
+  ],
+  "dependency_graph": {
+    "nodes": [
+      "network",
+      "network-online",
+      "tenmon-ark-api",
+      "tenmon-auto-patch",
+      "tenmon-auto-runner",
+      "tenmon-book-quality-loop",
+      "tenmon-campaign-os",
+      "tenmon-infra-audit",
+      "tenmon-notion-runtime-sync",
+      "tenmon-notion-task-audit",
+      "tenmon-notion-task-readback",
+      "tenmon-notion-task-requeue",
+      "tenmon-notion-task-seed",
+      "tenmon-notion-task-status-fix",
+      "tenmon-operations-level-autonomy",
+      "tenmon-runtime-watchdog",
+      "tenmon-storage",
+      "tenmon-strict-promotion",
+      "tenmon-todaycut-stack"
+    ],
+    "edges": [
+      {
+        "from": "network",
+        "to": "tenmon-ark-api",
+        "type": "after",
+        "label": "After"
+      },
+      {
+        "from": "tenmon-ark-api",
+        "to": "tenmon-auto-patch",
+        "type": "after",
+        "label": "After"
+      },
+      {
+        "from": "network-online",
+        "to": "tenmon-auto-runner",
+        "type": "after",
+        "label": "After"
+      },
+      {
+        "from": "tenmon-ark-api",
+        "to": "tenmon-auto-runner",
+        "type": "after",
+        "label": "After"
+      },
+      {
+        "from": "tenmon-auto-runner",
+        "to": "network-online",
+        "type": "wants",
+        "label": "Wants"
+      },
+      {
+        "from": "tenmon-ark-api",
+        "to": "tenmon-book-quality-loop",
+        "type": "after",
+        "label": "After"
+      },
+      {
+        "from": "tenmon-ark-api",
+        "to": "tenmon-campaign-os",
+        "type": "after",
+        "label": "After"
+      },
+      {
+        "from": "tenmon-auto-patch",
+        "to": "tenmon-campaign-os",
+        "type": "after",
+        "label": "After"
+      },
+      {
+        "from": "network",
+        "to": "tenmon-infra-audit",
+        "type": "after",
+        "label": "After"
+      },
+      {
+        "from": "tenmon-ark-api",
+        "to": "tenmon-infra-audit",
+        "type": "after",
+        "label": "After"
+      },
+      {
+        "from": "network-online",
+        "to": "tenmon-notion-runtime-sync",
+        "type": "after",
+        "label": "After"
+      },
+      {
+        "from": "tenmon-ark-api",
+        "to": "tenmon-notion-runtime-sync",
+        "type": "after",
+        "label": "After"
+      },
+      {
+        "from": "tenmon-runtime-watchdog",
+        "to": "tenmon-notion-runtime-sync",
+        "type": "after",
+        "label": "After"
+      },
+      {
+        "from": "tenmon-notion-runtime-sync",
+        "to": "network-online",
+        "type": "wants",
+        "label": "Wants"
+      },
+      {
+        "from": "tenmon-notion-task-seed",
+        "to": "tenmon-notion-task-audit",
+        "type": "after",
+        "label": "After"
+      },
+      {
+        "from": "tenmon-strict-promotion",
+        "to": "tenmon-notion-task-audit",
+        "type": "after",
+        "label": "After"
+      },
+      {
+        "from": "tenmon-notion-task-audit",
+        "to": "tenmon-notion-task-seed",
+        "type": "wants",
+        "label": "Wants"
+      },
+      {
+        "from": "tenmon-notion-task-audit",
+        "to": "tenmon-strict-promotion",
+        "type": "wants",
+        "label": "Wants"
+      },
+      {
+        "from": "tenmon-notion-task-requeue",
+        "to": "tenmon-notion-task-readback",
+        "type": "after",
+        "label": "After"
+      },
+      {
+        "from": "tenmon-notion-task-readback",
+        "to": "tenmon-notion-task-requeue",
+        "type": "wants",
+        "label": "Wants"
+      },
+      {
+        "from": "tenmon-notion-task-audit",
+        "to": "tenmon-notion-task-requeue",
+        "type": "after",
+        "label": "After"
+      },
+      {
+        "from": "tenmon-notion-task-requeue",
+        "to": "tenmon-notion-task-audit",
+        "type": "wants",
+        "label": "Wants"
+      },
+      {
+        "from": "tenmon-todaycut-stack",
+        "to": "tenmon-notion-task-seed",
+        "type": "after",
+        "label": "After"
+      },
+      {
+        "from": "tenmon-strict-promotion",
+        "to": "tenmon-notion-task-seed",
+        "type": "after",
+        "label": "After"
+      },
+      {
+        "from": "tenmon-notion-task-seed",
+        "to": "tenmon-todaycut-stack",
+        "type": "wants",
+        "label": "Wants"
+      },
+      {
+        "from": "tenmon-notion-task-seed",
+        "to": "tenmon-strict-promotion",
+        "type": "wants",
+        "label": "Wants"
+      },
+      {
+        "from": "tenmon-notion-task-readback",
+        "to": "tenmon-notion-task-status-fix",
+        "type": "after",
+        "label": "After"
+      },
+      {
+        "from": "tenmon-notion-task-status-fix",
+        "to": "tenmon-notion-task-readback",
+        "type": "wants",
+        "label": "Wants"
+      },
+      {
+        "from": "network-online",
+        "to": "tenmon-operations-level-autonomy",
+        "type": "after",
+        "label": "After"
+      },
+      {
+        "from": "tenmon-operations-level-autonomy",
+        "to": "network-online",
+        "type": "wants",
+        "label": "Wants"
+      },
+      {
+        "from": "network-online",
+        "to": "tenmon-runtime-watchdog",
+        "type": "after",
+        "label": "After"
+      },
+      {
+        "from": "tenmon-ark-api",
+        "to": "tenmon-runtime-watchdog",
+        "type": "after",
+        "label": "After"
+      },
+      {
+        "from": "tenmon-runtime-watchdog",
+        "to": "network-online",
+        "type": "wants",
+        "label": "Wants"
+      },
+      {
+        "from": "network",
+        "to": "tenmon-storage",
+        "type": "after",
+        "label": "After"
+      },
+      {
+        "from": "tenmon-todaycut-stack",
+        "to": "tenmon-strict-promotion",
+        "type": "after",
+        "label": "After"
+      },
+      {
+        "from": "tenmon-strict-promotion",
+        "to": "tenmon-todaycut-stack",
+        "type": "wants",
+        "label": "Wants"
+      },
+      {
+        "from": "network-online",
+        "to": "tenmon-todaycut-stack",
+        "type": "after",
+        "label": "After"
+      },
+      {
+        "from": "tenmon-ark-api",
+        "to": "tenmon-todaycut-stack",
+        "type": "after",
+        "label": "After"
+      },
+      {
+        "from": "tenmon-todaycut-stack",
+        "to": "network-online",
+        "type": "wants",
+        "label": "Wants"
+      }
+    ],
+    "mermaid": "graph TD\n    network[\"network\"]\n    network_online[\"network-online\"]\n    tenmon_ark_api[\"tenmon-ark-api\"]\n    tenmon_auto_patch[\"tenmon-auto-patch\"]\n    tenmon_auto_runner[\"tenmon-auto-runner\"]\n    tenmon_book_quality_loop[\"tenmon-book-quality-loop\"]\n    tenmon_campaign_os[\"tenmon-campaign-os\"]\n    tenmon_infra_audit[\"tenmon-infra-audit\"]\n    tenmon_notion_runtime_sync[\"tenmon-notion-runtime-sync\"]\n    tenmon_notion_task_audit[\"tenmon-notion-task-audit\"]\n    tenmon_notion_task_readback[\"tenmon-notion-task-readback\"]\n    tenmon_notion_task_requeue[\"tenmon-notion-task-requeue\"]\n    tenmon_notion_task_seed[\"tenmon-notion-task-seed\"]\n    tenmon_notion_task_status_fix[\"tenmon-notion-task-status-fix\"]\n    tenmon_operations_level_autonomy[\"tenmon-operations-level-autonomy\"]\n    tenmon_runtime_watchdog[\"tenmon-runtime-watchdog\"]\n    tenmon_storage[\"tenmon-storage\"]\n    tenmon_strict_promotion[\"tenmon-strict-promotion\"]\n    tenmon_todaycut_stack[\"tenmon-todaycut-stack\"]\n    network -->|After| tenmon_ark_api\n    tenmon_ark_api -->|After| tenmon_auto_patch\n    network_online -->|After| tenmon_auto_runner\n    tenmon_ark_api -->|After| tenmon_auto_runner\n    tenmon_auto_runner -->|Wants| network_online\n    tenmon_ark_api -->|After| tenmon_book_quality_loop\n    tenmon_ark_api -->|After| tenmon_campaign_os\n    tenmon_auto_patch -->|After| tenmon_campaign_os\n    network -->|After| tenmon_infra_audit\n    tenmon_ark_api -->|After| tenmon_infra_audit\n    network_online -->|After| tenmon_notion_runtime_sync\n    tenmon_ark_api -->|After| tenmon_notion_runtime_sync\n    tenmon_runtime_watchdog -->|After| tenmon_notion_runtime_sync\n    tenmon_notion_runtime_sync -->|Wants| network_online\n    tenmon_notion_task_seed -->|After| tenmon_notion_task_audit\n    tenmon_strict_promotion -->|After| tenmon_notion_task_audit\n    tenmon_notion_task_audit -->|Wants| tenmon_notion_task_seed\n    tenmon_notion_task_audit -->|Wants| tenmon_strict_promotion\n    tenmon_notion_task_requeue -->|After| tenmon_notion_task_readback\n    tenmon_notion_task_readback -->|Wants| tenmon_notion_task_requeue\n    tenmon_notion_task_audit -->|After| tenmon_notion_task_requeue\n    tenmon_notion_task_requeue -->|Wants| tenmon_notion_task_audit\n    tenmon_todaycut_stack -->|After| tenmon_notion_task_seed\n    tenmon_strict_promotion -->|After| tenmon_notion_task_seed\n    tenmon_notion_task_seed -->|Wants| tenmon_todaycut_stack\n    tenmon_notion_task_seed -->|Wants| tenmon_strict_promotion\n    tenmon_notion_task_readback -->|After| tenmon_notion_task_status_fix\n    tenmon_notion_task_status_fix -->|Wants| tenmon_notion_task_readback\n    network_online -->|After| tenmon_operations_level_autonomy\n    tenmon_operations_level_autonomy -->|Wants| network_online\n    network_online -->|After| tenmon_runtime_watchdog\n    tenmon_ark_api -->|After| tenmon_runtime_watchdog\n    tenmon_runtime_watchdog -->|Wants| network_online\n    network -->|After| tenmon_storage\n    tenmon_todaycut_stack -->|After| tenmon_strict_promotion\n    tenmon_strict_promotion -->|Wants| tenmon_todaycut_stack\n    network_online -->|After| tenmon_todaycut_stack\n    tenmon_ark_api -->|After| tenmon_todaycut_stack\n    tenmon_todaycut_stack -->|Wants| network_online"
+  }
+}

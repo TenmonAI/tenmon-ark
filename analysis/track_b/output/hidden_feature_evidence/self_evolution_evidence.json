@@ -1,0 +1,47 @@
+{
+  "selfEvolution": {
+    "occurrences": 1,
+    "sample": [
+      "-- No entries --"
+    ]
+  },
+  "selfHeal": {
+    "occurrences": 1,
+    "sample": [
+      "-- No entries --"
+    ]
+  },
+  "selfBuild": {
+    "occurrences": 1,
+    "sample": [
+      "-- No entries --"
+    ]
+  },
+  "autonomous": {
+    "occurrences": 1,
+    "sample": [
+      "-- No entries --"
+    ]
+  },
+  "self-repair": {
+    "occurrences": 1,
+    "sample": [
+      "-- No entries --"
+    ]
+  },
+  "evolution-loop": {
+    "occurrences": 1,
+    "sample": [
+      "-- No entries --"
+    ]
+  },
+  "db_growth_log": {
+    "error": "table may not exist"
+  },
+  "db_growth_seeds": {
+    "error": "table may not exist"
+  },
+  "db_ark_consciousness": {
+    "error": "table may not exist"
+  }
+}

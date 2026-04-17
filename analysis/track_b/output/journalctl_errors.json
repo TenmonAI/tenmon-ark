@@ -1,0 +1,26 @@
+{
+  "tenmon-ark-api": {
+    "total_error_lines": 1,
+    "recent_errors": [
+      "2026-04-11T23:42:32+0900 x220-158-23-9 systemd[1]: Failed to start TENMON-ARK API."
+    ]
+  },
+  "tenmon-ark": {
+    "total_error_lines": 1,
+    "recent_errors": [
+      "-- No entries --"
+    ]
+  },
+  "nginx": {
+    "total_error_lines": 1,
+    "recent_errors": [
+      "-- No entries --"
+    ]
+  },
+  "system_critical": {
+    "total_lines": 1,
+    "recent": [
+      "2026-04-16T13:20:08+0900 x220-158-23-9 sshd[314323]: fatal: userauth_pubkey: parse publickey packet: incomplete message [preauth]"
+    ]
+  }
+}

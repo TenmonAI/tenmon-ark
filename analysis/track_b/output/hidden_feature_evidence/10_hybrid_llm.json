@@ -1,0 +1,70 @@
+{
+  "feature_name": "hybrid_llm",
+  "connection_status": "absent",
+  "evidence": {
+    "files_found": [
+      "server/_core/llm.ts",
+      "api/src/core/llmWrapper.ts",
+      "api/src/core/llm.ts",
+      "api/dist/core/llm.js",
+      "api/dist/core/llmWrapper.js",
+      "api/src/kanagi/llm/dialecticLLM.ts",
+      "api/src/kanagi.bak.spiral_cap.1770666354/llm/dialecticLLM.ts",
+      "api/dist/kanagi/llm/dialecticLLM.js"
+    ],
+    "tables_with_data": [],
+    "services_involved": [],
+    "api_endpoints": [
+      "kokuzo/fractal/expansion.ts",
+      "dist/index.js",
+      "dist/public/assets/index-CqXQwYS0-1776126918766.js",
+      "dist/public/assets/dash.all.min-DZdVffIc-1776126918766.js",
+      "dist/public/assets/index-BGMYO5VM-1776126918766.js",
+      "lib/intellect/router.ts",
+      "client/dist.bak.1776138648/assets/index-D_7Esf0q.js",
+      "client/dist.bak.1776138648/assets/index-m2WHTEyM.js",
+      "client/dist.bak.1776138648/assets/dash.all.min-Oikk9St1.js",
+      "client/src/lib/atlas/atlasClient.ts",
+      "server/lpqa-enhanced.test.ts",
+      "server/chat/atlasChatRouter.ts",
+      "server/widget/widget-api.ts",
+      "server/_core/llm.ts",
+      "server/reisho/reishoPipeline.ts",
+      "server/chat-enhanced.test.ts",
+      "server/ife.test.ts",
+      "server/api/docs/generator.ts",
+      "server/routers/lpQaRouterV4.ts",
+      "api/src/core/llmWrapper.ts",
+      "api/src/core/llm.ts",
+      "api/src/routes.bak.p2.1770613286/chat.ts",
+      "api/src/provider/providerPlan.ts",
+      "api/src/routes/chat.ts",
+      "api/src/routes/chat_parts/gates_impl.ts",
+      "api/src/routes/adminMacDecision.ts",
+      "api/dist/core/llm.js",
+      "api/dist/core/llmWrapper.js",
+      "api/dist/provider/providerPlan.js",
+      "api/dist/routes/adminMacDecision.js",
+      "api/dist/routes/chat_parts/gates_impl.js",
+      "api/dist/routes/chat.js"
+    ],
+    "switch_logic_files": [
+      "dist/public/assets/index-CqXQwYS0-1776126918766.js",
+      "dist/public/assets/dash.all.min-DZdVffIc-1776126918766.js",
+      "client/dist.bak.1776138648/assets/index-D_7Esf0q.js",
+      "client/dist.bak.1776138648/assets/dash.all.min-Oikk9St1.js"
+    ]
+  },
+  "activity": {
+    "count_24h": 0,
+    "count_7d": 0,
+    "count_30d": 0,
+    "last_activity": null
+  },
+  "diagnosis": {
+    "working_as_designed": false,
+    "root_cause_if_broken": "LLM使用ログが記録されていないか、テーブルが存在しない",
+    "activation_difficulty": "S"
+  },
+  "recommendation": "ハイブリッドLLM切替ロジックを確認し、コスト/品質に基づく自動切替を有効化する"
+}

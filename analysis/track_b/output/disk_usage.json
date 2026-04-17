@@ -1,0 +1,12 @@
+{
+  "df": "Filesystem      Size  Used Avail Use% Mounted on\ntmpfs           1.2G  1.2M  1.2G   1% /run\n/dev/vda1       388G   36G  353G  10% /\ntmpfs           5.9G     0  5.9G   0% /dev/shm\ntmpfs           5.0M     0  5.0M   0% /run/lock\ntmpfs           5.9G  432K  5.9G   1% /run/qemu\n/dev/vda15      105M  6.1M   99M   6% /boot/efi\ntmpfs           1.2G   11M  1.2G   1% /run/user/0",
+  "directory_sizes": {
+    "/opt/tenmon-ark": "0",
+    "/opt/tenmon-ark-data": "12G",
+    "/opt/tenmon-ark-repo": "2.4G",
+    "/opt/tenmon-mc": "132K",
+    "/var/www/tenmon-mc": "672K",
+    "/var/log": "5.8G",
+    "/tmp": "410M"
+  }
+}

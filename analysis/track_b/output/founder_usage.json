@@ -1,0 +1,124 @@
+{
+  "timestamp": "2026-04-17T05:36:35Z",
+  "sqlite_stats": {
+    "total_sessions": 7024,
+    "total_conversation_entries": 35280,
+    "total_user_memories": "N/A",
+    "kokuzo_files": 1,
+    "kokuzo_chunks": 0,
+    "kokuzo_seeds": 68,
+    "kokuzo_core_entries": 164,
+    "pwa_threads": 2,
+    "pwa_messages": 12,
+    "persona_states": "N/A",
+    "daily_conversation_last_30d": [
+      {
+        "day": "2026-04-17",
+        "cnt": 62
+      },
+      {
+        "day": "2026-04-16",
+        "cnt": 272
+      },
+      {
+        "day": "2026-04-15",
+        "cnt": 288
+      },
+      {
+        "day": "2026-04-14",
+        "cnt": 82
+      },
+      {
+        "day": "2026-04-13",
+        "cnt": 58
+      },
+      {
+        "day": "2026-04-12",
+        "cnt": 464
+      },
+      {
+        "day": "2026-04-11",
+        "cnt": 952
+      },
+      {
+        "day": "2026-04-10",
+        "cnt": 906
+      },
+      {
+        "day": "2026-04-09",
+        "cnt": 204
+      },
+      {
+        "day": "2026-04-08",
+        "cnt": 84
+      },
+      {
+        "day": "2026-04-07",
+        "cnt": 44
+      },
+      {
+        "day": "2026-04-01",
+        "cnt": 192
+      },
+      {
+        "day": "2026-03-31",
+        "cnt": 260
+      },
+      {
+        "day": "2026-03-30",
+        "cnt": 140
+      },
+      {
+        "day": "2026-03-29",
+        "cnt": 770
+      },
+      {
+        "day": "2026-03-28",
+        "cnt": 504
+      },
+      {
+        "day": "2026-03-27",
+        "cnt": 2128
+      },
+      {
+        "day": "2026-03-26",
+        "cnt": 3010
+      },
+      {
+        "day": "2026-03-25",
+        "cnt": 1590
+      },
+      {
+        "day": "2026-03-24",
+        "cnt": 1578
+      },
+      {
+        "day": "2026-03-23",
+        "cnt": 1160
+      },
+      {
+        "day": "2026-03-22",
+        "cnt": 984
+      },
+      {
+        "day": "2026-03-21",
+        "cnt": 934
+      },
+      {
+        "day": "2026-03-20",
+        "cnt": 1200
+      },
+      {
+        "day": "2026-03-19",
+        "cnt": 1352
+      },
+      {
+        "day": "2026-03-18",
+        "cnt": 812
+      }
+    ],
+    "avg_user_message_length": 19.3,
+    "avg_assistant_message_length": 180.1
+  },
+  "note": "All personal data has been excluded. Only aggregate counts and distributions are reported."
+}

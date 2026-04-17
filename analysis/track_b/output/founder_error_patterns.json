@@ -1,0 +1,12 @@
+{
+  "total_errors": 512,
+  "error_types": {
+    "other": 511,
+    "502_bad_gateway": 1
+  },
+  "log_files_checked": [
+    "/var/log/nginx/error.log",
+    "/var/log/nginx/tenmon-ark.com.error.log"
+  ],
+  "note": "All IP addresses and hostnames masked."
+}
