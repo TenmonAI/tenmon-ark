@@ -465,6 +465,256 @@ export function SukuyouAboutPage({ onBack }: SukuyouAboutPageProps) {
           ))}
         </div>
 
+        {/* ── 宿曜算出基準 ── */}
+        <SectionTitle>宿曜算出基準について</SectionTitle>
+
+        {/* 3秒で分かる要約 */}
+        <div style={{
+          background: C.arkGoldBg,
+          border: `1.5px solid ${C.arkGoldBorder}`,
+          borderRadius: 10,
+          padding: "18px 20px",
+          marginBottom: 20,
+        }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: "#92400e", marginBottom: 8 }}>
+            3秒で分かる要約
+          </div>
+          <p style={{ fontSize: 13.5, lineHeight: 1.85, color: C.text, margin: 0 }}>
+            TENMON-ARKは、<strong>角宿＝1番</strong>の伝統採番、<strong>均等分割</strong>（360°÷27）、<strong>JST 0時基準</strong>、<strong>太陰太陽暦（旧暦）</strong>で宿を算出しています。他サイトと番号が違っても、宿の名前が同じなら算出は一致しています。
+          </p>
+        </div>
+
+        {/* 導入2段落 */}
+        <p style={{ fontSize: 14, lineHeight: 1.9, marginBottom: 12 }}>
+          宿曜占星術には、一つだけの「正解」はありません。流派によって採番が異なり、暦の基準が異なり、月が宿を跨ぐ境界時刻の定義も異なります。同じ生年月日でも、採用する基準によって算出される宿が一つズレることがあります。
+        </p>
+        <p style={{ fontSize: 14, lineHeight: 1.9, marginBottom: 20 }}>
+          TENMON-ARKは、この事実を隠しません。<strong>どの基準を、なぜ採用しているか</strong>を明示することこそが、占術システムとしての誠実さだと考えています。
+        </p>
+
+        {/* 3つの選択軸 */}
+        <h3 style={{ fontSize: 15, fontWeight: 700, color: C.text, marginTop: 28, marginBottom: 14 }}>
+          宿曜算出の3つの選択軸
+        </h3>
+
+        {/* 軸1: 採番順序 */}
+        <div style={{
+          background: C.sectionBg,
+          border: `1px solid ${C.sectionBorder}`,
+          borderRadius: 10,
+          padding: "16px 18px",
+          marginBottom: 14,
+        }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: C.text, marginBottom: 8 }}>
+            軸1：採番順序 — どの宿を「1番」とするか
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            <div style={{ display: "flex", gap: 8 }}>
+              <span style={{ flex: "0 0 90px", fontSize: 13, fontWeight: 600, color: "#92400e" }}>伝統採番</span>
+              <span style={{ flex: 1, fontSize: 13, lineHeight: 1.7, color: C.textSub }}>角宿＝1。空海伝来『宿曜経』原典の順序。古代インド天文学の原型に最も近い</span>
+            </div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <span style={{ flex: "0 0 90px", fontSize: 13, fontWeight: 600, color: "#92400e" }}>流派採番</span>
+              <span style={{ flex: 1, fontSize: 13, lineHeight: 1.7, color: C.textSub }}>昴宿＝1。日本の近現代占術流派で広く使われる順序</span>
+            </div>
+          </div>
+          <p style={{ fontSize: 12.5, lineHeight: 1.7, color: C.textMuted, marginTop: 10, marginBottom: 0 }}>
+            補足：どちらも宿そのものの定義は同じです。違うのは「何番目に書くか」だけ。斗宿は斗宿、角宿は角宿であり、番号が違うから別の宿になるわけではありません。
+          </p>
+        </div>
+
+        {/* 軸2: 分度法 */}
+        <div style={{
+          background: C.sectionBg,
+          border: `1px solid ${C.sectionBorder}`,
+          borderRadius: 10,
+          padding: "16px 18px",
+          marginBottom: 14,
+        }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: C.text, marginBottom: 8 }}>
+            軸2：分度法 — 27宿をどう分割するか
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            <div style={{ display: "flex", gap: 8 }}>
+              <span style={{ flex: "0 0 90px", fontSize: 13, fontWeight: 600, color: "#92400e" }}>均等分割法</span>
+              <span style={{ flex: 1, fontSize: 13, lineHeight: 1.7, color: C.textSub }}>月の黄経360°を27等分（各宿13.333°）。再現性が高く、検証可能</span>
+            </div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <span style={{ flex: "0 0 90px", fontSize: 13, fontWeight: 600, color: "#92400e" }}>不均等分割法</span>
+              <span style={{ flex: 1, fontSize: 13, lineHeight: 1.7, color: C.textSub }}>斗宿（牽牛宿）だけ特別な分度を割り当てる古式。流派により分度が異なる</span>
+            </div>
+          </div>
+        </div>
+
+        {/* 軸3: 日付基準 */}
+        <div style={{
+          background: C.sectionBg,
+          border: `1px solid ${C.sectionBorder}`,
+          borderRadius: 10,
+          padding: "16px 18px",
+          marginBottom: 20,
+        }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: C.text, marginBottom: 8 }}>
+            軸3：日付基準 — 月の位置をいつ計測するか
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            <div style={{ display: "flex", gap: 8 }}>
+              <span style={{ flex: "0 0 90px", fontSize: 13, fontWeight: 600, color: "#92400e" }}>JST基準</span>
+              <span style={{ flex: 1, fontSize: 13, lineHeight: 1.7, color: C.textSub }}>日本標準時0時で宿を判定</span>
+            </div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <span style={{ flex: "0 0 90px", fontSize: 13, fontWeight: 600, color: "#92400e" }}>UTC基準</span>
+              <span style={{ flex: 1, fontSize: 13, lineHeight: 1.7, color: C.textSub }}>協定世界時0時で判定（JSTと9時間差）</span>
+            </div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <span style={{ flex: "0 0 90px", fontSize: 13, fontWeight: 600, color: "#92400e" }}>正午基準</span>
+              <span style={{ flex: 1, fontSize: 13, lineHeight: 1.7, color: C.textSub }}>各地の正午で判定する古式</span>
+            </div>
+          </div>
+          <p style={{ fontSize: 12.5, lineHeight: 1.7, color: C.textMuted, marginTop: 10, marginBottom: 0 }}>
+            補足：月は27.3日で全天を一周するため、1日に約13°移動します。境界日ではタイムゾーンの差で宿が1つズレる可能性があります。
+          </p>
+        </div>
+
+        {/* TENMON-ARKの選択 */}
+        <h3 style={{ fontSize: 15, fontWeight: 700, color: C.text, marginTop: 28, marginBottom: 14 }}>
+          TENMON-ARKの選択
+        </h3>
+        <div style={{
+          background: C.card,
+          border: `2px solid ${C.arkGoldBorder}`,
+          borderRadius: 10,
+          padding: "18px 20px",
+          marginBottom: 16,
+        }}>
+          {[
+            { label: "採番順序", value: "角宿＝1（伝統採番）" },
+            { label: "分度法", value: "均等分割（13.333°／宿）" },
+            { label: "日付基準", value: "JST 0時" },
+            { label: "暦法", value: "太陰太陽暦（旧暦）" },
+            { label: "表示", value: "宿名ファースト・番号は補助" },
+            { label: "他サイト照合", value: "宿の名前で比較" },
+          ].map((item, i, arr) => (
+            <div key={item.label} style={{
+              display: "flex",
+              gap: 10,
+              paddingBottom: i < arr.length - 1 ? 10 : 0,
+              marginBottom: i < arr.length - 1 ? 10 : 0,
+              borderBottom: i < arr.length - 1 ? `1px solid ${C.border}` : "none",
+            }}>
+              <span style={{ flex: "0 0 90px", fontSize: 13, fontWeight: 600, color: "#92400e" }}>{item.label}</span>
+              <span style={{ flex: 1, fontSize: 13, lineHeight: 1.7, color: C.text }}>{item.value}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* なぜこの基準なのか */}
+        <div style={{ marginBottom: 20 }}>
+          <div style={{ fontSize: 13.5, fontWeight: 600, color: C.text, marginBottom: 10 }}>なぜ、この基準なのか</div>
+          {[
+            { title: "原典『宿曜経』への忠実性", desc: "空海が伝えた採番は千年以上変わっていません。流派採番は運営者の解釈によって将来変動する可能性があります" },
+            { title: "計算の再現性", desc: "均等分割は誰が計算しても同じ結果になります。不均等法は流派ごとに分度が違い、標準化されていません" },
+            { title: "日本の暦との整合性", desc: "旧暦自体が東アジアの暦法であり、日本時間との整合性が自然です" },
+            { title: "宿名ファースト表示", desc: "宿の本質は名前にあります。番号を前面に出すと、異なる採番体系の他サイトと比較したときにユーザーが混乱します" },
+          ].map((item) => (
+            <div key={item.title} style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+              <span style={{ color: C.arkGold, fontSize: 14, lineHeight: 1.7, flexShrink: 0 }}>●</span>
+              <div>
+                <span style={{ fontSize: 13, fontWeight: 600, color: C.text }}>{item.title}</span>
+                <span style={{ fontSize: 13, color: C.textSub }}> — {item.desc}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* 他サイトとの照合 */}
+        <h3 style={{ fontSize: 15, fontWeight: 700, color: C.text, marginTop: 28, marginBottom: 14 }}>
+          他サイトとの照合について
+        </h3>
+        <p style={{ fontSize: 14, lineHeight: 1.9, marginBottom: 12 }}>
+          TENMON-ARKの算出結果を他の宿曜サイトと照合する場合、<strong>番号ではなく宿の名前で比較してください</strong>。
+        </p>
+        <div style={{
+          background: C.quoteBg,
+          border: `1px solid ${C.quoteBorder}`,
+          borderRadius: 8,
+          padding: "16px 18px",
+          marginBottom: 12,
+          fontFamily: "monospace",
+        }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 10 }}>例 ／ 1990年9月26日生まれ</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            <div style={{ display: "flex", gap: 8, fontSize: 13, lineHeight: 1.7 }}>
+              <span style={{ flex: "0 0 160px", color: C.text }}>TENMON-ARK</span>
+              <span style={{ color: C.text }}>斗宿（伝統採番 8番）</span>
+            </div>
+            <div style={{ display: "flex", gap: 8, fontSize: 13, lineHeight: 1.7 }}>
+              <span style={{ flex: "0 0 160px", color: C.text }}>他サイト（昴宿=1系）</span>
+              <span style={{ color: C.text }}>斗宿（流派採番 19番）</span>
+            </div>
+          </div>
+          <p style={{ fontSize: 12.5, lineHeight: 1.7, color: C.textSub, marginTop: 10, marginBottom: 0 }}>
+            番号は違いますが、同じ「斗宿」です。これは誤りではなく、採番体系が異なるだけです。
+          </p>
+        </div>
+        <p style={{ fontSize: 13, lineHeight: 1.8, color: C.textSub, marginBottom: 20 }}>
+          もし宿の<strong>名前</strong>が他サイトと異なる場合は、境界日（月が宿を跨ぐ日）にあたってタイムゾーン基準の差で判定が分かれているか、該当サイトが独自のローカル補正を持っているか、暦法に微細な違いがあるかのいずれかです。
+        </p>
+
+        {/* 精度ランク */}
+        <h3 style={{ fontSize: 15, fontWeight: 700, color: C.text, marginTop: 28, marginBottom: 14 }}>
+          精度ランク
+        </h3>
+        <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 20 }}>
+          {[
+            { rank: "A", color: "#4a9b4a", title: "事前検証済み", desc: "検証済みルックアップテーブル（38,000件以上）にエントリがある日付" },
+            { rank: "B", color: "#c9a14a", title: "補間計算", desc: "ルックアップテーブルの補間によって高精度に計算可能な日付" },
+            { rank: "C", color: "#b07a7a", title: "旧暦フォールバック", desc: "旧暦計算による算出。境界日では±1日の誤差可能性あり" },
+          ].map((item) => (
+            <div key={item.rank} style={{
+              display: "flex",
+              gap: 14,
+              alignItems: "flex-start",
+              background: C.card,
+              border: `1px solid ${C.border}`,
+              borderRadius: 10,
+              padding: "14px 16px",
+            }}>
+              <span style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                width: 36,
+                height: 36,
+                borderRadius: "50%",
+                background: item.color,
+                color: "#fff",
+                fontSize: 15,
+                fontWeight: 700,
+                flexShrink: 0,
+              }}>{item.rank}</span>
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 600, color: C.text, marginBottom: 4 }}>{item.title}</div>
+                <div style={{ fontSize: 13, lineHeight: 1.7, color: C.textSub }}>{item.desc}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+        <p style={{ fontSize: 13, lineHeight: 1.8, color: C.textSub, marginBottom: 20 }}>
+          ランクを表示するのは、占いの結果は絶対ではなく、採用している基準に依存することを利用者に理解していただくためです。
+        </p>
+
+        {/* 深化データと採番の関係 */}
+        <h3 style={{ fontSize: 15, fontWeight: 700, color: C.text, marginTop: 28, marginBottom: 14 }}>
+          深化データと採番の関係
+        </h3>
+        <p style={{ fontSize: 14, lineHeight: 1.9, marginBottom: 12 }}>
+          TENMON-ARK独自の「核心の葛藤」「反転軸」「いろは根源音」「深化問いかけ」といった深化データは、<strong>宿の名前</strong>に紐付けられています。採番体系が変わっても、宿の名前が一致する限り、深化データは正しく作用します。
+        </p>
+        <p style={{ fontSize: 14, lineHeight: 1.9, marginBottom: 24 }}>
+          この設計により、TENMON-ARKは<strong>原典への忠実性</strong>と<strong>流派との照合可能性</strong>を同時に満たしています。
+        </p>
+
         {/* ── 三九法 ── */}
         <SectionTitle>三九法とは何か</SectionTitle>
         <p style={{ fontSize: 14, lineHeight: 1.9, marginBottom: 12 }}>
