@@ -36,6 +36,7 @@ import { connectorsRouter } from "./routes/connectors.js";
 import { feedbackRouter } from "./routes/feedback.js";
 import healthRouter from "./routes/health.js";
 import { syncPhaseARouter } from "./routes/syncPhaseA.js";
+import guestRouter from "./routes/guest.js";
 
 // Debug: 未処理例外のハンドリング
 const pid = process.pid;
@@ -98,6 +99,14 @@ try {
   process.exit(1);
 }
 
+// Guest chat CORS: allow LP domain
+const GUEST_CORS = cors({
+  origin: [/futomani88\.com$/, /localhost/],
+  methods: ["POST", "OPTIONS"],
+  allowedHeaders: ["Content-Type"],
+});
+app.use("/api/guest", GUEST_CORS);
+
 app.use(cors());
 app.use(express.json());
 app.use(cookieParser());
@@ -155,6 +164,9 @@ try {
 app.get("/health", (_, res) => {
   res.json({ status: "ok" });
 });
+
+// Guest chat (LP体験用)
+app.use("/api", guestRouter);
 
 app.use(koshikiConsoleRouter);
 app.listen(PORT, "0.0.0.0", () => {
