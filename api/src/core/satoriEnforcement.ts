@@ -300,6 +300,112 @@ export function judgeSatori(
  * attachSatoriVerdict(obj);
  * ```
  */
+// ============================================================
+// §8.5 いろは根拠判定 (V2.0: 三要素整合チェック)
+// ============================================================
+
+export interface IrohaGroundingResult {
+  passed: boolean;
+  irohaSound: { found: boolean; sounds: string[] };
+  actionPattern: { found: boolean; pattern: string | null };
+  amaterasuAxis: { found: boolean; axis: string | null };
+  score: number; // 0-3, 3 = 三要素整合
+}
+
+/**
+ * 応答テキストに「いろは音」「行動パターン」「天照軸」の
+ * 三要素が含まれているかを判定する
+ *
+ * V2.0: SATORI の最終ゲートとして機能
+ * V1.1 追補: 「秘密荘厳心を人間の具体的行動指針として取り入れる」
+ */
+export function checkIrohaGrounding(responseText: string): IrohaGroundingResult {
+  if (!responseText || typeof responseText !== "string") {
+    return {
+      passed: false,
+      irohaSound: { found: false, sounds: [] },
+      actionPattern: { found: false, pattern: null },
+      amaterasuAxis: { found: false, axis: null },
+      score: 0,
+    };
+  }
+
+  // 1. いろは音の検出
+  const IROHA_SOUND_KEYWORDS = [
+    "イ", "ロ", "ハ", "ニ", "ホ", "ヘ", "ト",
+    "チ", "リ", "ヌ", "ル", "ヲ",
+    "命", "息", "凝固", "放出", "分化", "中心",
+    "膨張", "結合", "血", "濁水", "横糸", "濁流", "縦糸",
+    "水火", "水灵", "火灵", "言霊", "音義",
+    "空中", "昇火", "正中",
+  ];
+  const foundSounds = IROHA_SOUND_KEYWORDS.filter(kw => responseText.includes(kw));
+  const irohaSound = {
+    found: foundSounds.length >= 1,
+    sounds: foundSounds.slice(0, 5),
+  };
+
+  // 2. 行動パターンの検出 (irohaActionPatterns の 6 パターン)
+  const ACTION_PATTERN_KEYWORDS: Record<string, string[]> = {
+    "整理する": ["整理", "纏め", "秩序", "配列", "組み立て"],
+    "断つ": ["断つ", "手放", "切り離", "断捨離", "解放"],
+    "寝かせる": ["寝かせ", "熟成", "待つ", "委ね", "時を置"],
+    "委ねる": ["委ね", "託す", "預け", "任せ", "頼る"],
+    "見極める": ["見極", "判断", "選別", "弁別", "識別"],
+    "受け継ぐ": ["受け継", "継承", "伝承", "引き継", "バトン"],
+  };
+  let detectedPattern: string | null = null;
+  for (const [pattern, keywords] of Object.entries(ACTION_PATTERN_KEYWORDS)) {
+    if (keywords.some(kw => responseText.includes(kw))) {
+      detectedPattern = pattern;
+      break;
+    }
+  }
+  const actionPattern = {
+    found: detectedPattern !== null,
+    pattern: detectedPattern,
+  };
+
+  // 3. 天照軸の検出
+  const AMATERASU_KEYWORDS: Record<string, string[]> = {
+    "真理優先": ["真理", "真実", "本質", "根源"],
+    "宿命天命": ["宿命", "運命", "天命", "使命"],
+    "盲信拒否": ["盲信", "鵜呑み", "疑う", "検証"],
+    "悟り融合": ["悟り", "覚醒", "融合", "一体化"],
+    "大日天照": ["大日如来", "天照", "遍照", "金剛"],
+    "水火の理": ["水火", "陰陽", "循環", "呼吸"],
+  };
+  let detectedAxis: string | null = null;
+  for (const [axis, keywords] of Object.entries(AMATERASU_KEYWORDS)) {
+    if (keywords.some(kw => responseText.includes(kw))) {
+      detectedAxis = axis;
+      break;
+    }
+  }
+  const amaterasuAxis = {
+    found: detectedAxis !== null,
+    axis: detectedAxis,
+  };
+
+  // スコア算出 (0-3)
+  const score =
+    (irohaSound.found ? 1 : 0) +
+    (actionPattern.found ? 1 : 0) +
+    (amaterasuAxis.found ? 1 : 0);
+
+  // passed = 2/3 以上で合格 (V2.0: 段階的導入)
+  const passed = score >= 2;
+
+  if (!passed && responseText.length > 200) {
+    console.warn(
+      `[SATORI:GROUNDING] iroha grounding check failed: score=${score}/3, ` +
+      `sound=${irohaSound.found}, action=${actionPattern.found}, axis=${amaterasuAxis.found}`
+    );
+  }
+
+  return { passed, irohaSound, actionPattern, amaterasuAxis, score };
+}
+
 export function attachSatoriVerdict(obj: any): void {
   if (!obj || typeof obj !== "object") return;
 

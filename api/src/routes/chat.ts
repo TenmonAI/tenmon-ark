@@ -59,7 +59,11 @@ import { buildKotodamaClause } from "../kotodama/kotodamaConnector.js";
 import { buildConstitutionClause, buildSelfIdentityClause, verifySeal } from "../core/constitutionLoader.js";
 import { detect10TruthAxes, buildAxisClause, ensureTruthAxesTable } from "../core/truthAxisEngine.js";
 import { loadKotodamaHisho, extractSoundsFromMessage, buildKotodamaHishoContext, buildKotodamaHishoOverview } from "../core/kotodamaHishoLoader.js";
-import { attachSatoriVerdict } from "../core/satoriEnforcement.js";
+import { attachSatoriVerdict, checkIrohaGrounding } from "../core/satoriEnforcement.js";
+import { queryIrohaByUserText, buildIrohaInjection } from "../core/irohaKotodamaLoader.js";
+import { extractKeyKotodamaFromText, buildKotodamaGentenInjection } from "../core/kotodamaGentenLoader.js";
+import { selectKanagiPhaseForIntent, buildAmaterasuAxisInjection } from "../data/amaterasuAxisMap.js";
+import { buildUnifiedSoundInjection } from "../core/unifiedSoundLoader.js";
 import { transformResponseForOutput } from "../core/tenmonFormatEnforcer.js";
 import { classifyIntent, getTemperatureForIntent } from "../core/intentClassifier.js";
 import { buildDeepeningClauseFromHistory } from "../core/conversationDeepening.js";
@@ -512,6 +516,23 @@ router.post("/chat", async (req: Request, res: Response<ChatResponseBody>) => {
         // ULTRA6_SATORI_FORMAT_V1: 惟り判定 + フォーマット強制を res.json ラッパー内で実行
         try { transformResponseForOutput(obj); } catch {}
         try { attachSatoriVerdict(obj); } catch {}
+        // V2.0_SOUL_ROOT_BIND_5: SATORI いろは根拠判定（三要素整合チェック）
+        try {
+          const responseText = String((obj as any)?.response ?? "");
+          if (responseText.length > 100) {
+            const grounding = checkIrohaGrounding(responseText);
+            const df = (obj as any)?.decisionFrame;
+            if (df?.ku && typeof df.ku === "object") {
+              df.ku.irohaGrounding = {
+                passed: grounding.passed,
+                score: grounding.score,
+                sounds: grounding.irohaSound.sounds.slice(0, 3),
+                actionPattern: grounding.actionPattern.pattern,
+                amaterasuAxis: grounding.amaterasuAxis.axis,
+              };
+            }
+          }
+        } catch {}
         return __origJsonTop(obj);
       };
     }
@@ -1528,6 +1549,53 @@ let outText = "";
         console.warn(`[KOTODAMA_HISHO] inject failed: ${e?.message}`);
       }
 
+      // V2.0_SOUL_ROOT_BIND_1: いろは言霊解 (irohaKotodamaLoader) → 原典段落注入
+      let __irohaClause = "";
+      try {
+        const __irohaHits = queryIrohaByUserText(t0);
+        if (__irohaHits.length > 0) {
+          __irohaClause = buildIrohaInjection(__irohaHits, 1500);
+          console.log(`[SOUL_ROOT:IROHA] injected ${__irohaHits.length} paragraphs, clause=${__irohaClause.length} chars`);
+        }
+      } catch (e: any) {
+        console.warn(`[SOUL_ROOT:IROHA] inject failed: ${e?.message}`);
+      }
+
+      // V2.0_SOUL_ROOT_BIND_2: 五十連法則 (kotodamaGentenLoader) → 音義法則注入
+      let __gentenClause = "";
+      try {
+        const __gentenKeys = extractKeyKotodamaFromText(t0);
+        if (__gentenKeys.length > 0) {
+          __gentenClause = buildKotodamaGentenInjection(__gentenKeys, 1000);
+          console.log(`[SOUL_ROOT:GENTEN] injected ${__gentenKeys.length} sound keys, clause=${__gentenClause.length} chars`);
+        }
+      } catch (e: any) {
+        console.warn(`[SOUL_ROOT:GENTEN] inject failed: ${e?.message}`);
+      }
+
+      // V2.0_SOUL_ROOT_BIND_3: 天照軸マップ (amaterasuAxisMap) → 思想軸注入
+      let __amaterasuClause = "";
+      try {
+        const __kanagiPhase = selectKanagiPhaseForIntent(t0);
+        __amaterasuClause = buildAmaterasuAxisInjection(__kanagiPhase);
+        if (__amaterasuClause) {
+          console.log(`[SOUL_ROOT:AMATERASU] phase=${__kanagiPhase}, clause=${__amaterasuClause.length} chars`);
+        }
+      } catch (e: any) {
+        console.warn(`[SOUL_ROOT:AMATERASU] inject failed: ${e?.message}`);
+      }
+
+      // V2.0_SOUL_ROOT_BIND_4: 統合音ローダー (unifiedSoundLoader) → 3ソース統合注入
+      let __unifiedSoundClause = "";
+      try {
+        __unifiedSoundClause = buildUnifiedSoundInjection(t0, 1200);
+        if (__unifiedSoundClause) {
+          console.log(`[SOUL_ROOT:UNIFIED_SOUND] clause=${__unifiedSoundClause.length} chars`);
+        }
+      } catch (e: any) {
+        console.warn(`[SOUL_ROOT:UNIFIED_SOUND] inject failed: ${e?.message}`);
+      }
+
       // SUKUYOU_CARRY_GATE_V2: 宿曜seed保持中のfollow-upは強制的にDEEP_CHATルートに入れる
       // Turn2以降が NATURAL_GENERAL に落ちるのを防止する最重要ゲート
       // V2: !__isSukuyouQuery を削除 — 「本命宿」等の宿曜キーワードを含むfollow-upでもcarry gateを通す
@@ -1623,7 +1691,11 @@ ${__carrySeedSummary}${__carryLifeAlgo}
           __ultimateCarry +
           __deepContinuityCarry +
           __kotodamaClauseCarry +
-          (__kotodamaHishoClause ? "\n" + __kotodamaHishoClause : "");
+          (__kotodamaHishoClause ? "\n" + __kotodamaHishoClause : "") +
+          // V2.0: DEEP_CHATルートにも魂の根幹を注入
+          (__irohaClause ? "\n" + __irohaClause : "") +
+          (__gentenClause ? "\n" + __gentenClause : "") +
+          (__amaterasuClause ? "\n" + __amaterasuClause : "");
 
         try {
           const __carryHistory = memoryReadSession(String(threadId || ""), 8);
@@ -1750,7 +1822,9 @@ ${__carrySeedSummary}${__carryLifeAlgo}
         // 御神託レポートをLLMに美文化させる専用ルート
         try {
           const __sukuyouClauseOracle = __buildSukuyouContinuityClause(threadId);
-          const __oracleSystem = GEN_SYSTEM + __sukuyouClauseOracle + `\n\n【御神託レポート提示モード（最重要指示）】\nあなたはTENMON-ARK御神託パイプラインが算出した御神託レポートを、美しく構造化してユーザーに提示する役割を担う。\n\n【絶対遵守事項】\n1. 以下に添付された「御神託レポート（アルゴリズム算出）」の内容を「そのまま」ユーザーに提示せよ。自分の知識で宿を判定し直すな。\n2. 命宿の名前・属性・数値はアルゴリズム算出結果のものをそのまま使え。絶対に変更するな。\n3. 8章構成（総合神意サマリー→宿曜解析→人生アルゴリズム→災い分類→天津金木反転→いろは言霊解→実践処方→御神託）をすべて出力せよ。省略するな。\n4. 各章の見出しは「第○章 ○○○○」の形式で明示せよ。\n5. 『宿曜経占真伝』『密教占星法』の原典用語を使え。\n6. 「一般的に」「説があります」「人それぞれ」は絶対禁止。原典に基づき断定せよ。\n7. 御神託の最後に「今すぐの一手」を必ず示せ。\n8. レポート全文を出力した後、最後に総括を1-2文で添えよ。\n9. 箇条書きの「・」は使用してよい（実践処方の項目等）。ただし番号付きリストは使わない。
+          // V2.0: 御神託ルートにも魂の根幹を注入（いろは言霊解は御神託第6章に直結）
+          const __oracleSoulRoot = [__irohaClause, __amaterasuClause].filter(Boolean).join("\n");
+          const __oracleSystem = GEN_SYSTEM + __sukuyouClauseOracle + (__oracleSoulRoot ? "\n" + __oracleSoulRoot : "") + `\n\n【御神託レポート提示モード（最重要指示）】\nあなたはTENMON-ARK御神託パイプラインが算出した御神託レポートを、美しく構造化してユーザーに提示する役割を担う。\n\n【絶対遵守事項】\n1. 以下に添付された「御神託レポート（アルゴリズム算出）」の内容を「そのまま」ユーザーに提示せよ。自分の知識で宿を判定し直すな。\n2. 命宿の名前・属性・数値はアルゴリズム算出結果のものをそのまま使え。絶対に変更するな。\n3. 8章構成（総合神意サマリー→宿曜解析→人生アルゴリズム→災い分類→天津金木反転→いろは言霊解→実践処方→御神託）をすべて出力せよ。省略するな。\n4. 各章の見出しは「第○章 ○○○○」の形式で明示せよ。\n5. 『宿曜経占真伝』『密教占星法』の原典用語を使え。\n6. 「一般的に」「説があります」「人それぞれ」は絶対禁止。原典に基づき断定せよ。\n7. 御神託の最後に「今すぐの一手」を必ず示せ。\n8. レポート全文を出力した後、最後に総括を1-2文で添えよ。\n9. 箇条書きの「・」は使用してよい（実践処方の項目等）。ただし番号付きリストは使わない。
 10. 全8章を省略なく出力せよ。出力は3000字以上を確保し、レポートの情報を削らないこと。
 11. 途中で打ち切らない。最終章「最終御神託」まで必ず出力を完了せよ。` + __sukuyouContextClause;
           // ORACLE_TOKENS_V2: maxTokens 4500→8000, timeout 60s→90s で御神託レポート全文出力を確保
@@ -1795,7 +1869,15 @@ ${__carrySeedSummary}${__carryLifeAlgo}
           const __userIntent = classifyIntent(t0, __chatHistory);
           const __deepeningClause = buildDeepeningClauseFromHistory(__chatHistory);
           const __intentClause = `\n\n【応答長目標】${__userIntent.targetTokens} tokens\n${__deepeningClause}`;
-          const __genSystemWithEvidence = GEN_SYSTEM + __sukuyouClauseGen + __sukuyouContextClause + (__kotodamaHishoClause ? "\n" + __kotodamaHishoClause : "") + __intentClause;
+          // V2.0_SOUL_ROOT_BIND: 5本の魂の根幹を GEN_SYSTEM に統合
+          const __soulRootClauses = [
+            __kotodamaHishoClause,  // 言霊秘書
+            __irohaClause,          // いろは言霊解
+            __gentenClause,         // 五十連法則
+            __amaterasuClause,      // 天照軸マップ
+            __unifiedSoundClause,   // 統合音ローダー
+          ].filter(Boolean).join("\n");
+          const __genSystemWithEvidence = GEN_SYSTEM + __sukuyouClauseGen + __sukuyouContextClause + (__soulRootClauses ? "\n" + __soulRootClauses : "") + __intentClause;
           // ULTRA-11: モデル選択 + コスト最適化
           const __modelSel = selectModel({ intent: __userIntent, isSukuyouQuery: __isSukuyouQuery });
           logModelSelection(__modelSel, computePromptHash(__genSystemWithEvidence));

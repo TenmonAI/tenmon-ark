@@ -163,6 +163,56 @@ if [ "$SYNAPSE_EXISTS" = "1" ]; then
   ")
 fi
 
+# §17: いろは言霊解接続率 (synapse_log から SOUL_ROOT:IROHA タグ)
+IROHA_BIND_HITS_24H="0"
+if [ "$SYNAPSE_EXISTS" = "1" ]; then
+  IROHA_BIND_HITS_24H=$(sql_ro "
+    SELECT COUNT(*) FROM synapse_log
+    WHERE tag LIKE '%SOUL_ROOT%' OR tag LIKE '%iroha%'
+    AND createdAt > datetime('now', '-24 hours');
+  ")
+fi
+
+# §18: 五十連法則接続率 (synapse_log から GENTEN タグ)
+GENTEN_BIND_HITS_24H="0"
+if [ "$SYNAPSE_EXISTS" = "1" ]; then
+  GENTEN_BIND_HITS_24H=$(sql_ro "
+    SELECT COUNT(*) FROM synapse_log
+    WHERE tag LIKE '%GENTEN%' OR tag LIKE '%genten%'
+    AND createdAt > datetime('now', '-24 hours');
+  ")
+fi
+
+# §19: 天照軸マップ接続率 + いろは根拠スコア (evolution_ledger から)
+AMATERASU_BIND_HITS_24H="0"
+IROHA_GROUNDING_AVG="0"
+EL_EXISTS=$(sql_ro "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='evolution_ledger';")
+if [ "$EL_EXISTS" = "1" ]; then
+  # evolution_ledger の snapshot_json から irohaGrounding を含むエントリをカウント
+  AMATERASU_BIND_HITS_24H=$(sql_ro "
+    SELECT COUNT(*) FROM evolution_ledger
+    WHERE snapshot_json LIKE '%amaterasu%' OR snapshot_json LIKE '%AMATERASU%'
+    AND created_at > datetime('now', '-24 hours');
+  ")
+  IROHA_GROUNDING_AVG=$(sql_ro "
+    SELECT COALESCE(CAST(AVG(
+      CASE WHEN snapshot_json LIKE '%irohaGrounding%' 
+      THEN json_extract(snapshot_json, '$.irohaGrounding.score') 
+      ELSE 0 END
+    ) * 100 AS INTEGER), 0) FROM evolution_ledger
+    WHERE created_at > datetime('now', '-24 hours');
+  ")
+fi
+
+# §17-19 統合: 魂の根幹接続率 (全 5 ソースの bind 状態)
+SOUL_ROOT_SOURCES_BOUND=0
+[ "$KOTODAMA_HISHO_HITS_24H" != "0" ] && SOUL_ROOT_SOURCES_BOUND=$((SOUL_ROOT_SOURCES_BOUND + 1))
+[ "$IROHA_BIND_HITS_24H" != "0" ] && SOUL_ROOT_SOURCES_BOUND=$((SOUL_ROOT_SOURCES_BOUND + 1))
+[ "$GENTEN_BIND_HITS_24H" != "0" ] && SOUL_ROOT_SOURCES_BOUND=$((SOUL_ROOT_SOURCES_BOUND + 1))
+[ "$AMATERASU_BIND_HITS_24H" != "0" ] && SOUL_ROOT_SOURCES_BOUND=$((SOUL_ROOT_SOURCES_BOUND + 1))
+# 統合音ローダーは上記 3 つの合成なので別カウント
+SOUL_ROOT_BIND_PCT=$((SOUL_ROOT_SOURCES_BOUND * 100 / 5))
+
 cat <<JSON
 {
   "section": "dialogue_quality",
@@ -178,6 +228,12 @@ cat <<JSON
   "memory_projection_avg_items": $(ensure_num "$MEMORY_PROJ_AVG_ITEMS"),
   "satori_avg_score_pct": $(ensure_num "$SATORI_AVG_SCORE"),
   "satori_omega_compliant_24h": $(ensure_num "$SATORI_OMEGA_COMPLIANT_24H"),
-  "kotodama_hisho_hits_24h": $(ensure_num "$KOTODAMA_HISHO_HITS_24H")
+  "kotodama_hisho_hits_24h": $(ensure_num "$KOTODAMA_HISHO_HITS_24H"),
+  "iroha_bind_hits_24h": $(ensure_num "$IROHA_BIND_HITS_24H"),
+  "genten_bind_hits_24h": $(ensure_num "$GENTEN_BIND_HITS_24H"),
+  "amaterasu_bind_hits_24h": $(ensure_num "$AMATERASU_BIND_HITS_24H"),
+  "iroha_grounding_avg_pct": $(ensure_num "$IROHA_GROUNDING_AVG"),
+  "soul_root_sources_bound": $(ensure_num "$SOUL_ROOT_SOURCES_BOUND"),
+  "soul_root_bind_pct": $(ensure_num "$SOUL_ROOT_BIND_PCT")
 }
 JSON

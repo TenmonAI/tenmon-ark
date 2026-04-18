@@ -138,6 +138,28 @@ async function render() {
         aggregateMetric(timeseries, 'dialogue_quality', 'satori_avg_score_pct'));
     }
 
+    // §17-19: 魂の根幹接続率 Stat カード
+    document.querySelector('#stat-soul-root .num').textContent = 
+      (dq.soul_root_bind_pct || '0') + '%';
+    document.querySelector('#stat-iroha-bind .num').textContent = 
+      dq.iroha_bind_hits_24h || '0';
+    document.querySelector('#stat-genten-bind .num').textContent = 
+      dq.genten_bind_hits_24h || '0';
+    document.querySelector('#stat-amaterasu-bind .num').textContent = 
+      dq.amaterasu_bind_hits_24h || '0';
+    document.querySelector('#stat-grounding .num').textContent = 
+      (dq.iroha_grounding_avg_pct || '0') + '%';
+    document.querySelector('#stat-sources .num').textContent = 
+      (dq.soul_root_sources_bound || '0') + '/5';
+
+    // §17-19: 魂の根幹チャート
+    if (timeseries.length > 0) {
+      buildLineChart('chart-soul-root', 'Soul Root Bind %', '#c9a14a',
+        aggregateMetric(timeseries, 'dialogue_quality', 'soul_root_bind_pct'));
+      buildLineChart('chart-grounding', 'Iroha Grounding %', '#d4a853',
+        aggregateMetric(timeseries, 'dialogue_quality', 'iroha_grounding_avg_pct'));
+    }
+
     // 宿分布バーチャート
     const shukuDist = snapshot.sections.founder.shuku_distribution || {};
     const shukuLabels = Object.keys(shukuDist).map(s => s + '宿');

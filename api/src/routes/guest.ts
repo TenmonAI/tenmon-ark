@@ -30,6 +30,11 @@ import { heartModelV1 } from "../core/heartModel.js";
 import { judgeSatori } from "../core/satoriEnforcement.js";
 import { enforceTenmonFormat } from "../core/tenmonFormatEnforcer.js";
 import { selectModel, logModelSelection, computePromptHash } from "../core/modelSelector.js";
+import { queryIrohaByUserText, buildIrohaInjection } from "../core/irohaKotodamaLoader.js";
+import { extractKeyKotodamaFromText, buildKotodamaGentenInjection } from "../core/kotodamaGentenLoader.js";
+import { selectKanagiPhaseForIntent, buildAmaterasuAxisInjection } from "../data/amaterasuAxisMap.js";
+import { buildUnifiedSoundInjection } from "../core/unifiedSoundLoader.js";
+import { checkIrohaGrounding } from "../core/satoriEnforcement.js";
 
 const router = Router();
 
@@ -194,6 +199,29 @@ router.post("/guest/chat", async (req: Request, res: Response) => {
 
     let systemPrompt = buildGuestSystemPrompt(promptContext);
 
+    // V2.0_SOUL_ROOT_BIND: ゲストにも魂の根幹を注入（軽量版）
+    try {
+      const __guestIrohaHits = queryIrohaByUserText(userMessage);
+      if (__guestIrohaHits.length > 0) {
+        systemPrompt += "\n" + buildIrohaInjection(__guestIrohaHits, 800);
+      }
+      const __guestGentenKeys = extractKeyKotodamaFromText(userMessage);
+      if (__guestGentenKeys.length > 0) {
+        systemPrompt += "\n" + buildKotodamaGentenInjection(__guestGentenKeys, 500);
+      }
+      const __guestKanagiPhase = selectKanagiPhaseForIntent(userMessage);
+      const __guestAmaterasuClause = buildAmaterasuAxisInjection(__guestKanagiPhase);
+      if (__guestAmaterasuClause) {
+        systemPrompt += "\n" + __guestAmaterasuClause;
+      }
+      const __guestUnifiedSound = buildUnifiedSoundInjection(userMessage, 600);
+      if (__guestUnifiedSound) {
+        systemPrompt += "\n" + __guestUnifiedSound;
+      }
+    } catch (e: any) {
+      console.warn(`[GUEST:SOUL_ROOT] inject failed: ${e?.message}`);
+    }
+
     // Heart による動的プロンプト注入
     if (heartState.state !== "neutral") {
       const heartClause = `\n\n【Heart 位相検出】
@@ -242,6 +270,13 @@ router.post("/guest/chat", async (req: Request, res: Response) => {
 
     updateSession(session, userMessage, aiResponse);
 
+    // V2.0: いろは根拠判定（ゲスト版）
+    let irohaGroundingScore = 0;
+    try {
+      const grounding = checkIrohaGrounding(aiResponse);
+      irohaGroundingScore = grounding.score;
+    } catch {}
+
     return res.json({
       response: aiResponse,
       sessionId,
@@ -251,6 +286,8 @@ router.post("/guest/chat", async (req: Request, res: Response) => {
       // ULTRA-9: 追加メタデータ
       heartPhase: heartState.state,
       satoriVerdict,
+      // V2.0: いろは根拠スコア
+      irohaGroundingScore,
     });
   } catch (e: any) {
     console.error("[GUEST_CHAT] Error:", e?.message || e);
