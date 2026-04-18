@@ -26,6 +26,7 @@ import { seedRouter } from "./routes/seed.js";
 import { selfImproveRouter } from "./routes/selfImprove.js";
 import { councilRouter } from "./routes/council.js";
 import { authRouter } from "./routes/auth.js";
+import { authLocalRouter } from "./routes/auth_local.js";
 import { meRouter } from "./routes/me.js";
 import { registerFounderAuth } from "./routes/auth_founder.js";
 import { markListenReady } from "./health/readiness.js";
@@ -144,6 +145,7 @@ app.get("/api/health", (_, res) => {
 app.use("/api", kamuRouter);
 registerFounderAuth(app);
 app.use("/api", authRouter);
+app.use("/api", authLocalRouter);
 app.use("/api", meRouter);
 app.use("/api", auditRouter);
 app.use("/api", chatRouter);
