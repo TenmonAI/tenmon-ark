@@ -1,0 +1,10 @@
+[Unit]
+Description=TENMON-ARK MC: Run all collectors (hourly)
+
+[Timer]
+OnBootSec=180
+OnUnitActiveSec=1h
+AccuracySec=120s
+
+[Install]
+WantedBy=timers.target

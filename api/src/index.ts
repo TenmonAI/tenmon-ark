@@ -40,6 +40,7 @@ import { writerRouter } from "./routes/writer.js";
 import { writerVerifyRouter } from "./routes/writerVerify.js";
 import { writerDraftRouter } from "./routes/writerDraft.js";
 import guestRouter from "./routes/guest.js";
+import mcRouter from "./routes/mc.js";
 
 // Debug: 未処理例外のハンドリング
 const pid = process.pid;
@@ -167,6 +168,9 @@ try {
 app.get("/health", (_, res) => {
   res.json({ status: "ok" });
 });
+
+// Mission Control V2 (read-only dashboard)
+app.use("/api/mc", mcRouter);
 
 // Guest chat (LP体験用)
 app.use("/api", guestRouter);

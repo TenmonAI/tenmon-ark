@@ -9,6 +9,13 @@ import { GptShell } from "./components/gpt/GptShell";
 import { I18nProvider } from "./i18n/useI18n";
 import { initSync, stopPeriodicSync } from "./lib/crossDeviceSync";
 
+/* MC (Mission Control) — lazy loaded */
+const McOverview = React.lazy(() => import("./pages/mc/McOverview"));
+const McHandoff = React.lazy(() => import("./pages/mc/McHandoff"));
+const McLive = React.lazy(() => import("./pages/mc/McLive"));
+const McGit = React.lazy(() => import("./pages/mc/McGit"));
+const McSoul = React.lazy(() => import("./pages/mc/McSoul"));
+
 const TENMON_AUTH_OK_V1 = "TENMON_AUTH_OK_V1";
 const TENMON_USER_KEY = "TENMON_USER_KEY";
 
@@ -50,6 +57,8 @@ export default function App() {
   const isSukuyouAbout = pathname === "/pwa/sukuyou-about" || pathname === "/pwa/sukuyou-about/";
   const isKotodamaAbout = pathname === "/pwa/kotodama-about" || pathname === "/pwa/kotodama-about/";
   const isAmatsuKanagiAbout = pathname === "/pwa/amatsu-kanagi-about" || pathname === "/pwa/amatsu-kanagi-about/";
+  const isMc = pathname.startsWith("/pwa/mc");
+  const mcSub = isMc ? pathname.replace(/^\/pwa\/mc\/?/, "").replace(/\/$/, "") : "";
 
   useEffect(() => {
     let dead = false;
@@ -168,6 +177,18 @@ export default function App() {
       <I18nProvider>
         <KoshikiConsolePage />
       </I18nProvider>
+    );
+  }
+  if (isMc) {
+    const McPage = mcSub === "handoff" ? McHandoff
+      : mcSub === "live" ? McLive
+      : mcSub === "git" ? McGit
+      : mcSub === "soul" ? McSoul
+      : McOverview;
+    return (
+      <React.Suspense fallback={<div style={{ padding: 24, fontFamily: "sans-serif", color: "#c9a14a" }}>Loading Mission Control...</div>}>
+        <McPage />
+      </React.Suspense>
     );
   }
 

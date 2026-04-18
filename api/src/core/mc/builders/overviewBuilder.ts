@@ -1,0 +1,81 @@
+// api/src/core/mc/builders/overviewBuilder.ts
+// MC V2 FINAL — §8.4 Overview Builder
+
+import { readState, allFileStatuses } from '../stateReader.js';
+import type { McOverview, McLiveState, McgitState, McIssues, McTruthCircuit } from '../types.js';
+import { HEALTH_ENDPOINT, SERVICE_NAME } from '../constants.js';
+
+/**
+ * Build the overview object by aggregating data from collector JSONs.
+ * This is a pure read-only aggregation — no side effects.
+ */
+export function buildOverview(): McOverview {
+  const liveState = readState<McLiveState>('live_state');
+  const gitState = readState<McgitState>('git_state');
+  const issues = readState<McIssues>('issues');
+  const truthCircuit = readState<McTruthCircuit>('truth_circuit');
+  const fileStatuses = allFileStatuses();
+
+  // Compute freshness detail
+  const freshnessDetail: Record<string, string> = {};
+  for (const [key, info] of Object.entries(fileStatuses)) {
+    if (info.mtime) {
+      freshnessDetail[key] = info.mtime;
+    }
+  }
+
+  // Count issues by severity
+  const criticalBlockers = issues?.items?.filter(i => i.severity === 'critical' && !i.resolved).length ?? 0;
+  const warnings = issues?.items?.filter(i => !i.resolved && i.severity !== 'critical').length ?? 0;
+  const contradictionsCount = 0; // Phase 2
+
+  const overview: McOverview = {
+    generated_at: new Date().toISOString(),
+    source_files: Object.values(fileStatuses)
+      .filter(f => f.exists)
+      .map(f => f.path),
+    stale: false,
+
+    service: {
+      name: SERVICE_NAME,
+      status: liveState?.service?.active ? 'running' : 'unknown',
+      uptime_sec: liveState?.service?.uptime_sec ?? null,
+    },
+
+    health: {
+      ok: liveState?.health?.ok ?? false,
+      endpoint: HEALTH_ENDPOINT,
+      response_ms: liveState?.health?.response_ms ?? 0,
+    },
+
+    git: {
+      branch: gitState?.branch ?? 'unknown',
+      head_sha_short: gitState?.head_sha_short ?? 'unknown',
+      last_commit_at: gitState?.head_date ?? 'unknown',
+      last_commit_subject: gitState?.head_subject ?? 'unknown',
+      dirty: gitState?.dirty ?? false,
+    },
+
+    state: {
+      critical_blockers: criticalBlockers,
+      warnings,
+      contradictions_count: contradictionsCount,
+    },
+
+    freshness_detail: {
+      last_collector_run: freshnessDetail,
+      last_notion_sync: fileStatuses.notion_sync?.mtime ?? null,
+      last_ai_handoff_build: fileStatuses.ai_handoff?.mtime ?? null,
+    },
+
+    links: {
+      overview: '/api/mc/overview',
+      ai_handoff: '/api/mc/ai-handoff.json',
+      handoff: '/api/mc/handoff',
+      live_state: '/api/mc/live-state',
+      git_state: '/api/mc/git-state',
+    },
+  };
+
+  return overview;
+}

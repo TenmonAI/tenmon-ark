@@ -1,0 +1,10 @@
+[Unit]
+Description=TENMON-ARK MC: Collect git state (every 10 min)
+
+[Timer]
+OnBootSec=90
+OnUnitActiveSec=10min
+AccuracySec=60s
+
+[Install]
+WantedBy=timers.target

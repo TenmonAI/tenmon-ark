@@ -1,0 +1,11 @@
+[Unit]
+Description=TENMON-ARK MC: Collect git state
+After=tenmon-ark-api.service
+
+[Service]
+Type=oneshot
+ExecStart=/opt/tenmon-ark-repo/api/scripts/mc/mc_collect_git_state.sh
+Environment=TENMON_DATA_ROOT=/opt/tenmon-ark-data
+Environment=TENMON_REPO_ROOT=/opt/tenmon-ark-repo
+StandardOutput=journal
+StandardError=journal
