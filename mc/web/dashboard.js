@@ -115,6 +115,29 @@ async function render() {
         aggregateMetric(timeseries, 'infra', 'error_count_24h'));
     }
 
+    // §13-16: 新指標 Stat カード
+    const dq = snapshot.sections.dialogue_quality || {};
+    document.querySelector('#stat-satori .num').textContent = 
+      (dq.satori_avg_score_pct || '0') + '%';
+    document.querySelector('#stat-omega .num').textContent = 
+      dq.satori_omega_compliant_24h || '0';
+    document.querySelector('#stat-khs .num').textContent = 
+      dq.khs_core_applied_24h || '0';
+    document.querySelector('#stat-hisho .num').textContent = 
+      dq.kotodama_hisho_hits_24h || '0';
+
+    // §13-16: 新指標チャート
+    if (timeseries.length > 0) {
+      buildLineChart('chart-khs', 'KHS Applied', '#d4a853',
+        aggregateMetric(timeseries, 'dialogue_quality', 'khs_core_applied_24h'));
+      buildLineChart('chart-axes', 'Truth Axes', '#9b6fc9',
+        aggregateMetric(timeseries, 'dialogue_quality', 'truth_axes_unique_24h'));
+      buildLineChart('chart-memory', 'Memory Proj', '#6fc9a1',
+        aggregateMetric(timeseries, 'dialogue_quality', 'memory_projection_24h'));
+      buildLineChart('chart-satori', 'SATORI %', '#c96a6a',
+        aggregateMetric(timeseries, 'dialogue_quality', 'satori_avg_score_pct'));
+    }
+
     // 宿分布バーチャート
     const shukuDist = snapshot.sections.founder.shuku_distribution || {};
     const shukuLabels = Object.keys(shukuDist).map(s => s + '宿');

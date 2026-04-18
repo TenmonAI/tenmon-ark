@@ -50,6 +50,23 @@ json_string_safe() {
   printf '%s' "$v"
 }
 
+# SQLite read-only クエリ実行
+# 引数: $1=SQL文
+# 戻り値: 結果文字列 or "null"
+sql_ro() {
+  local result
+  if [ ! -f "$DB_PATH" ]; then
+    echo "null"
+    return
+  fi
+  result=$(timeout 10 sqlite3 -readonly "$DB_PATH" "$1" 2>/dev/null) || result=""
+  if [ -z "$result" ]; then
+    echo "null"
+  else
+    echo "$result"
+  fi
+}
+
 # 数値保証（nullや空文字を0に変換）
 # 改行混じり入力（grep -c || echo 0 問題）にも対応
 # 先頭ゼロ除去: "00" → "0", "007" → "7"

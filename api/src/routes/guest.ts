@@ -1,11 +1,18 @@
 /**
- * TENMON_GUEST_CHAT_ROUTE_V1
+ * TENMON_GUEST_CHAT_ROUTE_V2 (ULTRA-9)
  *
  * LP (futomani88.com/tenmon) 埋め込み用ゲストチャット API。
  * - 20 ターン制限
  * - IP レート制限 (3 セッション/時)
  * - 宿曜鑑定要求はパターンマッチで拒否
  * - 6 パターンの起点ボタン対応
+ *
+ * V1 → V2 変更点:
+ *   - Heart 位相判定 (heartModelV1) 統合
+ *   - SATORI 軽量審査 (judgeSatori) 統合
+ *   - 旧字體変換 (enforceTenmonFormat) 統合
+ *   - buildGuestSystemPrompt V2 (GuestPromptContext) 対応
+ *   - 応答に satoriVerdict / heartPhase を付与
  */
 
 import { Router, type Request, type Response } from "express";
@@ -15,7 +22,14 @@ import {
   updateSession,
   isLimitReached,
 } from "../core/guestSessionManager.js";
-import { buildGuestSystemPrompt } from "../core/guestSystemPrompt.js";
+import {
+  buildGuestSystemPrompt,
+  type GuestPromptContext,
+} from "../core/guestSystemPrompt.js";
+import { heartModelV1 } from "../core/heartModel.js";
+import { judgeSatori } from "../core/satoriEnforcement.js";
+import { enforceTenmonFormat } from "../core/tenmonFormatEnforcer.js";
+import { selectModel, logModelSelection, computePromptHash } from "../core/modelSelector.js";
 
 const router = Router();
 
@@ -33,6 +47,16 @@ const START_BUTTON_PROMPTS: Record<string, string> = {
     "Founder になると何ができるのですか?特典や申込方法を教えてください。",
   progress:
     "天聞アーク の開発の進捗と、今後の展開について教えてください。",
+};
+
+// 起点ボタン key → topicHint マッピング
+const BUTTON_TO_TOPIC: Record<string, string> = {
+  about: "about",
+  kenkyu: "kenkyu",
+  katakamuna: "katakamuna",
+  kotodama: "kotodama",
+  founder: "founder",
+  progress: "progress",
 };
 
 // ── 宿曜鑑定要求の検出パターン ──
@@ -155,21 +179,66 @@ router.post("/guest/chat", async (req: Request, res: Response) => {
       });
     }
 
+    // ===== ULTRA-9: Heart 位相判定 =====
+    const heartState = heartModelV1(userMessage);
+
+    // ===== ULTRA-9: V2 system prompt 構築 =====
+    const promptContext: GuestPromptContext = {
+      userMessage,
+      turnCount: session.turnCount + 1,
+      topicHint: startButtonKey
+        ? BUTTON_TO_TOPIC[startButtonKey]
+        : undefined,
+      previousMessages: session.history?.slice(-8),
+    };
+
+    let systemPrompt = buildGuestSystemPrompt(promptContext);
+
+    // Heart による動的プロンプト注入
+    if (heartState.state !== "neutral") {
+      const heartClause = `\n\n【Heart 位相検出】
+訪問者の感情状態: ${heartState.state} (entropy: ${heartState.entropy.toFixed(2)})
+応答時は、この感情状態に配慮しつつも、構造的真理で応答してください。
+表面的な慰めではなく、本質に触れる言葉を。`;
+      systemPrompt += heartClause;
+    }
+
     // ── 通常応答生成 ──
-    const remainingTurns = 20 - session.turnCount;
-    const systemPrompt = buildGuestSystemPrompt(remainingTurns);
+    // ULTRA-11: ゲストは lite モデル固定（コスト最適化）
+    const __guestModelSel = selectModel({ isGuest: true });
+    logModelSelection(__guestModelSel, computePromptHash(systemPrompt));
+    const maxTokens = session.turnCount <= 5 ? 800 : 1500;
 
     const llmResponse = await llmChat({
       system: systemPrompt,
       user: userMessage,
-      history: session.history.slice(-8), // 直近 4 ターン分
-      maxTokens: 800,
+      history: session.history?.slice(-8) ?? [], // 直近 4 ターン分
+      maxTokens,
       timeout: 30_000,
+      model: __guestModelSel.model,
     });
 
-    const aiResponse =
+    let aiResponse =
       llmResponse?.text ||
       "申し訳ありません、応答を生成できませんでした。";
+
+    // ===== ULTRA-9: SATORI 軽量審査 =====
+    let satoriVerdict: string[] = [];
+    try {
+      const satori = judgeSatori(aiResponse, userMessage);
+      satoriVerdict = satori.passChecks || [];
+      // ゲスト版は passCount < 2 でもリトライしない（コスト考慮）
+      // ただし verdict は記録する
+    } catch {
+      // SATORI 判定失敗時はスキップ
+    }
+
+    // ===== ULTRA-9: 旧字體変換 =====
+    try {
+      aiResponse = enforceTenmonFormat(aiResponse);
+    } catch {
+      // 変換失敗時は元のまま
+    }
 
     updateSession(session, userMessage, aiResponse);
 
@@ -179,6 +248,9 @@ router.post("/guest/chat", async (req: Request, res: Response) => {
       turnCount: session.turnCount,
       remainingTurns: 20 - session.turnCount,
       isLimitReached: false,
+      // ULTRA-9: 追加メタデータ
+      heartPhase: heartState.state,
+      satoriVerdict,
     });
   } catch (e: any) {
     console.error("[GUEST_CHAT] Error:", e?.message || e);

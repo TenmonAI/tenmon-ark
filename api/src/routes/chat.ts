@@ -56,6 +56,14 @@ import {
   buildDeepContinuityClause,
 } from "../sukuyou/sukuyouEngine.js";
 import { buildKotodamaClause } from "../kotodama/kotodamaConnector.js";
+import { buildConstitutionClause } from "../core/constitutionLoader.js";
+import { detect10TruthAxes, buildAxisClause, ensureTruthAxesTable } from "../core/truthAxisEngine.js";
+import { loadKotodamaHisho, extractSoundsFromMessage, buildKotodamaHishoContext, buildKotodamaHishoOverview } from "../core/kotodamaHishoLoader.js";
+import { attachSatoriVerdict } from "../core/satoriEnforcement.js";
+import { transformResponseForOutput } from "../core/tenmonFormatEnforcer.js";
+import { classifyIntent, getTemperatureForIntent } from "../core/intentClassifier.js";
+import { buildDeepeningClauseFromHistory } from "../core/conversationDeepening.js";
+import { selectModel, logModelSelection, computePromptHash } from "../core/modelSelector.js";
 
 import { DatabaseSync } from "node:sqlite";
 const router: IRouter = Router();
@@ -126,8 +134,28 @@ function __buildSukuyouContinuityClause(threadId: string): string {
 
 
 // LLM_CHAT: minimal constitution (no evidence fabrication)
-const TENMON_CONSTITUTION_TEXT =
+const TENMON_CONSTITUTION_TEXT_BASE =
   "あなたはTENMON-ARK。自然で丁寧に対話する。根拠(doc/pdfPage/引用)は生成しない。必要ならユーザーに資料指定を促し、GROUNDEDに切り替える。";
+// KHS_CORE_CONSTITUTION_V1: 憲法句を起動時に注入
+const _khsConstitutionClause = (() => {
+  try { return buildConstitutionClause(); } catch { return ""; }
+})();
+const TENMON_CONSTITUTION_TEXT = _khsConstitutionClause
+  ? _khsConstitutionClause + "\n\n" + TENMON_CONSTITUTION_TEXT_BASE
+  : TENMON_CONSTITUTION_TEXT_BASE;
+// KOTODAMA_HISHO_INIT_V1: 言霊秘書JSONを起動時に読み込み
+const _kotodamaHishoOverview = (() => {
+  try {
+    const data = loadKotodamaHisho();
+    if (data) console.log(`[KOTODAMA_HISHO] init OK: ${data.total_paragraphs} paragraphs`);
+    return buildKotodamaHishoOverview();
+  } catch (e: any) {
+    console.warn(`[KOTODAMA_HISHO] init skipped: ${e?.message}`);
+    return "";
+  }
+})();
+// truth_axes_bindings テーブル初期化（起動時1回）
+try { ensureTruthAxesTable(); } catch (e: any) { console.warn("[TRUTH_AXIS] init skipped:", e?.message); }
 
 function scrubEvidenceLike(text: string): string {
   let t = String(text ?? "");
@@ -430,6 +458,9 @@ router.post("/chat", async (req: Request, res: Response<ChatResponseBody>) => {
             }
           }
         } catch {}
+        // ULTRA6_SATORI_FORMAT_V1: 惟り判定 + フォーマット強制を res.json ラッパー内で実行
+        try { transformResponseForOutput(obj); } catch {}
+        try { attachSatoriVerdict(obj); } catch {}
         return __origJsonTop(obj);
       };
     }
@@ -1428,6 +1459,24 @@ E. Current Facts
 let outText = "";
       let outProv = "llm";
 
+      // KOTODAMA_HISHO_INJECT_V1: ユーザーメッセージから音を抽出し、言霊秘書の関連段落をGEN_SYSTEMに注入
+      let __kotodamaHishoClause = "";
+      try {
+        const __hishoSounds = extractSoundsFromMessage(t0);
+        if (__hishoSounds.length > 0) {
+          __kotodamaHishoClause = buildKotodamaHishoContext(__hishoSounds, 2000);
+          if (__kotodamaHishoClause) {
+            console.log(`[KOTODAMA_HISHO] injected ${__hishoSounds.length} sounds, clause=${__kotodamaHishoClause.length} chars`);
+          }
+        }
+        // 概要は常時注入（音が検出されなくても基本知識を提供）
+        if (!__kotodamaHishoClause && _kotodamaHishoOverview) {
+          __kotodamaHishoClause = _kotodamaHishoOverview;
+        }
+      } catch (e: any) {
+        console.warn(`[KOTODAMA_HISHO] inject failed: ${e?.message}`);
+      }
+
       // SUKUYOU_CARRY_GATE_V2: 宿曜seed保持中のfollow-upは強制的にDEEP_CHATルートに入れる
       // Turn2以降が NATURAL_GENERAL に落ちるのを防止する最重要ゲート
       // V2: !__isSukuyouQuery を削除 — 「本命宿」等の宿曜キーワードを含むfollow-upでもcarry gateを通す
@@ -1522,7 +1571,8 @@ ${__carrySeedSummary}${__carryLifeAlgo}
           (__gogCarry?.systemClause || "") +
           __ultimateCarry +
           __deepContinuityCarry +
-          __kotodamaClauseCarry;
+          __kotodamaClauseCarry +
+          (__kotodamaHishoClause ? "\n" + __kotodamaHishoClause : "");
 
         try {
           const __carryHistory = memoryReadSession(String(threadId || ""), 8);
@@ -1654,6 +1704,9 @@ ${__carrySeedSummary}${__carryLifeAlgo}
 11. 途中で打ち切らない。最終章「最終御神託」まで必ず出力を完了せよ。` + __sukuyouContextClause;
           // ORACLE_TOKENS_V2: maxTokens 4500→8000, timeout 60s→90s で御神託レポート全文出力を確保
           const __oracleUserPrompt = `${t0}\n\n【出力補助指示】\n御神託レポートの全8章を、第1章から最終御神託まで省略なく3000字以上で提示してください。`;
+          // ULTRA-11: 御神託は premium 固定
+          const __oracleModelSel = selectModel({ isSukuyouOracle: true });
+          logModelSelection(__oracleModelSel, computePromptHash(__oracleSystem));
           const llmRes = await llmChat({ system: __oracleSystem, user: __oracleUserPrompt, history: memoryReadSession(String(threadId || ""), 3), maxTokens: 8000, timeout: 90000, provider: "openai" });
           outText = (llmRes?.ok && llmRes?.text) ? String(llmRes.text).trim() : "";
           outProv = String((llmRes?.providerUsed || llmRes?.provider) ?? "llm") + "+oracle";
@@ -1686,8 +1739,17 @@ ${__carrySeedSummary}${__carryLifeAlgo}
         // 通常ルート（宿曜コンテキストはあるが御神託レポートなし、または一般質問）
         try {
           const __sukuyouClauseGen = __buildSukuyouContinuityClause(threadId);
-          const __genSystemWithEvidence = GEN_SYSTEM + __sukuyouClauseGen + __sukuyouContextClause;
-          const llmRes = await llmChat({ system: __genSystemWithEvidence, user: t0, history: memoryReadSession(String(threadId || ""), 8), maxTokens: __isSukuyouQuery ? 3500 : 2000, timeout: __isSukuyouQuery ? 25000 : 15000 });
+          // ULTRA-10: 意図分類 + 深化戦略
+          const __chatHistory = memoryReadSession(String(threadId || ""), 8);
+          const __userIntent = classifyIntent(t0, __chatHistory);
+          const __deepeningClause = buildDeepeningClauseFromHistory(__chatHistory);
+          const __intentClause = `\n\n【応答長目標】${__userIntent.targetTokens} tokens\n${__deepeningClause}`;
+          const __genSystemWithEvidence = GEN_SYSTEM + __sukuyouClauseGen + __sukuyouContextClause + (__kotodamaHishoClause ? "\n" + __kotodamaHishoClause : "") + __intentClause;
+          // ULTRA-11: モデル選択 + コスト最適化
+          const __modelSel = selectModel({ intent: __userIntent, isSukuyouQuery: __isSukuyouQuery });
+          logModelSelection(__modelSel, computePromptHash(__genSystemWithEvidence));
+          const __dynamicMaxTokens = __isSukuyouQuery ? 3500 : __modelSel.maxTokens;
+          const llmRes = await llmChat({ system: __genSystemWithEvidence, user: t0, history: __chatHistory, maxTokens: __dynamicMaxTokens, timeout: __isSukuyouQuery ? 25000 : 15000, model: __modelSel.model });
           if (llmRes?.ok === false || !String(llmRes?.text ?? "").trim()) {
             console.error("[GENERAL_LLM_TOP] llmChat returned empty/error:", llmRes?.err);
             outText = "";

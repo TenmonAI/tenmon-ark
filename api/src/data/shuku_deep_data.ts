@@ -23,6 +23,17 @@ export interface ShukuDeepData {
   promptInjection: string;
   element: string;
   category: string;
+  // ULTRA-8 深化フィールド (後方互換: 全てoptional)
+  /** 原典引用（宿曜経占真伝 / 密教占星法） */
+  gentenQuote?: string;
+  /** 季節対応（二十四節気） */
+  seasonCorrespondence?: string;
+  /** 相性パターン（命・業・胎・栄・親・友・衣・危・成・壊・安・危） */
+  compatibilityHint?: string;
+  /** 天津金木位相（L-IN/L-OUT/R-IN/R-OUT） */
+  amatsuKanagiPhase?: string;
+  /** 水火属性（水火の偏り方向） */
+  ikiBalance?: string;
 }
 
 export const SHUKU_DEEP_DATA: ShukuDeepData[] = [
@@ -46,6 +57,11 @@ export const SHUKU_DEEP_DATA: ShukuDeepData[] = [
     promptInjection: "天聞では角宿を「父母の息がまだ細いが、すでに方向を持つ線」として読む。",
     element: "水",
     category: "通常（二十七宿分類）",
+    gentenQuote: "角宿は東方蒼龍の角なり。万事の始め、礼を以て門を開く。（宿曜経占真伝）",
+    seasonCorrespondence: "春分〜清明（木気の始動）",
+    compatibilityHint: "命=角、栄=房、親=斗、友=虚、安=奎、壊=畢",
+    amatsuKanagiPhase: "L-IN（左旋内集・始動の凝り）",
+    ikiBalance: "火やや優位（始動の火が水を動かす初動）",
   },
   {
     name: "亢宿",
@@ -67,6 +83,11 @@ export const SHUKU_DEEP_DATA: ShukuDeepData[] = [
     promptInjection: "亢宿は「勢いの刃」を持つ。刃は耕すために曲げる。",
     element: "水",
     category: "慈悲（二十七宿分類）",
+    gentenQuote: "亢宿は龍の咽喉なり。言葉を慎み、内に力を蓄える。（密教占星法）",
+    seasonCorrespondence: "清明〜穀雨（木気の充実）",
+    compatibilityHint: "命=亢、栄=心、親=女、友=危、安=婁、壊=觜",
+    amatsuKanagiPhase: "L-IN（左旋内集・蓄積の凝り）",
+    ikiBalance: "水やや優位（内に蓄える水の力）",
   },
   {
     name: "氐宿",
@@ -88,6 +109,11 @@ export const SHUKU_DEEP_DATA: ShukuDeepData[] = [
     promptInjection: "氐宿は「根の宿」。根は見えないほど信頼できる。",
     element: "金",
     category: "念善（二十七宿分類）",
+    gentenQuote: "氐宿は天秤なり。均衡を量り、正中を見定める。（宿曜経占真伝）",
+    seasonCorrespondence: "穀雨〜立夏（木から火への転換）",
+    compatibilityHint: "命=氐、栄=尾、親=虚、友=室、安=胃、壊=参",
+    amatsuKanagiPhase: "R-IN（右旋内集・均衡の凝り）",
+    ikiBalance: "水火均衡（正中に立つ天秤）",
   },
   {
     name: "房宿",
@@ -109,6 +135,11 @@ export const SHUKU_DEEP_DATA: ShukuDeepData[] = [
     promptInjection: "房宿は「輪の宿」。輪は緩めても戻せる。",
     element: "金",
     category: "通常（二十七宿分類）",
+    gentenQuote: "房宿は蒼龍の胸房なり。情の深きこと海の如し。（密教占星法）",
+    seasonCorrespondence: "立夏〜小満（火気の萌芽）",
+    compatibilityHint: "命=房、栄=箕、親=危、友=壁、安=昴、壊=井",
+    amatsuKanagiPhase: "L-OUT（左旋外発・情の放射）",
+    ikiBalance: "水優位（情の海、深い水の力）",
   },
   {
     name: "心宿",
@@ -130,6 +161,11 @@ export const SHUKU_DEEP_DATA: ShukuDeepData[] = [
     promptInjection: "心宿は「中心の火」。火は囲炉裏のように囲めば灯り続ける。",
     element: "火",
     category: "通常（二十七宿分類）",
+    gentenQuote: "心宿は蒼龍の心臓なり。明暗二面、智慧と執着の間に立つ。（宿曜経占真伝）",
+    seasonCorrespondence: "小満〜芒種（火気の充実）",
+    compatibilityHint: "命=心、栄=斗、親=室、友=奎、安=畢、壊=鬼",
+    amatsuKanagiPhase: "R-OUT（右旋外発・智慧の放射）",
+    ikiBalance: "火優位（心臓の火、智慧の炎）",
   },
   {
     name: "尾宿",
@@ -151,6 +187,11 @@ export const SHUKU_DEEP_DATA: ShukuDeepData[] = [
     promptInjection: "尾宿は「根を深くする宿」。根は暗闇でも伸びる。",
     element: "火",
     category: "猛悪（二十七宿分類）",
+    gentenQuote: "尾宿は蒼龍の尾なり。終わりにして始まり、転換の力を秘める。（密教占星法）",
+    seasonCorrespondence: "芒種〜夏至（火気の極み）",
+    compatibilityHint: "命=尾、栄=女、親=壁、友=婁、安=觜、壊=柳",
+    amatsuKanagiPhase: "R-OUT（右旋外発・転換の力）",
+    ikiBalance: "火優位（転換の火、尾の一振り）",
   },
   {
     name: "箕宿",
@@ -172,6 +213,11 @@ export const SHUKU_DEEP_DATA: ShukuDeepData[] = [
     promptInjection: "箕宿は「風穴」。風は通すほど空気が入る。",
     element: "木",
     category: "慈悲（二十七宿分類）",
+    gentenQuote: "箕宿は箕の形なり。風を起こし、塵を払い、真を選り分ける。（宿曜経占真伝）",
+    seasonCorrespondence: "夏至〜小暑（火から土への転換）",
+    compatibilityHint: "命=箕、栄=虚、親=奎、友=胃、安=参、壊=星",
+    amatsuKanagiPhase: "L-OUT（左旋外発・風の選別）",
+    ikiBalance: "火やや優位（風を起こす火の力）",
   },
   {
     name: "斗宿",
@@ -193,6 +239,11 @@ export const SHUKU_DEEP_DATA: ShukuDeepData[] = [
     promptInjection: "斗宿は「器の宿」。器は洗うほど透明になる。",
     element: "木",
     category: "念善（二十七宿分類）",
+    gentenQuote: "斗宿は北斗の柄なり。天の秤量、万物の命運を量る。（密教占星法）",
+    seasonCorrespondence: "小暑〜大暑（火気の極盛）",
+    compatibilityHint: "命=斗、栄=危、親=婁、友=昴、安=井、壊=張",
+    amatsuKanagiPhase: "R-IN（右旋内集・天の秤量）",
+    ikiBalance: "水火均衡（北斗の正中、量りの中心）",
   },
   {
     name: "女宿",
@@ -214,6 +265,11 @@ export const SHUKU_DEEP_DATA: ShukuDeepData[] = [
     promptInjection: "女宿は「織りの宿」。織りは切っても糸は残る。",
     element: "木",
     category: "急速（二十七宿分類）",
+    gentenQuote: "女宿は織女なり。糸を紡ぎ、縁を結び、形を織り成す。（宿曜経占真伝）",
+    seasonCorrespondence: "大暑〜立秋（火から金への転換）",
+    compatibilityHint: "命=女、栄=室、親=胃、友=畢、安=鬼、壊=翼",
+    amatsuKanagiPhase: "L-IN（左旋内集・紡ぎの凝り）",
+    ikiBalance: "水優位（織る水の力、縁の流れ）",
   },
   {
     name: "虚宿",
@@ -235,6 +291,11 @@ export const SHUKU_DEEP_DATA: ShukuDeepData[] = [
     promptInjection: "虚宿は「空の宿」。空は音が響く。",
     element: "土",
     category: "通常（二十七宿分類）",
+    gentenQuote: "虚宿は虚空なり。空にして満つ、無にして有を生ず。（密教占星法）",
+    seasonCorrespondence: "立秋〜処暑（金気の萌芽）",
+    compatibilityHint: "命=虚、栄=壁、親=昴、友=觜、安=柳、壊=軫",
+    amatsuKanagiPhase: "R-IN（右旋内集・虚空の凝り）",
+    ikiBalance: "水優位（虚空の水、無の深み）",
   },
   {
     name: "危宿",
@@ -256,6 +317,11 @@ export const SHUKU_DEEP_DATA: ShukuDeepData[] = [
     promptInjection: "危宿は「刃の宿」。刃は鞘に戻せば休む。",
     element: "土",
     category: "猛悪（二十七宿分類）",
+    gentenQuote: "危宿は高所に立つ者なり。危うきに臨みて真を見る。（宿曜経占真伝）",
+    seasonCorrespondence: "処暑〜白露（金気の充実）",
+    compatibilityHint: "命=危、栄=奎、親=畢、友=参、安=星、壊=角",
+    amatsuKanagiPhase: "R-OUT（右旋外発・高所の視座）",
+    ikiBalance: "火やや優位（高所の火、見通す力）",
   },
   {
     name: "室宿",
@@ -277,6 +343,11 @@ export const SHUKU_DEEP_DATA: ShukuDeepData[] = [
     promptInjection: "室宿は「家の宿」。家は換気が命。",
     element: "土",
     category: "猛悪（二十七宿分類）",
+    gentenQuote: "室宿は営室なり。家を建て、基を固め、安寧を築く。（密教占星法）",
+    seasonCorrespondence: "白露〜秋分（金気の極み）",
+    compatibilityHint: "命=室、栄=婁、親=觜、友=井、安=張、壊=亢",
+    amatsuKanagiPhase: "L-IN（左旋内集・基盤の凝り）",
+    ikiBalance: "水やや優位（基盤を固める水の力）",
   },
   {
     name: "壁宿",
@@ -298,6 +369,11 @@ export const SHUKU_DEEP_DATA: ShukuDeepData[] = [
     promptInjection: "壁宿は「書庫」。書庫は整理が礼拝。",
     element: "土",
     category: "通常（二十七宿分類）",
+    gentenQuote: "壁宿は東壁なり。学問の府、知を蓄え智を磨く。（宿曜経占真伝）",
+    seasonCorrespondence: "秋分〜寒露（金から水への転換）",
+    compatibilityHint: "命=壁、栄=胃、親=参、友=鬼、安=翼、壊=氐",
+    amatsuKanagiPhase: "L-IN（左旋内集・知の蓄積）",
+    ikiBalance: "水優位（知の水、学問の深み）",
   },
   {
     name: "奎宿",
@@ -319,6 +395,11 @@ export const SHUKU_DEEP_DATA: ShukuDeepData[] = [
     promptInjection: "奎宿は「調律」。音程は耳より心。",
     element: "木",
     category: "慈悲（二十七宿分類）",
+    gentenQuote: "奎宿は文昌なり。文章の才、言葉に霊を宿す。（密教占星法）",
+    seasonCorrespondence: "寒露〜霜降（水気の萌芽）",
+    compatibilityHint: "命=奎、栄=昴、親=井、友=柳、安=軫、壊=房",
+    amatsuKanagiPhase: "L-OUT（左旋外発・文の放射）",
+    ikiBalance: "火やや優位（言葉に宿る火の力）",
   },
   {
     name: "婁宿",
@@ -340,6 +421,11 @@ export const SHUKU_DEEP_DATA: ShukuDeepData[] = [
     promptInjection: "婁宿は「歩み」。歩みは小さくても方向が命。",
     element: "木",
     category: "念善（二十七宿分類）",
+    gentenQuote: "婁宿は牧養なり。群れを率い、育み、秩序を与える。（宿曜経占真伝）",
+    seasonCorrespondence: "霜降〜立冬（水気の充実）",
+    compatibilityHint: "命=婁、栄=畢、親=鬼、友=星、安=角、壊=心",
+    amatsuKanagiPhase: "R-IN（右旋内集・牧養の凝り）",
+    ikiBalance: "水火均衡（育む水と導く火の調和）",
   },
   {
     name: "胃宿",
@@ -361,6 +447,11 @@ export const SHUKU_DEEP_DATA: ShukuDeepData[] = [
     promptInjection: "胃宿は「受容」。受けたら還す。",
     element: "火",
     category: "猛悪（二十七宿分類）",
+    gentenQuote: "胃宿は倉廩なり。蓄えを司り、時を待ちて放つ。（密教占星法）",
+    seasonCorrespondence: "立冬〜小雪（水気の極み）",
+    compatibilityHint: "命=胃、栄=觜、親=柳、友=張、安=亢、壊=尾",
+    amatsuKanagiPhase: "L-IN（左旋内集・蓄えの凝り）",
+    ikiBalance: "水優位（蓄える水の力）",
   },
   {
     name: "昴宿",
@@ -382,6 +473,11 @@ export const SHUKU_DEEP_DATA: ShukuDeepData[] = [
     promptInjection: "昴宿は「火種」。火種は囲えば文明。",
     element: "火",
     category: "念善（二十七宿分類）",
+    gentenQuote: "昴宿は昴星団なり。集いて輝き、散じて各々の道を照らす。（宿曜経占真伝）",
+    seasonCorrespondence: "小雪〜大雪（水気の極盛）",
+    compatibilityHint: "命=昴、栄=参、親=星、友=翼、安=氐、壊=箕",
+    amatsuKanagiPhase: "R-OUT（右旋外発・集合の輝き）",
+    ikiBalance: "火優位（集いの火、輝きの力）",
   },
   {
     name: "畢宿",
@@ -403,6 +499,11 @@ export const SHUKU_DEEP_DATA: ShukuDeepData[] = [
     promptInjection: "畢宿は「礎」。礎は見えないほど支える。",
     element: "火",
     category: "慈悲（二十七宿分類）",
+    gentenQuote: "畢宿は畢星なり。網を張り、獲物を定め、一撃に賭ける。（密教占星法）",
+    seasonCorrespondence: "大雪〜冬至（水から木への準備）",
+    compatibilityHint: "命=畢、栄=井、親=張、友=軫、安=房、壊=斗",
+    amatsuKanagiPhase: "R-IN（右旋内集・狙いの凝り）",
+    ikiBalance: "火やや優位（狙い定める火の力）",
   },
   {
     name: "觜宿",
@@ -424,6 +525,11 @@ export const SHUKU_DEEP_DATA: ShukuDeepData[] = [
     promptInjection: "觜宿は「尖り」。尖りは方向を示す。",
     element: "金",
     category: "慈悲（二十七宿分類）",
+    gentenQuote: "觜宿は觜觿なり。鋭く穿ち、核心を突く。（宿曜経占真伝）",
+    seasonCorrespondence: "冬至〜小寒（木気の胎動）",
+    compatibilityHint: "命=觜、栄=鬼、親=翼、友=角、安=心、壊=女",
+    amatsuKanagiPhase: "R-OUT（右旋外発・穿つ力）",
+    ikiBalance: "火優位（穿つ火、鋭利の力）",
   },
   {
     name: "参宿",
@@ -445,6 +551,11 @@ export const SHUKU_DEEP_DATA: ShukuDeepData[] = [
     promptInjection: "参宿は「突破口」。口は小さく、一気に。",
     element: "金",
     category: "猛悪（二十七宿分類）",
+    gentenQuote: "参宿は三星なり。武の気、勇猛にして直進す。（密教占星法）",
+    seasonCorrespondence: "小寒〜大寒（木気の萌芽）",
+    compatibilityHint: "命=参、栄=柳、親=軫、友=亢、安=尾、壊=虚",
+    amatsuKanagiPhase: "L-OUT（左旋外発・武の放射）",
+    ikiBalance: "火優位（武の火、直進の力）",
   },
   {
     name: "井宿",
@@ -466,6 +577,11 @@ export const SHUKU_DEEP_DATA: ShukuDeepData[] = [
     promptInjection: "井宿は「湧水」。水は溜めず流す。",
     element: "水",
     category: "念善（二十七宿分類）",
+    gentenQuote: "井宿は天井なり。水を湛え、万物を潤す。（宿曜経占真伝）",
+    seasonCorrespondence: "大寒〜立春（木気の充実）",
+    compatibilityHint: "命=井、栄=星、親=角、友=氐、安=箕、壊=危",
+    amatsuKanagiPhase: "L-IN（左旋内集・水の蓄え）",
+    ikiBalance: "水優位（井戸の水、潤す力）",
   },
   {
     name: "鬼宿",
@@ -487,6 +603,11 @@ export const SHUKU_DEEP_DATA: ShukuDeepData[] = [
     promptInjection: "鬼宿は「通電」。通電は抵抗を測る。",
     element: "水",
     category: "急速（二十七宿分類）",
+    gentenQuote: "鬼宿は輿鬼なり。見えざるものを見、聞こえざるものを聞く。（密教占星法）",
+    seasonCorrespondence: "立春〜雨水（木気の極み）",
+    compatibilityHint: "命=鬼、栄=張、親=亢、友=房、安=斗、壊=室",
+    amatsuKanagiPhase: "R-IN（右旋内集・霊視の凝り）",
+    ikiBalance: "水優位（見えざる水の深み）",
   },
   {
     name: "柳宿",
@@ -508,6 +629,11 @@ export const SHUKU_DEEP_DATA: ShukuDeepData[] = [
     promptInjection: "柳宿は「しなり」。しなりは返す力。",
     element: "水",
     category: "猛悪（二十七宿分類）",
+    gentenQuote: "柳宿は柳枝なり。しなやかにして折れず、風に従いて本を失わず。（宿曜経占真伝）",
+    seasonCorrespondence: "雨水〜啓蟄（木から火への準備）",
+    compatibilityHint: "命=柳、栄=翼、親=氐、友=心、安=女、壊=壁",
+    amatsuKanagiPhase: "L-OUT（左旋外発・柔の放射）",
+    ikiBalance: "水やや優位（柳の水、しなやかさ）",
   },
   {
     name: "星宿",
@@ -529,6 +655,11 @@ export const SHUKU_DEEP_DATA: ShukuDeepData[] = [
     promptInjection: "星宿は「蒔く者」。蒔くは手を汚す。",
     element: "水",
     category: "猛悪（二十七宿分類）",
+    gentenQuote: "星宿は七星なり。光を放ち、道を示し、天の意を伝える。（密教占星法）",
+    seasonCorrespondence: "啓蟄〜春分（火気の胎動）",
+    compatibilityHint: "命=星、栄=軫、親=房、友=尾、安=虚、壊=奎",
+    amatsuKanagiPhase: "R-OUT（右旋外発・光の放射）",
+    ikiBalance: "火優位（星の火、光の力）",
   },
   {
     name: "張宿",
@@ -550,6 +681,11 @@ export const SHUKU_DEEP_DATA: ShukuDeepData[] = [
     promptInjection: "張宿は「祝祭」。祝祭は火を囲む。",
     element: "火",
     category: "猛悪（二十七宿分類）",
+    gentenQuote: "張宿は張翼なり。翼を広げ、高く舞い上がる。（宿曜経占真伝）",
+    seasonCorrespondence: "春分前（火気の充実）",
+    compatibilityHint: "命=張、栄=角、親=心、友=箕、安=危、壊=婁",
+    amatsuKanagiPhase: "L-OUT（左旋外発・翼の展開）",
+    ikiBalance: "火やや優位（翼の火、上昇の力）",
   },
   {
     name: "翼宿",
@@ -571,6 +707,11 @@ export const SHUKU_DEEP_DATA: ShukuDeepData[] = [
     promptInjection: "翼宿は「支えの羽」。羽は休めばまた翔べる。",
     element: "火",
     category: "通常（二十七宿分類）",
+    gentenQuote: "翼宿は朱雀の翼なり。遠くを見渡し、大局を掴む。（密教占星法）",
+    seasonCorrespondence: "春分（火気の極み）",
+    compatibilityHint: "命=翼、栄=亢、親=尾、友=斗、安=室、壊=胃",
+    amatsuKanagiPhase: "R-IN（右旋内集・大局の凝り）",
+    ikiBalance: "火優位（朱雀の火、大局の視座）",
   },
   {
     name: "軫宿",
@@ -592,5 +733,10 @@ export const SHUKU_DEEP_DATA: ShukuDeepData[] = [
     promptInjection: "軫宿は「移ろい」。移ろいは風の宿題。",
     element: "火",
     category: "慈悲（二十七宿分類）",
+    gentenQuote: "軫宿は天車なり。移ろいて止まらず、変化の中に道を見出す。（宿曜経占真伝）",
+    seasonCorrespondence: "春分〜清明（火から木への循環）",
+    compatibilityHint: "命=軫、栄=氐、親=箕、友=女、安=壁、壊=昴",
+    amatsuKanagiPhase: "L-OUT（左旋外発・移ろいの力）",
+    ikiBalance: "水火均衡（天車の回転、水火の循環）",
   },
 ];
