@@ -36,6 +36,9 @@ import { connectorsRouter } from "./routes/connectors.js";
 import { feedbackRouter } from "./routes/feedback.js";
 import healthRouter from "./routes/health.js";
 import { syncPhaseARouter } from "./routes/syncPhaseA.js";
+import { writerRouter } from "./routes/writer.js";
+import { writerVerifyRouter } from "./routes/writerVerify.js";
+import { writerDraftRouter } from "./routes/writerDraft.js";
 import guestRouter from "./routes/guest.js";
 
 // Debug: 未処理例外のハンドリング
@@ -177,6 +180,3 @@ app.listen(PORT, "0.0.0.0", () => {
   markListenReady();
   console.log(`[READY] listenReady=true`);
 });
-import { writerRouter } from "./routes/writer.js";
-import { writerVerifyRouter } from "./routes/writerVerify.js";
-import { writerDraftRouter } from "./routes/writerDraft.js";

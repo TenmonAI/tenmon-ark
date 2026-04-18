@@ -56,7 +56,7 @@ import {
   buildDeepContinuityClause,
 } from "../sukuyou/sukuyouEngine.js";
 import { buildKotodamaClause } from "../kotodama/kotodamaConnector.js";
-import { buildConstitutionClause } from "../core/constitutionLoader.js";
+import { buildConstitutionClause, buildSelfIdentityClause, verifySeal } from "../core/constitutionLoader.js";
 import { detect10TruthAxes, buildAxisClause, ensureTruthAxesTable } from "../core/truthAxisEngine.js";
 import { loadKotodamaHisho, extractSoundsFromMessage, buildKotodamaHishoContext, buildKotodamaHishoOverview } from "../core/kotodamaHishoLoader.js";
 import { attachSatoriVerdict } from "../core/satoriEnforcement.js";
@@ -64,6 +64,7 @@ import { transformResponseForOutput } from "../core/tenmonFormatEnforcer.js";
 import { classifyIntent, getTemperatureForIntent } from "../core/intentClassifier.js";
 import { buildDeepeningClauseFromHistory } from "../core/conversationDeepening.js";
 import { selectModel, logModelSelection, computePromptHash } from "../core/modelSelector.js";
+import { tryAppendEvolutionLedgerSnapshotOnceV1, appendEvolutionLedgerEventV1 } from "../core/evolutionLedgerV1.js";
 
 import { DatabaseSync } from "node:sqlite";
 const router: IRouter = Router();
@@ -140,9 +141,24 @@ const TENMON_CONSTITUTION_TEXT_BASE =
 const _khsConstitutionClause = (() => {
   try { return buildConstitutionClause(); } catch { return ""; }
 })();
-const TENMON_CONSTITUTION_TEXT = _khsConstitutionClause
-  ? _khsConstitutionClause + "\n\n" + TENMON_CONSTITUTION_TEXT_BASE
-  : TENMON_CONSTITUTION_TEXT_BASE;
+// ULTRA-1_SELF_IDENTITY_V1: 自己認識文を起動時に構築（system prompt 最先頭に注入）
+const _selfIdentityClause = (() => {
+  try { return buildSelfIdentityClause(); } catch { return ""; }
+})();
+// ULTRA-1_SHA256_SEAL_V1: KHS_CORE 封印検証（起動時に1回実行）
+try {
+  const seal = verifySeal();
+  if (!seal.verified) {
+    console.warn(`[CONSTITUTION_SEAL] KHS_CORE seal NOT verified: ${seal.status}`);
+  }
+} catch (e: any) {
+  console.warn(`[CONSTITUTION_SEAL] check skipped: ${e?.message}`);
+}
+const TENMON_CONSTITUTION_TEXT = [
+  _selfIdentityClause,
+  _khsConstitutionClause,
+  TENMON_CONSTITUTION_TEXT_BASE,
+].filter(Boolean).join("\n\n");
 // KOTODAMA_HISHO_INIT_V1: 言霊秘書JSONを起動時に読み込み
 const _kotodamaHishoOverview = (() => {
   try {
@@ -458,6 +474,41 @@ router.post("/chat", async (req: Request, res: Response<ChatResponseBody>) => {
             }
           }
         } catch {}
+        // ULTRA4_EVOLUTION_LEDGER_V1: 進化台帳への書き込み（1リクエスト1行）
+        try {
+          if (obj && typeof obj === "object") {
+            // tryAppendEvolutionLedgerSnapshotOnceV1 は decisionFrame.ku を参照する
+            // chat.ts の通常ルートでは decisionFrame が存在しない場合もあるため、
+            // 軽量フォールバックで最低限の進化記録を残す
+            const ledgerResult = tryAppendEvolutionLedgerSnapshotOnceV1(obj as Record<string, unknown>);
+            if (!ledgerResult && !(obj as any).__evolutionLedgerV1Done) {
+              // decisionFrame.ku が無い場合（通常チャットルート）→ 軽量記録
+              const responseSnippet = String(obj.response ?? "").replace(/\s+/g, " ").trim().slice(0, 400);
+              if (responseSnippet.length > 10) {
+                appendEvolutionLedgerEventV1({
+                  sourceCard: "CHAT_TS_MAIN_ROUTE_V1",
+                  changedLayer: "chat_response_snapshot",
+                  beforeSummary: {},
+                  afterSummary: {
+                    hasResponse: true,
+                    responseLength: responseSnippet.length,
+                    threadId: String(threadId ?? "").slice(0, 64),
+                  },
+                  affectedRoute: "chat.ts/general",
+                  affectedSourcePack: "",
+                  affectedDensity: "",
+                  affectedProse: responseSnippet,
+                  regressionRisk: "low",
+                  acceptedBy: "chat_ts_resjson_wrapper_v1",
+                  status: "accepted",
+                });
+                (obj as any).__evolutionLedgerV1Done = true;
+              }
+            }
+          }
+        } catch (evoErr: any) {
+          console.warn(`[EVOLUTION_LEDGER] chat.ts write skipped: ${evoErr?.message}`);
+        }
         // ULTRA6_SATORI_FORMAT_V1: 惟り判定 + フォーマット強制を res.json ラッパー内で実行
         try { transformResponseForOutput(obj); } catch {}
         try { attachSatoriVerdict(obj); } catch {}
