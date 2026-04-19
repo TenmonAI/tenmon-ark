@@ -7,7 +7,7 @@
  *
  * 設計原則:
  *   - 深い問い → 高性能モデル (gemini-2.5-flash / gpt-4o)
- *   - 表層的な問い → 軽量モデル (gemini-2.0-flash-lite / gpt-4o-mini)
+ *   - 表層的な問い → 軽量モデル (gemini-2.5-flash-lite / gpt-4o-mini)
  *   - ゲスト → 常に軽量モデル (コスト重視)
  *   - 宿曜御神託 → 高性能モデル固定 (品質最優先)
  */
@@ -71,7 +71,7 @@ function getGeminiModel(tier: ModelTier): string {
     case "lite":
       return String(
         process.env.GEMINI_MODEL_LITE ||
-          "models/gemini-2.0-flash-lite",
+          "models/gemini-2.5-flash-lite",
       ).trim();
   }
 }
