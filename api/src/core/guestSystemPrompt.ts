@@ -11,7 +11,19 @@
  */
 
 import { loadKhsCoreConstitution } from "./constitutionLoader.js";
-import { TRUTH_AXES } from "./truthAxisEngine.js";
+/** KHS_CORE truthAxes キー → 表示名（TRUTH_AXES はキー文字列の readonly 配列のみ） */
+const TRUTH_AXIS_DISPLAY: Record<string, string> = {
+  cycle: "循環 (cycle)",
+  polarity: "水火・対極 (polarity)",
+  center: "正中・中心 (center)",
+  breath: "息・呼吸 (breath)",
+  carami: "カラミ・絡み (carami)",
+  order: "秩序・五十連 (order)",
+  correspondence: "対応・照応 (correspondence)",
+  manifestation: "顕現・形 (manifestation)",
+  purification: "浄化・禊 (purification)",
+  governance: "統治・高天原 (governance)",
+};
 import {
   extractSoundsFromMessage,
   buildKotodamaHishoContext,
@@ -185,12 +197,7 @@ export function buildGuestSystemPrompt(
     const khsCore = loadKhsCoreConstitution();
     if (khsCore && khsCore.truthAxes && khsCore.truthAxes.length > 0) {
       const axisLabels = khsCore.truthAxes
-        .map((k: string) => {
-          const ax = TRUTH_AXES.find(
-            (a: any) => a.key === k || a.label?.includes(k),
-          );
-          return ax ? `  - ${ax.label || k}` : `  - ${k}`;
-        })
+        .map((k: string) => `  - ${TRUTH_AXIS_DISPLAY[k] ?? k}`)
         .join("\n");
 
       prompt += `

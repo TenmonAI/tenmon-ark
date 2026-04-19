@@ -71,10 +71,15 @@ function clearAuthCookie(res: Response) {
   res.setHeader("Set-Cookie", `${COOKIE_NAME}=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Lax`);
 }
 
-export async function requireAuth(req: Request, res: Response, next: NextFunction) {
+/** 有効な JWT があれば認証情報を返す。無効・欠如は null（レスポンスは書かない） */
+export async function tryAuthFromRequest(req: Request): Promise<TenmonAuth | null> {
   const token = getCookie(req, COOKIE_NAME);
-  if (!token) return res.status(401).json({ ok: false, error: "UNAUTHENTICATED" });
-  const auth = await verifyToken(token);
+  if (!token) return null;
+  return verifyToken(token);
+}
+
+export async function requireAuth(req: Request, res: Response, next: NextFunction) {
+  const auth = await tryAuthFromRequest(req);
   if (!auth) return res.status(401).json({ ok: false, error: "UNAUTHENTICATED" });
   req.auth = auth;
   return next();

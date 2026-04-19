@@ -26,8 +26,8 @@ mcRouter.get('/health', (_req: Request, res: Response) => {
   });
 });
 
-// ── Overview (aggregated) ───────────────────────────────
-mcRouter.get('/overview', mcRequireAuth, (req: Request, res: Response) => {
+// ── PUBLIC SSOT (外部 AI が認証なしで読める) ─────────────
+mcRouter.get('/overview', maybeAuth, (_req: Request, res: Response) => {
   try {
     const overview = buildOverview();
     res.json(sanitize(overview));
@@ -36,28 +36,29 @@ mcRouter.get('/overview', mcRequireAuth, (req: Request, res: Response) => {
   }
 });
 
-// ── AI Handoff JSON ─────────────────────────────────────
-mcRouter.get('/ai-handoff.json', mcRequireAuth, (req: Request, res: Response) => {
+function sendAiHandoff(_req: Request, res: Response): void {
   try {
     const handoff = buildAiHandoff();
     const sanitized = sanitize(handoff);
 
-    // Final leak audit
     const jsonStr = JSON.stringify(sanitized);
     const leaks = auditForLeaks(jsonStr);
     if (leaks.length > 0) {
       console.error('[MC] ai-handoff leak audit FAILED:', leaks);
-      return res.status(500).json({ ok: false, error: 'LEAK_DETECTED' });
+      res.status(500).json({ ok: false, error: 'LEAK_DETECTED' });
+      return;
     }
 
     res.json(sanitized);
   } catch (err: any) {
     res.status(500).json({ ok: false, error: 'HANDOFF_BUILD_FAILED', detail: err?.message });
   }
-});
+}
 
-// ── Handoff Markdown ────────────────────────────────────
-mcRouter.get('/handoff', mcRequireAuth, (req: Request, res: Response) => {
+mcRouter.get('/ai-handoff.json', maybeAuth, sendAiHandoff);
+mcRouter.get('/ai-handoff', maybeAuth, sendAiHandoff);
+
+mcRouter.get('/handoff', maybeAuth, (req: Request, res: Response) => {
   try {
     const handoff = buildHandoffMarkdown();
     const accept = req.headers.accept || '';
@@ -85,8 +86,11 @@ const COLLECTOR_ENDPOINTS: Array<{ path: string; key: McFileKey }> = [
   { path: '/notion-sync',     key: 'notion_sync' },
 ];
 
+const PUBLIC_COLLECTOR_KEYS = new Set<McFileKey>(['truth_circuit', 'issues']);
+
 for (const { path, key } of COLLECTOR_ENDPOINTS) {
-  mcRouter.get(path, mcRequireAuth, (req: Request, res: Response) => {
+  const authMw = PUBLIC_COLLECTOR_KEYS.has(key) ? maybeAuth : mcRequireAuth;
+  mcRouter.get(path, authMw, (_req: Request, res: Response) => {
     const data = readState(key);
     if (!data) {
       return res.status(404).json({

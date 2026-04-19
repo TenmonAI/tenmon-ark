@@ -2,43 +2,20 @@
 // MC V2 FINAL — §11.2 Auth Guards (thin wrapper over existing auth)
 
 import type { Request, Response, NextFunction } from 'express';
-import { requireAuth, requireFounder } from '../../routes/auth.js';
+import { requireAuth, requireFounder, tryAuthFromRequest } from '../../routes/auth.js';
 
 /**
  * maybeAuth: Attempt to authenticate but don't block.
- * Sets req.auth if valid token exists, otherwise continues.
+ * Sets req.auth if valid token exists, otherwise continues (never sends 401).
  */
-export async function maybeAuth(req: Request, res: Response, next: NextFunction): Promise<void> {
-  // Store original json to intercept 401
-  const origJson = res.json.bind(res);
-  let blocked = false;
-
-  const fakeRes = Object.create(res);
-  fakeRes.status = (code: number) => {
-    if (code === 401) {
-      blocked = true;
-      return { json: () => {} };
-    }
-    return res.status(code);
-  };
-  fakeRes.json = (body: any) => {
-    if (blocked) return fakeRes;
-    return origJson(body);
-  };
-
+export async function maybeAuth(req: Request, _res: Response, next: NextFunction): Promise<void> {
   try {
-    await requireAuth(req, fakeRes as Response, () => {});
+    const auth = await tryAuthFromRequest(req);
+    req.auth = auth ?? undefined;
   } catch {
-    // Ignore auth errors in maybeAuth
+    req.auth = undefined;
   }
-
-  if (!blocked && req.auth) {
-    return next();
-  }
-
-  // No auth — continue anyway (unauthenticated)
-  req.auth = undefined;
-  return next();
+  next();
 }
 
 /**

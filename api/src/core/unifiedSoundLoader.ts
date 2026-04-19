@@ -74,7 +74,7 @@ export function extractUnifiedSounds(
  * 統合音義の system prompt 注入文を構築
  * V2.0: genten が第一権威、iroha が補完
  */
-export function buildUnifiedSoundInjection(userText: string): string {
+export function buildUnifiedSoundInjection(userText: string, maxLength?: number): string {
   const sounds = extractUnifiedSounds(userText);
   if (sounds.length === 0) return "";
 
@@ -112,6 +112,10 @@ export function buildUnifiedSoundInjection(userText: string): string {
       (s) => `・${s.char}: ${s.meanings.join("・")} (いろは言霊解)`
     );
     injection += `\n【いろは言霊解 音義補完】\n${irohaLines.join("\n")}\n`;
+  }
+
+  if (typeof maxLength === "number" && maxLength > 0 && injection.length > maxLength) {
+    injection = injection.slice(0, maxLength);
   }
 
   return injection;

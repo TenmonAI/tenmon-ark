@@ -89,7 +89,8 @@ export function extractKeyKotodamaFromText(
 }
 
 export function buildKotodamaGentenInjection(
-  sounds: KotodamaSound[]
+  sounds: KotodamaSound[],
+  maxLength?: number
 ): string {
   if (sounds.length === 0) return "";
 
@@ -100,7 +101,7 @@ export function buildKotodamaGentenInjection(
         .join("・")} / 起源: ${s.spiritual_origin} / 元素: ${s.element}`
   );
 
-  return `
+  let result = `
 【言霊秘書 稲荷古伝五十連法則 (山口志道霊学全集)】
 
 ユーザー発話の重要音:
@@ -108,6 +109,12 @@ ${lines.join("\n")}
 
 この音の陰陽・元素・極性を踏まえて応答すること。
 `;
+
+  if (typeof maxLength === "number" && maxLength > 0 && result.length > maxLength) {
+    result = result.slice(0, maxLength);
+  }
+
+  return result;
 }
 
 export function kotodamaGentenStats() {

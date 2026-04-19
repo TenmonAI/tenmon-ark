@@ -87,6 +87,8 @@ const FABRICATION_PATTERNS: Array<{ pattern: RegExp; label: string }> = [
 export interface SatoriVerdict {
   /** 悟りスコア (0.0-1.0, 1.0 = 完全悟り) */
   score: number;
+  /** 通過した検査タグ（ゲスト等で参照） */
+  passChecks?: string[];
   /** 検出された違反 */
   violations: Array<{
     type: "speculation" | "fabrication" | "missing_axis" | "missing_phi";
@@ -193,6 +195,7 @@ export function judgeSatori(
   if (!response || typeof response !== "string") {
     return {
       score: 0,
+      passChecks: [],
       violations: [],
       fourPhi: { detected: [], missing: [...FOUR_PHI_STEPS], complete: false },
       truthAxis: { mentioned: [], count: 0, sufficient: false },
@@ -269,8 +272,15 @@ export function judgeSatori(
   const hasHighViolation = violations.some(v => v.severity === "high");
   const omegaCompliant = !hasHighViolation && axes.length >= 2;
 
+  const passChecks: string[] = [];
+  if (!hasHighViolation) passChecks.push("no_high_severity_violations");
+  if (axes.length >= 2) passChecks.push("truth_axis_sufficient");
+  if (phi.missing.length === 0) passChecks.push("four_phi_complete");
+  if (omegaCompliant) passChecks.push("omega_compliant");
+
   return {
     score: Math.round(score * 100) / 100,
+    passChecks,
     violations,
     fourPhi: {
       detected: phi.detected,
