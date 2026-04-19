@@ -10,10 +10,16 @@ import { HEALTH_ENDPOINT, SERVICE_NAME } from '../constants.js';
  * This is a pure read-only aggregation — no side effects.
  */
 export function buildOverview(): McOverview {
-  const liveState = readState<McLiveState>('live_state');
-  const gitState = readState<McgitState>('git_state');
-  const issues = readState<McIssues>('issues');
-  const truthCircuit = readState<McTruthCircuit>('truth_circuit');
+  let liveState: McLiveState | null = null;
+  let gitState: McgitState | null = null;
+  let issues: McIssues | null = null;
+  let truthCircuit: McTruthCircuit | null = null;
+
+  try { liveState = readState<McLiveState>('live_state'); } catch (e) { console.warn('[MC] readState(live_state) failed:', e); }
+  try { gitState = readState<McgitState>('git_state'); } catch (e) { console.warn('[MC] readState(git_state) failed:', e); }
+  try { issues = readState<McIssues>('issues'); } catch (e) { console.warn('[MC] readState(issues) failed:', e); }
+  try { truthCircuit = readState<McTruthCircuit>('truth_circuit'); } catch (e) { console.warn('[MC] readState(truth_circuit) failed:', e); }
+
   const fileStatuses = allFileStatuses();
 
   // Compute freshness detail

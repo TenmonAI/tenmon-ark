@@ -62,6 +62,8 @@ export const STALE_THRESHOLDS = {
   notion_sync:     30 * 60,  // 30 min
   ai_handoff:      30 * 60,  // 30 min
   overview:        15 * 60,  // 15 min
+  contradictions:  30 * 60,  // 30 min
+  issues:          30 * 60,  // 30 min
 } as const;
 
 // ── Service ─────────────────────────────────────────────

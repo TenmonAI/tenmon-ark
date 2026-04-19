@@ -19,7 +19,7 @@ export function readState<T extends McBase>(key: McFileKey): T | null {
     const data = JSON.parse(raw) as T;
 
     // Compute staleness
-    const threshold = STALE_THRESHOLDS[key] ?? 30 * 60;
+    const threshold = (STALE_THRESHOLDS as Record<string, number>)[key] ?? 30 * 60;
     const generatedAt = data.generated_at ? new Date(data.generated_at).getTime() : 0;
     const age = (Date.now() - generatedAt) / 1000;
     data.stale = age > threshold;

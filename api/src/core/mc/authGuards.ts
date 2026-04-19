@@ -46,7 +46,8 @@ export async function maybeAuth(req: Request, res: Response, next: NextFunction)
  * Delegates to existing requireAuth.
  */
 export async function mcRequireAuth(req: Request, res: Response, next: NextFunction): Promise<void> {
-  return requireAuth(req, res, next);
+  requireAuth(req, res, next);
+  return;
 }
 
 /**
@@ -54,8 +55,9 @@ export async function mcRequireAuth(req: Request, res: Response, next: NextFunct
  * Chains requireAuth → requireFounder.
  */
 export async function mcRequireAdmin(req: Request, res: Response, next: NextFunction): Promise<void> {
-  return requireAuth(req, res, (err?: any) => {
+  requireAuth(req, res, (err?: any) => {
     if (err) return next(err);
-    return requireFounder(req, res, next);
+    requireFounder(req, res, next);
   });
+  return;
 }
