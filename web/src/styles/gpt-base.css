@@ -335,12 +335,9 @@ body::before {
 
 /* Topbar */
 .gpt-topbar {
-  height: 52px;
-  min-height: 52px;
   display: flex;
-  align-items: center;
+  align-items: stretch;
   justify-content: space-between;
-  padding: 0 var(--gpt-space-lg);
   border-bottom: 1px solid var(--gpt-border);
   background: var(--gpt-bg-primary);
   flex-shrink: 0;
@@ -730,6 +727,12 @@ textarea.gpt-composer-input {
 
   .gpt-main{ width:100vw; }
   .gpt-topbar{ position:sticky; top:0; z-index:1100; }
+
+  /* モバイル: 戻るボタンのテキストを非表示 (アイコンのみ) */
+  .topbar-back-label{ display:none; }
+
+  /* モバイル: アカウント名を非表示 */
+  .gpt-account-name{ display:none; }
 }
 
 /* Topbar account button (Phase1 UI-only) */
