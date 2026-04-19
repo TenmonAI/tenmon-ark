@@ -46,15 +46,16 @@ export function buildAiHandoff(): McAiHandoff {
     }
   } catch { /* ignore */ }
 
-  // Count genten sounds
+  // Count genten sounds (kotodama_meanings is a Record<string, ...> with 12 entries)
   let gentenSounds = 0;
   try {
-    const gentenPath = `${REPO_ROOT}/api/src/data/kotodama_genten_data.json`;
+    // File lives at repo root, not api/src/data/
+    const gentenPath = `${REPO_ROOT}/kotodama_genten_data.json`;
     if (fs.existsSync(gentenPath)) {
       const raw = fs.readFileSync(gentenPath, 'utf-8');
       const data = JSON.parse(raw);
-      if (data?.sounds && Array.isArray(data.sounds)) {
-        gentenSounds = data.sounds.length;
+      if (data?.kotodama_meanings && typeof data.kotodama_meanings === 'object') {
+        gentenSounds = Object.keys(data.kotodama_meanings).length;
       }
     }
   } catch { /* ignore */ }
