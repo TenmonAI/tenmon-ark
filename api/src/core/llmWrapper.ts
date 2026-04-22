@@ -170,6 +170,7 @@ async function callGemini(input: LlmChatInput, model: string): Promise<LlmChatOu
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
+    console.log(`[GEMINI-CALL] requestedModel=${model} effectiveModel=${fullModel} provider=gemini maxTok=${maxTokens} timeoutMs=${timeoutMs}`);
     const url = `https://generativelanguage.googleapis.com/v1beta/${fullModel}:generateContent?key=${encodeURIComponent(apiKey)}`;
     const resp = await fetch(url, {
       method: "POST",
