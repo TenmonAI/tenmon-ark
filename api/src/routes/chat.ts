@@ -19,7 +19,7 @@ import { searchPagesForHybrid } from "../kokuzo/search.js";
 import { getCaps, debugCapsPath, debugCapsQueue } from "../kokuzo/capsQueue.js";
 import { setThreadCandidates, pickFromThread, clearThreadCandidates, setThreadPending, getThreadPending, clearThreadState } from "../kokuzo/threadCandidates.js";
 import { parseLaneChoice, type LaneChoice } from "../persona/laneChoice.js";
-import { getDb, dbPrepare } from "../db/index.js";
+import { getDb, dbPrepare, getDbPath } from "../db/index.js";
 import { extractLawCandidates } from "../kokuzo/lawCandidates.js";
 import { extractSaikihoLawsFromText } from "../kotodama/saikihoLawSet.js";
 import { extractFourLayerTags } from "../kotodama/fourLayerTags.js";
@@ -40,6 +40,7 @@ import { llmChat } from "../core/llmWrapper.js";
 import { rewriteOnlyTenmon } from "../core/rewriteOnly.js";
 
 import { memoryPersistMessage, memoryReadSession } from "../memory/index.js";
+import { conversationReadRecent } from "../memory/conversationStore.js";
 import { listRules } from "../training/storage.js";
 import { buildTenmonVerdictEngineV1 } from "../core/tenmonVerdictEngineV1.js";
 import { upsertConversationDistillMemoryV1, buildMemoryProjectionPack, logMemoryProjection } from "../core/memoryProjection.js";
@@ -49,7 +50,6 @@ import {
   inferTenmonLongformModeV1,
 } from "../core/tenmonLongformComposerV1.js";
 
-import { getDbPath } from "../db/index.js";
 import {
   buildSukuyouGogyoSeedIntegrationV2,
   buildUltimateKanteiClause,
@@ -65,7 +65,11 @@ import { extractKeyKotodamaFromText, buildKotodamaGentenInjection } from "../cor
 import { selectKanagiPhaseForIntent, buildAmaterasuAxisInjection } from "../data/amaterasuAxisMap.js";
 import { buildUnifiedSoundInjection } from "../core/unifiedSoundLoader.js";
 import { transformResponseForOutput } from "../core/tenmonFormatEnforcer.js";
-import { classifyIntent, getTemperatureForIntent } from "../core/intentClassifier.js";
+import {
+  classifyIntent,
+  getTemperatureForIntent,
+  type IntentClassification,
+} from "../core/intentClassifier.js";
 import { buildDeepeningClauseFromHistory } from "../core/conversationDeepening.js";
 import { selectModel, logModelSelection, computePromptHash } from "../core/modelSelector.js";
 import { tryAppendEvolutionLedgerSnapshotOnceV1, appendEvolutionLedgerEventV1 } from "../core/evolutionLedgerV1.js";
@@ -99,6 +103,129 @@ interface __SukuyouSeedContext {
   storedAt: number;
 }
 const __sukuyouSeedByThread = new Map<string, __SukuyouSeedContext>();
+
+/** NATURAL_GENERAL: 明示的な継続依頼のみ検知（CUT-AUDIT 観測用） */
+function isForcedContinuationPrompt(input: string): boolean {
+  const t = String(input || "")
+    .trim()
+    .replace(/[　\s]+/g, " ");
+  return /^(続きを|続けて|その続き|補足して|補足を|詳しく|もっと詳しく|もう少し詳しく|さらに詳しく|続きお願いします|続けてください)[。！!？?]*$/.test(
+    t,
+  );
+}
+
+type __ContinuationHistTurnV1 = { role: "user" | "assistant"; content: string };
+
+/** continuation 用: session_memory を優先し、空なら conversation_log で補完 */
+async function buildContinuationHistoryV1(
+  threadId: string,
+  fallbackCount = 6,
+): Promise<{
+  items: __ContinuationHistTurnV1[];
+  source: "memory" | "conversation_log" | "none";
+  historyAuditExactCount: number;
+  historyAuditPrefixCount: number;
+}> {
+  const sid = String(threadId || "").trim();
+  if (!sid) {
+    return { items: [], source: "none", historyAuditExactCount: 0, historyAuditPrefixCount: 0 };
+  }
+
+  let dbPath = "";
+  try {
+    dbPath = getDbPath("kokuzo");
+  } catch {
+    dbPath = "";
+  }
+
+  const mem = memoryReadSession(sid, 8);
+  const memoryLen = Array.isArray(mem) ? mem.length : -1;
+  const fromMem: __ContinuationHistTurnV1[] = mem
+    .filter((m) => String(m.content || "").trim())
+    .map((m) => ({ role: m.role, content: String(m.content || "") }));
+  if (fromMem.length > 0) {
+    return {
+      items: fromMem,
+      source: "memory",
+      historyAuditExactCount: -1,
+      historyAuditPrefixCount: -1,
+    };
+  }
+
+  console.log(
+    "[THREAD-HISTORY-AUDIT]",
+    JSON.stringify({
+      threadId: sid,
+      fallbackCount,
+      memoryLen,
+      sessionIdQueried: sid,
+      dbPath,
+      conversationLogProbeEnabled: true,
+    }),
+  );
+
+  const exactStmt = dbPrepare(
+    "kokuzo",
+    "SELECT COUNT(1) AS c FROM conversation_log WHERE session_id = ?",
+  );
+  const prefixStmt = dbPrepare(
+    "kokuzo",
+    "SELECT COUNT(1) AS c FROM conversation_log WHERE session_id LIKE ?",
+  );
+  const recentStmt = dbPrepare(
+    "kokuzo",
+    "SELECT session_id FROM conversation_log GROUP BY session_id ORDER BY MAX(created_at) DESC LIMIT 5",
+  );
+
+  const exactCount = Number((exactStmt.get(sid) as { c: number }).c) || 0;
+  const prefixCount = Number((prefixStmt.get(`${sid}%`) as { c: number }).c) || 0;
+  const recentRows = recentStmt.all() as Array<{ session_id: string }>;
+  const recentSessionIds = recentRows.map((r) => r.session_id);
+
+  console.log(
+    "[THREAD-HISTORY-AUDIT-CANDIDATES]",
+    JSON.stringify({
+      threadId: sid,
+      exactCount,
+      prefixCount,
+      recentSessionIds,
+    }),
+  );
+
+  const rows = conversationReadRecent(sid, fallbackCount);
+
+  console.log(
+    "[THREAD-HISTORY-AUDIT-RESULT]",
+    JSON.stringify({
+      threadId: sid,
+      matchedRows: rows.length,
+      roles: rows.map((r) => r.role),
+      turnIndexes: rows.map((r) => (r.turnIndex ?? null)),
+      sampleHeads: rows.map((r) => String(r.content || "").slice(0, 60)),
+      historySourceResolved: rows.length > 0 ? "conversation_log" : "none",
+    }),
+  );
+
+  const fromLog: __ContinuationHistTurnV1[] = [...rows]
+    .reverse()
+    .filter((r) => String(r.content || "").trim())
+    .map((r) => ({ role: r.role, content: String(r.content || "") }));
+
+  if (fromLog.length > 0) {
+    return {
+      items: fromLog,
+      source: "conversation_log",
+      historyAuditExactCount: exactCount,
+      historyAuditPrefixCount: prefixCount,
+    };
+  }
+  return {
+    items: [],
+    source: "none",
+    historyAuditExactCount: exactCount,
+    historyAuditPrefixCount: prefixCount,
+  };
+}
 
 /** A7/A8: threadIdに紐づく宿曜 seedがあれば、system promptに注入するコンテキスト文を返す */
 function __buildSukuyouContinuityClause(threadId: string): string {
@@ -1865,8 +1992,38 @@ ${__carrySeedSummary}${__carryLifeAlgo}
         try {
           const __sukuyouClauseGen = __buildSukuyouContinuityClause(threadId);
           // ULTRA-10: 意図分類 + 深化戦略
-          const __chatHistory = memoryReadSession(String(threadId || ""), 8);
-          const __userIntent = classifyIntent(t0, __chatHistory);
+          const __rawInputTrimmed = String(t0 || "").trim();
+          const __forcedContinuation =
+            isForcedContinuationPrompt(__rawInputTrimmed) &&
+            Boolean(String(threadId || "").trim());
+          let __chatHistory: __ContinuationHistTurnV1[];
+          let __historySource: "memory" | "conversation_log" | "none";
+          let __historyAuditExactCount = -1;
+          let __historyAuditPrefixCount = -1;
+          if (__forcedContinuation) {
+            const __builtHist = await buildContinuationHistoryV1(String(threadId || ""), 6);
+            __chatHistory = __builtHist.items;
+            __historySource = __builtHist.source;
+            __historyAuditExactCount = __builtHist.historyAuditExactCount;
+            __historyAuditPrefixCount = __builtHist.historyAuditPrefixCount;
+          } else {
+            const __memOnly = memoryReadSession(String(threadId || ""), 8);
+            __chatHistory = __memOnly
+              .filter((m) => String(m.content || "").trim())
+              .map((m) => ({ role: m.role, content: String(m.content || "") }));
+            __historySource = __chatHistory.length > 0 ? "memory" : "none";
+          }
+          const __userIntent = classifyIntent(__rawInputTrimmed, __chatHistory);
+          const __selectorIntentKind = __forcedContinuation ? "follow_up" : __userIntent.primary;
+          const __modelIntentForSelect: IntentClassification = __forcedContinuation
+            ? {
+                ...__userIntent,
+                primary: "follow_up",
+                depth: "deep",
+                expectedResponseLength: "long",
+                targetTokens: Math.max(__userIntent.targetTokens || 1500, 2500),
+              }
+            : __userIntent;
           const __deepeningClause = buildDeepeningClauseFromHistory(__chatHistory);
           const __intentClause = `\n\n【応答長目標】${__userIntent.targetTokens} tokens\n${__deepeningClause}`;
           // V2.0_SOUL_ROOT_BIND: 5本の魂の根幹を GEN_SYSTEM に統合
@@ -1878,18 +2035,93 @@ ${__carrySeedSummary}${__carryLifeAlgo}
             __unifiedSoundClause,   // 統合音ローダー
           ].filter(Boolean).join("\n");
           const __genSystemWithEvidence = GEN_SYSTEM + __sukuyouClauseGen + __sukuyouContextClause + (__soulRootClauses ? "\n" + __soulRootClauses : "") + __intentClause;
-          // ULTRA-11: モデル選択 + コスト最適化
-          const __modelSel = selectModel({ intent: __userIntent, isSukuyouQuery: __isSukuyouQuery });
+          // ULTRA-11: モデル選択 + コスト最適化（継続入力時は selector 用 intent を follow_up 相当へ）
+          const __modelSel = selectModel({
+            intent: __modelIntentForSelect,
+            isSukuyouQuery: __isSukuyouQuery,
+          });
           logModelSelection(__modelSel, computePromptHash(__genSystemWithEvidence));
-          const __dynamicMaxTokens = __isSukuyouQuery ? 3500 : __modelSel.maxTokens;
-          const llmRes = await llmChat({ system: __genSystemWithEvidence, user: t0, history: __chatHistory, maxTokens: __dynamicMaxTokens, timeout: __isSukuyouQuery ? 25000 : 15000, model: __modelSel.model });
-          if (llmRes?.ok === false || !String(llmRes?.text ?? "").trim()) {
-            console.error("[GENERAL_LLM_TOP] llmChat returned empty/error:", llmRes?.err);
-            outText = "";
-          } else {
-            outText = __tenmonClampOneQ(String(llmRes?.text ?? "").trim());
+          const __maxTokensPlanned = __forcedContinuation
+            ? 4000
+            : __isSukuyouQuery
+              ? 3500
+              : __modelSel.maxTokens;
+          const __providerForChat =
+            __forcedContinuation && Array.isArray(__chatHistory) && __chatHistory.length > 0
+              ? ("openai" as const)
+              : undefined;
+          let llmRes = await llmChat({
+            system: __genSystemWithEvidence,
+            user: t0,
+            history: __chatHistory,
+            maxTokens: __maxTokensPlanned,
+            timeout: __isSukuyouQuery ? 25000 : 15000,
+            model: __modelSel.model,
+            ...(__providerForChat ? { provider: __providerForChat } : {}),
+          });
+          let continuationRetry = false;
+          let retryProvider: "" | "gemini" = "";
+          let retryOutLen = 0;
+          let llmResFinal = llmRes;
+          if (__forcedContinuation && !String(llmRes?.text ?? "").trim()) {
+            continuationRetry = true;
+            retryProvider = "gemini";
+            const llmRetry = await llmChat({
+              system: __genSystemWithEvidence,
+              user: t0,
+              history: __chatHistory,
+              maxTokens: __maxTokensPlanned,
+              timeout: __isSukuyouQuery ? 25000 : 15000,
+              model: __modelSel.model,
+              provider: "gemini",
+            });
+            retryOutLen = String(llmRetry?.text ?? "").length;
+            if (String(llmRetry?.text ?? "").trim()) {
+              llmResFinal = llmRetry;
+            }
           }
-          outProv = String((llmRes?.providerUsed || llmRes?.provider) ?? "llm");
+          console.log(
+            "[CUT-AUDIT]",
+            JSON.stringify({
+              threadId,
+              routeReason: "NATURAL_GENERAL_LLM_TOP",
+              forcedContinuation: __forcedContinuation,
+              userIntentKind: __userIntent.primary,
+              selectorIntentKind: __selectorIntentKind,
+              chatHistoryLen: Array.isArray(__chatHistory) ? __chatHistory.length : -1,
+              historySource: __historySource,
+              historyPreview: (__chatHistory || []).slice(-2).map((h) => ({
+                role: h.role,
+                head: String(h.content || "").slice(0, 60),
+              })),
+              historyAuditExactCount: __historyAuditExactCount,
+              historyAuditPrefixCount: __historyAuditPrefixCount,
+              provider: llmResFinal?.provider || "",
+              model: llmResFinal?.model || "",
+              finishReason: llmResFinal?.finishReason || "",
+              maxTokensPlanned: __maxTokensPlanned,
+              outLen: String(llmResFinal?.text || "").length,
+              continuationRetry,
+              retryProvider: continuationRetry ? retryProvider : "",
+              retryOutLen: continuationRetry ? retryOutLen : 0,
+              rawInputTrimmed: __rawInputTrimmed,
+              userHead: String(t0 || "").slice(0, 80),
+            }),
+          );
+          if (llmResFinal?.ok === false || !String(llmResFinal?.text ?? "").trim()) {
+            if (__forcedContinuation) {
+              outText =
+                "前の回答の続きとして受け取りましたが、会話履歴の再取得に失敗しました。『どの段落の続きを知りたいか』を一言で送ってください。";
+              outProv = "deterministic+continuation";
+            } else {
+              console.error("[GENERAL_LLM_TOP] llmChat returned empty/error:", llmResFinal?.err);
+              outText = "";
+              outProv = String((llmResFinal?.providerUsed || llmResFinal?.provider) ?? "llm");
+            }
+          } else {
+            outText = __tenmonClampOneQ(String(llmResFinal?.text ?? "").trim());
+            outProv = String((llmResFinal?.providerUsed || llmResFinal?.provider) ?? "llm");
+          }
         } catch (e: any) {
           outText = "いま応答の生成に失敗しました。もう一度だけ、短く言い直してみてください。";
         }
@@ -2014,6 +2246,17 @@ const __responsePayload: Record<string, any> = {
       };
       if (__reportAvailable && __reportTextForCopy) {
         __responsePayload.reportText = __reportTextForCopy;
+      }
+      if (!__hasSukuyouOracle) {
+        console.log(
+          "[CUT-AUDIT-FINAL]",
+          JSON.stringify({
+            threadId,
+            routeReason: "NATURAL_GENERAL_LLM_TOP",
+            finalLen: String(outText || "").length,
+            finalTail: String(outText || "").slice(-80),
+          }),
+        );
       }
       return res.json(__tenmonGeneralGateResultMaybe(__responsePayload));
     }

@@ -23,6 +23,7 @@ export type LlmChatOutput = {
   model: string;
   inputTokens?: number;
   outputTokens?: number;
+  finishReason?: string;
   ok?: boolean;
   err?: string;
   providerPlanned?: LlmProvider;
@@ -140,12 +141,14 @@ async function callOpenAI(input: LlmChatInput, model: string): Promise<LlmChatOu
 
     const json: any = await resp.json();
     const text = String(json?.choices?.[0]?.message?.content || "").trim();
+    const finishReason = String(json?.choices?.[0]?.finish_reason || "").trim();
     return {
       text,
       provider: "openai",
       model,
       inputTokens: json?.usage?.prompt_tokens,
       outputTokens: json?.usage?.completion_tokens,
+      finishReason,
     };
   } catch (e) {
     clearTimeout(timeoutId);
@@ -176,6 +179,7 @@ async function callGemini(input: LlmChatInput, model: string): Promise<LlmChatOu
         generationConfig: {
           temperature: 0.4,
           maxOutputTokens: maxTokens,
+          thinkingConfig: { thinkingBudget: 0 },
         },
       }),
       signal: controller.signal,
@@ -193,12 +197,19 @@ async function callGemini(input: LlmChatInput, model: string): Promise<LlmChatOu
       json?.candidates?.[0]?.content?.parts?.map((p: any) => String(p?.text || "")).join("") || ""
     ).trim();
 
+    const finishReason = String(
+      json?.candidates?.[0]?.finishReason ||
+      json?.candidates?.[0]?.finish_reason ||
+      ""
+    ).trim();
+
     return {
       text,
       provider: "gemini",
       model,
       inputTokens: json?.usageMetadata?.promptTokenCount,
       outputTokens: json?.usageMetadata?.candidatesTokenCount,
+      finishReason,
     };
   } catch (e) {
     clearTimeout(timeoutId);
