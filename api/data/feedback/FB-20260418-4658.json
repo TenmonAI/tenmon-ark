@@ -1,0 +1,12 @@
+{
+  "title": "回答が途中で途切れます",
+  "category": "チャット機能",
+  "detail": "新しいチャットで質問をしたら回答が途切れ、続きを教えて下さいと入力してしても、\n全く別の話になってしまいました。",
+  "priority": "中",
+  "receiptNumber": "FB-20260418-4658",
+  "isFounder": true,
+  "device": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHT | 390x699",
+  "notionSaved": true,
+  "notionPageId": "34665146-58e6-8178-ba56-c84420a194a3",
+  "createdAt": "2026-04-18T15:24:42.713Z"
+}

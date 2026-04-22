@@ -1,0 +1,12 @@
+{
+  "title": "チャットのやり取りでメッセージが最後まで表示されない",
+  "category": "チャット機能",
+  "detail": "明らかに文章の途中で止まっている回答となる。一度でなく何度も途中で切れています。\n該当箇所の画像を送りたいところですが添付機能がありませんので、表現が難しいところです。",
+  "priority": "中",
+  "receiptNumber": "FB-20260420-2883",
+  "isFounder": true,
+  "device": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHT | 393x695",
+  "notionSaved": true,
+  "notionPageId": "34865146-58e6-81b6-a11b-f2f90ac5a18c",
+  "createdAt": "2026-04-20T09:59:10.730Z"
+}

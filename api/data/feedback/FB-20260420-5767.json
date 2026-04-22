@@ -1,0 +1,13 @@
+{
+  "title": "チャットの回答が途中で切れる",
+  "category": "チャット機能",
+  "detail": "チャットの回答が2,3行で切れてしまう",
+  "priority": "高",
+  "receiptNumber": "FB-20260420-5767",
+  "isFounder": true,
+  "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) | 1632x916",
+  "reproSteps": "26年5月はどんな月になりそうですか？",
+  "notionSaved": true,
+  "notionPageId": "34865146-58e6-8114-a181-f989a4843188",
+  "createdAt": "2026-04-20T16:59:44.666Z"
+}

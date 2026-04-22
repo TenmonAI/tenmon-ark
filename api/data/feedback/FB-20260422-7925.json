@@ -1,0 +1,12 @@
+{
+  "title": "チャットの途中で文章が終わる",
+  "category": "チャット機能",
+  "detail": "チャットの返答が途中で切れるのはなぜなのでしょうか？続きがあるかのような感じで途中で終わります。よろしくお願いいたします。文字数の問題でしょうか？",
+  "priority": "中",
+  "receiptNumber": "FB-20260422-7925",
+  "isFounder": true,
+  "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) | 1192x676",
+  "notionSaved": true,
+  "notionPageId": "34a65146-58e6-8166-8c4c-e12df2b1c52a",
+  "createdAt": "2026-04-22T05:40:31.759Z"
+}

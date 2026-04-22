@@ -1,0 +1,12 @@
+{
+  "title": "チャットの応答の途中で途切れる",
+  "category": "表示・動作の不具合",
+  "detail": "簡単な質問、定型の質問、挨拶\nしてみたが、みんな途切れる。",
+  "priority": "中",
+  "receiptNumber": "FB-20260418-9731",
+  "isFounder": true,
+  "device": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome | 345x678",
+  "notionSaved": true,
+  "notionPageId": "34665146-58e6-8106-a751-e219b3c920f7",
+  "createdAt": "2026-04-18T10:37:53.052Z"
+}

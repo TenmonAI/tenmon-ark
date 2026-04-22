@@ -1,0 +1,10 @@
+{
+  "to": "takako_nakanishi@icloud.com",
+  "subject": "TENMON-ARK パスワード再設定のご案内",
+  "body": "TENMON-ARK をご利用いただきありがとうございます。\n\nパスワード再設定をご希望の場合は、以下のリンクからお手続きください。\n\nhttps://tenmon-ark.com/pwa/reset-password?token=b784752f72afbdda57049cc122734c0b12a5ab3cff07b518d686cb837d39b313a905d5a321858d724ef7387cdcf3de85\n\nこのリンクの有効期限は60分です。\n心当たりがない場合は、このメールを破棄してください。\n\n— TENMON-ARK",
+  "createdAt": "2026-04-20T12:12:33.066Z",
+  "tokenId": "prt_mo75np2i_c51dac129f7f",
+  "mailSent": true,
+  "mailTransport": "smtp",
+  "mailMessageId": "<8fe87ffe-174f-73ae-61d1-b263a298c113@gmail.com>"
+}

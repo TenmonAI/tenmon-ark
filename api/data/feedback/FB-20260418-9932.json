@@ -1,0 +1,12 @@
+{
+  "title": "改行を押すとそのまま送信になる",
+  "category": "スマホ使用感",
+  "detail": "チャットに1文書いて、改行を押すと、そのまま送信してしまうので、文章が途中になってしまう。\n応答のAIからの答えも、文章が中途半端に終わっていて、\n同じフレーズを繰り返しているように思う。",
+  "priority": "高",
+  "receiptNumber": "FB-20260418-9932",
+  "isFounder": true,
+  "device": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome | 345x678",
+  "notionSaved": true,
+  "notionPageId": "34665146-58e6-8127-83e2-e965b5b3d37a",
+  "createdAt": "2026-04-18T12:01:16.362Z"
+}

@@ -1,0 +1,12 @@
+{
+  "title": "上部タブのメニュー表示について",
+  "category": "UI/デザイン",
+  "detail": "スマートフォンでの操作性に関する改善要望です。チャット、その他の画面で一番上までスクロールしないと上部のタブが表示されないので、メニューを開く操作が少々不便です。",
+  "priority": "低",
+  "receiptNumber": "FB-20260421-9319",
+  "isFounder": true,
+  "device": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_7_15 like Mac OS X) AppleWebKit/605.1.15 ( | 375x552",
+  "notionSaved": true,
+  "notionPageId": "34965146-58e6-818d-9ff2-d073b2c74d0f",
+  "createdAt": "2026-04-21T09:33:47.285Z"
+}

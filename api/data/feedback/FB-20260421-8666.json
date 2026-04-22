@@ -1,0 +1,12 @@
+{
+  "title": "回答がかなり短く途切れます",
+  "category": "チャット機能",
+  "detail": "チャットでの回答が\n10行もいかない位で途切れてしまいます。\n続きを教えて下さいと言っても、\n違う始まりですが数行で途切れしまいます。",
+  "priority": "中",
+  "receiptNumber": "FB-20260421-8666",
+  "isFounder": true,
+  "device": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHT | 390x699",
+  "notionSaved": true,
+  "notionPageId": "34965146-58e6-81d4-b8e2-d90bbc44e0c2",
+  "createdAt": "2026-04-21T15:21:11.504Z"
+}
