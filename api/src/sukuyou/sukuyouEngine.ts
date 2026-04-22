@@ -951,12 +951,33 @@ export function calculateHonmeiShuku(birthDateOrLunar: Date | LunarDate): Naksha
   return calculateHonmeiShukuFromLunar(birthDateOrLunar);
 }
 
-/** 日付をYYYYMMDD形式のキーに変換 */
+/**
+ * ルックアップキー用 YYYYMMDD（日本の戸籍・命盤で用いる**東京の暦日**）
+ *
+ * UTC 成分だけを取ると `1990-09-26T00:00:00+09:00` が UTC 9/25 になり、
+ * syukuyo 系テーブル（暦日キー）と 1 日ずれる（箕→斗境界など）。
+ */
 function formatDateKey(date: Date): string {
-  const y = date.getUTCFullYear();
-  const m = String(date.getUTCMonth() + 1).padStart(2, "0");
-  const d = String(date.getUTCDate()).padStart(2, "0");
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Tokyo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+  const y = parts.find((p) => p.type === "year")?.value ?? "1970";
+  const m = parts.find((p) => p.type === "month")?.value ?? "01";
+  const d = parts.find((p) => p.type === "day")?.value ?? "01";
   return `${y}${m}${d}`;
+}
+
+/** 東京暦日に基づく曜（本命曜）。UTC の曜だけでは JST 生まれとずれる。 */
+function getTokyoWeekDay(date: Date): number {
+  const key = formatDateKey(date);
+  const y = Number(key.slice(0, 4));
+  const mo = Number(key.slice(4, 6));
+  const da = Number(key.slice(6, 8));
+  const noonJst = new Date(Date.UTC(y, mo - 1, da, 3, 0, 0));
+  return noonJst.getUTCDay();
 }
 
 /** 朔日の直宿を決定する（旧暦フォールバック用） */
@@ -978,7 +999,7 @@ function calculateHonmeiShukuFromLunar(lunarDate: LunarDate): Nakshatra {
  * 本命曜の算出
  */
 export function calculateHonmeiYo(birthDate: Date): Planet {
-  const dayOfWeek = birthDate.getUTCDay();
+  const dayOfWeek = getTokyoWeekDay(birthDate);
   return PLANETS[dayOfWeek];
 }
 
