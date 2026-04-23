@@ -6,7 +6,7 @@ BASE="http://127.0.0.1:3000"
 DB="/opt/tenmon-ark-data/kokuzo.sqlite"
 OUT="/var/log/tenmon/POST_RELEASE_SOAK_${TS}.md"
 
-before="$(sqlite3 "$DB" 'select count(*) from kanagi_growth_ledger;')"
+before="$(sqlite3 -readonly "$DB" 'select count(*) from kanagi_growth_ledger;')"
 AUDIT="$(curl -fsS --max-time 20 "$BASE/api/audit")"
 
 probe () {
@@ -43,13 +43,13 @@ probe () {
     echo
   done
 
-  after="$(sqlite3 "$DB" 'select count(*) from kanagi_growth_ledger;')"
+  after="$(sqlite3 -readonly "$DB" 'select count(*) from kanagi_growth_ledger;')"
   echo "## ledger"
   echo "- before: $before"
   echo "- after:  $after"
   echo "- delta:  $((after-before))"
   echo
-  sqlite3 "$DB" "
+  sqlite3 -readonly "$DB" "
   select id, route_reason, input_text, scripture_key, self_phase, intent_phase, created_at
   from kanagi_growth_ledger
   order by id desc

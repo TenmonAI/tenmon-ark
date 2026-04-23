@@ -174,7 +174,7 @@ else
     echo "[WARN] kokuzo.sqlite not found at $KDATA — set TENMON_DATA_DIR or SKIP_SQLITE_CHECKS=1"
     fail "density ledger sqlite missing"
   fi
-  CNT="$(sqlite3 "$KDATA" "SELECT COUNT(*) FROM conversation_density_ledger_runtime_v1 WHERE thread_id='${DEN_TID}';" 2>/dev/null || echo 0)"
+  CNT="$(sqlite3 -readonly "$KDATA" "SELECT COUNT(*) FROM conversation_density_ledger_runtime_v1 WHERE thread_id='${DEN_TID}';" 2>/dev/null || echo 0)"
   if [[ "${CNT:-0}" -lt 1 ]]; then
     fail "density ledger: expected row for thread_id=${DEN_TID}, count=${CNT}"
   fi

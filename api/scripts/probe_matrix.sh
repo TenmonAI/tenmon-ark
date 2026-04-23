@@ -207,7 +207,7 @@ fi
 echo "[ASSERT_PASS] longform length"
 echo
 
-PROPOSED_TERM="$(sqlite3 /opt/tenmon-ark-data/kokuzo.sqlite \
+PROPOSED_TERM="$(sqlite3 -readonly /opt/tenmon-ark-data/kokuzo.sqlite \
   "SELECT p.termKey
    FROM khs_laws p
    WHERE p.status='proposed'

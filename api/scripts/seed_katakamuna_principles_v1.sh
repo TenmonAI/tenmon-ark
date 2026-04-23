@@ -12,7 +12,7 @@ curl -fsS "$BASE_URL/api/audit" >/dev/null
 
 # doc preference: KATAKAMUNA if exists else KHS
 DOC="KATAKAMUNA"
-if ! sqlite3 "$DB" "select count(*) from kokuzo_pages where doc='KATAKAMUNA';" | grep -qE '^[1-9]'; then
+if ! sqlite3 -readonly "$DB" "select count(*) from kokuzo_pages where doc='KATAKAMUNA';" | grep -qE '^[1-9]'; then
   DOC="KHS"
 fi
 

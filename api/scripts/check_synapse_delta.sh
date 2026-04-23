@@ -18,7 +18,7 @@ while [ $# -gt 0 ]; do
   esac
 done
 
-count() { sqlite3 "$DB" "SELECT COUNT(*) FROM synapse_log;"; }
+count() { sqlite3 -readonly "$DB" "SELECT COUNT(*) FROM synapse_log;"; }
 
 echo "[check_synapse_delta] BASE_URL=$BASE_URL DB=$DB THREAD=$THREAD N=$N EXPECT=$EXPECT"
 
@@ -34,7 +34,7 @@ A="$(count)"; echo "after_count=$A"
 DELTA=$((A-B))
 echo "delta=$DELTA"
 
-sqlite3 "$DB" ".mode box" ".headers on" "SELECT createdAt, threadId, routeReason, synapseId FROM synapse_log ORDER BY createdAt DESC LIMIT 3;" || true
+sqlite3 -readonly "$DB" ".mode box" ".headers on" "SELECT createdAt, threadId, routeReason, synapseId FROM synapse_log ORDER BY createdAt DESC LIMIT 3;" || true
 
 if [ "$DELTA" -lt "$EXPECT" ]; then
   echo "[FAIL] delta<$EXPECT" >&2

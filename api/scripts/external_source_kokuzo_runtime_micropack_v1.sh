@@ -362,7 +362,7 @@ jq -n --arg t "es-mc11-${SAN_TS}" '{threadId:$t}' \
   | curl -fsS -H "Content-Type: application/json" -d @- "$BASE/api/memory/seed" >"$MC11/seed.json" \
   || fail_mc "kokuzo_seed_bridge_probe" "curl seed"
 
-sqlite3 "$KDB" "SELECT 1 FROM sqlite_master WHERE type='table' AND name='kokuzo_seeds' LIMIT 1;" >"$MC11/kokuzo_seeds_table.txt" \
+sqlite3 -readonly "$KDB" "SELECT 1 FROM sqlite_master WHERE type='table' AND name='kokuzo_seeds' LIMIT 1;" >"$MC11/kokuzo_seeds_table.txt" \
   || fail_mc "kokuzo_seed_bridge_probe" "sqlite"
 
 python3 - <<'PY' "$MC11/seed.json" "$MC11/kokuzo_seeds_table.txt" || { write_envelope "kokuzo_seed_bridge_probe" "seed_bridge" "$MC11" "seed" "fail"; fail_mc "kokuzo_seed_bridge_probe" "acceptance"; }

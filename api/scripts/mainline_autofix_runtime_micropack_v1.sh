@@ -201,7 +201,7 @@ else
     write_envelope "density_ledger_runtime_check" "density" "$MC6" "同上" "fail"
     fail_mc "density_ledger_runtime_check" "kokuzo.sqlite missing at $KDATA"
   fi
-  CNT="$(sqlite3 "$KDATA" "SELECT COUNT(*) FROM conversation_density_ledger_runtime_v1 WHERE thread_id='${DEN_TID}';" 2>/dev/null || echo 0)"
+  CNT="$(sqlite3 -readonly "$KDATA" "SELECT COUNT(*) FROM conversation_density_ledger_runtime_v1 WHERE thread_id='${DEN_TID}';" 2>/dev/null || echo 0)"
   if [[ "${CNT:-0}" -lt 1 ]]; then
     write_envelope "density_ledger_runtime_check" "density" "$MC6" "同上" "fail"
     fail_mc "density_ledger_runtime_check" "expected ledger row for ${DEN_TID}, count=${CNT}"

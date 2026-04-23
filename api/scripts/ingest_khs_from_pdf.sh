@@ -111,10 +111,10 @@ EOF
 echo "[INGEST] Verifying"
 
 # 確認
-KHS_COUNT="$(sqlite3 "$KOKUZO_DB" "SELECT COUNT(*) FROM kokuzo_pages WHERE doc='KHS';")"
+KHS_COUNT="$(sqlite3 -readonly "$KOKUZO_DB" "SELECT COUNT(*) FROM kokuzo_pages WHERE doc='KHS';")"
 echo "[PASS] KHS pages count: $KHS_COUNT"
 
-FTS_COUNT="$(sqlite3 "$KOKUZO_DB" "SELECT COUNT(*) FROM kokuzo_pages_fts WHERE doc='KHS';")"
+FTS_COUNT="$(sqlite3 -readonly "$KOKUZO_DB" "SELECT COUNT(*) FROM kokuzo_pages_fts WHERE doc='KHS';")"
 echo "[PASS] KHS FTS entries: $FTS_COUNT"
 
 # 総件数確認

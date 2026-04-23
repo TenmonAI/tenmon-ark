@@ -21,7 +21,7 @@ if [ ! -f "$DB" ]; then
 fi
 
 count() {
-  sqlite3 "$DB" "SELECT COUNT(*) FROM kanagi_growth_ledger;"
+  sqlite3 -readonly "$DB" "SELECT COUNT(*) FROM kanagi_growth_ledger;"
 }
 
 if [ -n "$COUNT_ONLY" ]; then
@@ -31,7 +31,7 @@ fi
 
 echo "count=$(count)"
 echo "recent (limit=$LIMIT):"
-sqlite3 "$DB" ".mode line" "
+sqlite3 -readonly "$DB" ".mode line" "
   SELECT id, created_at, substr(input_text,1,80) AS input_head, route_reason, self_phase, intent_phase
   FROM kanagi_growth_ledger
   ORDER BY id DESC

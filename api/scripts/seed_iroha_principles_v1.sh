@@ -15,10 +15,10 @@ fi
 pick_page() {
   local pattern="$1"
   local p
-  p="$(sqlite3 "$DB" "select pdfPage from kokuzo_pages where doc='$DOC' and length(text)>200 and text like '%$pattern%' order by pdfPage asc limit 1;")"
+  p="$(sqlite3 -readonly "$DB" "select pdfPage from kokuzo_pages where doc='$DOC' and length(text)>200 and text like '%$pattern%' order by pdfPage asc limit 1;")"
   if [ -z "${p:-}" ]; then
     # fallback: any non-empty page
-    p="$(sqlite3 "$DB" "select pdfPage from kokuzo_pages where doc='$DOC' and length(text)>200 order by pdfPage asc limit 1;")"
+    p="$(sqlite3 -readonly "$DB" "select pdfPage from kokuzo_pages where doc='$DOC' and length(text)>200 order by pdfPage asc limit 1;")"
   fi
   echo "$p"
 }

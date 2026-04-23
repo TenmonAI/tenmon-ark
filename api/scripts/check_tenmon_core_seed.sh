@@ -13,7 +13,7 @@ if [ ! -f "$KOKUZO_DB" ]; then
 fi
 
 echo "[CHECK] kokuzo_pages TENMON_CORE P1"
-LEN_CORE="$(sqlite3 "$KOKUZO_DB" "SELECT LENGTH(text) FROM kokuzo_pages WHERE doc='TENMON_CORE' AND pdfPage=1;" 2>/dev/null || echo "0")"
+LEN_CORE="$(sqlite3 -readonly "$KOKUZO_DB" "SELECT LENGTH(text) FROM kokuzo_pages WHERE doc='TENMON_CORE' AND pdfPage=1;" 2>/dev/null || echo "0")"
 if [ "${LEN_CORE:-0}" -le 0 ]; then
   echo "[FAIL] TENMON_CORE P1 not found or empty (length=$LEN_CORE)"
   exit 1

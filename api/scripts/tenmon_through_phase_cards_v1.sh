@@ -18,7 +18,7 @@ curl -fsS "$BASE/api/audit/prompt-to-cursor-compiler-v1?card=CURSOR_ACTION_BROKE
 curl -fsS "$BASE/api/audit/full-autonomous-build-loop-v1" >"$EV/card7_full_loop.json"
 
 KDB="${TENMON_DATA_DIR:-/opt/tenmon-ark-data}/kokuzo.sqlite"
-sqlite3 "$KDB" "SELECT COUNT(*) FROM evolution_ledger_v1;" >"$EV/card2_ledger_count.txt" 2>/dev/null || echo "-1" >"$EV/card2_ledger_count.txt"
+sqlite3 -readonly "$KDB" "SELECT COUNT(*) FROM evolution_ledger_v1;" >"$EV/card2_ledger_count.txt" 2>/dev/null || echo "-1" >"$EV/card2_ledger_count.txt"
 
 python3 - <<'PY' "$EV/card3_meta_optimizer_bundle.json" "$EV/card4_intelligence_master.json" "$EV/card2_ledger_count.txt" "$EV/card5_cursor_broker.json" "$EV/card6_prompt_compiler.json" "$EV/card7_full_loop.json"
 import json, sys

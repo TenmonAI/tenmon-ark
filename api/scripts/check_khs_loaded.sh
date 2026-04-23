@@ -12,7 +12,7 @@ if [ ! -f "$KOKUZO_DB" ]; then
 fi
 
 echo "[CHECK] kokuzo_pages doc='KHS' count"
-KHS_COUNT="$(sqlite3 "$KOKUZO_DB" "SELECT COUNT(*) FROM kokuzo_pages WHERE doc='KHS';" 2>/dev/null || echo "0")"
+KHS_COUNT="$(sqlite3 -readonly "$KOKUZO_DB" "SELECT COUNT(*) FROM kokuzo_pages WHERE doc='KHS';" 2>/dev/null || echo "0")"
 echo "KHS pages count: $KHS_COUNT"
 
 if [ "$KHS_COUNT" = "0" ]; then
@@ -23,7 +23,7 @@ fi
 
 echo ""
 echo "[CHECK] pdfPage=32 text length"
-PAGE32_LENGTH="$(sqlite3 "$KOKUZO_DB" "SELECT length(text) FROM kokuzo_pages WHERE doc='KHS' AND pdfPage=32;" 2>/dev/null || echo "0")"
+PAGE32_LENGTH="$(sqlite3 -readonly "$KOKUZO_DB" "SELECT length(text) FROM kokuzo_pages WHERE doc='KHS' AND pdfPage=32;" 2>/dev/null || echo "0")"
 if [ "$PAGE32_LENGTH" = "0" ] || [ -z "$PAGE32_LENGTH" ]; then
   echo "[WARN] pdfPage=32 not found or empty"
 else
@@ -33,4 +33,4 @@ fi
 
 echo ""
 echo "[INFO] Sample pages (first 5):"
-sqlite3 "$KOKUZO_DB" "SELECT pdfPage, length(text) as text_len FROM kokuzo_pages WHERE doc='KHS' ORDER BY pdfPage ASC LIMIT 5;" 2>/dev/null || echo "No data"
+sqlite3 -readonly "$KOKUZO_DB" "SELECT pdfPage, length(text) as text_len FROM kokuzo_pages WHERE doc='KHS' ORDER BY pdfPage ASC LIMIT 5;" 2>/dev/null || echo "No data"

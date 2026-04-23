@@ -13,12 +13,12 @@ if [ ! -f "$KOKUZO_DB" ]; then
 fi
 
 # 総件数
-TOTAL_COUNT="$(sqlite3 "$KOKUZO_DB" "SELECT COUNT(*) FROM kokuzo_pages;" 2>/dev/null || echo "0")"
+TOTAL_COUNT="$(sqlite3 -readonly "$KOKUZO_DB" "SELECT COUNT(*) FROM kokuzo_pages;" 2>/dev/null || echo "0")"
 echo "[INFO] Total kokuzo_pages count: $TOTAL_COUNT"
 
 # doc="KHS" の存在確認
 echo "[CHECK] doc='KHS' in kokuzo_pages"
-KHS_COUNT="$(sqlite3 "$KOKUZO_DB" "SELECT COUNT(*) FROM kokuzo_pages WHERE doc='KHS' LIMIT 1;" 2>/dev/null || echo "0")"
+KHS_COUNT="$(sqlite3 -readonly "$KOKUZO_DB" "SELECT COUNT(*) FROM kokuzo_pages WHERE doc='KHS' LIMIT 1;" 2>/dev/null || echo "0")"
 echo "KHS pages count: $KHS_COUNT"
 
 if [ "$KHS_COUNT" = "0" ]; then
@@ -44,4 +44,4 @@ fi
 # 全docの一覧（doc別件数・上位20）
 echo ""
 echo "[INFO] All docs in kokuzo_pages (top 20 by page count):"
-sqlite3 "$KOKUZO_DB" "SELECT DISTINCT doc, COUNT(*) as pages FROM kokuzo_pages GROUP BY doc ORDER BY pages DESC LIMIT 20;" 2>/dev/null || echo "No data"
+sqlite3 -readonly "$KOKUZO_DB" "SELECT DISTINCT doc, COUNT(*) as pages FROM kokuzo_pages GROUP BY doc ORDER BY pages DESC LIMIT 20;" 2>/dev/null || echo "No data"
