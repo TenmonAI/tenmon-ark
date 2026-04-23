@@ -101,8 +101,22 @@ export interface McVnextOverviewPayload {
     memory_hit_all_time?: number | null;
     conversation_log_hit_live?: number | null;
     conversation_log_hit_all_time?: number | null;
+    /** CARD-MC-09C: turn_index>=1 に限定した真の継承品質（24h）。 */
+    continuation_memory_hit_live?: number | null;
+    /** CARD-MC-09C: turn_index>=1 に限定した真の継承品質（全期間）。 */
+    continuation_memory_hit_all_time?: number | null;
+    /** CARD-MC-09C: turn_index>=1 の MEMORY_READ サンプル数（24h）。 */
+    continuation_sample_count_live?: number;
+    /** CARD-MC-09C: turn_index>=1 の MEMORY_READ サンプル数（全期間）。 */
+    continuation_sample_count_all_time?: number;
+    /** CARD-MC-09C: Turn 0 の miss_reason='never_persisted' 率（正常性指標、24h）。 */
+    turn0_never_persisted_rate?: number | null;
+    /** CARD-MC-09C: Turn 0 の MEMORY_READ サンプル数（24h）。 */
+    turn0_sample_count_live?: number;
     metrics_window_note?: string;
     verdict_short: string;
+    /** CARD-MC-09C: continuation 継承 / turn0 正常性を分離表示する short verdict。 */
+    verdict_short_v2?: string;
   };
   /** CARD-MC-09: Route of truth. */
   route_summary?: {

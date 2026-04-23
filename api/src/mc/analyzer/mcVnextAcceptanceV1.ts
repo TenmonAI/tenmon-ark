@@ -44,7 +44,8 @@ export type McVnextAcceptanceCheckV1 = {
     | "persist_healthy"
     | "thread_trace_healthy"
     | "sources_populated"
-    | "alerts_below_critical";
+    | "alerts_below_critical"
+    | "continuation_memory_healthy";
   label: string;
   status: McVnextAcceptanceCheckStatusV1;
   detail: string;
@@ -79,12 +80,17 @@ const T_MIN_CANONICAL_SOURCES = 3;     // 未満で WATCH
 const T_MIN_GRAPH_EDGES = 8;           // 未満で WATCH
 const T_MIN_THREAD_STEPS = 2;          // 未満で WATCH
 const T_HIGH_ALERTS_WATCH = 2;         // 以上で WATCH
+// CARD-MC-09C: 継承メモリヒット率（turn_index>=1）の PASS / FAIL 閾値。
+const T_CONTINUATION_MEMORY_HIT_PASS = 0.8;  // 以上で PASS
+const T_CONTINUATION_MEMORY_HIT_FAIL = 0.5;  // 未満で FAIL
+const T_CONTINUATION_MEMORY_MIN_SAMPLE = 3;  // 未満は WATCH 扱い
 
 /** nextRecommendedCard は severity 優先でこの順に採用（古い thread カードが先頭に来るのを防ぐ）。 */
 const NEXT_CARD_PRIORITY: McVnextAcceptanceCheckV1["id"][] = [
   "alerts_below_critical",
   "ledger_flowing",
   "persist_healthy",
+  "continuation_memory_healthy",
   "continuation_healthy",
   "thread_trace_healthy",
   "canonical_path",
@@ -95,6 +101,8 @@ const CARD_BY_CHECK: Record<McVnextAcceptanceCheckV1["id"], string> = {
   canonical_path: "CARD-MC-07-ENTRY-UNIFY: /mc/ 正統パスと canonical source を同期",
   ledger_flowing: "CARD-NEXT-04-LEDGER-REQUEST-PROOF: ledger 書込経路の死活を再点検",
   continuation_healthy: "CARD-MC-06-CONTINUATION-PERSIST-ACCEPTANCE-FINAL-V1: continuation を再整備",
+  continuation_memory_healthy:
+    "CARD-MC-09C-MEMORY-HIT-METRIC-CORRECTNESS-V1: turn_index>=1 の継承メモリヒット率を追い込む",
   persist_healthy: "CARD-MC-06-CONTINUATION-PERSIST-ACCEPTANCE-FINAL-V1: persist ログを追い込む",
   thread_trace_healthy: "CARD-MC-08B-THREAD-TRACE-REALDATA: trace を実データで再確認",
   sources_populated: "CARD-MC-08A-SOURCE-MAP-REALDATA-V2: canonical source seed を拡充",
@@ -105,6 +113,7 @@ const LAYER_BY_CHECK: Record<McVnextAcceptanceCheckV1["id"], McVnextAcceptanceAf
   canonical_path: "source_registry",
   ledger_flowing: "memory_ledger",
   continuation_healthy: "route_selector",
+  continuation_memory_healthy: "memory_ledger",
   persist_healthy: "memory_ledger",
   thread_trace_healthy: "thread_trace",
   sources_populated: "source_registry",
@@ -443,6 +452,51 @@ function checkSourcesPopulated(registry: ReturnType<typeof buildMcSourceRegistry
   };
 }
 
+/**
+ * CARD-MC-09C-MEMORY-HIT-METRIC-CORRECTNESS-V1:
+ *   旧 memory_hit_rate は Turn 0 の正常な never_persisted を miss と
+ *   誤計上していたため、判定に使わない。ここでは turn_index>=1 に
+ *   限定した continuation_memory_hit_live で真の継承品質を判定する。
+ *   サンプル数が閾値未満なら判断保留（watch、WATCH/FAIL に昇格しない）。
+ */
+function checkContinuationMemoryHealthy(analyzer: McVnextAnalyzerSnapshotV1): CheckDraft {
+  const rate = analyzer.continuation_memory_hit_live;
+  const sample = analyzer.continuation_sample_count_live ?? 0;
+  if (sample < T_CONTINUATION_MEMORY_MIN_SAMPLE || rate == null) {
+    return {
+      id: "continuation_memory_healthy",
+      label: "continuation memory healthy",
+      status: "watch",
+      detail: `継承メモリ観測サンプル不足（turn≥1 n=${sample} < ${T_CONTINUATION_MEMORY_MIN_SAMPLE}）・判断保留`,
+      next_card: CARD_BY_CHECK.continuation_memory_healthy,
+    };
+  }
+  if (rate < T_CONTINUATION_MEMORY_HIT_FAIL) {
+    return {
+      id: "continuation_memory_healthy",
+      label: "continuation memory healthy",
+      status: "fail",
+      detail: `継承メモリヒット率 ${(rate * 100).toFixed(0)}% (n=${sample}) < ${(T_CONTINUATION_MEMORY_HIT_FAIL * 100).toFixed(0)}%（turn≥1 で継承失敗）`,
+      next_card: CARD_BY_CHECK.continuation_memory_healthy,
+    };
+  }
+  if (rate < T_CONTINUATION_MEMORY_HIT_PASS) {
+    return {
+      id: "continuation_memory_healthy",
+      label: "continuation memory healthy",
+      status: "watch",
+      detail: `継承メモリヒット率 ${(rate * 100).toFixed(0)}% (n=${sample}) < ${(T_CONTINUATION_MEMORY_HIT_PASS * 100).toFixed(0)}%（要観察）`,
+      next_card: CARD_BY_CHECK.continuation_memory_healthy,
+    };
+  }
+  return {
+    id: "continuation_memory_healthy",
+    label: "continuation memory healthy",
+    status: "pass",
+    detail: `継承メモリヒット率 ${(rate * 100).toFixed(0)}% (n=${sample}) ≥ ${(T_CONTINUATION_MEMORY_HIT_PASS * 100).toFixed(0)}%（turn≥1 で健全）`,
+  };
+}
+
 function checkAlertsBelowCritical(alerts: McVnextAlertItemV1[]): CheckDraft {
   let crit = 0;
   let high = 0;
@@ -525,6 +579,7 @@ export function evaluateMcVnextAcceptanceV1(
     checkCanonicalPath(registry),
     checkLedgerFlowing(s),
     checkContinuationHealthy(counters),
+    checkContinuationMemoryHealthy(s),
     checkPersistHealthy(s, counters, liveProblematic),
     checkThreadTraceHealthy(threadCandidates),
     checkSourcesPopulated(registry),

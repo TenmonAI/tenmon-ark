@@ -259,6 +259,91 @@ function memHitRowFromDb(row: Record<string, unknown> | undefined): {
   };
 }
 
+/**
+ * CARD-MC-09C-MEMORY-HIT-METRIC-CORRECTNESS-V1:
+ *   既存 memory_hit_rate（全 MEMORY_READ を母集団とする）は、Turn 0 の
+ *   「履歴が無いのが正常」なケースで hit=false が大量に混ざり、
+ *   実際の継承品質を 13% のような低値に押し下げていた。
+ *   新指標:
+ *     - continuation_memory_hit: turn_index >= 1 に限定した真の継承品質
+ *     - turn0_never_persisted_rate: Turn 0 の正常性（初回リードが
+ *       miss_reason='never_persisted' であるべき）
+ */
+export type McMemoryHitContinuationSplitV1 = {
+  window_hours_live: 24;
+  continuation_memory_hit_live: number | null;
+  continuation_memory_hit_all_time: number | null;
+  continuation_sample_count_live: number;
+  continuation_sample_count_all_time: number;
+  turn0_never_persisted_rate_live: number | null;
+  turn0_sample_count_live: number;
+  turn0_never_persisted_rate_all_time: number | null;
+  turn0_sample_count_all_time: number;
+};
+
+const EMPTY_CONTINUATION_SPLIT: McMemoryHitContinuationSplitV1 = {
+  window_hours_live: 24,
+  continuation_memory_hit_live: null,
+  continuation_memory_hit_all_time: null,
+  continuation_sample_count_live: 0,
+  continuation_sample_count_all_time: 0,
+  turn0_never_persisted_rate_live: null,
+  turn0_sample_count_live: 0,
+  turn0_never_persisted_rate_all_time: null,
+  turn0_sample_count_all_time: 0,
+};
+
+export function readMcMemoryHitContinuationSplitV1(): McMemoryHitContinuationSplitV1 {
+  // MEMORY_READ 行のみ（persisted_success IS NULL）を対象にする。
+  // hit は mcLedger.ts の payload 生成と同じ判定:
+  //   source IN ('memory','conversation_log') AND history_len > 0
+  const contSel = `SELECT
+      SUM(CASE WHEN source IN ('memory','conversation_log') AND history_len > 0 THEN 1 ELSE 0 END) AS hit,
+      COUNT(1) AS total
+    FROM mc_memory_ledger
+    WHERE persisted_success IS NULL AND turn_index >= 1`;
+  const turn0Sel = `SELECT
+      SUM(CASE WHEN json_extract(payload_json, '$.miss_reason') = 'never_persisted' THEN 1 ELSE 0 END) AS np,
+      COUNT(1) AS total
+    FROM mc_memory_ledger
+    WHERE persisted_success IS NULL AND turn_index = 0`;
+  try {
+    const contLive = dbPrepare(
+      "kokuzo",
+      `${contSel} AND ts >= ${since24h}`,
+    ).get() as { hit: number | null; total: number | null };
+    const contAll = dbPrepare("kokuzo", contSel).get() as {
+      hit: number | null;
+      total: number | null;
+    };
+    const turn0Live = dbPrepare(
+      "kokuzo",
+      `${turn0Sel} AND ts >= ${since24h}`,
+    ).get() as { np: number | null; total: number | null };
+    const turn0All = dbPrepare("kokuzo", turn0Sel).get() as {
+      np: number | null;
+      total: number | null;
+    };
+    const cl = { hit: Number(contLive?.hit ?? 0), total: Number(contLive?.total ?? 0) };
+    const ca = { hit: Number(contAll?.hit ?? 0), total: Number(contAll?.total ?? 0) };
+    const t0l = { np: Number(turn0Live?.np ?? 0), total: Number(turn0Live?.total ?? 0) };
+    const t0a = { np: Number(turn0All?.np ?? 0), total: Number(turn0All?.total ?? 0) };
+    return {
+      window_hours_live: 24,
+      continuation_memory_hit_live: cl.total > 0 ? cl.hit / cl.total : null,
+      continuation_memory_hit_all_time: ca.total > 0 ? ca.hit / ca.total : null,
+      continuation_sample_count_live: cl.total,
+      continuation_sample_count_all_time: ca.total,
+      turn0_never_persisted_rate_live: t0l.total > 0 ? t0l.np / t0l.total : null,
+      turn0_sample_count_live: t0l.total,
+      turn0_never_persisted_rate_all_time: t0a.total > 0 ? t0a.np / t0a.total : null,
+      turn0_sample_count_all_time: t0a.total,
+    };
+  } catch {
+    return { ...EMPTY_CONTINUATION_SPLIT };
+  }
+}
+
 export function readMcMemoryHitSplitV1(): McMemoryHitSplitV1 {
   const empty: McMemoryHitSplitV1 = {
     window_hours_live: 24,

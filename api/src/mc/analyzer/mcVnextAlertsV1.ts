@@ -86,17 +86,23 @@ export function buildMcVnextAlertsV1(s: McVnextAnalyzerSnapshotV1): McVnextAlert
     });
   }
 
-  const allTime = s.memory_hydration_hit_rate_all_time;
-  if (s.memory_hit_rate != null && s.memory_hit_rate < 0.45 && (s.persistence.context_memory_rows_24h ?? 0) > 3) {
+  // CARD-MC-09C: MED memory_mismatch は continuation_memory_hit_live（turn_index>=1）で判定。
+  //   旧 memory_hit_rate（全 MEMORY_READ 母集団）は Turn 0 の正常 never_persisted を
+  //   miss と誤計上し 13% 付近の低値を示していたため誤発火源になっていた。
+  //   サンプルが 5 件未満なら判断を保留（発火しない）。
+  const contHit = s.continuation_memory_hit_live;
+  const contSample = s.continuation_sample_count_live ?? 0;
+  const allTimeCont = s.continuation_memory_hit_all_time;
+  if (contHit != null && contSample >= 5 && contHit < 0.7) {
     const allPart =
-      allTime != null && Number.isFinite(allTime)
-        ? ` · all_time ${(allTime * 100).toFixed(1)}%`
+      allTimeCont != null && Number.isFinite(allTimeCont)
+        ? ` · all_time ${(allTimeCont * 100).toFixed(1)}%`
         : "";
     alerts.push({
       severity: "MED",
       category: "memory_mismatch",
-      message: `memory / conversation_log ヒット率（24h・history_len>0）が低い（${(s.memory_hit_rate * 100).toFixed(1)}%${allPart}）。`,
-      hint: "threadId と session_id の一致、session_memory 投入を確認。",
+      message: `継承メモリヒット率（turn≥1・24h）が低い（${(contHit * 100).toFixed(1)}% n=${contSample}${allPart}）。`,
+      hint: "threadId と session_id の一致、session_memory 投入、continuation 経路の hydrate を確認。",
     });
   }
 

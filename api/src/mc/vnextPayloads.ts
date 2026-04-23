@@ -7,6 +7,7 @@ import {
   readLatestMcThreadIdV1,
   readMcAlertsAggregateV1,
   readMcCircuitMapV1,
+  readMcMemoryHitContinuationSplitV1,
   readMcMemoryHitSplitV1,
   readMcOverviewCountersV1,
   partitionProblematicThreadsLiveArchive,
@@ -61,6 +62,7 @@ export function buildVnextOverviewPayload(): McVnextOverviewPayload {
   const { live: liveProblematic, archived: archivedProblematic } =
     partitionProblematicThreadsLiveArchive(problematicAll);
   const memSplit = readMcMemoryHitSplitV1();
+  const memContSplit = readMcMemoryHitContinuationSplitV1();
   const infra = buildMcInfraMapV1();
   const registry = buildMcSourceRegistryV1();
   const repo = buildMcRepoMapV1();
@@ -97,12 +99,35 @@ export function buildVnextOverviewPayload(): McVnextOverviewPayload {
   const conversation_log_hit_live = memSplit.conversation_log_hit_live;
   const conversation_log_hit_all_time = memSplit.conversation_log_hit_all_time;
 
+  // CARD-MC-09C: turn_index>=1 の真の継承品質と Turn 0 の正常性。
+  const continuation_memory_hit_live = memContSplit.continuation_memory_hit_live;
+  const continuation_memory_hit_all_time = memContSplit.continuation_memory_hit_all_time;
+  const continuation_sample_count_live = memContSplit.continuation_sample_count_live;
+  const continuation_sample_count_all_time = memContSplit.continuation_sample_count_all_time;
+  const turn0_never_persisted_rate = memContSplit.turn0_never_persisted_rate_live;
+  const turn0_sample_count_live = memContSplit.turn0_sample_count_live;
+
   const continuationVerdict =
     counters.follow_up_turns_24h === 0
       ? "24h 内に continuation 発火なし"
       : follow_up_success_rate != null && follow_up_success_rate >= 0.8
         ? `continuation 成功率 ${(follow_up_success_rate * 100).toFixed(0)}%・memory+conv_log ヒット(live) ${memory_hit_live != null ? (memory_hit_live * 100).toFixed(0) + "%" : "—"}`
         : `continuation 成功率 ${follow_up_success_rate != null ? (follow_up_success_rate * 100).toFixed(0) + "%" : "—"}（要観察）`;
+
+  // CARD-MC-09C verdict_short_v2: continuation 継承品質と turn0 正常性を分離表示。
+  const contSuccessPctStr =
+    follow_up_success_rate != null
+      ? `${(follow_up_success_rate * 100).toFixed(0)}%`
+      : "—";
+  const contHitPctStr =
+    continuation_memory_hit_live != null
+      ? `${(continuation_memory_hit_live * 100).toFixed(0)}%(n=${continuation_sample_count_live})`
+      : `—(n=${continuation_sample_count_live})`;
+  const turn0NpPctStr =
+    turn0_never_persisted_rate != null
+      ? `${(turn0_never_persisted_rate * 100).toFixed(0)}%`
+      : "—";
+  const continuationVerdictV2 = `continuation 成功率 ${contSuccessPctStr}・継承 ${contHitPctStr}・turn0 正常 ${turn0NpPctStr}`;
 
   const qualityVerdict =
     analyzer.sample_count === 0
@@ -235,9 +260,17 @@ export function buildVnextOverviewPayload(): McVnextOverviewPayload {
       memory_hit_all_time,
       conversation_log_hit_live,
       conversation_log_hit_all_time,
+      // CARD-MC-09C: 真の継承品質（turn_index>=1）と Turn 0 正常性。
+      continuation_memory_hit_live,
+      continuation_memory_hit_all_time,
+      continuation_sample_count_live,
+      continuation_sample_count_all_time,
+      turn0_never_persisted_rate,
+      turn0_sample_count_live,
       metrics_window_note:
-        "live = 24h 実測。all_time = 全期間履歴。continuation / persist / memory / conversation_log を current と履歴で分離表示。",
+        "live = 24h 実測。all_time = 全期間履歴。memory_hit_rate は後方互換（全 MEMORY_READ が母集団）。continuation_memory_hit_live は turn_index>=1 に限定した真の継承品質。turn0_never_persisted_rate は初回リードの正常性（高いほど正常）。",
       verdict_short: continuationVerdict,
+      verdict_short_v2: continuationVerdictV2,
     },
     route_summary: {
       top_route_reason: counters.top_route_reason,

@@ -6,7 +6,12 @@ import { dbPrepare } from "../../db/index.js";
 import { readState } from "../../core/mc/stateReader.js";
 import { sanitize } from "../../core/mc/sanitizer.js";
 import type { McgitState } from "../../core/mc/types.js";
-import { mcLedgerCountSince24h, readMcMemoryHitSplitV1, readMcQualityRecentV1 } from "../ledger/mcLedgerRead.js";
+import {
+  mcLedgerCountSince24h,
+  readMcMemoryHitContinuationSplitV1,
+  readMcMemoryHitSplitV1,
+  readMcQualityRecentV1,
+} from "../ledger/mcLedgerRead.js";
 import { scoreStyleOnTailsV1 } from "./styleHeuristicsV1.js";
 import { isMcVnextAnalyzerEnabled } from "./mcVnextAnalyzerFlag.js";
 
@@ -25,6 +30,18 @@ export type McVnextAnalyzerSnapshotV1 = {
   memory_hydration_hit_rate_live: number | null;
   /** 同上・全期間 mc_memory_ledger。 */
   memory_hydration_hit_rate_all_time: number | null;
+  /** CARD-MC-09C: turn_index>=1 に限定した真の継承品質（24h）。 */
+  continuation_memory_hit_live: number | null;
+  /** CARD-MC-09C: turn_index>=1 に限定した真の継承品質（全期間）。 */
+  continuation_memory_hit_all_time: number | null;
+  /** CARD-MC-09C: turn_index>=1 の MEMORY_READ サンプル数（24h）。 */
+  continuation_sample_count_live: number;
+  /** CARD-MC-09C: turn_index>=1 の MEMORY_READ サンプル数（全期間）。 */
+  continuation_sample_count_all_time: number;
+  /** CARD-MC-09C: Turn 0 の miss_reason='never_persisted' 率（24h、正常性指標）。 */
+  turn0_never_persisted_rate_live: number | null;
+  /** CARD-MC-09C: Turn 0 の MEMORY_READ サンプル数（24h）。 */
+  turn0_sample_count_live: number;
   route_stability_rate: number | null;
   provider_fallback_rate: number | null;
   politeness_consistency_score: number | null;
@@ -60,6 +77,12 @@ export function runMcVnextAnalyzerV1(): McVnextAnalyzerSnapshotV1 {
       memory_hit_rate: null,
       memory_hydration_hit_rate_live: null,
       memory_hydration_hit_rate_all_time: null,
+      continuation_memory_hit_live: null,
+      continuation_memory_hit_all_time: null,
+      continuation_sample_count_live: 0,
+      continuation_sample_count_all_time: 0,
+      turn0_never_persisted_rate_live: null,
+      turn0_sample_count_live: 0,
       route_stability_rate: null,
       provider_fallback_rate: null,
       politeness_consistency_score: null,
@@ -144,6 +167,9 @@ export function runMcVnextAnalyzerV1(): McVnextAnalyzerSnapshotV1 {
   const memory_hydration_hit_rate_all_time = memSplit.combined_hit_all_time;
   /** アラート互換: 24h の hydration ヒット率（旧 analyzer と同じ WINDOW）。 */
   const memory_hit_rate = memory_hydration_hit_rate_live;
+
+  // CARD-MC-09C: turn_index>=1 に限定した真の継承品質と Turn 0 の正常性。
+  const memContSplit = readMcMemoryHitContinuationSplitV1();
 
   let route_stability_rate: number | null = null;
   try {
@@ -250,6 +276,12 @@ export function runMcVnextAnalyzerV1(): McVnextAnalyzerSnapshotV1 {
     memory_hit_rate,
     memory_hydration_hit_rate_live,
     memory_hydration_hit_rate_all_time,
+    continuation_memory_hit_live: memContSplit.continuation_memory_hit_live,
+    continuation_memory_hit_all_time: memContSplit.continuation_memory_hit_all_time,
+    continuation_sample_count_live: memContSplit.continuation_sample_count_live,
+    continuation_sample_count_all_time: memContSplit.continuation_sample_count_all_time,
+    turn0_never_persisted_rate_live: memContSplit.turn0_never_persisted_rate_live,
+    turn0_sample_count_live: memContSplit.turn0_sample_count_live,
     route_stability_rate,
     provider_fallback_rate,
     politeness_consistency_score: style_detail.politeness_consistency_score,
