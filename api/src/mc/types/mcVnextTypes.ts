@@ -203,4 +203,8 @@ export interface McVnextSkeletonSection {
   acceptance_summary?: Record<string, unknown>;
   alerts?: Record<string, unknown>[];
   commit_quality_panel?: Record<string, unknown>;
+  /** CARD-MC-08B-V2: thread payload 用 turn 別集計（top-level）。 */
+  turns?: Record<string, unknown>[];
+  /** CARD-MC-08B-V2: thread payload 用 overall サマリ（top-level）。 */
+  overall?: Record<string, unknown> | null;
 }

@@ -386,6 +386,233 @@ export function buildVnextCircuitPayload(threadId?: string): McVnextSkeletonSect
   };
 }
 
+/**
+ * CARD-MC-08B-V2-THREAD-TRACE-TURN-ASSEMBLY-V1:
+ *   ledger 側 (`mc_memory_ledger`) の payload_json には既に
+ *   event_kind / miss_reason / hit / history_len / persisted_turn_count が
+ *   入っているが、buildVnextThreadPayload では top-level `turns` / `overall`
+ *   を組み立てておらず、Acceptance の `thread_trace_healthy` が step=0 と
+ *   誤判定していた。ここで ledger rows + conversation_log rows を
+ *   turn_index でグルーピングして turns / overall を露出させる。
+ */
+type ThreadTurnEventV1 = {
+  event_kind: string;
+  ts: string;
+  source: string | null;
+  miss_reason: string | null;
+  persisted_turn_count: number | null;
+  history_len: number | null;
+  hit: boolean | null;
+  persisted_success: number | null;
+};
+
+type ThreadTurnV1 = {
+  turn_index: number;
+  events: ThreadTurnEventV1[];
+  userInput: string;
+  assistantOutput: string;
+};
+
+type ThreadTurnOverallV1 = {
+  turn_count: number;
+  memory_hit_rate: number | null;
+  continuation_memory_hit_rate: number | null;
+  continuation_verdict: "success" | "failure" | "n/a";
+  dominant_miss_reason: string | null;
+  persist_success_count: number;
+  last_turn_index: number | null;
+};
+
+function extractPayloadJson(raw: unknown): Record<string, unknown> | null {
+  if (raw == null) return null;
+  if (typeof raw === "object" && !Array.isArray(raw)) return raw as Record<string, unknown>;
+  if (typeof raw === "string") {
+    const s = raw.trim();
+    if (!s || s === "{}") return {};
+    try {
+      const parsed = JSON.parse(s);
+      return typeof parsed === "object" && parsed !== null
+        ? (parsed as Record<string, unknown>)
+        : null;
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
+
+function coerceNumOrNull(v: unknown): number | null {
+  if (v == null) return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+
+function coerceBoolOrNull(v: unknown): boolean | null {
+  if (v == null) return null;
+  if (typeof v === "boolean") return v;
+  if (typeof v === "number") return v !== 0;
+  if (typeof v === "string") {
+    const s = v.trim().toLowerCase();
+    if (s === "true" || s === "1") return true;
+    if (s === "false" || s === "0") return false;
+  }
+  return null;
+}
+
+/**
+ * ledger の `turn_index` は role ごとに +1 される（user / assistant で
+ * 2 つずつ消費する）。ユーザーが見たい「会話ターン」は user+assistant の
+ * ペアなので、`Math.floor(turn_index / 2)` でグルーピングする。
+ * これにより mc09b-test-* のような 2 往復スレッドは turn_count=2 となる。
+ */
+function conversationTurnIndex(ti: number): number {
+  if (!Number.isFinite(ti) || ti < 0) return 0;
+  return Math.floor(ti / 2);
+}
+
+function buildThreadTurnsV1(
+  ledgerMemoryRows: Record<string, unknown>[],
+  convRows: Record<string, unknown>[],
+): { turns: ThreadTurnV1[]; overall: ThreadTurnOverallV1 } {
+  const turnsMap = new Map<number, ThreadTurnV1>();
+  const getTurn = (ti: number): ThreadTurnV1 => {
+    let t = turnsMap.get(ti);
+    if (!t) {
+      t = { turn_index: ti, events: [], userInput: "", assistantOutput: "" };
+      turnsMap.set(ti, t);
+    }
+    return t;
+  };
+
+  for (const row of ledgerMemoryRows) {
+    const rawTi = Number((row as any).turn_index ?? 0);
+    const ti = conversationTurnIndex(rawTi);
+    const t = getTurn(ti);
+    const payload = extractPayloadJson((row as any).payload_json) ?? {};
+    const eventKind =
+      typeof payload.event_kind === "string" && payload.event_kind
+        ? String(payload.event_kind)
+        : (row as any).persisted_success != null && Number((row as any).persisted_success) === 1
+          ? "MEMORY_PERSIST"
+          : "MEMORY_READ";
+    const source =
+      typeof payload.source === "string"
+        ? String(payload.source)
+        : typeof (row as any).source === "string"
+          ? String((row as any).source)
+          : null;
+    const hitFallback = (() => {
+      const s = source ?? "";
+      const hl = Number((row as any).history_len ?? 0);
+      if (s === "none" || s === "memory_error") return false;
+      if (!Number.isFinite(hl) || hl <= 0) return false;
+      return true;
+    })();
+    t.events.push({
+      event_kind: eventKind,
+      ts: String((row as any).ts ?? ""),
+      source,
+      miss_reason:
+        typeof payload.miss_reason === "string"
+          ? String(payload.miss_reason)
+          : payload.miss_reason == null
+            ? null
+            : null,
+      persisted_turn_count: coerceNumOrNull(payload.persisted_turn_count),
+      history_len: coerceNumOrNull(payload.history_len ?? (row as any).history_len),
+      hit:
+        payload.hit == null
+          ? eventKind === "MEMORY_READ"
+            ? hitFallback
+            : null
+          : coerceBoolOrNull(payload.hit),
+      persisted_success: coerceNumOrNull((row as any).persisted_success),
+    });
+  }
+
+  for (const row of convRows) {
+    const tiRaw = (row as any).turn_index;
+    const rawTi = tiRaw == null ? 0 : Number(tiRaw);
+    const ti = conversationTurnIndex(rawTi);
+    const t = getTurn(ti);
+    const role = String((row as any).role ?? "");
+    const content = String((row as any).content ?? "").slice(0, 200);
+    if (role === "user") {
+      if (!t.userInput) t.userInput = content;
+    } else if (role === "assistant") {
+      if (!t.assistantOutput) t.assistantOutput = content;
+    }
+  }
+
+  const turns = Array.from(turnsMap.values()).sort((a, b) => a.turn_index - b.turn_index);
+
+  // ---- overall aggregation ----
+  const readTurns = turns.filter((t) =>
+    t.events.some((e) => e.event_kind === "MEMORY_READ"),
+  );
+  const readHitCount = readTurns.filter((t) =>
+    t.events.some((e) => e.event_kind === "MEMORY_READ" && e.hit === true),
+  ).length;
+  const memory_hit_rate =
+    readTurns.length > 0 ? readHitCount / readTurns.length : null;
+
+  const continuationTurns = readTurns.filter((t) => t.turn_index >= 1);
+  const continuationHit = continuationTurns.filter((t) =>
+    t.events.some((e) => e.event_kind === "MEMORY_READ" && e.hit === true),
+  ).length;
+  const continuation_memory_hit_rate =
+    continuationTurns.length > 0 ? continuationHit / continuationTurns.length : null;
+
+  // Task 仕様: turns.length >= 2 のとき turns[1] (2 番目) の MEMORY_READ hit で verdict を決める。
+  let continuation_verdict: "success" | "failure" | "n/a" = "n/a";
+  if (turns.length >= 2) {
+    const second = turns[1];
+    const hit = second.events.some(
+      (e) => e.event_kind === "MEMORY_READ" && e.hit === true,
+    );
+    const hasRead = second.events.some((e) => e.event_kind === "MEMORY_READ");
+    continuation_verdict = hit ? "success" : hasRead ? "failure" : "n/a";
+  }
+
+  const missReasonCounts = new Map<string, number>();
+  for (const t of turns) {
+    for (const ev of t.events) {
+      if (ev.event_kind !== "MEMORY_READ") continue;
+      if (!ev.miss_reason) continue;
+      missReasonCounts.set(ev.miss_reason, (missReasonCounts.get(ev.miss_reason) ?? 0) + 1);
+    }
+  }
+  let dominant_miss_reason: string | null = null;
+  let bestCount = 0;
+  for (const [k, c] of missReasonCounts) {
+    if (c > bestCount) {
+      dominant_miss_reason = k;
+      bestCount = c;
+    }
+  }
+
+  const persist_success_count = turns.reduce(
+    (acc, t) =>
+      acc +
+      t.events.filter(
+        (e) => e.event_kind === "MEMORY_PERSIST" && e.persisted_success === 1,
+      ).length,
+    0,
+  );
+
+  const overall: ThreadTurnOverallV1 = {
+    turn_count: turns.length,
+    memory_hit_rate,
+    continuation_memory_hit_rate,
+    continuation_verdict,
+    dominant_miss_reason,
+    persist_success_count,
+    last_turn_index: turns.length > 0 ? turns[turns.length - 1].turn_index : null,
+  };
+
+  return { turns, overall };
+}
+
 export function buildVnextThreadPayload(threadId: string): McVnextSkeletonSection {
   const id = String(threadId || "").trim().slice(0, 128);
   const base = skeleton(
@@ -399,12 +626,22 @@ export function buildVnextThreadPayload(threadId: string): McVnextSkeletonSectio
   const trace = readMcThreadTraceV1(id, 120) as Record<string, unknown>;
   const ledgerEvents = Array.isArray(trace.event_stream) ? (trace.event_stream as Record<string, unknown>[]) : [];
   const convRows = Array.isArray(trace.conversation) ? (trace.conversation as Record<string, unknown>[]) : [];
+  const ledgers = (trace.ledgers ?? {}) as Record<string, unknown>;
+  const memoryRows = Array.isArray(ledgers.memory)
+    ? (ledgers.memory as Record<string, unknown>[])
+    : [];
   const sessionIdMatchCount = convRows.filter(
     (row) => String(row.session_id || "").trim() === id,
   ).length;
+
+  const { turns, overall } = buildThreadTurnsV1(memoryRows, convRows);
+  const overallForResponse = turns.length > 0 ? overall : null;
+
   return {
     ...base,
     ledgers: trace,
+    turns,
+    overall: overallForResponse,
     diagnostic: {
       ledger_events_found: ledgerEvents.length,
       conversation_log_rows_found: convRows.length,

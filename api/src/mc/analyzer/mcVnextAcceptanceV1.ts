@@ -144,14 +144,33 @@ function dedupeThreadProbeOrder(latest: string, recent: string[]): string[] {
   return out.slice(0, 14);
 }
 
+/**
+ * CARD-MC-08B-V2-THREAD-TRACE-TURN-ASSEMBLY-V1:
+ *   readMcThreadTraceV1 は `turns`（ledger step 単位のまとまり）を返す。
+ *   以前は `trace.steps` を参照していたため常に空となり、thread_trace_healthy
+ *   が全スレッドで step=0 と誤判定していた。turns ベースに切替え、
+ *   turn 内の `persistence` event / `persists` 配列から persist 数を数える。
+ */
 function traceStepsPersist(tid: string): { stepsLen: number; persistCount: number; err: boolean } {
   try {
     const trace = readMcThreadTraceV1(tid, 40) as Record<string, unknown>;
-    const steps = Array.isArray(trace.steps) ? (trace.steps as Record<string, unknown>[]) : [];
+    const steps = Array.isArray(trace.turns)
+      ? (trace.turns as Record<string, unknown>[])
+      : Array.isArray(trace.steps)
+        ? (trace.steps as Record<string, unknown>[])
+        : [];
     let persistCount = 0;
     for (const s of steps) {
-      const p = s.persists;
-      if (Array.isArray(p) && p.length > 0) persistCount += 1;
+      const persists = s.persistence ?? s.persists;
+      if (Array.isArray(persists) && persists.length > 0) {
+        persistCount += 1;
+        continue;
+      }
+      const events = Array.isArray(s.events) ? (s.events as Record<string, unknown>[]) : [];
+      const persistenceEvent = events.find(
+        (e) => String(e.node ?? "") === "persistence" && Boolean(e.success),
+      );
+      if (persistenceEvent) persistCount += 1;
     }
     return { stepsLen: steps.length, persistCount, err: false };
   } catch {
