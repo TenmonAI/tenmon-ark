@@ -27,6 +27,12 @@ const countStmt = dbPrepare(
 
 const clearStmt = dbPrepare("kokuzo", "DELETE FROM conversation_log WHERE session_id = ?");
 
+/** Next turn_index that would be used on the next append (read-only). */
+export function conversationPeekNextTurnIndex(sessionId: string): number {
+  const next = nextTurnStmt.get(sessionId) as { next_turn: number };
+  return Number(next?.next_turn ?? 0);
+}
+
 export function conversationAppend(sessionId: string, role: MemoryRole, content: string): ConversationLogRow {
   const next = nextTurnStmt.get(sessionId) as { next_turn: number };
   const turnIndex = Number(next.next_turn);

@@ -16,6 +16,10 @@ const readStmt = dbPrepare(
 );
 
 const clearStmt = dbPrepare("kokuzo", "DELETE FROM session_memory WHERE session_id = ?");
+const countStmt = dbPrepare(
+  "kokuzo",
+  "SELECT COUNT(1) AS cnt FROM session_memory WHERE session_id = ?",
+);
 
 export function sessionMemoryAdd(sessionId: string, role: MemoryRole, content: string): MemoryMessage {
   const ts = nowIso();
@@ -29,6 +33,11 @@ export function sessionMemoryRead(sessionId: string, limit = 200): MemoryMessage
   return rows
     .reverse()
     .map((r) => ({ role: r.role, content: r.content, ts: r.timestamp }));
+}
+
+export function sessionMemoryCount(sessionId: string): number {
+  const row = countStmt.get(sessionId) as { cnt: number };
+  return Number(row?.cnt ?? 0);
 }
 
 export function sessionMemoryClear(sessionId: string): void {

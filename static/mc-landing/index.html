@@ -1,0 +1,431 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mission Control — AI-HUB Overview · TENMON-ARK</title>
+    <style>
+      :root { color-scheme: dark; }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0; min-height: 100vh; font-family: "Noto Sans JP", "Inter", system-ui, sans-serif;
+        background: #0f1117; color: #e4e4e7; line-height: 1.55;
+      }
+      main { max-width: 1120px; margin: 0 auto; padding: 24px; }
+      h1 { margin: 0; font-size: 22px; color: #c9a14a; letter-spacing: 0.03em; }
+      h2 { font-size: 11px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.08em; margin: 0 0 8px; }
+      code { font-family: ui-monospace, "SFMono-Regular", Menlo, monospace; font-size: 12px; color: #c9a14a; }
+      a { color: #c9a14a; text-decoration: none; }
+      .header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 18px; }
+      .sub { font-size: 12px; color: #6b7280; margin-top: 4px; }
+      .pill-row { display: flex; gap: 8px; flex-wrap: wrap; }
+      .btn { padding: 8px 14px; border-radius: 6px; font-size: 12px; font-weight: 700; border: 1px solid #2d3040; cursor: pointer; }
+      .btn.primary { background: #c9a14a; color: #1a1a1a; border-color: #c9a14a; }
+      .btn.ghost { background: transparent; color: #9ca3af; }
+      .btn.accent { background: rgba(201,161,74,0.1); color: #c9a14a; border-color: rgba(201,161,74,0.35); }
+      .verdict-banner {
+        padding: 16px 20px; border-radius: 10px; margin-bottom: 18px;
+        display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap;
+      }
+      .verdict-PASS { border: 1px solid rgba(34,197,94,0.35); background: rgba(34,197,94,0.08); }
+      .verdict-FAIL { border: 1px solid rgba(239,68,68,0.35); background: rgba(239,68,68,0.08); }
+      .verdict-WATCH { border: 1px solid rgba(245,158,11,0.35); background: rgba(245,158,11,0.08); }
+      .verdict-unknown { border: 1px solid #2d3040; background: #1c1f2b; }
+      .big { font-size: 22px; font-weight: 700; }
+      .c-pass { color: #22c55e; } .c-fail { color: #ef4444; } .c-watch { color: #f59e0b; }
+      .c-mute { color: #9ca3af; } .c-sub { color: #6b7280; }
+      .grid { display: grid; gap: 12px; margin-bottom: 18px; }
+      .grid-4 { grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); }
+      .grid-2 { grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); }
+      .grid-links { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+      .card {
+        background: #1c1f2b; border: 1px solid #2d3040; border-radius: 10px;
+        padding: 14px 16px; display: flex; flex-direction: column; gap: 6px;
+      }
+      .card header { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+      .card .title { font-size: 11px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.06em; }
+      .card .tag { font-size: 11px; font-weight: 600; color: #9ca3af; }
+      .card .body { font-size: 13px; color: #e4e4e7; }
+      .card .note { font-size: 11px; color: #6b7280; }
+      .card a.more { font-size: 11px; color: #c9a14a; margin-top: 4px; }
+      .thread-item {
+        display: block; text-decoration: none; color: #e4e4e7;
+        border: 1px solid #2d3040; border-left: 3px solid #9ca3af; border-radius: 8px;
+        padding: 8px 12px; margin-top: 8px; background: rgba(255,255,255,0.01);
+      }
+      .thread-item:hover { background: rgba(255,255,255,0.03); }
+      .thread-item.r-truncation_suspect { border-left-color: #f59e0b; }
+      .thread-item.r-continuation_failure { border-left-color: #ef4444; }
+      .thread-item.r-persist_failure { border-left-color: #ef4444; }
+      .thread-item.r-memory_fallback_none { border-left-color: #f59e0b; }
+      .tid { font-family: ui-monospace, monospace; font-size: 12px; color: #e4e4e7; }
+      .alert { padding: 8px 0; border-top: 1px dashed #2d3040; }
+      .alert:first-child { border-top: none; padding-top: 0; }
+      .sev { font-size: 10px; font-weight: 700; margin-right: 6px; }
+      .sev-CRIT { color: #ef4444; } .sev-HIGH { color: #f59e0b; }
+      .sev-MED { color: #9ca3af; } .sev-LOW { color: #6b7280; }
+      .hint { font-size: 11px; color: #6b7280; margin-top: 2px; }
+      .nav-tile {
+        text-align: center; font-size: 12px; color: #c9a14a; padding: 10px 12px; border-radius: 8px;
+        background: rgba(201,161,74,0.08); border: 1px solid rgba(201,161,74,0.35);
+      }
+      .source-row { display: flex; justify-content: space-between; gap: 10px; font-size: 12px; margin: 4px 0; }
+      .source-row .uri { font-size: 11px; color: #6b7280; word-break: break-all; text-align: right; }
+      .alert-counts { font-size: 11px; }
+      #loading, #err { font-size: 13px; }
+      #err { color: #ef4444; background: rgba(239,68,68,0.08); padding: 12px; border-radius: 8px; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="header">
+        <div>
+          <h1>AI-HUB Overview</h1>
+          <div class="sub" id="sub">loading… · canonical entry <code>/mc/</code></div>
+        </div>
+        <div class="pill-row">
+          <a class="btn primary" id="btn-thread" href="/mc/vnext/">最新 thread →</a>
+          <a class="btn accent" href="/mc/vnext/">vNext 全面 →</a>
+          <button class="btn ghost" onclick="location.reload()">Refresh</button>
+        </div>
+      </div>
+
+      <div id="loading" class="c-sub">Loading…</div>
+      <div id="err" style="display:none"></div>
+      <div id="hub" style="display:none">
+        <div id="verdict" class="verdict-banner verdict-unknown">
+          <div>
+            <h2>Acceptance</h2>
+            <div class="big" id="v-status">—</div>
+            <div class="sub" id="v-reason">—</div>
+            <div class="note" id="v-next"></div>
+          </div>
+          <a class="btn accent" href="/mc/vnext/acceptance">acceptance 詳細 →</a>
+        </div>
+
+        <div class="grid grid-4">
+          <div class="card">
+            <header><span class="title">Runtime</span><span class="tag" id="runtime-tag">—</span></header>
+            <div class="body"><strong id="runtime-host">—</strong>
+              <span class="c-mute" id="runtime-uptime"></span></div>
+            <div class="note" id="runtime-branch">—</div>
+            <div class="note" id="runtime-note"></div>
+          </div>
+          <div class="card">
+            <header><span class="title">Route of Truth</span><span class="tag" id="route-tag">—</span></header>
+            <div class="body" id="route-verdict">—</div>
+            <div class="note" id="route-ledger">—</div>
+          </div>
+          <div class="card">
+            <header><span class="title">Dialogue Quality</span><span class="tag" id="quality-tag">—</span></header>
+            <div class="body" id="quality-verdict">—</div>
+            <div class="note" id="quality-detail">—</div>
+            <a class="more" href="/mc/vnext/quality">→ quality 面</a>
+          </div>
+          <div class="card">
+            <header><span class="title">Continuation Health</span><span class="tag" id="cont-tag">—</span></header>
+            <div class="body" id="cont-verdict">—</div>
+            <div class="note" id="cont-detail">—</div>
+            <a class="more" id="cont-link" href="/mc/vnext/">→ 最新 thread を確認</a>
+          </div>
+        </div>
+
+        <div class="grid grid-2">
+          <div class="card">
+            <header><span class="title">Active Alerts</span><span class="alert-counts" id="alert-counts">—</span></header>
+            <div id="alert-list" style="margin-top:8px"></div>
+            <a class="more" href="/mc/vnext/alerts">→ alerts 全面</a>
+          </div>
+          <div class="card">
+            <header><span class="title">Canonical Sources</span><span class="tag" id="sources-tag">—</span></header>
+            <div id="sources-list" style="margin-top:8px"></div>
+            <a class="more" href="/mc/vnext/sources">→ sources 全面</a>
+          </div>
+        </div>
+
+        <div class="card" style="margin-bottom:18px">
+          <header><span class="title">Failing Threads · live (top 3)</span><span class="tag" id="ft-count">—</span></header>
+          <div id="ft-list" style="margin-top:6px"></div>
+          <div id="ft-arch" style="margin-top:8px;font-size:11px;color:#6b7280;display:none"></div>
+        </div>
+
+        <div class="card" style="margin-bottom:18px">
+          <header>
+            <span class="title">Repair Hub — 次に直す</span>
+            <span class="tag" id="rh-count">—</span>
+          </header>
+          <div id="rh-list" style="margin-top:6px"></div>
+          <a class="more" href="/mc/vnext/repair">→ repair-hub 全面</a>
+        </div>
+
+        <div class="card" style="margin-bottom:18px;display:none" id="hist-section">
+          <header><span class="title">System history</span><span class="tag" id="hist-tag">—</span></header>
+          <div class="body" id="hist-body">—</div>
+          <a class="more" href="/mc/vnext/history">→ ledger タイムライン</a>
+        </div>
+
+        <div class="grid grid-links">
+          <a class="nav-tile" id="nav-thread" href="/mc/vnext/">最新 thread →</a>
+          <a class="nav-tile" href="/mc/vnext/quality">Quality →</a>
+          <a class="nav-tile" href="/mc/vnext/alerts">Alerts →</a>
+          <a class="nav-tile" href="/mc/vnext/acceptance">Acceptance →</a>
+          <a class="nav-tile" href="/mc/vnext/repair">Repair →</a>
+          <a class="nav-tile" href="/mc/vnext/history">History →</a>
+          <a class="nav-tile" href="/mc/vnext/sources">Sources →</a>
+          <a class="nav-tile" href="/mc/classic/">MC-P5 (legacy) →</a>
+        </div>
+      </div>
+    </main>
+
+    <script>
+      const REASON_LABEL = {
+        truncation_suspect: "切断疑い",
+        continuation_failure: "continuation 失敗",
+        persist_failure: "persist 失敗",
+        memory_fallback_none: "記憶未接続",
+      };
+
+      function fmtUptime(sec) {
+        if (sec == null || !isFinite(sec) || sec <= 0) return "—";
+        const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60);
+        if (h > 24) return Math.floor(h / 24) + "d " + (h % 24) + "h";
+        if (h > 0) return h + "h " + m + "m";
+        return m + "m";
+      }
+      function fmtPct(x) {
+        if (x == null || !isFinite(x)) return "—";
+        return (x * 100).toFixed(0) + "%";
+      }
+      function esc(s) { return String(s == null ? "" : s).replace(/[&<>]/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;" }[c])); }
+
+      async function load() {
+        try {
+          const r = await fetch("/api/mc/vnext/overview", { credentials: "include" });
+          if (!r.ok) throw new Error("HTTP " + r.status);
+          const d = await r.json();
+          render(d);
+          document.getElementById("loading").style.display = "none";
+          document.getElementById("hub").style.display = "block";
+        } catch (e) {
+          document.getElementById("loading").style.display = "none";
+          const err = document.getElementById("err");
+          err.style.display = "block";
+          err.textContent = "overview 取得失敗: " + (e && e.message ? e.message : String(e)) + "（/mc/ の owner 認証 or founder セッションを確認してください）";
+        }
+      }
+
+      function render(d) {
+        const nav = d.nav || {};
+        const rt = d.runtime_summary || {};
+        const q = d.quality_summary || {};
+        const ct = d.continuation_summary || {};
+        const rs = d.route_summary || {};
+        const acc = d.latest_acceptance || {};
+        const alerts = d.active_alerts_summary || {};
+        const src = d.canonical_sources_summary || {};
+        const ptLive = Array.isArray(d.failing_threads_live) && d.failing_threads_live.length
+          ? d.failing_threads_live
+          : (d.problematic_threads || []);
+        const archN = d.failing_threads_archived_count != null ? Number(d.failing_threads_archived_count) : 0;
+        const led = d.ledger_24h || {};
+        const hsum = d.history_summary || {};
+
+        if (d.generated_at) {
+          document.getElementById("sub").textContent =
+            "updated " + new Date(d.generated_at).toLocaleString("ja-JP") + " · canonical entry /mc/";
+        }
+
+        // Acceptance banner
+        const verdict = String(acc.verdict || acc.status || "unknown");
+        const vb = document.getElementById("verdict");
+        vb.className = "verdict-banner verdict-" + (["PASS","FAIL","WATCH"].includes(verdict) ? verdict : "unknown");
+        const vs = document.getElementById("v-status");
+        vs.textContent = verdict;
+        vs.className = "big " + (verdict === "PASS" ? "c-pass" : verdict === "FAIL" ? "c-fail" : verdict === "WATCH" ? "c-watch" : "c-sub");
+        const whyNow = acc.why_now ? String(acc.why_now) : "";
+        const firstReason = Array.isArray(acc.reasons) && acc.reasons[0];
+        const firstPassed = Array.isArray(acc.passed) && acc.passed[0];
+        document.getElementById("v-reason").textContent =
+          whyNow || firstReason || firstPassed || "集計対象の signal なし";
+        const topLayer = String(acc.top_affected_layer || "none");
+        const layerLabel = verdict === "FAIL" && topLayer !== "none"
+          ? "最優先 layer: " + topLayer + "　·　"
+          : verdict === "WATCH" && topLayer !== "none"
+            ? "要観察 layer: " + topLayer + "　·　"
+            : "";
+        document.getElementById("v-next").textContent =
+          layerLabel + (acc.nextRecommendedCard ? ("next: " + acc.nextRecommendedCard) : "");
+
+        // Runtime card
+        const rtTag = document.getElementById("runtime-tag");
+        rtTag.textContent = rt.service_active === true ? "active" : rt.service_active === false ? "inactive" : "—";
+        rtTag.className = "tag " + (rt.service_active ? "c-pass" : rt.service_active === false ? "c-fail" : "c-sub");
+        document.getElementById("runtime-host").textContent = rt.hostname || "—";
+        document.getElementById("runtime-uptime").textContent = " · uptime " + fmtUptime(rt.uptime_sec);
+        document.getElementById("runtime-branch").textContent = (rt.branch || "—") + " · " + (rt.head_sha_short || "—");
+        document.getElementById("runtime-note").textContent = rt.note || "";
+
+        // Route card
+        document.getElementById("route-tag").textContent = rs.top_route_reason || "—";
+        document.getElementById("route-verdict").textContent = rs.verdict_short || "—";
+        document.getElementById("route-ledger").textContent =
+          "ledger 24h: route=" + (led.route_rows ?? 0) + " · llm=" + (led.llm_rows ?? 0) +
+          " · memory=" + (led.memory_rows ?? 0) + " · quality=" + (led.quality_rows ?? 0);
+
+        // Quality card
+        document.getElementById("quality-tag").textContent = q.sample_count ? ("n=" + q.sample_count) : "no sample";
+        document.getElementById("quality-verdict").textContent = q.verdict_short || "—";
+        document.getElementById("quality-detail").textContent =
+          "natural_end " + fmtPct(q.natural_end_rate) +
+          " · truncation " + fmtPct(q.truncation_suspect_rate) +
+          " · avg_len " + (q.avg_length != null ? Math.round(q.avg_length) : "—");
+
+        // Continuation card
+        document.getElementById("cont-tag").textContent = ct.follow_up_turns_24h ?
+          (ct.non_empty_follow_up_24h + "/" + ct.follow_up_turns_24h) : "no data";
+        document.getElementById("cont-verdict").textContent = ct.verdict_short || "—";
+        document.getElementById("cont-detail").textContent =
+          "mem+conv live " + fmtPct(ct.memory_hit_live != null ? ct.memory_hit_live : ct.memory_hit_rate) +
+          " · all_time " + fmtPct(ct.memory_hit_all_time) +
+          " · conv_log live " + fmtPct(ct.conversation_log_hit_live) +
+          " · follow_up " + fmtPct(ct.follow_up_success_rate);
+        if (nav.thread_latest_link) document.getElementById("cont-link").href = nav.thread_latest_link;
+
+        // Alerts
+        document.getElementById("alert-counts").innerHTML =
+          '<span class="sev-CRIT">CRIT ' + (alerts.crit ?? 0) + '</span>　' +
+          '<span class="sev-HIGH">HIGH ' + (alerts.high ?? 0) + '</span>　' +
+          '<span class="sev-MED">MED ' + (alerts.med ?? 0) + '</span>　' +
+          '<span class="sev-LOW c-mute">LOW ' + (alerts.low ?? 0) + '</span>';
+        const alertList = document.getElementById("alert-list");
+        const tops = Array.isArray(alerts.top) ? alerts.top : [];
+        if (tops.length === 0) {
+          alertList.innerHTML = '<div class="c-pass" style="font-size:12px">アクティブなアラートはありません。</div>';
+        } else {
+          alertList.innerHTML = tops.map(a => (
+            '<div class="alert">' +
+              '<span class="sev sev-' + esc(a.severity) + '">' + esc(a.severity) + '</span>' +
+              '<span>' + esc(a.message) + '</span>' +
+              '<div class="hint">hint: ' + esc(a.hint) + '</div>' +
+            '</div>'
+          )).join("");
+        }
+
+        // Sources
+        document.getElementById("sources-tag").textContent = src.verdict_short || "—";
+        const srcList = document.getElementById("sources-list");
+        const can = Array.isArray(src.canonical) ? src.canonical : [];
+        srcList.innerHTML = can.slice(0, 6).map(s => (
+          '<div class="source-row">' +
+            '<span>' + esc(s.source_name) + '</span>' +
+            '<span class="uri">' + esc(s.source_uri || s.source_kind) + '</span>' +
+          '</div>'
+        )).join("") || '<div class="c-sub" style="font-size:12px">canonical source が検出できません</div>';
+
+        // Failing threads — live top 3 + archived count
+        const topLive = ptLive.slice(0, 3);
+        document.getElementById("ft-count").textContent = topLive.length > 0
+          ? (topLive.length + " 件（表示 max 3）")
+          : "live 窓で再現中の失敗なし";
+        const ftList = document.getElementById("ft-list");
+        ftList.innerHTML = topLive.map(p => {
+          const href = "/mc/vnext/thread/" + encodeURIComponent(p.thread_id);
+          const label = REASON_LABEL[p.reason] || p.reason;
+          return '<a class="thread-item r-' + esc(p.reason) + '" href="' + esc(href) + '">' +
+            '<div style="display:flex;justify-content:space-between;gap:8px;align-items:baseline;flex-wrap:wrap">' +
+              '<span class="tid">' + esc(p.thread_id) + '</span>' +
+              '<span class="sev">' + esc(String(label).toUpperCase()) + '</span>' +
+            '</div>' +
+            '<div style="font-size:11px;color:#9ca3af;margin-top:4px">' + esc(p.detail) + '</div>' +
+            '<div style="font-size:10px;color:#6b7280;margin-top:4px">' +
+              'turn ' + (p.turn_index ?? "—") + ' · final_len ' + (p.final_len ?? "—") +
+              ' · route ' + esc(p.route_reason || "—") + ' · ' + esc(String(p.last_ts || "").slice(0, 19)) +
+            '</div>' +
+          '</a>';
+        }).join("");
+        const ftArch = document.getElementById("ft-arch");
+        if (archN > 0) {
+          ftArch.style.display = "block";
+          ftArch.textContent = "過去履歴（live 窓外）: " + archN + " 件 — プレビューは /mc/vnext/acceptance または quality で確認";
+        } else {
+          ftArch.style.display = "none";
+          ftArch.textContent = "";
+        }
+
+        // Header nav buttons
+        if (nav.thread_latest_link) {
+          document.getElementById("btn-thread").href = nav.thread_latest_link;
+          document.getElementById("nav-thread").href = nav.thread_latest_link;
+        }
+
+        const histSec = document.getElementById("hist-section");
+        if (histSec && d.history_summary != null && typeof d.history_summary === "object") {
+          histSec.style.display = "block";
+          document.getElementById("hist-tag").textContent =
+            hsum.ledger_row_count != null ? String(hsum.ledger_row_count) + " rows" : "ledger";
+          const lp = hsum.latest_passed_card_id || hsum.latest_passed_card || "—";
+          const gaps = hsum.current_open_gap_count != null ? String(hsum.current_open_gap_count) : "—";
+          const lv = hsum.last_verified_at ? String(hsum.last_verified_at).slice(0, 19) : "—";
+          document.getElementById("hist-body").innerHTML =
+            '<div>latest passed: <strong>' + esc(lp) + '</strong></div>' +
+            '<div class="note" style="margin-top:6px">open gaps: <strong>' + esc(gaps) + '</strong> · last verified: ' + esc(lv) + "</div>";
+        }
+
+        // Repair hub preview
+        loadRepairHub();
+      }
+
+      async function loadRepairHub() {
+        const list = document.getElementById("rh-list");
+        const tag = document.getElementById("rh-count");
+        try {
+          const r = await fetch("/api/mc/vnext/repair-hub", { credentials: "include" });
+          if (!r.ok) throw new Error("HTTP " + r.status);
+          const d = await r.json();
+          const cards = Array.isArray(d.cards) ? d.cards : [];
+          tag.textContent = cards.length > 0 ? (cards.length + " 件 / 候補 " + (d.total_candidates || cards.length)) : "すべてクリア";
+          if (cards.length === 0) {
+            list.innerHTML = '<div class="c-pass" style="font-size:12px">今すぐ直すべきカードはありません。</div>';
+            return;
+          }
+          // priority 閾値 & 色分けは /mc/repair / /mc/acceptance 下段と完全一致:
+          //   90+ = CRIT(赤), 70-89 = HIGH(橙), 50-69 = MED(黄), <50 = WATCH(青)
+          function prioColor(p) {
+            return p >= 90 ? "#ff6b6b" : p >= 70 ? "#f6a14c" : p >= 50 ? "#e0c04d" : "#6fa3c9";
+          }
+          const sorted = cards.slice().sort((a, b) => (b.priority || 0) - (a.priority || 0));
+          list.innerHTML = sorted.map(c => {
+            const prio = Number(c.priority || 0);
+            const sev = prio >= 90 ? "CRIT" : prio >= 70 ? "HIGH" : prio >= 50 ? "MED" : "WATCH";
+            const col = prioColor(prio);
+            const threads = Array.isArray(c.related_thread_ids) ? c.related_thread_ids : [];
+            const threadHtml = threads.length > 0
+              ? '<div class="hint" style="margin-top:4px"><span style="color:#9ad0ff">threads:</span> ' +
+                  threads.slice(0, 3).map(t =>
+                    '<a href="/mc/vnext/thread/' + encodeURIComponent(t) +
+                    '" style="color:#cbd5e1;text-decoration:underline">' + esc(String(t).slice(0, 24)) + '</a>'
+                  ).join(' · ') +
+                '</div>'
+              : '';
+            return '<div class="alert" style="flex-direction:column;align-items:stretch;border-left:4px solid ' + col + '">' +
+              '<div style="display:flex;gap:8px;align-items:baseline">' +
+                '<span class="sev sev-' + esc(sev) + '" style="background:' + col + ';color:#000">P' + esc(String(prio)) + ' · ' + esc(sev) + '</span>' +
+                '<span style="font-size:13px;font-weight:600">' + esc(c.title) + '</span>' +
+                '<span style="font-size:11px;color:#9ca3af;margin-left:auto">' + esc(c.affected_layer) + '</span>' +
+              '</div>' +
+              '<div class="hint" style="margin-top:6px">' + esc(c.why_now) + '</div>' +
+              '<div class="hint" style="margin-top:4px"><span style="color:#9ad0ff">fix:</span> ' + esc(c.suggested_fix_area) + '</div>' +
+              '<div class="hint"><span style="color:#9ad0ff">verify:</span> ' + esc(c.verify_hint) + '</div>' +
+              threadHtml +
+            '</div>';
+          }).join("");
+        } catch (e) {
+          tag.textContent = "取得失敗";
+          list.innerHTML = '<div class="c-fail" style="font-size:12px">repair-hub 取得失敗: ' + esc(e && e.message ? e.message : String(e)) + '</div>';
+        }
+      }
+
+      load();
+    </script>
+  </body>
+</html>

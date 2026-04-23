@@ -35,11 +35,11 @@ HEALTH_OK=$(echo "${HEALTH_RAW}" | python3 -c "import json,sys; d=json.load(sys.
 HEALTH_PREVIEW=$(echo "${HEALTH_RAW}" | head -c 200)
 
 # ── Resources ────────────────────────────────────────────
-DISK_JSON=$(df -BG --output=target,used,avail,pcent / /opt 2>/dev/null | tail -n +2 | awk '{
+DISK_JSON=$(df -BG --output=target,used,avail,pcent / /opt 2>/dev/null | tail -n +2 | awk '!seen[$1]++ {
   gsub(/G/,"",$2); gsub(/G/,"",$3); gsub(/%/,"",$4);
-  printf "{\"path\":\"%s\",\"used_gb\":%s,\"free_gb\":%s,\"percent\":%s}", $1, $2, $3, $4
+  printf "{\"path\":\"%s\",\"used_gb\":%s,\"free_gb\":%s,\"percent\":%s}\n", $1, $2, $3, $4
 }' | paste -sd, | sed 's/^/[/;s/$/]/')
-[ -z "${DISK_JSON}" ] && DISK_JSON="[]"
+[ -z "${DISK_JSON}" ] || [ "${DISK_JSON}" = "[]" ] && DISK_JSON="[]"
 
 MEM_TOTAL=$(free -g 2>/dev/null | awk '/Mem:/{print $2}' || echo "0")
 MEM_AVAIL=$(free -g 2>/dev/null | awk '/Mem:/{print $7}' || echo "0")

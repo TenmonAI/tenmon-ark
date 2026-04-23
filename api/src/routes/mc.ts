@@ -26,6 +26,11 @@ mcRouter.get('/health', (_req: Request, res: Response) => {
   });
 });
 
+// ── Owner-only gate for nginx auth_request ───────────────
+mcRouter.get('/access', mcRequireAdmin, (_req: Request, res: Response) => {
+  res.status(204).end();
+});
+
 // ── PUBLIC SSOT (外部 AI が認証なしで読める) ─────────────
 mcRouter.get('/overview', maybeAuth, (_req: Request, res: Response) => {
   try {

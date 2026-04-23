@@ -1,10 +1,21 @@
 // LLM ラッパー（TENMON-ARK人格接続済み）
 // LLM_WRAPPER_V5: Gemini retry + abort detection + Oracle OpenAI fixed
+import { type McLedgerAppendResultV1, tryAppendMcLlmExecutionLedgerV1, tryAppendMcSourceMapLedgerV1 } from "../mc/ledger/mcLedger.js";
 export type LlmProvider = "openai" | "gemini";
 
 export type LlmChatHistoryItem = {
   role: "user" | "assistant";
   content: string;
+};
+
+/** Optional MC vNext ledger correlation (CARD_MC_VNEXT_COLLECTOR_AND_LEDGER_V1). */
+export type LlmLedgerCtxV1 = {
+  requestId?: string;
+  threadId: string;
+  turnIndex: number;
+  routeReason: string;
+  inputHash: string;
+  onLedgerWrite?: (result: McLedgerAppendResultV1) => void;
 };
 
 export type LlmChatInput = {
@@ -15,6 +26,8 @@ export type LlmChatInput = {
   model?: string;
   maxTokens?: number;
   timeout?: number;
+  /** When set, append-only mc_llm_execution_ledger row (fail-open). */
+  ledgerCtx?: LlmLedgerCtxV1;
 };
 
 export type LlmChatOutput = {
@@ -145,7 +158,7 @@ async function callOpenAI(input: LlmChatInput, model: string): Promise<LlmChatOu
     return {
       text,
       provider: "openai",
-      model,
+      model: String(json?.model || model || "").trim(),
       inputTokens: json?.usage?.prompt_tokens,
       outputTokens: json?.usage?.completion_tokens,
       finishReason,
@@ -207,7 +220,7 @@ async function callGemini(input: LlmChatInput, model: string): Promise<LlmChatOu
     return {
       text,
       provider: "gemini",
-      model,
+      model: fullModel,
       inputTokens: json?.usageMetadata?.promptTokenCount,
       outputTokens: json?.usageMetadata?.candidatesTokenCount,
       finishReason,
@@ -236,11 +249,50 @@ function __isAbortLikeError(err: any): boolean {
  * 4. 宿曜Oracle等で明示的にproviderが指定された場合はretryなしで即座にfallback
  */
 export async function llmChat(input: LlmChatInput): Promise<LlmChatOutput> {
+  const __ledgerFlush = (
+    out: LlmChatOutput,
+    requestedModel: string,
+    extras?: { retryProvider?: string; retryOutLen?: number },
+  ): LlmChatOutput => {
+    const ctx = input.ledgerCtx;
+    if (ctx) {
+      const result = tryAppendMcLlmExecutionLedgerV1({
+        requestId: ctx.requestId,
+        threadId: ctx.threadId,
+        turnIndex: ctx.turnIndex,
+        provider: String(out.providerUsed || out.provider || ""),
+        requestedModel: String(requestedModel || "").slice(0, 256),
+        effectiveModel: String(out.model || "").slice(0, 256),
+        maxTokensPlanned: Number(input.maxTokens ?? 0),
+        timeoutMs: Number(input.timeout ?? 0),
+        thinkingBudget: null,
+        finishReason: String(out.finishReason || (out.ok === false ? "error" : "stop")),
+        outLen: String(out.text ?? "").length,
+        retryProvider: String(extras?.retryProvider ?? ""),
+        retryOutLen: Number(extras?.retryOutLen ?? 0),
+      });
+      try {
+        ctx.onLedgerWrite?.(result);
+      } catch {}
+      try {
+        tryAppendMcSourceMapLedgerV1({
+          githubRepo: String(process.env.GITHUB_REPOSITORY || "tenmon-ark-repo").slice(0, 128),
+          threadId: ctx.threadId,
+          turnIndex: ctx.turnIndex,
+          filePath: "api/src/core/llmWrapper.ts",
+          runtimeNode: String(out.providerUsed || out.provider || "llm").slice(0, 128),
+          role: "llm_execution",
+        });
+      } catch {}
+    }
+    return out;
+  };
+
   let primaryProvider: LlmProvider;
   try {
     primaryProvider = pickProvider(input.provider);
   } catch (e: any) {
-    return {
+    const r: LlmChatOutput = {
       text: "",
       provider: "openai",
       model: "none",
@@ -249,6 +301,7 @@ export async function llmChat(input: LlmChatInput): Promise<LlmChatOutput> {
       providerPlanned: "openai",
       providerUsed: "",
     };
+    return __ledgerFlush(r, String(input.model || "none"));
   }
 
   const primaryModel = pickModel(primaryProvider, input.model);
@@ -262,13 +315,16 @@ export async function llmChat(input: LlmChatInput): Promise<LlmChatOutput> {
     if (!String(out.text || "").trim()) {
       throw new Error(`${primaryProvider} empty response`);
     }
-    return {
-      ...out,
-      ok: true,
-      err: "",
-      providerPlanned: primaryProvider,
-      providerUsed: primaryProvider,
-    };
+    return __ledgerFlush(
+      {
+        ...out,
+        ok: true,
+        err: "",
+        providerPlanned: primaryProvider,
+        providerUsed: primaryProvider,
+      },
+      primaryModel,
+    );
   } catch (primaryErr: any) {
     const primaryErrMsg = String(primaryErr?.message || primaryErr || "primary_failed");
     try { console.error("[llmChat] primary failed:", primaryProvider, primaryModel, primaryErrMsg); } catch {}
@@ -284,13 +340,20 @@ export async function llmChat(input: LlmChatInput): Promise<LlmChatOutput> {
         if (!String(out.text || "").trim()) {
           throw new Error("gemini retry empty response");
         }
-        return {
-          ...out,
-          ok: true,
-          err: "",
-          providerPlanned: primaryProvider,
-          providerUsed: "gemini",
-        };
+        return __ledgerFlush(
+          {
+            ...out,
+            ok: true,
+            err: "",
+            providerPlanned: primaryProvider,
+            providerUsed: "gemini",
+          },
+          primaryModel,
+          {
+            retryProvider: "gemini_retry",
+            retryOutLen: String(out.text || "").length,
+          },
+        );
       } catch (retryErr: any) {
         const retryErrMsg = String(retryErr?.message || retryErr || "retry_failed");
         try { console.error("[llmChat] Gemini retry failed:", retryErrMsg); } catch {}
@@ -311,37 +374,50 @@ export async function llmChat(input: LlmChatInput): Promise<LlmChatOutput> {
         if (!String(out.text || "").trim()) {
           throw new Error(`${alt} empty response`);
         }
-        return {
-          ...out,
-          ok: true,
-          err: "",
-          providerPlanned: primaryProvider,
-          providerUsed: alt,
-        };
+        return __ledgerFlush(
+          {
+            ...out,
+            ok: true,
+            err: "",
+            providerPlanned: primaryProvider,
+            providerUsed: alt,
+          },
+          primaryModel,
+          {
+            retryProvider: String(primaryProvider),
+            retryOutLen: String(out.text || "").length,
+          },
+        );
       } catch (altErr: any) {
         const altErrMsg = String(altErr?.message || altErr || "fallback_failed");
         try { console.error("[llmChat] fallback also failed:", alt, altModel, altErrMsg); } catch {}
-        return {
-          text: "",
-          provider: primaryProvider,
-          model: primaryModel,
-          ok: false,
-          err: `primary(${primaryProvider}): ${primaryErrMsg}; fallback(${alt}): ${altErrMsg}`,
-          providerPlanned: primaryProvider,
-          providerUsed: "",
-        };
+        return __ledgerFlush(
+          {
+            text: "",
+            provider: primaryProvider,
+            model: primaryModel,
+            ok: false,
+            err: `primary(${primaryProvider}): ${primaryErrMsg}; fallback(${alt}): ${altErrMsg}`,
+            providerPlanned: primaryProvider,
+            providerUsed: "",
+          },
+          primaryModel,
+        );
       }
     }
 
     // 代替プロバイダなし
-    return {
-      text: "",
-      provider: primaryProvider,
-      model: primaryModel,
-      ok: false,
-      err: primaryErrMsg,
-      providerPlanned: primaryProvider,
-      providerUsed: "",
-    };
+    return __ledgerFlush(
+      {
+        text: "",
+        provider: primaryProvider,
+        model: primaryModel,
+        ok: false,
+        err: primaryErrMsg,
+        providerPlanned: primaryProvider,
+        providerUsed: "",
+      },
+      primaryModel,
+    );
   }
 }

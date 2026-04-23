@@ -465,3 +465,110 @@ CREATE TABLE IF NOT EXISTS thread_center_memory (
 CREATE INDEX IF NOT EXISTS idx_thread_center_memory_thread_id_updated_at
   ON thread_center_memory(thread_id, updated_at DESC);
 
+-- CARD_MC_VNEXT_COLLECTOR_AND_LEDGER_V1: append-only MC observability (kokuzo DB)
+CREATE TABLE IF NOT EXISTS mc_route_ledger (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  request_id TEXT NOT NULL DEFAULT '',
+  thread_id TEXT NOT NULL,
+  turn_index INTEGER NOT NULL,
+  input_hash TEXT NOT NULL,
+  route_reason TEXT NOT NULL,
+  selector_intent TEXT NOT NULL,
+  sacred_route_flag INTEGER NOT NULL DEFAULT 0,
+  fallback_route_flag INTEGER NOT NULL DEFAULT 0,
+  ts TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_mc_route_ledger_thread_ts ON mc_route_ledger(thread_id, ts DESC);
+CREATE INDEX IF NOT EXISTS idx_mc_route_ledger_request_id ON mc_route_ledger(request_id, ts DESC);
+
+CREATE TABLE IF NOT EXISTS mc_llm_execution_ledger (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  request_id TEXT NOT NULL DEFAULT '',
+  thread_id TEXT NOT NULL,
+  turn_index INTEGER NOT NULL,
+  provider TEXT NOT NULL,
+  requested_model TEXT NOT NULL,
+  effective_model TEXT NOT NULL,
+  max_tokens_planned INTEGER NOT NULL,
+  timeout_ms INTEGER NOT NULL,
+  thinking_budget INTEGER,
+  finish_reason TEXT NOT NULL,
+  out_len INTEGER NOT NULL,
+  retry_provider TEXT NOT NULL DEFAULT '',
+  retry_out_len INTEGER NOT NULL DEFAULT 0,
+  ts TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_mc_llm_ledger_thread_ts ON mc_llm_execution_ledger(thread_id, ts DESC);
+CREATE INDEX IF NOT EXISTS idx_mc_llm_ledger_request_id ON mc_llm_execution_ledger(request_id, ts DESC);
+
+CREATE TABLE IF NOT EXISTS mc_memory_ledger (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  request_id TEXT NOT NULL DEFAULT '',
+  thread_id TEXT NOT NULL,
+  turn_index INTEGER NOT NULL,
+  source TEXT NOT NULL,
+  history_len INTEGER NOT NULL,
+  history_preview TEXT NOT NULL,
+  exact_count INTEGER NOT NULL DEFAULT -1,
+  prefix_count INTEGER NOT NULL DEFAULT -1,
+  persisted_success INTEGER,
+  payload_json TEXT NOT NULL DEFAULT '{}',
+  ts TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_mc_memory_ledger_thread_ts ON mc_memory_ledger(thread_id, ts DESC);
+CREATE INDEX IF NOT EXISTS idx_mc_memory_ledger_request_id ON mc_memory_ledger(request_id, ts DESC);
+
+CREATE TABLE IF NOT EXISTS mc_dialogue_quality_ledger (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  request_id TEXT NOT NULL DEFAULT '',
+  thread_id TEXT NOT NULL,
+  turn_index INTEGER NOT NULL,
+  final_len INTEGER NOT NULL,
+  final_tail TEXT NOT NULL,
+  natural_end INTEGER NOT NULL DEFAULT 0,
+  heading_count INTEGER NOT NULL DEFAULT 0,
+  avg_sentence_len REAL NOT NULL DEFAULT 0,
+  truncation_suspect INTEGER NOT NULL DEFAULT 0,
+  ts TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_mc_quality_ledger_thread_ts ON mc_dialogue_quality_ledger(thread_id, ts DESC);
+CREATE INDEX IF NOT EXISTS idx_mc_quality_ledger_request_id ON mc_dialogue_quality_ledger(request_id, ts DESC);
+
+CREATE TABLE IF NOT EXISTS mc_source_map (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  notion_page_id TEXT NOT NULL DEFAULT '',
+  github_repo TEXT NOT NULL DEFAULT '',
+  thread_id TEXT NOT NULL DEFAULT '',
+  turn_index INTEGER,
+  file_path TEXT NOT NULL,
+  runtime_node TEXT NOT NULL DEFAULT '',
+  role TEXT NOT NULL,
+  last_seen TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_mc_source_map_last_seen ON mc_source_map(last_seen DESC);
+CREATE INDEX IF NOT EXISTS idx_mc_source_map_thread_seen ON mc_source_map(thread_id, last_seen DESC);
+
+-- CARD-MC-15: system history / regression registry (append-only, AI-inheritable timeline)
+CREATE TABLE IF NOT EXISTS mc_system_history_ledger (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  record_id TEXT NOT NULL UNIQUE,
+  event_kind TEXT NOT NULL,
+  card_id TEXT,
+  title TEXT NOT NULL,
+  status TEXT NOT NULL,
+  git_head TEXT NOT NULL DEFAULT '',
+  branch TEXT NOT NULL DEFAULT '',
+  deployed_at TEXT,
+  verified_at TEXT,
+  affected_layers_json TEXT NOT NULL DEFAULT '[]',
+  proof_refs_json TEXT NOT NULL DEFAULT '[]',
+  related_threads_json TEXT NOT NULL DEFAULT '[]',
+  notes TEXT NOT NULL DEFAULT '',
+  deltas_json TEXT,
+  created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_mc_sys_hist_created ON mc_system_history_ledger(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_mc_sys_hist_kind ON mc_system_history_ledger(event_kind, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_mc_sys_hist_card ON mc_system_history_ledger(card_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_mc_sys_hist_status ON mc_system_history_ledger(status, created_at DESC);
+

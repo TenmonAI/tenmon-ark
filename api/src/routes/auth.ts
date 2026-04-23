@@ -10,6 +10,8 @@ declare global {
   namespace Express {
     interface Request {
       auth?: TenmonAuth;
+      /** CARD-MC-16: Bearer TENMON_MC_CLAUDE_READ_TOKEN で通過した read-only レーン（write API では拒否すること）。 */
+      tenmonMcClaudeReadLane?: boolean;
     }
   }
 }

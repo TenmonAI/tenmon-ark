@@ -26,11 +26,12 @@ interface McLayoutProps {
 }
 
 const NAV_ITEMS = [
-  { key: "overview", label: "Overview", icon: "◉", path: "/pwa/mc/" },
-  { key: "handoff", label: "AI Handoff", icon: "⬡", path: "/pwa/mc/handoff" },
-  { key: "live", label: "Live State", icon: "◈", path: "/pwa/mc/live" },
-  { key: "git", label: "Git State", icon: "⌥", path: "/pwa/mc/git" },
-  { key: "soul", label: "Soul Root", icon: "✦", path: "/pwa/mc/soul" },
+  { key: "overview", label: "Overview", icon: "◉", path: "/mc/classic/" },
+  { key: "handoff", label: "AI Handoff", icon: "⬡", path: "/mc/classic/handoff" },
+  { key: "live", label: "Live State", icon: "◈", path: "/mc/classic/live" },
+  { key: "git", label: "Git State", icon: "⌥", path: "/mc/classic/git" },
+  { key: "soul", label: "Soul Root", icon: "✦", path: "/mc/classic/soul" },
+  { key: "vnext", label: "AI-HUB / MC vNext", icon: "⎆", path: "/mc/vnext/" },
 ];
 
 export default function McLayout({ children, activePage }: McLayoutProps) {
@@ -66,7 +67,7 @@ export default function McLayout({ children, activePage }: McLayoutProps) {
             <span style={{ fontSize: 18, color: C.accent }}>◉</span>
             <div>
               <div style={{ fontSize: 14, fontWeight: 700, color: C.accent, letterSpacing: 1 }}>MISSION CONTROL</div>
-              <div style={{ fontSize: 10, color: C.textMuted, letterSpacing: 0.5 }}>TENMON-ARK V2</div>
+              <div style={{ fontSize: 10, color: C.textMuted, letterSpacing: 0.5 }}>TENMON-ARK classic · formal hub is /mc/</div>
             </div>
           </div>
         </div>
@@ -103,6 +104,9 @@ export default function McLayout({ children, activePage }: McLayoutProps) {
 
         {/* Footer */}
         <div style={{ padding: "12px 16px", borderTop: `1px solid ${C.border}`, fontSize: 10, color: C.textMuted }}>
+          <a href="/mc/" style={{ color: C.textMuted, textDecoration: "none", display: "block", marginBottom: 6 }}>
+            ← Formal hub /mc/
+          </a>
           <a href="/pwa/" style={{ color: C.textMuted, textDecoration: "none" }}>← Back to ARK</a>
         </div>
       </aside>

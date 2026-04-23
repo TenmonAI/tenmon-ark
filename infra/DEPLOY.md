@@ -323,15 +323,64 @@ sudo systemctl restart tenmon-ark-api
 sudo journalctl -u tenmon-ark-api -f
 ```
 
-### SPA を更新する場合
+### SPA（PWA / `web/`）を更新する場合
+
+nginx の PWA `root` は **`/var/www/tenmon-pwa/pwa`**（`infra/nginx/tenmon-ark.com.conf` の既定）です。旧構成では **`/var/www/tenmon-ark.com/current/dist`** のままにしてよいです。  
+`web/` は Vite の `base: "/pwa/"` により **`web/dist/` 直下**に `index.html` と `assets/` が出力されます。**nginx の `root` と同じディレクトリ**へ `rsync` してください。
 
 ```bash
-# SPA をビルド
-cd /path/to/os-tenmon-ai-v2-reset
+cd /opt/tenmon-ark-repo/web
+npm ci 2>/dev/null || npm install
 npm run build
 
-# dist/public を /var/www/tenmon-ark.com/current/dist にコピー
-sudo cp -r dist/public/* /var/www/tenmon-ark.com/current/dist/
+sudo rsync -a --delete dist/ /var/www/tenmon-pwa/pwa/
+GIT_SHA="$(cd /opt/tenmon-ark-repo && git rev-parse --short HEAD 2>/dev/null || echo unknown)"
+echo "WEB_BUILD_MARK:${GIT_SHA} $(date -u +"%Y-%m-%dT%H:%M:%SZ")" | sudo tee /var/www/tenmon-pwa/pwa/build.txt >/dev/null
+
+sudo rsync -a /opt/tenmon-ark-repo/static/mc-landing/ /var/www/mc-landing/
+
+sudo nginx -t && sudo systemctl reload nginx
+```
+
+一括なら `sudo bash /opt/tenmon-ark-repo/scripts/deploy_all.sh`（Web は **`/var/www/tenmon-pwa/pwa` を最優先**で検出）または `sudo bash /opt/tenmon-ark-repo/web/scripts/deploy_web_live.sh`（`WEB_LIVE_DIR` / `MC_LANDING_LIVE` で上書き可）を使用します。
+
+**Mission Control / vNext の疎通確認（本番 URL）**
+
+```bash
+curl -sI https://tenmon-ark.com/mc/ | head -8
+curl -sI https://tenmon-ark.com/mc/vnext/ | head -8
+curl -sI https://tenmon-ark.com/mc/quality | head -8
+curl -sI https://tenmon-ark.com/mc/alerts | head -8
+curl -sI https://tenmon-ark.com/mc/acceptance | head -8
+curl -sI https://tenmon-ark.com/mc/sources | head -8
+# /mc/ が静的 HTML（text/html）で vNext への導線を含むこと
+curl -s https://tenmon-ark.com/mc/ | grep -o 'MC vNext'
+curl -s https://tenmon-ark.com/pwa/ | grep -o 'src="[^"]*"' | head -3
+# 欠落チャンクで index.html が返っていないこと（Content-Type: application/javascript になること）
+curl -sI "$(curl -s https://tenmon-ark.com/pwa/ | grep -oE '/pwa/assets/index-[^"]+\.js' | head -1)" | head -6
+```
+
+- `/pwa/*` は `location /` の `try_files` で **`index.html` にフォールバック**します。`/pwa/assets/*.js` が無いのに 200 で HTML が返ると、ブラウザはサイレントに壊れます。リポジトリの nginx 設定では **`location ^~ /pwa/assets/`** で欠落時は 404 にしています（反映後 `nginx -t` → reload）。
+- **`https://tenmon-ark.com/mc/`** はリポジトリ nginx 既定では **`static/mc-landing/index.html`**（`/var/www/mc-landing/`）を返し、その中から **Overview / Quality / Alerts / Acceptance / Sources / Classic** へ遷移します。
+- **`/mc/vnext/*`** と **`/mc/classic/*`** は owner-only の正式 SPA path です。互換のため **`/pwa/mc/vnext`** は残せますが、運用説明は **`/mc/*`** に統一します。
+- **`/mc/` を founder IP のみに制限**する場合は、`infra/nginx/mc-landing-location.conf.fragment` のコメント例のとおり `allow` / `deny` を `location = /mc/` に追加してください。
+
+### Mission Control — 人間用 `/mc/` と Claude 用 read lane（CARD-MC-16）
+
+運用は次の **3 本立て**で説明する。
+
+1. **`/mc/`（および `/mc/vnext/*`）** — **人間用**の owner-only Mission Control hub（Basic + founder gate）。
+2. **`GET /api/mc/vnext/claude-summary`** — **Claude / GPT 用**の read-only JSON 一本（`Authorization: Bearer TENMON_MC_CLAUDE_READ_TOKEN`）。nginx では `location = /api/mc/vnext/claude-summary` で **Basic を掛けず** `Authorization` を API に通す。Claude トークンでは **GET/HEAD のみ**（POST/PUT/DELETE は 403）。
+3. **Notion ページ `TENMON_ARK_MC_CURRENT_STATE_FOR_CLAUDE`** — **継承用** current state ミラー。`POST /api/mc/vnext/claude-notion-sync` は **founder JWT または MC Basic trust のみ**（Claude Bearer 不可）。`.env` に `NOTION_TOKEN` / `NOTION_API_KEY` と `TENMON_NOTION_MC_CLAUDE_PAGE_ID` を設定し、cron 等で同期すると鮮度を保てる。
+
+疎通（例）:
+
+```bash
+curl -sS "https://tenmon-ark.com/api/mc/vnext/enabled" | jq '.claude_read_lane_configured,.notion_mirror_configured,.claude_summary_path'
+curl -sS -H "Authorization: Bearer $TENMON_MC_CLAUDE_READ_TOKEN" "https://tenmon-ark.com/api/mc/vnext/claude-summary" | jq 'keys'
+# Claude token で POST が 403 になること
+curl -sS -o /dev/null -w "%{http_code}\n" -X POST -H "Authorization: Bearer $TENMON_MC_CLAUDE_READ_TOKEN" \
+  "https://tenmon-ark.com/api/mc/vnext/claude-notion-sync"
 ```
 
 ### nginx 設定を更新する場合

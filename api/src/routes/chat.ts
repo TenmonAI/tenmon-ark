@@ -1,4 +1,5 @@
 /* CARD1_SEAL_V1 */
+import { randomUUID } from "node:crypto";
 import { synthHybridResponseV1 } from "../hybrid/synth.js";
 import { heartModelV1 } from "../core/heartModel.js";
 import { Router, type IRouter, type Request, type Response } from "express";
@@ -39,8 +40,16 @@ import { localSurfaceize } from "../tenmon/surface/localSurfaceize.js";
 import { llmChat } from "../core/llmWrapper.js";
 import { rewriteOnlyTenmon } from "../core/rewriteOnly.js";
 
-import { memoryPersistMessage, memoryReadSession } from "../memory/index.js";
-import { conversationReadRecent } from "../memory/conversationStore.js";
+import { memoryPersistMessage, memoryReadSession, memorySessionCount } from "../memory/index.js";
+import { conversationCount, conversationPeekNextTurnIndex, conversationReadRecent } from "../memory/conversationStore.js";
+import {
+  type McLedgerAppendResultV1,
+  mcLedgerInputHashShort,
+  tryAppendMcDialogueQualityLedgerV1,
+  tryAppendMcMemoryLedgerV1,
+  tryAppendMcRouteLedgerV1,
+  tryAppendMcSourceMapLedgerV1,
+} from "../mc/ledger/mcLedger.js";
 import { listRules } from "../training/storage.js";
 import { buildTenmonVerdictEngineV1 } from "../core/tenmonVerdictEngineV1.js";
 import { upsertConversationDistillMemoryV1, buildMemoryProjectionPack, logMemoryProjection } from "../core/memoryProjection.js";
@@ -104,14 +113,24 @@ interface __SukuyouSeedContext {
 }
 const __sukuyouSeedByThread = new Map<string, __SukuyouSeedContext>();
 
-/** NATURAL_GENERAL: 明示的な継続依頼のみ検知（CUT-AUDIT 観測用） */
+function wantsShortAnswerPrompt(input: string): boolean {
+  const t = String(input || "")
+    .trim()
+    .replace(/[　\s]+/g, " ");
+  // MC-06 FINAL: 文中出現も検知（「もう少し短く、3行で要点だけ。」等）
+  return /(3行で|三行で|短く|手短に|簡潔に|一言で|一行で|二行で|要点だけ|結論だけ|箇条書きで)/.test(t);
+}
+
+/** NATURAL_GENERAL: 明示的な継続依頼を広めに検知（CUT-AUDIT 観測用） */
 function isForcedContinuationPrompt(input: string): boolean {
   const t = String(input || "")
     .trim()
     .replace(/[　\s]+/g, " ");
-  return /^(続きを|続けて|その続き|補足して|補足を|詳しく|もっと詳しく|もう少し詳しく|さらに詳しく|続きお願いします|続けてください)[。！!？?]*$/.test(
-    t,
-  );
+  if (!t) return false;
+  if (/^(続きを?|この続き|その続き|続けて|続き(?:を)?(?:お願い(?:します)?|ください)?|続きを(?:お願い(?:します)?|ください)?|続けて(?:ください)?|補足(?:して|を)?(?:ください|お願い(?:します)?)?|詳しく(?:お願い(?:します)?|教えて)?|もっと詳しく|もう少し詳しく|さらに詳しく)[。！!？?]*$/u.test(t)) {
+    return true;
+  }
+  return t.length <= 24 && /^(続きを?|続けて|その続き|補足|詳しく|もう少し|さらに)/u.test(t);
 }
 
 type __ContinuationHistTurnV1 = { role: "user" | "assistant"; content: string };
@@ -125,10 +144,23 @@ async function buildContinuationHistoryV1(
   source: "memory" | "conversation_log" | "none";
   historyAuditExactCount: number;
   historyAuditPrefixCount: number;
+  persistedTurnCount: number;
+  lookupSessionId: string;
+  limitRequested: number;
+  missReason: "never_persisted" | "insufficient_history" | "session_id_mismatch_or_limit" | null;
 }> {
   const sid = String(threadId || "").trim();
   if (!sid) {
-    return { items: [], source: "none", historyAuditExactCount: 0, historyAuditPrefixCount: 0 };
+    return {
+      items: [],
+      source: "none",
+      historyAuditExactCount: 0,
+      historyAuditPrefixCount: 0,
+      persistedTurnCount: 0,
+      lookupSessionId: "",
+      limitRequested: 8,
+      missReason: "never_persisted",
+    };
   }
 
   let dbPath = "";
@@ -138,17 +170,31 @@ async function buildContinuationHistoryV1(
     dbPath = "";
   }
 
-  const mem = memoryReadSession(sid, 8);
+  const limitRequested = 8;
+  const persistedTurnCount = memorySessionCount(sid);
+  const mem = memoryReadSession(sid, limitRequested);
   const memoryLen = Array.isArray(mem) ? mem.length : -1;
   const fromMem: __ContinuationHistTurnV1[] = mem
     .filter((m) => String(m.content || "").trim())
     .map((m) => ({ role: m.role, content: String(m.content || "") }));
+  const missReason =
+    fromMem.length > 0
+      ? null
+      : persistedTurnCount === 0
+        ? "never_persisted"
+        : persistedTurnCount < 2
+          ? "insufficient_history"
+          : "session_id_mismatch_or_limit";
   if (fromMem.length > 0) {
     return {
       items: fromMem,
       source: "memory",
       historyAuditExactCount: -1,
       historyAuditPrefixCount: -1,
+      persistedTurnCount,
+      lookupSessionId: sid,
+      limitRequested,
+      missReason,
     };
   }
 
@@ -217,6 +263,10 @@ async function buildContinuationHistoryV1(
       source: "conversation_log",
       historyAuditExactCount: exactCount,
       historyAuditPrefixCount: prefixCount,
+      persistedTurnCount,
+      lookupSessionId: sid,
+      limitRequested,
+      missReason,
     };
   }
   return {
@@ -224,6 +274,10 @@ async function buildContinuationHistoryV1(
     source: "none",
     historyAuditExactCount: exactCount,
     historyAuditPrefixCount: prefixCount,
+    persistedTurnCount,
+    lookupSessionId: sid,
+    limitRequested,
+    missReason,
   };
 }
 
@@ -349,16 +403,102 @@ function recallPassphraseFromSession(threadId: string, limit = 80): string | nul
 // --- /DET_PASSPHRASE_HELPERS_V1 ---
 
 // --- PERSIST_TURN_V2 (for passphrase + normal chat) ---
-function persistTurn(threadId: string, userText: string, assistantText: string): void {
+function persistTurn(
+  threadId: string,
+  userText: string,
+  assistantText: string,
+  options?: {
+    requestId?: string;
+    onLedgerWrite?: (result: McLedgerAppendResultV1) => void;
+  },
+): {
+  ok: boolean;
+  userPersisted: boolean;
+  assistantPersisted: boolean;
+  sessionMemoryCount: number;
+  conversationLogCount: number;
+  sessionMemoryDelta: number;
+  conversationLogDelta: number;
+} {
+  const beforeSessionMemory = memorySessionCount(threadId);
+  const beforeConversationLog = conversationCount(threadId);
+  let userPersisted = false;
+  let assistantPersisted = false;
   try {
-    memoryPersistMessage(threadId, "user", userText);
-    memoryPersistMessage(threadId, "assistant", assistantText);
-    console.log(`[MEMORY] persisted threadId=${threadId} bytes_u=${userText.length} bytes_a=${assistantText.length}`);
+    memoryPersistMessage(threadId, "user", userText, {
+      requestId: options?.requestId,
+      onLedgerWrite: options?.onLedgerWrite,
+    });
+    userPersisted = true;
   } catch (e: any) {
-    console.warn(`[PERSIST] failed threadId=${threadId}:`, e?.message ?? String(e));
+    console.warn(`[PERSIST] user write failed threadId=${threadId}:`, e?.message ?? String(e));
   }
+  try {
+    memoryPersistMessage(threadId, "assistant", assistantText, {
+      requestId: options?.requestId,
+      onLedgerWrite: options?.onLedgerWrite,
+    });
+    assistantPersisted = true;
+  } catch (e: any) {
+    console.warn(`[PERSIST] assistant write failed threadId=${threadId}:`, e?.message ?? String(e));
+  }
+  const afterSessionMemory = memorySessionCount(threadId);
+  const afterConversationLog = conversationCount(threadId);
+  const audit = {
+    requestId: String(options?.requestId || ""),
+    threadId,
+    userPersisted,
+    assistantPersisted,
+    sessionMemoryCount: afterSessionMemory,
+    conversationLogCount: afterConversationLog,
+    sessionMemoryDelta: afterSessionMemory - beforeSessionMemory,
+    conversationLogDelta: afterConversationLog - beforeConversationLog,
+  };
+  console.log(`[PERSIST_AUDIT] ${JSON.stringify(audit)}`);
+  if (userPersisted && assistantPersisted) {
+    console.log(`[MEMORY] persisted threadId=${threadId} bytes_u=${userText.length} bytes_a=${assistantText.length}`);
+  }
+  return {
+    ok: userPersisted && assistantPersisted,
+    userPersisted,
+    assistantPersisted,
+    sessionMemoryCount: afterSessionMemory,
+    conversationLogCount: afterConversationLog,
+    sessionMemoryDelta: afterSessionMemory - beforeSessionMemory,
+    conversationLogDelta: afterConversationLog - beforeConversationLog,
+  };
 }
 // --- /PERSIST_TURN_V2 ---
+
+function ensureNaturalTail(text: string): string {
+  const t = String(text || "").trim();
+  if (!t) return t;
+  if (/[。！？!?」』）)\]]$/.test(t)) return t;
+  if (/[:：]$/.test(t)) return t;
+  return `${t}。`;
+}
+
+function enforceShortAnswerResponse(text: string, maxLines = 3, maxChars = 180): string {
+  const raw = String(text || "").trim();
+  if (!raw) return raw;
+  const normalized = raw.replace(/\r/g, "").replace(/\n{3,}/g, "\n\n").trim();
+  const lineBased = normalized
+    .split(/\n+/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+  let picked = lineBased.slice(0, maxLines).join("\n");
+  if (!picked) picked = normalized;
+  const sentenceParts = picked.match(/[^。！？!?]+[。！？!?]?/g)?.map((s) => s.trim()).filter(Boolean) ?? [picked];
+  let compact = sentenceParts.slice(0, maxLines).join("");
+  if (compact.length > maxChars) {
+    compact = compact.slice(0, maxChars).replace(/[、。！？!?,\s]+$/g, "");
+  }
+  return ensureNaturalTail(compact);
+}
+
+function createMcRequestId(): string {
+  return `mc_req_${randomUUID().replace(/-/g, "")}`;
+}
 
 
 
@@ -552,6 +692,25 @@ function buildGroundedResultBody(
  * 固定応答を廃止し、天津金木思考回路を通して観測を返す
  */
 router.post("/chat", async (req: Request, res: Response<ChatResponseBody>) => {
+  const __mcRequestId = createMcRequestId();
+  const __ledgerWriteSummary: Record<string, McLedgerAppendResultV1[]> = {
+    route: [],
+    llm: [],
+    memory: [],
+    quality: [],
+  };
+  const __recordLedger = (result: McLedgerAppendResultV1 | null | undefined) => {
+    if (!result) return;
+    if (result.kind === "source_map") return;
+    __ledgerWriteSummary[result.kind].push(result);
+  };
+  const __isOwnerDebug =
+    (req as any).cookies?.tenmon_founder === "1" ||
+    Boolean((req as any).auth?.founder) ||
+    String((req.query as { debug?: string }).debug ?? "") === "1";
+  let __natGeneralFollowUpDetected = false;
+  let __natGeneralHistorySource: "memory" | "conversation_log" | "none" | "memory_error" = "none";
+  let __natGeneralHistoryLen = 0;
   // HEART observe (deterministic; no behavior change)
   const __heart = (() => { try {
     const b: any = (req as any)?.body || {};
@@ -571,8 +730,25 @@ router.post("/chat", async (req: Request, res: Response<ChatResponseBody>) => {
       (res as any).json = (obj: any) => {
         try {
           if (obj && typeof obj === "object") {
+            if ((obj as any).requestId === undefined) (obj as any).requestId = __mcRequestId;
             if (obj.rewriteUsed === undefined) obj.rewriteUsed = false;
             if (obj.rewriteDelta === undefined) obj.rewriteDelta = 0;
+            if (__isOwnerDebug) {
+              const df0 = obj.decisionFrame;
+              const routeReason0 =
+                df0 && typeof df0 === "object" && df0.ku && typeof df0.ku === "object"
+                  ? String((df0.ku as any).routeReason ?? "")
+                  : "";
+              (obj as any).ledgerWriteSummary = {
+                requestId: __mcRequestId,
+                threadId: String((obj as any).threadId ?? ""),
+                routeReason: routeReason0,
+                route: __ledgerWriteSummary.route,
+                llm: __ledgerWriteSummary.llm,
+                memory: __ledgerWriteSummary.memory,
+                quality: __ledgerWriteSummary.quality,
+              };
+            }
             // also ensure decisionFrame.ku is object when decisionFrame exists (non-breaking)
             const df = obj.decisionFrame;
             if (df && typeof df === "object") {
@@ -597,6 +773,17 @@ router.post("/chat", async (req: Request, res: Response<ChatResponseBody>) => {
                   routeReason: routeReasonV1,
                   responseText,
                 });
+                try {
+                  tryAppendMcSourceMapLedgerV1({
+                    notionPageId: "",
+                    githubRepo: "",
+                    threadId: String(threadId ?? "").trim(),
+                    turnIndex: conversationPeekNextTurnIndex(String(threadId ?? "").trim()),
+                    filePath: "conversation_distill_memory_v1",
+                    runtimeNode: "api",
+                    role: "learning",
+                  });
+                } catch {}
                 try {
                   const __pack = buildMemoryProjectionPack({ threadId: String(threadId ?? "").trim() });
                   if (__pack.items.length > 0) logMemoryProjection(__pack);
@@ -853,6 +1040,9 @@ const pid = process.pid;
 
       let outText = "";
       let outProv = "llm";
+      let __natGeneralFollowUpDetected = false;
+      let __natGeneralHistorySource: "memory" | "conversation_log" | "none" | "memory_error" = "none";
+      let __natGeneralHistoryLen = 0;
       try {
         const __sukuyouClauseN1 = __buildSukuyouContinuityClause(threadId);
         const llmRes = await llmChat({ system: GENERAL_SYSTEM + __sukuyouClauseN1, user: t0, history: memoryReadSession(String(threadId || ""), 8) });
@@ -1392,6 +1582,9 @@ const DEF_SYSTEM = `あなたは「TENMON-ARK（TENMON-ARK）」。言霊・神�
 
       let outText = "";
       let outProv = "llm";
+      let __natGeneralFollowUpDetected = false;
+      let __natGeneralHistorySource: "memory" | "conversation_log" | "none" | "memory_error" = "none";
+      let __natGeneralHistoryLen = 0;
       try {
         const __isDeepDomainDef = /言霊|カタカムナ|天津金木|水火|宿曜経|言灵|五十音|ヲシテ|神代文字/.test(t0);
         const __sukuyouClauseDef = __buildSukuyouContinuityClause(threadId);
@@ -1453,9 +1646,14 @@ const DEF_SYSTEM = `あなたは「TENMON-ARK（TENMON-ARK）」。言霊・神�
       t0.length >= 2 &&
       t0.length <= 240;
     const __isSmokeHybridTop = /^smoke-hybrid/i.test(String(threadId || ""));
+    const __wantsShortAnswerTop = wantsShortAnswerPrompt(t0);
     // LONGFORM_CHAT_GATE_V1: NATURAL_GENERALでも長文要求を優先処理
-    const __isLongV1Top = /(長文で|長く説明|詳細に|詳しく|くわしく|核心を|とは何か|について|説明せよ|網羅的に|深く|潜象|ウタヒ|水火|イキ)/u.test(t0) && /(カタカムナ|言灵|言霊|空海|法華経|kotodama)/iu.test(t0);
+    const __isLongV1Top =
+      !__wantsShortAnswerTop &&
+      /(長文で|長く説明|詳細に|詳しく|くわしく|核心を|とは何か|について|説明せよ|網羅的に|深く|潜象|ウタヒ|水火|イキ)/u.test(t0) &&
+      /(カタカムナ|言灵|言霊|空海|法華経|kotodama)/iu.test(t0);
     const __explicitLongCharsTop = (() => {
+      if (__wantsShortAnswerTop) return 0;
       const m = String(t0 || "").match(/(\d{2,5})\s*(?:字|文字)/u);
       if (!m || !m[1]) return 0;
       const n = parseInt(m[1], 10);
@@ -1472,7 +1670,8 @@ const DEF_SYSTEM = `あなたは「TENMON-ARK（TENMON-ARK）」。言霊・神�
 
 
     if (__generalOk && !__isSmokeHybridTop) {
-      
+      let __mcLedgerTurn: number | null = null;
+
   // P3.1 KAMIYO Synapse: load 3 core laws (deterministic, no naming in output)
   const __kamiyo = (() => {
     try {
@@ -1989,33 +2188,131 @@ ${__carrySeedSummary}${__carryLifeAlgo}
         }
       } else {
         // 通常ルート（宿曜コンテキストはあるが御神託レポートなし、または一般質問）
+        let __chatHistory: __ContinuationHistTurnV1[] = [];
+        let __historySource: "memory" | "conversation_log" | "none" | "memory_error" = "none";
+        let __treatAsFollowUp = false;
         try {
           const __sukuyouClauseGen = __buildSukuyouContinuityClause(threadId);
           // ULTRA-10: 意図分類 + 深化戦略
           const __rawInputTrimmed = String(t0 || "").trim();
+          __mcLedgerTurn = conversationPeekNextTurnIndex(String(threadId || ""));
+          const __mcLedgerInputHash = mcLedgerInputHashShort(t0);
+          const __mcLedgerCtx = {
+            requestId: __mcRequestId,
+            threadId: String(threadId || ""),
+            turnIndex: __mcLedgerTurn,
+            routeReason: "NATURAL_GENERAL_LLM_TOP",
+            inputHash: __mcLedgerInputHash,
+            onLedgerWrite: __recordLedger,
+          };
+          const __threadIdNormalized = String(threadId || "").trim();
+          const __sessionMemoryCountBefore = __threadIdNormalized ? memorySessionCount(__threadIdNormalized) : 0;
+          const __conversationLogCountBefore = __threadIdNormalized ? conversationCount(__threadIdNormalized) : 0;
+          const __hasPersistedThreadContext = __sessionMemoryCountBefore > 0 || __conversationLogCountBefore > 0;
+          const __looksShortFollowUp =
+            __rawInputTrimmed.length <= 32 &&
+            /^(続きを?|続けて|この続き|その続き|補足|補足して|詳しく|もう少し|さらに|続きお願いします|続きをお願いします)/u.test(__rawInputTrimmed);
           const __forcedContinuation =
-            isForcedContinuationPrompt(__rawInputTrimmed) &&
-            Boolean(String(threadId || "").trim());
-          let __chatHistory: __ContinuationHistTurnV1[];
-          let __historySource: "memory" | "conversation_log" | "none";
+            Boolean(__threadIdNormalized) &&
+            (isForcedContinuationPrompt(__rawInputTrimmed) || (__looksShortFollowUp && __hasPersistedThreadContext));
           let __historyAuditExactCount = -1;
           let __historyAuditPrefixCount = -1;
-          if (__forcedContinuation) {
-            const __builtHist = await buildContinuationHistoryV1(String(threadId || ""), 6);
-            __chatHistory = __builtHist.items;
-            __historySource = __builtHist.source;
-            __historyAuditExactCount = __builtHist.historyAuditExactCount;
-            __historyAuditPrefixCount = __builtHist.historyAuditPrefixCount;
-          } else {
-            const __memOnly = memoryReadSession(String(threadId || ""), 8);
-            __chatHistory = __memOnly
-              .filter((m) => String(m.content || "").trim())
-              .map((m) => ({ role: m.role, content: String(m.content || "") }));
-            __historySource = __chatHistory.length > 0 ? "memory" : "none";
+          let __persistedTurnCount = __threadIdNormalized ? memorySessionCount(__threadIdNormalized) : 0;
+          let __historyLookupSessionId = __threadIdNormalized;
+          let __historyLimitRequested = 8;
+          let __historyMissReason:
+            | "never_persisted"
+            | "insufficient_history"
+            | "session_id_mismatch_or_limit"
+            | null = __threadIdNormalized ? "never_persisted" : null;
+          let __historyPreview: Array<{ role: string; head: string }> = [];
+          try {
+            if (__forcedContinuation) {
+              const __builtHist = await buildContinuationHistoryV1(String(threadId || ""), 6);
+              __chatHistory = __builtHist.items;
+              __historySource = __builtHist.source;
+              __historyAuditExactCount = __builtHist.historyAuditExactCount;
+              __historyAuditPrefixCount = __builtHist.historyAuditPrefixCount;
+              __persistedTurnCount = __builtHist.persistedTurnCount;
+              __historyLookupSessionId = __builtHist.lookupSessionId;
+              __historyLimitRequested = __builtHist.limitRequested;
+              __historyMissReason = __builtHist.missReason;
+            } else {
+              const __builtHist = await buildContinuationHistoryV1(__threadIdNormalized, 8);
+              __chatHistory = __builtHist.items;
+              __historySource = __builtHist.source;
+              __historyAuditExactCount = __builtHist.historyAuditExactCount;
+              __historyAuditPrefixCount = __builtHist.historyAuditPrefixCount;
+              __persistedTurnCount = __builtHist.persistedTurnCount;
+              __historyLookupSessionId = __builtHist.lookupSessionId;
+              __historyLimitRequested = __builtHist.limitRequested;
+              __historyMissReason = __builtHist.missReason;
+            }
+          } catch (histErr: any) {
+            __chatHistory = [];
+            __historySource = "memory_error";
+            __historyAuditExactCount = -1;
+            __historyAuditPrefixCount = -1;
+            __historyMissReason =
+              __persistedTurnCount === 0
+                ? "never_persisted"
+                : __persistedTurnCount < 2
+                  ? "insufficient_history"
+                  : "session_id_mismatch_or_limit";
+            __historyPreview = [{ role: "system", head: `history read failed: ${String(histErr?.message || histErr || "unknown").slice(0, 80)}` }];
           }
+          if (__historyPreview.length === 0) {
+            __historyPreview = (__chatHistory || []).slice(-2).map((h) => ({
+              role: h.role,
+              head: String(h.content || "").slice(0, 60),
+            }));
+          }
+          __recordLedger(tryAppendMcMemoryLedgerV1({
+            requestId: __mcRequestId,
+            threadId: __mcLedgerCtx.threadId,
+            turnIndex: __mcLedgerTurn,
+            source: __historySource,
+            historyLen: __chatHistory.length,
+            historyPreview: __historyPreview,
+            exactCount: __historyAuditExactCount,
+            prefixCount: __historyAuditPrefixCount,
+            persistedSuccess: null,
+            lookupSessionId: __historyLookupSessionId,
+            persistedTurnCount: __persistedTurnCount,
+            limitRequested: __historyLimitRequested,
+            missReason: __historyMissReason,
+          }));
+          try {
+            tryAppendMcSourceMapLedgerV1({
+              githubRepo: String(process.env.GITHUB_REPOSITORY || "tenmon-ark-repo").slice(0, 128),
+              threadId: __mcLedgerCtx.threadId,
+              turnIndex: __mcLedgerTurn,
+              filePath: "api/src/routes/chat.ts",
+              runtimeNode: "api",
+              role: "route",
+            });
+          } catch {}
           const __userIntent = classifyIntent(__rawInputTrimmed, __chatHistory);
-          const __selectorIntentKind = __forcedContinuation ? "follow_up" : __userIntent.primary;
-          const __modelIntentForSelect: IntentClassification = __forcedContinuation
+          __treatAsFollowUp =
+            Boolean(__threadIdNormalized) &&
+            (__forcedContinuation ||
+              (__chatHistory.length > 0 && __looksShortFollowUp) ||
+              (__hasPersistedThreadContext && __looksShortFollowUp));
+          __natGeneralFollowUpDetected = __treatAsFollowUp;
+          __natGeneralHistorySource = __historySource;
+          __natGeneralHistoryLen = __chatHistory.length;
+          const __selectorIntentKind = __treatAsFollowUp ? "follow_up" : __userIntent.primary;
+          __recordLedger(tryAppendMcRouteLedgerV1({
+            requestId: __mcRequestId,
+            threadId: __mcLedgerCtx.threadId,
+            turnIndex: __mcLedgerTurn,
+            inputHash: __mcLedgerInputHash,
+            routeReason: "NATURAL_GENERAL_LLM_TOP",
+            selectorIntent: String(__selectorIntentKind),
+            sacredRouteFlag: Boolean(__hasSukuyouOracle),
+            fallbackRouteFlag: Boolean(__treatAsFollowUp && (__historySource === "none" || __historySource === "memory_error")),
+          }));
+          const __modelIntentForSelect: IntentClassification = __treatAsFollowUp
             ? {
                 ...__userIntent,
                 primary: "follow_up",
@@ -2041,13 +2338,13 @@ ${__carrySeedSummary}${__carryLifeAlgo}
             isSukuyouQuery: __isSukuyouQuery,
           });
           logModelSelection(__modelSel, computePromptHash(__genSystemWithEvidence));
-          const __maxTokensPlanned = __forcedContinuation
+          const __maxTokensPlanned = __treatAsFollowUp
             ? 4000
             : __isSukuyouQuery
               ? 3500
               : __modelSel.maxTokens;
           const __providerForChat =
-            __forcedContinuation && Array.isArray(__chatHistory) && __chatHistory.length > 0
+            __treatAsFollowUp && Array.isArray(__chatHistory) && __chatHistory.length > 0
               ? ("openai" as const)
               : undefined;
           let llmRes = await llmChat({
@@ -2057,13 +2354,14 @@ ${__carrySeedSummary}${__carryLifeAlgo}
             maxTokens: __maxTokensPlanned,
             timeout: __isSukuyouQuery ? 25000 : 15000,
             model: __modelSel.model,
+            ledgerCtx: __mcLedgerCtx,
             ...(__providerForChat ? { provider: __providerForChat } : {}),
           });
           let continuationRetry = false;
           let retryProvider: "" | "gemini" = "";
           let retryOutLen = 0;
           let llmResFinal = llmRes;
-          if (__forcedContinuation && !String(llmRes?.text ?? "").trim()) {
+          if (__treatAsFollowUp && !String(llmRes?.text ?? "").trim()) {
             continuationRetry = true;
             retryProvider = "gemini";
             const llmRetry = await llmChat({
@@ -2074,6 +2372,7 @@ ${__carrySeedSummary}${__carryLifeAlgo}
               timeout: __isSukuyouQuery ? 25000 : 15000,
               model: __modelSel.model,
               provider: "gemini",
+              ledgerCtx: __mcLedgerCtx,
             });
             retryOutLen = String(llmRetry?.text ?? "").length;
             if (String(llmRetry?.text ?? "").trim()) {
@@ -2086,6 +2385,7 @@ ${__carrySeedSummary}${__carryLifeAlgo}
               threadId,
               routeReason: "NATURAL_GENERAL_LLM_TOP",
               forcedContinuation: __forcedContinuation,
+              treatedAsFollowUp: __treatAsFollowUp,
               userIntentKind: __userIntent.primary,
               selectorIntentKind: __selectorIntentKind,
               chatHistoryLen: Array.isArray(__chatHistory) ? __chatHistory.length : -1,
@@ -2109,7 +2409,7 @@ ${__carrySeedSummary}${__carryLifeAlgo}
             }),
           );
           if (llmResFinal?.ok === false || !String(llmResFinal?.text ?? "").trim()) {
-            if (__forcedContinuation) {
+            if (__treatAsFollowUp) {
               outText =
                 "前の回答の続きとして受け取りましたが、会話履歴の再取得に失敗しました。『どの段落の続きを知りたいか』を一言で送ってください。";
               outProv = "deterministic+continuation";
@@ -2123,6 +2423,41 @@ ${__carrySeedSummary}${__carryLifeAlgo}
             outProv = String((llmResFinal?.providerUsed || llmResFinal?.provider) ?? "llm");
           }
         } catch (e: any) {
+          __natGeneralFollowUpDetected = false;
+          __natGeneralHistorySource = "memory_error";
+          __natGeneralHistoryLen = 0;
+          __recordLedger(tryAppendMcRouteLedgerV1({
+            requestId: __mcRequestId,
+            threadId: String(threadId || ""),
+            turnIndex: __mcLedgerTurn ?? conversationPeekNextTurnIndex(String(threadId || "")),
+            inputHash: mcLedgerInputHashShort(t0),
+            routeReason: "NATURAL_GENERAL_LLM_TOP",
+            selectorIntent: "exception",
+            sacredRouteFlag: Boolean(__hasSukuyouOracle),
+            fallbackRouteFlag: true,
+          }));
+          __recordLedger(tryAppendMcMemoryLedgerV1({
+            requestId: __mcRequestId,
+            threadId: String(threadId || ""),
+            turnIndex: __mcLedgerTurn ?? conversationPeekNextTurnIndex(String(threadId || "")),
+            source: "memory_error",
+            historyLen: 0,
+            historyPreview: [{ role: "system", head: String(e?.message || "general route exception").slice(0, 80) }],
+            exactCount: -1,
+            prefixCount: -1,
+            persistedSuccess: null,
+            lookupSessionId: String(threadId || "").trim(),
+            persistedTurnCount: String(threadId || "").trim() ? memorySessionCount(String(threadId || "").trim()) : 0,
+            limitRequested: 8,
+            missReason:
+              !String(threadId || "").trim()
+                ? null
+                : memorySessionCount(String(threadId || "").trim()) === 0
+                  ? "never_persisted"
+                  : memorySessionCount(String(threadId || "").trim()) < 2
+                    ? "insufficient_history"
+                    : "session_id_mismatch_or_limit",
+          }));
           outText = "いま応答の生成に失敗しました。もう一度だけ、短く言い直してみてください。";
         }
       }
@@ -2135,12 +2470,6 @@ ${__carrySeedSummary}${__carryLifeAlgo}
         .trim();
       }
 
-      // SUKUYOU_SURFACE_BYPASS_V2: 御神託レポート時は【天聞の所見】ヘッダ・フォールバック・エスケープ検出を全てバイパス
-      if (!__hasSukuyouOracle) {
-        if (!outText.startsWith("【天聞の所見】")) {
-          outText = "【天聞の所見】" + outText;
-        }
-      }
       // FALLBACK_V3: heart stateに応じたフォールバック（言い切り優先、誘導文禁止）
       // CURRENT_FACTS_FALLBACK_EXCLUDE_V1: current facts / DEFには適用しない
       if (!__hasSukuyouOracle && !__isCurrentFacts(t0) && outText.length < 80) {
@@ -2172,31 +2501,34 @@ ${__carrySeedSummary}${__carryLifeAlgo}
           /のに基づ|個人のに基づ|自分のと社会|かもしれません。、/.test(__t) ||
           /です。ある状況|指します。によって|ます。、/.test(__t);
 
-        // R1_ESCAPE_FIX_V1: 汎用AI語検出時も言い切りで返す（御神託レポート時はバイパス）
-        if (!__hasSukuyouOracle && (__hasEscape || __looksBroken)) {
-          outText = "一般論や相対化は要りません。いまの焦点を一つに絞り、そこだけを見つめてください。";
+        // MC-06 FINAL: 固定句「一般論や相対化は要りません…」は通常会話に強制挿入しない。
+        // 極端な壊れ出力 (>240 文字かつ明確な worm-eaten 兆候) を検知した時だけ log-only で残す。
+        const __extremelyBroken =
+          !__hasSukuyouOracle &&
+          !__wantsShortAnswerTop &&
+          __looksBroken &&
+          String(__t).length > 240 &&
+          __hasEscape &&
+          /、{2,}|。{2,}|，，|．．/.test(__t);
+        if (__extremelyBroken) {
+          try {
+            console.warn(
+              "[BROKEN_OUTPUT_RESCUE_CANDIDATE_V1]",
+              JSON.stringify({
+                threadId: String(threadId || ""),
+                len: String(__t).length,
+                tail: String(__t).slice(-80),
+                route: "NATURAL_GENERAL_LLM_TOP",
+              }),
+            );
+          } catch {}
+          // 通常会話では outText を書き換えない (acceptance: 固定句を出さない)
         }
       }
-      // LONGFORM_CHAT_GATE_V1: NATURAL_GENERALの短文化を長文要求時のみ上書き
+      // LONGFORM_CHAT_GATE_V1: 通常会話で固定本文を差し込まない。明示的な長文指定時のみ後段整形する。
       let __explicitLongTraceTop: Record<string, unknown> | null = null;
-      if ((__isLongV1Top || __explicitLongCharsTop >= 1000) && __centerKeyV1Top) {
-        const __longBodyMapV1: Record<string, string> = {
-          HOKEKYO:
-            "法華経の核心は、方便と実相を対立ではなく段階として統合する点にあります。一仏乗という最終原理を土台に、衆生の理解段階に応じて三乗を説き分け、最終的に同じ到達点へ収斂させる構造を採ります。如来寿量品で示される永遠性は、歴史上の一点の出来事としての仏ではなく、今ここで働く覚りの可能性を示す読解軸です。実践面では、自己救済と他者救済を切り離さず、苦の現場で慈悲と智慧を同時に鍛えることが重視されます。章ごとの主張だけでなく、配列の意図と転換点を追うことで、法華経は教義集ではなく変容の設計図として立ち上がります。",
-          KUKAI:
-            "空海の声字実相義の核心は、声・字・実相を別々の層として扱わず、修行実践の中で相即する働きとして捉える点にあります。声は単なる音ではなく、身体と世界の関係を立ち上げる運動であり、字はその運動を保持して再現可能にする器です。したがって理解は読解だけで完了せず、身口意を調える三密の実践を通じて、観念が体験へ移行していく必要があります。六大無碍の枠組みでは、宇宙と身体は断絶せず連続し、言語行為そのものが認識変容の実験場になります。声字実相義は言葉の哲学に留まらず、行為・認識・存在を同時に再編する実践理論として読むのが要点です。",
-          kotodama_hisho:
-            "言霊は、語が意味を運ぶだけでなく、発話によって関係・態度・行為の向きを変える働きまで含めて捉える見方です。五十音は単なる配列ではなく、生成と分化の秩序を表す座標として扱われ、音の位置関係が意味作用の差を生むという前提で読解されます。水火（イキ）の観点では、対立項を固定せず、循環と転化の中で働きを見ます。したがって言霊理解は語源知識の暗記ではなく、どの場面でどの音価がどの方向に作用したかを検証する実践に近い作業です。",
-          katakamuna:
-            "カタカムナの読解では、文字形・音価・配置を分離せず、図像と言語を一体のモデルとして扱います。現象の背後にある潜象を読むという立場では、形は記号ではなく運動の痕跡であり、音は命名ではなく生成過程の指標になります。したがって解釈時には、語の意味だけでなく図像の対応関係、反復パターン、解読史上の差異を並行して確認する必要があります。妥当な読みを得るには、単一の断定よりも、複数仮説を保持したまま本文と図像の整合を取り続ける姿勢が重要です。",
-          tenmon_ark:
-            "TENMON-ARKが世界最高水準へ届くための未達点は、単一機能の不足ではなく、会話主権・長文完遂・観測可能な安全性・自律運転の fail-soft を一本の契約として閉じ切れていない点にあります。第一に、短答でも長答でも中心が残る応答主権がまだ揺れやすく、support・general・analysis の境界で浅い返しへ落ちる瞬間があります。第二に、長文要求では生成途中の密度と最終出口の整形が分離していたため、目標字数に対して本文の厚みが不足しやすく、説明の段数より補助尾句が先に出てしまう弱点がありました。第三に、外部接続では source・memory・promotion は整い始めている一方、Notion writeback のような外部I/Oが親ループ全体の停止理由へ直結しやすく、局所失敗を局所 pending に閉じ込める設計が不十分でした。第四に、seal 判定は acceptance・reuse・promotion・OCR 系観測が別々の boolean として散在し、なぜ sealed なのか、なぜ pending なのかを reason code と evidence ref で一つの object に収束できていません。世界最高を目指すなら、知識量の追加より先に、こうした契約の一貫性を固定し、失敗が起きても原因と回復経路が説明可能である状態を増やす必要があります。つまり未達の核心は、賢さそのものより、生成・運転・昇格・監査を横断して『同じ中心が最後まで残るか』にあります。",
-        };
-        const __longBody = __longBodyMapV1[__centerKeyV1Top];
-        if (__longBody) {
-          outText = `${String(outText || "").trim()}\n\n${__longBody}`.trim();
-        }
-        if (__explicitLongCharsTop >= 1000) {
+      if (!__wantsShortAnswerTop && __explicitLongCharsTop >= 1000 && __centerKeyV1Top) {
+        if (__isLongV1Top) {
           const __lf = composeTenmonLongformV1({
             mode: inferTenmonLongformModeV1(t0, outText),
             body: outText,
@@ -2216,6 +2548,10 @@ ${__carrySeedSummary}${__carryLifeAlgo}
           };
         }
       }
+      if (__wantsShortAnswerTop) {
+        outText = enforceShortAnswerResponse(outText, 3, 180);
+      }
+      outText = ensureNaturalTail(outText);
 // BLOCK3: reportText/reportAvailable をレスポンスに追加
 const __responsePayload: Record<string, any> = {
         response: outText,
@@ -2244,6 +2580,13 @@ const __responsePayload: Record<string, any> = {
             : { routeReason: __hasSukuyouOracle ? "SUKUYOU_ORACLE_TOP" : "NATURAL_GENERAL_LLM_TOP", isSukuyouOracle: __hasSukuyouOracle, isSukuyouQuery: __isSukuyouQuery, reportAvailable: __reportAvailable || __hasSukuyouOracle || false, ...(__kanagiKuCache.get(String(threadId || "default")) ?? {}) },
         },
       };
+      if (__isOwnerDebug) {
+        __responsePayload.debug = {
+          continuationDetected: __natGeneralFollowUpDetected,
+          historySource: __natGeneralHistorySource,
+          historyLen: __natGeneralHistoryLen,
+        };
+      }
       if (__reportAvailable && __reportTextForCopy) {
         __responsePayload.reportText = __reportTextForCopy;
       }
@@ -2257,6 +2600,63 @@ const __responsePayload: Record<string, any> = {
             finalTail: String(outText || "").slice(-80),
           }),
         );
+      }
+      if (__mcLedgerTurn != null) {
+        __recordLedger(tryAppendMcDialogueQualityLedgerV1({
+          requestId: __mcRequestId,
+          threadId: String(threadId || ""),
+          turnIndex: __mcLedgerTurn,
+          finalText: String(outText || ""),
+        }));
+      }
+      let __persistAudit:
+        | {
+            ok: boolean;
+            userPersisted: boolean;
+            assistantPersisted: boolean;
+            sessionMemoryCount: number;
+            conversationLogCount: number;
+            sessionMemoryDelta: number;
+            conversationLogDelta: number;
+          }
+        | null = null;
+      try {
+        __persistAudit = persistTurn(String(threadId || ""), String(t0 || ""), String(outText || ""), {
+          requestId: __mcRequestId,
+          onLedgerWrite: __recordLedger,
+        });
+        // MC-06 FINAL: persist の acceptance 可視化
+        try {
+          const __persistedTo: string[] = [];
+          if (__persistAudit?.sessionMemoryDelta && __persistAudit.sessionMemoryDelta > 0) __persistedTo.push("session_memory");
+          if (__persistAudit?.conversationLogDelta && __persistAudit.conversationLogDelta > 0) __persistedTo.push("conversation_log");
+          console.log(
+            "[PERSIST_FINAL_V1]",
+            JSON.stringify({
+              threadId: String(threadId || ""),
+              persisted_to: __persistedTo,
+              user_len: String(t0 || "").length,
+              assistant_len: String(outText || "").length,
+              ok: Boolean(__persistAudit?.ok),
+              user_persisted: Boolean(__persistAudit?.userPersisted),
+              assistant_persisted: Boolean(__persistAudit?.assistantPersisted),
+              session_memory_delta: __persistAudit?.sessionMemoryDelta ?? 0,
+              conversation_log_delta: __persistAudit?.conversationLogDelta ?? 0,
+              route: "NATURAL_GENERAL_LLM_TOP",
+            }),
+          );
+        } catch {}
+      } catch (persistErr: any) {
+        console.warn("[MC_LEDGER] NATURAL_GENERAL persistTurn failed:", persistErr?.message ?? String(persistErr));
+      }
+      if (__isOwnerDebug) {
+        __responsePayload.debug = {
+          ...(__responsePayload.debug ?? {}),
+          continuationDetected: __natGeneralFollowUpDetected,
+          historySource: __natGeneralHistorySource,
+          historyLen: __natGeneralHistoryLen,
+          persistAudit: __persistAudit,
+        };
       }
       return res.json(__tenmonGeneralGateResultMaybe(__responsePayload));
     }
@@ -5060,24 +5460,17 @@ if (__hasMenu && !__askedMenu) {
       }
     } catch {}
 
-    // LONGFORM_CHAT_GATE_V1: 既存の短文化を維持しつつ、長文要求時のみ本文を拡張
+    // LONGFORM_CHAT_GATE_V1: 固定本文の自動挿入はやめ、明示的な長文要求だけを後段整形する
     try {
-      if (__isLongV1 && __centerKeyV1) {
-        const __longBodyMapV1: Record<string, string> = {
-          HOKEKYO:
-            "法華経の核心は、方便と実相を対立ではなく段階として統合する点にあります。一仏乗という最終原理を土台に、衆生の理解段階に応じて三乗を説き分け、最終的に同じ到達点へ収斂させる構造を採ります。如来寿量品で示される永遠性は、歴史上の一点の出来事としての仏ではなく、今ここで働く覚りの可能性を示す読解軸です。実践面では、自己救済と他者救済を切り離さず、苦の現場で慈悲と智慧を同時に鍛えることが重視されます。章ごとの主張だけでなく、配列の意図と転換点を追うことで、法華経は教義集ではなく変容の設計図として立ち上がります。",
-          KUKAI:
-            "空海の声字実相義の核心は、声・字・実相を別々の層として扱わず、修行実践の中で相即する働きとして捉える点にあります。声は単なる音ではなく、身体と世界の関係を立ち上げる運動であり、字はその運動を保持して再現可能にする器です。したがって理解は読解だけで完了せず、身口意を調える三密の実践を通じて、観念が体験へ移行していく必要があります。六大無碍の枠組みでは、宇宙と身体は断絶せず連続し、言語行為そのものが認識変容の実験場になります。声字実相義は言葉の哲学に留まらず、行為・認識・存在を同時に再編する実践理論として読むのが要点です。",
-          kotodama_hisho:
-            "言霊は、語が意味を運ぶだけでなく、発話によって関係・態度・行為の向きを変える働きまで含めて捉える見方です。五十音は単なる配列ではなく、生成と分化の秩序を表す座標として扱われ、音の位置関係が意味作用の差を生むという前提で読解されます。水火（イキ）の観点では、対立項を固定せず、循環と転化の中で働きを見ます。したがって言霊理解は語源知識の暗記ではなく、どの場面でどの音価がどの方向に作用したかを検証する実践に近い作業です。",
-          katakamuna:
-            "カタカムナの読解では、文字形・音価・配置を分離せず、図像と言語を一体のモデルとして扱います。現象の背後にある潜象を読むという立場では、形は記号ではなく運動の痕跡であり、音は命名ではなく生成過程の指標になります。したがって解釈時には、語の意味だけでなく図像の対応関係、反復パターン、解読史上の差異を並行して確認する必要があります。妥当な読みを得るには、単一の断定よりも、複数仮説を保持したまま本文と図像の整合を取り続ける姿勢が重要です。",
-        };
-        const __longBodyV1 = __longBodyMapV1[__centerKeyV1];
-        if (__longBodyV1) {
-          const __baseBodyV1 = String(finalResponse || "").trim();
-          finalResponse = __baseBodyV1 ? `${__baseBodyV1}\n\n${__longBodyV1}` : __longBodyV1;
-        }
+      const __longTargetV1 = /網羅的に|詳細に|長文で|深く/u.test(__rawMsgForLong) ? 1200 : 1000;
+      if (__isLongV1 && __centerKeyV1 && !wantsShortAnswerPrompt(__rawMsgForLong)) {
+        finalResponse = composeTenmonLongformV1({
+          mode: inferTenmonLongformModeV1(__rawMsgForLong, finalResponse),
+          body: finalResponse,
+          centerClaim: __centerKeyV1,
+          nextAxis: "center claim / evidence / practical next step",
+          targetLength: __longTargetV1,
+        }).longform;
       }
     } catch {}
 

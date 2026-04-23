@@ -41,6 +41,9 @@ import { writerVerifyRouter } from "./routes/writerVerify.js";
 import { writerDraftRouter } from "./routes/writerDraft.js";
 import guestRouter from "./routes/guest.js";
 import mcRouter from "./routes/mc.js";
+import mcVnextRouter from "./mc/routes/mcVnextRouter.js";
+import { isMcVnextEnabled } from "./mc/mcVnextFlag.js";
+import { isMcLedgerWritesEnabled } from "./mc/ledger/mcLedger.js";
 
 // Debug: 未処理例外のハンドリング
 const pid = process.pid;
@@ -79,6 +82,41 @@ try {
     if (!has("evidenceIds")) db.prepare("ALTER TABLE kokuzo_laws ADD COLUMN evidenceIds TEXT").run(); // JSON array
   } catch (e) {
     console.error("[DB] ENSURE_KOKUZO_LAWS_COLUMNS_V1 failed:", e);
+  }
+
+  try {
+    const db = getDb("kokuzo") as any;
+    const cols = (db.prepare("PRAGMA table_info('mc_source_map')").all() as any[]).map((r: any) => String(r.name));
+    const has = (name: string) => cols.includes(name);
+    if (!has("thread_id")) db.prepare("ALTER TABLE mc_source_map ADD COLUMN thread_id TEXT NOT NULL DEFAULT ''").run();
+    if (!has("turn_index")) db.prepare("ALTER TABLE mc_source_map ADD COLUMN turn_index INTEGER").run();
+    db.prepare("CREATE INDEX IF NOT EXISTS idx_mc_source_map_thread_seen ON mc_source_map(thread_id, last_seen DESC)").run();
+  } catch (e) {
+    console.error("[DB] ENSURE_MC_SOURCE_MAP_THREAD_COLUMNS_V1 failed:", e);
+  }
+
+  try {
+    const db = getDb("kokuzo") as any;
+    const ensureRequestIdColumn = (table: string) => {
+      const cols = (db.prepare(`PRAGMA table_info('${table}')`).all() as any[]).map((r: any) => String(r.name));
+      if (!cols.includes("request_id")) {
+        db.prepare(`ALTER TABLE ${table} ADD COLUMN request_id TEXT NOT NULL DEFAULT ''`).run();
+      }
+    };
+    ensureRequestIdColumn("mc_route_ledger");
+    ensureRequestIdColumn("mc_llm_execution_ledger");
+    ensureRequestIdColumn("mc_memory_ledger");
+    ensureRequestIdColumn("mc_dialogue_quality_ledger");
+    const memoryCols = (db.prepare("PRAGMA table_info('mc_memory_ledger')").all() as any[]).map((r: any) => String(r.name));
+    if (!memoryCols.includes("payload_json")) {
+      db.prepare("ALTER TABLE mc_memory_ledger ADD COLUMN payload_json TEXT NOT NULL DEFAULT '{}'").run();
+    }
+    db.prepare("CREATE INDEX IF NOT EXISTS idx_mc_route_ledger_request_id ON mc_route_ledger(request_id, ts DESC)").run();
+    db.prepare("CREATE INDEX IF NOT EXISTS idx_mc_llm_ledger_request_id ON mc_llm_execution_ledger(request_id, ts DESC)").run();
+    db.prepare("CREATE INDEX IF NOT EXISTS idx_mc_memory_ledger_request_id ON mc_memory_ledger(request_id, ts DESC)").run();
+    db.prepare("CREATE INDEX IF NOT EXISTS idx_mc_quality_ledger_request_id ON mc_dialogue_quality_ledger(request_id, ts DESC)").run();
+  } catch (e) {
+    console.error("[DB] ENSURE_MC_LEDGER_REQUEST_ID_COLUMNS_V1 failed:", e);
   }
 
   console.log(`[DB-INIT] kokuzo ready pid=${pid} uptime=${uptime}s`);
@@ -169,6 +207,8 @@ app.get("/health", (_, res) => {
   res.json({ status: "ok" });
 });
 
+// Mission Control vNext (read-only skeleton; TENMON_MC_VNEXT=1) — register before /api/mc so paths are not swallowed
+app.use("/api/mc/vnext", mcVnextRouter);
 // Mission Control V2 (read-only dashboard)
 app.use("/api/mc", mcRouter);
 
@@ -183,4 +223,9 @@ app.listen(PORT, "0.0.0.0", () => {
   console.log(`API listening on http://0.0.0.0:${PORT}`);
   markListenReady();
   console.log(`[READY] listenReady=true`);
+  if (isMcVnextEnabled() && !isMcLedgerWritesEnabled()) {
+    console.warn(
+      "[MC_VNEXT] TENMON_MC_VNEXT=1 だが TENMON_MC_VNEXT_LEDGER≠1 — mc_*_ledger は一切書かれません（.env に LEDGER=1 を追加）",
+    );
+  }
 });

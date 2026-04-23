@@ -45,7 +45,8 @@ fi
 # Web (PWA)
 WEB_SRC="$REPO/web"
 detect_web_live() {
-  for d in "/var/www/tenmon-pwa/pwa" "/opt/tenmon-ark-live/web" "/var/www/html"; do
+  # 本番 PWA root（infra/nginx/tenmon-ark.com.conf と一致）
+  for d in "/var/www/tenmon-pwa/pwa" "/var/www/tenmon-ark.com/current/dist" "/opt/tenmon-ark-live/web" "/var/www/html"; do
     if [ -d "$d" ]; then echo "$d"; return; fi
   done
   echo "/var/www/tenmon-pwa/pwa"
@@ -157,6 +158,15 @@ mkdir -p "$WEB_LIVE"
 rsync -av --delete "$WEB_SRC/dist/" "$WEB_LIVE/"
 chown -R www-data:www-data "$WEB_LIVE" 2>/dev/null || true
 
+MC_LANDING_SRC="${MC_LANDING_SRC:-$REPO/static/mc-landing}"
+MC_LANDING_LIVE="${MC_LANDING_LIVE:-/var/www/mc-landing}"
+if [ -d "$MC_LANDING_SRC" ]; then
+  echo "  mc landing → $MC_LANDING_LIVE"
+  mkdir -p "$MC_LANDING_LIVE"
+  rsync -av "$MC_LANDING_SRC/" "$MC_LANDING_LIVE/"
+  chown -R www-data:www-data "$MC_LANDING_LIVE" 2>/dev/null || true
+fi
+
 # build stamp
 echo "WEB_BUILD_MARK:${GIT_SHA} $(date -u +"%Y-%m-%dT%H:%M:%SZ")" > "$WEB_LIVE/build.txt"
 
@@ -220,9 +230,11 @@ echo "============================================================"
 echo ""
 echo "次のステップ:"
 echo "  1. ブラウザで https://tenmon-ark.com/pwa/login-local を開く"
-echo "  2. 「パスワードを忘れた方」リンクが見えることを確認"
-echo "  3. 左メニューにチャットフォルダーが見えることを確認"
-echo "  4. feedback送信テスト:"
+echo "  2. Mission Control: https://tenmon-ark.com/mc/ と https://tenmon-ark.com/mc/vnext/ と /mc/sources"
+echo "     （内部互換 path https://tenmon-ark.com/pwa/mc/vnext/ は残るが、正式入口は /mc/*）"
+echo "  3. 「パスワードを忘れた方」リンクが見えることを確認"
+echo "  4. 左メニューにチャットフォルダーが見えることを確認"
+echo "  5. feedback送信テスト:"
 echo "     curl -s -X POST http://localhost:3000/api/feedback \\"
 echo "       -H 'Content-Type: application/json' \\"
 echo "       -d '{\"category\":\"宿曜鑑定\",\"priority\":\"中\",\"title\":\"deploy test\",\"detail\":\"テスト送信\",\"device\":\"curl\"}'"

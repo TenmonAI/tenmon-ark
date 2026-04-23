@@ -128,7 +128,82 @@ function applySchemas(database: DatabaseSync, kind: DbKind): void {
   const pid = process.pid;
   const uptime = process.uptime();
   console.log(`[DB-SCHEMA] apply start kind=${kind} schemaDir=${schemaDir} pid=${pid} uptime=${uptime}s`);
-  
+
+  // BOOT-MIGRATION: schema SQL が CREATE INDEX で参照する request_id 列を、
+  // 既存 DB（request_id 未追加の mc_*_ledger）に対し事前に付与しておく。
+  // CREATE TABLE IF NOT EXISTS は既存テーブルに新列を追加しないため、
+  // ALTER TABLE ... ADD COLUMN を applySchemas の先頭で回す必要がある。
+  if (kind === "kokuzo") {
+    try {
+      const ledgerTables = [
+        "mc_route_ledger",
+        "mc_llm_execution_ledger",
+        "mc_memory_ledger",
+        "mc_dialogue_quality_ledger",
+      ];
+      for (const t of ledgerTables) {
+        const exists = database
+          .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name=?")
+          .get(t) as { name?: string } | undefined;
+        if (!exists || exists.name !== t) continue;
+        const cols = (database.prepare(`PRAGMA table_info('${t}')`).all() as any[]).map(
+          (r: any) => String(r.name),
+        );
+        if (!cols.includes("request_id")) {
+          console.log(`[DB-SCHEMA] pre-migrate: adding request_id column to ${t}`);
+          withRetry(() =>
+            database.exec(
+              `ALTER TABLE ${t} ADD COLUMN request_id TEXT NOT NULL DEFAULT ''`,
+            ),
+          );
+        }
+        if (t === "mc_memory_ledger" && !cols.includes("payload_json")) {
+          console.log("[DB-SCHEMA] pre-migrate: adding payload_json column to mc_memory_ledger");
+          withRetry(() =>
+            database.exec(
+              "ALTER TABLE mc_memory_ledger ADD COLUMN payload_json TEXT NOT NULL DEFAULT '{}'",
+            ),
+          );
+        }
+      }
+    } catch (e: any) {
+      console.warn(
+        `[DB-SCHEMA] pre-migrate request_id failed (non-fatal):`,
+        e?.message || String(e),
+      );
+    }
+
+    try {
+      const smExists = database
+        .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='mc_source_map'")
+        .get() as { name?: string } | undefined;
+      if (smExists?.name === "mc_source_map") {
+        const cols = (database.prepare("PRAGMA table_info('mc_source_map')").all() as any[]).map(
+          (r: any) => String(r.name),
+        );
+        if (!cols.includes("thread_id")) {
+          console.log("[DB-SCHEMA] pre-migrate: adding thread_id to mc_source_map");
+          withRetry(() =>
+            database.exec(
+              "ALTER TABLE mc_source_map ADD COLUMN thread_id TEXT NOT NULL DEFAULT ''",
+            ),
+          );
+        }
+        if (!cols.includes("turn_index")) {
+          console.log("[DB-SCHEMA] pre-migrate: adding turn_index to mc_source_map");
+          withRetry(() =>
+            database.exec("ALTER TABLE mc_source_map ADD COLUMN turn_index INTEGER"),
+          );
+        }
+      }
+    } catch (e: any) {
+      console.warn(
+        `[DB-SCHEMA] pre-migrate mc_source_map failed (non-fatal):`,
+        e?.message || String(e),
+      );
+    }
+  }
+
   try {
     const files = schemaFilesFor(kind);
     console.log(`[DB-SCHEMA] files to apply: ${files.join(", ")}`);

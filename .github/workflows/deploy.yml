@@ -16,9 +16,31 @@ jobs:
           username: ${{ secrets.VPS_USERNAME }}
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
-            cd /opt/tenmon-ark/api
+            set -euo pipefail
+            REPO=""
+            for r in /opt/tenmon-ark-repo /opt/tenmon-ark; do
+              if [ -d "$r/api" ]; then REPO="$r"; break; fi
+            done
+            if [ -z "$REPO" ]; then
+              echo "ERROR: repo root with api/ not found (tried /opt/tenmon-ark-repo, /opt/tenmon-ark)"
+              exit 1
+            fi
+            cd "$REPO"
             git fetch --all
             git reset --hard origin/main
+            cd "$REPO/api"
             npm install
             npm run build
             systemctl restart tenmon-ark-api
+            if [ -d "$REPO/web" ]; then
+              cd "$REPO/web"
+              npm install
+              npm run build
+              install -d -m 0755 /var/www/tenmon-pwa/pwa /var/www/mc-landing
+              rsync -a --delete dist/ /var/www/tenmon-pwa/pwa/
+              rsync -a "$REPO/static/mc-landing/" /var/www/mc-landing/
+              nginx -t
+              systemctl reload nginx
+            else
+              echo "WARN: $REPO/web missing — SPA not deployed (API only)"
+            fi

@@ -10,6 +10,7 @@ import type { KokuzoCandidate } from "../kokuzo/search.js";
 export type ChatResponseBody = {
   response: string;
   timestamp: string;
+  requestId?: string;
   trace?: unknown; // KanagiTrace（型循環を避けるため unknown）
   provisional?: boolean;
   error?: string;
@@ -36,4 +37,5 @@ export type ChatResponseBody = {
     caption: string;
     caption_alt?: string[];
   };
+  ledgerWriteSummary?: unknown;
 };

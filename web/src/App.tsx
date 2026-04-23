@@ -15,6 +15,7 @@ const McHandoff = React.lazy(() => import("./pages/mc/McHandoff"));
 const McLive = React.lazy(() => import("./pages/mc/McLive"));
 const McGit = React.lazy(() => import("./pages/mc/McGit"));
 const McSoul = React.lazy(() => import("./pages/mc/McSoul"));
+const McVnextApp = React.lazy(() => import("./pages/mission-control-vnext/McVnextApp"));
 
 const TENMON_AUTH_OK_V1 = "TENMON_AUTH_OK_V1";
 const TENMON_USER_KEY = "TENMON_USER_KEY";
@@ -57,8 +58,15 @@ export default function App() {
   const isSukuyouAbout = pathname === "/pwa/sukuyou-about" || pathname === "/pwa/sukuyou-about/";
   const isKotodamaAbout = pathname === "/pwa/kotodama-about" || pathname === "/pwa/kotodama-about/";
   const isAmatsuKanagiAbout = pathname === "/pwa/amatsu-kanagi-about" || pathname === "/pwa/amatsu-kanagi-about/";
-  const isMc = pathname.startsWith("/pwa/mc");
-  const mcSub = isMc ? pathname.replace(/^\/pwa\/mc\/?/, "").replace(/\/$/, "") : "";
+  const isMcVnext = pathname.startsWith("/mc/vnext");
+  const isMcClassic = pathname === "/mc/classic" || pathname.startsWith("/mc/classic/");
+  const isMc = pathname.startsWith("/mc/") || isMcClassic;
+  const mcSub = isMc
+    ? pathname
+        .replace(/^\/mc\/vnext\/?/, "")
+        .replace(/^\/mc\/classic\/?/, "")
+        .replace(/\/$/, "")
+    : "";
 
   useEffect(() => {
     let dead = false;
@@ -91,8 +99,13 @@ export default function App() {
       const onForgotPage = currentPath === "/pwa/forgot-password" || currentPath === "/pwa/forgot-password/";
       const onResetPage = currentPath === "/pwa/reset-password" || currentPath === "/pwa/reset-password/";
       const allowWithoutAuth = onLoginPage || onRegisterPage || onForgotPage || onResetPage;
-      if (!result.ok && !allowWithoutAuth && currentPath.startsWith("/pwa")) {
-        window.location.href = "/pwa/login-local.html?next=/pwa/";
+      if (
+        !result.ok &&
+        !allowWithoutAuth &&
+        (currentPath.startsWith("/pwa") || currentPath.startsWith("/mc/vnext") || currentPath.startsWith("/mc/classic"))
+      ) {
+        const next = encodeURIComponent(currentPath || "/mc/");
+        window.location.href = `/pwa/login-local.html?next=${next}`;
       }
     })();
 
@@ -177,6 +190,13 @@ export default function App() {
       <I18nProvider>
         <KoshikiConsolePage />
       </I18nProvider>
+    );
+  }
+  if (isMcVnext) {
+    return (
+      <React.Suspense fallback={<div style={{ padding: 24, fontFamily: "sans-serif", color: "#c9a14a" }}>Loading MC vNext...</div>}>
+        <McVnextApp />
+      </React.Suspense>
     );
   }
   if (isMc) {
