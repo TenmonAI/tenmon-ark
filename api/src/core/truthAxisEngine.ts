@@ -13,12 +13,25 @@
  *   - 新テーブルは 10 軸 CHECK 制約付き
  *   - 全 SQL は try-catch で保護
  */
-import Database from "better-sqlite3";
+import { DatabaseSync } from "node:sqlite";
 import { v4 as uuidv4 } from "uuid";
+import { getDb } from "../db/index.js";
 
 // ── DB パス ───────────────────────────────────────
+// CARD-MC-09A-WAL-INTEGRITY-V1:
+//   better-sqlite3 から node:sqlite（shared getDb("kokuzo")）に移行。
+//   異なる SQLite 実装が同一ファイルを開閉すると、close 時の checkpoint が
+//   WAL を unlink し、他方の WAL fd が (deleted) 化して書込が不可視になる。
+//   テスト等で dbPath を指定された場合のみ独立した DatabaseSync を開く。
 const DB_PATH =
   process.env.KOKUZO_DB_PATH || "/opt/tenmon-ark-data/kokuzo.sqlite";
+
+function openKokuzoDb(dbPath?: string): { db: DatabaseSync; shouldClose: boolean } {
+  if (dbPath && dbPath !== DB_PATH) {
+    return { db: new DatabaseSync(dbPath), shouldClose: true };
+  }
+  return { db: getDb("kokuzo") as unknown as DatabaseSync, shouldClose: false };
+}
 
 // ── 10 truth_axis（KHS_CORE_v1 正式） ────────────
 export const TRUTH_AXES = [
@@ -86,10 +99,8 @@ const AXIS_KEYWORDS: Record<TruthAxis, string[]> = {
  * 旧テーブルが存在する場合は _legacy として保存。
  */
 export function ensureTruthAxesTable(dbPath?: string): void {
-  const db = new Database(dbPath || DB_PATH, { readonly: false });
+  const { db, shouldClose } = openKokuzoDb(dbPath);
   try {
-    db.pragma("journal_mode = WAL");
-
     const exists = db
       .prepare(
         "SELECT COUNT(*) as c FROM sqlite_master WHERE type='table' AND name='truth_axes_bindings'"
@@ -98,7 +109,7 @@ export function ensureTruthAxesTable(dbPath?: string): void {
 
     if (exists.c > 0) {
       // 旧テーブルのカラムチェック
-      const cols = db.pragma("table_info(truth_axes_bindings)") as Array<{
+      const cols = db.prepare("PRAGMA table_info(truth_axes_bindings)").all() as Array<{
         name: string;
       }>;
       const colNames = cols.map((c) => c.name);
@@ -148,7 +159,11 @@ export function ensureTruthAxesTable(dbPath?: string): void {
   } catch (e: any) {
     console.error(`[TRUTH_AXIS] ensureTruthAxesTable failed: ${e?.message}`);
   } finally {
-    db.close();
+    if (shouldClose) {
+      try {
+        db.close();
+      } catch {}
+    }
   }
 }
 
@@ -205,10 +220,8 @@ export function bindAxes(
   dbPath?: string
 ): number {
   let bound = 0;
+  const { db, shouldClose } = openKokuzoDb(dbPath);
   try {
-    const db = new Database(dbPath || DB_PATH, { readonly: false });
-    db.pragma("journal_mode = WAL");
-
     const stmt = db.prepare(`
       INSERT OR IGNORE INTO truth_axes_bindings
       (id, segment_id, axis_key, confidence, binding_reason)
@@ -219,10 +232,14 @@ export function bindAxes(
       stmt.run(uuidv4(), segmentId, axis, confidence, reason);
       bound++;
     }
-
-    db.close();
   } catch (e: any) {
     console.error(`[TRUTH_AXIS] bindAxes failed: ${e?.message}`);
+  } finally {
+    if (shouldClose) {
+      try {
+        db.close();
+      } catch {}
+    }
   }
   return bound;
 }

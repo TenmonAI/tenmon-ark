@@ -28,7 +28,7 @@ import { inviteRouter } from "./routes/invite.js";
 import meRouter from "./routes/me.js";
 import { registerFounderAuth } from "./routes/auth_founder.js";
 import { markListenReady } from "./health/readiness.js";
-import { getDb } from "./db/index.js";
+import { getDb, startWalCheckpointTimer } from "./db/index.js";
 import koshikiConsoleRouter from "./routes/koshikiConsole.js";
 import { bookForgeRouter } from "./routes/bookForge.js";
 import { personaStudioRouter } from "./routes/personaStudio.js";
@@ -139,6 +139,14 @@ try {
 } catch (e: any) {
   console.error(`[DB-INIT] FATAL: persona init failed pid=${pid} uptime=${uptime}s:`, e);
   process.exit(1);
+}
+
+// CARD-MC-09A-WAL-INTEGRITY-V1: 10 分ごとに WAL を TRUNCATE チェックポイントし、
+// 外部 sqlite3 CLI に依存せず WAL サイズを抑制して mc_*_ledger の書込を常に可視化する。
+try {
+  startWalCheckpointTimer(10 * 60 * 1000);
+} catch (e: any) {
+  console.warn(`[DB-WAL-CHECKPOINT] startWalCheckpointTimer failed: ${e?.message ?? String(e)}`);
 }
 
 // Guest chat CORS: allow LP domain

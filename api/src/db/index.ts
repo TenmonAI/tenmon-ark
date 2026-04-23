@@ -284,6 +284,8 @@ export function getDb(kind: DbKind): DatabaseSync {
     database.exec("PRAGMA synchronous = NORMAL;");
     database.exec("PRAGMA foreign_keys = ON;");
     database.exec("PRAGMA busy_timeout = 5000;");
+    // CARD-MC-09A-WAL-INTEGRITY-V1: WAL サイズ抑制のため 1000 ページごとに自動チェックポイント
+    database.exec("PRAGMA wal_autocheckpoint = 1000;");
   });
 
   applySchemas(database, kind);
@@ -331,6 +333,34 @@ export function closeAllDbs(): void {
     }
   }
   dbs.clear();
+}
+
+/**
+ * CARD-MC-09A-WAL-INTEGRITY-V1
+ * 定期的に WAL を TRUNCATE チェックポイントする。
+ * 外部 sqlite3 CLI に依存せず、API プロセス自身で WAL を縮退させることで、
+ * 別プロセスが WAL を unlink する race を避け、mc_*_ledger の書込が
+ * sqlite3 -readonly 経由でも即座に可視化される状態を保つ。
+ */
+let __walCheckpointTimer: ReturnType<typeof setInterval> | null = null;
+export function startWalCheckpointTimer(intervalMs = 10 * 60 * 1000): void {
+  if (__walCheckpointTimer) return;
+  __walCheckpointTimer = setInterval(() => {
+    for (const [kind, database] of dbs.entries()) {
+      try {
+        const row = database
+          .prepare("PRAGMA wal_checkpoint(TRUNCATE);")
+          .get() as { busy?: number; log?: number; checkpointed?: number } | undefined;
+        console.log(
+          `[DB-WAL-CHECKPOINT] kind=${kind} busy=${row?.busy ?? "?"} log=${row?.log ?? "?"} checkpointed=${row?.checkpointed ?? "?"}`,
+        );
+      } catch (e: any) {
+        console.warn(`[DB-WAL-CHECKPOINT] failed kind=${kind}: ${e?.message ?? String(e)}`);
+      }
+    }
+  }, intervalMs);
+  if (__walCheckpointTimer.unref) __walCheckpointTimer.unref();
+  console.log(`[DB-WAL-CHECKPOINT] timer started intervalMs=${intervalMs}`);
 }
 
 export function dbExec(kind: DbKind, sql: string): void {
