@@ -4,7 +4,10 @@
  * 宇野多美恵以降の変貌は transformation / 普及系として整理し、本流そのものとして断定しない。
  */
 
-import { KATAKAMUNA_SOURCE_AUDIT_ENTRIES_V1 } from "./katakamunaSourceAuditClassificationV1.js";
+import {
+  KATAKAMUNA_SOURCE_AUDIT_ENTRIES_V1,
+  katakamunaRawTouchesAuditedSecondaryCorpusV1,
+} from "./katakamunaSourceAuditClassificationV1.js";
 
 export type KatakamunaHistoricalCertaintyLaneV1 = "high" | "medium" | "low" | "placeholder";
 
@@ -204,6 +207,22 @@ function buildDivergenceMapV1(): Record<string, readonly KatakamunaDivergenceTag
     m[e.id] = divergenceTagsForAuditId(e.id);
   }
   return m;
+}
+
+/** CARD-MC-21: 系譜・変形束の短文化（GEN 参照・カタカムナ文脈のみ） */
+export function buildKatakamunaLineageTransformationClauseV1(rawMessage: string, maxChars: number): string {
+  const t = String(rawMessage ?? "").trim();
+  if (!/(カタカムナ|かたかむな|KATAKAMUNA)/iu.test(t) && !katakamunaRawTouchesAuditedSecondaryCorpusV1(t)) return "";
+  const b = buildKatakamunaLineageTransformationBundleV1();
+  const lines = [
+    "【カタカムナ系譜・変形（engine）】",
+    b.lineage_summary,
+    b.transformation_summary,
+    `未解決（抜粋）: ${b.unresolved_points.slice(0, 2).join(" / ")}`,
+  ];
+  const cap = Math.max(200, maxChars);
+  const out = lines.join("\n");
+  return out.length > cap ? `${out.slice(0, cap - 12)}…\n(省略)` : out;
 }
 
 export function buildKatakamunaLineageTransformationBundleV1(): KatakamunaLineageTransformationBundleV1 {

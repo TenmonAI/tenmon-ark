@@ -50,3 +50,18 @@ export function resolveRouteFamilyKhsRootHintV1(routeReason: string): {
   }
   return { routeFamily: "default", khsRootRef: "KHS_root:default" };
 }
+
+/** CARD-MC-21: GEN soul-root 向け KHS root 宣言（短文・捏造なし） */
+export function buildKhsRootFractalConstitutionClauseV1(routeReason: string, maxChars: number): string {
+  const hint = resolveRouteFamilyKhsRootHintV1(routeReason);
+  const axes = KHS_ROOT_FRACTAL_CONSTITUTION_V1.rootAxes.join("・");
+  const body = [
+    "【KHS ルートフラクタル憲法（GEN 参照）】",
+    KHS_ROOT_PRIORITY_DECLARATION_V1,
+    `rootSource=${KHS_ROOT_FRACTAL_CONSTITUTION_V1.rootSource} · external=${KHS_ROOT_FRACTAL_CONSTITUTION_V1.externalSourcesRole}`,
+    `rootAxes: ${axes}`,
+    `routeHint: ${hint.routeFamily} / ${hint.khsRootRef}`,
+  ].join("\n");
+  const cap = Math.max(120, maxChars);
+  return body.length > cap ? `${body.slice(0, cap - 20)}…\n(省略)` : body;
+}

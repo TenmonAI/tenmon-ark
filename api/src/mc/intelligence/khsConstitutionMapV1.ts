@@ -20,11 +20,25 @@ export const KHS_TEN_AXES_DECLARATION_V1: KhsAxisDeclarationV1[] = [
   { id: "polarity", label_ja: "極性", implemented: true, wired_chat_declared: true, via: "truthAxisEngine + waterFireHint", note: "" },
   { id: "center", label_ja: "正中", implemented: true, wired_chat_declared: true, via: "truthAxisEngine", note: "" },
   { id: "breath", label_ja: "呼吸", implemented: true, wired_chat_declared: true, via: "breathEngine", note: "" },
-  { id: "carami", label_ja: "絡み", implemented: false, wired_chat_declared: false, via: null, note: "未整備の可能性" },
+  {
+    id: "carami",
+    label_ja: "絡み",
+    implemented: true,
+    wired_chat_declared: true,
+    via: "truthAxisEngine + buildCaramiGenClauseV1 + KHS_CORE_CONSTITUTION_v1",
+    note: "",
+  },
   { id: "order", label_ja: "秩序", implemented: true, wired_chat_declared: true, via: "truthAxisEngine", note: "" },
   { id: "correspondence", label_ja: "対応", implemented: true, wired_chat_declared: true, via: "五十連・genten", note: "" },
   { id: "manifestation", label_ja: "顕現", implemented: true, wired_chat_declared: true, via: "kotodamaHishoLoader", note: "" },
-  { id: "purification", label_ja: "澄濁", implemented: true, wired_chat_declared: false, via: "方向性のみ", note: "GEN 専用節は未配線の可能性" },
+  {
+    id: "purification",
+    label_ja: "澄濁",
+    implemented: true,
+    wired_chat_declared: true,
+    via: "truthAxisEngine + buildPurificationGenClauseV1 + kotodamaHishoLoader(水火別)",
+    note: "",
+  },
   { id: "governance", label_ja: "統治", implemented: true, wired_chat_declared: true, via: "tenmonLawPromotionGateV1", note: "shadow context" },
 ];
 

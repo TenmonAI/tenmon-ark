@@ -1,6 +1,8 @@
 /**
  * K1_KOTODAMA_ONE_SOUND_LAW_INDEX_V1
  * CARD-MC-19: GEN_SYSTEM 向け一音法則節の構築は `buildKotodamaOneSoundLawSystemClauseV1`。
+ * CARD-MC-20: `api/src/routes/chat.ts` が上記関数を import し NATURAL_GENERAL soul-root で呼び出す。
+ *   jsonl の `one_sound` スロットは `__kotodamaOneSoundLawClause` 非空＝本 index の出力に一致（DEAD_FILE ではない）。
  *
  * K1_KOTODAMA_ONE_SOUND_LAW_INDEX_V1
  * K2_NOTION_BRIDGE_V1: Notion を索引・補助軸として追加。本文根拠は VPS 優先。raw Notion id / KHSL は前面に出さない。

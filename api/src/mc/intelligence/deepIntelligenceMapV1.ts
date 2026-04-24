@@ -5,7 +5,11 @@ import fs from "node:fs";
 import path from "node:path";
 import { dbPrepare } from "../../db/index.js";
 import { REPO_ROOT } from "../../core/mc/constants.js";
-import { summarizeIntelligenceFire24hV1 } from "../fire/intelligenceFireTracker.js";
+import {
+  summarizeIntelligenceFire24hV1,
+  buildIntelligenceFire7dTrendV1,
+  type IntelligenceFire24hSummaryV1,
+} from "../fire/intelligenceFireTracker.js";
 import { auditKotodama50IndexV1 } from "./kotodama50MapV1.js";
 import { buildKhsConstitutionObservabilityV1 } from "./khsConstitutionMapV1.js";
 
@@ -72,7 +76,37 @@ export const DEEP_INTELLIGENCE_MAP = {
     {
       name: "kotodamaOneSoundLawIndex",
       path: "core/kotodamaOneSoundLawIndex.ts",
-      role: "80 音一音法則索引→GEN_SYSTEM（buildKotodamaOneSoundLawSystemClauseV1）",
+      role: "一音法則索引→GEN_SYSTEM（buildKotodamaOneSoundLawSystemClauseV1 · chat.ts 本線）",
+      db_source: null,
+    },
+    {
+      name: "katakamunaSourceAuditClassificationV1",
+      path: "core/katakamunaSourceAuditClassificationV1.ts",
+      role: "CARD-MC-21: カタカムナ出典監査（GEN soul-root）",
+      db_source: null,
+    },
+    {
+      name: "katakamunaLineageTransformationEngine",
+      path: "core/katakamunaLineageTransformationEngine.ts",
+      role: "CARD-MC-21: 系譜・変形 engine（GEN soul-root）",
+      db_source: null,
+    },
+    {
+      name: "truthLayerArbitrationKernel",
+      path: "core/truthLayerArbitrationKernel.ts",
+      role: "CARD-MC-21: 真理層 root kernel（GEN soul-root）",
+      db_source: null,
+    },
+    {
+      name: "khsRootFractalConstitutionV1",
+      path: "core/khsRootFractalConstitutionV1.ts",
+      role: "CARD-MC-21: KHS ルートフラクタル憲法（GEN soul-root）",
+      db_source: null,
+    },
+    {
+      name: "katakamunaMisreadExpansionGuard",
+      path: "core/katakamunaMisreadExpansionGuard.ts",
+      role: "CARD-MC-21: 誤読拡張ガード（GEN soul-root）",
       db_source: null,
     },
   ] as DeepIntelligenceWiredV1[],
@@ -87,38 +121,7 @@ export const DEEP_INTELLIGENCE_MAP = {
     },
   ] as DeepIntelligenceStubV1[],
 
-  unwired_candidates: [
-    {
-      name: "katakamunaLineageTransformationEngine",
-      path: "core/katakamunaLineageTransformationEngine.ts",
-      role: "カタカムナ系譜変換",
-      status: "unknown",
-    },
-    {
-      name: "katakamunaMisreadExpansionGuard",
-      path: "core/katakamunaMisreadExpansionGuard.ts",
-      role: "カタカムナ誤読展開ガード",
-      status: "unknown",
-    },
-    {
-      name: "katakamunaSourceAuditClassificationV1",
-      path: "core/katakamunaSourceAuditClassificationV1.ts",
-      role: "カタカムナ出典監査",
-      status: "unknown",
-    },
-    {
-      name: "truthLayerArbitrationKernel",
-      path: "core/truthLayerArbitrationKernel.ts",
-      role: "真理層裁定",
-      status: "unknown",
-    },
-    {
-      name: "khsRootFractalConstitutionV1",
-      path: "core/khsRootFractalConstitutionV1.ts",
-      role: "言霊秘書ルートフラクタル憲法",
-      status: "unknown",
-    },
-  ] as DeepIntelligenceUnwiredV1[],
+  unwired_candidates: [] as DeepIntelligenceUnwiredV1[],
 
   post_generation_judgement: [
     { name: "verdictEngineV1", role: "伝統×天聞マッピング" },
@@ -171,7 +174,9 @@ function fileHeadHasDeadMarkerV1(relPath: string): boolean {
   const abs = path.join(REPO_ROOT, "api/src", relPath.replace(/^api\/src\//, ""));
   try {
     const head = fs.readFileSync(abs, "utf8").split("\n").slice(0, 14).join("\n");
-    return /DEAD_FILE|@deprecated.*孤立/u.test(head);
+    // CARD-MC-20: 「DEAD_FILE ではない」等の否定説明を dead 扱いしない（kotodamaOneSoundLawIndex 等）
+    if (/DEAD_FILE\s*では\s*な/u.test(head)) return false;
+    return /DEAD_FILE\s*[:\[=]|@deprecated.*孤立/u.test(head);
   } catch {
     return false;
   }
@@ -209,6 +214,11 @@ function promptInjectDeclared(name: string): boolean {
     "amaterasuAxisMap",
     "kotodamaOneSoundLawIndex",
     "constitutionLoader",
+    "katakamunaSourceAuditClassificationV1",
+    "katakamunaLineageTransformationEngine",
+    "truthLayerArbitrationKernel",
+    "khsRootFractalConstitutionV1",
+    "katakamunaMisreadExpansionGuard",
   ]);
   return inject.has(name);
 }
@@ -284,6 +294,62 @@ export function buildObservedModuleRowsV1(): Record<string, unknown>[] {
   return rows;
 }
 
+/** CARD-MC-20: `one_sound` スロットと modules 行の真偽整合（DEAD_FILE 誤認の否定材料）。 */
+function enrichModulesMc20TruthV1(
+  modules: Record<string, unknown>[],
+  fire: IntelligenceFire24hSummaryV1,
+): Record<string, unknown>[] {
+  const oneInSlots = fire.slot_names_fired.includes("one_sound");
+  return modules.map((m) => {
+    if (String(m.name) !== "kotodamaOneSoundLawIndex") return m;
+    const wired = Boolean(m.wired_chat);
+    const pinj = Boolean(m.prompt_inject_gen);
+    const dead = Boolean(m.dead_file_marker);
+    return {
+      ...m,
+      status_mc20: dead ? "dead_file_head_marker" : wired && pinj ? "wired_active" : wired ? "wired_partial" : "unwired_observed",
+      mc20_fire_tracker_alignment: {
+        fire_slot: "one_sound",
+        slot_seen_in_24h: oneInSlots,
+        /** jsonl の one_sound は __kotodamaOneSoundLawClause（buildKotodamaOneSoundLawSystemClauseV1）由来で、秘書ローダーとは独立 */
+        same_module_as_slot_binding: true,
+        contradiction: Boolean(dead && oneInSlots) || Boolean(!wired && oneInSlots),
+        note:
+          dead && oneInSlots
+            ? "要調査: 先頭に DEAD マーカーがあるのに 24h で one_sound が記録（古い jsonl の可能性）"
+            : !wired && oneInSlots
+              ? "要調査: chat 未 grep 配線なのに one_sound が記録（デプロイ不一致の可能性）"
+              : "chat import + buildKotodamaOneSoundLawSystemClauseV1 + fire one_sound は同一経路（MC-20）",
+      },
+    };
+  });
+}
+
+function buildMc20FireTruthAuditV1(
+  fire: IntelligenceFire24hSummaryV1,
+  modules: Record<string, unknown>[],
+): Record<string, unknown> {
+  const row = modules.find((x) => String(x.name) === "kotodamaOneSoundLawIndex");
+  const wired = Boolean(row?.wired_chat);
+  const pinj = Boolean(row?.prompt_inject_gen);
+  const dead = Boolean(row?.dead_file_marker);
+  const oneInSlots = fire.slot_names_fired.includes("one_sound");
+  return {
+    schema: "mc20_fire_truth_audit_v1",
+    one_sound_jsonl_semantics:
+      "appendIntelligenceFireEventV1({ … one_sound: Boolean(__kotodamaOneSoundLawClause) }) — clause は chat.ts 内で buildKotodamaOneSoundLawSystemClauseV1（kotodamaOneSoundLawIndex.ts）が生成",
+    kotodamaOneSoundLawIndex_head_scan_dead: dead,
+    kotodamaOneSoundLawIndex_wired_chat: wired,
+    kotodamaOneSoundLawIndex_prompt_inject_gen: pinj,
+    slot_names_fired_24h: fire.slot_names_fired,
+    one_sound_seen_in_window: oneInSlots,
+    /** DEAD_FILE 宣言と「発火している」外観の矛盾は、head に DEAD が無い・かつ wired のとき否定 */
+    dead_file_vs_fire_contradiction: Boolean(dead && oneInSlots),
+    /** wired かつ prompt なのに一度も one_sound が立っていない＝トラフィック不足の可能性（非矛盾） */
+    wired_but_one_sound_never_logged: Boolean(wired && pinj && !dead && fire.events_in_window >= 3 && !oneInSlots),
+  };
+}
+
 function buildGapsV1(rows: Record<string, unknown>[], fifty: Record<string, unknown>): Array<Record<string, unknown>> {
   const gaps: Array<Record<string, unknown>> = [];
   const khs = rows.find((r) => String(r.name) === "khsRootFractalConstitutionV1");
@@ -326,7 +392,9 @@ export function buildDeepIntelligencePayloadV1(): Record<string, unknown> {
   };
   const khsObs = buildKhsConstitutionObservabilityV1() as Record<string, unknown>;
   const fire = summarizeIntelligenceFire24hV1();
-  const modules = buildObservedModuleRowsV1();
+  const modulesRaw = buildObservedModuleRowsV1();
+  const modules = enrichModulesMc20TruthV1(modulesRaw, fire);
+  const mc20 = buildMc20FireTruthAuditV1(fire, modules);
   const src = readChatTsSourceV1();
   const khsSealed = (khsObs.khs_core_sealed_docs ?? []) as { exists?: boolean }[];
   const khs_docs_any = khsSealed.some((d) => d.exists);
@@ -346,6 +414,8 @@ export function buildDeepIntelligencePayloadV1(): Record<string, unknown> {
   );
 
   const fire_ratio_24h = fire.avg_fire_ratio;
+  const fire7 = buildIntelligenceFire7dTrendV1(7);
+  const fire_ratio_7d = fire7.avg_fire_ratio_window;
   const kotodama_50_coverage = Number(fifty.coverage_ratio) || 0;
   const khs_10_axes_wired_ratio = Number(khsObs.khs_10_axes_wired_ratio) || 0;
 
@@ -355,11 +425,13 @@ export function buildDeepIntelligencePayloadV1(): Record<string, unknown> {
     total_dead_or_unwired: dead_or_weak.length,
     prompt_inject_chars_avg: null as number | null,
     fire_ratio_24h,
+    fire_ratio_7d,
     kotodama_50_coverage,
     khs_10_axes_wired_ratio,
     db_total_rows,
     chat_ts_imports,
     fire_events_24h: fire.events_in_window,
+    fire_events_7d: fire7.events_total,
     khs_sealed_docs_present: khs_docs_any,
   };
 
@@ -382,6 +454,8 @@ export function buildDeepIntelligencePayloadV1(): Record<string, unknown> {
     fifty_sounds: fifty,
     khs_10_axes: khsObs,
     fire_24h: fire,
+    fire_7d_trend: fire7,
+    mc20_fire_truth_audit: mc20,
     gaps,
     wired_count: DEEP_INTELLIGENCE_MAP.wired_modules.length,
     stub_count: DEEP_INTELLIGENCE_MAP.stub_modules.length,
@@ -407,11 +481,14 @@ export function buildDeepIntelligenceSummaryForClaudeV1(): Record<string, unknow
     db_tables: full.db_tables,
     chat_ts_imports: full.chat_ts_imports,
     fire_ratio_24h: s.fire_ratio_24h ?? fire?.avg_fire_ratio,
+    fire_ratio_7d: s.fire_ratio_7d ?? (full as { fire_7d_trend?: { avg_fire_ratio_window?: number } }).fire_7d_trend?.avg_fire_ratio_window,
     fire_events_24h: s.fire_events_24h ?? fire?.events_in_window,
+    fire_events_7d: s.fire_events_7d ?? (full as { fire_7d_trend?: { events_total?: number } }).fire_7d_trend?.events_total,
     kotodama_50_coverage: s.kotodama_50_coverage,
     khs_10_axes_wired_ratio: s.khs_10_axes_wired_ratio,
     endpoint: "/api/mc/vnext/intelligence",
     fire_endpoint: "/api/mc/vnext/intelligence/fire",
+    effect_endpoint: "/api/mc/vnext/intelligence/effect",
     wired_names: DEEP_INTELLIGENCE_MAP.wired_modules.map((m) => m.name),
     stub_names: DEEP_INTELLIGENCE_MAP.stub_modules.map((m) => m.name),
     unwired_names: DEEP_INTELLIGENCE_MAP.unwired_candidates.map((m) => m.name),

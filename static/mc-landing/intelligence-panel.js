@@ -20,8 +20,12 @@
     var fire = d.fire_24h || {};
     var axes = Array.isArray(khs.khs_10_axes) ? khs.khs_10_axes : [];
     var per = Array.isArray(fifty.per_sound) ? fifty.per_sound : [];
+    var denom =
+      fire.slots_denominator != null && Number(fire.slots_denominator) > 0 ? Number(fire.slots_denominator) : 11;
     var slotRatio =
-      fire.slots_ever_fired != null && typeof fire.slots_ever_fired === "number" ? fire.slots_ever_fired / 6 : 0;
+      fire.slots_ever_fired != null && typeof fire.slots_ever_fired === "number"
+        ? fire.slots_ever_fired / denom
+        : 0;
     var avgFill = fire.avg_fire_ratio != null ? Number(fire.avg_fire_ratio) : 0;
 
     var hm = per
@@ -71,7 +75,9 @@
       '<header><span class="title">24h soul-root 発火</span><span class="tag">jsonl</span></header>' +
       '<div class="body">slots 一度でも発火: <strong>' +
       esc(String(fire.slots_ever_fired)) +
-      '</strong>/6 · 平均スロット充填: <strong>' +
+      "</strong>/" +
+      denom +
+      " · 平均スロット充填: <strong>" +
       fmtPct(avgFill) +
       "</strong></div>" +
       '<div class="bar-row" style="margin-top:10px"><span class="c-mute" style="min-width:120px">slot coverage</span>' +

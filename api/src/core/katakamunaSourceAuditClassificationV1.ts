@@ -353,6 +353,34 @@ export function katakamunaRawTouchesAuditedSecondaryCorpusV1(raw: string): boole
   return needles.some((n) => t.includes(n));
 }
 
+/** CARD-MC-21: カタカムナ文脈での出典監査ラベル（断定ではない） */
+export function buildKatakamunaSourceAuditClauseV1(rawMessage: string, maxChars: number): string {
+  const t = String(rawMessage ?? "").trim();
+  if (!t) return "";
+  const katakamuna = /(カタカムナ|かたかむな|KATAKAMUNA)/iu.test(t);
+  const hits = matchKatakamunaSourceAuditEntriesV1(t);
+  const secondary = katakamunaRawTouchesAuditedSecondaryCorpusV1(t);
+  if (!katakamuna && hits.length === 0 && !secondary) return "";
+  const lines: string[] = [
+    "【カタカムナ出典監査（TENMON･観測）】",
+    "primary_root と commentary / popularized / psychologized を一括扱いしない。以下は監査ラベルの参照のみ。",
+  ];
+  if (secondary) lines.push("※ 発話は二次コーパス語彙に触れている可能性あり（宇野・吉野・川井系など）。");
+  for (const e of hits.slice(0, 10)) {
+    lines.push(
+      `- ${e.title} | class=${e.source_class} | medium=${e.medium_type} | certainty=${e.certainty_band} | ${String(e.audit_note).slice(0, 140)}`,
+    );
+  }
+  if (hits.length === 0 && katakamuna) {
+    const b = getKatakamunaSourceAuditBundleV1();
+    lines.push(`監査束エントリ数: ${b.entries.length}（代表抜粋）`);
+    lines.push(String(b.entries[0]?.audit_note ?? "").slice(0, 220));
+  }
+  const cap = Math.max(200, maxChars);
+  const out = lines.join("\n");
+  return out.length > cap ? `${out.slice(0, cap - 12)}…\n(省略)` : out;
+}
+
 export function matchKatakamunaSourceAuditEntriesV1(raw: string): KatakamunaSourceAuditEntryV1[] {
   const t = String(raw ?? "").trim();
   if (!t) return [];

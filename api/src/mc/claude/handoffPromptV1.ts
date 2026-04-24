@@ -6,7 +6,7 @@
  *
  * 使い方:
  *   GET /api/mc/vnext/handoff-prompt?ai=claude&format=markdown
- *   → Content-Type: text/markdown; 10000 文字以内の 1 枚コピペで継承可能。
+ *   → Content-Type: text/markdown; 約 20000 文字上限の 1 枚コピペで継承可能（CARD-MC-25）。
  *
  * format:
  *   - markdown  (default): fenced json block 付き、AI 指示フル本文
@@ -25,11 +25,13 @@ import { getTenmonDataDir } from "../../db/index.js";
 import { buildClaudeSummaryPayloadV1 } from "./claudeSummaryV1.js";
 import { buildVnextHistoryPayload } from "../history/mcSystemHistoryV1.js";
 import { buildDeepIntelligencePayloadV1 } from "../intelligence/deepIntelligenceMapV1.js";
+import { readMcHandoffChatLedgerSample24hV1 } from "../ledger/mcLedgerRead.js";
 
 export type HandoffAiV1 = "claude" | "gpt" | "cursor" | "generic";
 export type HandoffFormatV1 = "markdown" | "text" | "json";
 
-const MAX_PROMPT_LEN = 10000;
+/** CARD-MC-25: 継承情報密度倍増のため上限を拡張 */
+const MAX_PROMPT_LEN = 20000;
 
 function clampAi(v: unknown): HandoffAiV1 {
   const s = String(v ?? "").trim().toLowerCase();
@@ -80,7 +82,7 @@ function safeJsonForMarkdown(obj: unknown): string {
 }
 
 /**
- * 10000 文字制限を満たすため、JSON を aggressively compact 化する。
+ * 文字上限を満たすため、JSON を aggressively compact 化する。
  * handoff プロンプト用途では主要シグナル（verdict / 最新カード / 推奨カード /
  * active_alerts / continuation 指標 / git 状態）だけあれば十分。
  * 詳細は /api/mc/vnext/claude-summary 等の endpoint に HTTP 再取得させればよい。
@@ -111,6 +113,8 @@ function buildIntelligenceMapSectionMd(): string {
   const unw = Array.isArray(det.unwired_candidates) ? det.unwired_candidates : [];
   const post = Array.isArray(det.post_generation_judgement) ? det.post_generation_judgement : [];
   const fr = sum.fire_ratio_24h != null ? Number(sum.fire_ratio_24h) : Number(fire.avg_fire_ratio) || 0;
+  const fr7 = sum.fire_ratio_7d != null ? Number(sum.fire_ratio_7d) : null;
+  const fe7 = sum.fire_events_7d != null ? Number(sum.fire_events_7d) : null;
   const cov = sum.kotodama_50_coverage != null ? Number(sum.kotodama_50_coverage) : Number(fifty.coverage_ratio) || 0;
   const khsR = sum.khs_10_axes_wired_ratio != null ? Number(sum.khs_10_axes_wired_ratio) : 0;
   const lines = [
@@ -120,6 +124,9 @@ function buildIntelligenceMapSectionMd(): string {
     `- **KHS 10 軸 wired 率（宣言）**: ${(khsR * 100).toFixed(0)}%`,
     `- **DB 知能**: ${intel.db_total_rows} rows / ${intel.db_tables} tables`,
     `- **24h 発火（avg slot fill）**: ${(fr * 100).toFixed(0)}% · events=${sum.fire_events_24h ?? fire.events_in_window ?? "—"} · GET \`/api/mc/vnext/intelligence/fire\``,
+    fr7 != null && Number.isFinite(fr7)
+      ? `- **7d 発火（平均）**: ${(fr7 * 100).toFixed(0)}% · events_7d=${fe7 ?? "—"}（CARD-MC-26 長期窓）`
+      : "",
     `- 一覧 JSON: GET \`/api/mc/vnext/intelligence\`（Bearer / MC 認証）`,
     ``,
     `### 最大の眠れる／未配線（抜粋）`,
@@ -139,6 +146,28 @@ function buildIntelligenceMapSectionMd(): string {
   return lines.join("\n");
 }
 
+/** CARD-MC-25: 24h 以内の ledger 由来チャット継承サンプル（常時 handoff に付与） */
+function buildChatLedgerHandoffSectionMd(): string {
+  try {
+    const pack = readMcHandoffChatLedgerSample24hV1({
+      memoryLimit: 24,
+      qualityLimit: 18,
+      routeLimit: 18,
+    });
+    const body = safeJsonForMarkdown(pack);
+    if (body.length < 40) return "";
+    return [
+      `## 24h chat / memory サンプル（ledger 実測）`,
+      `> mc_memory_ledger の history_preview（継続対話の頭出し）・mc_dialogue_quality（応答末尾）・mc_route_ledger（経路）。`,
+      "```json",
+      body,
+      "```",
+    ].join("\n");
+  } catch {
+    return "";
+  }
+}
+
 function compactSummaryForHandoff(summary: Record<string, unknown>): Record<string, unknown> {
   const overview = (summary.overview_summary ?? {}) as Record<string, unknown>;
   const continuation = (overview.continuation_summary ?? {}) as Record<string, unknown>;
@@ -149,59 +178,59 @@ function compactSummaryForHandoff(summary: Record<string, unknown>): Record<stri
 
   const checksSlim = Array.isArray(acc.checks)
     ? (acc.checks as Record<string, unknown>[])
-        .slice(0, 8)
+        .slice(0, 16)
         .map((c) => ({
           id: String(c.id ?? ""),
           status: String(c.status ?? ""),
-          detail: String(c.detail ?? "").slice(0, 160),
+          detail: String(c.detail ?? "").slice(0, 220),
         }))
     : [];
   const cardsSlim = Array.isArray(rh.cards)
     ? (rh.cards as Record<string, unknown>[])
-        .slice(0, 5)
+        .slice(0, 10)
         .map((c) => ({
           id: String(c.id ?? c.card_id ?? ""),
           priority: c.priority ?? null,
-          title: String(c.title ?? c.label ?? c.suggested_fix_area ?? c.message ?? "").slice(0, 160),
+          title: String(c.title ?? c.label ?? c.suggested_fix_area ?? c.message ?? "").slice(0, 200),
         }))
     : [];
   const problematicSlim = Array.isArray(summary.top_problematic_threads)
     ? (summary.top_problematic_threads as Record<string, unknown>[])
-        .slice(0, 3)
+        .slice(0, 6)
         .map((p) => ({
           thread_id: String(p.thread_id ?? ""),
           turn_index: p.turn_index ?? null,
           reason: String(p.reason ?? ""),
-          detail: String(p.detail ?? "").slice(0, 120),
+          detail: String(p.detail ?? "").slice(0, 160),
           last_ts: String(p.last_ts ?? ""),
         }))
     : [];
   const alertsSlim = Array.isArray(summary.active_alerts)
     ? (summary.active_alerts as Record<string, unknown>[])
-        .slice(0, 6)
+        .slice(0, 12)
         .map((a) => ({
           severity: String(a.severity ?? ""),
           category: String(a.category ?? ""),
-          message: String(a.message ?? "").slice(0, 160),
+          message: String(a.message ?? "").slice(0, 200),
         }))
     : [];
   const passedSlim = Array.isArray(summary.latest_passed_cards)
     ? (summary.latest_passed_cards as Record<string, unknown>[])
-        .slice(0, 5)
+        .slice(0, 10)
         .map((c) => ({
           card_id: String(c.card_id ?? c.id ?? ""),
-          title: String(c.title ?? c.label ?? "").slice(0, 140),
+          title: String(c.title ?? c.label ?? "").slice(0, 180),
         }))
     : [];
   const gapsSlim = Array.isArray(summary.current_open_gaps)
-    ? (summary.current_open_gaps as Record<string, unknown>[]).slice(0, 5)
+    ? (summary.current_open_gaps as Record<string, unknown>[]).slice(0, 10)
     : [];
   const canonicalSlim = Array.isArray(ss.top_canonical)
     ? (ss.top_canonical as Record<string, unknown>[])
-        .slice(0, 5)
+        .slice(0, 10)
         .map((s) => ({
           id: String(s.id ?? ""),
-          source_name: String(s.source_name ?? "").slice(0, 120),
+          source_name: String(s.source_name ?? "").slice(0, 140),
           source_kind: String(s.source_kind ?? ""),
         }))
     : [];
@@ -218,9 +247,14 @@ function compactSummaryForHandoff(summary: Record<string, unknown>): Record<stri
         "follow_up_success_rate",
         "continuation_memory_hit_live",
         "continuation_sample_count_live",
+        "continuation_memory_hit_all_time",
         "turn0_never_persisted_rate",
         "verdict_short",
         "verdict_short_v2",
+        "persist_ok_turns_24h",
+        "persist_total_turns_24h",
+        "memory_hit_turns_24h",
+        "memory_total_turns_24h",
       ]),
     },
     acceptance: {
@@ -257,10 +291,13 @@ function compactSummaryForHandoff(summary: Record<string, unknown>): Record<stri
       "chat_ts_imports",
       "fire_ratio_24h",
       "fire_events_24h",
+      "fire_ratio_7d",
+      "fire_events_7d",
       "kotodama_50_coverage",
       "khs_10_axes_wired_ratio",
       "endpoint",
       "fire_endpoint",
+      "effect_endpoint",
       "wired_names",
       "stub_names",
       "unwired_names",
@@ -432,6 +469,8 @@ function buildMarkdownV1(params: {
     `## Active alerts (上位 6)`,
     alerts,
     "",
+    buildChatLedgerHandoffSectionMd(),
+    "",
     buildIntelligenceMapSectionMd(),
     "",
   ];
@@ -459,10 +498,10 @@ function buildMarkdownV1(params: {
   if (includeHistory && history) {
     const compactHistory = {
       latest_passed_cards: Array.isArray(history.latest_passed_cards)
-        ? (history.latest_passed_cards as unknown[]).slice(0, 12)
+        ? (history.latest_passed_cards as unknown[]).slice(0, 24)
         : [],
       current_open_gaps: Array.isArray(history.current_open_gaps)
-        ? (history.current_open_gaps as unknown[]).slice(0, 8)
+        ? (history.current_open_gaps as unknown[]).slice(0, 16)
         : [],
       last_verified_at: history.last_verified_at ?? null,
       history_event_count: history.history_event_count ?? null,
@@ -503,13 +542,13 @@ function buildMarkdownV1(params: {
     "",
     buildClosingInstruction(),
     "",
-    `> NOTE: mcSystemHistory は 10000 文字制限のため省略しました（/api/mc/vnext/history 参照）。`,
+    `> NOTE: mcSystemHistory は ${MAX_PROMPT_LEN} 文字制限のため省略しました（/api/mc/vnext/history 参照）。`,
   ].join("\n");
 
   if (draft3.length <= MAX_PROMPT_LEN) return draft3;
 
   // 最終: hard truncate (先頭と末尾の指示は残す)
-  const marker = `\n\n> NOTE: 10000 文字制限のため一部省略されました。\n`;
+  const marker = `\n\n> NOTE: ${MAX_PROMPT_LEN} 文字制限のため一部省略されました。\n`;
   return draft3.slice(0, MAX_PROMPT_LEN - marker.length) + marker;
 }
 
@@ -546,7 +585,8 @@ export function buildHandoffPromptV1(
 ): HandoffPromptResultV1 {
   const ai = clampAi(opts.ai);
   const format = clampFormat(opts.format);
-  const includeHistory = Boolean(opts.includeHistory);
+  /** CARD-MC-25: 既定で mcSystemHistory を同梱（明示 false で従来の軽量のみ） */
+  const includeHistory = opts.includeHistory !== false;
 
   const summary = buildClaudeSummaryPayloadV1();
   const history = includeHistory ? buildVnextHistoryPayload() : null;
@@ -561,7 +601,7 @@ export function buildHandoffPromptV1(
   }
 
   const truncated = markdown.endsWith(
-    "> NOTE: 10000 文字制限のため一部省略されました。\n",
+    `> NOTE: ${MAX_PROMPT_LEN} 文字制限のため一部省略されました。\n`,
   );
 
   return {

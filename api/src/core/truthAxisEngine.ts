@@ -13,9 +13,12 @@
  *   - 新テーブルは 10 軸 CHECK 制約付き
  *   - 全 SQL は try-catch で保護
  */
+import { readFileSync, existsSync } from "node:fs";
+import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { v4 as uuidv4 } from "uuid";
 import { getDb } from "../db/index.js";
+import { REPO_ROOT } from "./mc/constants.js";
 
 // ── DB パス ───────────────────────────────────────
 // CARD-MC-09A-WAL-INTEGRITY-V1:
@@ -56,8 +59,18 @@ const AXIS_KEYWORDS: Record<TruthAxis, string[]> = {
     "サイクル", "輪廻", "繰り返し", "還", "転",
   ],
   polarity: [
-    "水火", "イキ", "陰陽", "対極", "二元",
-    "水", "火", "上下", "昇降", "澄濁", "軽清", "重濁",
+    "水火",
+    "イキ",
+    "陰陽",
+    "対極",
+    "二元",
+    "水",
+    "火",
+    "上下",
+    "昇降",
+    "澄濁",
+    "軽清",
+    "重濁",
   ],
   center: [
     "正中", "まなか", "中心", "ゝ", "凝",
@@ -68,8 +81,26 @@ const AXIS_KEYWORDS: Record<TruthAxis, string[]> = {
     "吸", "吐", "氣", "生命力", "活力",
   ],
   carami: [
-    "カラミ", "絡み", "交合", "結合", "與合",
-    "くみあい", "交差", "螺旋", "DNA", "組み合わせ",
+    "カラミ",
+    "絡み",
+    "交合",
+    "結合",
+    "與合",
+    "縁起",
+    "縁",
+    "因縁",
+    "因果",
+    "関係性",
+    "つながり",
+    "相互",
+    "条件付き",
+    "依存",
+    "ネットワーク",
+    "くみあい",
+    "交差",
+    "螺旋",
+    "DNA",
+    "組み合わせ",
   ],
   order: [
     "秩序", "配列", "順序", "五十連", "行列",
@@ -84,8 +115,25 @@ const AXIS_KEYWORDS: Record<TruthAxis, string[]> = {
     "生成", "創造", "産み", "成り", "ワ", "国土",
   ],
   purification: [
-    "浄化", "禊", "澄", "清", "祓",
-    "洗", "純化", "精錬", "昇華", "祓い",
+    "浄化",
+    "禊",
+    "澄",
+    "澄み",
+    "上澄",
+    "清",
+    "清め",
+    "祓",
+    "洗",
+    "純化",
+    "精錬",
+    "昇華",
+    "祓い",
+    "濁",
+    "濁り",
+    "沉降",
+    "降ろし",
+    "重濁",
+    "軽清",
   ],
   governance: [
     "統治", "君位", "臣", "治", "政",
@@ -207,6 +255,73 @@ export function detect10TruthAxes(
   }
 
   return results;
+}
+
+const KHS_CORE_CONST_REL = path.join("docs", "ark", "khs", "KHS_CORE_CONSTITUTION_v1.txt");
+
+/** CARD-MC-22: KHS_CORE 封印正本から carami / 縁起周辺の短い抜粋（捏造なし・ファイル無しは空） */
+export function readKhsCoreCaramiContextSnippetV1(maxChars: number): string {
+  const cap = Math.max(80, Math.min(600, maxChars));
+  try {
+    const abs = path.join(REPO_ROOT, KHS_CORE_CONST_REL);
+    if (!existsSync(abs)) return "";
+    const raw = readFileSync(abs, "utf8");
+    const needle = /絡み|縁起|carami|與合|四締/u;
+    const m = needle.exec(raw);
+    const idx = m?.index ?? -1;
+    const slice =
+      idx >= 0 ? raw.slice(Math.max(0, idx - 60), idx + cap) : raw.slice(0, cap);
+    return slice.replace(/\s+/g, " ").trim().slice(0, cap);
+  } catch {
+    return "";
+  }
+}
+
+/** CARD-MC-22: 絡み軸の GEN 節（truth 検出 or 縁起系キーワード + KHS_CORE 参照） */
+export function buildCaramiGenClauseV1(
+  userText: string,
+  axes: Array<{ axis: TruthAxis; confidence: number }>,
+  maxChars: number,
+): string {
+  const t = String(userText ?? "").trim();
+  if (!t) return "";
+  const axisHit = axes.some((a) => a.axis === "carami" && a.confidence >= 0.45);
+  const kw = /(縁起|縁|因果|関係性|因縁|相互|つながり|依存)/u.test(t);
+  if (!axisHit && !kw) return "";
+  const khs = readKhsCoreCaramiContextSnippetV1(Math.min(420, maxChars - 160));
+  const lines = [
+    "【truth_axis 絡み（carami）・KHS_CORE 参照】",
+    "関係性・因果・縁起は単線の物語因果へ還元せず、位相として読む（封印正本の用法に従う）。",
+    khs ? `正本抜粋: ${khs}` : "（KHS_CORE_CONSTITUTION_v1 未配置環境: 軸検出・キーワードのみ）",
+  ];
+  return lines.join("\n\n").slice(0, Math.max(120, maxChars));
+}
+
+/** CARD-MC-22: 澄濁軸の GEN 専用節（澄＝上澄・軽清、濁＝沉降・重濁。言霊秘書水火別と接続） */
+export function buildPurificationGenClauseV1(
+  userText: string,
+  kotodamaHishoClause: string,
+  axes: Array<{ axis: TruthAxis; confidence: number }>,
+  maxChars: number,
+): string {
+  const t = String(userText ?? "").trim();
+  if (!t) return "";
+  const axisHit = axes.some((a) => a.axis === "purification" && a.confidence >= 0.45);
+  const kw = /(澄|濁|浄化|禊|清め|澄み|濁り|沉降|上澄|重濁|軽清)/u.test(t);
+  if (!axisHit && !kw) return "";
+  const wf = classifyWaterFire(t);
+  const h = String(kotodamaHishoClause ?? "").trim();
+  const hFrag =
+    h.length > 0 && /(水|火|水火|澄|濁|軽清|重濁)/u.test(h) ? h.slice(0, Math.min(480, maxChars - 280)) : "";
+  const lines = [
+    "【truth_axis 澄濁（purification）・GEN 専用】",
+    "澄＝軽清・上澄の相（昇る側の整理）。濁＝重濁・沉降の相（降りる側の整理）。水火は別にして混線しない。",
+    `classifyWaterFire=${wf}`,
+    hFrag
+      ? `【言霊秘書・水火別との接続（抜粋）】\n${hFrag}`
+      : "（言霊秘書節に水火別が未注入のときは上記方向性のみ参照）",
+  ];
+  return lines.join("\n\n").slice(0, Math.max(160, maxChars));
 }
 
 // ── 軸バインディング記録 ──────────────────────────

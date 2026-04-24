@@ -8,11 +8,14 @@
  */
 
 import type { ThreadCore } from "./threadCore.js";
-import type { InputSemanticSplitResultV1 } from "./inputSemanticSplitter.js";
-import type { TruthLayerArbitrationResultV1 } from "./meaningArbitrationKernel.js";
-import type { SourceLayerDiscernmentV1 } from "./sourceLayerDiscernmentKernel.js";
-import type { LineageTransformationJudgementV1 } from "./lineageAndTransformationJudgementEngine.js";
-import type { SpeculativeGuardV1 } from "./misreadExpansionAndSpeculativeGuard.js";
+import { splitInputSemanticsV1, type InputSemanticSplitResultV1 } from "./inputSemanticSplitter.js";
+import { arbitrateTruthLayerV1, type TruthLayerArbitrationResultV1 } from "./meaningArbitrationKernel.js";
+import { discernSourceLayerV1, type SourceLayerDiscernmentV1 } from "./sourceLayerDiscernmentKernel.js";
+import {
+  judgeLineageAndTransformationV1,
+  type LineageTransformationJudgementV1,
+} from "./lineageAndTransformationJudgementEngine.js";
+import { buildSpeculativeGuardV1, type SpeculativeGuardV1 } from "./misreadExpansionAndSpeculativeGuard.js";
 
 /** カード記述上の discernment bundle（実体は source + lineage） */
 export type TenmonDiscernmentJudgementBundleV1 = {
@@ -148,4 +151,57 @@ export function buildRootTruthArbitrationKernelV1(
     displayConstraint,
     reasonSummary,
   };
+}
+
+/**
+ * CARD-MC-21: split→truth→discern→lineage→guard→kernel を soul-root から通し、短文化して GEN に載せる。
+ */
+export function buildTruthLayerArbitrationClauseV1(rawMessage: string, routeReason: string, maxChars: number): string {
+  const rm = String(rawMessage ?? "").trim();
+  if (!rm) return "";
+  const rr = String(routeReason || "NATURAL_GENERAL_LLM_TOP").trim();
+  const split = splitInputSemanticsV1(rm);
+  const truth = arbitrateTruthLayerV1({
+    split,
+    knowledge: {
+      routeReason: rr,
+      rawMessage: rm,
+      sourcePack: "soul_root_mc21",
+      centerKey: null,
+      centerLabel: null,
+      evidenceRefs: [],
+      notionCanonCount: 0,
+      uncertaintyFlagCount: 0,
+      groundedRequired: false,
+    },
+    heartHint: split.heartHint ?? null,
+  });
+  const disc = discernSourceLayerV1({ split, truthLayerArbitrationV1: truth, rawMessage: rm });
+  const lin = judgeLineageAndTransformationV1({ discernment: disc, split, rawMessage: rm });
+  const guard = buildSpeculativeGuardV1({
+    discernment: disc,
+    lineageJudgement: lin,
+    rawMessage: rm,
+    routeReason: rr,
+    centerKey: null,
+  });
+  const kernel = buildRootTruthArbitrationKernelV1({
+    inputCognitionSplitV1: split,
+    truthLayerArbitrationV1: truth,
+    sourceLayerDiscernmentV1: disc,
+    lineageTransformationJudgementV1: lin,
+    misreadExpansionAndSpeculativeGuardV1: guard,
+    structuralCompatibilityAndRootSeparationV1: null,
+    threadMeaningMemoryV1: undefined,
+    threadCore: null,
+  });
+  const lines = [
+    "【真理層裁定 kernel（TENMON･観測）】",
+    kernel.reasonSummary,
+    `rootMode=${kernel.rootMode}; center=${kernel.centerStability}; policies=${kernel.separationPolicy.join(",")}`,
+    `display: preserve_center=${kernel.displayConstraint.preserve_center_without_leak} symbolic_vs_fact=${kernel.displayConstraint.separate_symbolic_and_fact} minimal_next=${kernel.displayConstraint.allow_minimal_next_step}`,
+  ];
+  const cap = Math.max(200, maxChars);
+  const out = lines.join("\n");
+  return out.length > cap ? `${out.slice(0, cap - 12)}…\n(省略)` : out;
 }

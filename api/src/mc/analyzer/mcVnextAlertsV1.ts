@@ -3,6 +3,7 @@
  * CARD_MC_VNEXT_ANALYZER_AND_ACCEPTANCE_V1
  */
 import type { McVnextAnalyzerSnapshotV1 } from "./mcVnextAnalyzerV1.js";
+import { buildIntelligenceFire7dTrendV1 } from "../fire/intelligenceFireTracker.js";
 
 export type McVnextAlertSeverityV1 = "CRIT" | "HIGH" | "MED" | "LOW";
 
@@ -113,6 +114,25 @@ export function buildMcVnextAlertsV1(s: McVnextAnalyzerSnapshotV1): McVnextAlert
       message: `天聞文体適合スコアが低め（${s.tenmon_style_fit_score.toFixed(2)}）。`,
       hint: "generic 逃避・AI定型・高圧表現の混入を final_tail で確認。",
     });
+  }
+
+  // CARD-MC-26: soul-root 発火率の 7 日プール平均が 70% 未満（十分なサンプル時）
+  try {
+    const t7 = buildIntelligenceFire7dTrendV1(7);
+    const n7 = t7.events_total;
+    const ar7 = t7.avg_fire_ratio_window;
+    if (n7 >= 21 && ar7 < 0.7) {
+      const worstDay = [...t7.daily].sort((a, b) => a.avg_fire_ratio - b.avg_fire_ratio)[0];
+      const dayHint = worstDay ? ` 最弱日 ${worstDay.day}=${(worstDay.avg_fire_ratio * 100).toFixed(0)}%` : "";
+      alerts.push({
+        severity: "HIGH",
+        category: "intelligence_fire_ratio_7d_low",
+        message: `7 日平均 soul-root 充填率が閾値未満（avg=${(ar7 * 100).toFixed(1)}% · n=${n7} · want ≥70%）。${dayHint}`,
+        hint: "GET /api/mc/vnext/intelligence/fire と mc_intelligence_fire.jsonl を確認。トラフィック偏りか注入退行かを切り分け。",
+      });
+    }
+  } catch {
+    /* ignore */
   }
 
   return alerts;

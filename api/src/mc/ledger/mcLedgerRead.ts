@@ -1221,3 +1221,122 @@ export function readMcAlertsAggregateV1(): {
     };
   }
 }
+
+/** CARD-MC-25: handoff 向け 24h 以内の会話継承サンプル（memory / dialogue / route） */
+export function readMcHandoffChatLedgerSample24hV1(opts?: {
+  memoryLimit?: number;
+  qualityLimit?: number;
+  routeLimit?: number;
+}): {
+  schema_version: "mc_handoff_chat_ledger_sample_v1";
+  window: "24h";
+  memory_samples: Array<{
+    ts: string;
+    thread_id: string;
+    turn_index: number;
+    source: string;
+    history_len: number;
+    history_preview: unknown;
+  }>;
+  dialogue_tails: Array<{
+    ts: string;
+    thread_id: string;
+    turn_index: number;
+    final_len: number;
+    final_tail: string;
+  }>;
+  route_hints: Array<{
+    ts: string;
+    thread_id: string;
+    turn_index: number;
+    route_reason: string;
+    selector_intent: string;
+    input_hash: string;
+  }>;
+} {
+  const memL = Math.min(64, Math.max(4, opts?.memoryLimit ?? 20));
+  const qL = Math.min(48, Math.max(4, opts?.qualityLimit ?? 16));
+  const rL = Math.min(48, Math.max(4, opts?.routeLimit ?? 16));
+  const empty = {
+    schema_version: "mc_handoff_chat_ledger_sample_v1" as const,
+    window: "24h" as const,
+    memory_samples: [] as Array<{
+      ts: string;
+      thread_id: string;
+      turn_index: number;
+      source: string;
+      history_len: number;
+      history_preview: unknown;
+    }>,
+    dialogue_tails: [] as Array<{
+      ts: string;
+      thread_id: string;
+      turn_index: number;
+      final_len: number;
+      final_tail: string;
+    }>,
+    route_hints: [] as Array<{
+      ts: string;
+      thread_id: string;
+      turn_index: number;
+      route_reason: string;
+      selector_intent: string;
+      input_hash: string;
+    }>,
+  };
+  try {
+    const memRows = dbPrepare(
+      "kokuzo",
+      `SELECT ts, thread_id, turn_index, source, history_len, history_preview
+       FROM mc_memory_ledger WHERE ts >= ${since24h} ORDER BY id DESC LIMIT ?`,
+    ).all(memL) as Record<string, unknown>[];
+    const qRows = dbPrepare(
+      "kokuzo",
+      `SELECT ts, thread_id, turn_index, final_len, final_tail
+       FROM mc_dialogue_quality_ledger WHERE ts >= ${since24h} ORDER BY id DESC LIMIT ?`,
+    ).all(qL) as Record<string, unknown>[];
+    const rRows = dbPrepare(
+      "kokuzo",
+      `SELECT ts, thread_id, turn_index, route_reason, selector_intent, input_hash
+       FROM mc_route_ledger WHERE ts >= ${since24h} ORDER BY id DESC LIMIT ?`,
+    ).all(rL) as Record<string, unknown>[];
+    const parsePreview = (raw: unknown): unknown => {
+      if (raw == null) return null;
+      if (typeof raw === "object") return raw;
+      try {
+        return JSON.parse(String(raw)) as unknown;
+      } catch {
+        return String(raw).slice(0, 400);
+      }
+    };
+    return {
+      schema_version: "mc_handoff_chat_ledger_sample_v1",
+      window: "24h",
+      memory_samples: memRows.map((row) => ({
+        ts: String(row.ts ?? ""),
+        thread_id: String(row.thread_id ?? ""),
+        turn_index: Number(row.turn_index ?? 0),
+        source: String(row.source ?? ""),
+        history_len: Number(row.history_len ?? 0),
+        history_preview: parsePreview(row.history_preview),
+      })),
+      dialogue_tails: qRows.map((row) => ({
+        ts: String(row.ts ?? ""),
+        thread_id: String(row.thread_id ?? ""),
+        turn_index: Number(row.turn_index ?? 0),
+        final_len: Number(row.final_len ?? 0),
+        final_tail: String(row.final_tail ?? "").slice(0, 220),
+      })),
+      route_hints: rRows.map((row) => ({
+        ts: String(row.ts ?? ""),
+        thread_id: String(row.thread_id ?? ""),
+        turn_index: Number(row.turn_index ?? 0),
+        route_reason: String(row.route_reason ?? "").slice(0, 120),
+        selector_intent: String(row.selector_intent ?? "").slice(0, 80),
+        input_hash: String(row.input_hash ?? "").slice(0, 48),
+      })),
+    };
+  } catch {
+    return empty;
+  }
+}

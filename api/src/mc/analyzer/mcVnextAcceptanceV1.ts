@@ -2,7 +2,7 @@
  * MC vNext acceptance — PASS / WATCH / FAIL を実データで下す裁定器。
  * CARD-MC-10-ACCEPTANCE-VERDICT-TUNING-V1
  *
- * 7 本の signal:
+ * 主要 signal（canonical / ledger / continuation / persist / trace / sources / alerts / 憲法 / intelligence fire / MC-26 拡張 等）:
  *   1. canonical_path        — /mc/ 正統パスと canonical source が揃っているか
  *   2. ledger_flowing        — route / llm / memory / quality の 24h ledger が書かれているか
  *   3. continuation_healthy  — follow_up の成功率が閾値を超えているか
@@ -24,7 +24,12 @@ import {
 } from "../ledger/mcLedgerRead.js";
 import { buildMcSourceRegistryV1 } from "../mcVnextSourceMapV1.js";
 import { buildAmatsuKanagiPayloadV1 } from "../constitution/amatsuKanagiMapV1.js";
-import { summarizeIntelligenceFire24hV1, SOUL_ROOT_FIRE_SLOTS } from "../fire/intelligenceFireTracker.js";
+import {
+  summarizeIntelligenceFire24hV1,
+  buildIntelligenceFire7dTrendV1,
+  SOUL_ROOT_FIRE_SLOTS,
+} from "../fire/intelligenceFireTracker.js";
+import { KHS_TEN_AXES_DECLARATION_V1 } from "../intelligence/khsConstitutionMapV1.js";
 
 export type McVnextAcceptanceStatusV1 = "PASS" | "FAIL" | "WATCH";
 export type McVnextAcceptanceCheckStatusV1 = "pass" | "watch" | "fail";
@@ -50,7 +55,9 @@ export type McVnextAcceptanceCheckV1 = {
     | "alerts_below_critical"
     | "continuation_memory_healthy"
     | "constitution_compliance"
-    | "intelligence_fire_healthy";
+    | "intelligence_fire_healthy"
+    | "intelligence_fire_7d_healthy"
+    | "khs_mc22_axes_active";
   label: string;
   status: McVnextAcceptanceCheckStatusV1;
   detail: string;
@@ -92,6 +99,10 @@ const T_CONTINUATION_MEMORY_MIN_SAMPLE = 3;  // 未満は WATCH 扱い
 // CARD-MC-11: 憲法履行率の閾値（unwired も「実装済」としてカウント）。
 const T_CONSTITUTION_IMPL_RATIO_PASS = 0.8; // 以上で PASS
 const T_CONSTITUTION_IMPL_RATIO_FAIL = 0.5; // 未満で FAIL
+// CARD-MC-26: soul-root 7 日プール平均（十分なサンプル時）
+const T_FIRE_7D_PASS = 0.7;
+const T_FIRE_7D_WATCH = 0.55;
+const T_FIRE_7D_MIN_EVENTS = 21;
 
 /** nextRecommendedCard は severity 優先でこの順に採用（古い thread カードが先頭に来るのを防ぐ）。 */
 const NEXT_CARD_PRIORITY: McVnextAcceptanceCheckV1["id"][] = [
@@ -105,6 +116,8 @@ const NEXT_CARD_PRIORITY: McVnextAcceptanceCheckV1["id"][] = [
   "sources_populated",
   "constitution_compliance",
   "intelligence_fire_healthy",
+  "intelligence_fire_7d_healthy",
+  "khs_mc22_axes_active",
 ];
 
 const CARD_BY_CHECK: Record<McVnextAcceptanceCheckV1["id"], string> = {
@@ -121,6 +134,10 @@ const CARD_BY_CHECK: Record<McVnextAcceptanceCheckV1["id"], string> = {
     "CARD-MC-11-AMATSU-KANAGI-CORE-VISUALIZATION-V1: 憲法コア（天津金木）の実装 / 配線を完結させる",
   intelligence_fire_healthy:
     "CARD-MC-19-DEEP-INTELLIGENCE-OBSERVABILITY-V1: soul-root 発火 jsonl の蓄積と閾値を見直す",
+  intelligence_fire_7d_healthy:
+    "CARD-MC-26-ACCEPTANCE-STRICT-V2: 7 日平均発火率と jsonl tail を点検しトラフィック偏りを排除",
+  khs_mc22_axes_active:
+    "CARD-MC-22-KHS-10-AXES-COMPLETE-V1: carami/purification の宣言・chat 配線を再確認",
 };
 
 const LAYER_BY_CHECK: Record<McVnextAcceptanceCheckV1["id"], McVnextAcceptanceAffectedLayerV1> = {
@@ -134,6 +151,8 @@ const LAYER_BY_CHECK: Record<McVnextAcceptanceCheckV1["id"], McVnextAcceptanceAf
   alerts_below_critical: "alerts_pipeline",
   constitution_compliance: "constitution_core",
   intelligence_fire_healthy: "none",
+  intelligence_fire_7d_healthy: "none",
+  khs_mc22_axes_active: "constitution_core",
 };
 
 function layerOf(id: McVnextAcceptanceCheckV1["id"]): McVnextAcceptanceAffectedLayerV1 {
@@ -208,7 +227,7 @@ function resolveNextRecommendedCard(checks: McVnextAcceptanceCheckV1[], verdict:
 
 function buildWhyNow(verdict: McVnextAcceptanceStatusV1, failWatch: string[], passed: string[]): string {
   if (verdict === "PASS") {
-    return passed[0] ? `現在状態: ${passed[0].slice(0, 180)}` : "現在状態: 主要 7 signal はすべて確認済み。";
+    return passed[0] ? `現在状態: ${passed[0].slice(0, 180)}` : "現在状態: 主要 acceptance checks はすべて確認済み。";
   }
   const head = failWatch[0];
   return head ? `現在状態: ${head.slice(0, 220)}` : "現在状態: 要確認（詳細は checks を参照）。";
@@ -546,28 +565,32 @@ function checkIntelligenceFireHealthy(): CheckDraft {
   const fire = summarizeIntelligenceFire24hV1();
   const n = fire.events_in_window;
   const slotRatio = SOUL_ROOT_FIRE_SLOTS > 0 ? fire.slots_ever_fired / SOUL_ROOT_FIRE_SLOTS : 0;
+  const ar = fire.avg_fire_ratio;
+  /** MC-21: スロット 11 化に合わせ distinct 比率より avg 充填率を優先して判定 */
+  const strong = ar >= 0.45 || slotRatio >= 0.41;
+  const medium = ar >= 0.28 || slotRatio >= 0.28;
   if (n < 3) {
     return {
       id: "intelligence_fire_healthy",
       label: "intelligence fire healthy",
       status: "pass",
-      detail: `24h イベント n=${n} < 3 — 寛容 PASS（slots_ever=${fire.slots_ever_fired}/${SOUL_ROOT_FIRE_SLOTS} avg_slot_fill=${(fire.avg_fire_ratio * 100).toFixed(0)}%）`,
+      detail: `24h イベント n=${n} < 3 — 寛容 PASS（slots_ever=${fire.slots_ever_fired}/${SOUL_ROOT_FIRE_SLOTS} avg_fill=${(ar * 100).toFixed(0)}%）`,
     };
   }
-  if (slotRatio >= 0.7) {
+  if (strong) {
     return {
       id: "intelligence_fire_healthy",
       label: "intelligence fire healthy",
       status: "pass",
-      detail: `soul-root スロット発火 ${fire.slots_ever_fired}/${SOUL_ROOT_FIRE_SLOTS}（≥70%）· n=${n}`,
+      detail: `soul-root 健全: avg_fill=${(ar * 100).toFixed(0)}% · distinct_slots=${fire.slots_ever_fired}/${SOUL_ROOT_FIRE_SLOTS} · n=${n}`,
     };
   }
-  if (slotRatio >= 0.5) {
+  if (medium) {
     return {
       id: "intelligence_fire_healthy",
       label: "intelligence fire healthy",
       status: "watch",
-      detail: `スロット発火率 ${(slotRatio * 100).toFixed(0)}%（50–70%）· n=${n}`,
+      detail: `avg_fill=${(ar * 100).toFixed(0)}% · distinct=${(slotRatio * 100).toFixed(0)}%（MC-21 閾値帯）· n=${n}`,
       next_card: CARD_BY_CHECK.intelligence_fire_healthy,
     };
   }
@@ -575,8 +598,85 @@ function checkIntelligenceFireHealthy(): CheckDraft {
     id: "intelligence_fire_healthy",
     label: "intelligence fire healthy",
     status: "fail",
-    detail: `スロット発火率 ${(slotRatio * 100).toFixed(0)}%（<50%）· n=${n}`,
+    detail: `avg_fill=${(ar * 100).toFixed(0)}% · distinct=${(slotRatio * 100).toFixed(0)}%（低下）· n=${n}`,
     next_card: CARD_BY_CHECK.intelligence_fire_healthy,
+  };
+}
+
+/** CARD-MC-26: jsonl 7 日プール平均（サンプル十分時のみ厳格化） */
+function checkIntelligenceFire7dHealthy(): CheckDraft {
+  const t = buildIntelligenceFire7dTrendV1(7);
+  const n = t.events_total;
+  const ar = t.avg_fire_ratio_window;
+  if (n < T_FIRE_7D_MIN_EVENTS) {
+    return {
+      id: "intelligence_fire_7d_healthy",
+      label: "intelligence fire 7d healthy",
+      status: "pass",
+      detail: `7d イベント n=${n} < ${T_FIRE_7D_MIN_EVENTS} — 判断保留（avg_window=${(ar * 100).toFixed(0)}%）`,
+    };
+  }
+  if (ar >= T_FIRE_7D_PASS) {
+    return {
+      id: "intelligence_fire_7d_healthy",
+      label: "intelligence fire 7d healthy",
+      status: "pass",
+      detail: `7d avg_fill=${(ar * 100).toFixed(0)}% ≥ ${(T_FIRE_7D_PASS * 100).toFixed(0)}% · n=${n}`,
+    };
+  }
+  if (ar >= T_FIRE_7D_WATCH) {
+    return {
+      id: "intelligence_fire_7d_healthy",
+      label: "intelligence fire 7d healthy",
+      status: "watch",
+      detail: `7d avg_fill=${(ar * 100).toFixed(0)}% · n=${n}（閾値 ${(T_FIRE_7D_PASS * 100).toFixed(0)}% 未満）`,
+      next_card: CARD_BY_CHECK.intelligence_fire_7d_healthy,
+    };
+  }
+  return {
+    id: "intelligence_fire_7d_healthy",
+    label: "intelligence fire 7d healthy",
+    status: "fail",
+    detail: `7d avg_fill=${(ar * 100).toFixed(0)}% < ${(T_FIRE_7D_WATCH * 100).toFixed(0)}% · n=${n}`,
+    next_card: CARD_BY_CHECK.intelligence_fire_7d_healthy,
+  };
+}
+
+/** CARD-MC-26: KHS 宣言上 carami / purification が chat 配線済みか */
+function checkKhsMc22AxesActive(): CheckDraft {
+  const c = KHS_TEN_AXES_DECLARATION_V1.find((a) => a.id === "carami");
+  const p = KHS_TEN_AXES_DECLARATION_V1.find((a) => a.id === "purification");
+  if (!c || !p) {
+    return {
+      id: "khs_mc22_axes_active",
+      label: "KHS mc22 axes (carami/purification)",
+      status: "fail",
+      detail: "KHS_TEN_AXES_DECLARATION_V1 に carami または purification 行が無い",
+      next_card: CARD_BY_CHECK.khs_mc22_axes_active,
+    };
+  }
+  const cOk = Boolean(c.wired_chat_declared && c.implemented);
+  const pOk = Boolean(p.wired_chat_declared && p.implemented);
+  if (cOk && pOk) {
+    return {
+      id: "khs_mc22_axes_active",
+      label: "KHS mc22 axes (carami/purification)",
+      status: "pass",
+      detail: "carami / purification は宣言上 wired かつ実装済（MC-22）",
+    };
+  }
+  const parts = [
+    !cOk ? `carami(wired=${c.wired_chat_declared}, impl=${c.implemented})` : "",
+    !pOk ? `purification(wired=${p.wired_chat_declared}, impl=${p.implemented})` : "",
+  ]
+    .filter(Boolean)
+    .join(" · ");
+  return {
+    id: "khs_mc22_axes_active",
+    label: "KHS mc22 axes (carami/purification)",
+    status: "watch",
+    detail: `宣言未充足: ${parts}`,
+    next_card: CARD_BY_CHECK.khs_mc22_axes_active,
   };
 }
 
@@ -728,6 +828,8 @@ export function evaluateMcVnextAcceptanceV1(
     checkSourcesPopulated(registry),
     checkConstitutionCompliance(),
     checkIntelligenceFireHealthy(),
+    checkIntelligenceFire7dHealthy(),
+    checkKhsMc22AxesActive(),
     checkAlertsBelowCritical(alerts),
   ];
 

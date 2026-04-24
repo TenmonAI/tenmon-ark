@@ -164,13 +164,14 @@ protectedVnext.get("/claude-summary", (_req: Request, res: Response) => {
 
 /**
  * CARD-MC-HANDOFF-V1:
- *   GET /api/mc/vnext/handoff-prompt?ai=claude|gpt|cursor&format=markdown|text|json&include_history=true
+ *   GET /api/mc/vnext/handoff-prompt?ai=claude|gpt|cursor&format=markdown|text|json&include_history=false（省略時 true・CARD-MC-25）
  *   Bearer auth（protectedVnext 配下）。TENMON が新 AI トークルーム起動時に
  *   1 コマンドで前会話の文脈を継承するための 1 枚プロンプト生成器。
  */
 protectedVnext.get("/handoff-prompt", (req: Request, res: Response) => {
   const q = req.query as Record<string, unknown>;
-  const includeHistory = String(q.include_history ?? "").toLowerCase() === "true";
+  const ihRaw = String(q.include_history ?? "").trim().toLowerCase();
+  const includeHistory = !(ihRaw === "false" || ihRaw === "0");
   const result = buildHandoffPromptV1({
     ai: typeof q.ai === "string" ? q.ai : undefined,
     format: typeof q.format === "string" ? q.format : undefined,

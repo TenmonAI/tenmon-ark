@@ -25,3 +25,20 @@ for (const f of files) {
   fs.copyFileSync(src, dst);
   console.log(`[copy-assets] copied ${src} -> ${dst}`);
 }
+
+// CARD-MC-24: nginx が api/dist/static/mc-landing を参照する構成向け（index.html の intelligence-panel.js 等）
+const repoRoot = path.join(root, "..");
+const mcLandingSrc = path.join(repoRoot, "static", "mc-landing");
+const mcLandingDst = path.join(root, "dist", "static", "mc-landing");
+if (fs.existsSync(mcLandingSrc)) {
+  fs.mkdirSync(mcLandingDst, { recursive: true });
+  for (const name of fs.readdirSync(mcLandingSrc)) {
+    const src = path.join(mcLandingSrc, name);
+    if (!fs.statSync(src).isFile()) continue;
+    const dst = path.join(mcLandingDst, name);
+    fs.copyFileSync(src, dst);
+    console.log(`[copy-assets] copied ${src} -> ${dst}`);
+  }
+} else {
+  console.warn(`[copy-assets] skip mc-landing: not found ${mcLandingSrc}`);
+}
