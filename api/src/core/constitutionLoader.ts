@@ -14,6 +14,7 @@
 import { readFileSync, existsSync } from "fs";
 import { createHash } from "crypto";
 import { kotodamaBridgeHealth } from "./kotodamaBridgeRegistry.js";
+import { runKotodamaConstitutionEnforcerAtStartup } from "./kotodamaConstitutionEnforcerV1.js";
 
 // ── パス定義 ──────────────────────────────────────
 const KHS_CORE_PATH =
@@ -245,6 +246,11 @@ function verifyKotodamaConstitutionSealV1Once(): void {
         );
       } catch (err: unknown) {
         console.warn(`[KOTODAMA_BRIDGE] registry load failed: ${String((err as Error)?.message ?? err)}`);
+      }
+      try {
+        runKotodamaConstitutionEnforcerAtStartup();
+      } catch (enfErr: unknown) {
+        console.warn(`[KOTODAMA_ENFORCER_V1] startup hook failed: ${String((enfErr as Error)?.message ?? enfErr)}`);
       }
     } else {
       console.error(

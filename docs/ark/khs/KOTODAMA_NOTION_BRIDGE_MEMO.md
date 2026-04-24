@@ -96,3 +96,34 @@
 ### 次カード
 
 - MC-20-CONSTITUTION-ENFORCER-V1: 計測基盤の上で憲法違反を監視
+
+---
+
+## 2026-04-24: MC-20-CONSTITUTION-ENFORCER-V1 実装ログ
+
+### 実装内容
+
+- `kotodamaConstitutionEnforcerV1.ts` 新設
+- 憲法 V1 第 2, 3, 4, 6, 8, 9 条の runtime 監視
+- ERROR (第 2, 3, 4, 8) / WARN (第 6, 9) 分離
+- 起動時 console 出力
+- `/api/mc/vnext/intelligence` に `kotodama_constitution_enforcer` セクション
+
+### 原則
+
+- 検知と警告のみ、自動修正なし
+- 既存 chat / acceptance に影響なし
+- 本モジュール配線により、憲法は文書権威から実効権威へ昇格
+
+### Phase A 完了
+
+本カード SEAL により、Phase A (基礎回路構築) 全 6 枚完成:
+
+1. MC-20-B KOTODAMA-CONSTITUTION-V1 (5c1144ca) 文書権威
+2. MC-20-BRIDGE-PIPELINE-V1 (e6e8cebf) 正規経路
+3. MC-20-DEEP-MAP-DENOM-FIX-V1 (f18a8a6c) 正規分母
+4. MC-20-CHAT-LENGTH-REGRESSION-AUDIT-V1 (d9aec8ff) 切り分け監査
+5. MC-20-PROMPT-TRACE-V1 (fc78185c) 計測基盤
+6. MC-20-CONSTITUTION-ENFORCER-V1 (本カード) 実効権威
+
+次段階: TENMON 再裁定 → Phase B 検討 (canonical_kotodama_base 拡張 / Notion 同期 / loader 従属化)

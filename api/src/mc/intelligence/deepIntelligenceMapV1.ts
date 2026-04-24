@@ -13,6 +13,7 @@ import {
 import { auditKotodama50IndexV1, buildKotodama50MapV1 } from "./kotodama50MapV1.js";
 import { buildKhsConstitutionObservabilityV1 } from "./khsConstitutionMapV1.js";
 import { kotodamaBridgeHealth } from "../../core/kotodamaBridgeRegistry.js";
+import { enforceKotodamaConstitutionV1 } from "../../core/kotodamaConstitutionEnforcerV1.js";
 
 const ALLOWED_DB_TABLES = [
   "scripture_learning_ledger",
@@ -479,6 +480,29 @@ export function buildDeepIntelligencePayloadV1(): Record<string, unknown> {
     }
   })();
 
+  const kotodama_constitution_enforcer = (() => {
+    try {
+      const r = enforceKotodamaConstitutionV1();
+      return {
+        verdict: r.verdict,
+        total_checks: r.total_checks,
+        violation_count_error: r.violation_count_error,
+        violation_count_warn: r.violation_count_warn,
+        violations: r.violations.map((v) => ({
+          article: v.article,
+          severity: v.severity,
+          title: v.title,
+          observed: v.observed,
+          expected: v.expected,
+        })),
+        constitution_ref: r.constitution_ref,
+        timestamp: r.timestamp,
+      };
+    } catch (err) {
+      return { verdict: "unknown" as const, error: String(err) };
+    }
+  })();
+
   const detail = {
     wired_modules: DEEP_INTELLIGENCE_MAP.wired_modules,
     stub_modules: DEEP_INTELLIGENCE_MAP.stub_modules,
@@ -501,6 +525,7 @@ export function buildDeepIntelligencePayloadV1(): Record<string, unknown> {
     mc20_fire_truth_audit: mc20,
     gaps,
     kotodama_bridges,
+    kotodama_constitution_enforcer,
     wired_count: DEEP_INTELLIGENCE_MAP.wired_modules.length,
     stub_count: DEEP_INTELLIGENCE_MAP.stub_modules.length,
     unwired_candidate_count: DEEP_INTELLIGENCE_MAP.unwired_candidates.length,
