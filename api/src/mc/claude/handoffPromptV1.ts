@@ -115,7 +115,16 @@ function buildIntelligenceMapSectionMd(): string {
   const fr = sum.fire_ratio_24h != null ? Number(sum.fire_ratio_24h) : Number(fire.avg_fire_ratio) || 0;
   const fr7 = sum.fire_ratio_7d != null ? Number(sum.fire_ratio_7d) : null;
   const fe7 = sum.fire_events_7d != null ? Number(sum.fire_events_7d) : null;
-  const cov = sum.kotodama_50_coverage != null ? Number(sum.kotodama_50_coverage) : Number(fifty.coverage_ratio) || 0;
+  const rootCov = (intel as Record<string, unknown>).kotodama_50_coverage;
+  const covFromRoot =
+    rootCov && typeof rootCov === "object" && !Array.isArray(rootCov) && "coverage_ratio" in rootCov
+      ? Number((rootCov as { coverage_ratio?: unknown }).coverage_ratio)
+      : NaN;
+  const cov = Number.isFinite(covFromRoot)
+    ? covFromRoot
+    : sum.kotodama_50_coverage != null
+      ? Number(sum.kotodama_50_coverage)
+      : Number(fifty.coverage_ratio) || 0;
   const khsR = sum.khs_10_axes_wired_ratio != null ? Number(sum.khs_10_axes_wired_ratio) : 0;
   const lines = [
     `## 深層知能マップ (MC-19)`,

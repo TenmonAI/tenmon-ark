@@ -387,9 +387,25 @@ export function buildDeepIntelligencePayloadV1(): Record<string, unknown> {
     rows: safeCount(d.table, d.rows),
   }));
   const db_total_rows = dbRows.reduce((s, r) => s + r.rows, 0);
+  const audit50 = auditKotodama50IndexV1() as Record<string, unknown>;
   const fifty: Record<string, unknown> = {
-    ...(auditKotodama50IndexV1() as Record<string, unknown>),
+    ...audit50,
     wired_to_chat: isModulePathReferencedInChatTsV1("core/kotodamaOneSoundLawIndex.ts"),
+  };
+  const kotodama_50_coverage_detail = {
+    total: Number(audit50.total ?? audit50.total_canonical ?? 50),
+    with_entry: audit50.with_entry,
+    with_water_fire: audit50.with_water_fire,
+    with_textual_grounding: audit50.with_textual_grounding,
+    with_source_page: audit50.with_source_page,
+    with_shape_position: audit50.with_shape_position,
+    with_modern_alias: audit50.with_modern_alias,
+    coverage_ratio: Number(audit50.coverage_ratio) || 0,
+    coverage_ratio_grounding: Number(audit50.coverage_ratio_grounding) || 0,
+    sounds: audit50.sounds,
+    per_sound: audit50.per_sound,
+    constitution_ref: audit50.constitution_ref,
+    notes: audit50.notes,
   };
   const khsObs = buildKhsConstitutionObservabilityV1() as Record<string, unknown>;
   const fire = summarizeIntelligenceFire24hV1();
@@ -471,6 +487,7 @@ export function buildDeepIntelligencePayloadV1(): Record<string, unknown> {
     generated_at: new Date().toISOString(),
     summary,
     modules,
+    kotodama_50_coverage: kotodama_50_coverage_detail,
     fifty_sounds: fifty,
     khs_10_axes: khsObs,
     fire_24h: fire,

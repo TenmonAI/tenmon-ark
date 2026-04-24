@@ -35,5 +35,31 @@
 ### 次カード
 
 - MC-20-DEEP-MAP-DENOM-FIX-V1: 50 分母・ヰヱ保持・ン除外（憲法違反是正）
+
+---
+
+## 2026-04-24: MC-20-DEEP-MAP-DENOM-FIX-V1 実装ログ
+
+### 実装内容
+
+- `kotodama50MapV1.ts` に `GOJUREN_JUGYO_V1` / `GOJUREN_50_SOUNDS_V1` 追加
+- 五十連十行構造 (10 行 × 5 段 = 50 音) で定義
+- ヰ・ヱ 保持（ア行イ vs ヤ行ヰ vs ワ行ヰ を別 `canonical_id`）
+- 「ン」除外
+- coverage 計算を 50 分母固定、`with_*` 6 種分離
+- 旧 `GOJUON_BASE` は `@deprecated`（次カードで削除）
+- `deepIntelligenceMapV1` ルートに `kotodama_50_coverage` 詳細オブジェクト追加（`summary.kotodama_50_coverage` は比率の数のまま）
+
+### 憲法整合
+
+- 第 2 条: total = 50
+- 第 3 条: ン除外
+- 第 4 条: ヰ・ヱ 保持
+- 第 8 条: `with_*` 分離
+
+### 効果
+
+- `GET /api/mc/vnext/intelligence` の `kotodama_50_coverage` が正典基準で算出
+- 「46 で 100%」偽陽性の再発防止
 - MC-20-CONSTITUTION-ENFORCER-V1: 憲法違反監視機能
 - 後続: Phase B（TENMON 再裁定後）
