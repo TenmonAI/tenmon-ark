@@ -157,6 +157,22 @@ export function buildMcSourceRegistrySeedV1(): McSourceSeedV1[] {
       note: "天聞アークの推論根幹：天津金木・五相・四相フェーズ。",
     },
     {
+      id: "core:amatsu-kanagi",
+      source_kind: "core",
+      source_name: "天津金木コア（TENMON-ARK 思考中枢）",
+      source_uri: `file://${CANON_DIR}`,
+      source_role: "canonical",
+      linked_to: [
+        "constitution:soul-root",
+        "core:tenmon-kanagi",
+        "github:main-repo",
+        "corpus:sacred",
+      ],
+      last_seen: ts,
+      note:
+        "CARD-MC-11: 憲法コア（TENMON_ARK_COMPLETION_CONSTITUTION_V1 系）と天津金木の三層構造（構造裁定→参照→会話還元）。詳細は /api/mc/vnext/constitution で履行状況を取得。",
+    },
+    {
       id: "mc_hub:main",
       source_kind: "mc_hub",
       source_name: "TENMON-ARK Mission Control AI-HUB",

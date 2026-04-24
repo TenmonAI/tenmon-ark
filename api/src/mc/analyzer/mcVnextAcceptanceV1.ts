@@ -23,6 +23,7 @@ import {
   type McProblematicThreadV1,
 } from "../ledger/mcLedgerRead.js";
 import { buildMcSourceRegistryV1 } from "../mcVnextSourceMapV1.js";
+import { buildAmatsuKanagiPayloadV1 } from "../constitution/amatsuKanagiMapV1.js";
 
 export type McVnextAcceptanceStatusV1 = "PASS" | "FAIL" | "WATCH";
 export type McVnextAcceptanceCheckStatusV1 = "pass" | "watch" | "fail";
@@ -34,6 +35,7 @@ export type McVnextAcceptanceAffectedLayerV1 =
   | "thread_trace"
   | "alerts_pipeline"
   | "git_workspace"
+  | "constitution_core"
   | "none";
 
 export type McVnextAcceptanceCheckV1 = {
@@ -45,7 +47,8 @@ export type McVnextAcceptanceCheckV1 = {
     | "thread_trace_healthy"
     | "sources_populated"
     | "alerts_below_critical"
-    | "continuation_memory_healthy";
+    | "continuation_memory_healthy"
+    | "constitution_compliance";
   label: string;
   status: McVnextAcceptanceCheckStatusV1;
   detail: string;
@@ -84,6 +87,9 @@ const T_HIGH_ALERTS_WATCH = 2;         // 以上で WATCH
 const T_CONTINUATION_MEMORY_HIT_PASS = 0.8;  // 以上で PASS
 const T_CONTINUATION_MEMORY_HIT_FAIL = 0.5;  // 未満で FAIL
 const T_CONTINUATION_MEMORY_MIN_SAMPLE = 3;  // 未満は WATCH 扱い
+// CARD-MC-11: 憲法履行率の閾値（unwired も「実装済」としてカウント）。
+const T_CONSTITUTION_IMPL_RATIO_PASS = 0.8; // 以上で PASS
+const T_CONSTITUTION_IMPL_RATIO_FAIL = 0.5; // 未満で FAIL
 
 /** nextRecommendedCard は severity 優先でこの順に採用（古い thread カードが先頭に来るのを防ぐ）。 */
 const NEXT_CARD_PRIORITY: McVnextAcceptanceCheckV1["id"][] = [
@@ -95,6 +101,7 @@ const NEXT_CARD_PRIORITY: McVnextAcceptanceCheckV1["id"][] = [
   "thread_trace_healthy",
   "canonical_path",
   "sources_populated",
+  "constitution_compliance",
 ];
 
 const CARD_BY_CHECK: Record<McVnextAcceptanceCheckV1["id"], string> = {
@@ -107,6 +114,8 @@ const CARD_BY_CHECK: Record<McVnextAcceptanceCheckV1["id"], string> = {
   thread_trace_healthy: "CARD-MC-08B-THREAD-TRACE-REALDATA: trace を実データで再確認",
   sources_populated: "CARD-MC-08A-SOURCE-MAP-REALDATA-V2: canonical source seed を拡充",
   alerts_below_critical: "alerts: CRIT / HIGH を閉じてから再評価",
+  constitution_compliance:
+    "CARD-MC-11-AMATSU-KANAGI-CORE-VISUALIZATION-V1: 憲法コア（天津金木）の実装 / 配線を完結させる",
 };
 
 const LAYER_BY_CHECK: Record<McVnextAcceptanceCheckV1["id"], McVnextAcceptanceAffectedLayerV1> = {
@@ -118,6 +127,7 @@ const LAYER_BY_CHECK: Record<McVnextAcceptanceCheckV1["id"], McVnextAcceptanceAf
   thread_trace_healthy: "thread_trace",
   sources_populated: "source_registry",
   alerts_below_critical: "alerts_pipeline",
+  constitution_compliance: "constitution_core",
 };
 
 function layerOf(id: McVnextAcceptanceCheckV1["id"]): McVnextAcceptanceAffectedLayerV1 {
@@ -516,6 +526,73 @@ function checkContinuationMemoryHealthy(analyzer: McVnextAnalyzerSnapshotV1): Ch
   };
 }
 
+/**
+ * CARD-MC-11-AMATSU-KANAGI-CORE-VISUALIZATION-V1:
+ *   憲法条項 → 実装ファイル対応マップ（amatsuKanagiMapV1）で、
+ *   ファイル存在ベースの履行率が閾値を満たしているかを判定する。
+ *   unwired（実装済だが chat.ts から未呼出）は「実装済」としてカウント
+ *   する（配線は別カードで追い込む）。失敗しても既存 8 check は退行しない。
+ */
+function checkConstitutionCompliance(): CheckDraft {
+  let implemented = 0;
+  let unwired = 0;
+  let partial = 0;
+  let notImplemented = 0;
+  let total = 0;
+  let ratio = 0;
+  try {
+    const payload = buildAmatsuKanagiPayloadV1();
+    implemented = payload.summary.implemented_layers;
+    unwired = payload.summary.unwired_layers;
+    partial = payload.summary.partial_layers;
+    notImplemented = payload.summary.not_implemented_layers;
+    total = payload.summary.total_layers;
+    ratio = payload.summary.implementation_ratio;
+  } catch (e: any) {
+    return {
+      id: "constitution_compliance",
+      label: "constitution compliance",
+      status: "watch",
+      detail: `天津金木コアマップ取得失敗: ${String(e?.message ?? e ?? "unknown").slice(0, 120)}`,
+      next_card: CARD_BY_CHECK.constitution_compliance,
+    };
+  }
+  const detailBase = `憲法条項 ${implemented + unwired + partial}/${total} 実装（wired=${implemented} / unwired=${unwired} / partial=${partial} / not_implemented=${notImplemented}）`;
+  if (total === 0) {
+    return {
+      id: "constitution_compliance",
+      label: "constitution compliance",
+      status: "watch",
+      detail: "天津金木マップが空（AMATSU_KANAGI_MAP 未定義の疑い）",
+      next_card: CARD_BY_CHECK.constitution_compliance,
+    };
+  }
+  if (ratio < T_CONSTITUTION_IMPL_RATIO_FAIL) {
+    return {
+      id: "constitution_compliance",
+      label: "constitution compliance",
+      status: "fail",
+      detail: `${detailBase} · 履行率 ${(ratio * 100).toFixed(0)}% < ${(T_CONSTITUTION_IMPL_RATIO_FAIL * 100).toFixed(0)}%`,
+      next_card: CARD_BY_CHECK.constitution_compliance,
+    };
+  }
+  if (ratio < T_CONSTITUTION_IMPL_RATIO_PASS) {
+    return {
+      id: "constitution_compliance",
+      label: "constitution compliance",
+      status: "watch",
+      detail: `${detailBase} · 履行率 ${(ratio * 100).toFixed(0)}% < ${(T_CONSTITUTION_IMPL_RATIO_PASS * 100).toFixed(0)}%`,
+      next_card: CARD_BY_CHECK.constitution_compliance,
+    };
+  }
+  return {
+    id: "constitution_compliance",
+    label: "constitution compliance",
+    status: "pass",
+    detail: `${detailBase} · 履行率 ${(ratio * 100).toFixed(0)}% ≥ ${(T_CONSTITUTION_IMPL_RATIO_PASS * 100).toFixed(0)}%`,
+  };
+}
+
 function checkAlertsBelowCritical(alerts: McVnextAlertItemV1[]): CheckDraft {
   let crit = 0;
   let high = 0;
@@ -602,6 +679,7 @@ export function evaluateMcVnextAcceptanceV1(
     checkPersistHealthy(s, counters, liveProblematic),
     checkThreadTraceHealthy(threadCandidates),
     checkSourcesPopulated(registry),
+    checkConstitutionCompliance(),
     checkAlertsBelowCritical(alerts),
   ];
 

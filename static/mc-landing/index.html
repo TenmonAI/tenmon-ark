@@ -164,6 +164,17 @@
           <a class="more" href="/mc/vnext/history">→ ledger タイムライン</a>
         </div>
 
+        <!-- CARD-MC-11: 天津金木コア可視化 -->
+        <div class="card" style="margin-bottom:18px" id="kanagi-section">
+          <header>
+            <span class="title">天津金木コア — 憲法 × 実装</span>
+            <span class="tag" id="kanagi-tag">—</span>
+          </header>
+          <div class="body" id="kanagi-summary" style="margin-bottom:8px">—</div>
+          <div id="kanagi-list"></div>
+          <a class="more" href="/api/mc/vnext/constitution">→ constitution endpoint (raw JSON)</a>
+        </div>
+
         <div class="grid grid-links">
           <a class="nav-tile" id="nav-thread" href="/mc/vnext/">最新 thread →</a>
           <a class="nav-tile" href="/mc/vnext/quality">Quality →</a>
@@ -172,6 +183,7 @@
           <a class="nav-tile" href="/mc/vnext/repair">Repair →</a>
           <a class="nav-tile" href="/mc/vnext/history">History →</a>
           <a class="nav-tile" href="/mc/vnext/sources">Sources →</a>
+          <a class="nav-tile" href="/api/mc/vnext/constitution">Constitution →</a>
           <a class="nav-tile" href="/mc/classic/">MC-P5 (legacy) →</a>
         </div>
       </div>
@@ -373,6 +385,76 @@
 
         // Repair hub preview
         loadRepairHub();
+        // CARD-MC-11: 天津金木コア可視化
+        loadKanagiConstitution();
+      }
+
+      async function loadKanagiConstitution() {
+        const tag = document.getElementById("kanagi-tag");
+        const summary = document.getElementById("kanagi-summary");
+        const list = document.getElementById("kanagi-list");
+        try {
+          const r = await fetch("/api/mc/vnext/constitution", { credentials: "include" });
+          if (!r.ok) throw new Error("HTTP " + r.status);
+          const d = await r.json();
+          const s = d.summary || {};
+          const layers = Array.isArray(d.layers) ? d.layers : [];
+          const ratioPct = (v) => v == null ? "—" : (v * 100).toFixed(0) + "%";
+          tag.textContent = "履行率 " + ratioPct(s.implementation_ratio) + " · wired " + ratioPct(s.wired_ratio);
+          summary.innerHTML =
+            '<div>憲法条項 <strong>' + esc(String(s.total_layers ?? 0)) + '</strong> / wired <strong>' +
+              esc(String(s.implemented_layers ?? 0)) + '</strong> · unwired <strong>' +
+              esc(String(s.unwired_layers ?? 0)) + '</strong> · partial <strong>' +
+              esc(String(s.partial_layers ?? 0)) + '</strong> · not_impl <strong>' +
+              esc(String(s.not_implemented_layers ?? 0)) + '</strong></div>' +
+            '<div class="note" style="margin-top:4px">docs 候補: ' +
+              (Array.isArray(d.constitution_doc_candidates)
+                ? d.constitution_doc_candidates.filter(x => x.exists).length
+                : 0) +
+              ' / ' +
+              (Array.isArray(d.constitution_doc_candidates)
+                ? d.constitution_doc_candidates.length
+                : 0) + ' 存在</div>';
+          list.innerHTML = layers.map(function (L) {
+            const status = String(L.status_resolved || "").toLowerCase();
+            const col =
+              status === "implemented" ? "#6fa3c9"
+              : status === "implemented_but_unwired" ? "#e0c04d"
+              : status === "partial" ? "#f6a14c"
+              : "#ff6b6b";
+            const probes = Array.isArray(L.impl_probes) ? L.impl_probes : [];
+            const probeHtml = probes.map(function (p) {
+              const mark = p.exists ? "✓" : "✗";
+              const color = p.exists ? "#6fa3c9" : "#ff6b6b";
+              const sym = p.symbol ? ("::" + p.symbol) : "";
+              return '<div class="hint" style="margin-top:2px;color:' + color + '">' +
+                esc(mark) + ' ' + esc(p.ref || (p.path + sym)) + '</div>';
+            }).join("");
+            const gapHtml = L.gap
+              ? '<div class="hint" style="margin-top:4px;color:#e0c04d">gap: ' + esc(L.gap) + '</div>'
+              : '';
+            const verifyHtml = L.verify_hint
+              ? '<div class="hint" style="margin-top:4px"><span style="color:#9ad0ff">verify:</span> ' + esc(L.verify_hint) + '</div>'
+              : '';
+            return '<div class="alert" style="flex-direction:column;align-items:stretch;border-left:4px solid ' + col + '">' +
+              '<div style="display:flex;gap:8px;align-items:baseline">' +
+                '<span class="sev" style="background:' + col + ';color:#000">' + esc(String(L.status_resolved || "")) + '</span>' +
+                '<span style="font-size:13px;font-weight:600">' + esc(L.layer_label_ja || L.layer_id) + '</span>' +
+                '<span style="font-size:11px;color:#9ca3af;margin-left:auto">' + esc(L.constitution_ref || "") + '</span>' +
+              '</div>' +
+              probeHtml +
+              gapHtml +
+              verifyHtml +
+            '</div>';
+          }).join("");
+          if (layers.length === 0) {
+            list.innerHTML = '<div class="c-fail" style="font-size:12px">AMATSU_KANAGI_MAP が空です。</div>';
+          }
+        } catch (e) {
+          tag.textContent = "取得失敗";
+          summary.textContent = "constitution endpoint 取得失敗: " + (e && e.message ? e.message : String(e));
+          list.innerHTML = "";
+        }
       }
 
       async function loadRepairHub() {

@@ -31,6 +31,7 @@ import { runMcVnextAnalyzerV1 } from "../analyzer/mcVnextAnalyzerV1.js";
 import { isMcLedgerWritesEnabled } from "../ledger/mcLedger.js";
 import { buildClaudeSummaryPayloadV1 } from "../claude/claudeSummaryV1.js";
 import { buildHandoffPromptV1 } from "../claude/handoffPromptV1.js";
+import { buildAmatsuKanagiPayloadV1 } from "../constitution/amatsuKanagiMapV1.js";
 import { isMcClaudeNotionMirrorConfiguredV1, syncMcClaudeSummaryToNotionPageV1 } from "../notion/mcClaudeNotionMirrorV1.js";
 
 const mcVnextRouter = Router();
@@ -198,6 +199,16 @@ protectedVnext.get("/analyzer", (_req: Request, res: Response) => {
 
 protectedVnext.get("/graph", (_req: Request, res: Response) => {
   res.json(sanitize(buildVnextGraphPayload()));
+});
+
+/**
+ * CARD-MC-11-AMATSU-KANAGI-CORE-VISUALIZATION-V1:
+ *   天津金木コア（憲法→実装マップ）。GPT/Claude が /mc/ から直接
+ *   「構造裁定・参照・会話還元・言霊法・意味裁定・法昇格門」の
+ *   実装ファイル存在・wired/unwired 状態を読めるようにする。
+ */
+protectedVnext.get("/constitution", (_req: Request, res: Response) => {
+  res.json(sanitize(buildAmatsuKanagiPayloadV1()));
 });
 
 mcVnextRouter.use(protectedVnext);
