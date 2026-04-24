@@ -3,6 +3,9 @@
  * KHS_CORE_CONSTITUTION_v1.txt を起動時に読み込み、
  * chat.ts の systemPrompt に注入する憲法句を構築する。
  *
+ * CARD-MC-20-B-KOTODAMA-CONSTITUTION-V1: KOTODAMA_CONSTITUTION_V1.txt を併置し、
+ * `verifySeal()` 経由で起動時に読込ログ＋SHA256 封印検証のみ（KHS 句の構成は変更しない）。
+ *
  * 安全設計:
  *   - ファイルが無い場合はフォールバック（空文字列）
  *   - 起動時に1回だけ読み込み（キャッシュ）
@@ -16,6 +19,30 @@ const KHS_CORE_PATH =
   "/opt/tenmon-ark-repo/docs/ark/khs/KHS_CORE_CONSTITUTION_v1.txt";
 const KHS_CORE_SHA256_PATH =
   "/opt/tenmon-ark-repo/docs/ark/khs/KHS_CORE_CONSTITUTION_v1.sha256";
+
+const KOTODAMA_CONSTITUTION_V1_PATH =
+  "/opt/tenmon-ark-repo/docs/ark/khs/KOTODAMA_CONSTITUTION_V1.txt";
+const KOTODAMA_CONSTITUTION_V1_SHA256_PATH =
+  "/opt/tenmon-ark-repo/docs/ark/khs/KOTODAMA_CONSTITUTION_V1.sha256";
+
+/** CARD-MC-20-B-KOTODAMA-CONSTITUTION-V1: 言霊憲法レジストリ（KHS_CORE と共存・上書きしない） */
+export type ConstitutionDocumentRefV1 = {
+  id: string;
+  docPath: string;
+  seal: string;
+  authority: string;
+  required: boolean;
+};
+
+export const CONSTITUTION_DOCUMENT_REGISTRY_V1: readonly ConstitutionDocumentRefV1[] = [
+  {
+    id: "KOTODAMA_CONSTITUTION_V1",
+    docPath: KOTODAMA_CONSTITUTION_V1_PATH,
+    seal: "TENMON:2026-04-24",
+    authority: "天聞アーク 言霊系統 最上位正典",
+    required: true,
+  },
+] as const;
 
 // ── 型定義 ────────────────────────────────────────
 export interface CoreDefinition {
@@ -184,11 +211,47 @@ ${defsBlock}
 // ── SHA256 封印確認 ──────────────────────────────────
 let _sealVerified = false;
 let _sealStatus: "verified" | "mismatch" | "no_sha256" | "no_file" | "error" = "no_file";
+let _kotodamaConstitutionSealChecked = false;
+
+/** KOTODAMA_CONSTITUTION_V1 を読み込みログ＋SHA256 封印検証（起動時1回） */
+function verifyKotodamaConstitutionSealV1Once(): void {
+  if (_kotodamaConstitutionSealChecked) return;
+  _kotodamaConstitutionSealChecked = true;
+  if (!existsSync(KOTODAMA_CONSTITUTION_V1_PATH)) {
+    console.warn(`[CONSTITUTION] KOTODAMA_CONSTITUTION_V1 not found: ${KOTODAMA_CONSTITUTION_V1_PATH}`);
+    return;
+  }
+  try {
+    const buf = readFileSync(KOTODAMA_CONSTITUTION_V1_PATH);
+    console.log(`[CONSTITUTION] KOTODAMA_CONSTITUTION_V1 loaded (${buf.length} bytes)`);
+    if (!existsSync(KOTODAMA_CONSTITUTION_V1_SHA256_PATH)) {
+      console.warn(
+        `[CONSTITUTION_SEAL] ${KOTODAMA_CONSTITUTION_V1_SHA256_PATH} not found — KOTODAMA seal check skipped`,
+      );
+      return;
+    }
+    const actualHash = createHash("sha256").update(buf).digest("hex");
+    const sha256Line = readFileSync(KOTODAMA_CONSTITUTION_V1_SHA256_PATH, "utf-8").trim();
+    const expectedHash = sha256Line.split(/\s+/)[0].toLowerCase();
+    if (actualHash === expectedHash) {
+      console.log(
+        `[CONSTITUTION_SEAL] KOTODAMA_CONSTITUTION_V1 seal VERIFIED (${actualHash.slice(0, 16)}...)`,
+      );
+    } else {
+      console.error(
+        `[CONSTITUTION_SEAL] KOTODAMA_CONSTITUTION_V1 MISMATCH expected=${expectedHash.slice(0, 16)}... actual=${actualHash.slice(0, 16)}...`,
+      );
+    }
+  } catch (e: any) {
+    console.error(`[CONSTITUTION] KOTODAMA_CONSTITUTION_V1 read failed: ${e?.message}`);
+  }
+}
 
 /**
  * KHS_CORE_CONSTITUTION_v1.txt の SHA256 封印を検証する（起動時1回）
  */
 export function verifySeal(): { verified: boolean; status: string; expected?: string; actual?: string } {
+  verifyKotodamaConstitutionSealV1Once();
   if (_sealVerified) return { verified: _sealStatus === "verified", status: _sealStatus };
   _sealVerified = true;
 
