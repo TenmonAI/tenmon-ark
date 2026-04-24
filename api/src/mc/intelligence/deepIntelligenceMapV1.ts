@@ -10,7 +10,7 @@ import {
   buildIntelligenceFire7dTrendV1,
   type IntelligenceFire24hSummaryV1,
 } from "../fire/intelligenceFireTracker.js";
-import { auditKotodama50IndexV1 } from "./kotodama50MapV1.js";
+import { auditKotodama50IndexV1, buildKotodama50MapV1 } from "./kotodama50MapV1.js";
 import { buildKhsConstitutionObservabilityV1 } from "./khsConstitutionMapV1.js";
 import { kotodamaBridgeHealth } from "../../core/kotodamaBridgeRegistry.js";
 
@@ -392,21 +392,27 @@ export function buildDeepIntelligencePayloadV1(): Record<string, unknown> {
     ...audit50,
     wired_to_chat: isModulePathReferencedInChatTsV1("core/kotodamaOneSoundLawIndex.ts"),
   };
-  const kotodama_50_coverage_detail = {
-    total: Number(audit50.total ?? audit50.total_canonical ?? 50),
-    with_entry: audit50.with_entry,
-    with_water_fire: audit50.with_water_fire,
-    with_textual_grounding: audit50.with_textual_grounding,
-    with_source_page: audit50.with_source_page,
-    with_shape_position: audit50.with_shape_position,
-    with_modern_alias: audit50.with_modern_alias,
-    coverage_ratio: Number(audit50.coverage_ratio) || 0,
-    coverage_ratio_grounding: Number(audit50.coverage_ratio_grounding) || 0,
-    sounds: audit50.sounds,
-    per_sound: audit50.per_sound,
-    constitution_ref: audit50.constitution_ref,
-    notes: audit50.notes,
-  };
+  let kotodama_50_coverage_payload: Record<string, unknown>;
+  try {
+    const m = buildKotodama50MapV1();
+    fifty.coverage_ratio = m.coverage_ratio_entry;
+    kotodama_50_coverage_payload = {
+      total: m.total_canonical,
+      with_entry: m.with_entry,
+      with_water_fire: m.with_water_fire,
+      with_textual_grounding: m.with_textual_grounding,
+      with_source_page: m.with_source_page,
+      with_shape_position: m.with_shape_position,
+      with_modern_alias: m.with_modern_alias,
+      coverage_ratio: m.coverage_ratio_entry,
+      coverage_ratio_grounding: m.coverage_ratio_grounding,
+      sounds: m.sounds,
+      constitution_ref: m.constitution_ref,
+      notes: m.notes,
+    };
+  } catch (err) {
+    kotodama_50_coverage_payload = { total: 50, error: String(err) };
+  }
   const khsObs = buildKhsConstitutionObservabilityV1() as Record<string, unknown>;
   const fire = summarizeIntelligenceFire24hV1();
   const modulesRaw = buildObservedModuleRowsV1();
@@ -433,7 +439,7 @@ export function buildDeepIntelligencePayloadV1(): Record<string, unknown> {
   const fire_ratio_24h = fire.avg_fire_ratio;
   const fire7 = buildIntelligenceFire7dTrendV1(7);
   const fire_ratio_7d = fire7.avg_fire_ratio_window;
-  const kotodama_50_coverage = Number(fifty.coverage_ratio) || 0;
+  const kotodama_50_coverage_summary = Number(fifty.coverage_ratio) || 0;
   const khs_10_axes_wired_ratio = Number(khsObs.khs_10_axes_wired_ratio) || 0;
 
   const summary = {
@@ -443,7 +449,7 @@ export function buildDeepIntelligencePayloadV1(): Record<string, unknown> {
     prompt_inject_chars_avg: null as number | null,
     fire_ratio_24h,
     fire_ratio_7d,
-    kotodama_50_coverage,
+    kotodama_50_coverage: kotodama_50_coverage_summary,
     khs_10_axes_wired_ratio,
     db_total_rows,
     chat_ts_imports,
@@ -487,7 +493,7 @@ export function buildDeepIntelligencePayloadV1(): Record<string, unknown> {
     generated_at: new Date().toISOString(),
     summary,
     modules,
-    kotodama_50_coverage: kotodama_50_coverage_detail,
+    kotodama_50_coverage: kotodama_50_coverage_payload,
     fifty_sounds: fifty,
     khs_10_axes: khsObs,
     fire_24h: fire,

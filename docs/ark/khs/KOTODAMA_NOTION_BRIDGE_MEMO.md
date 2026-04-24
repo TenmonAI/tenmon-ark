@@ -63,3 +63,9 @@
 - 「46 で 100%」偽陽性の再発防止
 - MC-20-CONSTITUTION-ENFORCER-V1: 憲法違反監視機能
 - 後続: Phase B（TENMON 再裁定後）
+
+### 追補（カード改訂版）
+
+- `buildKotodama50MapV1`: `kotodama_meanings`・`EVIDENCE_UNITS_KHS_v1.jsonl`・列ラベル「未確定」に基づく `with_*` 6 種
+- 起動時 `[KOTODAMA_CONSTITUTION_V1_VIOLATION]` assert（50 音・ン除外・ヰヱ≥2）
+- `GOJUON_BASE` を **`export const`** + 拡張 `@deprecated` JSDoc
