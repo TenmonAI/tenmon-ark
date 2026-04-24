@@ -72,6 +72,8 @@ import { runKotodamaKatakamunaBridgeV1 } from "../core/kotodamaKatakamunaAmatsuB
 // CARD-MC-14-MEANING-WIRE-V1: meaning arbitration を shadow/context 接続（同期・LLM prompt 非改変）
 import { arbitrateTruthLayerV1 } from "../core/meaningArbitrationKernel.js";
 import { splitInputSemanticsV1 } from "../core/inputSemanticSplitter.js";
+// CARD-MC-15-LAW-PROMOTION-WIRE-V1: 法昇格門を shadow/context 接続（同期・LLM prompt 非改変）
+import { runTenmonLawPromotionGateV1 } from "../core/tenmonLawPromotionGateV1.js";
 import { loadKotodamaHisho, extractSoundsFromMessage, buildKotodamaHishoContext, buildKotodamaHishoOverview } from "../core/kotodamaHishoLoader.js";
 import { attachSatoriVerdict, checkIrohaGrounding } from "../core/satoriEnforcement.js";
 import { queryIrohaByUserText, buildIrohaInjection } from "../core/irohaKotodamaLoader.js";
@@ -932,6 +934,38 @@ const pid = process.pid;
     };
   } catch (err) {
     console.warn("[MC-14-MEANING-WIRE-V1] meaning arbitration failed", err);
+  }
+
+  // CARD-MC-15-LAW-PROMOTION-WIRE-V1:
+  //   法昇格門（tenmonLawPromotionGateV1）を shadow 接続し、
+  //   req.context.lawPromotionGate に decision / reason_codes / promotedLawIds
+  //   などを格納する。
+  //   - LLM プロンプト / return 構造には触れない
+  //   - await は使わない
+  //   - runTenmonLawPromotionGateV1 は `PromotionGateInputV1`（candidateType /
+  //     centerKey / evidence / routeReason / contradictionRisk）を受け取る
+  //     純同期関数で、未設定時は reason_codes:["CENTER_KEY_EMPTY"] の reject
+  //     を返す決定的挙動。本線ルートが確定する前段の shadow 観測として十分。
+  //   - 例外時も会話を落とさない（fail-open）。
+  try {
+    const __meaning = (req as any).context?.meaningArbitration as
+      | { supportingEvidence?: string[]; danshari?: boolean }
+      | null
+      | undefined;
+    const lawPromotionGate = runTenmonLawPromotionGateV1({
+      candidateType: "response",
+      routeReason: "",
+      evidence: Array.isArray(__meaning?.supportingEvidence)
+        ? __meaning.supportingEvidence
+        : [],
+      contradictionRisk: __meaning?.danshari ? 0.5 : 0.2,
+    });
+    (req as any).context = {
+      ...((req as any).context || {}),
+      lawPromotionGate,
+    };
+  } catch (err) {
+    console.warn("[MC-15-LAW-PROMOTION-WIRE-V1] law promotion gate failed", err);
   }
 
   // RESEED_ROUTER_CORE_V2: top-of-router hard stops (N1 greeting + LLM1 force + N2 kanagi 4-phase)
