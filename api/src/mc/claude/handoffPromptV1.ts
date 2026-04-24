@@ -24,6 +24,7 @@ import path from "node:path";
 import { getTenmonDataDir } from "../../db/index.js";
 import { buildClaudeSummaryPayloadV1 } from "./claudeSummaryV1.js";
 import { buildVnextHistoryPayload } from "../history/mcSystemHistoryV1.js";
+import { buildDeepIntelligencePayloadV1 } from "../intelligence/deepIntelligenceMapV1.js";
 
 export type HandoffAiV1 = "claude" | "gpt" | "cursor" | "generic";
 export type HandoffFormatV1 = "markdown" | "text" | "json";
@@ -94,12 +95,57 @@ function pickRecord(src: unknown, keys: string[]): Record<string, unknown> {
   return out;
 }
 
+function buildIntelligenceMapSectionMd(): string {
+  const intel = buildDeepIntelligencePayloadV1() as Record<string, unknown>;
+  const sum = (intel.summary ?? {}) as Record<string, unknown>;
+  const fifty = (intel.fifty_sounds ?? {}) as Record<string, unknown>;
+  const fire = (intel.fire_24h ?? {}) as Record<string, unknown>;
+  const det = (intel.detail ?? {}) as {
+    wired_modules?: Array<{ name: string; role: string }>;
+    stub_modules?: Array<{ name: string; gap?: string }>;
+    unwired_candidates?: Array<{ name: string; status: string; role?: string }>;
+    post_generation_judgement?: Array<{ name: string; role: string }>;
+  };
+  const wired = Array.isArray(det.wired_modules) ? det.wired_modules : [];
+  const stub = Array.isArray(det.stub_modules) ? det.stub_modules : [];
+  const unw = Array.isArray(det.unwired_candidates) ? det.unwired_candidates : [];
+  const post = Array.isArray(det.post_generation_judgement) ? det.post_generation_judgement : [];
+  const fr = sum.fire_ratio_24h != null ? Number(sum.fire_ratio_24h) : Number(fire.avg_fire_ratio) || 0;
+  const cov = sum.kotodama_50_coverage != null ? Number(sum.kotodama_50_coverage) : Number(fifty.coverage_ratio) || 0;
+  const khsR = sum.khs_10_axes_wired_ratio != null ? Number(sum.khs_10_axes_wired_ratio) : 0;
+  const lines = [
+    `## 深層知能マップ (MC-19)`,
+    `- **GEN prompt 注入（観測）**: ${sum.total_wired ?? "—"} modules · **shadow**: ${sum.total_shadow ?? "—"} · **dead/unwired 目安**: ${sum.total_dead_or_unwired ?? "—"}`,
+    `- **五十音 INDEX 覆面率**: ${(cov * 100).toFixed(0)}%（wired_to_chat: ${String(fifty.wired_to_chat ?? "—")}）`,
+    `- **KHS 10 軸 wired 率（宣言）**: ${(khsR * 100).toFixed(0)}%`,
+    `- **DB 知能**: ${intel.db_total_rows} rows / ${intel.db_tables} tables`,
+    `- **24h 発火（avg slot fill）**: ${(fr * 100).toFixed(0)}% · events=${sum.fire_events_24h ?? fire.events_in_window ?? "—"} · GET \`/api/mc/vnext/intelligence/fire\``,
+    `- 一覧 JSON: GET \`/api/mc/vnext/intelligence\`（Bearer / MC 認証）`,
+    ``,
+    `### 最大の眠れる／未配線（抜粋）`,
+    ...unw.slice(0, 4).map((m) => `- **${m.name}** — ${m.role}`),
+    unw.length > 4 ? `- … 他 ${unw.length - 4} 件` : "",
+    ``,
+    `### wired（抜粋）`,
+    ...wired.slice(0, 8).map((m) => `- **${m.name}** — ${m.role}`),
+    wired.length > 8 ? `- … 他 ${wired.length - 8} 件` : "",
+    ``,
+    `### stub`,
+    ...stub.map((m) => `- **${m.name}** — ${String(m.gap || "").slice(0, 120)}`),
+    ``,
+    `### 事後 judgement`,
+    ...post.map((m) => `- **${m.name}** — ${m.role}`),
+  ].filter((x) => x !== "");
+  return lines.join("\n");
+}
+
 function compactSummaryForHandoff(summary: Record<string, unknown>): Record<string, unknown> {
   const overview = (summary.overview_summary ?? {}) as Record<string, unknown>;
   const continuation = (overview.continuation_summary ?? {}) as Record<string, unknown>;
   const acc = (summary.acceptance ?? {}) as Record<string, unknown>;
   const rh = (summary.repair_hub ?? {}) as Record<string, unknown>;
   const ss = (summary.source_summary ?? {}) as Record<string, unknown>;
+  const intelFull = (summary.intelligence ?? {}) as Record<string, unknown>;
 
   const checksSlim = Array.isArray(acc.checks)
     ? (acc.checks as Record<string, unknown>[])
@@ -201,6 +247,25 @@ function compactSummaryForHandoff(summary: Record<string, unknown>): Record<stri
       graph_edge_count: ss.graph_edge_count ?? null,
       top_canonical: canonicalSlim,
     },
+    intelligence: pickRecord(intelFull, [
+      "wired_count",
+      "stub_count",
+      "unwired_candidate_count",
+      "post_generation_count",
+      "db_total_rows",
+      "db_tables",
+      "chat_ts_imports",
+      "fire_ratio_24h",
+      "fire_events_24h",
+      "kotodama_50_coverage",
+      "khs_10_axes_wired_ratio",
+      "endpoint",
+      "fire_endpoint",
+      "wired_names",
+      "stub_names",
+      "unwired_names",
+      "post_judgement_names",
+    ]),
     last_verified_at: summary.last_verified_at ?? null,
   };
   return compact;
@@ -366,6 +431,8 @@ function buildMarkdownV1(params: {
     "",
     `## Active alerts (上位 6)`,
     alerts,
+    "",
+    buildIntelligenceMapSectionMd(),
     "",
   ];
 

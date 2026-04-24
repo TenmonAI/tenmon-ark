@@ -33,6 +33,11 @@ import { buildClaudeSummaryPayloadV1 } from "../claude/claudeSummaryV1.js";
 import { buildHandoffPromptV1 } from "../claude/handoffPromptV1.js";
 import { buildAmatsuKanagiPayloadV1 } from "../constitution/amatsuKanagiMapV1.js";
 import { isMcClaudeNotionMirrorConfiguredV1, syncMcClaudeSummaryToNotionPageV1 } from "../notion/mcClaudeNotionMirrorV1.js";
+import {
+  getLastContextInjectionSnapshotV1,
+  isMcDebugInjectionEndpointEnabledV1,
+} from "../../core/contextInjectionProbe.js";
+import { mcIntelligenceObsRouter } from "./intelligenceRouter.js";
 
 const mcVnextRouter = Router();
 
@@ -209,6 +214,36 @@ protectedVnext.get("/graph", (_req: Request, res: Response) => {
  */
 protectedVnext.get("/constitution", (_req: Request, res: Response) => {
   res.json(sanitize(buildAmatsuKanagiPayloadV1()));
+});
+
+/**
+ * CARD-MC-18 + CARD-MC-19: 深層知能（宣言 × grep × 五十音 × 発火 jsonl）。
+ *   GET /intelligence  · GET /intelligence/fire
+ */
+protectedVnext.use("/intelligence", mcIntelligenceObsRouter);
+
+/**
+ * CARD-MC-16-V2: 直近の /api/chat が記録した __debug_injections のスナップショット。
+ * TENMON_MC_DEBUG_INJECTION_ENDPOINT=1 のときのみ有効（それ以外は 404）。
+ */
+protectedVnext.get("/debug/last-injection", (_req: Request, res: Response) => {
+  if (!isMcDebugInjectionEndpointEnabledV1()) {
+    res.status(404).json({ ok: false, error: "MC_DEBUG_INJECTION_ENDPOINT_DISABLED" });
+    return;
+  }
+  const snap = getLastContextInjectionSnapshotV1();
+  if (!snap.ok) {
+    res.json(sanitize({ ok: false, reason: snap.reason }));
+    return;
+  }
+  res.json(
+    sanitize({
+      ok: true,
+      captured_at: snap.captured_at,
+      threadId: snap.threadId,
+      injections: snap.injections,
+    }),
+  );
 });
 
 mcVnextRouter.use(protectedVnext);

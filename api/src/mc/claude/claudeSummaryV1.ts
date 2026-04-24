@@ -9,6 +9,7 @@ import { buildVnextAcceptancePayload, buildVnextOverviewPayload, buildVnextRepai
 import { buildVnextHistoryPayload } from "../history/mcSystemHistoryV1.js";
 import { partitionProblematicThreadsLiveArchive, readMcProblematicThreadsV1 } from "../ledger/mcLedgerRead.js";
 import { isMcClaudeNotionMirrorConfiguredV1, MC_CLAUDE_NOTION_PAGE_TITLE } from "../notion/mcClaudeNotionMirrorV1.js";
+import { buildDeepIntelligenceSummaryForClaudeV1 } from "../intelligence/deepIntelligenceMapV1.js";
 
 /** `/api/mc/vnext/claude-summary` の固定 top-level（schema 固定用） */
 export const MC_CLAUDE_SUMMARY_V1_TOP_KEYS = [
@@ -24,6 +25,7 @@ export const MC_CLAUDE_SUMMARY_V1_TOP_KEYS = [
   "active_alerts",
   "source_summary",
   "notion_mirror",
+  "intelligence",
   "last_verified_at",
 ] as const;
 
@@ -80,6 +82,29 @@ function defaultNotionMirror(): Record<string, unknown> {
   };
 }
 
+function defaultIntelligence(): Record<string, unknown> {
+  return {
+    wired_count: null,
+    stub_count: null,
+    unwired_candidate_count: null,
+    post_generation_count: null,
+    db_total_rows: null,
+    db_tables: null,
+    chat_ts_imports: null,
+    fire_ratio_24h: null,
+    fire_events_24h: null,
+    kotodama_50_coverage: null,
+    khs_10_axes_wired_ratio: null,
+    endpoint: "/api/mc/vnext/intelligence",
+    fire_endpoint: "/api/mc/vnext/intelligence/fire",
+    wired_names: [],
+    stub_names: [],
+    unwired_names: [],
+    post_judgement_names: [],
+    db_table_rows: [],
+  };
+}
+
 function mergeRecord(base: Record<string, unknown>, patch: unknown): Record<string, unknown> {
   const p = patch && typeof patch === "object" && !Array.isArray(patch) ? (patch as Record<string, unknown>) : {};
   return { ...base, ...p };
@@ -95,6 +120,7 @@ export function normalizeClaudeSummaryV1Shape(s: Record<string, unknown>): Recor
   const source_summary = mergeRecord(defaultSourceSummary(), s.source_summary);
   const notion_mirror = mergeRecord(defaultNotionMirror(), s.notion_mirror);
   notion_mirror.mirror_configured = isMcClaudeNotionMirrorConfiguredV1();
+  const intelligence = mergeRecord(defaultIntelligence(), s.intelligence);
 
   return {
     ok: s.ok === true,
@@ -109,6 +135,7 @@ export function normalizeClaudeSummaryV1Shape(s: Record<string, unknown>): Recor
     active_alerts: Array.isArray(s.active_alerts) ? s.active_alerts : [],
     source_summary,
     notion_mirror,
+    intelligence,
     last_verified_at: s.last_verified_at != null && String(s.last_verified_at) !== "" ? String(s.last_verified_at) : null,
   };
 }
@@ -204,6 +231,7 @@ export function buildClaudeSummaryPayloadV1(): Record<string, unknown> {
       env_page_id: "TENMON_NOTION_MC_CLAUDE_PAGE_ID",
       mirror_configured: isMcClaudeNotionMirrorConfiguredV1(),
     },
+    intelligence: buildDeepIntelligenceSummaryForClaudeV1(),
   };
 
   const sanitized = sanitize(raw) as Record<string, unknown>;

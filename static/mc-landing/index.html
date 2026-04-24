@@ -65,6 +65,24 @@
       .sev-CRIT { color: #ef4444; } .sev-HIGH { color: #f59e0b; }
       .sev-MED { color: #9ca3af; } .sev-LOW { color: #6b7280; }
       .hint { font-size: 11px; color: #6b7280; margin-top: 2px; }
+      .intel-cat { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; margin: 14px 0 6px; color: #9ca3af; }
+      .intel-item {
+        font-size: 12px; padding: 6px 10px; border-radius: 6px; margin: 4px 0;
+        border-left: 4px solid #6b7280; background: rgba(255,255,255,0.02);
+      }
+      .intel-wired { border-left-color: #22c55e; }
+      .intel-stub { border-left-color: #eab308; }
+      .intel-unwired { border-left-color: #ef4444; }
+      .intel-judge { border-left-color: #60a5fa; }
+      .bar-row { display: flex; align-items: center; gap: 10px; font-size: 11px; margin: 5px 0; }
+      .bar-track { flex: 1; height: 14px; background: #2d3040; border-radius: 4px; overflow: hidden; min-width: 40px; }
+      .bar-fill { height: 100%; background: linear-gradient(90deg, #6fa3c9, #c9a14a); border-radius: 4px; }
+      .hm-grid { display: flex; flex-wrap: wrap; gap: 4px; font-size: 11px; font-family: ui-monospace, monospace; }
+      .hm-on { padding: 2px 4px; border-radius: 3px; background: rgba(34,197,94,0.2); border: 1px solid rgba(34,197,94,0.45); color: #bbf7d0; }
+      .hm-off { padding: 2px 4px; border-radius: 3px; background: rgba(107,114,128,0.25); border: 1px solid #374151; color: #9ca3af; }
+      .khs-row { display: flex; justify-content: space-between; gap: 10px; font-size: 12px; padding: 4px 0; border-bottom: 1px solid #2d3040; }
+      .khs-w { border-left: 3px solid #22c55e; padding-left: 8px; }
+      .khs-n { border-left: 3px solid #6b7280; padding-left: 8px; opacity: 0.85; }
       .nav-tile {
         text-align: center; font-size: 12px; color: #c9a14a; padding: 10px 12px; border-radius: 8px;
         background: rgba(201,161,74,0.08); border: 1px solid rgba(201,161,74,0.35);
@@ -103,6 +121,12 @@
           <a class="btn accent" href="/mc/vnext/acceptance">acceptance 詳細 →</a>
         </div>
 
+        <div class="pill-row" style="margin-bottom:14px" id="mc-view-tabs">
+          <button type="button" class="btn primary" id="tab-view-main">Overview</button>
+          <button type="button" class="btn ghost" id="tab-view-intel">深層知能マップ</button>
+        </div>
+
+        <div id="panel-main">
         <div class="grid grid-4">
           <div class="card">
             <header><span class="title">Runtime</span><span class="tag" id="runtime-tag">—</span></header>
@@ -184,11 +208,31 @@
           <a class="nav-tile" href="/mc/vnext/history">History →</a>
           <a class="nav-tile" href="/mc/vnext/sources">Sources →</a>
           <a class="nav-tile" href="/api/mc/vnext/constitution">Constitution →</a>
+          <a class="nav-tile" href="/api/mc/vnext/intelligence">Intelligence JSON →</a>
           <a class="nav-tile" href="/mc/classic/">MC-P5 (legacy) →</a>
+        </div>
+        </div>
+
+        <div id="panel-intel" style="display:none">
+          <div class="card" style="margin-bottom:14px">
+            <header><span class="title">深層知能マップ</span><span class="tag" id="intel-tag">—</span></header>
+            <div class="body" id="intel-summary">loading…</div>
+            <div class="note" id="intel-import-note" style="margin-top:8px"></div>
+          </div>
+          <div class="card" style="margin-bottom:14px">
+            <header><span class="title">Modules</span><span class="tag">wired / stub / unwired / judgement</span></header>
+            <div id="intel-modules"></div>
+          </div>
+          <div class="card">
+            <header><span class="title">DB 知能（行数）</span><span class="tag" id="intel-db-tag">—</span></header>
+            <div id="intel-db-bars" style="margin-top:8px"></div>
+          </div>
+          <div id="intel-augment-root"></div>
         </div>
       </div>
     </main>
 
+    <script src="intelligence-panel.js"></script>
     <script>
       const REASON_LABEL = {
         truncation_suspect: "切断疑い",
@@ -218,6 +262,7 @@
           render(d);
           document.getElementById("loading").style.display = "none";
           document.getElementById("hub").style.display = "block";
+          setupViewTabs();
         } catch (e) {
           document.getElementById("loading").style.display = "none";
           const err = document.getElementById("err");
@@ -504,6 +549,101 @@
         } catch (e) {
           tag.textContent = "取得失敗";
           list.innerHTML = '<div class="c-fail" style="font-size:12px">repair-hub 取得失敗: ' + esc(e && e.message ? e.message : String(e)) + '</div>';
+        }
+      }
+
+      let intelLoaded = false;
+      function setupViewTabs() {
+        const main = document.getElementById("panel-main");
+        const intel = document.getElementById("panel-intel");
+        const tMain = document.getElementById("tab-view-main");
+        const tIntel = document.getElementById("tab-view-intel");
+        if (!main || !intel || !tMain || !tIntel) return;
+        tMain.onclick = function () {
+          main.style.display = "block";
+          intel.style.display = "none";
+          tMain.className = "btn primary";
+          tIntel.className = "btn ghost";
+        };
+        tIntel.onclick = function () {
+          main.style.display = "none";
+          intel.style.display = "block";
+          tMain.className = "btn ghost";
+          tIntel.className = "btn primary";
+          if (!intelLoaded) loadIntelligencePanel();
+        };
+      }
+
+      async function loadIntelligencePanel() {
+        const tag = document.getElementById("intel-tag");
+        const summary = document.getElementById("intel-summary");
+        const importNote = document.getElementById("intel-import-note");
+        const mod = document.getElementById("intel-modules");
+        const dbTag = document.getElementById("intel-db-tag");
+        const dbBars = document.getElementById("intel-db-bars");
+        try {
+          const r = await fetch("/api/mc/vnext/intelligence", { credentials: "include" });
+          if (!r.ok) throw new Error("HTTP " + r.status);
+          const d = await r.json();
+          intelLoaded = true;
+          tag.textContent =
+            "wired " + (d.wired_count ?? "—") + " · stub " + (d.stub_count ?? "—") +
+            " · unwired " + (d.unwired_candidate_count ?? "—");
+          summary.innerHTML =
+            '<div>事後 judgement <strong>' + esc(d.post_generation_count) + '</strong> 系（応答後・本文非同期）</div>' +
+            '<div class="note" style="margin-top:6px">DB 総行数 <strong>' + esc(String(d.db_total_rows)) +
+            '</strong> · テーブル <strong>' + esc(String(d.db_tables)) + '</strong></div>';
+          importNote.textContent = "api/src/routes/chat.ts の import 行数: " + (d.chat_ts_imports != null ? d.chat_ts_imports : "—");
+
+          const det = d.detail || {};
+          const wired = Array.isArray(det.wired_modules) ? det.wired_modules : [];
+          const stub = Array.isArray(det.stub_modules) ? det.stub_modules : [];
+          const unw = Array.isArray(det.unwired_candidates) ? det.unwired_candidates : [];
+          const judge = Array.isArray(det.post_generation_judgement) ? det.post_generation_judgement : [];
+
+          function itemRow(cls, title, sub) {
+            return '<div class="intel-item ' + cls + '"><strong>' + esc(title) + '</strong>' +
+              (sub ? '<div class="hint" style="margin-top:2px">' + esc(sub) + '</div>' : '') + '</div>';
+          }
+          let mh = '<div class="intel-cat">Wired（緑）</div>';
+          mh += wired.map(function (m) {
+            return itemRow("intel-wired", m.name, (m.role || "") + " · " + (m.path || ""));
+          }).join("");
+          mh += '<div class="intel-cat">Stub（黄）</div>';
+          mh += stub.map(function (m) {
+            return itemRow("intel-stub", m.name, m.gap || m.path || "");
+          }).join("");
+          mh += '<div class="intel-cat">Unwired 候補（赤）</div>';
+          mh += unw.map(function (m) {
+            return itemRow("intel-unwired", m.name, (m.status || "") + " — " + (m.role || "") + (m.gap ? " · " + m.gap : ""));
+          }).join("");
+          mh += '<div class="intel-cat">事後 judgement（青）</div>';
+          mh += judge.map(function (m) {
+            return itemRow("intel-judge", m.name, m.role || "");
+          }).join("");
+          mod.innerHTML = mh;
+
+          const dbRows = Array.isArray(det.db_intelligence) ? det.db_intelligence : [];
+          const maxR = dbRows.reduce(function (a, x) { return Math.max(a, Number(x.rows) || 0); }, 1);
+          dbTag.textContent = "max " + maxR + " rows / table";
+          dbBars.innerHTML = dbRows.map(function (row) {
+            const n = Number(row.rows) || 0;
+            const pct = Math.min(100, Math.round((n / maxR) * 100));
+            return '<div class="bar-row">' +
+              '<span style="min-width:150px">' + esc(row.table) + '</span>' +
+              '<div class="bar-track"><div class="bar-fill" style="width:' + pct + '%"></div></div>' +
+              '<span style="min-width:56px;text-align:right">' + esc(String(n)) + '</span>' +
+              '<span class="c-mute" style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' +
+                esc(row.role || "") + '</span></div>';
+          }).join("") || '<div class="c-sub">db_intelligence なし</div>';
+          if (typeof window.__renderMcIntelligenceAugment === "function") {
+            window.__renderMcIntelligenceAugment(d);
+          }
+        } catch (e) {
+          if (tag) tag.textContent = "取得失敗";
+          if (summary) summary.textContent = "intelligence 取得失敗: " + (e && e.message ? e.message : String(e));
+          if (mod) mod.innerHTML = "";
+          if (dbBars) dbBars.innerHTML = "";
         }
       }
 

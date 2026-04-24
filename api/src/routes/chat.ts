@@ -50,6 +50,7 @@ import {
   tryAppendMcRouteLedgerV1,
   tryAppendMcSourceMapLedgerV1,
 } from "../mc/ledger/mcLedger.js";
+import { appendIntelligenceFireEventV1 } from "../mc/fire/intelligenceFireTracker.js";
 import { listRules } from "../training/storage.js";
 import { buildTenmonVerdictEngineV1 } from "../core/tenmonVerdictEngineV1.js";
 import { upsertConversationDistillMemoryV1, buildMemoryProjectionPack, logMemoryProjection } from "../core/memoryProjection.js";
@@ -67,6 +68,7 @@ import {
 import { buildKotodamaClause } from "../kotodama/kotodamaConnector.js";
 import { buildConstitutionClause, buildSelfIdentityClause, verifySeal } from "../core/constitutionLoader.js";
 import { detect10TruthAxes, buildAxisClause, ensureTruthAxesTable } from "../core/truthAxisEngine.js";
+import { buildKotodamaOneSoundLawSystemClauseV1 } from "../core/kotodamaOneSoundLawIndex.js";
 // CARD-MC-13-KOTODAMA-WIRE-V1: 最小 diff 配線（同期・LLM prompt 非改変・return 非改変）
 import { runKotodamaKatakamunaBridgeV1 } from "../core/kotodamaKatakamunaAmatsuBridgeV1.js";
 // CARD-MC-14-MEANING-WIRE-V1: meaning arbitration を shadow/context 接続（同期・LLM prompt 非改変）
@@ -74,10 +76,19 @@ import { arbitrateTruthLayerV1 } from "../core/meaningArbitrationKernel.js";
 import { splitInputSemanticsV1 } from "../core/inputSemanticSplitter.js";
 // CARD-MC-15-LAW-PROMOTION-WIRE-V1: 法昇格門を shadow/context 接続（同期・LLM prompt 非改変）
 import { runTenmonLawPromotionGateV1 } from "../core/tenmonLawPromotionGateV1.js";
+import {
+  resetContextInjectionProbeForRequestV1,
+  recordContextInjectionProbeV1,
+  buildInjectionPreviewV1,
+} from "../core/contextInjectionProbe.js";
 import { loadKotodamaHisho, extractSoundsFromMessage, buildKotodamaHishoContext, buildKotodamaHishoOverview } from "../core/kotodamaHishoLoader.js";
 import { attachSatoriVerdict, checkIrohaGrounding } from "../core/satoriEnforcement.js";
 import { queryIrohaByUserText, buildIrohaInjection } from "../core/irohaKotodamaLoader.js";
-import { extractKeyKotodamaFromText, buildKotodamaGentenInjection } from "../core/kotodamaGentenLoader.js";
+import {
+  extractKeyKotodamaFromText,
+  buildKotodamaGentenInjection,
+  type KotodamaSound,
+} from "../core/kotodamaGentenLoader.js";
 import { selectKanagiPhaseForIntent, buildAmaterasuAxisInjection } from "../data/amaterasuAxisMap.js";
 import { buildUnifiedSoundInjection } from "../core/unifiedSoundLoader.js";
 import { transformResponseForOutput } from "../core/tenmonFormatEnforcer.js";
@@ -1946,14 +1957,18 @@ E. Current Facts
 let outText = "";
       let outProv = "llm";
 
+      // CARD-MC-16-V2: prompt 注入メタの観測（response / system 本文には出さない）
+      resetContextInjectionProbeForRequestV1(req);
+
       // KOTODAMA_HISHO_INJECT_V1: ユーザーメッセージから音を抽出し、言霊秘書の関連段落をGEN_SYSTEMに注入
       let __kotodamaHishoClause = "";
+      let __hishoSoundsProbe: string[] = [];
       try {
-        const __hishoSounds = extractSoundsFromMessage(t0);
-        if (__hishoSounds.length > 0) {
-          __kotodamaHishoClause = buildKotodamaHishoContext(__hishoSounds, 2000);
+        __hishoSoundsProbe = extractSoundsFromMessage(t0);
+        if (__hishoSoundsProbe.length > 0) {
+          __kotodamaHishoClause = buildKotodamaHishoContext(__hishoSoundsProbe, 2000);
           if (__kotodamaHishoClause) {
-            console.log(`[KOTODAMA_HISHO] injected ${__hishoSounds.length} sounds, clause=${__kotodamaHishoClause.length} chars`);
+            console.log(`[KOTODAMA_HISHO] injected ${__hishoSoundsProbe.length} sounds, clause=${__kotodamaHishoClause.length} chars`);
           }
         }
         // 概要は常時注入（音が検出されなくても基本知識を提供）
@@ -1963,11 +1978,20 @@ let outText = "";
       } catch (e: any) {
         console.warn(`[KOTODAMA_HISHO] inject failed: ${e?.message}`);
       }
+      try {
+        recordContextInjectionProbeV1(req, "inject_kotodama_hisho", {
+          sounds: __hishoSoundsProbe.slice(0, 48),
+          clause_len: __kotodamaHishoClause.length,
+          preview: buildInjectionPreviewV1(__kotodamaHishoClause),
+        });
+      } catch {}
 
       // V2.0_SOUL_ROOT_BIND_1: いろは言霊解 (irohaKotodamaLoader) → 原典段落注入
       let __irohaClause = "";
+      let __irohaMatchedUnits = 0;
       try {
         const __irohaHits = queryIrohaByUserText(t0);
+        __irohaMatchedUnits = __irohaHits.length;
         if (__irohaHits.length > 0) {
           __irohaClause = buildIrohaInjection(__irohaHits, 1500);
           console.log(`[SOUL_ROOT:IROHA] injected ${__irohaHits.length} paragraphs, clause=${__irohaClause.length} chars`);
@@ -1975,23 +1999,38 @@ let outText = "";
       } catch (e: any) {
         console.warn(`[SOUL_ROOT:IROHA] inject failed: ${e?.message}`);
       }
+      try {
+        recordContextInjectionProbeV1(req, "inject_iroha", {
+          matched_units: __irohaMatchedUnits,
+          clause_len: __irohaClause.length,
+        });
+      } catch {}
 
       // V2.0_SOUL_ROOT_BIND_2: 五十連法則 (kotodamaGentenLoader) → 音義法則注入
       let __gentenClause = "";
+      let __gentenKeysProbe: KotodamaSound[] = [];
       try {
-        const __gentenKeys = extractKeyKotodamaFromText(t0);
-        if (__gentenKeys.length > 0) {
-          __gentenClause = buildKotodamaGentenInjection(__gentenKeys, 1000);
-          console.log(`[SOUL_ROOT:GENTEN] injected ${__gentenKeys.length} sound keys, clause=${__gentenClause.length} chars`);
+        __gentenKeysProbe = extractKeyKotodamaFromText(t0);
+        if (__gentenKeysProbe.length > 0) {
+          __gentenClause = buildKotodamaGentenInjection(__gentenKeysProbe, 1000);
+          console.log(`[SOUL_ROOT:GENTEN] injected ${__gentenKeysProbe.length} sound keys, clause=${__gentenClause.length} chars`);
         }
       } catch (e: any) {
         console.warn(`[SOUL_ROOT:GENTEN] inject failed: ${e?.message}`);
       }
+      try {
+        recordContextInjectionProbeV1(req, "inject_kotodama_genten", {
+          keys: __gentenKeysProbe.slice(0, 48).map((s) => s.char),
+          clause_len: __gentenClause.length,
+        });
+      } catch {}
 
       // V2.0_SOUL_ROOT_BIND_3: 天照軸マップ (amaterasuAxisMap) → 思想軸注入
       let __amaterasuClause = "";
+      let __kanagiPhaseProbe = "";
       try {
         const __kanagiPhase = selectKanagiPhaseForIntent(t0);
+        __kanagiPhaseProbe = String(__kanagiPhase || "");
         __amaterasuClause = buildAmaterasuAxisInjection(__kanagiPhase);
         if (__amaterasuClause) {
           console.log(`[SOUL_ROOT:AMATERASU] phase=${__kanagiPhase}, clause=${__amaterasuClause.length} chars`);
@@ -1999,6 +2038,12 @@ let outText = "";
       } catch (e: any) {
         console.warn(`[SOUL_ROOT:AMATERASU] inject failed: ${e?.message}`);
       }
+      try {
+        recordContextInjectionProbeV1(req, "inject_amaterasu_axis", {
+          phase: __kanagiPhaseProbe || "unknown",
+          clause_len: __amaterasuClause.length,
+        });
+      } catch {}
 
       // V2.0_SOUL_ROOT_BIND_4: 統合音ローダー (unifiedSoundLoader) → 3ソース統合注入
       let __unifiedSoundClause = "";
@@ -2009,6 +2054,68 @@ let outText = "";
         }
       } catch (e: any) {
         console.warn(`[SOUL_ROOT:UNIFIED_SOUND] inject failed: ${e?.message}`);
+      }
+      try {
+        recordContextInjectionProbeV1(req, "inject_unified_sound", {
+          clause_len: __unifiedSoundClause.length,
+        });
+      } catch {}
+
+      // CARD-MC-19: 一音法則索引（80音）→ GEN_SYSTEM 本線へ注入（shadow ではなく clause）
+      let __kotodamaOneSoundLawClause = "";
+      try {
+        __kotodamaOneSoundLawClause = buildKotodamaOneSoundLawSystemClauseV1(t0, {
+          maxChars: 2400,
+          maxSounds: 6,
+        });
+        if (__kotodamaOneSoundLawClause) {
+          console.log(`[ONE_SOUND_LAW] GEN_SYSTEM clause_len=${__kotodamaOneSoundLawClause.length}`);
+        }
+      } catch (e: any) {
+        console.warn(`[ONE_SOUND_LAW] inject failed: ${e?.message}`);
+      }
+      try {
+        recordContextInjectionProbeV1(req, "inject_kotodama_one_sound_law", {
+          clause_len: __kotodamaOneSoundLawClause.length,
+          preview: buildInjectionPreviewV1(__kotodamaOneSoundLawClause),
+          prompt_injected_main_natural: __kotodamaOneSoundLawClause.length > 0,
+        });
+      } catch {}
+
+      // truth_axis / kotodama connector: connector は CARRY 専用の薄い節の観測用。本線 NATURAL は上記 one_sound を使用。
+      try {
+        const __axisRows = detect10TruthAxes(t0);
+        const __axisClauseProbe = buildAxisClause(__axisRows);
+        recordContextInjectionProbeV1(req, "inject_truth_axis", {
+          axes: __axisRows.map((r) => ({ axis: r.axis, confidence: r.confidence })),
+          clause_len: __axisClauseProbe.length,
+          prompt_injected: false,
+        });
+      } catch (e: any) {
+        try {
+          recordContextInjectionProbeV1(req, "inject_truth_axis", {
+            axes: [],
+            clause_len: 0,
+            error: String(e?.message || e),
+            prompt_injected: false,
+          });
+        } catch {}
+      }
+      try {
+        const __kotodamaConnProbe = buildKotodamaClause(t0, "");
+        recordContextInjectionProbeV1(req, "inject_kotodama_connector", {
+          clause_len: __kotodamaConnProbe.length,
+          preview: buildInjectionPreviewV1(__kotodamaConnProbe),
+          prompt_injected_main_natural: false,
+        });
+      } catch (e: any) {
+        try {
+          recordContextInjectionProbeV1(req, "inject_kotodama_connector", {
+            clause_len: 0,
+            error: String(e?.message || e),
+            prompt_injected_main_natural: false,
+          });
+        } catch {}
       }
 
       // SUKUYOU_CARRY_GATE_V2: 宿曜seed保持中のfollow-upは強制的にDEEP_CHATルートに入れる
@@ -2091,12 +2198,19 @@ ${__carrySeedSummary}${__carryLifeAlgo}
           previousDepth: __carryTurn,
           userResponse: t0,
         });
-        // KOTODAMA_RESURRECTION_V1: reconnect buildKotodamaClause (was orphan).
-        // Safe by design: returns empty string if first char not in one-sound index.
-        const __kotodamaClauseCarry = buildKotodamaClause(
-          t0,
-          String(__sukuyouSeedForCarry.honmeiShuku || "")
-        );
+        // CARD-MC-19: CARRY でも一音法則索引を system に注入（本命宿を shukuHint で接続）
+        const __kotodamaClauseCarry = buildKotodamaOneSoundLawSystemClauseV1(t0, {
+          maxChars: 2600,
+          maxSounds: 6,
+          shukuHint: String(__sukuyouSeedForCarry.honmeiShuku || ""),
+        });
+        try {
+          recordContextInjectionProbeV1(req, "inject_kotodama_one_sound_law", {
+            clause_len: __kotodamaClauseCarry.length,
+            preview: buildInjectionPreviewV1(__kotodamaClauseCarry),
+            prompt_injected_carry: true,
+          });
+        } catch {}
         __sukuyouSeedForCarry.turnCount = __carryTurn + 1;
         __sukuyouSeedByThread.set(String(threadId || ""), __sukuyouSeedForCarry);
 
@@ -2238,7 +2352,7 @@ ${__carrySeedSummary}${__carryLifeAlgo}
         try {
           const __sukuyouClauseOracle = __buildSukuyouContinuityClause(threadId);
           // V2.0: 御神託ルートにも魂の根幹を注入（いろは言霊解は御神託第6章に直結）
-          const __oracleSoulRoot = [__irohaClause, __amaterasuClause].filter(Boolean).join("\n");
+          const __oracleSoulRoot = [__irohaClause, __amaterasuClause, __kotodamaOneSoundLawClause].filter(Boolean).join("\n");
           const __oracleSystem = GEN_SYSTEM + __sukuyouClauseOracle + (__oracleSoulRoot ? "\n" + __oracleSoulRoot : "") + `\n\n【御神託レポート提示モード（最重要指示）】\nあなたはTENMON-ARK御神託パイプラインが算出した御神託レポートを、美しく構造化してユーザーに提示する役割を担う。\n\n【絶対遵守事項】\n1. 以下に添付された「御神託レポート（アルゴリズム算出）」の内容を「そのまま」ユーザーに提示せよ。自分の知識で宿を判定し直すな。\n2. 命宿の名前・属性・数値はアルゴリズム算出結果のものをそのまま使え。絶対に変更するな。\n3. 8章構成（総合神意サマリー→宿曜解析→人生アルゴリズム→災い分類→天津金木反転→いろは言霊解→実践処方→御神託）をすべて出力せよ。省略するな。\n4. 各章の見出しは「第○章 ○○○○」の形式で明示せよ。\n5. 『宿曜経占真伝』『密教占星法』の原典用語を使え。\n6. 「一般的に」「説があります」「人それぞれ」は絶対禁止。原典に基づき断定せよ。\n7. 御神託の最後に「今すぐの一手」を必ず示せ。\n8. レポート全文を出力した後、最後に総括を1-2文で添えよ。\n9. 箇条書きの「・」は使用してよい（実践処方の項目等）。ただし番号付きリストは使わない。
 10. 全8章を省略なく出力せよ。出力は3000字以上を確保し、レポートの情報を削らないこと。
 11. 途中で打ち切らない。最終章「最終御神託」まで必ず出力を完了せよ。` + __sukuyouContextClause;
@@ -2412,14 +2526,27 @@ ${__carrySeedSummary}${__carryLifeAlgo}
             : __userIntent;
           const __deepeningClause = buildDeepeningClauseFromHistory(__chatHistory);
           const __intentClause = `\n\n【応答長目標】${__userIntent.targetTokens} tokens\n${__deepeningClause}`;
-          // V2.0_SOUL_ROOT_BIND: 5本の魂の根幹を GEN_SYSTEM に統合
+          // V2.0_SOUL_ROOT_BIND: 魂の根幹 + CARD-MC-19 一音法則索引を GEN_SYSTEM に統合
           const __soulRootClauses = [
-            __kotodamaHishoClause,  // 言霊秘書
-            __irohaClause,          // いろは言霊解
-            __gentenClause,         // 五十連法則
-            __amaterasuClause,      // 天照軸マップ
-            __unifiedSoundClause,   // 統合音ローダー
+            __kotodamaHishoClause,       // 言霊秘書
+            __irohaClause,               // いろは言霊解
+            __gentenClause,              // 五十連法則
+            __amaterasuClause,           // 天照軸マップ
+            __unifiedSoundClause,        // 統合音ローダー
+            __kotodamaOneSoundLawClause, // 80 音一音法則索引
           ].filter(Boolean).join("\n");
+          try {
+            appendIntelligenceFireEventV1({
+              hisho: Boolean(__kotodamaHishoClause),
+              iroha: Boolean(__irohaClause),
+              genten: Boolean(__gentenClause),
+              amaterasu: Boolean(__amaterasuClause),
+              unified: Boolean(__unifiedSoundClause),
+              one_sound: Boolean(__kotodamaOneSoundLawClause),
+            });
+          } catch {
+            /* MC-19 観測のみ */
+          }
           const __genSystemWithEvidence = GEN_SYSTEM + __sukuyouClauseGen + __sukuyouContextClause + (__soulRootClauses ? "\n" + __soulRootClauses : "") + __intentClause;
           // ULTRA-11: モデル選択 + コスト最適化（継続入力時は selector 用 intent を follow_up 相当へ）
           const __modelSel = selectModel({

@@ -96,8 +96,8 @@ export const AMATSU_KANAGI_MAP: AmatsuKanagiLayerSpecV1[] = [
       "api/src/core/kotodamaOneSoundLawIndex.ts",
       "api/src/core/kotodamaKatakamunaAmatsuBridgeV1.ts",
     ],
-    status_declared: "implemented_but_unwired",
-    gap: "chat.ts から kotodama 層への呼出が未配線",
+    status_declared: "partial",
+    gap: "CARD-MC-19: 一音法則索引は GEN_SYSTEM に配線済。katakamuna bridge は stub のまま。",
   },
   {
     layer_id: "meaning_arbitration",

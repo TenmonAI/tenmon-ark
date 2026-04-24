@@ -24,6 +24,7 @@ import {
 } from "../ledger/mcLedgerRead.js";
 import { buildMcSourceRegistryV1 } from "../mcVnextSourceMapV1.js";
 import { buildAmatsuKanagiPayloadV1 } from "../constitution/amatsuKanagiMapV1.js";
+import { summarizeIntelligenceFire24hV1, SOUL_ROOT_FIRE_SLOTS } from "../fire/intelligenceFireTracker.js";
 
 export type McVnextAcceptanceStatusV1 = "PASS" | "FAIL" | "WATCH";
 export type McVnextAcceptanceCheckStatusV1 = "pass" | "watch" | "fail";
@@ -48,7 +49,8 @@ export type McVnextAcceptanceCheckV1 = {
     | "sources_populated"
     | "alerts_below_critical"
     | "continuation_memory_healthy"
-    | "constitution_compliance";
+    | "constitution_compliance"
+    | "intelligence_fire_healthy";
   label: string;
   status: McVnextAcceptanceCheckStatusV1;
   detail: string;
@@ -102,6 +104,7 @@ const NEXT_CARD_PRIORITY: McVnextAcceptanceCheckV1["id"][] = [
   "canonical_path",
   "sources_populated",
   "constitution_compliance",
+  "intelligence_fire_healthy",
 ];
 
 const CARD_BY_CHECK: Record<McVnextAcceptanceCheckV1["id"], string> = {
@@ -116,6 +119,8 @@ const CARD_BY_CHECK: Record<McVnextAcceptanceCheckV1["id"], string> = {
   alerts_below_critical: "alerts: CRIT / HIGH を閉じてから再評価",
   constitution_compliance:
     "CARD-MC-11-AMATSU-KANAGI-CORE-VISUALIZATION-V1: 憲法コア（天津金木）の実装 / 配線を完結させる",
+  intelligence_fire_healthy:
+    "CARD-MC-19-DEEP-INTELLIGENCE-OBSERVABILITY-V1: soul-root 発火 jsonl の蓄積と閾値を見直す",
 };
 
 const LAYER_BY_CHECK: Record<McVnextAcceptanceCheckV1["id"], McVnextAcceptanceAffectedLayerV1> = {
@@ -128,6 +133,7 @@ const LAYER_BY_CHECK: Record<McVnextAcceptanceCheckV1["id"], McVnextAcceptanceAf
   sources_populated: "source_registry",
   alerts_below_critical: "alerts_pipeline",
   constitution_compliance: "constitution_core",
+  intelligence_fire_healthy: "none",
 };
 
 function layerOf(id: McVnextAcceptanceCheckV1["id"]): McVnextAcceptanceAffectedLayerV1 {
@@ -533,6 +539,47 @@ function checkContinuationMemoryHealthy(analyzer: McVnextAnalyzerSnapshotV1): Ch
  *   unwired（実装済だが chat.ts から未呼出）は「実装済」としてカウント
  *   する（配線は別カードで追い込む）。失敗しても既存 8 check は退行しない。
  */
+/**
+ * CARD-MC-19: GEN soul-root 6 スロットの 24h 発火（jsonl）。サンプル不足時は FAIL にしない。
+ */
+function checkIntelligenceFireHealthy(): CheckDraft {
+  const fire = summarizeIntelligenceFire24hV1();
+  const n = fire.events_in_window;
+  const slotRatio = SOUL_ROOT_FIRE_SLOTS > 0 ? fire.slots_ever_fired / SOUL_ROOT_FIRE_SLOTS : 0;
+  if (n < 3) {
+    return {
+      id: "intelligence_fire_healthy",
+      label: "intelligence fire healthy",
+      status: "pass",
+      detail: `24h イベント n=${n} < 3 — 寛容 PASS（slots_ever=${fire.slots_ever_fired}/${SOUL_ROOT_FIRE_SLOTS} avg_slot_fill=${(fire.avg_fire_ratio * 100).toFixed(0)}%）`,
+    };
+  }
+  if (slotRatio >= 0.7) {
+    return {
+      id: "intelligence_fire_healthy",
+      label: "intelligence fire healthy",
+      status: "pass",
+      detail: `soul-root スロット発火 ${fire.slots_ever_fired}/${SOUL_ROOT_FIRE_SLOTS}（≥70%）· n=${n}`,
+    };
+  }
+  if (slotRatio >= 0.5) {
+    return {
+      id: "intelligence_fire_healthy",
+      label: "intelligence fire healthy",
+      status: "watch",
+      detail: `スロット発火率 ${(slotRatio * 100).toFixed(0)}%（50–70%）· n=${n}`,
+      next_card: CARD_BY_CHECK.intelligence_fire_healthy,
+    };
+  }
+  return {
+    id: "intelligence_fire_healthy",
+    label: "intelligence fire healthy",
+    status: "fail",
+    detail: `スロット発火率 ${(slotRatio * 100).toFixed(0)}%（<50%）· n=${n}`,
+    next_card: CARD_BY_CHECK.intelligence_fire_healthy,
+  };
+}
+
 function checkConstitutionCompliance(): CheckDraft {
   let implemented = 0;
   let unwired = 0;
@@ -680,6 +727,7 @@ export function evaluateMcVnextAcceptanceV1(
     checkThreadTraceHealthy(threadCandidates),
     checkSourcesPopulated(registry),
     checkConstitutionCompliance(),
+    checkIntelligenceFireHealthy(),
     checkAlertsBelowCritical(alerts),
   ];
 

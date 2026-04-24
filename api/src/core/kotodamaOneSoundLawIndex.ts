@@ -1,7 +1,6 @@
 /**
- * @deprecated DEAD_FILE: このモジュールはどこからもimportされていない孤立ファイルです。
- * 将来の言霊エンジン統合時に接続するか、廃棄を検討してください。
- * 監査日: 2026-04-13
+ * K1_KOTODAMA_ONE_SOUND_LAW_INDEX_V1
+ * CARD-MC-19: GEN_SYSTEM 向け一音法則節の構築は `buildKotodamaOneSoundLawSystemClauseV1`。
  *
  * K1_KOTODAMA_ONE_SOUND_LAW_INDEX_V1
  * K2_NOTION_BRIDGE_V1: Notion を索引・補助軸として追加。本文根拠は VPS 優先。raw Notion id / KHSL は前面に出さない。
@@ -344,4 +343,85 @@ export function getKotodamaOneSoundNotionMeta(entry: KotodamaOneSoundEntry): { n
     ...(entry.notionHint ? { notionHint: entry.notionHint } : {}),
     ...(entry.notionTopics && entry.notionTopics.length > 0 ? { notionTopics: entry.notionTopics } : {}),
   };
+}
+
+/** ユーザー文から索引に載るカタカナ一音を先頭から走査して収集（重複なし）。 */
+function collectIndexedKatakanaSoundsFromText(text: string, maxSounds: number): string[] {
+  const t = String(text ?? "");
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (let i = 0; i < t.length && out.length < maxSounds; i++) {
+    const ch = t[i];
+    if (!ch) continue;
+    if (/[\s　\n\r\t\[\]【】「」（）()｜|]/.test(ch)) continue;
+    // 「とは」「では」等で と・は が ト・ハ に落ちるノイズを抑える（単独助詞のみスキップ）
+    if (ch === "と" || ch === "は") continue;
+    let k = ch;
+    if (/[\u3041-\u3096]/.test(ch)) {
+      k = String.fromCharCode(ch.charCodeAt(0) + 0x60);
+    }
+    if (!/[\u30A1-\u30F6]/.test(k)) continue;
+    const ent = getKotodamaOneSoundEntry(k);
+    if (!ent) continue;
+    const key = ent.sound;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(key);
+  }
+  return out;
+}
+
+export type KotodamaOneSoundLawSystemClauseOptionsV1 = {
+  maxChars?: number;
+  maxSounds?: number;
+  /** 宿曜 CARRY 等: 本命宿名を添えて水火の補助線として接続 */
+  shukuHint?: string;
+};
+
+/**
+ * CARD-MC-19: 80 音一音法則索引から GEN_SYSTEM 用の補助節を組む（断定しない・空安全）。
+ * kotodamaHisho / いろは注入と同様、system にのみ載せる。
+ */
+export function buildKotodamaOneSoundLawSystemClauseV1(
+  userMessage: string,
+  opts?: KotodamaOneSoundLawSystemClauseOptionsV1,
+): string {
+  const maxChars = Math.min(4500, Math.max(320, opts?.maxChars ?? 2400));
+  const maxSounds = Math.min(12, Math.max(1, opts?.maxSounds ?? 6));
+  const shuku = String(opts?.shukuHint ?? "").trim();
+  const keys = collectIndexedKatakanaSoundsFromText(userMessage, maxSounds);
+  if (keys.length === 0 && !shuku) return "";
+
+  const head: string[] = [
+    "【一音法則索引（80音法則・補助参照）】",
+    "以下は天聞一音索引に基づく補助参照である。応答の視座を整える材料として用い、ユーザーへの断定や内部識別子の露出は避ける。",
+  ];
+  let body = head.join("\n");
+  for (const sound of keys) {
+    const e = getKotodamaOneSoundEntry(sound);
+    if (!e) continue;
+    const pm = String(e.preferredMeaning || "").replace(/\s+/g, " ").trim();
+    const pmShort = pm.length > 200 ? pm.slice(0, 200) + "…" : pm;
+    const wf = String(e.waterFireHint || "").replace(/\s+/g, " ").trim();
+    const wfShort = wf.length > 160 ? wf.slice(0, 160) + "…" : wf;
+    const tg = e.textualGrounding?.length
+      ? "\n· 語感: " +
+        e.textualGrounding
+          .slice(0, 2)
+          .map((g) => "「" + String(g) + "」")
+          .join("・")
+      : "";
+    const block = "\n\n◆「" + e.sound + "」\n· 核: " + pmShort + "\n· 水火: " + wfShort + tg;
+    if (body.length + block.length > maxChars) break;
+    body += block;
+  }
+  if (shuku) {
+    const tail =
+      "\n\n【宿との接点（補助）】\n本命宿「" +
+      shuku +
+      "」を主軸にし、上記一音法則は水ひょうとして添える（鑑定データを上書きしない）。";
+    if (body.length + tail.length <= maxChars) body += tail;
+  }
+  if (body.length < 80) return "";
+  return "\n\n" + body.trim();
 }

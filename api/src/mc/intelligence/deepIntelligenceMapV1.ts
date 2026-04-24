@@ -1,0 +1,423 @@
+/**
+ * CARD-MC-18 + CARD-MC-19: 深層知能マップ（宣言 × chat.ts grep × 五十音 INDEX × 発火 jsonl）。
+ */
+import fs from "node:fs";
+import path from "node:path";
+import { dbPrepare } from "../../db/index.js";
+import { REPO_ROOT } from "../../core/mc/constants.js";
+import { summarizeIntelligenceFire24hV1 } from "../fire/intelligenceFireTracker.js";
+import { auditKotodama50IndexV1 } from "./kotodama50MapV1.js";
+import { buildKhsConstitutionObservabilityV1 } from "./khsConstitutionMapV1.js";
+
+const ALLOWED_DB_TABLES = [
+  "scripture_learning_ledger",
+  "sacred_corpus_registry",
+  "sacred_segments",
+  "khs_seed_clusters",
+  "khs_seeds_det_v1",
+  "khs_laws",
+  "khs_units",
+  "khs_concepts",
+  "iroha_units",
+  "iroha_khs_alignment",
+] as const;
+
+export type DeepIntelligenceWiredV1 = {
+  name: string;
+  path: string;
+  role: string;
+  db_source: string | null;
+};
+
+export type DeepIntelligenceStubV1 = {
+  name: string;
+  path: string;
+  lines: number;
+  status: "stub";
+  gap: string;
+};
+
+export type DeepIntelligenceUnwiredV1 = {
+  name: string;
+  path: string;
+  lines?: number;
+  role: string;
+  status: string;
+};
+
+export type DeepIntelligencePostJudgementV1 = { name: string; role: string };
+
+export type DeepIntelligenceDbRowV1 = { table: string; rows: number; role: string };
+
+export const DEEP_INTELLIGENCE_MAP = {
+  wired_modules: [
+    { name: "kotodamaHishoLoader", path: "core/kotodamaHishoLoader.ts", role: "言霊秘書注入", db_source: null },
+    { name: "irohaKotodamaLoader", path: "core/irohaKotodamaLoader.ts", role: "いろは言霊解", db_source: "iroha_units" },
+    { name: "kotodamaGentenLoader", path: "core/kotodamaGentenLoader.ts", role: "言霊原典", db_source: null },
+    { name: "constitutionLoader", path: "core/constitutionLoader.ts", role: "憲法／自己同一 clause", db_source: null },
+    { name: "truthAxisEngine", path: "core/truthAxisEngine.ts", role: "10 真理軸検出", db_source: "truth_axes" },
+    { name: "meaningArbitrationKernel", path: "core/meaningArbitrationKernel.ts", role: "意味裁定", db_source: null },
+    { name: "tenmonLawPromotionGateV1", path: "core/tenmonLawPromotionGateV1.ts", role: "法昇格門", db_source: "khs_laws" },
+    { name: "saikihoLawSet", path: "kotodama/saikihoLawSet.ts", role: "サイキホウ法則", db_source: "khs_laws" },
+    { name: "fourLayerTags", path: "kotodama/fourLayerTags.ts", role: "四層タグ", db_source: null },
+    { name: "kojikiTags", path: "kojiki/kojikiTags.ts", role: "古事記タグ", db_source: null },
+    { name: "mythMapEdges", path: "myth/mythMapEdges.ts", role: "神話マップ", db_source: null },
+    { name: "kanaPhysicsMap", path: "koshiki/kanaPhysicsMap.ts", role: "カナ物理マップ", db_source: null },
+    { name: "breathEngine", path: "koshiki/breathEngine.ts", role: "呼吸律", db_source: null },
+    { name: "teniwoha", path: "koshiki/teniwoha.ts", role: "てにをは判定", db_source: null },
+    { name: "itsura", path: "koshiki/itsura.ts", role: "いつら", db_source: null },
+    { name: "amaterasuAxisMap", path: "data/amaterasuAxisMap.ts", role: "アマテラス軸", db_source: null },
+    { name: "unifiedSoundLoader", path: "core/unifiedSoundLoader.ts", role: "統合音注入", db_source: null },
+    { name: "kotodamaConnector", path: "kotodama/kotodamaConnector.ts", role: "言霊連結", db_source: null },
+    {
+      name: "kotodamaOneSoundLawIndex",
+      path: "core/kotodamaOneSoundLawIndex.ts",
+      role: "80 音一音法則索引→GEN_SYSTEM（buildKotodamaOneSoundLawSystemClauseV1）",
+      db_source: null,
+    },
+  ] as DeepIntelligenceWiredV1[],
+
+  stub_modules: [
+    {
+      name: "kotodamaKatakamunaAmatsuBridgeV1",
+      path: "core/kotodamaKatakamunaAmatsuBridgeV1.ts",
+      lines: 19,
+      status: "stub" as const,
+      gap: "sounds=[], phase=neutral で固定、言霊解析ロジック未実装",
+    },
+  ] as DeepIntelligenceStubV1[],
+
+  unwired_candidates: [
+    {
+      name: "katakamunaLineageTransformationEngine",
+      path: "core/katakamunaLineageTransformationEngine.ts",
+      role: "カタカムナ系譜変換",
+      status: "unknown",
+    },
+    {
+      name: "katakamunaMisreadExpansionGuard",
+      path: "core/katakamunaMisreadExpansionGuard.ts",
+      role: "カタカムナ誤読展開ガード",
+      status: "unknown",
+    },
+    {
+      name: "katakamunaSourceAuditClassificationV1",
+      path: "core/katakamunaSourceAuditClassificationV1.ts",
+      role: "カタカムナ出典監査",
+      status: "unknown",
+    },
+    {
+      name: "truthLayerArbitrationKernel",
+      path: "core/truthLayerArbitrationKernel.ts",
+      role: "真理層裁定",
+      status: "unknown",
+    },
+    {
+      name: "khsRootFractalConstitutionV1",
+      path: "core/khsRootFractalConstitutionV1.ts",
+      role: "言霊秘書ルートフラクタル憲法",
+      status: "unknown",
+    },
+  ] as DeepIntelligenceUnwiredV1[],
+
+  post_generation_judgement: [
+    { name: "verdictEngineV1", role: "伝統×天聞マッピング" },
+    { name: "satoriVerdict", role: "悟り判定" },
+    { name: "irohaGrounding", role: "いろは根拠化" },
+  ] as DeepIntelligencePostJudgementV1[],
+
+  db_intelligence: [
+    { table: "scripture_learning_ledger", rows: 5392, role: "聖典学習履歴" },
+    { table: "sacred_corpus_registry", rows: 1014, role: "14+ 伝統の聖典" },
+    { table: "sacred_segments", rows: 2211, role: "セグメント化聖典" },
+    { table: "khs_seed_clusters", rows: 5153, role: "言霊秘書シード" },
+    { table: "khs_seeds_det_v1", rows: 1408, role: "言霊秘書シード決定" },
+    { table: "khs_laws", rows: 371, role: "言霊秘書法則" },
+    { table: "khs_units", rows: 360, role: "言霊秘書ユニット" },
+    { table: "khs_concepts", rows: 137, role: "言霊秘書概念" },
+    { table: "iroha_units", rows: 21, role: "いろは言霊解" },
+    { table: "iroha_khs_alignment", rows: 10, role: "いろは×言霊秘書アライメント" },
+  ] as DeepIntelligenceDbRowV1[],
+};
+
+let chatTsCache: { mtime: number; src: string } | null = null;
+
+function readChatTsSourceV1(): string {
+  const p = path.join(REPO_ROOT, "api/src/routes/chat.ts");
+  try {
+    const st = fs.statSync(p);
+    if (chatTsCache && chatTsCache.mtime === st.mtimeMs) return chatTsCache.src;
+    const src = fs.readFileSync(p, "utf8");
+    chatTsCache = { mtime: st.mtimeMs, src };
+    return src;
+  } catch {
+    return "";
+  }
+}
+
+/** `core/foo.ts` または `data/foo.ts`（api/src からの相対）が chat.ts の import に現れるか。 */
+export function isModulePathReferencedInChatTsV1(relFromApiSrc: string): boolean {
+  const src = readChatTsSourceV1();
+  if (!src) return false;
+  const norm = relFromApiSrc
+    .replace(/\\/g, "/")
+    .replace(/^api\/src\//, "")
+    .replace(/\.ts$/i, "");
+  const base = path.basename(norm);
+  return src.includes(norm) || src.includes(`${norm}.js`) || src.includes(`/${base}.js`);
+}
+
+function fileHeadHasDeadMarkerV1(relPath: string): boolean {
+  const abs = path.join(REPO_ROOT, "api/src", relPath.replace(/^api\/src\//, ""));
+  try {
+    const head = fs.readFileSync(abs, "utf8").split("\n").slice(0, 14).join("\n");
+    return /DEAD_FILE|@deprecated.*孤立/u.test(head);
+  } catch {
+    return false;
+  }
+}
+
+function safeCount(table: string, fallback: number): number {
+  if (!ALLOWED_DB_TABLES.includes(table as (typeof ALLOWED_DB_TABLES)[number])) return fallback;
+  if (!/^[a-z0-9_]+$/i.test(table)) return fallback;
+  try {
+    const row = dbPrepare("kokuzo", `SELECT COUNT(*) AS c FROM ${table}`).get() as { c: number };
+    const n = Number(row?.c);
+    return Number.isFinite(n) ? n : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+export function readChatTsImportLineCountV1(): number {
+  const src = readChatTsSourceV1();
+  if (!src) return 0;
+  let n = 0;
+  for (const line of src.split("\n")) {
+    if (/^\s*import\s+/.test(line)) n += 1;
+  }
+  return n;
+}
+
+/** GEN_SYSTEM soul-root に clause として載る想定（truth は probe のみ → false） */
+function promptInjectDeclared(name: string): boolean {
+  const inject = new Set([
+    "kotodamaHishoLoader",
+    "irohaKotodamaLoader",
+    "kotodamaGentenLoader",
+    "unifiedSoundLoader",
+    "amaterasuAxisMap",
+    "kotodamaOneSoundLawIndex",
+    "constitutionLoader",
+  ]);
+  return inject.has(name);
+}
+
+function shadowOnly(name: string): boolean {
+  return (
+    name === "kotodamaKatakamunaAmatsuBridgeV1" ||
+    name === "meaningArbitrationKernel" ||
+    name === "tenmonLawPromotionGateV1"
+  );
+}
+
+function postJudgementWiredInChatV1(src: string, name: string): boolean {
+  if (name === "verdictEngineV1") return /buildTenmonVerdictEngineV1|verdictEngineV1/.test(src);
+  if (name === "satoriVerdict") return /attachSatoriVerdict/.test(src);
+  if (name === "irohaGrounding") return /checkIrohaGrounding|irohaGrounding/.test(src);
+  return false;
+}
+
+export function buildObservedModuleRowsV1(): Record<string, unknown>[] {
+  const rows: Record<string, unknown>[] = [];
+  const srcAll = readChatTsSourceV1();
+  for (const m of DEEP_INTELLIGENCE_MAP.wired_modules) {
+    const wired = isModulePathReferencedInChatTsV1(m.path);
+    const dead = fileHeadHasDeadMarkerV1(m.path);
+    const shadow = shadowOnly(m.name);
+    rows.push({
+      name: m.name,
+      path: `api/src/${m.path}`,
+      role: m.role,
+      wired_chat: wired,
+      prompt_inject_gen: Boolean(promptInjectDeclared(m.name) && wired && !shadow),
+      dead_file_marker: dead,
+      shadow_only: shadow,
+    });
+  }
+  for (const s of DEEP_INTELLIGENCE_MAP.stub_modules) {
+    rows.push({
+      name: s.name,
+      path: `api/src/${s.path}`,
+      role: "stub",
+      wired_chat: isModulePathReferencedInChatTsV1(s.path),
+      prompt_inject_gen: false,
+      dead_file_marker: fileHeadHasDeadMarkerV1(s.path),
+      shadow_only: true,
+      gap: s.gap,
+    });
+  }
+  for (const u of DEEP_INTELLIGENCE_MAP.unwired_candidates) {
+    rows.push({
+      name: u.name,
+      path: `api/src/${u.path}`,
+      role: u.role,
+      wired_chat: isModulePathReferencedInChatTsV1(u.path),
+      prompt_inject_gen: false,
+      dead_file_marker: fileHeadHasDeadMarkerV1(u.path),
+      shadow_only: false,
+      status: u.status,
+    });
+  }
+  for (const p of DEEP_INTELLIGENCE_MAP.post_generation_judgement) {
+    rows.push({
+      name: p.name,
+      path: "(post_generation)",
+      role: p.role,
+      wired_chat: postJudgementWiredInChatV1(srcAll, p.name),
+      prompt_inject_gen: false,
+      dead_file_marker: false,
+      shadow_only: false,
+      post_generation: true,
+    });
+  }
+  return rows;
+}
+
+function buildGapsV1(rows: Record<string, unknown>[], fifty: Record<string, unknown>): Array<Record<string, unknown>> {
+  const gaps: Array<Record<string, unknown>> = [];
+  const khs = rows.find((r) => String(r.name) === "khsRootFractalConstitutionV1");
+  if (khs && !khs.wired_chat) {
+    gaps.push({
+      id: "khs_root_fractal",
+      severity: "MED",
+      action: "khsRootFractalConstitutionV1 を chat から参照するか、意図的除外をドキュメント化",
+    });
+  }
+  if (Number(fifty.coverage_ratio) < 1) {
+    gaps.push({
+      id: "kotodama50_coverage",
+      severity: "LOW",
+      action: "五十音 INDEX に欠番あり",
+    });
+  }
+  return gaps;
+}
+
+export function buildIntelligenceFireOnlyPayloadV1(): Record<string, unknown> {
+  return {
+    ok: true,
+    schema_version: "mc_intelligence_fire_v1",
+    generated_at: new Date().toISOString(),
+    fire_24h: summarizeIntelligenceFire24hV1(),
+  };
+}
+
+export function buildDeepIntelligencePayloadV1(): Record<string, unknown> {
+  const chat_ts_imports = readChatTsImportLineCountV1();
+  const dbRows: DeepIntelligenceDbRowV1[] = DEEP_INTELLIGENCE_MAP.db_intelligence.map((d) => ({
+    ...d,
+    rows: safeCount(d.table, d.rows),
+  }));
+  const db_total_rows = dbRows.reduce((s, r) => s + r.rows, 0);
+  const fifty: Record<string, unknown> = {
+    ...(auditKotodama50IndexV1() as Record<string, unknown>),
+    wired_to_chat: isModulePathReferencedInChatTsV1("core/kotodamaOneSoundLawIndex.ts"),
+  };
+  const khsObs = buildKhsConstitutionObservabilityV1() as Record<string, unknown>;
+  const fire = summarizeIntelligenceFire24hV1();
+  const modules = buildObservedModuleRowsV1();
+  const src = readChatTsSourceV1();
+  const khsSealed = (khsObs.khs_core_sealed_docs ?? []) as { exists?: boolean }[];
+  const khs_docs_any = khsSealed.some((d) => d.exists);
+  const khsReferencedInChat = /KHS_CORE|DOMAIN_GUIDE_KOTODAMA_KHS/i.test(src);
+  (khsObs as Record<string, unknown>).referenced_by_chat_ts = khsReferencedInChat;
+
+  const wired_prompt = modules.filter(
+    (m) => m.prompt_inject_gen === true && m.shadow_only !== true && m.post_generation !== true,
+  );
+  const shadow_m = modules.filter((m) => m.shadow_only === true);
+  const dead_or_weak = modules.filter(
+    (m) =>
+      m.dead_file_marker === true ||
+      (m.wired_chat === false &&
+        m.post_generation !== true &&
+        (String(m.path).includes("/core/") || String(m.path).includes("/kotodama/") || String(m.path).includes("/data/"))),
+  );
+
+  const fire_ratio_24h = fire.avg_fire_ratio;
+  const kotodama_50_coverage = Number(fifty.coverage_ratio) || 0;
+  const khs_10_axes_wired_ratio = Number(khsObs.khs_10_axes_wired_ratio) || 0;
+
+  const summary = {
+    total_wired: wired_prompt.length,
+    total_shadow: shadow_m.length,
+    total_dead_or_unwired: dead_or_weak.length,
+    prompt_inject_chars_avg: null as number | null,
+    fire_ratio_24h,
+    kotodama_50_coverage,
+    khs_10_axes_wired_ratio,
+    db_total_rows,
+    chat_ts_imports,
+    fire_events_24h: fire.events_in_window,
+    khs_sealed_docs_present: khs_docs_any,
+  };
+
+  const gaps = buildGapsV1(modules, fifty);
+
+  const detail = {
+    wired_modules: DEEP_INTELLIGENCE_MAP.wired_modules,
+    stub_modules: DEEP_INTELLIGENCE_MAP.stub_modules,
+    unwired_candidates: DEEP_INTELLIGENCE_MAP.unwired_candidates,
+    post_generation_judgement: DEEP_INTELLIGENCE_MAP.post_generation_judgement,
+    db_intelligence: dbRows,
+  };
+
+  return {
+    ok: true,
+    schema_version: "mc_deep_intelligence_obs_v1",
+    generated_at: new Date().toISOString(),
+    summary,
+    modules,
+    fifty_sounds: fifty,
+    khs_10_axes: khsObs,
+    fire_24h: fire,
+    gaps,
+    wired_count: DEEP_INTELLIGENCE_MAP.wired_modules.length,
+    stub_count: DEEP_INTELLIGENCE_MAP.stub_modules.length,
+    unwired_candidate_count: DEEP_INTELLIGENCE_MAP.unwired_candidates.length,
+    post_generation_count: DEEP_INTELLIGENCE_MAP.post_generation_judgement.length,
+    db_tables: dbRows.length,
+    chat_ts_imports,
+    db_total_rows,
+    detail,
+  };
+}
+
+export function buildDeepIntelligenceSummaryForClaudeV1(): Record<string, unknown> {
+  const full = buildDeepIntelligencePayloadV1();
+  const s = (full.summary ?? {}) as Record<string, unknown>;
+  const fire = full.fire_24h as Record<string, unknown>;
+  return {
+    wired_count: full.wired_count,
+    stub_count: full.stub_count,
+    unwired_candidate_count: full.unwired_candidate_count,
+    post_generation_count: full.post_generation_count,
+    db_total_rows: full.db_total_rows,
+    db_tables: full.db_tables,
+    chat_ts_imports: full.chat_ts_imports,
+    fire_ratio_24h: s.fire_ratio_24h ?? fire?.avg_fire_ratio,
+    fire_events_24h: s.fire_events_24h ?? fire?.events_in_window,
+    kotodama_50_coverage: s.kotodama_50_coverage,
+    khs_10_axes_wired_ratio: s.khs_10_axes_wired_ratio,
+    endpoint: "/api/mc/vnext/intelligence",
+    fire_endpoint: "/api/mc/vnext/intelligence/fire",
+    wired_names: DEEP_INTELLIGENCE_MAP.wired_modules.map((m) => m.name),
+    stub_names: DEEP_INTELLIGENCE_MAP.stub_modules.map((m) => m.name),
+    unwired_names: DEEP_INTELLIGENCE_MAP.unwired_candidates.map((m) => m.name),
+    post_judgement_names: DEEP_INTELLIGENCE_MAP.post_generation_judgement.map((m) => m.name),
+    db_table_rows: ((full.detail as { db_intelligence: DeepIntelligenceDbRowV1[] })?.db_intelligence || []).map(
+      (r) => ({ table: r.table, rows: r.rows }),
+    ),
+  };
+}

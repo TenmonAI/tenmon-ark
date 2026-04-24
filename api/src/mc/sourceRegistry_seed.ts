@@ -36,7 +36,8 @@ export type McSourceKindV1 =
   | "core"
   | "constitution"
   | "mc_hub"
-  | "mc_landing";
+  | "mc_landing"
+  | "intelligence_graph";
 
 /**
  * 6-field seed spec mandated by CARD-MC-08A.
@@ -191,6 +192,36 @@ export function buildMcSourceRegistrySeedV1(): McSourceSeedV1[] {
       linked_to: ["mc_hub:main"],
       last_seen: ts,
       note: "vNext UI エントリ。",
+    },
+    {
+      id: "intelligence:deep-map",
+      source_kind: "intelligence_graph",
+      source_name: "天聞アーク 深層知能マップ",
+      source_uri: "/api/mc/vnext/intelligence",
+      source_role: "canonical",
+      linked_to: ["github:main-repo", "corpus:khs", "kotodama:fifty-one-sound-index", "core:tenmon-kanagi", "mc_hub:main"],
+      last_seen: ts,
+      note: "CARD-MC-18/19: wired / stub / unwired / 五十音覆面 / 発火 jsonl / DB 知能層の一覧。",
+    },
+    {
+      id: "corpus:khs",
+      source_kind: "sacred_corpus",
+      source_name: "言霊秘書 (KHS) DB",
+      source_uri: `sqlite://${path.join(DATA_ROOT, "kokuzo.sqlite")}#khs_*`,
+      source_role: "canonical",
+      linked_to: ["corpus:sacred", "learning:ledger-spec", "intelligence:deep-map"],
+      last_seen: ts,
+      note: "khs_laws / khs_units / khs_seeds 系。深層知能マップの DB 層。",
+    },
+    {
+      id: "kotodama:fifty-one-sound-index",
+      source_kind: "core",
+      source_name: "五十音一音法則 INDEX（kotodamaOneSoundLawIndex）",
+      source_uri: `file://${path.join(REPO_ROOT, "api/src/core/kotodamaOneSoundLawIndex.ts")}`,
+      source_role: "canonical",
+      linked_to: ["intelligence:deep-map", "corpus:khs", "persona:module", "github:main-repo"],
+      last_seen: ts,
+      note: "CARD-MC-19: fifty_sounds 覆面率の実体。chat.ts から buildKotodamaOneSoundLawSystemClauseV1 で参照。",
     },
     // --- mirror ---
     {
