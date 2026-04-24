@@ -12,6 +12,7 @@ import {
 } from "../fire/intelligenceFireTracker.js";
 import { auditKotodama50IndexV1 } from "./kotodama50MapV1.js";
 import { buildKhsConstitutionObservabilityV1 } from "./khsConstitutionMapV1.js";
+import { kotodamaBridgeHealth } from "../../core/kotodamaBridgeRegistry.js";
 
 const ALLOWED_DB_TABLES = [
   "scripture_learning_ledger",
@@ -437,6 +438,25 @@ export function buildDeepIntelligencePayloadV1(): Record<string, unknown> {
 
   const gaps = buildGapsV1(modules, fifty);
 
+  const kotodama_bridges = (() => {
+    try {
+      const h = kotodamaBridgeHealth();
+      return {
+        total: h.total,
+        has_primary_bridge: h.hasPrimaryBridge,
+        has_separation_policy: h.hasSeparationPolicy,
+        entries: h.entries,
+        constitution_ref: "KOTODAMA_CONSTITUTION_V1",
+        status:
+          h.hasPrimaryBridge && h.hasSeparationPolicy ? "registered_not_synced" : "incomplete",
+        notes:
+          "橋渡しページは静的レジストリとして登録。Notion MCP 実取得は別カード。",
+      };
+    } catch (err) {
+      return { total: 0, error: String(err) };
+    }
+  })();
+
   const detail = {
     wired_modules: DEEP_INTELLIGENCE_MAP.wired_modules,
     stub_modules: DEEP_INTELLIGENCE_MAP.stub_modules,
@@ -457,6 +477,7 @@ export function buildDeepIntelligencePayloadV1(): Record<string, unknown> {
     fire_7d_trend: fire7,
     mc20_fire_truth_audit: mc20,
     gaps,
+    kotodama_bridges,
     wired_count: DEEP_INTELLIGENCE_MAP.wired_modules.length,
     stub_count: DEEP_INTELLIGENCE_MAP.stub_modules.length,
     unwired_candidate_count: DEEP_INTELLIGENCE_MAP.unwired_candidates.length,

@@ -13,6 +13,7 @@
  */
 import { readFileSync, existsSync } from "fs";
 import { createHash } from "crypto";
+import { kotodamaBridgeHealth } from "./kotodamaBridgeRegistry.js";
 
 // ── パス定義 ──────────────────────────────────────
 const KHS_CORE_PATH =
@@ -237,6 +238,14 @@ function verifyKotodamaConstitutionSealV1Once(): void {
       console.log(
         `[CONSTITUTION_SEAL] KOTODAMA_CONSTITUTION_V1 seal VERIFIED (${actualHash.slice(0, 16)}...)`,
       );
+      try {
+        const h = kotodamaBridgeHealth();
+        console.log(
+          `[KOTODAMA_BRIDGE] registry loaded: total=${h.total} primary=${h.hasPrimaryBridge} separation=${h.hasSeparationPolicy}`,
+        );
+      } catch (err: unknown) {
+        console.warn(`[KOTODAMA_BRIDGE] registry load failed: ${String((err as Error)?.message ?? err)}`);
+      }
     } else {
       console.error(
         `[CONSTITUTION_SEAL] KOTODAMA_CONSTITUTION_V1 MISMATCH expected=${expectedHash.slice(0, 16)}... actual=${actualHash.slice(0, 16)}...`,
