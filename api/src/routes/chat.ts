@@ -69,6 +69,9 @@ import { buildConstitutionClause, buildSelfIdentityClause, verifySeal } from "..
 import { detect10TruthAxes, buildAxisClause, ensureTruthAxesTable } from "../core/truthAxisEngine.js";
 // CARD-MC-13-KOTODAMA-WIRE-V1: 最小 diff 配線（同期・LLM prompt 非改変・return 非改変）
 import { runKotodamaKatakamunaBridgeV1 } from "../core/kotodamaKatakamunaAmatsuBridgeV1.js";
+// CARD-MC-14-MEANING-WIRE-V1: meaning arbitration を shadow/context 接続（同期・LLM prompt 非改変）
+import { arbitrateTruthLayerV1 } from "../core/meaningArbitrationKernel.js";
+import { splitInputSemanticsV1 } from "../core/inputSemanticSplitter.js";
 import { loadKotodamaHisho, extractSoundsFromMessage, buildKotodamaHishoContext, buildKotodamaHishoOverview } from "../core/kotodamaHishoLoader.js";
 import { attachSatoriVerdict, checkIrohaGrounding } from "../core/satoriEnforcement.js";
 import { queryIrohaByUserText, buildIrohaInjection } from "../core/irohaKotodamaLoader.js";
@@ -894,6 +897,41 @@ const pid = process.pid;
     };
   } catch {
     /* fail-open: 会話フローは継続 */
+  }
+
+  // CARD-MC-14-MEANING-WIRE-V1:
+  //   arbitrateTruthLayerV1 を shadow 接続し、req.context.meaningArbitration に
+  //   結果（answerMode / coreTruth / depthPolicy / supportingEvidence ほか）を格納する。
+  //   - LLM プロンプト / return 構造には触れない
+  //   - await は使わない
+  //   - arbitrateTruthLayerV1 は { split, knowledge } を要求するため、
+  //     同ファイル群にある純同期ヘルパ splitInputSemanticsV1 で split を生成し、
+  //     この時点で既知な最小 knowledgePack を合成する（routeReason は本線確定前のため空）。
+  //   - 例外時も会話を落とさない（fail-open）。
+  try {
+    const __msplit = splitInputSemanticsV1(message);
+    const __mknowledge = {
+      routeReason: "",
+      rawMessage: message,
+      sourcePack: "",
+      centerKey: null,
+      centerLabel: null,
+      evidenceRefs: [] as string[],
+      notionCanonCount: 0,
+      uncertaintyFlagCount: 0,
+      groundedRequired: false,
+    };
+    const meaningArbitration = arbitrateTruthLayerV1({
+      split: __msplit,
+      knowledge: __mknowledge,
+      heartHint: __msplit.heartHint ?? null,
+    });
+    (req as any).context = {
+      ...((req as any).context || {}),
+      meaningArbitration,
+    };
+  } catch (err) {
+    console.warn("[MC-14-MEANING-WIRE-V1] meaning arbitration failed", err);
   }
 
   // RESEED_ROUTER_CORE_V2: top-of-router hard stops (N1 greeting + LLM1 force + N2 kanagi 4-phase)
