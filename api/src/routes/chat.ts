@@ -50,7 +50,11 @@ import {
   tryAppendMcRouteLedgerV1,
   tryAppendMcSourceMapLedgerV1,
 } from "../mc/ledger/mcLedger.js";
-import { appendIntelligenceFireEventV1 } from "../mc/fire/intelligenceFireTracker.js";
+import {
+  appendIntelligenceFireEventV1,
+  type PromptTraceV1,
+  type SoulRootFireFlagsV1,
+} from "../mc/fire/intelligenceFireTracker.js";
 import { listRules } from "../training/storage.js";
 import { buildTenmonVerdictEngineV1 } from "../core/tenmonVerdictEngineV1.js";
 import { upsertConversationDistillMemoryV1, buildMemoryProjectionPack, logMemoryProjection } from "../core/memoryProjection.js";
@@ -1886,6 +1890,8 @@ const DEF_SYSTEM = `あなたは「TENMON-ARK（TENMON-ARK）」。言霊・神�
 
 let outText = "";
       let outProv = "llm";
+      let __mc20NatFire: { flags: SoulRootFireFlagsV1; trace: PromptTraceV1 } | undefined;
+      let __mc20NatFireAppended = false;
 
       // CARD-MC-16-V2: prompt 注入メタの観測（response / system 本文には出さない）
       resetContextInjectionProbeForRequestV1(req);
@@ -2520,8 +2526,9 @@ ${__carrySeedSummary}${__carryLifeAlgo}
           ]
             .filter(Boolean)
             .join("\n");
-          try {
-            appendIntelligenceFireEventV1({
+          const __genSystemWithEvidence = GEN_SYSTEM + __sukuyouClauseGen + __sukuyouContextClause + (__soulRootClauses ? "\n" + __soulRootClauses : "") + __intentClause;
+          __mc20NatFire = {
+            flags: {
               hisho: Boolean(__kotodamaHishoClause),
               iroha: Boolean(__irohaClause),
               genten: Boolean(__gentenClause),
@@ -2533,11 +2540,30 @@ ${__carrySeedSummary}${__carryLifeAlgo}
               truth_layer_kernel: Boolean(__truthLayerArbitrationClause),
               khs_root_fractal: Boolean(__khsRootFractalClause),
               katakamuna_misread_guard: Boolean(__katakamunaMisreadGuardClause),
-            });
-          } catch {
-            /* MC-19/21 観測のみ */
-          }
-          const __genSystemWithEvidence = GEN_SYSTEM + __sukuyouClauseGen + __sukuyouContextClause + (__soulRootClauses ? "\n" + __soulRootClauses : "") + __intentClause;
+            },
+            trace: {
+              route_reason: "NATURAL_GENERAL_LLM_TOP",
+              provider: null,
+              clause_lengths: {
+                khs_constitution: String(_khsConstitutionClause ?? "").length,
+                kotodama_hisho: (__kotodamaHishoClause ?? "").length,
+                kotodama_one_sound: (__kotodamaOneSoundLawClause ?? "").length,
+                kotodama_genten: (__gentenClause ?? "").length,
+                unified_sound: (__unifiedSoundClause ?? "").length,
+                iroha: (__irohaClause ?? "").length,
+                amaterasu: (__amaterasuClause ?? "").length,
+                truth_layer: (__truthLayerArbitrationClause ?? "").length,
+                meaning_arbitration: (__mc22CaramiClause ?? "").length + (__mc22PurificationClause ?? "").length,
+                katakamuna_audit: (__katakamunaSourceAuditClause ?? "").length,
+                katakamuna_lineage: (__katakamunaLineageClause ?? "").length,
+                katakamuna_misread_guard: (__katakamunaMisreadGuardClause ?? "").length,
+                khs_root_fractal: (__khsRootFractalClause ?? "").length,
+              },
+              prompt_total_length: __genSystemWithEvidence.length,
+              response_length: 0,
+              user_message_length: String(t0 ?? "").length,
+            },
+          };
           // ULTRA-11: モデル選択 + コスト最適化（継続入力時は selector 用 intent を follow_up 相当へ）
           const __modelSel = selectModel({
             intent: __modelIntentForSelect,
@@ -2665,6 +2691,16 @@ ${__carrySeedSummary}${__carryLifeAlgo}
                     : "session_id_mismatch_or_limit",
           }));
           outText = "いま応答の生成に失敗しました。もう一度だけ、短く言い直してみてください。";
+          if (__mc20NatFire) {
+            __mc20NatFire.trace.response_length = String(outText || "").length;
+            __mc20NatFire.trace.provider = "exception";
+            try {
+              appendIntelligenceFireEventV1(__mc20NatFire.flags, __mc20NatFire.trace);
+              __mc20NatFireAppended = true;
+            } catch {
+              /* MC-20 観測のみ */
+            }
+          }
         }
       }
 
@@ -2758,6 +2794,16 @@ ${__carrySeedSummary}${__carryLifeAlgo}
         outText = enforceShortAnswerResponse(outText, 3, 180);
       }
       outText = ensureNaturalTail(outText);
+      if (__mc20NatFire && !__mc20NatFireAppended) {
+        __mc20NatFire.trace.provider = String(outProv || "").trim() || null;
+        __mc20NatFire.trace.response_length = String(outText || "").length;
+        try {
+          appendIntelligenceFireEventV1(__mc20NatFire.flags, __mc20NatFire.trace);
+          __mc20NatFireAppended = true;
+        } catch {
+          /* MC-20 観測のみ */
+        }
+      }
 // BLOCK3: reportText/reportAvailable をレスポンスに追加
 const __responsePayload: Record<string, any> = {
         response: outText,

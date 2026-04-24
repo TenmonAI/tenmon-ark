@@ -69,3 +69,30 @@
 - `buildKotodama50MapV1`: `kotodama_meanings`・`EVIDENCE_UNITS_KHS_v1.jsonl`・列ラベル「未確定」に基づく `with_*` 6 種
 - 起動時 `[KOTODAMA_CONSTITUTION_V1_VIOLATION]` assert（50 音・ン除外・ヰヱ≥2）
 - `GOJUON_BASE` を **`export const`** + 拡張 `@deprecated` JSDoc
+
+---
+
+## 2026-04-24: MC-20-PROMPT-TRACE-V1 実装ログ
+
+### 実装内容
+
+- `intelligenceFireTracker.ts` に `PromptTraceV1` / `PromptTraceClauseLengthsV1` / `PromptTraceSummary24hV1` 追加
+- `appendIntelligenceFireEventV1(flags, promptTrace?)` — `prompt_trace` を jsonl に任意追記（後方互換）
+- `chat.ts`（NATURAL_GENERAL 本線）で各 soul-root clause 長・`prompt_total_length`・`route_reason`・`provider`・応答長を計測し、応答確定後に 1 行追記
+- `summarizeIntelligenceFire24hV1()` の戻りに `prompt_trace_summary_24h` を追加（`/api/mc/vnext/intelligence/fire` 経由で可視）
+
+### 効果
+
+- Clause 別の実注入長が runtime / jsonl から参照可能
+- `route_reason` / `provider` がイベント単位で記録される
+- prompt 総長・response 長・user message 長の相関が 24h 集計で把握可能
+
+### 観測計装原則
+
+- prompt 本文・ルート分岐ロジックは変更していない（計測・追記のみ）
+- 既存 jsonl は boolean 行と共存（`prompt_trace` は optional）
+- 計測は `.length` のみで O(1)
+
+### 次カード
+
+- MC-20-CONSTITUTION-ENFORCER-V1: 計測基盤の上で憲法違反を監視

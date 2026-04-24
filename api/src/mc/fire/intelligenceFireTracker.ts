@@ -2,6 +2,7 @@
  * CARD-MC-19-DEEP-INTELLIGENCE-OBSERVABILITY-V1
  * CARD-MC-20-DEAD-FILE-TRUTH-AUDIT-V1: 各スロットの実データ源（chat.ts 変数）を slot_chat_binding で固定。
  * CARD-MC-21-DEEP-INTELLIGENCE-WIRING-V1: soul-root スロット 6 → 11。
+ * CARD-MC-20-PROMPT-TRACE-V1: clause 長・route・provider を jsonl / fire API で観測。
  * 魂の根幹注入の発火を jsonl に追記し、24h 窓で集計する（観測専用）。
  */
 import fs from "node:fs";
@@ -27,16 +28,55 @@ export type SoulRootFireFlagsV1 = {
   katakamuna_misread_guard: boolean;
 };
 
+/** MC-20-PROMPT-TRACE-V1: GEN_SYSTEM 周辺 clause の実長（chat.ts 変数名に対応） */
+export type PromptTraceClauseLengthsV1 = {
+  khs_constitution: number;
+  kotodama_hisho: number;
+  kotodama_one_sound: number;
+  kotodama_genten: number;
+  unified_sound: number;
+  iroha: number;
+  amaterasu: number;
+  truth_layer: number;
+  /** MC-22 carami + purification の合算（単一 __meaningArbitrationClause 無し） */
+  meaning_arbitration: number;
+  katakamuna_audit: number;
+  katakamuna_lineage: number;
+  katakamuna_misread_guard: number;
+  khs_root_fractal: number;
+};
+
+export type PromptTraceV1 = {
+  route_reason: string | null;
+  provider: string | null;
+  clause_lengths: PromptTraceClauseLengthsV1;
+  prompt_total_length: number;
+  response_length: number;
+  user_message_length: number;
+};
+
+export type PromptTraceSummary24hV1 = {
+  sample_size: number;
+  route_reasons: string[];
+  providers: string[];
+  avg_clause_lengths: PromptTraceClauseLengthsV1;
+  avg_prompt_total_length: number;
+  avg_response_length: number;
+  avg_user_message_length: number;
+  note: string;
+};
+
 function logPath(): string {
   return path.join(getTenmonDataDir(), LOG_NAME);
 }
 
-/** chat.ts から 1 呼び出しのみ（try/catch は呼び出し側）。 */
-export function appendIntelligenceFireEventV1(flags: SoulRootFireFlagsV1): void {
+/** chat.ts から 1 呼び出しのみ（try/catch は呼び出し側）。`prompt_trace` は任意で後方互換。 */
+export function appendIntelligenceFireEventV1(flags: SoulRootFireFlagsV1, promptTrace?: PromptTraceV1): void {
   const line =
     JSON.stringify({
       ts: Date.now(),
       ...flags,
+      ...(promptTrace ? { prompt_trace: promptTrace } : {}),
     }) + "\n";
   fs.appendFileSync(logPath(), line, { encoding: "utf8" });
 }
@@ -105,6 +145,8 @@ export type IntelligenceFire24hSummaryV1 = {
   slot_chat_binding: typeof INTELLIGENCE_FIRE_SLOT_CHAT_BINDING_V1;
   log_path: string;
   note: string;
+  /** MC-20-PROMPT-TRACE-V1: 24h 内に `prompt_trace` が付いたイベントの集約 */
+  prompt_trace_summary_24h: PromptTraceSummary24hV1 | null;
 };
 
 /** CARD-MC-26: 7 日分の日別 avg とプール平均（長期推移） */
@@ -144,6 +186,36 @@ function fireRatioForRow(row: Record<string, unknown>): number {
     if (row[k] === true) fired += 1;
   }
   return fired / SOUL_ROOT_FIRE_SLOTS;
+}
+
+function buildPromptTraceSummary24hV1(traces: PromptTraceV1[]): PromptTraceSummary24hV1 | null {
+  if (traces.length === 0) return null;
+  const avg = (nums: number[]) => (nums.length ? Math.round(nums.reduce((a, b) => a + b, 0) / nums.length) : 0);
+  const z = (pick: (t: PromptTraceV1) => number) => avg(traces.map(pick));
+  return {
+    sample_size: traces.length,
+    route_reasons: [...new Set(traces.map((t) => t.route_reason).filter((x): x is string => Boolean(x)))],
+    providers: [...new Set(traces.map((t) => t.provider).filter((x): x is string => Boolean(x)))],
+    avg_clause_lengths: {
+      khs_constitution: z((t) => t.clause_lengths.khs_constitution),
+      kotodama_hisho: z((t) => t.clause_lengths.kotodama_hisho),
+      kotodama_one_sound: z((t) => t.clause_lengths.kotodama_one_sound),
+      kotodama_genten: z((t) => t.clause_lengths.kotodama_genten),
+      unified_sound: z((t) => t.clause_lengths.unified_sound),
+      iroha: z((t) => t.clause_lengths.iroha),
+      amaterasu: z((t) => t.clause_lengths.amaterasu),
+      truth_layer: z((t) => t.clause_lengths.truth_layer),
+      meaning_arbitration: z((t) => t.clause_lengths.meaning_arbitration),
+      katakamuna_audit: z((t) => t.clause_lengths.katakamuna_audit),
+      katakamuna_lineage: z((t) => t.clause_lengths.katakamuna_lineage),
+      katakamuna_misread_guard: z((t) => t.clause_lengths.katakamuna_misread_guard),
+      khs_root_fractal: z((t) => t.clause_lengths.khs_root_fractal),
+    },
+    avg_prompt_total_length: z((t) => t.prompt_total_length),
+    avg_response_length: z((t) => t.response_length),
+    avg_user_message_length: z((t) => t.user_message_length),
+    note: "MC-20-PROMPT-TRACE-V1 計装による実数値観測（NATURAL_GENERAL 本線で付与）",
+  };
 }
 
 /**
@@ -198,6 +270,7 @@ export function summarizeIntelligenceFire24hV1(): IntelligenceFire24hSummaryV1 {
   const ever = new Set<string>();
   let sumRatio = 0;
   let n = 0;
+  const traces: PromptTraceV1[] = [];
   for (const line of lines) {
     let row: Record<string, unknown>;
     try {
@@ -216,6 +289,8 @@ export function summarizeIntelligenceFire24hV1(): IntelligenceFire24hSummaryV1 {
       }
     }
     sumRatio += fired / SOUL_ROOT_FIRE_SLOTS;
+    const pt = row.prompt_trace;
+    if (pt && typeof pt === "object") traces.push(pt as PromptTraceV1);
   }
   const avg_fire_ratio = n > 0 ? sumRatio / n : 0;
   return {
@@ -230,5 +305,6 @@ export function summarizeIntelligenceFire24hV1(): IntelligenceFire24hSummaryV1 {
       n < 3
         ? "24h サンプル < 3 のため acceptance は寛容モード（telemetry 蓄積待ち）。"
         : `avg_fire_ratio は各リクエストの「発火スロット数/${SOUL_ROOT_FIRE_SLOTS}」の平均（MC-21）。`,
+    prompt_trace_summary_24h: buildPromptTraceSummary24hV1(traces),
   };
 }
