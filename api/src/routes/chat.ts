@@ -67,6 +67,8 @@ import {
 import { buildKotodamaClause } from "../kotodama/kotodamaConnector.js";
 import { buildConstitutionClause, buildSelfIdentityClause, verifySeal } from "../core/constitutionLoader.js";
 import { detect10TruthAxes, buildAxisClause, ensureTruthAxesTable } from "../core/truthAxisEngine.js";
+// CARD-MC-13-KOTODAMA-WIRE-V1: 最小 diff 配線（同期・LLM prompt 非改変・return 非改変）
+import { runKotodamaKatakamunaBridgeV1 } from "../core/kotodamaKatakamunaAmatsuBridgeV1.js";
 import { loadKotodamaHisho, extractSoundsFromMessage, buildKotodamaHishoContext, buildKotodamaHishoOverview } from "../core/kotodamaHishoLoader.js";
 import { attachSatoriVerdict, checkIrohaGrounding } from "../core/satoriEnforcement.js";
 import { queryIrohaByUserText, buildIrohaInjection } from "../core/irohaKotodamaLoader.js";
@@ -878,6 +880,21 @@ const pid = process.pid;
   const shouldBlockLLMChatForGuest = !isAuthed;
 
   if (!message) return res.status(400).json({ response: "message required", error: "message required", timestamp, decisionFrame: { mode: "NATURAL", intent: "chat", llm: null, ku: {} } });
+
+  // CARD-MC-13-KOTODAMA-WIRE-V1:
+  //   kotodama（言霊）ブリッジを同期実行し、req.context.kotodama に格納する。
+  //   - LLM プロンプト / return 構造には触れない
+  //   - await は使わない
+  //   - 例外時も会話を落とさないため try/catch
+  try {
+    const kotodamaResult = runKotodamaKatakamunaBridgeV1(message);
+    (req as any).context = {
+      ...((req as any).context || {}),
+      kotodama: kotodamaResult,
+    };
+  } catch {
+    /* fail-open: 会話フローは継続 */
+  }
 
   // RESEED_ROUTER_CORE_V2: top-of-router hard stops (N1 greeting + LLM1 force + N2 kanagi 4-phase)
   // - MUST run BEFORE lane/menu/cmd/sanitize/hybrid search
