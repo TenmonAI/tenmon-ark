@@ -4,6 +4,7 @@
 import { readState, allFileStatuses } from '../stateReader.js';
 import type { McOverview, McLiveState, McgitState, McIssues, McTruthCircuit } from '../types.js';
 import { HEALTH_ENDPOINT, SERVICE_NAME } from '../constants.js';
+import { readGitLiveStateV1 } from '../gitLiveState.js';
 
 /**
  * Build the overview object by aggregating data from collector JSONs.
@@ -54,13 +55,27 @@ export function buildOverview(): McOverview {
       response_ms: liveState?.health?.response_ms ?? 0,
     },
 
-    git: {
-      branch: gitState?.branch ?? 'unknown',
-      head_sha_short: gitState?.head_sha_short ?? 'unknown',
-      last_commit_at: gitState?.head_date ?? 'unknown',
-      last_commit_subject: gitState?.head_subject ?? 'unknown',
-      dirty: gitState?.dirty ?? false,
-    },
+    // CARD-MC-09D: live git を優先。collector JSON の head_subject / head_date は
+    //   live 側で取れないので、そこだけは gitState フォールバックを保持する。
+    git: (() => {
+      const live = readGitLiveStateV1();
+      if (live.ok) {
+        return {
+          branch: live.branch || gitState?.branch || 'unknown',
+          head_sha_short: live.head_sha_short,
+          last_commit_at: gitState?.head_date ?? 'unknown',
+          last_commit_subject: gitState?.head_subject ?? 'unknown',
+          dirty: live.dirty ?? gitState?.dirty ?? false,
+        };
+      }
+      return {
+        branch: gitState?.branch ?? 'unknown',
+        head_sha_short: gitState?.head_sha_short ?? 'unknown',
+        last_commit_at: gitState?.head_date ?? 'unknown',
+        last_commit_subject: gitState?.head_subject ?? 'unknown',
+        dirty: gitState?.dirty ?? false,
+      };
+    })(),
 
     state: {
       critical_blockers: criticalBlockers,

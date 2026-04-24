@@ -4,6 +4,7 @@ import path from "node:path";
 import { execFileSync } from "node:child_process";
 import { dbPrepare, getDbPath } from "../db/index.js";
 import { CANON_DIR, DATA_ROOT, MC_FILES, REPO_ROOT } from "../core/mc/constants.js";
+import { readGitLiveStateV1 } from "../core/mc/gitLiveState.js";
 import { readState } from "../core/mc/stateReader.js";
 import type {
   McDbStatus,
@@ -408,8 +409,14 @@ export function buildMcSourceRegistryV1(): McSourceRegistryV1 {
 
 export function buildMcRepoMapV1(): Record<string, unknown> {
   const gitState = readState<McgitState>("git_state");
-  const branch = safeStr(gitState?.branch);
-  const head = safeStr(gitState?.head_sha_short);
+  // CARD-MC-09D: live git 情報を優先。head_subject / modified_count 等は
+  //   live 側で取得していないため、そのフィールドだけ gitState を使う。
+  const live = readGitLiveStateV1();
+  const branch = live.ok ? live.branch : safeStr(gitState?.branch);
+  const head = live.ok ? live.head_sha_short : safeStr(gitState?.head_sha_short);
+  const dirty = live.ok && live.dirty != null ? live.dirty : Boolean(gitState?.dirty);
+  const modifiedCount = live.ok ? live.modified_count : safeNum(gitState?.modified_count, 0);
+  const untrackedCount = live.ok ? live.untracked_count : safeNum(gitState?.untracked_count, 0);
   const githubUri = head
     ? `https://github.com/TenmonAI/tenmon-ark/tree/${head}`
     : branch
@@ -420,9 +427,9 @@ export function buildMcRepoMapV1(): Record<string, unknown> {
     branch,
     head_sha_short: head,
     head_subject: safeStr(gitState?.head_subject),
-    dirty: Boolean(gitState?.dirty),
-    modified_count: safeNum(gitState?.modified_count, 0),
-    untracked_count: safeNum(gitState?.untracked_count, 0),
+    dirty,
+    modified_count: modifiedCount,
+    untracked_count: untrackedCount,
     source: {
       id: "github:main-repo",
       source_kind: "github",

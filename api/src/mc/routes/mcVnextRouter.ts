@@ -30,6 +30,7 @@ import { buildVnextHistoryPayload, buildVnextRegressionPayload } from "../histor
 import { runMcVnextAnalyzerV1 } from "../analyzer/mcVnextAnalyzerV1.js";
 import { isMcLedgerWritesEnabled } from "../ledger/mcLedger.js";
 import { buildClaudeSummaryPayloadV1 } from "../claude/claudeSummaryV1.js";
+import { buildHandoffPromptV1 } from "../claude/handoffPromptV1.js";
 import { isMcClaudeNotionMirrorConfiguredV1, syncMcClaudeSummaryToNotionPageV1 } from "../notion/mcClaudeNotionMirrorV1.js";
 
 const mcVnextRouter = Router();
@@ -153,6 +154,38 @@ protectedVnext.get("/history", (_req: Request, res: Response) => {
 
 protectedVnext.get("/claude-summary", (_req: Request, res: Response) => {
   res.json(sanitize(buildClaudeSummaryPayloadV1()));
+});
+
+/**
+ * CARD-MC-HANDOFF-V1:
+ *   GET /api/mc/vnext/handoff-prompt?ai=claude|gpt|cursor&format=markdown|text|json&include_history=true
+ *   Bearer auth（protectedVnext 配下）。TENMON が新 AI トークルーム起動時に
+ *   1 コマンドで前会話の文脈を継承するための 1 枚プロンプト生成器。
+ */
+protectedVnext.get("/handoff-prompt", (req: Request, res: Response) => {
+  const q = req.query as Record<string, unknown>;
+  const includeHistory = String(q.include_history ?? "").toLowerCase() === "true";
+  const result = buildHandoffPromptV1({
+    ai: typeof q.ai === "string" ? q.ai : undefined,
+    format: typeof q.format === "string" ? q.format : undefined,
+    includeHistory,
+  });
+
+  if (result.format === "json") {
+    res.json(sanitize(result) as Record<string, unknown>);
+    return;
+  }
+
+  const contentType =
+    result.format === "markdown" ? "text/markdown; charset=utf-8" : "text/plain; charset=utf-8";
+  res.setHeader("Content-Type", contentType);
+  // sanitize は文字列に作用して token などを消してくれるが、object が期待されるため手動適用
+  res.setHeader("X-MC-Handoff-Ai", result.ai);
+  res.setHeader("X-MC-Handoff-Format", result.format);
+  res.setHeader("X-MC-Handoff-Char-Count", String(result.char_count));
+  res.setHeader("X-MC-Handoff-Truncated", String(result.truncated));
+  res.setHeader("X-MC-Handoff-Schema", result.schema_version);
+  res.send(result.prompt);
 });
 
 protectedVnext.get("/regression", (_req: Request, res: Response) => {

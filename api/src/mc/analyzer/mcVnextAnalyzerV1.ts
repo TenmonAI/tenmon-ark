@@ -6,6 +6,7 @@ import { dbPrepare } from "../../db/index.js";
 import { readState } from "../../core/mc/stateReader.js";
 import { sanitize } from "../../core/mc/sanitizer.js";
 import type { McgitState } from "../../core/mc/types.js";
+import { readGitLiveStateV1 } from "../../core/mc/gitLiveState.js";
 import {
   mcLedgerCountSince24h,
   readMcMemoryHitContinuationSplitV1,
@@ -229,14 +230,27 @@ export function runMcVnextAnalyzerV1(): McVnextAnalyzerSnapshotV1 {
     /* empty */
   }
 
+  // CARD-MC-09D: live git 判定を最優先にし、collector JSON はフォールバック。
+  //   collector は 10 分周期で、直前のコミットや working tree 変更を反映できない。
+  //   ここでは process 内で `git rev-parse HEAD` / `git status --porcelain` を
+  //   同期実行し、短い TTL で再計算する（readGitLiveStateV1 側で 10s キャッシュ）。
   let git: McVnextAnalyzerSnapshotV1["git"] = { head_clean: null, head_sha_short: "", branch: "" };
   try {
-    const gs = sanitize(readState<McgitState>("git_state"));
-    git = {
-      head_clean: gs?.dirty === false,
-      head_sha_short: String(gs?.head_sha_short ?? ""),
-      branch: String(gs?.branch ?? ""),
-    };
+    const live = readGitLiveStateV1();
+    if (live.ok) {
+      git = {
+        head_clean: live.dirty === false,
+        head_sha_short: live.head_sha_short,
+        branch: live.branch,
+      };
+    } else {
+      const gs = sanitize(readState<McgitState>("git_state"));
+      git = {
+        head_clean: gs?.dirty === false,
+        head_sha_short: String(gs?.head_sha_short ?? ""),
+        branch: String(gs?.branch ?? ""),
+      };
+    }
   } catch {
     /* empty */
   }
