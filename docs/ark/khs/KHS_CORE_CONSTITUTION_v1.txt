@@ -14,9 +14,11 @@ KHSに含まれない言灵概念は一切採用しない。
 
 言灵の定義は必ずKHS原典Unitに基づく
 
-doc=NOTION:PAGE:* + pdfPage=数値 が無い断言は禁止
+doc=NOTION:PAGE:* + printedPage=数値（書籍印字ページ）が無い断言は禁止
 
-pdfPage=? は封印不可（GATE凍結のみ許可）
+※ 旧表記 pdfPage=N はすべて「印字ページ N」を指す。PDF ビューアの物理ページは刷次により変わり得るが、同一刷次の目安として pdfPhysicalPage を印字ページに併記する（例: 印字420↔PDF442 は +22）。
+
+printedPage=? は封印不可（GATE凍結のみ許可）
 
 truth_axisは以下の10軸に固定する
 
@@ -71,7 +73,8 @@ KHS語義の心理学化
 
 sourceRef:
 doc=NOTION:PAGE:eed52861641d4d32ac88f3755c4c7a89
-pdfPage=479
+printedPage=479
+pdfPhysicalPage=501
 
 truth_axis: polarity / manifestation
 
@@ -82,7 +85,8 @@ truth_axis: polarity / manifestation
 
 sourceRef:
 doc=NOTION:PAGE:6beb2c055ef24cf6b60cecbeb1b7847a
-pdfPage=97
+printedPage=97
+pdfPhysicalPage=119
 
 truth_axis: center / order
 
@@ -91,10 +95,15 @@ truth_axis: center / order
 五十連の惣名
 無にして有
 基底母体
+嘆息の詞・悲歓の詞・気の揉む時の詞
+百千の思を一音に収む
+天然の音
+空中の水灵にして形をなさず
 
 sourceRef:
 doc=NOTION:PAGE:af58bef540844ff59f19775177c8f3e8
-pdfPage=415
+printedPage=415
+pdfPhysicalPage=437
 
 truth_axis: center / manifestation
 
@@ -106,7 +115,8 @@ truth_axis: center / manifestation
 
 sourceRef:
 doc=NOTION:PAGE:efc23543a4284d8199d3b8c9ef6e6fbe
-pdfPage=420
+printedPage=420
+pdfPhysicalPage=442
 
 truth_axis: polarity / manifestation
 
@@ -120,7 +130,8 @@ truth_axis: polarity / manifestation
 
 sourceRef:
 doc=NOTION:PAGE:c69b831fb5e24de99b89bf6ccc39874d
-pdfPage=24
+printedPage=24
+pdfPhysicalPage=46
 
 truth_axis: governance / correspondence
 
@@ -131,7 +142,8 @@ truth_axis: governance / correspondence
 
 sourceRef:
 doc=NOTION:PAGE:71974cfd35a54e6fbbe120bd17297bb8
-pdfPage=449
+printedPage=449
+pdfPhysicalPage=471
 
 truth_axis: purification / polarity
 

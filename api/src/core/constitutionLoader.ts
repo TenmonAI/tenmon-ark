@@ -20,7 +20,8 @@ const KHS_CORE_SHA256_PATH =
 // ── 型定義 ────────────────────────────────────────
 export interface CoreDefinition {
   concept: string;
-  sourceRef: { doc: string; pdfPage: number };
+  /** 印字ページ（旧 pdfPage と同義） */
+  sourceRef: { doc: string; printedPage: number; pdfPhysicalPage: number };
   truthAxis: string[];
 }
 
@@ -52,7 +53,8 @@ const CORE_DEFINITIONS: Record<string, CoreDefinition> = {
     concept: "水＝動く側、火＝動かす側、形＝火が水を動かして顕れる",
     sourceRef: {
       doc: "NOTION:PAGE:eed52861641d4d32ac88f3755c4c7a89",
-      pdfPage: 479,
+      printedPage: 479,
+      pdfPhysicalPage: 501,
     },
     truthAxis: ["polarity", "manifestation"],
   },
@@ -60,15 +62,18 @@ const CORE_DEFINITIONS: Record<string, CoreDefinition> = {
     concept: "天地の中心にゝ（凝）が立つ、ここから水火別が起こる",
     sourceRef: {
       doc: "NOTION:PAGE:6beb2c055ef24cf6b60cecbeb1b7847a",
-      pdfPage: 97,
+      printedPage: 97,
+      pdfPhysicalPage: 119,
     },
     truthAxis: ["center", "order"],
   },
   ア: {
-    concept: "五十連の惣名、無にして有、基底母体",
+    concept:
+      "五十連の惣名、無にして有、基底母体。嘆息・悲歓・気の揉みの詞。百千の思を一音に収む。天然の音。空中の水灵、形をなさず。",
     sourceRef: {
       doc: "NOTION:PAGE:af58bef540844ff59f19775177c8f3e8",
-      pdfPage: 415,
+      printedPage: 415,
+      pdfPhysicalPage: 437,
     },
     truthAxis: ["center", "manifestation"],
   },
@@ -76,7 +81,8 @@ const CORE_DEFINITIONS: Record<string, CoreDefinition> = {
     concept: "国土、形の宰、水火の灵",
     sourceRef: {
       doc: "NOTION:PAGE:efc23543a4284d8199d3b8c9ef6e6fbe",
-      pdfPage: 420,
+      printedPage: 420,
+      pdfPhysicalPage: 442,
     },
     truthAxis: ["polarity", "manifestation"],
   },
@@ -84,7 +90,8 @@ const CORE_DEFINITIONS: Record<string, CoreDefinition> = {
     concept: "ア行＝天、ワ行＝地、ヤ行＝人、三行＝君位、八行＝臣",
     sourceRef: {
       doc: "NOTION:PAGE:c69b831fb5e24de99b89bf6ccc39874d",
-      pdfPage: 24,
+      printedPage: 24,
+      pdfPhysicalPage: 46,
     },
     truthAxis: ["governance", "correspondence"],
   },
@@ -92,7 +99,8 @@ const CORE_DEFINITIONS: Record<string, CoreDefinition> = {
     concept: "澄＝上、濁＝降",
     sourceRef: {
       doc: "NOTION:PAGE:71974cfd35a54e6fbbe120bd17297bb8",
-      pdfPage: 449,
+      printedPage: 449,
+      pdfPhysicalPage: 471,
     },
     truthAxis: ["purification", "polarity"],
   },
@@ -148,7 +156,7 @@ export function buildConstitutionClause(): string {
   const defsBlock = Object.entries(core.coreDefinitions)
     .map(
       ([k, v]) =>
-        `  - ${k}: ${v.concept} [${v.sourceRef.doc}, pdfPage=${v.sourceRef.pdfPage}]`
+        `  - ${k}: ${v.concept} [${v.sourceRef.doc}, printedPage=${v.sourceRef.printedPage}, pdfPhysicalPage=${v.sourceRef.pdfPhysicalPage}]`
     )
     .join("\n");
 
@@ -164,7 +172,7 @@ ${defsBlock}
 
 【応答規律】
 - 曖昧表現（〜とされる、〜と言われる）禁止
-- 原典参照必須（doc=XXX pdfPage=N）
+- 原典参照必須（doc=XXX printedPage=N 印字／pdfPhysicalPage=PDFビューア物理頁）
 - 旧字体: 霊→灵、気→氣、国→國
 - 「水火」は「水火（イキ）」と記す
 - 憶測・捏造禁止（OMEGA）

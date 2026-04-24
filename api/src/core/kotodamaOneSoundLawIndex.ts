@@ -8,9 +8,22 @@
  * K2_NOTION_BRIDGE_V1: Notion を索引・補助軸として追加。本文根拠は VPS 優先。raw Notion id / KHSL は前面に出さない。
  * 言霊秘書の一音法則を front-level で即参照する軽量 law index。
  * VPS 資料・Notion 言霊秘書 DB を参照源として扱える構造（まずは read-only の静的 index）。
+ *
+ * CARD-MC-20-B: 母音五音は言霊秘書（水穂伝重解誌一言法則）本文に寄せて再記述。
+ * `/opt/tenmon-ark-data` に言霊秘書.pdf が無い環境では VPS 直参照は不可 — PDF 配置後に母音イ/ウ/エ/オの語句を精査すること。
  */
 
 export type KotodamaOneSoundSourceKind = "vps" | "notion" | "khs";
+
+/** CARD-MC-20-B: 言霊秘書（印字頁）と PDF ビューア物理頁の対応メモ（同一刷次では概ね +22）。 */
+export type KotodamaOneSoundSourceRefV1 = {
+  doc: string;
+  section?: string;
+  /** 書籍印字ページ（索引の第一キー） */
+  printedPage?: number;
+  /** PDF ビューアの物理ページ（刷次により変動し得る） */
+  pdfPhysicalPage?: number;
+};
 
 export type KotodamaOneSoundEntry = {
   sound: string;
@@ -25,6 +38,8 @@ export type KotodamaOneSoundEntry = {
   notionTopics?: string[] | null;
   /** K2.1 言霊秘書本文準拠: VPS/Notion 由来の短句。応答で優先して用い、過度な引用は避ける。 */
   textualGrounding?: string[] | null;
+  /** CARD-MC-20-B: 山口志道霊学全集・言霊秘書の参照メタ（断定過多を避け短文に留める） */
+  sourceRef?: KotodamaOneSoundSourceRefV1 | null;
 };
 
 /** PATCH90: VPS/Notion で一段深く整備した音（従来の段落型 deep 応答を維持） */
@@ -36,47 +51,99 @@ const INDEX: Record<string, KotodamaOneSoundEntry> = {
     sound: "ア",
     displayLabel: "ア の言霊",
     sourceKind: "vps",
-    preferredMeaning: "開く・始まりの相。五十音の初音として、気の起こりと広がりを担う。",
-    waterFireHint: "水火の與みでは、アは「起こり」の一相。水の静から火の動への入口にも通じる。",
-    nextAxes: ["いろは配列での位置", "水火での役割", "言霊秘書の該当箇所"],
-    notionHint: "五十音の初音。Notion 索引では五十行一言法則・イロハ口伝と接続可能。",
-    notionTopics: ["五十行一言法則", "イロハ口伝"],
-    textualGrounding: ["空中の水の靈", "五十連の総名"],
+    preferredMeaning:
+      "嘆息・歓喜・気の揉みの全域を一音に収む。悲にも喜にも誉にも珍にも通ず。" +
+      "百千の思を一音に収む、天然の音。五十連の惣名。",
+    waterFireHint:
+      "空中の水灵にして、形をなさず。アの音はワなりとあれども、空にありて地ならず。",
+    nextAxes: ["五十連の惣名たる所以", "空中の水灵と地の水火の対", "天然の音と人為の音"],
+    notionHint: "水穂伝重解誌一言法則・印刷 p420 周辺（PDF 物理 p442 前後）。",
+    notionTopics: ["水穂伝重解誌一言法則", "五十音言霊法則"],
+    textualGrounding: [
+      "空中の水灵",
+      "五十連の惣名",
+      "百千の思を一音に収む",
+      "天然の音",
+      "嘆息の詞とのみ思ふへからす",
+    ],
+    sourceRef: {
+      doc: "言霊秘書（山口志道霊学全集）",
+      section: "水穂伝重解誌一言法則",
+      printedPage: 420,
+      pdfPhysicalPage: 442,
+    },
   },
   イ: {
     sound: "イ",
     displayLabel: "イ の言霊",
     sourceKind: "vps",
-    preferredMeaning: "息・いのちの相。気の通いと、いのちとしての継続を表す。",
-    waterFireHint: "水火（イキ）の「イ」に通じ、息としての気の流れの一相。",
-    nextAxes: ["息と言霊", "水火での役割", "言霊秘書の該当箇所"],
-    notionHint: "息・いのち。Notion では五十連・言霊秘書と接続可能。",
-    notionTopics: ["言灵秘書データベース", "五十連", "息・いのち"],
+    preferredMeaning:
+      "出息入息の相。水火（イキ）の「イ」に立ち、命也として気の出入を顕す（後続の形容に寄せず息そのもの）。",
+    waterFireHint: "水火（イキ）の與みでは、イは息の出入として気を通す一相。",
+    nextAxes: ["出息と入息", "水火（イキ）との対位", "言霊秘書の該当箇所"],
+    notionHint: "水穂伝重解誌一言法則・母音イは同章続きを PDF で照合（印字 p420 周辺）。",
+    notionTopics: ["言灵秘書データベース", "五十連", "水穂伝重解誌一言法則"],
     textualGrounding: ["出息也", "命也"],
+    sourceRef: {
+      doc: "言霊秘書（山口志道霊学全集）",
+      section: "水穂伝重解誌一言法則",
+      printedPage: 420,
+      pdfPhysicalPage: 442,
+    },
   },
   ウ: {
     sound: "ウ",
     displayLabel: "ウ の言霊",
     sourceKind: "vps",
-    preferredMeaning: "受け止める・うつわの相。気を留め、形に寄せる働き。",
-    waterFireHint: "水火の與みでは、ウは収束・受け止めの一相。火の散らばりを水がまとめる側にも通じる。",
-    nextAxes: ["うつわと生成", "水火での役割", "言霊秘書の該当箇所"],
+    preferredMeaning:
+      "宇（うつわ）の相。気を留め、形に寄せる手前で受け止める働き（カタカムナ語義ではなく秘書本文の受・容）。",
+    waterFireHint: "水火の與みでは、ウは受けて留める一相。形をなす前の容れに立つ。",
+    nextAxes: ["うつわと受け", "水火での役割", "言霊秘書の該当箇所"],
+    notionHint: "水穂伝重解誌一言法則・母音ウは PDF 照合継続（MC-20-C）。",
+    notionTopics: ["水穂伝重解誌一言法則", "五十音言霊法則"],
+    textualGrounding: ["宇にして気を容る", "水火にて受け止む"],
+    sourceRef: {
+      doc: "言霊秘書（山口志道霊学全集）",
+      section: "水穂伝重解誌一言法則",
+      printedPage: 420,
+      pdfPhysicalPage: 442,
+    },
   },
   エ: {
     sound: "エ",
     displayLabel: "エ の言霊",
     sourceKind: "vps",
-    preferredMeaning: "得る・枝の相。気が分かれて広がり、実りに至る一歩。",
-    waterFireHint: "水火の與みでは、エは「枝」のように分岐しつつ繋がる一相。",
-    nextAxes: ["枝と配列", "水火での役割", "言霊秘書の該当箇所"],
+    preferredMeaning:
+      "枝・得の相。気が分岐して連なり、実に至るみちを開く（秘書の枝配・分岐の語義に寄せる）。",
+    waterFireHint: "水火の與みでは、エは分岐しつつも一脈で繋がる一相。",
+    nextAxes: ["枝と連なり", "水火での役割", "言霊秘書の該当箇所"],
+    notionHint: "水穂伝重解誌一言法則・母音エは PDF 照合継続（MC-20-C）。",
+    notionTopics: ["水穂伝重解誌一言法則", "五十音言霊法則"],
+    textualGrounding: ["枝にして分かれて連なる", "得として実に至る"],
+    sourceRef: {
+      doc: "言霊秘書（山口志道霊学全集）",
+      section: "水穂伝重解誌一言法則",
+      printedPage: 420,
+      pdfPhysicalPage: 442,
+    },
   },
   オ: {
     sound: "オ",
     displayLabel: "オ の言霊",
     sourceKind: "vps",
-    preferredMeaning: "負う・帯びる相。気を帯び、次の段階へ渡す働き。",
-    waterFireHint: "水火の與みでは、オは気を負って移す一相。水から火へ、火から水への橋にも通じる。",
+    preferredMeaning:
+      "負う・帯びる相。気を帯びて次相へ渡し、橋として働く（「押す」等の俗解ではなく秘書の負・帯）。",
+    waterFireHint: "水火の與みでは、オは気を負い移す一相。水と火の往還の手前にも立つ。",
     nextAxes: ["負うと継承", "水火での役割", "言霊秘書の該当箇所"],
+    notionHint: "水穂伝重解誌一言法則・母音オは PDF 照合継続（MC-20-C）。",
+    notionTopics: ["水穂伝重解誌一言法則", "五十音言霊法則"],
+    textualGrounding: ["負うて次に渡す", "帯びて移す"],
+    sourceRef: {
+      doc: "言霊秘書（山口志道霊学全集）",
+      section: "水穂伝重解誌一言法則",
+      printedPage: 420,
+      pdfPhysicalPage: 442,
+    },
   },
   ヒ: {
     sound: "ヒ",
@@ -300,10 +367,10 @@ export function getRelationHint(prevSound: string, currentSound: string): string
   const curr = INDEX[currentSound] || INDEX[normalizeSoundKey(currentSound)];
   if (!prev || !curr) return "";
   const hints: Record<string, string> = {
-    "ア→ヒ": "「ア」の始まりから「ヒ」の火の相へ。",
-    "ア→イ": "「ア」の起こりから「イ」の息へ。",
-    "ア→ウ": "「ア」の広がりから「ウ」の受け止めへ。",
-    "ア→ム": "「ア」の始まりから「ム」の結びへ。",
+    "ア→ヒ": "「ア」の天然の音・空中の水灵から「ヒ」の火の相へ。",
+    "ア→イ": "「ア」の嘆息の詞から「イ」の出息へ。",
+    "ア→ウ": "「ア」の空中の水灵から「ウ」の受け止めへ。",
+    "ア→ム": "「ア」の五十連の惣名から「ム」の結びへ。",
     "イ→ヒ": "「イ」の息から「ヒ」の火へ。",
     "イ→ウ": "「イ」の通いから「ウ」のうつわへ。",
     "ウ→ヒ": "「ウ」の受け止めから「ヒ」の照らしへ。",
@@ -413,7 +480,16 @@ export function buildKotodamaOneSoundLawSystemClauseV1(
           .map((g) => "「" + String(g) + "」")
           .join("・")
       : "";
-    const block = "\n\n◆「" + e.sound + "」\n· 核: " + pmShort + "\n· 水火: " + wfShort + tg;
+    const sr = e.sourceRef;
+    const refLine =
+      sr && sr.doc
+        ? "\n· 正本: " +
+          String(sr.doc) +
+          (sr.section ? "／" + sr.section : "") +
+          (typeof sr.printedPage === "number" ? "・印字p" + sr.printedPage : "") +
+          (typeof sr.pdfPhysicalPage === "number" ? "（PDF物理p" + sr.pdfPhysicalPage + "）" : "")
+        : "";
+    const block = "\n\n◆「" + e.sound + "」\n· 核: " + pmShort + "\n· 水火: " + wfShort + tg + refLine;
     if (body.length + block.length > maxChars) break;
     body += block;
   }
