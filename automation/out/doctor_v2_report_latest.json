@@ -1,0 +1,166 @@
+{
+  "doctor_version": "v2.0.0-phase1",
+  "generated_at": "2026-04-25T23:30:48.699412+00:00",
+  "verdict": "RED",
+  "summary": {
+    "critical": 1,
+    "warn": 3,
+    "info": 0
+  },
+  "git": {
+    "branch": "feature/unfreeze-v4",
+    "commit": {
+      "hash": "4ee8c7b17ec482aac5efd31b4c2a87a95e047cce",
+      "subject": "feat(evolution-log): RELEASE-NOTES-MEMORY-PROJECTION-V1 - founder release note for chat-clause two-source supply",
+      "committer_date": "2026-04-26T07:54:11+09:00"
+    },
+    "dirty_count": 0,
+    "untracked_count": 3,
+    "ahead": 0,
+    "behind": 0
+  },
+  "api": {
+    "health": {
+      "status": 200,
+      "ok": true,
+      "error": null,
+      "payload": {
+        "ok": true,
+        "gitSha": "4ee8c7b1",
+        "ready": true,
+        "stage": "READY",
+        "uptime_ms": 3722910
+      }
+    },
+    "claude_summary": {
+      "status": 200,
+      "ok": true,
+      "acceptance_verdict": "FAIL"
+    },
+    "intelligence": {
+      "status": 200,
+      "ok": true,
+      "enforcer_verdict": "clean",
+      "coverage_ratio": null,
+      "coverage_with_entry": 13
+    },
+    "chat_probe": {
+      "status": 200,
+      "ok": true,
+      "thread_id": "doctor-v2-probe-20260425233046",
+      "response_length": 165,
+      "mode": "NATURAL",
+      "intent": "chat",
+      "route_reason": "chat"
+    }
+  },
+  "pwa": {
+    "pwa_root": {
+      "status": 200,
+      "ok": true
+    },
+    "pwa_evolution": {
+      "status": 200,
+      "ok": true
+    },
+    "pwa_no_slash": {
+      "status": 404,
+      "ok": false
+    },
+    "bundle_path": "/var/www/tenmon-pwa/pwa/assets/EvolutionLogPage-CPAtzADp.js",
+    "bundle_entry_hits": {
+      "言霊憲法が会話により深く反映されるようになりました": true,
+      "言霊憲法が記憶層にも定着しました": true,
+      "言霊憲法の本文に基づいて答えられるようになりました": true,
+      "チャット応答が長く話せるようになりました": true
+    },
+    "sidebar_link_hit": true
+  },
+  "db": {
+    "memory_units_total": 253030,
+    "kotodama_units": 12,
+    "thread_center_memory": 9178,
+    "persona_knowledge_bindings": 105,
+    "thread_persona_links": 112975,
+    "persona_profiles": 2,
+    "sacred_corpus_registry": 1014
+  },
+  "safety": {
+    "auto_patch": {
+      "active": "inactive",
+      "enabled": "disabled"
+    },
+    "watchdog": {
+      "active": "active",
+      "enabled": "enabled"
+    },
+    "mc_collect_timers": [
+      "Sun 2026-04-26 08:33:17 JST 2min 29s left Sun 2026-04-26 08:28:17 JST 2min 30s ago mc-collect-live.timer          mc-collect-live.service",
+      "Sun 2026-04-26 08:33:20 JST 2min 32s left Sun 2026-04-26 08:23:20 JST 7min ago     mc-collect-git.timer           mc-collect-git.service",
+      "Sun 2026-04-26 09:21:47 JST 50min left    Sun 2026-04-26 08:21:47 JST 9min ago     mc-collect-all.timer           mc-collect-all.service"
+    ],
+    "denylist_path": "/opt/tenmon-ark-repo/docs/ark/automation/dangerous_script_denylist_v1.json",
+    "denylist_exists": true,
+    "auto_runner_exists": true,
+    "auto_runner_denylist_wired": true
+  },
+  "prompt_trace": {
+    "khs_constitution": 1148,
+    "kotodama_constitution_v1": 2895,
+    "kotodama_constitution_memory": 2139,
+    "response_length": 165,
+    "route_reason": "NATURAL_GENERAL_LLM_TOP",
+    "provider": "gemini",
+    "ts": 1777159848503,
+    "source": "mc_intelligence_fire.jsonl"
+  },
+  "evolution": {
+    "entry_ids": [
+      "evo-2026-04-25-constitution-memory-projection",
+      "evo-2026-04-25-constitution-memory-distill",
+      "evo-2026-04-25-constitution-promotion",
+      "evo-2026-04-25-clamp",
+      "evo-2026-04-24-50sounds",
+      "evo-2026-04-24-bridge",
+      "evo-2026-04-24-watcher",
+      "evo-2026-04-24-trace"
+    ],
+    "expected_top4": [
+      "evo-2026-04-25-constitution-memory-projection",
+      "evo-2026-04-25-constitution-memory-distill",
+      "evo-2026-04-25-constitution-promotion",
+      "evo-2026-04-25-clamp"
+    ],
+    "bundle_top4_hits": {
+      "evo-2026-04-25-constitution-memory-projection": true,
+      "evo-2026-04-25-constitution-memory-distill": true,
+      "evo-2026-04-25-constitution-promotion": true,
+      "evo-2026-04-25-clamp": true
+    }
+  },
+  "next_card_suggestions": [
+    "CARD-DOCTOR-V2-REPAIR-API-V1"
+  ],
+  "findings": [
+    {
+      "level": "warn",
+      "area": "git",
+      "message": "3 untracked file(s)"
+    },
+    {
+      "level": "critical",
+      "area": "api",
+      "message": "acceptance verdict FAIL"
+    },
+    {
+      "level": "warn",
+      "area": "pwa",
+      "message": "/pwa returns 404 (trailing-slash issue)"
+    },
+    {
+      "level": "warn",
+      "area": "prompt_trace",
+      "message": "latest trace response_length=165 < 600"
+    }
+  ]
+}
