@@ -1,0 +1,269 @@
+{
+  "schema_version": "v1",
+  "generated_at": "2026-04-25T16:23:00+09:00",
+  "report_type": "doctor_v2_phase_a_native",
+  "card": "CARD-DOCTOR-V2-PHASE-A-NATIVE-V1",
+  "design_doc": "docs/ark/doctor/DOCTOR_V2_PHASE_A_NATIVE_DESIGN_V1.md",
+  "note": "Sample built from real VPS read-only measurements; not produced by an actual doctor implementation (Phase 2 future).",
+
+  "git": {
+    "head_short": "b93b70b8",
+    "head_full": "b93b70b8cd1dc427559678fee2c1cb1be04742ff",
+    "branch": "feature/unfreeze-v4",
+    "last_commit_subject": "docs(card-templates): DENYLIST-CURSOR-CARD-CHECK-V1 - operational checklist & guide",
+    "last_commit_iso": "2026-04-25T16:11:29+09:00",
+    "dirty": false,
+    "dirty_count": 0,
+    "untracked_count": 0,
+    "modified_count": 0,
+    "commits_30d": 211,
+    "commits_7d": 50,
+    "recent_commits": [
+      "b93b70b8 docs(card-templates): DENYLIST-CURSOR-CARD-CHECK-V1 - operational checklist & guide",
+      "df76610b feat(automation): DENYLIST-AUTORUNNER-WIRING-V1 - precheck denylist enforcement (no actual script execution)",
+      "563fa399 docs(automation): DANGEROUS_SCRIPT_DENYLIST_V1 - structured denylist design (observe/design, no enforcement)",
+      "cb09a0a9 fix(mc): MC-COLLECTOR-GIT-REPAIR-V1 - bash protection patch (mirrors live 2e35ddc8)",
+      "72d539c8 docs(automation): MC_COLLECTOR_FAILED_OBSERVE_V1 - mc-collect-git/all failed observe (read-only)",
+      "b6940733 docs(automation): AUTOMATION_PHANTOM_UNIT_OBSERVE_V1 - phantom unit deep-observe (observe-only, no kill/restore)",
+      "2c6f0ab0 docs(automation): AUTOMATION_DEAD_UNIT_RETIRE_OBSERVE_V1 - dead unit observe (observe-only, no disable)",
+      "211d3d60 feat(founder-ui): RELEASE-NOTES-UI-PHASE-A-V1 - static evolution log at /pwa/evolution",
+      "480beb92 docs(founder-ui): FOUNDER_RELEASE_NOTES_UI_OBSERVE_V1 (observe-only, design map)",
+      "7a2f3ca8 feat(chat): CLAMP-REPAIR-V1 - conditional 500-char clamp for longform"
+    ]
+  },
+
+  "production_api": {
+    "tenmon_ark_api_pid": 854190,
+    "tenmon_ark_api_active": "active",
+    "tenmon_ark_api_enabled": "enabled",
+    "acceptance": {
+      "verdict": "PASS",
+      "checks_total": 10,
+      "checks_pass": 10,
+      "lastVerifiedAt": "2026-04-25T07:22:34.170Z",
+      "reasons_count": 12,
+      "reasons_sample": [
+        "canonical path: canonical 13 件・/mc/ 正統エントリあり（MC-07 ライン満たす）",
+        "ledger flowing: 24h: route=318 llm=320 memory=1028 quality=318 すべて書込あり",
+        "alerts below critical: CRIT=0 / HIGH=0 (<2)"
+      ]
+    },
+    "enforcer": {
+      "verdict": "clean",
+      "total_checks": 6,
+      "violation_count_error": 0,
+      "violation_count_warn": 0,
+      "violations": [],
+      "constitution_ref": "KOTODAMA_CONSTITUTION_V1",
+      "timestamp": "2026-04-25T07:22:35.002Z"
+    },
+    "kotodama_50_coverage": {
+      "total": 50,
+      "with_entry": 13,
+      "coverage_ratio": 0.26,
+      "constitution_ref": "KOTODAMA_CONSTITUTION_V1"
+    },
+    "kotodama_bridges": {
+      "status": "registered_not_synced",
+      "total": 2,
+      "has_primary_bridge": true,
+      "has_separation_policy": true
+    },
+    "pwa_evolution_status": 200,
+    "chat_t1_length": 40,
+    "chat_t4_length": 807,
+    "chat_t4_clamp_repaired": true
+  },
+
+  "mc_collectors": {
+    "live": {
+      "timer_active": "active",
+      "timer_enabled": "enabled",
+      "service_active": "inactive",
+      "service_result": "success",
+      "last_exit": "Sat 2026-04-25 16:20:07 JST"
+    },
+    "build_handoff": {
+      "timer_active": "active",
+      "timer_enabled": "enabled",
+      "service_active": "inactive",
+      "service_result": "success",
+      "last_exit": "Sat 2026-04-25 16:14:24 JST"
+    },
+    "git": {
+      "timer_active": "active",
+      "timer_enabled": "enabled",
+      "service_active": "inactive",
+      "service_result": "success",
+      "last_exit": "Sat 2026-04-25 16:18:19 JST"
+    },
+    "all": {
+      "timer_active": "active",
+      "timer_enabled": "enabled",
+      "service_active": "inactive",
+      "service_result": "success",
+      "last_exit": "Sat 2026-04-25 16:20:53 JST"
+    },
+    "output_dir": "/opt/tenmon-ark-data/mc/",
+    "outputs": {
+      "live_state.json": {
+        "size_bytes": 1877,
+        "mtime_unix": 1777101653,
+        "mtime_iso": "2026-04-25T16:20:53+09:00"
+      },
+      "git_state.json": {
+        "size_bytes": 5590,
+        "mtime_unix": 1777101653,
+        "mtime_iso": "2026-04-25T16:20:53+09:00"
+      },
+      "overview.json": {
+        "size_bytes": 620,
+        "mtime_unix": 1777101653,
+        "mtime_iso": "2026-04-25T16:20:53+09:00"
+      },
+      "ai-handoff.json": {
+        "size_bytes": 1778,
+        "mtime_unix": 1777101653,
+        "mtime_iso": "2026-04-25T16:20:53+09:00"
+      }
+    }
+  },
+
+  "safety_layer": {
+    "denylist_json": {
+      "exists": true,
+      "path": "/opt/tenmon-ark-repo/docs/ark/automation/dangerous_script_denylist_v1.json",
+      "size_bytes": 29037,
+      "schema_version": "v1",
+      "default_action": "block",
+      "num_categories": 5,
+      "num_explicit_scripts": 54,
+      "num_deny_globs": 40,
+      "num_allow_globs": 4,
+      "source_commit": "563fa399"
+    },
+    "tenmon_auto_patch_service": {
+      "active": "inactive",
+      "enabled": "disabled",
+      "phantom": false,
+      "exec_start_path": "/opt/tenmon-ark-repo/auto_patch_runner.sh",
+      "comment": "RETIRE 完了 (CARD-AUTOMATION-PHANTOM-UNIT-RETIRE-V1)"
+    },
+    "tenmon_runtime_watchdog_service": {
+      "active": "active",
+      "enabled": "enabled",
+      "pid": 2539152,
+      "phantom": true,
+      "exec_start_path": "/usr/bin/python3",
+      "exec_start_args": "/opt/tenmon-ark-repo/api/automation/tenmon_runtime_watchdog_v1.py",
+      "comment": "ExecStart の args が deleted file を指す可能性 (要 RETIRE 候補、別カード)"
+    },
+    "tenmon_ark_api_service": {
+      "active": "active",
+      "enabled": "enabled",
+      "pid": 854190,
+      "exec_start_path": "/usr/bin/node",
+      "exec_start_args": "/opt/tenmon-ark-repo/api/dist/index.js"
+    },
+    "nginx_service": {
+      "active": "active",
+      "enabled": "enabled",
+      "pid": 891111,
+      "exec_start_path": "/usr/sbin/nginx"
+    },
+    "tenmon_auto_runner": {
+      "denylist_wired": true,
+      "wiring_commit": "df76610b",
+      "wiring_function": "_scan_card_for_denylist",
+      "service_active": "inactive",
+      "service_enabled": "static",
+      "comment": "auto_runner unit 自体は static / inactive (手動 trigger 専用)"
+    },
+    "fence_summary": {
+      "tenmon_auto_runner": "wired",
+      "tenmon_doctor": "not_wired",
+      "cursor_via_card": "not_wired",
+      "old_4gb_vps_automation_os": "not_wired"
+    }
+  },
+
+  "feedback_loop": {
+    "endpoint": "/api/feedback/history",
+    "endpoint_status": 200,
+    "local_fallback_dir": "/opt/tenmon-ark-repo/api/data/feedback/",
+    "local_fallback_count": 2,
+    "local_fallback_examples": ["FB-20260414-3524.json", "FB-20260414-4673.json"],
+    "design_doc": "docs/ark/feedback/FEEDBACK_LOOP_OBSERVE_V1.md",
+    "comment": "Notion DB 書き込みは doctor 対象外 (READ-ONLY 原則)"
+  },
+
+  "autobuild_progress": {
+    "phase_a_seal_commit": "a6d43996",
+    "phase_a_seal_subject": "feat(mc-20): CONSTITUTION-ENFORCER-V1 - runtime constitution watch (Phase A final)",
+    "phase_b_seals": [
+      {"sha": "7a2f3ca8", "subject": "feat(chat): CLAMP-REPAIR-V1 - conditional 500-char clamp for longform"},
+      {"sha": "211d3d60", "subject": "feat(founder-ui): RELEASE-NOTES-UI-PHASE-A-V1 - static evolution log at /pwa/evolution"},
+      {"sha": "563fa399", "subject": "docs(automation): DANGEROUS_SCRIPT_DENYLIST_V1 - structured denylist design"},
+      {"sha": "df76610b", "subject": "feat(automation): DENYLIST-AUTORUNNER-WIRING-V1 - precheck denylist enforcement"},
+      {"sha": "b93b70b8", "subject": "docs(card-templates): DENYLIST-CURSOR-CARD-CHECK-V1 - operational checklist & guide"}
+    ],
+    "evolution_log_entries": 5,
+    "evolution_log_route": "/pwa/evolution",
+    "evolution_log_source": "web/src/data/evolution_log_v1.ts",
+    "commits_30d": 211,
+    "commits_7d": 50
+  },
+
+  "alerts": [
+    {
+      "id": "watchdog_phantom",
+      "level": "warn",
+      "category": "phantom_unit",
+      "message": "tenmon-runtime-watchdog.service is in phantom state (PID 2539152 active but ExecStart args may point to deleted file)",
+      "recommendation": "RETIRE candidate in next card (low priority); evidence in docs/ark/automation/AUTOMATION_PHANTOM_UNIT_OBSERVE_V1.md"
+    },
+    {
+      "id": "kotodama_50_coverage_low",
+      "level": "warn",
+      "category": "constitution",
+      "message": "kotodama_50_coverage.coverage_ratio = 0.26 (with_entry=13/total=50)",
+      "recommendation": "Plan 50-音 entry expansion card (Phase B)"
+    },
+    {
+      "id": "auto_runner_unwired_doctor",
+      "level": "info",
+      "category": "fence_pending",
+      "message": "tenmon_doctor is not yet wired to denylist (enforcement_rules.tenmon_doctor.wired=false)",
+      "recommendation": "Plan CARD-DENYLIST-DOCTOR-WIRING-V1 (separate card)"
+    },
+    {
+      "id": "auto_runner_unwired_cursor",
+      "level": "info",
+      "category": "fence_pending",
+      "message": "cursor_via_card is not yet wired to denylist (Phase γ)",
+      "recommendation": "Plan CARD-DENYLIST-CURSOR-CARD-CHECK-WIRING-V1 (Phase γ separate card)"
+    },
+    {
+      "id": "old_vps_unwired",
+      "level": "info",
+      "category": "fence_pending",
+      "message": "Old 4GB VPS automation_os is not yet wired (low priority)",
+      "recommendation": "Phase C separate card; do not modify old VPS in current cards"
+    }
+  ],
+
+  "verdict": "GREEN",
+  "verdict_reason": "Phase A modules clean (acceptance PASS 10/10, enforcer clean 6/6, 0 violations); safety layer wired for auto_runner; mc-collect 4 collectors all green; 2 warn-level alerts (watchdog phantom, 50音 coverage low) but no critical alerts; chat clamp repaired; pwa evolution 200; api PID stable.",
+
+  "next_card_suggestions": {
+    "high_priority": [],
+    "medium_priority": [
+      {"card": "CARD-AUTOMATION-WATCHDOG-RETIRE-V1", "reason": "watchdog_phantom alert"}
+    ],
+    "low_priority": [
+      {"card": "CARD-DOCTOR-V2-IMPLEMENT-V1", "reason": "implement this design"},
+      {"card": "CARD-DENYLIST-DOCTOR-WIRING-V1", "reason": "wire denylist into tenmon_doctor"},
+      {"card": "CARD-50ON-COVERAGE-EXPAND-V1", "reason": "kotodama_50_coverage_low"}
+    ]
+  }
+}
