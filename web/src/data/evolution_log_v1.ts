@@ -27,6 +27,20 @@ export interface EvolutionLogEntry {
 
 export const evolutionLogV1: EvolutionLogEntry[] = [
   {
+    id: "evo-2026-04-25-constitution-promotion",
+    emoji: "✨",
+    title: "言霊憲法の本文に基づいて答えられるようになりました",
+    date: "2026-04-25",
+    badge: "改善",
+    summary: {
+      description:
+        "「言霊憲法 V1 第 4 条は何ですか？」と聞いたとき、天聞アークが本文に基づいて「ヰ・ヱを欠損扱いにしない」という原則を答えられるようになりました。",
+      context:
+        "これにより、言霊の五十音構造やヰ・ヱの保持について、より正確に応答できる土台が整いました。",
+      tryItExample: "言霊憲法 V1 第 4 条は何ですか？",
+    },
+  },
+  {
     id: "evo-2026-04-25-clamp",
     emoji: "✨",
     title: "チャット応答が長く話せるようになりました",
