@@ -22,8 +22,8 @@ HEAD_AUTHOR=$(git log -1 --format="%an" 2>/dev/null || echo "unknown")
 # ── Dirty state ──────────────────────────────────────────
 DIRTY=$(git status --porcelain 2>/dev/null | wc -l)
 IS_DIRTY=$([ "${DIRTY}" -gt 0 ] && echo "true" || echo "false")
-UNTRACKED=$(git status --porcelain 2>/dev/null | grep "^??" | wc -l)
-MODIFIED=$(git status --porcelain 2>/dev/null | grep -v "^??" | wc -l)
+UNTRACKED=$(git status --porcelain 2>/dev/null | { grep "^??" || true; } | wc -l)
+MODIFIED=$(git status --porcelain 2>/dev/null | { grep -v "^??" || true; } | wc -l)
 
 # ── Recent commits ───────────────────────────────────────
 RECENT_COMMITS=$(git log --format='{"sha":"%h","subject":"%s","author":"%an","date":"%aI"}' -20 2>/dev/null | python3 -c "
