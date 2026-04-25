@@ -27,6 +27,19 @@ export interface EvolutionLogEntry {
 
 export const evolutionLogV1: EvolutionLogEntry[] = [
   {
+    id: "evo-2026-04-25-constitution-memory-distill",
+    emoji: "✨",
+    title: "言霊憲法が記憶層にも定着しました",
+    date: "2026-04-25",
+    badge: "改善",
+    summary: {
+      description:
+        "天聞アークは、言霊憲法 V1 の 12 条を記憶層にも保持できるようになりました。",
+      context:
+        "これにより、言霊の五十音構造、ヰ・ヱの保持、正典分母の考え方を、より安定して参照できる土台が整いました。",
+    },
+  },
+  {
     id: "evo-2026-04-25-constitution-promotion",
     emoji: "✨",
     title: "言霊憲法の本文に基づいて答えられるようになりました",
