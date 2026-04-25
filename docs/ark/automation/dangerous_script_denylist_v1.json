@@ -1,0 +1,775 @@
+{
+  "schema_version": "v1",
+  "card": "CARD-DANGEROUS-SCRIPT-DENYLIST-V1",
+  "card_type": "OBSERVE / 設計",
+  "generated_at": "2026-04-25",
+  "parent_commit": "cb09a0a9",
+  "purpose": "天聞アーク自動構築 OS の自動実行経路 (tenmon_auto_runner / tenmon doctor / Cursor card / 旧 4GB VPS) から、deploy / rollback / vps_sync / migration / autopilot 系の危険スクリプト実行を構造的にブロックするための denylist 設計データ。本ファイルは Phase 1 (設計) の成果物であり、enforcement 配線は Phase 2 で別カードにより実施。",
+  "enforcement_status": "DESIGN_ONLY (not wired yet)",
+  "enforcement_mode": "strict",
+  "default_action": "block",
+
+  "categories": [
+    {
+      "id": "A",
+      "name": "本番直撃 (即停止 / 即破壊)",
+      "tier": 1,
+      "default_action": "block",
+      "rationale": "git pull / npm install / tsc / systemctl restart 系を直接実行するため、自動実行されると本番停止または不整合 deploy のリスクが極めて高い。",
+      "scripts": [
+        {
+          "path": "scripts/deploy_all.sh",
+          "size_bytes": 8897,
+          "line_count": 241,
+          "executable": true,
+          "exists": true,
+          "danger_patterns": ["systemctl restart", "git push --force", "rm -rf", "npm install"],
+          "rationale": "git pull + npm install + tsc + systemctl restart tenmon-ark-api を一気通貫実行する最上位 deploy script",
+          "last_commit": "2e35ddc8 (2026-04-24)"
+        },
+        {
+          "path": "api/scripts/deploy_live.sh",
+          "size_bytes": 3260,
+          "line_count": 94,
+          "executable": true,
+          "exists": true,
+          "danger_patterns": ["rm -rf"],
+          "rationale": "本番 API への直接 deploy",
+          "last_commit": "b62912dc (2026-02-26)"
+        },
+        {
+          "path": "api/scripts/deploy_web.sh",
+          "size_bytes": 606,
+          "line_count": 21,
+          "executable": true,
+          "exists": true,
+          "danger_patterns": ["rm -rf"],
+          "rationale": "web bundle の本番 deploy",
+          "last_commit": "cc1f4638 (2026-02-12)"
+        },
+        {
+          "path": "api/scripts/run_deploy_and_check.sh",
+          "size_bytes": 341,
+          "line_count": 15,
+          "executable": true,
+          "exists": true,
+          "danger_patterns": [],
+          "rationale": "deploy 後 check ラッパー (deploy_live を呼び出すため deny)",
+          "last_commit": "b62912dc (2026-02-26)"
+        },
+        {
+          "path": "api/scripts/run_restart_and_route_bleed_check.sh",
+          "size_bytes": 2089,
+          "line_count": 81,
+          "executable": false,
+          "exists": true,
+          "danger_patterns": ["systemctl restart", "npm install"],
+          "rationale": "tenmon-ark-api 再起動 + ルート漏洩チェック (再起動を含むため deny)",
+          "last_commit": "36945860 (2026-03-24)"
+        },
+        {
+          "path": "api/scripts/setup_systemd_override.sh",
+          "size_bytes": 1183,
+          "line_count": 39,
+          "executable": true,
+          "exists": true,
+          "danger_patterns": ["systemctl restart"],
+          "rationale": "systemd override 配置 + daemon-reload + 再起動",
+          "last_commit": "fb507886 (2026-02-02)"
+        },
+        {
+          "path": "api/scripts/build_restart_wrapper_v1.sh",
+          "size_bytes": 750,
+          "line_count": 28,
+          "executable": true,
+          "exists": true,
+          "danger_patterns": ["systemctl restart", "npm install"],
+          "rationale": "ビルド + 再起動の包括ラッパー",
+          "last_commit": "15918865 (2026-03-25)"
+        },
+        {
+          "path": "api/scripts/build_acceptance_autorun_v1.sh",
+          "size_bytes": 2805,
+          "line_count": 107,
+          "executable": true,
+          "exists": true,
+          "danger_patterns": ["systemctl restart", "npm install"],
+          "rationale": "ビルド + acceptance 自動実行 + 再起動",
+          "last_commit": "7740719e (2026-03-21)"
+        },
+        {
+          "path": "infra/deploy.sh",
+          "size_bytes": 5005,
+          "line_count": 153,
+          "executable": true,
+          "exists": true,
+          "danger_patterns": ["systemctl restart", "npm install"],
+          "rationale": "infra 層の deploy entry point",
+          "last_commit": "e290a232 (2026-01-31)"
+        },
+        {
+          "path": "infra/auto-recovery.sh",
+          "size_bytes": 3066,
+          "line_count": 124,
+          "executable": true,
+          "exists": true,
+          "danger_patterns": ["systemctl restart", "npm install"],
+          "rationale": "自動 recovery (restart 連発のリスク)",
+          "last_commit": "e290a232 (2026-01-31)"
+        },
+        {
+          "path": "web/scripts/deploy_web_live.sh",
+          "size_bytes": 1386,
+          "line_count": 42,
+          "executable": true,
+          "exists": true,
+          "danger_patterns": ["npm install"],
+          "rationale": "web 本番 deploy",
+          "last_commit": "2e35ddc8 (2026-04-24)"
+        },
+        {
+          "path": "site/scripts/deploy_site_live.sh",
+          "size_bytes": 900,
+          "line_count": 29,
+          "executable": false,
+          "exists": true,
+          "danger_patterns": ["npm install"],
+          "rationale": "site 本番 deploy",
+          "last_commit": "c66f9d7d (2026-02-11)"
+        },
+        {
+          "path": ".github/workflows/deploy.yml",
+          "size_bytes": 1430,
+          "line_count": 46,
+          "executable": false,
+          "exists": true,
+          "danger_patterns": ["systemctl restart", "git push --force", "npm install"],
+          "rationale": "GitHub Actions による自動 deploy ワークフロー (push trigger で発火するため最警戒)",
+          "last_commit": "2e35ddc8 (2026-04-24)"
+        }
+      ]
+    },
+
+    {
+      "id": "B",
+      "name": "VPS 同期 / 再 clone (リポジトリ全体破壊)",
+      "tier": 1,
+      "default_action": "block",
+      "rationale": "VPS のリポジトリ全体を再 clone / 強制 sync するため、誤実行で全変更喪失のリスク。",
+      "scripts": [
+        {
+          "path": "api/scripts/vps_sync_and_verify.sh",
+          "size_bytes": 4779,
+          "line_count": 152,
+          "executable": true,
+          "exists": true,
+          "danger_patterns": ["systemctl restart", "git push --force"],
+          "rationale": "VPS 全同期 + force push リスク",
+          "last_commit": "e290a232 (2026-01-31)"
+        },
+        {
+          "path": "api/scripts/vps_sync_phase28.sh",
+          "size_bytes": 5588,
+          "line_count": 186,
+          "executable": true,
+          "exists": true,
+          "danger_patterns": ["systemctl restart", "git push --force"],
+          "rationale": "Phase28 同期 (force push を含む)",
+          "last_commit": "e290a232 (2026-01-31)"
+        },
+        {
+          "path": "api/scripts/vps_reclone_and_switch.sh",
+          "size_bytes": 4900,
+          "line_count": 171,
+          "executable": true,
+          "exists": true,
+          "danger_patterns": ["systemctl restart", "rm -rf", "npm install"],
+          "rationale": "リポジトリ rm -rf + 再 clone + switch (リポジトリ完全破壊・再構築)",
+          "last_commit": "e290a232 (2026-01-31)"
+        },
+        {
+          "path": "api/scripts/vps_fix_live_directory.sh",
+          "size_bytes": 4976,
+          "line_count": 173,
+          "executable": true,
+          "exists": true,
+          "danger_patterns": ["systemctl restart"],
+          "rationale": "live directory 修復 + 再起動",
+          "last_commit": "29682fa6 (2026-01-31)"
+        },
+        {
+          "path": "api/src/scripts/tenmon_master_integrated_deploy_sequence_vps_v1.sh",
+          "size_bytes": 546,
+          "line_count": 12,
+          "executable": true,
+          "exists": true,
+          "danger_patterns": [],
+          "rationale": "VPS 統合 deploy のラッパー (deploy_live / deploy_web を呼ぶため deny)",
+          "last_commit": "e81b7f21 (2026-03-25)"
+        }
+      ]
+    },
+
+    {
+      "id": "C",
+      "name": "rollback / restore (自動起動禁止)",
+      "tier": 1,
+      "default_action": "block",
+      "rationale": "rollback は緊急時のみ TENMON が手動で SSH 経由で実行する。自動起動は二次被害のリスクが極めて高い。",
+      "scripts": [
+        {
+          "path": "api/scripts/tenmon_rollback_autotrigger_and_restore_v1.sh",
+          "size_bytes": 1549,
+          "line_count": 54,
+          "executable": true,
+          "exists": true,
+          "danger_patterns": [],
+          "rationale": "auto rollback トリガー + restore (絶対自動禁止)",
+          "last_commit": "15918865 (2026-03-25)"
+        },
+        {
+          "path": "api/scripts/tenmon_verify_rejudge_rollback_loop_v1.sh",
+          "size_bytes": 269,
+          "line_count": 7,
+          "executable": true,
+          "exists": true,
+          "danger_patterns": [],
+          "rationale": "verify 失敗時に rollback ループ (loop は最警戒)",
+          "last_commit": "15918865 (2026-03-25)"
+        },
+        {
+          "path": "api/scripts/auto_rollback_restore_guard_v1.sh",
+          "size_bytes": 750,
+          "line_count": 26,
+          "executable": true,
+          "exists": true,
+          "danger_patterns": [],
+          "rationale": "auto rollback ガード (誤発火で本番停止)",
+          "last_commit": "15918865 (2026-03-25)"
+        },
+        {
+          "path": "api/scripts/build_probe_rollback_autoguard_v1.sh",
+          "size_bytes": 239,
+          "line_count": 5,
+          "executable": true,
+          "exists": true,
+          "danger_patterns": [],
+          "rationale": "build probe 失敗時の rollback autoguard",
+          "last_commit": "942c2bd0 (2026-03-26)"
+        },
+        {
+          "path": "api/automation/auto_rollback_restore_guard_v1.py",
+          "size_bytes": 8573,
+          "line_count": 217,
+          "executable": false,
+          "exists": true,
+          "danger_patterns": [],
+          "rationale": "Python 版 auto rollback restore guard",
+          "last_commit": "15918865 (2026-03-25)"
+        },
+        {
+          "path": "api/automation/build_probe_rollback_autoguard_v1.py",
+          "size_bytes": 15133,
+          "line_count": 433,
+          "executable": false,
+          "exists": true,
+          "danger_patterns": [],
+          "rationale": "Python 版 build probe rollback autoguard",
+          "last_commit": "942c2bd0 (2026-03-26)"
+        },
+        {
+          "path": "api/automation/rollback_plan_generator_v1.py",
+          "size_bytes": 3309,
+          "line_count": 86,
+          "executable": false,
+          "exists": true,
+          "danger_patterns": ["npm install"],
+          "rationale": "rollback プラン生成 (実行時の副作用は限定的だが deny)",
+          "last_commit": "15918865 (2026-03-25)"
+        },
+        {
+          "path": "api/automation/rollback_planner_v1.py",
+          "size_bytes": 2107,
+          "line_count": 68,
+          "executable": false,
+          "exists": true,
+          "danger_patterns": [],
+          "rationale": "rollback プランナー",
+          "last_commit": "15918865 (2026-03-25)"
+        },
+        {
+          "path": "api/automation/rollback_trigger_v1.py",
+          "size_bytes": 2731,
+          "line_count": 81,
+          "executable": false,
+          "exists": true,
+          "danger_patterns": ["systemctl restart"],
+          "rationale": "rollback トリガー本体 (systemctl restart を含む)",
+          "last_commit": "15918865 (2026-03-25)"
+        },
+        {
+          "path": "api/automation/tenmon_rollback_autotrigger_and_restore_v1.py",
+          "size_bytes": 10478,
+          "line_count": 278,
+          "executable": false,
+          "exists": true,
+          "danger_patterns": [],
+          "rationale": "Python 版 auto rollback + restore",
+          "last_commit": "15918865 (2026-03-25)"
+        },
+        {
+          "path": "api/automation/tenmon_autonomy_failclosed_supervisor_rollback_forensic_cursor_auto_v1.py",
+          "size_bytes": 17106,
+          "line_count": 439,
+          "executable": false,
+          "exists": true,
+          "danger_patterns": [],
+          "rationale": "fail-closed supervisor + rollback + forensic 統合",
+          "last_commit": "b49af1ae (2026-03-27)"
+        }
+      ]
+    },
+
+    {
+      "id": "D",
+      "name": "migration / DB seed (DB 書き込みリスク)",
+      "tier": 2,
+      "default_action": "block",
+      "rationale": "kokuzo.sqlite への書き込み / migration / DROP TABLE のリスク。誤実行で DB 整合性破壊。",
+      "scripts": [
+        {
+          "path": "scripts/migrate-legacy-memory.mjs",
+          "size_bytes": 9138,
+          "line_count": 289,
+          "executable": false,
+          "exists": true,
+          "danger_patterns": [],
+          "rationale": "legacy memory migration (DB 書き込み)",
+          "last_commit": "e290a232 (2026-01-31)"
+        },
+        {
+          "path": "scripts/seed-plans.mjs",
+          "size_bytes": 2057,
+          "line_count": 78,
+          "executable": false,
+          "exists": true,
+          "danger_patterns": [],
+          "rationale": "plans seed (本番 DB に書き込みのリスク)",
+          "last_commit": "e290a232 (2026-01-31)"
+        },
+        {
+          "path": "scripts/seed-plans.ts",
+          "size_bytes": 2082,
+          "line_count": 78,
+          "executable": false,
+          "exists": true,
+          "danger_patterns": [],
+          "rationale": "plans seed TypeScript 版",
+          "last_commit": "e290a232 (2026-01-31)"
+        },
+        {
+          "path": "scripts/seed-site-info.mjs",
+          "size_bytes": 2237,
+          "line_count": 80,
+          "executable": false,
+          "exists": true,
+          "danger_patterns": [],
+          "rationale": "site info seed",
+          "last_commit": "e290a232 (2026-01-31)"
+        },
+        {
+          "path": "scripts/seed-siteinfo.mjs",
+          "size_bytes": 1732,
+          "line_count": 72,
+          "executable": false,
+          "exists": true,
+          "danger_patterns": [],
+          "rationale": "site info seed (旧名)",
+          "last_commit": "e290a232 (2026-01-31)"
+        },
+        {
+          "path": "scripts/setupSiteInfo.mjs",
+          "size_bytes": 2448,
+          "line_count": 98,
+          "executable": false,
+          "exists": true,
+          "danger_patterns": [],
+          "rationale": "site info セットアップ",
+          "last_commit": "e290a232 (2026-01-31)"
+        },
+        {
+          "path": "scripts/setupSiteInfo.ts",
+          "size_bytes": 2242,
+          "line_count": 89,
+          "executable": false,
+          "exists": true,
+          "danger_patterns": [],
+          "rationale": "site info セットアップ (TS)",
+          "last_commit": "e290a232 (2026-01-31)"
+        },
+        {
+          "path": "api/scripts/rebuild_fts5.sh",
+          "size_bytes": 1329,
+          "line_count": 56,
+          "executable": true,
+          "exists": true,
+          "danger_patterns": ["DROP TABLE"],
+          "rationale": "FTS5 再構築 (DROP TABLE を含む)",
+          "last_commit": "e290a232 (2026-01-31)"
+        },
+        {
+          "path": "api/scripts/seed_iroha_principles_v1.sh",
+          "size_bytes": 1789,
+          "line_count": null,
+          "executable": true,
+          "exists": true,
+          "danger_patterns": [],
+          "rationale": "iroha principles seed (DB 書き込み)",
+          "last_commit": "(grep glob 補完)"
+        },
+        {
+          "path": "api/scripts/seed_katakamuna_principles_v1.sh",
+          "size_bytes": 1196,
+          "line_count": null,
+          "executable": true,
+          "exists": true,
+          "danger_patterns": [],
+          "rationale": "katakamuna principles seed",
+          "last_commit": "(grep glob 補完)"
+        },
+        {
+          "path": "api/scripts/seed_khs_laws_v1.mjs",
+          "size_bytes": 22937,
+          "line_count": null,
+          "executable": false,
+          "exists": true,
+          "danger_patterns": [],
+          "rationale": "khs laws bulk seed (大量レコード書き込み)",
+          "last_commit": "(grep glob 補完)"
+        },
+        {
+          "path": "api/scripts/seed_learning_effect_audit_v1.sh",
+          "size_bytes": 5558,
+          "line_count": null,
+          "executable": true,
+          "exists": true,
+          "danger_patterns": ["npm install"],
+          "rationale": "learning effect audit seed",
+          "last_commit": "(grep glob 補完)"
+        },
+        {
+          "path": "api/scripts/seed_tenmon_core_pack_v1.sh",
+          "size_bytes": 1164,
+          "line_count": null,
+          "executable": true,
+          "exists": true,
+          "danger_patterns": [],
+          "rationale": "tenmon core pack seed",
+          "last_commit": "(grep glob 補完)"
+        }
+      ]
+    },
+
+    {
+      "id": "E",
+      "name": "autopilot / runner (自動実行系)",
+      "tier": 2,
+      "default_action": "block",
+      "rationale": "autopilot / orchestrator / supervisor / 任意 runner。長時間 loop で本番に副作用を起こすリスク。",
+      "scripts": [
+        {
+          "path": "api/automation/master_integrated_deploy_sequence_v1.py",
+          "size_bytes": 15877,
+          "line_count": 446,
+          "executable": false,
+          "exists": true,
+          "danger_patterns": [],
+          "rationale": "Python 版 master deploy sequence (Cat A の Python 等価)",
+          "last_commit": "15918865 (2026-03-25)"
+        },
+        {
+          "path": "api/automation/full_autopilot_v1.py",
+          "size_bytes": 14670,
+          "line_count": 420,
+          "executable": false,
+          "exists": true,
+          "danger_patterns": [],
+          "rationale": "fully autonomous autopilot v1",
+          "last_commit": "15918865 (2026-03-25)"
+        },
+        {
+          "path": "api/automation/final_seal_autopilot_v3.py",
+          "size_bytes": 35893,
+          "line_count": 916,
+          "executable": false,
+          "exists": true,
+          "danger_patterns": ["npm install"],
+          "rationale": "final seal autopilot v3 (大規模)",
+          "last_commit": "15918865 (2026-03-25)"
+        },
+        {
+          "path": "api/automation/worldclass_ascent_autopilot_v2.py",
+          "size_bytes": 25868,
+          "line_count": 596,
+          "executable": false,
+          "exists": true,
+          "danger_patterns": ["npm install"],
+          "rationale": "worldclass ascent autopilot v2",
+          "last_commit": "15918865 (2026-03-25)"
+        },
+        {
+          "path": "api/automation/multi_ai_autonomy_supervisor_v1.py",
+          "size_bytes": 66178,
+          "line_count": 1629,
+          "executable": false,
+          "exists": true,
+          "danger_patterns": [],
+          "rationale": "multi-AI autonomy supervisor (極大スクリプト)",
+          "last_commit": "f166ba75 (2026-03-31)"
+        },
+        {
+          "path": "api/automation/infinite_growth_loop_orchestrator_v1.py",
+          "size_bytes": 43747,
+          "line_count": 1277,
+          "executable": false,
+          "exists": true,
+          "danger_patterns": [],
+          "rationale": "infinite growth loop orchestrator",
+          "last_commit": "ec8c2af3 (2026-03-31)"
+        },
+        {
+          "path": "api/automation/overnight_full_pdca_autonomy_orchestrator_v1.py",
+          "size_bytes": 17774,
+          "line_count": 495,
+          "executable": false,
+          "exists": true,
+          "danger_patterns": [],
+          "rationale": "overnight full PDCA autonomy orchestrator",
+          "last_commit": "21ec4427 (2026-03-27)"
+        },
+        {
+          "path": "api/automation/tenmon_full_autonomy_os_13plus4_master_parent_v1.py",
+          "size_bytes": 22058,
+          "line_count": 571,
+          "executable": false,
+          "exists": true,
+          "danger_patterns": [],
+          "rationale": "tenmon full autonomy OS 13+4 master parent",
+          "last_commit": "21ec4427 (2026-03-27)"
+        },
+        {
+          "path": "api/scripts/autopilot_cycle.sh",
+          "size_bytes": 5705,
+          "line_count": 139,
+          "executable": true,
+          "exists": true,
+          "danger_patterns": ["systemctl restart"],
+          "rationale": "autopilot cycle (systemctl restart を含む loop)",
+          "last_commit": "9df6aa14 (2026-03-10)"
+        },
+        {
+          "path": "api/scripts/card_runner.sh",
+          "size_bytes": 2439,
+          "line_count": 96,
+          "executable": true,
+          "exists": true,
+          "danger_patterns": ["systemctl restart"],
+          "rationale": "card 任意実行 runner (systemctl restart を含む)",
+          "last_commit": "61041cce (2026-03-10)"
+        },
+        {
+          "path": "api/scripts/runner.sh",
+          "size_bytes": 1499,
+          "line_count": 57,
+          "executable": true,
+          "exists": true,
+          "danger_patterns": [],
+          "rationale": "汎用 runner (任意 cmd の実行ラッパー)",
+          "last_commit": "b62912dc (2026-02-26)"
+        },
+        {
+          "path": "api/scripts/phase44_runner.sh",
+          "size_bytes": 2533,
+          "line_count": 63,
+          "executable": true,
+          "exists": true,
+          "danger_patterns": [],
+          "rationale": "phase44 runner",
+          "last_commit": "7c7006fe (2026-02-17)"
+        }
+      ]
+    }
+  ],
+
+  "path_patterns": {
+    "comment": "個別列挙されていない script でも、以下の glob にマッチするものは default_action=block。catch-all 的なゲート。",
+    "deny_globs": [
+      "api/automation/*autopilot*.py",
+      "api/automation/*orchestrator*.py",
+      "api/automation/*supervisor*.py",
+      "api/automation/*autonomy*.py",
+      "api/automation/*rollback*.py",
+      "api/automation/*restore*.py",
+      "api/automation/*autoguard*.py",
+      "api/automation/*deploy*.py",
+      "api/automation/*forensic*.py",
+      "api/automation/multi_ai_*.py",
+      "api/automation/infinite_growth_*.py",
+      "api/automation/overnight_*.py",
+      "api/automation/master_integrated_*.py",
+      "api/automation/full_*.py",
+      "api/automation/final_*.py",
+      "api/scripts/deploy_*.sh",
+      "api/scripts/vps_*.sh",
+      "api/scripts/*rollback*.sh",
+      "api/scripts/*autoguard*.sh",
+      "api/scripts/*runner*.sh",
+      "api/scripts/autopilot_*.sh",
+      "api/scripts/seed_*.sh",
+      "api/scripts/seed_*.mjs",
+      "api/scripts/seed_*.ts",
+      "api/scripts/setup_systemd_*.sh",
+      "api/scripts/build_restart_*.sh",
+      "api/scripts/build_acceptance_autorun_*.sh",
+      "api/scripts/run_deploy_*.sh",
+      "api/scripts/run_restart_*.sh",
+      "api/scripts/rebuild_fts5*.sh",
+      "api/src/scripts/tenmon_master_integrated_*.sh",
+      "scripts/deploy_*.sh",
+      "scripts/migrate-*.{mjs,ts,js}",
+      "scripts/seed-*.{mjs,ts,js}",
+      "scripts/setupSiteInfo*",
+      "infra/deploy*.sh",
+      "infra/auto-recovery*.sh",
+      "web/scripts/deploy_*.sh",
+      "site/scripts/deploy_*.sh",
+      ".github/workflows/deploy*.yml"
+    ],
+    "allow_globs": [
+      "api/scripts/mc/*",
+      "api/scripts/mc/mc_collect_*.sh",
+      "api/scripts/mc/mc_build_ai_handoff.sh",
+      "api/scripts/mc/mc_lib.sh"
+    ],
+    "allow_rationale": "MC (Mission Control) 観測コレクタは本番 API に副作用を持たないため、自動実行を許可。read-only collector + JSON 書き込みのみ。"
+  },
+
+  "enforcement_rules": {
+    "tenmon_auto_runner": {
+      "applies": true,
+      "wired": false,
+      "phase": 2,
+      "check_method": "ExecStart の resolved 絶対 path を denylist と突合 (個別 path + deny_globs 両方)",
+      "on_violation": "abort + freeze marker 作成",
+      "freeze_marker": "/var/log/tenmon/auto_runner_freeze_denylist_<card>_<timestamp>.txt",
+      "log_destination": "/var/log/tenmon/auto_runner.log"
+    },
+    "tenmon_doctor": {
+      "applies": true,
+      "wired": false,
+      "phase": 2,
+      "check_method": "subcommand が呼び出す path を denylist と突合",
+      "on_violation": "abort + log",
+      "log_destination": "/var/log/tenmon/doctor.log"
+    },
+    "cursor_via_card": {
+      "applies": true,
+      "wired": false,
+      "phase": 2,
+      "check_method": "card 内の bash command を grep し、denylist 対象 path への呼び出しを検出",
+      "on_violation": "card-level FAIL marker (card commit を阻止)",
+      "implementation_hint": "Cursor pre-commit hook または card 設計レビュー段階で適用"
+    },
+    "old_4gb_vps_automation_os": {
+      "applies": true,
+      "wired": false,
+      "phase": 2,
+      "check_method": "起動時に denylist json を読み込み、全実行 attempt を path 突合",
+      "on_violation": "abort + remote freeze (production-side blocker)",
+      "deployment": "json file 配布 (rsync / scp) + Automation OS 起動時に load"
+    }
+  },
+
+  "exceptions": {
+    "manual_only": {
+      "description": "TENMON が直接 SSH で実行する場合のみ許可。自動経路 (tenmon_auto_runner / cron / systemd unit) からは実行しない。",
+      "applies_to": "全 deny 対象",
+      "verification": "実行時の TTY 検出 + 実行ユーザ + 実行 origin を log に記録"
+    },
+    "test_environments": {
+      "description": "本番でない環境 (TENMON_ENV=test 等) では一部の Cat D (migration / seed) を緩和可能。Cat A/B/C/E は本番含めて常に deny。",
+      "applies_to": "Category D のみ条件付き許可",
+      "wired": false,
+      "phase": 2,
+      "implementation_hint": "環境変数 TENMON_ENV または /etc/tenmon/env で test 識別"
+    }
+  },
+
+  "phase_2_plan": {
+    "comment": "本カード (Phase 1 設計) の後に、以下 4 カードを順次投入。各カードは TENMON 裁定後に実施。",
+    "cards": [
+      {
+        "id": "CARD-DENYLIST-AUTORUNNER-WIRING-V1",
+        "purpose": "tenmon_auto_runner.py の precheck stage に denylist 突合を組込み",
+        "target_files": [
+          "api/automation/tenmon_auto_runner.py (関数追加 1 個)",
+          "denylist json は read-only で参照"
+        ],
+        "scope": "1 file / 1 function 追加 (~30-50 行) / freeze marker 機構 1 個",
+        "risk": "low (現在 health-only lane のため)",
+        "recommended_order": 1
+      },
+      {
+        "id": "CARD-DENYLIST-CURSOR-CARD-CHECK-V1",
+        "purpose": "Cursor card 設計時に bash command が denylist 対象を呼ぶか pre-check",
+        "target_files": [
+          "docs/ark/card-templates/CARD_TEMPLATE_DENYLIST_CHECKLIST.md (新規)",
+          "(将来) .cursor/rules/denylist-pre-check.md (新規)"
+        ],
+        "scope": "ドキュメント + チェックリストのみ。Cursor 側の動的 hook は限定的",
+        "risk": "lowest (運用ルールのみ)",
+        "recommended_order": 2
+      },
+      {
+        "id": "CARD-DENYLIST-DOCTOR-WIRING-V1",
+        "purpose": "将来の tenmon doctor (CLI) で subcommand 実行時に denylist を参照",
+        "target_files": [
+          "(旧 4GB VPS 配備時に新規) tenmon-doctor.py (CLI 実装)"
+        ],
+        "scope": "doctor CLI 実装と同時に denylist 配線を組込み",
+        "risk": "deferred (doctor 実装そのものが旧 VPS 移行後)",
+        "recommended_order": 3
+      },
+      {
+        "id": "CARD-DENYLIST-OLD-VPS-MIGRATION-V1",
+        "purpose": "旧 4GB VPS への denylist 移送 + Automation OS 起動時 read",
+        "target_files": [
+          "infra/automation_os/dangerous_script_denylist_v1.json (rsync 配布)",
+          "infra/automation_os/automation_os.py (起動 hook)"
+        ],
+        "scope": "json file 配布 + 起動時 load + 違反時 abort",
+        "risk": "medium (旧 VPS 環境差分の不確定性)",
+        "recommended_order": 4
+      }
+    ],
+    "recommended_start": "CARD-DENYLIST-AUTORUNNER-WIRING-V1 (現在 active な auto-runner 経路の組込みが最重要)",
+    "deferred": "CARD-DENYLIST-DOCTOR-WIRING-V1 と CARD-DENYLIST-OLD-VPS-MIGRATION-V1 は旧 VPS Automation OS 移行が確定してから"
+  },
+
+  "summary_counts": {
+    "category_A_count": 13,
+    "category_B_count": 5,
+    "category_C_count": 11,
+    "category_D_count": 13,
+    "category_E_count": 12,
+    "explicit_total": 54,
+    "legacy_inventory_count": 39,
+    "complement_via_grep_glob_count": 15,
+    "complement_breakdown": {
+      "api_scripts_seed_glob": 5,
+      "covered_by_deny_globs_for_future_files": "open-ended (catch-all)"
+    },
+    "deny_globs_count": 41,
+    "allow_globs_count": 4
+  }
+}
