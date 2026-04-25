@@ -865,6 +865,18 @@ export function Sidebar({ view, onView, onNewChat, onNewSukuyou, onOpenSettings,
         >
           ✉ 改善のご要望
         </button>
+        {/* CARD-PWA-EVOLUTION-CHAT-ENTRY-V1: Founder 向け進化ログへの導線 */}
+        <a
+          href="/pwa/evolution"
+          className="gpt-sidebar-item"
+          style={{
+            textDecoration: "none",
+            color: "inherit",
+          }}
+          aria-label="進化ログを開く"
+        >
+          🌱 進化ログ
+        </a>
       </nav>
 
       <div className="gpt-sidebar-bottom">
