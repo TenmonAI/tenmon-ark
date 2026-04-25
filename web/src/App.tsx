@@ -17,6 +17,9 @@ const McGit = React.lazy(() => import("./pages/mc/McGit"));
 const McSoul = React.lazy(() => import("./pages/mc/McSoul"));
 const McVnextApp = React.lazy(() => import("./pages/mission-control-vnext/McVnextApp"));
 
+/* FOUNDER_RELEASE_NOTES_UI_PHASE_A_V1 — lazy loaded */
+const EvolutionLogPage = React.lazy(() => import("./pages/EvolutionLogPage"));
+
 const TENMON_AUTH_OK_V1 = "TENMON_AUTH_OK_V1";
 const TENMON_USER_KEY = "TENMON_USER_KEY";
 
@@ -58,6 +61,7 @@ export default function App() {
   const isSukuyouAbout = pathname === "/pwa/sukuyou-about" || pathname === "/pwa/sukuyou-about/";
   const isKotodamaAbout = pathname === "/pwa/kotodama-about" || pathname === "/pwa/kotodama-about/";
   const isAmatsuKanagiAbout = pathname === "/pwa/amatsu-kanagi-about" || pathname === "/pwa/amatsu-kanagi-about/";
+  const isEvolution = pathname === "/pwa/evolution" || pathname === "/pwa/evolution/";
   const isMcVnext = pathname.startsWith("/mc/vnext");
   const isMcClassic = pathname === "/mc/classic" || pathname.startsWith("/mc/classic/");
   const isMc = pathname.startsWith("/mc/") || isMcClassic;
@@ -189,6 +193,15 @@ export default function App() {
     return (
       <I18nProvider>
         <KoshikiConsolePage />
+      </I18nProvider>
+    );
+  }
+  if (isEvolution) {
+    return (
+      <I18nProvider>
+        <React.Suspense fallback={<div style={{ padding: 24, fontFamily: "sans-serif", color: "#6b7280" }}>進化ログを読み込み中...</div>}>
+          <EvolutionLogPage />
+        </React.Suspense>
       </I18nProvider>
     );
   }

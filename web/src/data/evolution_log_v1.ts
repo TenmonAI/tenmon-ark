@@ -1,0 +1,88 @@
+/**
+ * 進化ログ静的データ V1 (Phase α)
+ *
+ * Founder 向け公開ログ。
+ * - 内部用語 (commit hash / Master Card / Phase / 内部モジュール名) は含めない
+ * - 数字 (件数 / 割合) は UI に出さない
+ * - 「複数の Founder の声をもとに」表現を含む
+ *
+ * 編集ガイドライン: TENMON 確定文言を尊重し、技術詳細は context に滲ませる程度に留める。
+ */
+
+export type EvolutionLogBadge = "改善" | "整備" | "新規";
+
+export interface EvolutionLogEntry {
+  id: string;
+  emoji: string;
+  title: string;
+  date: string; // YYYY-MM-DD
+  badge: EvolutionLogBadge;
+  summary: {
+    description: string;
+    context?: string;
+    tryItExample?: string;
+    tryItDescription?: string;
+  };
+}
+
+export const evolutionLogV1: EvolutionLogEntry[] = [
+  {
+    id: "evo-2026-04-25-clamp",
+    emoji: "✨",
+    title: "チャット応答が長く話せるようになりました",
+    date: "2026-04-25",
+    badge: "改善",
+    summary: {
+      description:
+        "「詳しく解説して」「仕組みを教えて」といった深い問いに対して、回答が途中で切れにくくなりました。",
+      context:
+        "複数の Founder の声をもとに、長めの説明でも自然に完結するよう調整しています。",
+      tryItExample: "カタカムナと言霊秘書の関係を詳しく解説してください",
+      tryItDescription:
+        "このような問いに、よりまとまった形で答えられるようになっています。",
+    },
+  },
+  {
+    id: "evo-2026-04-24-50sounds",
+    emoji: "🛠",
+    title: "言霊の正典骨格を整えました",
+    date: "2026-04-24",
+    badge: "整備",
+    summary: {
+      description:
+        "五十連十行の 50 音、ヰ・ヱの位相差を canonical に固定しました。",
+    },
+  },
+  {
+    id: "evo-2026-04-24-bridge",
+    emoji: "🔗",
+    title: "知識の橋渡し経路を整えました",
+    date: "2026-04-24",
+    badge: "整備",
+    summary: {
+      description: "言霊と天聞アーク内部の知識経路を正規化しました。",
+    },
+  },
+  {
+    id: "evo-2026-04-24-watcher",
+    emoji: "🌱",
+    title: "正典との一致を常時見守る仕組みを始動",
+    date: "2026-04-24",
+    badge: "新規",
+    summary: {
+      description:
+        "対話の中で正典と矛盾が起きていないかを、自動で見守る仕組みが動き始めました。",
+    },
+  },
+  {
+    id: "evo-2026-04-24-trace",
+    emoji: "👁",
+    title: "応答の質を測る計測層を追加",
+    date: "2026-04-24",
+    badge: "整備",
+    summary: {
+      description:
+        "応答がどのような構成で組み立てられているかを観測できるようにしました。これにより継続的な改善が可能になります。",
+    },
+  },
+];
