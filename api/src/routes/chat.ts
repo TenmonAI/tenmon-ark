@@ -368,6 +368,22 @@ const _khsConstitutionClause = (() => {
 const _kotodamaConstitutionV1Clause = (() => {
   try { return buildKotodamaConstitutionClause(); } catch { return ""; }
 })();
+// CARD-CONSTITUTION-MEMORY-PROJECTION-CHAT-CLAUSE-V1: memory_units 12 条 summary を起動時に注入 (PROMOTION-GATE と並列)
+const _kotodamaConstitutionMemoryClause = (() => {
+  try {
+    const rows = getDb("kokuzo").prepare(
+      "SELECT summary FROM memory_units WHERE memory_scope='source' AND memory_type='scripture_distill' AND scope_id='kotodama_constitution_v1' ORDER BY id"
+    ).all() as Array<{ summary: string }>;
+    if (!rows?.length) return "";
+    return [
+      "# 言霊憲法 V1 記憶層 (12 条 summary)",
+      "以下は記憶層に蒸留された 12 条の summary。概念 (分母固定 / ヰ・ヱ保持 / 五十連十行 等) を問われたら本記憶を根拠として答え、本文を改変・捏造しない。",
+      "---",
+      ...rows.map(r => r.summary),
+      "---",
+    ].join("\n");
+  } catch { return ""; }
+})();
 // ULTRA-1_SELF_IDENTITY_V1: 自己認識文を起動時に構築（system prompt 最先頭に注入）
 const _selfIdentityClause = (() => {
   try { return buildSelfIdentityClause(); } catch { return ""; }
@@ -385,6 +401,7 @@ const TENMON_CONSTITUTION_TEXT = [
   _selfIdentityClause,
   _khsConstitutionClause,
   _kotodamaConstitutionV1Clause,
+  _kotodamaConstitutionMemoryClause,
   TENMON_CONSTITUTION_TEXT_BASE,
 ].filter(Boolean).join("\n\n");
 // KOTODAMA_HISHO_INIT_V1: 言霊秘書JSONを起動時に読み込み
@@ -2535,7 +2552,7 @@ ${__carrySeedSummary}${__carryLifeAlgo}
           ]
             .filter(Boolean)
             .join("\n");
-          const __genSystemWithEvidence = GEN_SYSTEM + __sukuyouClauseGen + __sukuyouContextClause + (__soulRootClauses ? "\n" + __soulRootClauses : "") + __intentClause + (_kotodamaConstitutionV1Clause ? "\n\n" + _kotodamaConstitutionV1Clause : "");
+          const __genSystemWithEvidence = GEN_SYSTEM + __sukuyouClauseGen + __sukuyouContextClause + (__soulRootClauses ? "\n" + __soulRootClauses : "") + __intentClause + (_kotodamaConstitutionV1Clause ? "\n\n" + _kotodamaConstitutionV1Clause : "") + (_kotodamaConstitutionMemoryClause ? "\n\n" + _kotodamaConstitutionMemoryClause : "");
           __mc20NatFire = {
             flags: {
               hisho: Boolean(__kotodamaHishoClause),
@@ -2556,6 +2573,7 @@ ${__carrySeedSummary}${__carryLifeAlgo}
               clause_lengths: {
                 khs_constitution: String(_khsConstitutionClause ?? "").length,
                 kotodama_constitution_v1: String(_kotodamaConstitutionV1Clause ?? "").length,
+                kotodama_constitution_memory: String(_kotodamaConstitutionMemoryClause ?? "").length,
                 kotodama_hisho: (__kotodamaHishoClause ?? "").length,
                 kotodama_one_sound: (__kotodamaOneSoundLawClause ?? "").length,
                 kotodama_genten: (__gentenClause ?? "").length,
