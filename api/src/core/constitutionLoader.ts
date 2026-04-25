@@ -210,6 +210,41 @@ ${defsBlock}
 `;
 }
 
+// ── KOTODAMA_CONSTITUTION_V1 clause builder (CARD-CONSTITUTION-PROMOTION-GATE-V1) ──
+let _kotodamaConstitutionV1Clause: string | null = null;
+
+/**
+ * KOTODAMA_CONSTITUTION_V1.txt の 12 条本文を、chat.ts の system prompt に
+ * 注入可能な clause として返す。起動時 1 回読み込み + キャッシュ。
+ *
+ * - 12 条本文を改変・要約・捏造しない（prefix 案内のみ追加）
+ * - 読み込み失敗時は空文字列 (chat 側で skip)
+ */
+export function buildKotodamaConstitutionClause(): string {
+  if (_kotodamaConstitutionV1Clause !== null) return _kotodamaConstitutionV1Clause;
+  if (!existsSync(KOTODAMA_CONSTITUTION_V1_PATH)) {
+    _kotodamaConstitutionV1Clause = "";
+    return "";
+  }
+  try {
+    const raw = readFileSync(KOTODAMA_CONSTITUTION_V1_PATH, "utf-8");
+    _kotodamaConstitutionV1Clause = [
+      "【言霊憲法 V1 (KOTODAMA_CONSTITUTION_V1) — 天聞アーク 言霊系統 最上位正典】",
+      "以下は canonical な憲法本文 (12 条 + 実装原則)。",
+      "「言霊憲法 V1 第 N 条は何ですか？」と問われた場合、本文を根拠として",
+      "条文番号と本文を対応させて答えること。本文を改変・要約・捏造しない。",
+      "---",
+      raw.trim(),
+      "---",
+    ].join("\n");
+    return _kotodamaConstitutionV1Clause;
+  } catch (e: any) {
+    console.warn(`[CONSTITUTION] buildKotodamaConstitutionClause failed: ${e?.message ?? String(e)}`);
+    _kotodamaConstitutionV1Clause = "";
+    return "";
+  }
+}
+
 // ── SHA256 封印確認 ──────────────────────────────────
 let _sealVerified = false;
 let _sealStatus: "verified" | "mismatch" | "no_sha256" | "no_file" | "error" = "no_file";

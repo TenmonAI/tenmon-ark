@@ -70,7 +70,7 @@ import {
   buildDeepContinuityClause,
 } from "../sukuyou/sukuyouEngine.js";
 import { buildKotodamaClause } from "../kotodama/kotodamaConnector.js";
-import { buildConstitutionClause, buildSelfIdentityClause, verifySeal } from "../core/constitutionLoader.js";
+import { buildConstitutionClause, buildKotodamaConstitutionClause, buildSelfIdentityClause, verifySeal } from "../core/constitutionLoader.js";
 import {
   detect10TruthAxes,
   buildAxisClause,
@@ -364,6 +364,10 @@ const TENMON_CONSTITUTION_TEXT_BASE =
 const _khsConstitutionClause = (() => {
   try { return buildConstitutionClause(); } catch { return ""; }
 })();
+// CARD-CONSTITUTION-PROMOTION-GATE-V1: KOTODAMA_CONSTITUTION_V1 12 条本文を起動時に注入
+const _kotodamaConstitutionV1Clause = (() => {
+  try { return buildKotodamaConstitutionClause(); } catch { return ""; }
+})();
 // ULTRA-1_SELF_IDENTITY_V1: 自己認識文を起動時に構築（system prompt 最先頭に注入）
 const _selfIdentityClause = (() => {
   try { return buildSelfIdentityClause(); } catch { return ""; }
@@ -380,6 +384,7 @@ try {
 const TENMON_CONSTITUTION_TEXT = [
   _selfIdentityClause,
   _khsConstitutionClause,
+  _kotodamaConstitutionV1Clause,
   TENMON_CONSTITUTION_TEXT_BASE,
 ].filter(Boolean).join("\n\n");
 // KOTODAMA_HISHO_INIT_V1: 言霊秘書JSONを起動時に読み込み
@@ -2530,7 +2535,7 @@ ${__carrySeedSummary}${__carryLifeAlgo}
           ]
             .filter(Boolean)
             .join("\n");
-          const __genSystemWithEvidence = GEN_SYSTEM + __sukuyouClauseGen + __sukuyouContextClause + (__soulRootClauses ? "\n" + __soulRootClauses : "") + __intentClause;
+          const __genSystemWithEvidence = GEN_SYSTEM + __sukuyouClauseGen + __sukuyouContextClause + (__soulRootClauses ? "\n" + __soulRootClauses : "") + __intentClause + (_kotodamaConstitutionV1Clause ? "\n\n" + _kotodamaConstitutionV1Clause : "");
           __mc20NatFire = {
             flags: {
               hisho: Boolean(__kotodamaHishoClause),
@@ -2550,6 +2555,7 @@ ${__carrySeedSummary}${__carryLifeAlgo}
               provider: null,
               clause_lengths: {
                 khs_constitution: String(_khsConstitutionClause ?? "").length,
+                kotodama_constitution_v1: String(_kotodamaConstitutionV1Clause ?? "").length,
                 kotodama_hisho: (__kotodamaHishoClause ?? "").length,
                 kotodama_one_sound: (__kotodamaOneSoundLawClause ?? "").length,
                 kotodama_genten: (__gentenClause ?? "").length,

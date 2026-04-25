@@ -31,6 +31,8 @@ export type SoulRootFireFlagsV1 = {
 /** MC-20-PROMPT-TRACE-V1: GEN_SYSTEM 周辺 clause の実長（chat.ts 変数名に対応） */
 export type PromptTraceClauseLengthsV1 = {
   khs_constitution: number;
+  /** CARD-CONSTITUTION-PROMOTION-GATE-V1: KOTODAMA_CONSTITUTION_V1.txt 12 条本文 clause */
+  kotodama_constitution_v1?: number;
   kotodama_hisho: number;
   kotodama_one_sound: number;
   kotodama_genten: number;
