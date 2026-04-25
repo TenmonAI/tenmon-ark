@@ -27,6 +27,20 @@ export interface EvolutionLogEntry {
 
 export const evolutionLogV1: EvolutionLogEntry[] = [
   {
+    id: "evo-2026-04-25-constitution-memory-projection",
+    emoji: "✨",
+    title: "言霊憲法が会話により深く反映されるようになりました",
+    date: "2026-04-25",
+    badge: "改善",
+    summary: {
+      description:
+        "言霊憲法 V1 の本文に加えて、記憶層に蒸留された 12 条の要点も会話へ届くようになりました。",
+      context:
+        "これにより、「分母の固定」「五十連十行」「ヰ・ヱを欠損扱いにしない」といった概念について、より安定して深く答えられる土台が整いました。",
+      tryItExample: "言霊憲法の分母の固定とは？",
+    },
+  },
+  {
     id: "evo-2026-04-25-constitution-memory-distill",
     emoji: "✨",
     title: "言霊憲法が記憶層にも定着しました",
