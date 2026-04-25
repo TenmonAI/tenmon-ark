@@ -1280,7 +1280,11 @@ const pid = process.pid;
         if (q !== -1) t = t.slice(0, q + 1).trim();
       }
       // 長すぎる場合は切り詰め（言い切りで閉じる）
-      if (t.length > 500) t = t.slice(0, 500).replace(/[。、\s　]+$/g, "") + "。";
+      // CARD_CHAT_LONGFORM_CLAMP_REPAIR_V1: short 質問のみ 500 chars clamp を適用し、
+      // longform 質問 (第N条 / 解説 等) では clamp を解除して自然完結させる。
+      if (t.length > 500 && __isShortAnswerMode(t0)) {
+        t = __trimToSentenceBoundary(t, 500);
+      }
       return t;
     };
 // ---------- N2: Kanagi 4-phase NATURAL spine (LLM-driven; do NOT crush normal questions) ----------
@@ -5809,6 +5813,38 @@ export default router;
 
 // CARD_C21B2_FIX_NEED_CONTEXT_CLAMP_V1
 
+// CARD_CHAT_LONGFORM_CLAMP_REPAIR_V1:
+// 500-char hard clamp は短答質問のみに適用し、longform 質問では clamp を解除する。
+// 完全削除はしない (LLM 暴走防止)。判定は最小キーワード + 「第N条」パターン。
+function __isShortAnswerMode(userMessage?: string): boolean {
+  if (!userMessage || typeof userMessage !== "string") return true;
+  const longformKeywords = [
+    "詳しく", "完全解説", "関係", "仕組み", "なぜ",
+    "どのように", "全体", "まとめて", "解説",
+  ];
+  if (/第[一二三四五六七八九十百千万0-9０-９]+条/u.test(userMessage)) return false;
+  for (const kw of longformKeywords) {
+    if (userMessage.includes(kw)) return false;
+  }
+  return true;
+}
+function __trimToSentenceBoundary(text: string, maxLen: number): string {
+  if (text.length <= maxLen) return text;
+  const sliced = text.slice(0, maxLen);
+  if (/[。！？.!?\n]$/u.test(sliced)) return sliced;
+  const lastPunct = Math.max(
+    sliced.lastIndexOf("。"),
+    sliced.lastIndexOf("！"),
+    sliced.lastIndexOf("？"),
+    sliced.lastIndexOf("."),
+    sliced.lastIndexOf("!"),
+    sliced.lastIndexOf("?"),
+    sliced.lastIndexOf("\n"),
+  );
+  if (lastPunct > 0) return sliced.slice(0, lastPunct + 1);
+  return sliced;
+}
+
 // --- C21G1C: GENERAL_GATE_SOFT_V1 ---
 // Deterministic last-mile gate. Only edits response when routeReason === NATURAL_GENERAL_LLM_TOP.
 function __tenmonGeneralGateSoft(out: string, userMsg?: string): string {
@@ -5833,7 +5869,10 @@ function __tenmonGeneralGateSoft(out: string, userMsg?: string): string {
 
   // R3_GATE_SOFT_V2: 言い切り許容。質問強制しない。説教検出時のみ整形。
   // 説教検出または形式違反時のみ整形
-  if (hasBad || lines.length > 8 || t.length > 500) {
+  // CARD_CHAT_LONGFORM_CLAMP_REPAIR_V1: 500 chars 判定は short 質問のみに適用。
+  // 説教除去 (hasBad) と多行制限 (lines.length > 8) は longform でも維持する。
+  const __isShort = __isShortAnswerMode(userMsg);
+  if (hasBad || lines.length > 8 || (__isShort && t.length > 500)) {
     let u = String(t || "").replace(/\r/g, "").trim();
     // リスト除去
     u = u.replace(/^\s*\d+[.)].*$/gm, "").replace(/^\s*[-*•]\s+.*$/gm, "").trim();
@@ -5846,8 +5885,8 @@ function __tenmonGeneralGateSoft(out: string, userMsg?: string): string {
       const qpos2 = Math.max(u.indexOf("？"), u.indexOf("?"));
       if (qpos2 !== -1) u = u.slice(0, qpos2 + 1).trim();
     }
-    // 長さ制限（言い切りで閉じる）
-    if (u.length > 500) u = u.slice(0, 500).replace(/[。、\s　]+$/g, "") + "。";
+    // 長さ制限（短答時のみ 500 chars で言い切り）
+    if (__isShort && u.length > 500) u = __trimToSentenceBoundary(u, 500);
     // 説教検出時はプレフィックス追加
     // CURRENT_FACTS_PREFIX_EXCLUDE_V1: current factsには「いまの言葉」プレフィックスを付けない
     const __cfCheck = /現在の.*(首相|大統領|CEO|知事|社長|総裁|代表|王|女王|大臣)|今の.*(首相|大統領|CEO)|最新の.*(ニュース|情報|状況)|誰が.*(首相|大統領|リーダー|代表)/.test(userMsg || "");
