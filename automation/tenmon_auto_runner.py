@@ -4,9 +4,11 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import fcntl
+import fnmatch
 import json
 import os
 import pathlib
+import shlex
 import subprocess
 import sys
 import time
@@ -17,6 +19,11 @@ from typing import Any
 
 LOCK_PATH = "/var/lock/tenmon_auto_runner.lock"
 STATE_PATH = "/var/log/tenmon/auto_state.json"
+
+# CARD-DENYLIST-AUTORUNNER-WIRING-V1: precheck stage denylist enforcement
+DENYLIST_PATH = "/opt/tenmon-ark-repo/docs/ark/automation/dangerous_script_denylist_v1.json"
+REPO_ROOT_DEFAULT = "/opt/tenmon-ark-repo"
+SCRIPT_EXTS = (".sh", ".py", ".mjs", ".ts", ".js", ".cjs", ".yml", ".yaml")
 
 
 def utc_ts() -> str:
@@ -185,6 +192,225 @@ def write_freeze(
     freeze_path.write_text("\n".join(body), encoding="utf-8")
 
 
+def _load_denylist(path: str = DENYLIST_PATH) -> dict[str, Any] | None:
+    """Read dangerous_script_denylist_v1.json. Returns None on any failure (caller is fail-closed)."""
+    try:
+        if not os.path.exists(path):
+            return None
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        if not isinstance(data, dict):
+            return None
+        return data
+    except (json.JSONDecodeError, OSError, IOError, ValueError):
+        return None
+
+
+def _normalize_target_path(raw_path: str, repo_root: str = REPO_ROOT_DEFAULT) -> str:
+    """Normalize a target path: relative→absolute (under repo_root), realpath when resolvable, normpath otherwise."""
+    if not raw_path:
+        return ""
+    candidate = raw_path
+    if not os.path.isabs(candidate):
+        candidate = os.path.join(repo_root, candidate)
+    try:
+        normalized = os.path.realpath(candidate)
+    except (OSError, ValueError):
+        normalized = os.path.normpath(candidate)
+    return normalized.rstrip("/")
+
+
+def _check_denylist(
+    target_path: str,
+    denylist: dict[str, Any] | None,
+    repo_root: str = REPO_ROOT_DEFAULT,
+) -> tuple[bool, str, str]:
+    """Match target_path against denylist explicit entries and deny_globs.
+
+    Returns: (is_blocked, category_id, reason)
+    """
+    if not denylist or not target_path:
+        return (False, "", "")
+
+    is_test_env = os.environ.get("TENMON_ENV", "").lower() == "test"
+
+    if target_path.startswith(repo_root + "/"):
+        relative_path = target_path[len(repo_root) + 1:]
+    else:
+        relative_path = target_path
+
+    allow_globs = denylist.get("path_patterns", {}).get("allow_globs", []) or []
+    for ag in allow_globs:
+        if fnmatch.fnmatch(relative_path, ag) or fnmatch.fnmatch(target_path, ag):
+            return (False, "ALLOW", f"matches allow_glob: {ag}")
+
+    for category in denylist.get("categories", []) or []:
+        cat_id = category.get("id", "")
+        cat_tier = category.get("tier", 1)
+        cat_name = category.get("name", "unknown")
+        if is_test_env and cat_id == "D":
+            continue
+        for script in category.get("scripts", []) or []:
+            denylist_path_raw = script.get("path", "")
+            if not denylist_path_raw:
+                continue
+            denylist_abs = _normalize_target_path(denylist_path_raw, repo_root)
+            if target_path == denylist_abs:
+                return (
+                    True,
+                    cat_id,
+                    f"Category {cat_id} ({cat_name}) Tier-{cat_tier}: {script.get('rationale', 'denylist match')}",
+                )
+
+    deny_globs = denylist.get("path_patterns", {}).get("deny_globs", []) or []
+    for glob_pattern in deny_globs:
+        if fnmatch.fnmatch(relative_path, glob_pattern) or fnmatch.fnmatch(target_path, glob_pattern):
+            return (True, "GLOB", f"matches deny_glob pattern: {glob_pattern}")
+
+    return (False, "", "")
+
+
+def _write_denylist_freeze_marker(
+    card_name: str,
+    target_path: str,
+    category: str,
+    reason: str,
+    freeze_log_dir: str = "/var/log/tenmon",
+) -> str:
+    """Write a freeze marker when a denylist match (or load failure) aborts auto_runner."""
+    timestamp = dt.datetime.utcnow().strftime("%Y%m%dT%H%M%SZ")
+    marker_dir = freeze_log_dir
+    try:
+        os.makedirs(marker_dir, exist_ok=True)
+    except OSError:
+        marker_dir = "/tmp"
+        try:
+            os.makedirs(marker_dir, exist_ok=True)
+        except OSError:
+            pass
+    safe_card = "".join(c if (c.isalnum() or c in ("-", "_")) else "_" for c in (card_name or "unknown"))
+    marker_path = os.path.join(
+        marker_dir,
+        f"auto_runner_freeze_denylist_{safe_card}_{timestamp}.txt",
+    )
+    body = (
+        "# DENYLIST FREEZE MARKER\n"
+        f"timestamp: {dt.datetime.utcnow().isoformat()}Z\n"
+        f"card: {card_name}\n"
+        f"target_path: {target_path}\n"
+        f"denylist_category: {category}\n"
+        f"reason: {reason}\n"
+        f"denylist_source: {DENYLIST_PATH}\n"
+        "runner: tenmon_auto_runner.py\n"
+        "status: aborted before execution\n"
+        "\n"
+        "# auto_runner aborted because the target path matched the dangerous script denylist\n"
+        "# (or denylist could not be loaded). Manual TENMON review required.\n"
+    )
+    try:
+        with open(marker_path, "w", encoding="utf-8") as f:
+            f.write(body)
+        return marker_path
+    except OSError as e:
+        return f"(failed to write marker: {e})"
+
+
+def _enforce_denylist_precheck(
+    target_path: str,
+    card_name: str = "unknown",
+    freeze_log_dir: str = "/var/log/tenmon",
+    denylist: dict[str, Any] | None = None,
+) -> tuple[bool, str]:
+    """precheck-stage denylist gate. fail-closed on load failure / on match.
+
+    Returns: (is_safe_to_proceed, error_message)
+    """
+    if denylist is None:
+        denylist = _load_denylist()
+    if denylist is None:
+        marker = _write_denylist_freeze_marker(
+            card_name=card_name,
+            target_path=target_path or "(unknown)",
+            category="LOAD_FAILED",
+            reason="dangerous_script_denylist_v1.json could not be loaded (fail-closed)",
+            freeze_log_dir=freeze_log_dir,
+        )
+        return (False, f"denylist load failed - aborted (marker: {marker})")
+
+    if not target_path:
+        return (True, "")
+
+    normalized = _normalize_target_path(target_path)
+    is_blocked, category, reason = _check_denylist(normalized, denylist)
+    if is_blocked:
+        marker = _write_denylist_freeze_marker(
+            card_name=card_name,
+            target_path=normalized,
+            category=category,
+            reason=reason,
+            freeze_log_dir=freeze_log_dir,
+        )
+        return (False, f"denylist match - aborted (category: {category}, marker: {marker})")
+    return (True, "")
+
+
+def _extract_script_tokens(cmd: str) -> list[str]:
+    """Extract candidate script-path tokens from a shell command string.
+
+    A token is considered a candidate when it ends with a known script extension
+    or contains a path separator. Used by the precheck denylist gate to scan
+    card 'precheck' / 'apply_cmd' shell strings without executing them.
+    """
+    if not cmd:
+        return []
+    try:
+        tokens = shlex.split(cmd, posix=True)
+    except ValueError:
+        tokens = cmd.split()
+    out: list[str] = []
+    for t in tokens:
+        if not t or t.startswith("-"):
+            continue
+        if t.endswith(SCRIPT_EXTS) or "/" in t:
+            out.append(t)
+    return out
+
+
+def _scan_card_for_denylist(
+    card: dict[str, Any],
+    freeze_log_dir: str = "/var/log/tenmon",
+) -> tuple[bool, str]:
+    """Scan card.precheck (list) and card.apply_cmd (string) for denylist matches.
+
+    Returns: (is_safe_to_proceed, error_message). fail-closed on denylist load failure.
+    """
+    denylist = _load_denylist()
+    card_name = card.get("name") or card.get("id") or "unknown_card"
+    if denylist is None:
+        marker = _write_denylist_freeze_marker(
+            card_name=card_name,
+            target_path="(card-scan)",
+            category="LOAD_FAILED",
+            reason="dangerous_script_denylist_v1.json could not be loaded (fail-closed)",
+            freeze_log_dir=freeze_log_dir,
+        )
+        return (False, f"denylist load failed - aborted (marker: {marker})")
+
+    candidates: list[str] = []
+    for cmd in card.get("precheck", []) or []:
+        candidates.extend(_extract_script_tokens(cmd))
+    apply_cmd = card.get("apply_cmd") or ""
+    if apply_cmd:
+        candidates.extend(_extract_script_tokens(apply_cmd))
+    for tp in candidates:
+        is_safe, err = _enforce_denylist_precheck(
+            tp, card_name=card_name, freeze_log_dir=freeze_log_dir, denylist=denylist,
+        )
+        if not is_safe:
+            return (False, err)
+    return (True, "")
+
+
 def _apply_wired() -> bool:
     """True if apply engine is configured (health-only mode when False)."""
     return bool(os.environ.get("TENMON_AI_APPLY_CMD") or os.environ.get("TENMON_APPLY_ENGINE"))
@@ -250,6 +476,14 @@ def run_card(queue: dict[str, Any], state: dict[str, Any], card: dict[str, Any])
         logger.write("== OBS 1) audit ==")
         audit_json = http_json(f"{base_url}/api/audit")
         logger.write(json.dumps(audit_json, ensure_ascii=False, indent=2))
+
+        logger.write("")
+        logger.write("== PRECHECK 0) denylist gate ==")
+        dl_ok, dl_err = _scan_card_for_denylist(card, freeze_log_dir=freeze_log_dir)
+        if not dl_ok:
+            logger.write(f"DENYLIST BLOCK: {dl_err}")
+            raise RunnerError("precheck", f"denylist block: {dl_err}", 1)
+        logger.write("denylist_gate=ok")
 
         for cmd in card.get("precheck", []):
             logger.write("")
