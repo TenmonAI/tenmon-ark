@@ -1,0 +1,342 @@
+{
+  "audit_version": "v1.0.0",
+  "card": "CARD-IROHA-MC-CONNECTION-AUDIT-V1",
+  "generated_at": "2026-04-26T06:19:50.755657+00:00",
+  "host": "https://tenmon-ark.com",
+  "verdict": "YELLOW",
+  "summary": {
+    "critical": 0,
+    "warn": 1,
+    "info": 4
+  },
+  "mc_endpoints": {
+    "health": {
+      "ok": true,
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "url": "https://tenmon-ark.com/api/health"
+    },
+    "claude_summary": {
+      "ok": false,
+      "status": 401,
+      "error": "HTTP Error 401: Unauthorized",
+      "url": "https://tenmon-ark.com/api/mc/vnext/claude-summary"
+    },
+    "intelligence": {
+      "ok": false,
+      "status": 401,
+      "error": "HTTP Error 401: Unauthorized",
+      "url": "https://tenmon-ark.com/api/mc/vnext/intelligence"
+    }
+  },
+  "mc_source": {
+    "mc_iroha_files": [
+      {
+        "file": "api/src/mc/intelligence/deepIntelligenceMapV1.ts",
+        "iroha_hits": 8
+      },
+      {
+        "file": "api/src/mc/intelligence/mcContextInjectionEffectAuditV1.ts",
+        "iroha_hits": 6
+      },
+      {
+        "file": "api/src/mc/fire/intelligenceFireTracker.ts",
+        "iroha_hits": 5
+      },
+      {
+        "file": "api/src/mc/sourceRegistry_seed.ts",
+        "iroha_hits": 1
+      }
+    ],
+    "slot_chat_binding_files": [
+      {
+        "file": "api/src/mc/fire/intelligenceFireTracker.ts",
+        "hits": 4
+      }
+    ],
+    "prompt_trace_files": [
+      {
+        "file": "api/src/mc/fire/intelligenceFireTracker.ts",
+        "hits": 7
+      }
+    ]
+  },
+  "prompt_trace_24h": {
+    "log_path": "/opt/tenmon-ark-data/mc_intelligence_fire.jsonl",
+    "exists": true,
+    "size_bytes": 338314,
+    "events_24h": 244,
+    "events_with_prompt_trace_24h": 244,
+    "iroha_fired_24h": 244,
+    "iroha_clause_lengths": {
+      "n": 244,
+      "min": 342,
+      "max": 1436,
+      "avg": 766.73
+    },
+    "iroha_clause_keys_seen": [
+      "iroha"
+    ],
+    "non_iroha_clause_keys_seen": [
+      "amaterasu",
+      "katakamuna_audit",
+      "katakamuna_lineage",
+      "katakamuna_misread_guard",
+      "khs_constitution",
+      "khs_root_fractal",
+      "kotodama_constitution_memory",
+      "kotodama_constitution_v1",
+      "kotodama_genten",
+      "kotodama_hisho",
+      "kotodama_one_sound",
+      "meaning_arbitration",
+      "truth_layer",
+      "unified_sound"
+    ]
+  },
+  "doctor_v2_prompt_trace": {
+    "path": "/opt/tenmon-ark-repo/automation/out/doctor_v2_report_latest.json",
+    "exists": true,
+    "iroha_keys_in_prompt_trace": [],
+    "all_prompt_trace_keys": [
+      "khs_constitution",
+      "kotodama_constitution_memory",
+      "kotodama_constitution_v1",
+      "provider",
+      "response_length",
+      "route_reason",
+      "source",
+      "ts"
+    ],
+    "doctor_verdict": "RED",
+    "doctor_profile": "default"
+  },
+  "route": {
+    "by_route": [
+      {
+        "route_file": "api/src/routes/chat.ts",
+        "exists": true,
+        "iroha_hits": 24,
+        "grounding_hits": 3,
+        "inject_probe_hits": 1,
+        "query_build_hits": 3,
+        "grounding_lines": [
+          {
+            "line": 100,
+            "text": "import { attachSatoriVerdict, checkIrohaGrounding } from \"../core/satoriEnforcement.js\";"
+          },
+          {
+            "line": 897,
+            "text": "            const grounding = checkIrohaGrounding(responseText);"
+          },
+          {
+            "line": 900,
+            "text": "              df.ku.irohaGrounding = {"
+          }
+        ],
+        "inject_probe_lines": [
+          {
+            "line": 1977,
+            "text": "        recordContextInjectionProbeV1(req, \"inject_iroha\", {"
+          }
+        ],
+        "query_build_lines": [
+          {
+            "line": 101,
+            "text": "import { queryIrohaByUserText, buildIrohaInjection } from \"../core/irohaKotodamaLoader.js\";"
+          },
+          {
+            "line": 1967,
+            "text": "        const __irohaHits = queryIrohaByUserText(t0);"
+          },
+          {
+            "line": 1970,
+            "text": "          __irohaClause = buildIrohaInjection(__irohaHits, 1500);"
+          }
+        ],
+        "imports": [
+          {
+            "line": 100,
+            "text": "import { attachSatoriVerdict, checkIrohaGrounding } from \"../core/satoriEnforcement.js\";"
+          },
+          {
+            "line": 101,
+            "text": "import { queryIrohaByUserText, buildIrohaInjection } from \"../core/irohaKotodamaLoader.js\";"
+          }
+        ]
+      },
+      {
+        "route_file": "api/src/routes/guest.ts",
+        "exists": true,
+        "iroha_hits": 11,
+        "grounding_hits": 5,
+        "inject_probe_hits": 0,
+        "query_build_hits": 3,
+        "grounding_lines": [
+          {
+            "line": 37,
+            "text": "import { checkIrohaGrounding } from \"../core/satoriEnforcement.js\";"
+          },
+          {
+            "line": 274,
+            "text": "    let irohaGroundingScore = 0;"
+          },
+          {
+            "line": 276,
+            "text": "      const grounding = checkIrohaGrounding(aiResponse);"
+          },
+          {
+            "line": 277,
+            "text": "      irohaGroundingScore = grounding.score;"
+          },
+          {
+            "line": 290,
+            "text": "      irohaGroundingScore,"
+          }
+        ],
+        "inject_probe_lines": [],
+        "query_build_lines": [
+          {
+            "line": 33,
+            "text": "import { queryIrohaByUserText, buildIrohaInjection } from \"../core/irohaKotodamaLoader.js\";"
+          },
+          {
+            "line": 204,
+            "text": "      const __guestIrohaHits = queryIrohaByUserText(userMessage);"
+          },
+          {
+            "line": 206,
+            "text": "        systemPrompt += \"\\n\" + buildIrohaInjection(__guestIrohaHits, 800);"
+          }
+        ],
+        "imports": [
+          {
+            "line": 33,
+            "text": "import { queryIrohaByUserText, buildIrohaInjection } from \"../core/irohaKotodamaLoader.js\";"
+          },
+          {
+            "line": 37,
+            "text": "import { checkIrohaGrounding } from \"../core/satoriEnforcement.js\";"
+          }
+        ]
+      }
+    ]
+  },
+  "route_matrix": [
+    {
+      "route": "/api/chat",
+      "clause_chars_avg_24h": 766.73,
+      "clause_chars_cap": 1500,
+      "grounding": "decisionFrame.ku.irohaGrounding (object: passed/score/sounds/actionPattern/amaterasuAxis)",
+      "binding": "fired (slot_chat_binding.iroha = __irohaClause)",
+      "inject_probe": "recorded (inject_iroha)",
+      "iroha_total_refs": 24
+    },
+    {
+      "route": "/api/guest",
+      "clause_chars_avg_24h": null,
+      "clause_chars_cap": 800,
+      "grounding": "irohaGroundingScore (scalar 0-3)",
+      "binding": "local hits via queryIrohaByUserText (no slot_chat_binding alias)",
+      "inject_probe": "absent",
+      "iroha_total_refs": 11
+    },
+    {
+      "route": "/api/mc/vnext/claude-summary",
+      "clause_chars_avg_24h": null,
+      "clause_chars_cap": null,
+      "grounding": "N/A (auth required, status=401)",
+      "binding": "schema-defined (slot_chat_binding.iroha) but observable only with bearer token",
+      "inject_probe": "N/A",
+      "iroha_total_refs": null
+    },
+    {
+      "route": "/api/mc/vnext/intelligence",
+      "clause_chars_avg_24h": null,
+      "clause_chars_cap": null,
+      "grounding": "N/A (auth required, status=401)",
+      "binding": "schema-defined; deepIntelligenceMapV1 marks irohaKotodamaLoader / irohaGrounding",
+      "inject_probe": "N/A",
+      "iroha_total_refs": null
+    }
+  ],
+  "chapter_tracking": {
+    "currently_aggregated": false,
+    "iroha_keys_seen_anywhere": [
+      "iroha"
+    ],
+    "expected_chapter_keys": [
+      "iroha_47ji",
+      "iroha_ongi",
+      "iroha_seimei",
+      "iroha_shisei",
+      "iroha_hokekyo"
+    ],
+    "missing_indicators": [
+      "iroha_47ji",
+      "iroha_ongi",
+      "iroha_seimei",
+      "iroha_shisei",
+      "iroha_hokekyo"
+    ]
+  },
+  "card_candidates": [
+    {
+      "priority": 2,
+      "name": "CARD-IROHA-MC-CHAPTER-TRACKING-V1",
+      "reason": "chapter-level keys missing: iroha_47ji,iroha_ongi,iroha_seimei,iroha_shisei,iroha_hokekyo",
+      "source": "iroha_audit"
+    },
+    {
+      "priority": 3,
+      "name": "CARD-IROHA-MEMORY-PROJECTION-AUDIT-V1",
+      "reason": "memory_units iroha (63 / 32 scope_id) projection rate not yet visible",
+      "source": "iroha_audit"
+    },
+    {
+      "priority": 4,
+      "name": "CARD-IROHA-NOTION-STRUCTURE-WRITE-V1",
+      "reason": "Notion 5-chapter map remains pending; audit foundation now ready",
+      "source": "iroha_audit"
+    },
+    {
+      "priority": 4,
+      "name": "CARD-DANSHARI-CORPUS-SOURCE-OBSERVE-V1",
+      "reason": "TENMON main-line (tone) candidate; complementary",
+      "source": "tenmon_priority"
+    },
+    {
+      "priority": 5,
+      "name": "CARD-IROHA-MC-CONNECTION-AUDIT-IMPL-V1",
+      "reason": "scriptize this audit for periodic execution from old_vps base",
+      "source": "iroha_audit"
+    }
+  ],
+  "findings": [
+    {
+      "level": "info",
+      "area": "prompt_trace",
+      "message": "24h iroha clause avg=766.73 within expected band (~760)"
+    },
+    {
+      "level": "info",
+      "area": "doctor_v2_prompt_trace",
+      "message": "doctor v2 prompt_trace section does not surface iroha keys"
+    },
+    {
+      "level": "info",
+      "area": "mc_endpoint",
+      "message": "claude-summary 401 (auth missing, strategy C)"
+    },
+    {
+      "level": "info",
+      "area": "mc_endpoint",
+      "message": "intelligence 401 (auth missing, strategy C)"
+    },
+    {
+      "level": "warn",
+      "area": "chapter_tracking",
+      "message": "chapter-level keys missing: iroha_47ji,iroha_ongi,iroha_seimei,iroha_shisei,iroha_hokekyo"
+    }
+  ]
+}
