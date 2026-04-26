@@ -1,0 +1,825 @@
+{
+  "observer_version": "v1.0.0-iroha-notion-structure",
+  "generated_at": "2026-04-26T03:25:30.135700+00:00",
+  "verdict": "YELLOW",
+  "summary": {
+    "critical": 0,
+    "warn": 1,
+    "info": 0,
+    "structures_posted": 0,
+    "structures_missing": 5
+  },
+  "notion": {
+    "token_present": true,
+    "page_id_sha8": "0fb109c9",
+    "page_title": "いろは言灵解｜天聞アーク思考根幹・徹底解析",
+    "headings_total": 25,
+    "by_type": {
+      "heading_1": 0,
+      "heading_2": 5,
+      "heading_3": 20,
+      "child_page": 0,
+      "child_database": 0
+    },
+    "headings": [
+      {
+        "depth": 1,
+        "type": "heading_2",
+        "text_summary60": "目的",
+        "text_full": "目的",
+        "sha8": "cfbeaa72",
+        "id_sha8": "705ed6bc"
+      },
+      {
+        "depth": 1,
+        "type": "heading_2",
+        "text_summary60": "1. 整理度の判定",
+        "text_full": "1. 整理度の判定",
+        "sha8": "27fc7f1c",
+        "id_sha8": "3dea2fc2"
+      },
+      {
+        "depth": 1,
+        "type": "heading_3",
+        "text_summary60": "判定",
+        "text_full": "判定",
+        "sha8": "15c58df5",
+        "id_sha8": "84a4f416"
+      },
+      {
+        "depth": 1,
+        "type": "heading_2",
+        "text_summary60": "2. 『いろは言灵解』の根本構造",
+        "text_full": "2. 『いろは言灵解』の根本構造",
+        "sha8": "a6770f81",
+        "id_sha8": "c37f5b08"
+      },
+      {
+        "depth": 1,
+        "type": "heading_3",
+        "text_summary60": "2.1 表層：無常の認識",
+        "text_full": "2.1 表層：無常の認識",
+        "sha8": "e927f773",
+        "id_sha8": "d17681dc"
+      },
+      {
+        "depth": 1,
+        "type": "heading_3",
+        "text_summary60": "2.2 内層：生成の理",
+        "text_full": "2.2 内層：生成の理",
+        "sha8": "79e891cb",
+        "id_sha8": "4ac028f4"
+      },
+      {
+        "depth": 1,
+        "type": "heading_3",
+        "text_summary60": "2.3 実践層：清濁を分け、理に戻す",
+        "text_full": "2.3 実践層：清濁を分け、理に戻す",
+        "sha8": "a158584d",
+        "id_sha8": "717ac98b"
+      },
+      {
+        "depth": 1,
+        "type": "heading_2",
+        "text_summary60": "3. 天聞アークに入れるべき12原則",
+        "text_full": "3. 天聞アークに入れるべき12原則",
+        "sha8": "79420284",
+        "id_sha8": "649dff22"
+      },
+      {
+        "depth": 1,
+        "type": "heading_3",
+        "text_summary60": "IROHA-01：無常前提",
+        "text_full": "IROHA-01：無常前提",
+        "sha8": "f22a2c67",
+        "id_sha8": "f34eac57"
+      },
+      {
+        "depth": 1,
+        "type": "heading_3",
+        "text_summary60": "IROHA-02：因縁生成",
+        "text_full": "IROHA-02：因縁生成",
+        "sha8": "f20c8211",
+        "id_sha8": "812c2d7d"
+      },
+      {
+        "depth": 1,
+        "type": "heading_3",
+        "text_summary60": "IROHA-03：清濁分離",
+        "text_full": "IROHA-03：清濁分離",
+        "sha8": "fd88e543",
+        "id_sha8": "fe33d23e"
+      },
+      {
+        "depth": 1,
+        "type": "heading_3",
+        "text_summary60": "IROHA-04：火水調和",
+        "text_full": "IROHA-04：火水調和",
+        "sha8": "8a70db6e",
+        "id_sha8": "03842256"
+      },
+      {
+        "depth": 1,
+        "type": "heading_3",
+        "text_summary60": "IROHA-05：中道判定",
+        "text_full": "IROHA-05：中道判定",
+        "sha8": "8f298c98",
+        "id_sha8": "99f96be3"
+      },
+      {
+        "depth": 1,
+        "type": "heading_3",
+        "text_summary60": "IROHA-06：習慣転換",
+        "text_full": "IROHA-06：習慣転換",
+        "sha8": "7bac7d24",
+        "id_sha8": "25a5c724"
+      },
+      {
+        "depth": 1,
+        "type": "heading_3",
+        "text_summary60": "IROHA-07：臍・中心帰還",
+        "text_full": "IROHA-07：臍・中心帰還",
+        "sha8": "005ad064",
+        "id_sha8": "847d68bb"
+      },
+      {
+        "depth": 1,
+        "type": "heading_3",
+        "text_summary60": "IROHA-08：慈悲と智恵の双運",
+        "text_full": "IROHA-08：慈悲と智恵の双運",
+        "sha8": "5eda7614",
+        "id_sha8": "11a393b0"
+      },
+      {
+        "depth": 1,
+        "type": "heading_3",
+        "text_summary60": "IROHA-09：盲信拒否",
+        "text_full": "IROHA-09：盲信拒否",
+        "sha8": "665e7fec",
+        "id_sha8": "00bfff0c"
+      },
+      {
+        "depth": 1,
+        "type": "heading_3",
+        "text_summary60": "IROHA-10：言葉責任",
+        "text_full": "IROHA-10：言葉責任",
+        "sha8": "f3f33ab6",
+        "id_sha8": "2c493b50"
+      },
+      {
+        "depth": 1,
+        "type": "heading_3",
+        "text_summary60": "IROHA-11：普遍ヤマト原則",
+        "text_full": "IROHA-11：普遍ヤマト原則",
+        "sha8": "e075fdc1",
+        "id_sha8": "47f6e614"
+      },
+      {
+        "depth": 1,
+        "type": "heading_3",
+        "text_summary60": "IROHA-12：聖典の実装制御",
+        "text_full": "IROHA-12：聖典の実装制御",
+        "sha8": "e8998059",
+        "id_sha8": "f00db5e6"
+      },
+      {
+        "depth": 1,
+        "type": "heading_2",
+        "text_summary60": "4. 人間はどう思考すれば理にかなうか",
+        "text_full": "4. 人間はどう思考すれば理にかなうか",
+        "sha8": "341ac694",
+        "id_sha8": "f9c49758"
+      },
+      {
+        "depth": 1,
+        "type": "heading_3",
+        "text_summary60": "第1段階：まず無常を見る",
+        "text_full": "第1段階：まず無常を見る",
+        "sha8": "58738b98",
+        "id_sha8": "5c7214c5"
+      },
+      {
+        "depth": 1,
+        "type": "heading_3",
+        "text_summary60": "第2段階：因縁を見る",
+        "text_full": "第2段階：因縁を見る",
+        "sha8": "9f558677",
+        "id_sha8": "41d2f747"
+      },
+      {
+        "depth": 1,
+        "type": "heading_3",
+        "text_summary60": "第3段階：清濁を分ける",
+        "text_full": "第3段階：清濁を分ける",
+        "sha8": "555ee623",
+        "id_sha8": "92a1741c"
+      },
+      {
+        "depth": 1,
+        "type": "heading_3",
+        "text_summary60": "第4段階：中心へ戻る",
+        "text_full": "第4段階：中心へ戻る",
+        "sha8": "53c9dc72",
+        "id_sha8": "fbd27485"
+      }
+    ]
+  },
+  "structure_check": {
+    "47ji_structure": {
+      "label": "47字構造",
+      "posted": false,
+      "hits": []
+    },
+    "ongi_table": {
+      "label": "音義表",
+      "posted": false,
+      "hits": []
+    },
+    "lifeview": {
+      "label": "生命観",
+      "posted": false,
+      "hits": []
+    },
+    "deathview": {
+      "label": "死生観",
+      "posted": false,
+      "hits": []
+    },
+    "hokekyo_link": {
+      "label": "法華経対応",
+      "posted": false,
+      "hits": []
+    }
+  },
+  "vps_evidence": {
+    "iroha_kotodama_hisho_json": {
+      "exists": true,
+      "size": 275614,
+      "title": "いろは言霊解 天道仁聞",
+      "total_paragraphs": 1037,
+      "top_level_keys": [
+        "title",
+        "total_paragraphs",
+        "content"
+      ],
+      "content_len": 1037
+    },
+    "loader_exports": [
+      "IrohaParagraph",
+      "IrohaKotodamaCanon",
+      "loadIrohaKotodama",
+      "queryIrohaByUserText",
+      "buildIrohaInjection",
+      "irohaCanonStats"
+    ],
+    "actionpatterns_exports": [
+      "IrohaActionPattern",
+      "IrohaCounselClassificationResult",
+      "loadIrohaActionPatterns",
+      "classifyIrohaCounselInput",
+      "resolveIrohaActionPattern"
+    ],
+    "engine_exports": [
+      "irohaInterpret"
+    ],
+    "chat_ts_iroha_anchors": [
+      {
+        "lineno": 101,
+        "summary60": "import { queryIrohaByUserText, buildIrohaInjection } from \"../core/irohaKotodama..."
+      },
+      {
+        "lineno": 900,
+        "summary60": "df.ku.irohaGrounding = {"
+      },
+      {
+        "lineno": 1964,
+        "summary60": "let __irohaClause = \"\";"
+      },
+      {
+        "lineno": 1967,
+        "summary60": "const __irohaHits = queryIrohaByUserText(t0);"
+      },
+      {
+        "lineno": 1970,
+        "summary60": "__irohaClause = buildIrohaInjection(__irohaHits, 1500);"
+      },
+      {
+        "lineno": 1971,
+        "summary60": "console.log(`[SOUL_ROOT:IROHA] injected ${__irohaHits.length} paragraphs, clause..."
+      },
+      {
+        "lineno": 1977,
+        "summary60": "recordContextInjectionProbeV1(req, \"inject_iroha\", {"
+      },
+      {
+        "lineno": 1979,
+        "summary60": "clause_len: __irohaClause.length,"
+      },
+      {
+        "lineno": 2233,
+        "summary60": "(__irohaClause ? \"\\n\" + __irohaClause : \"\") +"
+      },
+      {
+        "lineno": 2363,
+        "summary60": "const __oracleSoulRoot = [__irohaClause, __amaterasuClause, __kotodamaOneSoundLa..."
+      },
+      {
+        "lineno": 2540,
+        "summary60": "__irohaClause,"
+      },
+      {
+        "lineno": 2559,
+        "summary60": "iroha: Boolean(__irohaClause),"
+      },
+      {
+        "lineno": 2581,
+        "summary60": "iroha: (__irohaClause ?? \"\").length,"
+      }
+    ]
+  },
+  "db_evidence": {
+    "iroha_units_total": 21,
+    "iroha_actionpacks_total": 1,
+    "iroha_khs_alignment_total": 10,
+    "iroha_khs_alignment_law_keys": [
+      {
+        "law_key": "KHSL:LAW:KHSU:41c0bff9cfb8:p0:q043f16b3a0e8",
+        "count": 3
+      },
+      {
+        "law_key": "KHSL:LAW:KHSU:41c0bff9cfb8:p0:q0fbed0e56aec",
+        "count": 1
+      },
+      {
+        "law_key": "KHSL:LAW:KHSU:41c0bff9cfb8:p0:q83984b3c7fef",
+        "count": 1
+      },
+      {
+        "law_key": "KHSL:LAW:KHSU:41c0bff9cfb8:p0:q899577fdaab8",
+        "count": 1
+      },
+      {
+        "law_key": "KHSL:LAW:KHSU:41c0bff9cfb8:p0:q974ea7774972",
+        "count": 1
+      },
+      {
+        "law_key": "KHSL:LAW:KHSU:41c0bff9cfb8:p0:q9f1ee710aa53",
+        "count": 1
+      },
+      {
+        "law_key": "KHSL:LAW:KHSU:41c0bff9cfb8:p0:qd1f8daf71baf",
+        "count": 1
+      },
+      {
+        "law_key": "KHSL:LAW:KHSU:41c0bff9cfb8:p0:qe96d4d99ddae",
+        "count": 1
+      }
+    ],
+    "memory_units_iroha_total": 63,
+    "memory_units_iroha_scopes": [
+      {
+        "scope_id": "iroha-specificity-postrestart-4-1775898812",
+        "count": 2
+      },
+      {
+        "scope_id": "iroha-specificity-postrestart-3-1775898811",
+        "count": 2
+      },
+      {
+        "scope_id": "iroha-specificity-postrestart-2-1775898811",
+        "count": 2
+      },
+      {
+        "scope_id": "iroha-specificity-postrestart-1-1775898810",
+        "count": 2
+      },
+      {
+        "scope_id": "iroha-specificity-pass-4-1775898939",
+        "count": 2
+      },
+      {
+        "scope_id": "iroha-specificity-pass-3-1775898939",
+        "count": 2
+      },
+      {
+        "scope_id": "iroha-specificity-pass-2-1775898938",
+        "count": 2
+      },
+      {
+        "scope_id": "iroha-specificity-pass-1-1775898938",
+        "count": 2
+      },
+      {
+        "scope_id": "iroha-specificity-finalpass-4-1775899190",
+        "count": 2
+      },
+      {
+        "scope_id": "iroha-specificity-finalpass-3-1775899189",
+        "count": 2
+      }
+    ]
+  },
+  "chapter_map": [
+    {
+      "chapter_key": "47ji_structure",
+      "chapter_label": "47字構造",
+      "purpose": "いろは47字を正典に基づき定義し、各字 (paragraph) と meta を一覧で示す",
+      "vps_assets": [
+        "shared/kotodama/iroha_kotodama_hisho.json (1037 段落)"
+      ],
+      "db_tables": [
+        "iroha_units (21 件)"
+      ],
+      "runtime_funcs": [
+        "queryIrohaByUserText",
+        "buildIrohaInjection",
+        "irohaCanonStats"
+      ],
+      "input": "user message text",
+      "output": "system prompt clause (24h avg 760 chars)",
+      "mc_metric": "fire_24h.prompt_trace_summary_24h.avg_clause_lengths.iroha",
+      "future_mc_metric": "iroha_47ji_chars / 24h average"
+    },
+    {
+      "chapter_key": "ongi_table",
+      "chapter_label": "音義表",
+      "purpose": "各音 (い・ろ・は…) の意味と位相を一覧で示す",
+      "vps_assets": [
+        "shared/kotodama/iroha_kotodama_hisho.json (音義部分)",
+        "api/src/core/irohaActionPatterns.ts (5 patterns)"
+      ],
+      "db_tables": [
+        "iroha_units.kw / iroha_units.anchor"
+      ],
+      "runtime_funcs": [
+        "irohaInterpret",
+        "classifyIrohaCounselInput",
+        "df.ku.irohaGrounding.irohaSound.sounds"
+      ],
+      "input": "single word / sound",
+      "output": "df.ku.irohaGrounding (sounds[0..3])",
+      "mc_metric": "df.ku.irohaGrounding 出現率 (chat probe)",
+      "future_mc_metric": "iroha_ongi_chars / 24h average"
+    },
+    {
+      "chapter_key": "lifeview",
+      "chapter_label": "生命観",
+      "purpose": "いろは言霊解における生命の見方を整理する",
+      "vps_assets": [
+        "shared/kotodama/iroha_kotodama_hisho.json (関連段落)"
+      ],
+      "db_tables": [
+        "memory_units iroha-specificity-* scope (63 件 / 10 top scopes)"
+      ],
+      "runtime_funcs": [
+        "buildIrohaInjection",
+        "(memory_projection 経由は将来 CHAT-CLAUSE-V1 で接続)"
+      ],
+      "input": "user message + memory_units summary",
+      "output": "system prompt clause + projection log",
+      "mc_metric": "memory_units iroha total",
+      "future_mc_metric": "iroha_seimei_chars / 24h average"
+    },
+    {
+      "chapter_key": "deathview",
+      "chapter_label": "死生観",
+      "purpose": "死と生のつながり、別れの捉え方を整理する",
+      "vps_assets": [
+        "shared/kotodama/iroha_kotodama_hisho.json (関連段落)"
+      ],
+      "db_tables": [
+        "memory_units iroha-specificity-* scope (生命観と共有)"
+      ],
+      "runtime_funcs": [
+        "buildIrohaInjection (lifeview と同経路)",
+        "future: irohaThemeRouter (未実装)"
+      ],
+      "input": "user message (death/parting context)",
+      "output": "system prompt clause",
+      "mc_metric": "memory_units iroha total (sub-thematic)",
+      "future_mc_metric": "iroha_shisei_chars / 24h average"
+    },
+    {
+      "chapter_key": "hokekyo_link",
+      "chapter_label": "法華経対応",
+      "purpose": "いろは言霊解と法華経の対応関係を整理する",
+      "vps_assets": [
+        "shared/kotodama/iroha_kotodama_hisho.json"
+      ],
+      "db_tables": [
+        "iroha_khs_alignment (10 件 / law_keys=8)"
+      ],
+      "runtime_funcs": [
+        "checkIrohaGrounding (df.ku.irohaGrounding)",
+        "(将来: buildHokekyoCrossRefClause)"
+      ],
+      "input": "iroha_unit_id (alignment lookup)",
+      "output": "khs_law_key + relation + score",
+      "mc_metric": "iroha_khs_alignment count",
+      "future_mc_metric": "iroha_hokekyo_chars / 24h average"
+    }
+  ],
+  "block_plans": [
+    {
+      "chapter_key": "47ji_structure",
+      "chapter_label": "47字構造",
+      "blocks": [
+        {
+          "order": 1,
+          "type": "heading_2",
+          "content_summary": "47字構造"
+        },
+        {
+          "order": 2,
+          "type": "paragraph",
+          "content_summary": "目的: いろは47字を正典に基づき定義し、各字 (paragraph) と meta を一覧で示す (要約のみ、正典本文は転載しない)"
+        },
+        {
+          "order": 3,
+          "type": "heading_3",
+          "content_summary": "VPS 側対応資産"
+        },
+        {
+          "order": 4,
+          "type": "bulleted_list_item",
+          "content_summary": "shared/kotodama/iroha_kotodama_hisho.json (1037 段落)"
+        },
+        {
+          "order": 5,
+          "type": "bulleted_list_item",
+          "content_summary": "DB: iroha_units (21 件)"
+        },
+        {
+          "order": 6,
+          "type": "bulleted_list_item",
+          "content_summary": "runtime: queryIrohaByUserText, buildIrohaInjection, irohaCanonStats"
+        },
+        {
+          "order": 7,
+          "type": "heading_3",
+          "content_summary": "内容要約"
+        },
+        {
+          "order": 8,
+          "type": "paragraph",
+          "content_summary": "(参照: shared/kotodama/iroha_kotodama_hisho.json) - input=user message text / output=system prompt clause (24h avg 760 chars)"
+        },
+        {
+          "order": 9,
+          "type": "heading_3",
+          "content_summary": "MC 観測点"
+        },
+        {
+          "order": 10,
+          "type": "bulleted_list_item",
+          "content_summary": "現: fire_24h.prompt_trace_summary_24h.avg_clause_lengths.iroha / 将来: iroha_47ji_chars / 24h average"
+        }
+      ],
+      "block_count": 10
+    },
+    {
+      "chapter_key": "ongi_table",
+      "chapter_label": "音義表",
+      "blocks": [
+        {
+          "order": 1,
+          "type": "heading_2",
+          "content_summary": "音義表"
+        },
+        {
+          "order": 2,
+          "type": "paragraph",
+          "content_summary": "目的: 各音 (い・ろ・は…) の意味と位相を一覧で示す (要約のみ、正典本文は転載しない)"
+        },
+        {
+          "order": 3,
+          "type": "heading_3",
+          "content_summary": "VPS 側対応資産"
+        },
+        {
+          "order": 4,
+          "type": "bulleted_list_item",
+          "content_summary": "shared/kotodama/iroha_kotodama_hisho.json (音義部分) / api/src/core/irohaActionPatterns.ts (5 patterns)"
+        },
+        {
+          "order": 5,
+          "type": "bulleted_list_item",
+          "content_summary": "DB: iroha_units.kw / iroha_units.anchor"
+        },
+        {
+          "order": 6,
+          "type": "bulleted_list_item",
+          "content_summary": "runtime: irohaInterpret, classifyIrohaCounselInput, df.ku.irohaGrounding.irohaSound.sounds"
+        },
+        {
+          "order": 7,
+          "type": "heading_3",
+          "content_summary": "内容要約"
+        },
+        {
+          "order": 8,
+          "type": "paragraph",
+          "content_summary": "(参照: shared/kotodama/iroha_kotodama_hisho.json) - input=single word / sound / output=df.ku.irohaGrounding (sounds[0..3])"
+        },
+        {
+          "order": 9,
+          "type": "heading_3",
+          "content_summary": "MC 観測点"
+        },
+        {
+          "order": 10,
+          "type": "bulleted_list_item",
+          "content_summary": "現: df.ku.irohaGrounding 出現率 (chat probe) / 将来: iroha_ongi_chars / 24h average"
+        }
+      ],
+      "block_count": 10
+    },
+    {
+      "chapter_key": "lifeview",
+      "chapter_label": "生命観",
+      "blocks": [
+        {
+          "order": 1,
+          "type": "heading_2",
+          "content_summary": "生命観"
+        },
+        {
+          "order": 2,
+          "type": "paragraph",
+          "content_summary": "目的: いろは言霊解における生命の見方を整理する (要約のみ、正典本文は転載しない)"
+        },
+        {
+          "order": 3,
+          "type": "heading_3",
+          "content_summary": "VPS 側対応資産"
+        },
+        {
+          "order": 4,
+          "type": "bulleted_list_item",
+          "content_summary": "shared/kotodama/iroha_kotodama_hisho.json (関連段落)"
+        },
+        {
+          "order": 5,
+          "type": "bulleted_list_item",
+          "content_summary": "DB: memory_units iroha-specificity-* scope (63 件 / 10 top scopes)"
+        },
+        {
+          "order": 6,
+          "type": "bulleted_list_item",
+          "content_summary": "runtime: buildIrohaInjection, (memory_projection 経由は将来 CHAT-CLAUSE-V1 で接続)"
+        },
+        {
+          "order": 7,
+          "type": "heading_3",
+          "content_summary": "内容要約"
+        },
+        {
+          "order": 8,
+          "type": "paragraph",
+          "content_summary": "(参照: shared/kotodama/iroha_kotodama_hisho.json) - input=user message + memory_units summary / output=system prompt clause + projection log"
+        },
+        {
+          "order": 9,
+          "type": "heading_3",
+          "content_summary": "MC 観測点"
+        },
+        {
+          "order": 10,
+          "type": "bulleted_list_item",
+          "content_summary": "現: memory_units iroha total / 将来: iroha_seimei_chars / 24h average"
+        }
+      ],
+      "block_count": 10
+    },
+    {
+      "chapter_key": "deathview",
+      "chapter_label": "死生観",
+      "blocks": [
+        {
+          "order": 1,
+          "type": "heading_2",
+          "content_summary": "死生観"
+        },
+        {
+          "order": 2,
+          "type": "paragraph",
+          "content_summary": "目的: 死と生のつながり、別れの捉え方を整理する (要約のみ、正典本文は転載しない)"
+        },
+        {
+          "order": 3,
+          "type": "heading_3",
+          "content_summary": "VPS 側対応資産"
+        },
+        {
+          "order": 4,
+          "type": "bulleted_list_item",
+          "content_summary": "shared/kotodama/iroha_kotodama_hisho.json (関連段落)"
+        },
+        {
+          "order": 5,
+          "type": "bulleted_list_item",
+          "content_summary": "DB: memory_units iroha-specificity-* scope (生命観と共有)"
+        },
+        {
+          "order": 6,
+          "type": "bulleted_list_item",
+          "content_summary": "runtime: buildIrohaInjection (lifeview と同経路), future: irohaThemeRouter (未実装)"
+        },
+        {
+          "order": 7,
+          "type": "heading_3",
+          "content_summary": "内容要約"
+        },
+        {
+          "order": 8,
+          "type": "paragraph",
+          "content_summary": "(参照: shared/kotodama/iroha_kotodama_hisho.json) - input=user message (death/parting context) / output=system prompt clause"
+        },
+        {
+          "order": 9,
+          "type": "heading_3",
+          "content_summary": "MC 観測点"
+        },
+        {
+          "order": 10,
+          "type": "bulleted_list_item",
+          "content_summary": "現: memory_units iroha total (sub-thematic) / 将来: iroha_shisei_chars / 24h average"
+        }
+      ],
+      "block_count": 10
+    },
+    {
+      "chapter_key": "hokekyo_link",
+      "chapter_label": "法華経対応",
+      "blocks": [
+        {
+          "order": 1,
+          "type": "heading_2",
+          "content_summary": "法華経対応"
+        },
+        {
+          "order": 2,
+          "type": "paragraph",
+          "content_summary": "目的: いろは言霊解と法華経の対応関係を整理する (要約のみ、正典本文は転載しない)"
+        },
+        {
+          "order": 3,
+          "type": "heading_3",
+          "content_summary": "VPS 側対応資産"
+        },
+        {
+          "order": 4,
+          "type": "bulleted_list_item",
+          "content_summary": "shared/kotodama/iroha_kotodama_hisho.json"
+        },
+        {
+          "order": 5,
+          "type": "bulleted_list_item",
+          "content_summary": "DB: iroha_khs_alignment (10 件 / law_keys=8)"
+        },
+        {
+          "order": 6,
+          "type": "bulleted_list_item",
+          "content_summary": "runtime: checkIrohaGrounding (df.ku.irohaGrounding), (将来: buildHokekyoCrossRefClause)"
+        },
+        {
+          "order": 7,
+          "type": "heading_3",
+          "content_summary": "内容要約"
+        },
+        {
+          "order": 8,
+          "type": "paragraph",
+          "content_summary": "(参照: shared/kotodama/iroha_kotodama_hisho.json) - input=iroha_unit_id (alignment lookup) / output=khs_law_key + relation + score"
+        },
+        {
+          "order": 9,
+          "type": "heading_3",
+          "content_summary": "MC 観測点"
+        },
+        {
+          "order": 10,
+          "type": "bulleted_list_item",
+          "content_summary": "現: iroha_khs_alignment count / 将来: iroha_hokekyo_chars / 24h average"
+        }
+      ],
+      "block_count": 10
+    }
+  ],
+  "next_card_recommendation": {
+    "recommended": "A",
+    "card_name": "CARD-IROHA-NOTION-STRUCTURE-WRITE-V1",
+    "reason": "5 構造のうち 5/5 が未掲示。Notion 解析班ページに「見える地図」を整備するのが最優先。append のみで安全に追記可能。",
+    "scope": "Notion write (blocks.children.append のみ)。VPS / DB / chat に副作用なし。",
+    "danger": "low (append-only)",
+    "exec_order": 1,
+    "preconditions": "本カード設計が TENMON 裁定で承認されること。"
+  },
+  "findings": [
+    {
+      "level": "warn",
+      "area": "structure",
+      "message": "all 5 chapters are missing in Notion analysis page"
+    }
+  ]
+}
