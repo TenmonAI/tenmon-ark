@@ -1,0 +1,426 @@
+{
+  "observer_version": "v1.0.0",
+  "card": "CARD-IROHA-MC-CHAPTER-TRACKING-V1",
+  "generated_at": "2026-04-26T06:41:26.814261+00:00",
+  "verdict": "YELLOW",
+  "summary": {
+    "critical": 0,
+    "warn": 2,
+    "info": 6
+  },
+  "db_schema": {
+    "db_path": "/opt/tenmon-ark-data/kokuzo.sqlite",
+    "exists": true,
+    "tables": {
+      "iroha_actionpacks": {
+        "columns": [
+          {
+            "name": "packId",
+            "type": "TEXT",
+            "notnull": false,
+            "default": null,
+            "pk": true
+          },
+          {
+            "name": "kind",
+            "type": "TEXT",
+            "notnull": true,
+            "default": null,
+            "pk": false
+          },
+          {
+            "name": "payloadJson",
+            "type": "TEXT",
+            "notnull": true,
+            "default": null,
+            "pk": false
+          },
+          {
+            "name": "status",
+            "type": "TEXT",
+            "notnull": true,
+            "default": "'UNRESOLVED'",
+            "pk": false
+          },
+          {
+            "name": "createdAt",
+            "type": "TEXT",
+            "notnull": true,
+            "default": "''",
+            "pk": false
+          }
+        ],
+        "row_count": 1
+      },
+      "iroha_khs_alignment": {
+        "columns": [
+          {
+            "name": "alignId",
+            "type": "TEXT",
+            "notnull": false,
+            "default": null,
+            "pk": true
+          },
+          {
+            "name": "irohaUnitId",
+            "type": "TEXT",
+            "notnull": true,
+            "default": null,
+            "pk": false
+          },
+          {
+            "name": "khsLawKey",
+            "type": "TEXT",
+            "notnull": true,
+            "default": null,
+            "pk": false
+          },
+          {
+            "name": "relation",
+            "type": "TEXT",
+            "notnull": true,
+            "default": null,
+            "pk": false
+          },
+          {
+            "name": "score",
+            "type": "REAL",
+            "notnull": true,
+            "default": "0",
+            "pk": false
+          },
+          {
+            "name": "note",
+            "type": "TEXT",
+            "notnull": true,
+            "default": "''",
+            "pk": false
+          },
+          {
+            "name": "createdAt",
+            "type": "TEXT",
+            "notnull": true,
+            "default": "''",
+            "pk": false
+          }
+        ],
+        "row_count": 10,
+        "relation_distribution": {
+          "SEED": 1,
+          "SUPPORTS_VERIFIED": 9
+        },
+        "distinct_khs_law_keys": 8,
+        "distinct_iroha_units": 3
+      },
+      "iroha_units": {
+        "columns": [
+          {
+            "name": "unitId",
+            "type": "TEXT",
+            "notnull": false,
+            "default": null,
+            "pk": true
+          },
+          {
+            "name": "doc",
+            "type": "TEXT",
+            "notnull": true,
+            "default": null,
+            "pk": false
+          },
+          {
+            "name": "pdfPage",
+            "type": "INTEGER",
+            "notnull": false,
+            "default": null,
+            "pk": false
+          },
+          {
+            "name": "anchor",
+            "type": "TEXT",
+            "notnull": false,
+            "default": null,
+            "pk": false
+          },
+          {
+            "name": "kw",
+            "type": "TEXT",
+            "notnull": false,
+            "default": null,
+            "pk": false
+          },
+          {
+            "name": "quote",
+            "type": "TEXT",
+            "notnull": true,
+            "default": null,
+            "pk": false
+          },
+          {
+            "name": "quoteHash",
+            "type": "TEXT",
+            "notnull": true,
+            "default": null,
+            "pk": false
+          },
+          {
+            "name": "status",
+            "type": "TEXT",
+            "notnull": true,
+            "default": "'UNRESOLVED'",
+            "pk": false
+          },
+          {
+            "name": "createdAt",
+            "type": "TEXT",
+            "notnull": true,
+            "default": "''",
+            "pk": false
+          }
+        ],
+        "row_count": 21,
+        "doc_distribution": {
+          "DOCX->PDF:いろは最終原稿.pdf": 18,
+          "iroha_pdftext_p-015.txt": 1,
+          "iroha_pdftext_p-027.txt": 2
+        },
+        "status_distribution": {
+          "UNRESOLVED": 21
+        },
+        "pdf_page_min": 9,
+        "pdf_page_max": 124,
+        "pdf_page_distinct": 10
+      }
+    }
+  },
+  "canon_structure": {
+    "locations": [
+      {
+        "path": "/opt/tenmon-ark-repo/shared/kotodama/iroha_kotodama_hisho.json",
+        "size": 275614
+      },
+      {
+        "path": "/opt/tenmon-ark-repo/api/src/data/iroha_kotodama_hisho.json",
+        "size": 275614
+      },
+      {
+        "path": "/opt/tenmon-ark-repo/server/data/iroha_kotodama_hisho.json",
+        "size": 275614
+      }
+    ],
+    "primary": "/opt/tenmon-ark-repo/shared/kotodama/iroha_kotodama_hisho.json",
+    "top_level_keys": [
+      "title",
+      "total_paragraphs",
+      "content"
+    ],
+    "content_len": 1037,
+    "chapter_field_in_root": false,
+    "content_item_type": [
+      "str"
+    ],
+    "content_avg_len": 86.09,
+    "content_max_len": 477,
+    "content_min_len": 1
+  },
+  "existing_impl": {
+    "loader_path": "api/src/core/irohaKotodamaLoader.ts",
+    "exists": true,
+    "chapter_keywords": {
+      "第一章_普遍叡智": "いろは言[霊灵靈]解に秘められた普遍叡智|空海が天地創造の原理",
+      "第二章_イゑす": "イゑす|イエス|命の普遍的展開|天之御中主",
+      "第三章_モせす": "モせす|モーセ|律法と境界|結び",
+      "第四章_トカナクテシス": "トカナクテシス|咎なくて死す|解組と再発",
+      "第五章_聖書的誤解": "聖書的誤解|贖罪の悲劇",
+      "第六章_空海の霊的役割": "空海の霊的役割|天照として再|遍照金剛",
+      "第七章_結論": "死を悲劇ではなく|再生と光明の扉"
+    },
+    "principle_keywords": {
+      "水火": "水火|水と火|みずほ|呼吸|循環|血液|消化",
+      "結び": "結び|縁|契り|夫婦|家族|絡み",
+      "生死": "生死|生きる|死ぬ|輪廻|魂|命",
+      "発顕": "顕現|発動|始まり|芽生え|開闢",
+      "浄化": "浄化|清める|濁|手放|整理|執着",
+      "凝固": "凝|固まる|根|定まる|成る"
+    },
+    "iroha_paragraph_type_fields": [
+      "index",
+      "text",
+      "chapter",
+      "soundAnchors",
+      "principleTags",
+      "healthRelated"
+    ],
+    "build_iroha_injection_returns_string": true,
+    "build_iroha_injection_uses_chapter_tag": true
+  },
+  "chapter_coverage": {
+    "existing_7chap": {
+      "total": 1037,
+      "classified": 208,
+      "unclassified": 829,
+      "multi_match": 11,
+      "coverage_pct": 20.06,
+      "counts": {
+        "第一章_普遍叡智": 2,
+        "第二章_イゑす": 17,
+        "第三章_モせす": 177,
+        "第四章_トカナクテシス": 5,
+        "第五章_聖書的誤解": 2,
+        "第六章_空海の霊的役割": 17,
+        "第七章_結論": 1
+      }
+    },
+    "existing_6principle": {
+      "total": 1037,
+      "classified": 553,
+      "unclassified": 484,
+      "multi_match": 226,
+      "coverage_pct": 53.33,
+      "counts": {
+        "水火": 160,
+        "結び": 208,
+        "生死": 221,
+        "発顕": 102,
+        "浄化": 53,
+        "凝固": 122
+      }
+    },
+    "tenmon_5chap": {
+      "total": 1037,
+      "classified": 266,
+      "unclassified": 771,
+      "multi_match": 36,
+      "coverage_pct": 25.65,
+      "counts": {
+        "47ji": 29,
+        "ongi": 13,
+        "seimei": 191,
+        "shisei": 68,
+        "hokekyo": 2
+      }
+    },
+    "tenmon_5_keywords_used": {
+      "47ji": "四十七|47字|47文字|五十音|いろは47|ヰ|ヱ|京の字|京がなくても",
+      "ongi": "音義|音意|音響|響き|霊響|音灵|声韻|音律",
+      "seimei": "生命|いのち|生きる|誕生|命の|魂",
+      "shisei": "死生|死ぬ|別れ|終わり|転化|再生|輪廻|涅槃|往生",
+      "hokekyo": "法華|妙法|蓮華|如来寿量|観音|普門品|薬王|常不軽"
+    }
+  },
+  "diff_estimate": {
+    "approach_y_two_axis": {
+      "description": "keep existing 7 chapters, add TENMON 5 chapters as parallel chapterTagsV5[]",
+      "line_estimate_breakdown": {
+        "irohaKotodamaLoader.ts (CHAPTER_KEYWORDS_V5 + IrohaParagraph.chapterTagsV5)": 12,
+        "intelligenceFireTracker.ts (PromptTraceClauseLengthsV1 + summary aggregator)": 15,
+        "chat.ts (clause_lengths.iroha_chapters object)": 5,
+        "satoriEnforcement.ts (IrohaGroundingResult.matchedChapters?)": 5,
+        "chat.ts:893 (df.ku.irohaGrounding pass-through matchedChapters)": 1,
+        "buildIrohaInjection (export new helper summarizeIrohaInjectionByChapterV1)": 8
+      },
+      "total_estimated_lines": 46,
+      "back_compat": true,
+      "notes": [
+        "all new fields are optional / nullable; no existing call site breaks",
+        "IrohaParagraph.chapter (existing 7-chap) preserved",
+        "buildIrohaInjection signature unchanged (still returns string)",
+        "PromptTraceClauseLengthsV1 gains optional iroha_chapters?: Record<string, number>"
+      ]
+    },
+    "approach_x_minimal_existing7": {
+      "description": "do not add TENMON 5; expose existing 7-chapter chapterIndex to MC",
+      "line_estimate_breakdown": {
+        "intelligenceFireTracker.ts (PromptTraceClauseLengthsV1 + aggregator)": 15,
+        "chat.ts (compute chapter_lens from queryIrohaByUserText results)": 8
+      },
+      "total_estimated_lines": 23,
+      "back_compat": true,
+      "notes": [
+        "lowest cost; surfaces what loader already computes",
+        "but uses thought-history axis (universal/Christ/Moses/Kobo) not structural axis (47ji/ongi)",
+        "existing 7-chap coverage is only 20% on canon; biased toward 第三章_モせす"
+      ]
+    },
+    "approach_z_replace_with_tenmon5": {
+      "description": "deprecate existing 7-chapter, replace with TENMON 5",
+      "total_estimated_lines": 60,
+      "back_compat": false,
+      "notes": [
+        "buildIrohaInjection [chapter] tag in LLM system prompt changes meaning",
+        "any external dashboard/log indexing existing chapter names breaks",
+        "not recommended unless deliberate migration cycle"
+      ]
+    },
+    "recommended": "approach_y_two_axis"
+  },
+  "card_candidates": [
+    {
+      "priority": 1,
+      "name": "CARD-IROHA-MC-CHAPTER-TRACKING-IMPLEMENT-V1",
+      "reason": "implement approach Y (existing 7 + TENMON 5 dual-axis) per design",
+      "source": "chapter_tracking_observe",
+      "estimated_diff_lines": 46
+    },
+    {
+      "priority": 2,
+      "name": "CARD-IROHA-MEMORY-PROJECTION-AUDIT-V1",
+      "reason": "memory_units iroha 63 / 32 scope_id projection rate visualization (read-only)",
+      "source": "tenmon_priority"
+    },
+    {
+      "priority": 3,
+      "name": "CARD-IROHA-NOTION-STRUCTURE-WRITE-V1",
+      "reason": "Notion 5-chapter map (write-pending) - safer to write after MC chapter KPI lands",
+      "source": "tenmon_priority"
+    },
+    {
+      "priority": 4,
+      "name": "CARD-DANSHARI-CORPUS-SOURCE-OBSERVE-V1",
+      "reason": "tone policy main-line (orthogonal to chapter tracking)",
+      "source": "tenmon_priority"
+    }
+  ],
+  "findings": [
+    {
+      "level": "warn",
+      "area": "db_schema",
+      "message": "iroha_units has no chapter-like column (cols=['unitId', 'doc', 'pdfPage', 'anchor', 'kw', 'quote', 'quoteHash', 'status', 'createdAt']); chapter classification must rely on keyword regex (approach A) or supplement table (approach B)"
+    },
+    {
+      "level": "info",
+      "area": "db_alignment",
+      "message": "iroha_khs_alignment rows=10, distinct iroha_units=3; khsLawKey is 言霊秘書 hash, not 法華経 chapter id"
+    },
+    {
+      "level": "info",
+      "area": "canon_json",
+      "message": "iroha_kotodama_hisho.json top-level has no chapter key (keys=['title', 'total_paragraphs', 'content']); content is flat string list (n=1037)"
+    },
+    {
+      "level": "info",
+      "area": "impl",
+      "message": "existing CHAPTER_KEYWORDS in loader: 7 keys (thought-history axis)"
+    },
+    {
+      "level": "info",
+      "area": "impl",
+      "message": "existing PRINCIPLE_KEYWORDS in loader: 6 keys (structural axis)"
+    },
+    {
+      "level": "info",
+      "area": "coverage_existing_7",
+      "message": "existing 7-chap coverage = 20.06% (classified=208/1037)"
+    },
+    {
+      "level": "info",
+      "area": "coverage_existing_6",
+      "message": "existing 6-principle coverage = 53.33% (classified=553/1037, multi_match=226)"
+    },
+    {
+      "level": "warn",
+      "area": "coverage_tenmon_5",
+      "message": "TENMON 5-chap initial keyword coverage = 25.65% (<50%); keyword dict needs strengthening esp. hokekyo (counts={'47ji': 29, 'ongi': 13, 'seimei': 191, 'shisei': 68, 'hokekyo': 2})"
+    }
+  ]
+}
