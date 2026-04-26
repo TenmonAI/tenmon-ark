@@ -110,6 +110,33 @@ def _level_for_auth_missing(default_level: str) -> str:
     return default_level
 
 
+def _evaluate_old_vps_verdict(online_signals: int, critical_count: int,
+                              warn_count: int) -> str:
+    """Compute verdict for old_vps profile using online signals as a hard gate.
+
+    old_vps profile is a remote-observer base; the verdict must reflect whether
+    HTTPS 200 reachability to the production VPS is healthy. The 4 signals
+    (api/health, chat probe, /pwa/, /pwa/evolution) are scored 0..4.
+
+    Rules:
+      online_signals == 0   -> RED   (the observer base is offline)
+      online_signals == 1|2 -> RED if any critical, else YELLOW
+      online_signals >= 3   -> RED if any critical, YELLOW if any warn, else GREEN
+
+    default profile is unaffected; this helper is invoked only when PROFILE
+    is "old_vps".
+    """
+    if online_signals == 0:
+        return "RED"
+    if online_signals <= 2:
+        return "RED" if critical_count > 0 else "YELLOW"
+    if critical_count > 0:
+        return "RED"
+    if warn_count > 0:
+        return "YELLOW"
+    return "GREEN"
+
+
 def _evaluate_online_signals(api_section: dict, pwa_section: dict) -> tuple[int, str]:
     """Count HTTPS 200 signals from api_section / pwa_section.
 
@@ -677,13 +704,17 @@ def derive_verdict(findings: list[dict]) -> tuple[str, int, int, int]:
 def derive_next_cards(verdict: str, findings: list[dict],
                       online_signals: int = 0) -> list[str]:
     if PROFILE == "old_vps":
-        if verdict in ("GREEN", "YELLOW") and online_signals >= 3:
+        if online_signals >= 3:
             return [
                 "CARD-DOCTOR-V2-OLD-VPS-FEEDBACK-INTEGRATION-V1",
                 "CARD-FEEDBACK-LOOP-CARD-GENERATION-V1",
             ]
-        if online_signals < 3:
+        if online_signals == 2:
             return ["CARD-DOCTOR-V2-OLD-VPS-CONNECTIVITY-AUDIT-V1"]
+        return [
+            "CARD-DOCTOR-V2-OLD-VPS-RESCUE-V1",
+            "CARD-DOCTOR-V2-OLD-VPS-CONNECTIVITY-AUDIT-V1",
+        ]
     if verdict == "GREEN":
         return [
             "CARD-FEEDBACK-LOOP-CARD-GENERATION-OBSERVE-V1",
@@ -854,6 +885,8 @@ def cmd_verify() -> int:
 
     verdict, crit, warn, info = derive_verdict(findings)
     online_signals, online_label = _evaluate_online_signals(api_section, pwa_section)
+    if PROFILE == "old_vps":
+        verdict = _evaluate_old_vps_verdict(online_signals, crit, warn)
     next_cards = derive_next_cards(verdict, findings, online_signals=online_signals)
 
     report = {

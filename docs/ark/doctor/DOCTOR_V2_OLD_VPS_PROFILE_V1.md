@@ -47,10 +47,13 @@ info に下げる契約を先に定義しておく)。
 
 - **default profile の挙動は完全維持**（本番 VPS 実行時に退行ゼロ）
 - `TENMON_DOCTOR_PROFILE=old_vps` を立てた時のみ、判定軸を「リモート観測者」用に切り替える
-- 切替対象は **既存 finding の level 引数** と **`derive_next_cards` の suggestions 戦略** のみ
+- 切替対象は **既存 finding の level 引数** / **`derive_next_cards` の suggestions 戦略** /
+  **`old_vps` profile 限定の verdict 再計算** の 3 つ
 - 既存関数シグネチャは破壊しない（`derive_next_cards` のみ optional `online_signals` を追加）
 - 既存 import の追加なし (`os` は PATH-ENV-OVERRIDE で既に import 済み)
-- diff 行数: 77 insert / 14 delete (合計 91 行 / 目安 80〜150 内)
+- diff 行数: doctor v2 累計 +112 / -16 (目安 80〜150 内)
+- default profile 経路では `_evaluate_old_vps_verdict` は呼ばれず、`derive_verdict` の従来ロジック
+  がそのまま `verdict` を決める → 退行ゼロ
 
 ---
 
@@ -171,13 +174,38 @@ if cs.get("status") == 401:
 
 ---
 
-## 6. `_evaluate_online_signals` の HTTPS 200 シグナル評価
+## 6. 観測基地判定ロジック (HTTPS 200 シグナル + verdict 再計算)
+
+old_vps profile では、HTTPS 200 シグナル 4 種を **観測基地として機能しているかの必須判定**
+として用いる。
+
+### 6.1 判定対象 (4 endpoint)
+
+```
+1. /api/health           200
+2. /api/chat probe       200
+3. /pwa/                 200
+4. /pwa/evolution        200
+```
+
+### 6.2 判定基準
+
+```
+online_signals = 200 を返した数 (0 〜 4)
+
+online_signals >= 3  → 観測基地として PASS 寄り (GREEN または軽い YELLOW)
+online_signals == 2  → YELLOW または RED 寄り (要注意)
+online_signals == 1  → YELLOW または RED
+online_signals == 0  → RED (観測基地として機能していない)
+```
+
+### 6.3 シグナル集計 `_evaluate_online_signals`
 
 ```python
 def _evaluate_online_signals(api_section: dict, pwa_section: dict) -> tuple[int, str]:
-    health = (api_section.get("health") or {})
-    chat_probe = (api_section.get("chat_probe") or {})
-    pwa_root = (pwa_section.get("pwa_root") or {})
+    health        = (api_section.get("health") or {})
+    chat_probe    = (api_section.get("chat_probe") or {})
+    pwa_root      = (pwa_section.get("pwa_root") or {})
     pwa_evolution = (pwa_section.get("pwa_evolution") or {})
     signals = sum([
         health.get("status") == 200,
@@ -185,69 +213,156 @@ def _evaluate_online_signals(api_section: dict, pwa_section: dict) -> tuple[int,
         pwa_root.get("status") == 200,
         pwa_evolution.get("status") == 200,
     ])
-    if signals >= 3:
-        return signals, "online"
-    if signals >= 1:
-        return signals, "partial"
+    if signals >= 3: return signals, "online"
+    if signals >= 1: return signals, "partial"
     return signals, "offline"
 ```
-
-最大 4 / 最小 0 のシグナル数を集計し、`(signals, label)` を返す。
 
 | signals | label | 意味 |
 | --- | --- | --- |
 | 4 | online | 観測基地として完全に到達 |
-| 3 | online | 観測基地として実質到達 (1 endpoint だけ瞬間的失敗) |
+| 3 | online | 観測基地として実質到達 (1 endpoint のみ瞬間的失敗) |
 | 1〜2 | partial | 部分的にしか到達できていない |
 | 0 | offline | 観測者として機能していない |
 
-- 結果は report の top-level `online_status: {"signals": N, "label": "..."}` に保存
-- old_vps profile では `derive_next_cards` に渡され suggestions の分岐に使われる
-- default profile でも report に出るが suggestions は従来ロジック (online_status は監査用情報)
+結果は report の top-level `online_status: {"signals": N, "label": "..."}` に保存。
+default profile でも記録される (監査用情報) が、verdict 算出には使われない。
 
-ユニット検証結果:
+### 6.4 verdict 再計算 `_evaluate_old_vps_verdict` (old_vps 限定)
+
+```python
+def _evaluate_old_vps_verdict(online_signals: int,
+                              critical_count: int,
+                              warn_count: int) -> str:
+    if online_signals == 0:
+        return "RED"
+    if online_signals <= 2:
+        return "RED" if critical_count > 0 else "YELLOW"
+    if critical_count > 0:
+        return "RED"
+    if warn_count > 0:
+        return "YELLOW"
+    return "GREEN"
+```
+
+呼び出しは `cmd_verify` 内の以下 1 行のみ (PROFILE が old_vps の時だけ verdict を上書き):
+
+```python
+verdict, crit, warn, info = derive_verdict(findings)
+online_signals, online_label = _evaluate_online_signals(api_section, pwa_section)
+if PROFILE == "old_vps":
+    verdict = _evaluate_old_vps_verdict(online_signals, crit, warn)
+```
+
+default profile では `_evaluate_old_vps_verdict` は呼ばれず、`derive_verdict` の従来ロジック
+がそのまま採用される → 退行ゼロ。
+
+### 6.5 critical の立て方 (old_vps profile)
+
+old_vps profile では、以下のみ critical として扱う (本物の到達性 / 重要装置の異常):
 
 ```
-[online_eval-all200]      sig=4 lbl=online
-[online_eval-all_fail]    sig=0 lbl=offline
-[online_eval-1_signal]    sig=1 lbl=partial
+- /api/health が 200 以外 (タイムアウト含む)
+- chat probe が 5xx または timeout
+- /api/chat の acceptance verdict FAIL
+- intelligence enforcer verdict not clean
+- /pwa/evolution が 404
+- tenmon-auto-patch が active
+- kotodama_units != 12 (DB が読めた場合のみ)
+- kotodama_constitution_v1 / kotodama_constitution_memory が 0/missing
+  (jsonl が読めた場合のみ)
+- online_signals == 0 (verdict 算出側で RED 確定)
+- doctor v2 自体の起動失敗 (発生時は execution 不能なので通常出ない)
+```
+
+以下は `info` / `warn` 以下に整理 (旧 VPS には無くて正常 / token 不在なので 401 が想定内):
+
+```
+- local DB 不在                   → info (旧 VPS には無いのが正常)
+- prompt_trace JSONL 不在          → info
+- evolution_log_v1.ts 不在         → info
+- PWA assets bundle 不在           → info
+- claude_summary 401              → info "auth missing" (現行は finding 立てない)
+- intelligence 401                → info "auth missing" (現行は finding 立てない)
+- /pwa/ が 200 以外 (health/chat 生きていれば) → warn (current default 維持)
+- /pwa/evolution が 200 以外 (404 以外で health/chat 生きていれば) → warn
+```
+
+### 6.6 ユニット検証結果 (verdict 13 ケース全 PASS)
+
+```
+[OK] online=0 crit=0 warn=0 -> RED      (offline 強制 RED)
+[OK] online=0 crit=5 warn=5 -> RED
+[OK] online=1 crit=0 warn=0 -> YELLOW
+[OK] online=1 crit=1 warn=0 -> RED
+[OK] online=2 crit=0 warn=0 -> YELLOW
+[OK] online=2 crit=0 warn=5 -> YELLOW
+[OK] online=2 crit=1 warn=0 -> RED
+[OK] online=3 crit=0 warn=0 -> GREEN
+[OK] online=3 crit=0 warn=1 -> YELLOW
+[OK] online=3 crit=1 warn=0 -> RED
+[OK] online=4 crit=0 warn=0 -> GREEN    (clean / 観測基地完全機能)
+[OK] online=4 crit=0 warn=3 -> YELLOW
+[OK] online=4 crit=1 warn=3 -> RED      (本番 VPS 実測 Step 6 と同条件)
 ```
 
 ---
 
-## 7. `next_card_suggestions` の切り替えロジック
+## 7. `next_card_suggestions` の切り替えロジック (3 段階分岐)
 
 ```python
 def derive_next_cards(verdict: str, findings: list[dict],
                       online_signals: int = 0) -> list[str]:
     if PROFILE == "old_vps":
-        if verdict in ("GREEN", "YELLOW") and online_signals >= 3:
+        if online_signals >= 3:
             return [
                 "CARD-DOCTOR-V2-OLD-VPS-FEEDBACK-INTEGRATION-V1",
                 "CARD-FEEDBACK-LOOP-CARD-GENERATION-V1",
             ]
-        if online_signals < 3:
+        if online_signals == 2:
             return ["CARD-DOCTOR-V2-OLD-VPS-CONNECTIVITY-AUDIT-V1"]
+        # online_signals 0 or 1: 観測基地として機能していない
+        return [
+            "CARD-DOCTOR-V2-OLD-VPS-RESCUE-V1",
+            "CARD-DOCTOR-V2-OLD-VPS-CONNECTIVITY-AUDIT-V1",
+        ]
     # 以下、既存 default ロジック（GREEN / 主 finding ベース）
     ...
 ```
 
 シグネチャ拡張は optional `online_signals=0` のみ。既存呼び出し互換。
 
-シナリオ別の出力 (acceptance #8 検証):
+old_vps profile の分岐は **online_signals 数のみ** で決まる (verdict は判断材料にしない)。
+これは「観測基地が機能しているか」を主軸に suggestions を出すため。verdict は別途
+`_evaluate_old_vps_verdict` で online_signals + crit/warn から再計算される。
 
-| profile | verdict | online_signals | next_card_suggestions |
+### 7.1 シナリオ別出力 (ユニット検証 PASS / acceptance #8 / #16)
+
+| profile | online_signals | verdict (再計算後) | next_card_suggestions |
 | --- | --- | --- | --- |
-| default | RED | 4 | `CARD-DOCTOR-V2-REPAIR-API-V1` (元来通り) |
-| default | GREEN | 4 | `CARD-FEEDBACK-LOOP-CARD-GENERATION-OBSERVE-V1`, `CARD-MEMORY-PROJECTION-DISTILLED-SCRIPTURE-V1` |
-| old_vps | YELLOW | 4 | **`CARD-DOCTOR-V2-OLD-VPS-FEEDBACK-INTEGRATION-V1`**, **`CARD-FEEDBACK-LOOP-CARD-GENERATION-V1`** |
-| old_vps | GREEN | 3 | 同上 |
-| old_vps | YELLOW | 2 | **`CARD-DOCTOR-V2-OLD-VPS-CONNECTIVITY-AUDIT-V1`** |
-| old_vps | RED | 4 | (fall-through) `CARD-DOCTOR-V2-REPAIR-API-V1` |
-| 不正値 (`foo`) → default fallback | YELLOW | 4 | `CARD-DOCTOR-V2-OBSERVE-GENERAL-V1` |
+| default | (使われない) | RED | `CARD-DOCTOR-V2-REPAIR-API-V1` (元来通り / 退行ゼロ) |
+| default | (使われない) | GREEN | `CARD-FEEDBACK-LOOP-CARD-GENERATION-OBSERVE-V1`, `CARD-MEMORY-PROJECTION-DISTILLED-SCRIPTURE-V1` |
+| old_vps | 4 (clean) | GREEN | **`OLD-VPS-FEEDBACK-INTEGRATION-V1`**, **`FEEDBACK-LOOP-CARD-GENERATION-V1`** |
+| old_vps | 4 (warn>0) | YELLOW | 同上 |
+| old_vps | 4 (crit>0) | RED | 同上 (online ≥ 3 なら observer 機能 → integration 推奨) |
+| old_vps | 3 | GREEN/YELLOW/RED | 同上 |
+| old_vps | 2 | YELLOW or RED | **`OLD-VPS-CONNECTIVITY-AUDIT-V1`** |
+| old_vps | 1 | YELLOW or RED | **`OLD-VPS-RESCUE-V1`**, **`OLD-VPS-CONNECTIVITY-AUDIT-V1`** |
+| old_vps | 0 | RED 確定 | **`OLD-VPS-RESCUE-V1`**, **`OLD-VPS-CONNECTIVITY-AUDIT-V1`** |
+| 不正値 (`foo`) → default fallback | (使われない) | RED | `CARD-DOCTOR-V2-REPAIR-API-V1` |
 
-old_vps profile の RED は (本番 VPS の状態を反映してしまった) 想定外状況のため fall-through。
-旧 VPS で実機運用する状態 (`old_vps + YELLOW + online ≥ 3`) では旧 VPS 向け suggestions が出る。
+### 7.2 補正前後の違い (前カードからの変更点)
+
+| 観点 | 前カード (初版) | 本カード補正版 |
+| --- | --- | --- |
+| online ≥ 3 の条件 | `verdict in ("GREEN", "YELLOW")` 必要 | online_signals 数のみで分岐 (verdict 不問) |
+| online < 3 の処理 | `CONNECTIVITY-AUDIT-V1` 1 種で固定 | `==2` と `<=1` で別カードに分離 |
+| online ≤ 1 の RESCUE | 無し | **新規** `CARD-DOCTOR-V2-OLD-VPS-RESCUE-V1` |
+| verdict の old_vps 再計算 | derive_verdict 任せ | `_evaluate_old_vps_verdict` で再計算 |
+
+本番 VPS 上 Step 6 verify の suggestions が前回 (RED + fall-through で `REPAIR-API-V1`) から
+(`OLD-VPS-FEEDBACK-INTEGRATION-V1` + `FEEDBACK-LOOP-CARD-GENERATION-V1`) に変わったことが
+本補正の動作確認となる。
 
 ---
 
@@ -282,13 +397,20 @@ exit_code=0
 
 report (抜粋):
 - `profile = "old_vps"`
-- `verdict = RED, crit=1, warn=3, info=0` (本番 VPS では local 成果物がすべて揃っているため、
-  `_level_for_missing_local` の発火がなく default と同じ verdict になる = 設計意図通り)
-- `online_status = {"signals": 4, "label": "online"}`
-- `next_card_suggestions = ["CARD-DOCTOR-V2-REPAIR-API-V1"]` (RED かつ fall-through 経路)
-- 既定 OUT_DIR の `mtime` 不変 → env override が完全分離
+- `online_status = {"signals": 4, "label": "online"}` (本番 VPS は 4 endpoint すべて 200)
+- `verdict = RED` (`_evaluate_old_vps_verdict(4, 1, 3)` → online ≥ 3 + crit > 0 → RED)
+- `crit=1, warn=3, info=0` (本番 VPS では local 成果物がすべて揃っているため、
+  `_level_for_missing_local` の発火がなく default と同じ件数になる = 設計意図通り)
+- `next_card_suggestions = ["CARD-DOCTOR-V2-OLD-VPS-FEEDBACK-INTEGRATION-V1", "CARD-FEEDBACK-LOOP-CARD-GENERATION-V1"]`
+  (補正版: online ≥ 3 なら verdict によらず観測基地統合を推奨)
+- 既定 OUT_DIR の更新は Step 6 では発生せず、env override が完全分離
 
 MD report 冒頭で `profile: \`old_vps\`` が明示される。
+
+**補正版が動作している決定的証拠**: 同じ `verdict=RED` でも `default` profile は
+`REPAIR-API-V1` を出すのに対し、`old_vps` profile は online_signals=4 を見て
+`OLD-VPS-FEEDBACK-INTEGRATION-V1` + `FEEDBACK-LOOP-CARD-GENERATION-V1` を出している。
+つまり同一観測条件で **profile によってのみ出力が分岐** している。
 
 ### 8.3 旧 VPS RETRY-V2 での期待値 (本カードでは未実施)
 
@@ -296,10 +418,10 @@ MD report 冒頭で `profile: \`old_vps\`` が明示される。
 - `profile = "old_vps"` が JSON / MD に明記
 - DRYRUN-RETRY で発生していた warn=7 が **0〜2** に大幅減（local 成果物不在の 6+ 件が info に降格）
 - `summary.info` が 6+ になる
-- `verdict` は GREEN または軽い YELLOW
 - `online_status = {"signals": 4, "label": "online"}` (HTTPS 4 経路すべて 200 のため)
+- `_evaluate_old_vps_verdict(4, 0, 0〜2)` → **GREEN または軽い YELLOW**
+- `critical = 0` 維持
 - `next_card_suggestions = ["CARD-DOCTOR-V2-OLD-VPS-FEEDBACK-INTEGRATION-V1", "CARD-FEEDBACK-LOOP-CARD-GENERATION-V1"]`
-- `critical` は 0 維持
 
 ---
 
@@ -346,20 +468,24 @@ profile 名 (`default` / `old_vps`) や env 名 (`TENMON_DOCTOR_PROFILE`)、sugg
 
 ## 11. 退行なし確認 (default 完全維持)
 
-| 観測項目 | HEAD (PATH-ENV-OVERRIDE-V1) | Step 5 (default profile) |
+| 観測項目 | HEAD~1 (PATH-ENV-OVERRIDE-V1 直後) | Step 5 (default profile / 補正版) |
 | --- | --- | --- |
 | exit_code | 0 | 0 |
 | verdict | RED | RED |
 | critical | 1 | 1 |
 | warn | 3 | 3 |
 | profile キー | (無し) | `"default"` (新規追加 / 値は既定) |
-| online_status キー | (無し) | `{"signals": 4, "label": "online"}` (監査情報追加) |
+| online_status キー | (無し) | `{"signals": 4, "label": "online"}` (監査情報追加 / verdict 算出には不使用) |
 | next_card_suggestions | `["CARD-DOCTOR-V2-REPAIR-API-V1"]` | `["CARD-DOCTOR-V2-REPAIR-API-V1"]` |
 | 既存 finding の level | (warn / critical) | 完全一致 |
+| `_evaluate_old_vps_verdict` 呼び出し | (関数自体が無い) | **呼ばれない** (`if PROFILE == "old_vps"` ガード) |
 
 `profile` / `online_status` の追加は report の **追加キー** であり、既存の consumer (JSON を
 読む側) が既存キーを参照する場合の互換性を破壊しない。MD report も冒頭に 1 行 `profile:` を
 追加するのみで、既存セクションは順序・内容ともに不変。
+
+**default profile では `_evaluate_old_vps_verdict` への分岐自体に入らない** ため、補正版で
+追加された verdict 再計算ロジックは default profile に一切影響を与えない。
 
 ---
 
@@ -370,20 +496,50 @@ profile 名 (`default` / `old_vps`) や env 名 (`TENMON_DOCTOR_PROFILE`)、sugg
 - `_level_for_auth_missing` は将来用の defensive helper (現行 doctor v2 が 401 finding を立てない
   ため、現時点では呼び出し側ゼロ)
 - `online_status` を MD report の本文に出すかどうかは次の小カードで検討（現状は JSON のみ）
+- `RESCUE-V1` / `CONNECTIVITY-AUDIT-V1` は old_vps profile からの suggestions として
+  実装名のみ確定。実カードは旧 VPS 観測結果に応じて起票判断する。
 
 ### 次カード候補
 
 ```
 A. CARD-DOCTOR-V2-OLD-VPS-DRYRUN-V1-RETRY-V2 (推奨)
    → 旧 VPS で TENMON_DOCTOR_PROFILE=old_vps 付きで再 DRYRUN
-   → 期待: warn 7 → 0〜2 / verdict GREEN または軽い YELLOW / suggestions が old_vps 向け
+   → 期待: warn 7 → 0〜2 / verdict GREEN または軽い YELLOW / suggestions が
+     OLD-VPS-FEEDBACK-INTEGRATION-V1 + FEEDBACK-LOOP-CARD-GENERATION-V1 になる
    → systemd / cron 禁止は維持
    → 次カードでも旧 VPS への新規 systemd 登録 / 自動実行は禁止
 
 B. 本カード追補 (diff レビュー後の微調整が必要な場合のみ)
+
+C. (条件付き) CARD-DOCTOR-V2-OLD-VPS-RESCUE-V1
+   → online_signals が 0 〜 1 のときのみ起票。RETRY-V2 で online=4 を確認するため、
+     通常は不要。
+
+D. (条件付き) CARD-DOCTOR-V2-OLD-VPS-CONNECTIVITY-AUDIT-V1
+   → online_signals が 2 のときのみ起票。同上、通常は不要。
 ```
 
 TENMON 裁定: 本カード PASS 後、原則 A へ進行。
+
+### Acceptance (17 項 / 補正版)
+
+1. `python3 -m py_compile automation/tenmon_doctor_v2.py` PASS
+2. default profile (env 未設定) で本番 VPS doctor v2 が従来通り動く (exit 0)
+3. default profile の verdict / warn 件数が PATH-ENV-OVERRIDE 後と同等 (退行ゼロ)
+4. `TENMON_DOCTOR_PROFILE=old_vps` で旧 VPS 向け判定になる
+5. old_vps profile で local DB / prompt_trace / evolution / PWA assets 不在が critical にならない
+6. old_vps profile で claude_summary / intelligence 401 が warn 未満になる契約
+7. old_vps profile で health / chat / pwa / pwa_evolution 200 が重視される
+8. old_vps profile で `next_card_suggestions` が旧 VPS 運用向けになる (3 段階分岐)
+9. report JSON に `profile` キーが含まれる
+10. 不正な profile 値 (例: `TENMON_DOCTOR_PROFILE=foo`) が default にフォールバック
+11. 変更ファイルは doctor v2 + docs のみ
+12. doctor v2 の diff 行数が 150 行以内
+13. DB write 0 件 / systemctl 操作 0 回 / nginx 操作 0 回
+14. 旧 VPS への操作 0 回 / token / IP 混入なし / enforcer clean
+15. **(補正版追加)** old_vps profile で `online_signals` が JSON report に記録される (0〜4)
+16. **(補正版追加)** `online_signals >= 3` のとき、verdict が GREEN / YELLOW / RED いずれか妥当 (online=0/1/2 で偽 PASS にならない)
+17. **(補正版追加)** `online_signals == 0` のとき、verdict が RED 確定 (`_evaluate_old_vps_verdict` ユニット検証で実証 / 本番 VPS では発生しないので run-time observe ではなく unit test で確認)
 
 ---
 
@@ -392,7 +548,9 @@ TENMON 裁定: 本カード PASS 後、原則 A へ進行。
 ```
 Phase 3a: CARD-DOCTOR-V2-PATH-ENV-OVERRIDE-V1                           [PASS / eec9c76e]
 Phase 3b: CARD-DOCTOR-V2-OLD-VPS-DRYRUN-V1-RETRY                        [PASS / YELLOW / warn=7]
-Phase 3c: CARD-DOCTOR-V2-OLD-VPS-PROFILE-V1                             ← 本カード
+Phase 3c: CARD-DOCTOR-V2-OLD-VPS-PROFILE-V1                             ← 本カード (補正版)
 Phase 3d: CARD-DOCTOR-V2-OLD-VPS-DRYRUN-V1-RETRY-V2                     [次カード]
+Phase 3e: (条件付) CARD-DOCTOR-V2-OLD-VPS-RESCUE-V1                     [online ≤ 1 時のみ]
+Phase 3f: (条件付) CARD-DOCTOR-V2-OLD-VPS-CONNECTIVITY-AUDIT-V1         [online == 2 時のみ]
 Phase 4 : CARD-FEEDBACK-LOOP-CARD-GENERATION-V1
 ```
