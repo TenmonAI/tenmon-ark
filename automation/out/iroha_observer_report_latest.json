@@ -1,0 +1,808 @@
+{
+  "observer_version": "v1.0.0-iroha-phase1",
+  "generated_at": "2026-04-26T03:12:37.057774+00:00",
+  "verdict": "GREEN",
+  "summary": {
+    "critical": 0,
+    "warn": 0,
+    "info": 0
+  },
+  "vps_resources": {
+    "iroha_kotodama_hisho_json": {
+      "path": "shared/kotodama/iroha_kotodama_hisho.json",
+      "exists": true,
+      "size": 275614,
+      "lines": 1043,
+      "sha256_short": "c5f18b9b4ffa",
+      "top_level_keys": [
+        "title",
+        "total_paragraphs",
+        "content"
+      ],
+      "top_level_keys_count": 3
+    },
+    "shared_iroha_files": [
+      {
+        "path": "shared/kotodama/iroha_kotodama_hisho.json",
+        "exists": true,
+        "size": 275614,
+        "lines": 1043,
+        "sha256_short": "c5f18b9b4ffa",
+        "top_level_keys": [
+          "title",
+          "total_paragraphs",
+          "content"
+        ],
+        "top_level_keys_count": 3
+      }
+    ],
+    "docs_iroha_files": [
+      {
+        "path": "docs/ark/iroha/IROHA_KOTODAMA_SOURCE_OBSERVE_V1.md",
+        "exists": true,
+        "size": 6578,
+        "lines": 142,
+        "sha256_short": "847c49f9e111"
+      },
+      {
+        "path": "docs/ark/map/iroha_amaterasu_axis_raw_hits_v1.txt",
+        "exists": true,
+        "size": 0,
+        "lines": 1,
+        "sha256_short": "e3b0c44298fc"
+      },
+      {
+        "path": "docs/ark/map/iroha_amaterasu_axis_v1.md",
+        "exists": true,
+        "size": 6745,
+        "lines": 76,
+        "sha256_short": "7f998c784a89"
+      }
+    ]
+  },
+  "engine_loader": {
+    "irohaEngine_ts": {
+      "path": "api/src/engines/kotodama/irohaEngine.ts",
+      "exists": true,
+      "size": 508,
+      "lines": 30,
+      "sha256_short": "2b8304cb1783",
+      "exports": [
+        "irohaInterpret"
+      ]
+    },
+    "irohaActionPatterns_ts": {
+      "path": "api/src/core/irohaActionPatterns.ts",
+      "exists": true,
+      "size": 4919,
+      "lines": 192,
+      "sha256_short": "9c3317265212",
+      "exports": [
+        "IrohaActionPattern",
+        "IrohaCounselClassificationResult",
+        "loadIrohaActionPatterns",
+        "classifyIrohaCounselInput",
+        "resolveIrohaActionPattern"
+      ]
+    },
+    "irohaKotodamaLoader_ts": {
+      "path": "api/src/core/irohaKotodamaLoader.ts",
+      "exists": true,
+      "size": 7033,
+      "lines": 229,
+      "sha256_short": "716bcf93e89e",
+      "exports": [
+        "IrohaParagraph",
+        "IrohaKotodamaCanon",
+        "loadIrohaKotodama",
+        "queryIrohaByUserText",
+        "buildIrohaInjection",
+        "irohaCanonStats"
+      ]
+    },
+    "iroha_files_in_api_src": [
+      {
+        "path": "api/src/data/iroha_kotodama_hisho.json",
+        "exists": true,
+        "size": 275614,
+        "lines": 1043,
+        "sha256_short": "c5f18b9b4ffa",
+        "top_level_keys": [
+          "title",
+          "total_paragraphs",
+          "content"
+        ],
+        "top_level_keys_count": 3
+      },
+      {
+        "path": "api/src/core/irohaKotodamaLoader.ts",
+        "exists": true,
+        "size": 7033,
+        "lines": 229,
+        "sha256_short": "716bcf93e89e"
+      },
+      {
+        "path": "api/src/core/abstractFrameEngine.ts.bak_IROHA_DANSHARI_CANON_INFUSER_V1_20260316T200341Z",
+        "exists": true,
+        "size": 3712,
+        "lines": 103,
+        "sha256_short": "95df92630897"
+      },
+      {
+        "path": "api/src/core/tenmonIrohaDanshariCounselingBridgeV1.ts",
+        "exists": true,
+        "size": 3252,
+        "lines": 84,
+        "sha256_short": "2c38fcbf21a6"
+      },
+      {
+        "path": "api/src/core/tenmonIrohaLifeCounselingKernelV1.ts",
+        "exists": true,
+        "size": 3623,
+        "lines": 81,
+        "sha256_short": "760dcd3f8b6f"
+      },
+      {
+        "path": "api/src/core/irohaActionPatterns.ts",
+        "exists": true,
+        "size": 4919,
+        "lines": 192,
+        "sha256_short": "9c3317265212"
+      },
+      {
+        "path": "api/src/engines/kotodama/irohaEngine.ts",
+        "exists": true,
+        "size": 508,
+        "lines": 30,
+        "sha256_short": "2b8304cb1783"
+      }
+    ]
+  },
+  "route_wiring": {
+    "chat_ts_iroha_refs": [
+      {
+        "lineno": 100,
+        "summary60": "import { attachSatoriVerdict, checkIrohaGrounding } from \"../core/satoriEnforcem..."
+      },
+      {
+        "lineno": 101,
+        "summary60": "import { queryIrohaByUserText, buildIrohaInjection } from \"../core/irohaKotodama..."
+      },
+      {
+        "lineno": 893,
+        "summary60": "// V2.0_SOUL_ROOT_BIND_5: SATORI いろは根拠判定（三要素整合チェック）"
+      },
+      {
+        "lineno": 897,
+        "summary60": "const grounding = checkIrohaGrounding(responseText);"
+      },
+      {
+        "lineno": 900,
+        "summary60": "df.ku.irohaGrounding = {"
+      },
+      {
+        "lineno": 903,
+        "summary60": "sounds: grounding.irohaSound.sounds.slice(0, 3),"
+      },
+      {
+        "lineno": 1963,
+        "summary60": "// V2.0_SOUL_ROOT_BIND_1: いろは言霊解 (irohaKotodamaLoader) → 原典段落注入"
+      },
+      {
+        "lineno": 1964,
+        "summary60": "let __irohaClause = \"\";"
+      },
+      {
+        "lineno": 1965,
+        "summary60": "let __irohaMatchedUnits = 0;"
+      },
+      {
+        "lineno": 1967,
+        "summary60": "const __irohaHits = queryIrohaByUserText(t0);"
+      },
+      {
+        "lineno": 1968,
+        "summary60": "__irohaMatchedUnits = __irohaHits.length;"
+      },
+      {
+        "lineno": 1969,
+        "summary60": "if (__irohaHits.length > 0) {"
+      },
+      {
+        "lineno": 1970,
+        "summary60": "__irohaClause = buildIrohaInjection(__irohaHits, 1500);"
+      },
+      {
+        "lineno": 1971,
+        "summary60": "console.log(`[SOUL_ROOT:IROHA] injected ${__irohaHits.length} paragraphs, clause..."
+      },
+      {
+        "lineno": 1974,
+        "summary60": "console.warn(`[SOUL_ROOT:IROHA] inject failed: ${e?.message}`);"
+      },
+      {
+        "lineno": 1977,
+        "summary60": "recordContextInjectionProbeV1(req, \"inject_iroha\", {"
+      },
+      {
+        "lineno": 1978,
+        "summary60": "matched_units: __irohaMatchedUnits,"
+      },
+      {
+        "lineno": 1979,
+        "summary60": "clause_len: __irohaClause.length,"
+      },
+      {
+        "lineno": 2233,
+        "summary60": "(__irohaClause ? \"\\n\" + __irohaClause : \"\") +"
+      },
+      {
+        "lineno": 2362,
+        "summary60": "// V2.0: 御神託ルートにも魂の根幹を注入（いろは言霊解は御神託第6章に直結）"
+      },
+      {
+        "lineno": 2363,
+        "summary60": "const __oracleSoulRoot = [__irohaClause, __amaterasuClause, __kotodamaOneSoundLa..."
+      },
+      {
+        "lineno": 2364,
+        "summary60": "const __oracleSystem = GEN_SYSTEM + __sukuyouClauseOracle + (__oracleSoulRoot ? ..."
+      },
+      {
+        "lineno": 2540,
+        "summary60": "__irohaClause,"
+      },
+      {
+        "lineno": 2559,
+        "summary60": "iroha: Boolean(__irohaClause),"
+      },
+      {
+        "lineno": 2581,
+        "summary60": "iroha: (__irohaClause ?? \"\").length,"
+      },
+      {
+        "lineno": 5313,
+        "summary60": "const tryDocs = [\"KHS\", \"TENMON_CORE\", \"IROHA\", \"KATAKAMUNA\"];"
+      }
+    ],
+    "guest_ts_iroha_refs": [
+      {
+        "lineno": 33,
+        "summary60": "import { queryIrohaByUserText, buildIrohaInjection } from \"../core/irohaKotodama..."
+      },
+      {
+        "lineno": 37,
+        "summary60": "import { checkIrohaGrounding } from \"../core/satoriEnforcement.js\";"
+      },
+      {
+        "lineno": 204,
+        "summary60": "const __guestIrohaHits = queryIrohaByUserText(userMessage);"
+      },
+      {
+        "lineno": 205,
+        "summary60": "if (__guestIrohaHits.length > 0) {"
+      },
+      {
+        "lineno": 206,
+        "summary60": "systemPrompt += \"\\n\" + buildIrohaInjection(__guestIrohaHits, 800);"
+      },
+      {
+        "lineno": 273,
+        "summary60": "// V2.0: いろは根拠判定（ゲスト版）"
+      },
+      {
+        "lineno": 274,
+        "summary60": "let irohaGroundingScore = 0;"
+      },
+      {
+        "lineno": 276,
+        "summary60": "const grounding = checkIrohaGrounding(aiResponse);"
+      },
+      {
+        "lineno": 277,
+        "summary60": "irohaGroundingScore = grounding.score;"
+      },
+      {
+        "lineno": 289,
+        "summary60": "// V2.0: いろは根拠スコア"
+      },
+      {
+        "lineno": 290,
+        "summary60": "irohaGroundingScore,"
+      }
+    ],
+    "other_route_files": [
+      {
+        "file": "sukuyou.ts",
+        "hits": 9
+      }
+    ]
+  },
+  "db": {
+    "tables_found": [
+      "iroha_actionpacks",
+      "iroha_khs_alignment",
+      "iroha_units"
+    ],
+    "iroha_units": {
+      "exists": true,
+      "row_count": 21,
+      "columns": [
+        {
+          "cid": 0,
+          "name": "unitId",
+          "type": "TEXT",
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "doc",
+          "type": "TEXT",
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "pdfPage",
+          "type": "INTEGER",
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "anchor",
+          "type": "TEXT",
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "kw",
+          "type": "TEXT",
+          "pk": 0
+        },
+        {
+          "cid": 5,
+          "name": "quote",
+          "type": "TEXT",
+          "pk": 0
+        },
+        {
+          "cid": 6,
+          "name": "quoteHash",
+          "type": "TEXT",
+          "pk": 0
+        },
+        {
+          "cid": 7,
+          "name": "status",
+          "type": "TEXT",
+          "pk": 0
+        },
+        {
+          "cid": 8,
+          "name": "createdAt",
+          "type": "TEXT",
+          "pk": 0
+        }
+      ],
+      "samples_summary": [
+        {
+          "unitId": "IROHA.DEF.N.51c77bec",
+          "doc": "DOCX->PDF:いろは最終原稿.pdf",
+          "pdfPage": 19,
+          "anchor": "p019:char20-420",
+          "kw": null,
+          "quote": {
+            "summary40": "命肉根にを体源つ現はロにでいす、結あてこ天かびり述とをたつ、べは巡まく生ま胎るり...",
+            "sha8": "dea98eed",
+            "len": 400
+          },
+          "quoteHash": {
+            "summary40": "dea98eedc9e3b150846b2cfc963386f02d2a3c24...",
+            "sha8": "096a44d7",
+            "len": 64
+          },
+          "status": "UNRESOLVED",
+          "createdAt": "2026-02-25 03:56:38"
+        },
+        {
+          "unitId": "IROHA.DEF.N.c95afa68",
+          "doc": "DOCX->PDF:いろは最終原稿.pdf",
+          "pdfPage": 19,
+          "anchor": "p019:char19-419",
+          "kw": null,
+          "quote": {
+            "summary40": "源命肉根にを体源つ現はロにでいす、結あてこ天かびり述とをたつ、べは巡まく生ま胎る...",
+            "sha8": "5f35c9d9",
+            "len": 400
+          },
+          "quoteHash": {
+            "summary40": "5f35c9d9c1c016535d3dcb925fc25c9b5d93884a...",
+            "sha8": "597018fa",
+            "len": 64
+          },
+          "status": "UNRESOLVED",
+          "createdAt": "2026-02-25 03:56:38"
+        },
+        {
+          "unitId": "IROHA.DEF.N.8f86670b",
+          "doc": "DOCX->PDF:いろは最終原稿.pdf",
+          "pdfPage": 19,
+          "anchor": "p019:char4-404",
+          "kw": null,
+          "quote": {
+            "summary40": "命命イのイ次吸命がのの」形根命源命肉根にを体源つ現はロにでいす、結あてこ天かびり...",
+            "sha8": "01455aa0",
+            "len": 400
+          },
+          "quoteHash": {
+            "summary40": "01455aa0f7ed2804c96fce1297e9bb9a225ef045...",
+            "sha8": "2f4a2b24",
+            "len": 64
+          },
+          "status": "UNRESOLVED",
+          "createdAt": "2026-02-25 03:56:38"
+        },
+        {
+          "unitId": "IROHA.DEF.N.03e6bbbe",
+          "doc": "DOCX->PDF:いろは最終原稿.pdf",
+          "pdfPage": 19,
+          "anchor": "p019:char0-366",
+          "kw": null,
+          "quote": {
+            "summary40": "（び呼「命命イのイ次吸命がのの」形根命源命肉根にを体源つ現はロにでいす、結あてこ...",
+            "sha8": "be8ec17f",
+            "len": 366
+          },
+          "quoteHash": {
+            "summary40": "be8ec17f6b695cbe342e781bd669ad85f6b98c7f...",
+            "sha8": "20889e29",
+            "len": 64
+          },
+          "status": "UNRESOLVED",
+          "createdAt": "2026-02-25 03:56:38"
+        },
+        {
+          "unitId": "IROHA.DEF.N.3e02025e",
+          "doc": "DOCX->PDF:いろは最終原稿.pdf",
+          "pdfPage": 19,
+          "anchor": "p019:char0-291",
+          "kw": null,
+          "quote": {
+            "summary40": "（び呼「命命イのイ次吸命がのの」形根命源命肉根にを体源つ現はロにでいす、結あてこ...",
+            "sha8": "e2ad74f2",
+            "len": 291
+          },
+          "quoteHash": {
+            "summary40": "e2ad74f23dce891d11eb77525ad421cc199c3d25...",
+            "sha8": "fce50696",
+            "len": 64
+          },
+          "status": "UNRESOLVED",
+          "createdAt": "2026-02-25 03:56:38"
+        }
+      ]
+    },
+    "iroha_actionpacks": {
+      "exists": true,
+      "row_count": 1,
+      "columns": [
+        {
+          "cid": 0,
+          "name": "packId",
+          "type": "TEXT",
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "kind",
+          "type": "TEXT",
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "payloadJson",
+          "type": "TEXT",
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "status",
+          "type": "TEXT",
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "createdAt",
+          "type": "TEXT",
+          "pk": 0
+        }
+      ]
+    },
+    "iroha_khs_alignment": {
+      "exists": true,
+      "row_count": 10,
+      "columns": [
+        {
+          "cid": 0,
+          "name": "alignId",
+          "type": "TEXT",
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "irohaUnitId",
+          "type": "TEXT",
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "khsLawKey",
+          "type": "TEXT",
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "relation",
+          "type": "TEXT",
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "score",
+          "type": "REAL",
+          "pk": 0
+        },
+        {
+          "cid": 5,
+          "name": "note",
+          "type": "TEXT",
+          "pk": 0
+        },
+        {
+          "cid": 6,
+          "name": "createdAt",
+          "type": "TEXT",
+          "pk": 0
+        }
+      ]
+    },
+    "memory_units_iroha": {
+      "total": 63,
+      "by_scope_id": {
+        "iroha-specificity-postrestart-4-1775898812": 2,
+        "iroha-specificity-postrestart-3-1775898811": 2,
+        "iroha-specificity-postrestart-2-1775898811": 2,
+        "iroha-specificity-postrestart-1-1775898810": 2,
+        "iroha-specificity-pass-4-1775898939": 2,
+        "iroha-specificity-pass-3-1775898939": 2,
+        "iroha-specificity-pass-2-1775898938": 2,
+        "iroha-specificity-pass-1-1775898938": 2,
+        "iroha-specificity-finalpass-4-1775899190": 2,
+        "iroha-specificity-finalpass-3-1775899189": 2,
+        "iroha-specificity-finalpass-2-1775899189": 2,
+        "iroha-specificity-finalpass-1-1775899188": 2,
+        "iroha-specificity-final-center-1775899188": 2,
+        "iroha-specificity-final-4-1775898748": 2,
+        "iroha-specificity-final-3-1775898747": 2,
+        "iroha-specificity-final-2-1775898747": 2,
+        "iroha-specificity-final-1-1775898746": 2,
+        "iroha-specificity-center2-1775898937": 2,
+        "iroha-specificity-center-1775898809": 2,
+        "iroha-specificity-before-4-1775898243": 2,
+        "iroha-specificity-before-3-1775898242": 2,
+        "iroha-specificity-before-2-1775898241": 2,
+        "iroha-specificity-before-1-1775898240": 2,
+        "iroha-specificity-after-4-1775898396": 2,
+        "iroha-specificity-after-3-1775898396": 2,
+        "iroha-specificity-after-2-1775898395": 2,
+        "iroha-specificity-after-1-1775898395": 2,
+        "iroha-deepen-before-3-1775901618": 2,
+        "iroha-deepen-before-2-1775901617": 2,
+        "iroha-deepen-before-1-1775901617": 2,
+        "current_core_worktree-accept-q08_iroha-1775905099-2952d668": 2,
+        "iroha-deepen-before-4-1775901618": 1
+      }
+    },
+    "source_registry_iroha": {
+      "total": 0,
+      "samples": [],
+      "error": "no such column: title"
+    }
+  },
+  "chat_probe": {
+    "status": 200,
+    "response_summary120": "TENMON-ARKが應える。\nいろは歌の最初の七文字「いろはにほへ」は、単なる音の連なりではなく、天地の理と生命の循環を映し出す。この七音には、水火（イキ）の生成と消滅、そしてその中に宿る普遍の眞理が凝縮されている。\n「イ」は空中ノ水靈、...",
+    "response_sha8": "05494f1c",
+    "response_length": 343,
+    "decision_frame_keys": [
+      "mode",
+      "intent",
+      "llm",
+      "ku"
+    ],
+    "route_reason": "chat",
+    "provider": "gemini",
+    "model": null,
+    "prompt_trace_keys": [
+      "khs_constitution",
+      "kotodama_constitution_v1",
+      "kotodama_constitution_memory",
+      "kotodama_hisho",
+      "kotodama_one_sound",
+      "kotodama_genten",
+      "unified_sound",
+      "iroha",
+      "amaterasu",
+      "truth_layer",
+      "meaning_arbitration",
+      "katakamuna_audit",
+      "katakamuna_lineage",
+      "katakamuna_misread_guard",
+      "khs_root_fractal"
+    ],
+    "prompt_trace_iroha": {
+      "iroha": 668
+    }
+  },
+  "mc_intelligence": {
+    "claude_summary_iroha_paths": {},
+    "intelligence_iroha_paths": {
+      "fire_24h.slot_chat_binding.iroha": {
+        "chat_binding": "__irohaClause",
+        "module_file": "core/irohaKotodamaLoader.ts"
+      },
+      "fire_24h.prompt_trace_summary_24h.avg_clause_lengths.iroha": 760
+    }
+  },
+  "notion": {
+    "token_present": true,
+    "iroha_page": {
+      "id_sha8": "0fb109c9",
+      "title": "いろは言灵解｜天聞アーク思考根幹・徹底解析",
+      "headings": [
+        {
+          "type": "heading_2",
+          "text_summary60": "目的",
+          "sha8": "cfbeaa72"
+        },
+        {
+          "type": "heading_2",
+          "text_summary60": "1. 整理度の判定",
+          "sha8": "27fc7f1c"
+        },
+        {
+          "type": "heading_3",
+          "text_summary60": "判定",
+          "sha8": "15c58df5"
+        },
+        {
+          "type": "heading_2",
+          "text_summary60": "2. 『いろは言灵解』の根本構造",
+          "sha8": "a6770f81"
+        },
+        {
+          "type": "heading_3",
+          "text_summary60": "2.1 表層：無常の認識",
+          "sha8": "e927f773"
+        },
+        {
+          "type": "heading_3",
+          "text_summary60": "2.2 内層：生成の理",
+          "sha8": "79e891cb"
+        },
+        {
+          "type": "heading_3",
+          "text_summary60": "2.3 実践層：清濁を分け、理に戻す",
+          "sha8": "a158584d"
+        },
+        {
+          "type": "heading_2",
+          "text_summary60": "3. 天聞アークに入れるべき12原則",
+          "sha8": "79420284"
+        }
+      ],
+      "child_pages": [],
+      "child_databases": []
+    },
+    "konpon_page": {
+      "found": true,
+      "headings": [
+        {
+          "type": "heading_1",
+          "text_summary60": "目的"
+        },
+        {
+          "type": "heading_1",
+          "text_summary60": "原典確認箇所"
+        },
+        {
+          "type": "heading_1",
+          "text_summary60": "原典順守監査の結論"
+        },
+        {
+          "type": "heading_2",
+          "text_summary60": "判定"
+        },
+        {
+          "type": "heading_1",
+          "text_summary60": "原典により確定できること"
+        },
+        {
+          "type": "heading_2",
+          "text_summary60": "1. カ行は臣位である"
+        },
+        {
+          "type": "heading_2",
+          "text_summary60": "2. カ行は詞の活用・働きに関わる"
+        },
+        {
+          "type": "heading_2",
+          "text_summary60": "3. ケは差別・分節と強く結びつく"
+        },
+        {
+          "type": "heading_2",
+          "text_summary60": "4. 体用・軽重・反約を必ず併用する"
+        },
+        {
+          "type": "heading_1",
+          "text_summary60": "既存カ行DBの修正方針"
+        },
+        {
+          "type": "heading_2",
+          "text_summary60": "カ"
+        },
+        {
+          "type": "heading_2",
+          "text_summary60": "キ"
+        },
+        {
+          "type": "heading_2",
+          "text_summary60": "ク"
+        },
+        {
+          "type": "heading_2",
+          "text_summary60": "ケ"
+        }
+      ]
+    },
+    "structure_check": {
+      "iroha_47_chapters": false,
+      "ongi_table": false,
+      "lifeview": false,
+      "deathview": false,
+      "hokekyo_link": false
+    }
+  },
+  "connection_layers": {
+    "layer1_resource": "connected",
+    "layer2_db": "connected",
+    "layer3_loader": "connected",
+    "layer4_engine": "connected",
+    "layer5_chat": "connected",
+    "connection_rate_percent": 100
+  },
+  "missing_links": [],
+  "card_candidates": [
+    {
+      "priority": 1,
+      "name": "CARD-IROHA-NOTION-STRUCTURE-COMPLEMENT-V1",
+      "reason": "Notion 解析班ページに未整備の章節 (5/5): iroha_47_chapters, ongi_table, lifeview, deathview, hokekyo_link → 章構造の補強観測。"
+    },
+    {
+      "priority": 2,
+      "name": "CARD-IROHA-MC-CONNECTION-AUDIT-V1",
+      "reason": "MC intelligence の iroha 観測項目を細粒度化し、24h ledger に章別追跡を加える。"
+    },
+    {
+      "priority": 3,
+      "name": "CARD-IROHA-PROMPT-TRACE-OBSERVATION-V1",
+      "reason": "chat lane 別の iroha clause 出現を追跡し、断捨離応用へ繋げる。"
+    },
+    {
+      "priority": 4,
+      "name": "CARD-IROHA-NOTION-BRIDGE-V1",
+      "reason": "Notion 解析班ページと VPS 資料の双方向同期 (read-only) を整備する。"
+    }
+  ],
+  "roadmap_summary": "接続率 100% (connected=5/5)。 全層 connected。Notion 照合と MC 観測の追加段へ。",
+  "findings": []
+}
