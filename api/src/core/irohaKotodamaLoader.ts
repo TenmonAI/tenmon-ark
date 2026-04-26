@@ -16,6 +16,7 @@ export type IrohaParagraph = {
   soundAnchors: string[];
   principleTags: string[];
   healthRelated: boolean;
+  chapterTagsV5?: string[]; // CARD-IROHA-MC-CHAPTER-TRACKING-IMPLEMENT-V1 (TENMON 5 章, 構造軸, optional)
 };
 
 export type IrohaKotodamaCanon = {
@@ -66,6 +67,15 @@ const PRINCIPLE_KEYWORDS: Record<string, RegExp> = {
 const HEALTH_KEYWORDS =
   /健康|病|治|癒|体調|症状|食|消化|血液|循環|呼吸|水|薬|医|療|快復|浄化|便|尿|栄養/;
 
+// CARD-IROHA-MC-CHAPTER-TRACKING-IMPLEMENT-V1: TENMON 5 章 (構造軸) multi-tag dict (private, no shared/)
+const CHAPTER_KEYWORDS_V5: Record<string, string[]> = {
+  "47ji":    ["四十七", "47字", "五十音", "いろは47", "ヰ", "ヱ"],
+  "ongi":    ["音義", "音意", "音響", "響き", "霊響"],
+  "seimei":  ["生命", "命", "いのち", "生きる", "誕生"],
+  "shisei":  ["死", "別れ", "終わり", "転化", "再生", "輪廻"],
+  "hokekyo": ["法華", "妙法", "蓮華", "如来寿量品", "薬王菩薩", "観世音菩薩", "普門品", "常不軽菩薩", "舍利弗", "提婆達多"],
+};
+
 function detectChapter(text: string): string | null {
   for (const [chapter, regex] of Object.entries(CHAPTER_KEYWORDS)) {
     if (regex.test(text)) return chapter;
@@ -84,6 +94,21 @@ function detectPrinciples(text: string): string[] {
     if (regex.test(text)) hit.push(principle);
   }
   return hit;
+}
+
+// CARD-IROHA-MC-CHAPTER-TRACKING-IMPLEMENT-V1: 既存 paragraph.chapter (7 章) は維持。
+export function classifyIrohaChapterTagsV5(paragraph: IrohaParagraph): string[] {
+  const text =
+    (paragraph.text || "") + " " +
+    (paragraph.principleTags || []).join(" ") + " " +
+    (paragraph.chapter || "");
+  const tags: string[] = [];
+  for (const [chapterId, kws] of Object.entries(CHAPTER_KEYWORDS_V5)) {
+    for (const kw of kws) {
+      if (text.includes(kw)) { tags.push(chapterId); break; }
+    }
+  }
+  return tags;
 }
 
 export function loadIrohaKotodama(): IrohaKotodamaCanon {
@@ -107,6 +132,7 @@ export function loadIrohaKotodama(): IrohaKotodamaCanon {
     principleTags: detectPrinciples(text),
     healthRelated: HEALTH_KEYWORDS.test(text),
   }));
+  for (const p of paragraphs) p.chapterTagsV5 = classifyIrohaChapterTagsV5(p);
 
   const chapterIndex: Record<string, number[]> = {};
   const soundIndex: Record<string, number[]> = {};
@@ -225,4 +251,27 @@ export function irohaCanonStats() {
     indexedPrinciples: Object.keys(c.principleIndex).length,
     healthParagraphs: c.healthIndex.length,
   };
+}
+
+// CARD-IROHA-MC-CHAPTER-TRACKING-IMPLEMENT-V1: 注入 paragraph の 5 章別 KPI 集計 (buildIrohaInjection signature は不変)
+export type IrohaChapterSummaryV1 = {
+  totalChars: number;
+  chapters: Record<string, { chars: number; hits: number }>;
+};
+
+export function summarizeIrohaInjectionByChapterV1(paragraphs: IrohaParagraph[]): IrohaChapterSummaryV1 {
+  const chapters: Record<string, { chars: number; hits: number }> = Object.fromEntries(
+    (["47ji", "ongi", "seimei", "shisei", "hokekyo"] as const).map((k) => [k, { chars: 0, hits: 0 }])
+  );
+  let totalChars = 0;
+  for (const p of paragraphs) {
+    const len = (p.text || "").length;
+    totalChars += len;
+    const tags = p.chapterTagsV5 ?? classifyIrohaChapterTagsV5(p);
+    for (const tag of tags) {
+      const c = chapters[tag];
+      if (c) { c.chars += len; c.hits += 1; }
+    }
+  }
+  return { totalChars, chapters };
 }

@@ -98,7 +98,7 @@ import {
 } from "../core/contextInjectionProbe.js";
 import { loadKotodamaHisho, extractSoundsFromMessage, buildKotodamaHishoContext, buildKotodamaHishoOverview } from "../core/kotodamaHishoLoader.js";
 import { attachSatoriVerdict, checkIrohaGrounding } from "../core/satoriEnforcement.js";
-import { queryIrohaByUserText, buildIrohaInjection } from "../core/irohaKotodamaLoader.js";
+import { queryIrohaByUserText, buildIrohaInjection, summarizeIrohaInjectionByChapterV1, type IrohaChapterSummaryV1 } from "../core/irohaKotodamaLoader.js";
 import {
   extractKeyKotodamaFromText,
   buildKotodamaGentenInjection,
@@ -1963,11 +1963,13 @@ let outText = "";
       // V2.0_SOUL_ROOT_BIND_1: いろは言霊解 (irohaKotodamaLoader) → 原典段落注入
       let __irohaClause = "";
       let __irohaMatchedUnits = 0;
+      let __irohaChapterSummaryV1: IrohaChapterSummaryV1 | null = null; // CARD-IROHA-MC-CHAPTER-TRACKING-IMPLEMENT-V1
       try {
         const __irohaHits = queryIrohaByUserText(t0);
         __irohaMatchedUnits = __irohaHits.length;
         if (__irohaHits.length > 0) {
           __irohaClause = buildIrohaInjection(__irohaHits, 1500);
+          __irohaChapterSummaryV1 = summarizeIrohaInjectionByChapterV1(__irohaHits);
           console.log(`[SOUL_ROOT:IROHA] injected ${__irohaHits.length} paragraphs, clause=${__irohaClause.length} chars`);
         }
       } catch (e: any) {
@@ -2579,6 +2581,8 @@ ${__carrySeedSummary}${__carryLifeAlgo}
                 kotodama_genten: (__gentenClause ?? "").length,
                 unified_sound: (__unifiedSoundClause ?? "").length,
                 iroha: (__irohaClause ?? "").length,
+                iroha_chapters: __irohaChapterSummaryV1 ? Object.fromEntries(Object.entries(__irohaChapterSummaryV1.chapters).map(([k, v]) => [k, v.chars])) : undefined,
+                iroha_chapter_hits: __irohaChapterSummaryV1 ? Object.fromEntries(Object.entries(__irohaChapterSummaryV1.chapters).map(([k, v]) => [k, v.hits])) : undefined,
                 amaterasu: (__amaterasuClause ?? "").length,
                 truth_layer: (__truthLayerArbitrationClause ?? "").length,
                 meaning_arbitration: (__mc22CaramiClause ?? "").length + (__mc22PurificationClause ?? "").length,

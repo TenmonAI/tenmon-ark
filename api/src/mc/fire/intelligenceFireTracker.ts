@@ -40,6 +40,8 @@ export type PromptTraceClauseLengthsV1 = {
   kotodama_genten: number;
   unified_sound: number;
   iroha: number;
+  iroha_chapters?: Record<string, number>; // CARD-IROHA-MC-CHAPTER-TRACKING-IMPLEMENT-V1 (5 章 chars, optional)
+  iroha_chapter_hits?: Record<string, number>; // CARD-IROHA-MC-CHAPTER-TRACKING-IMPLEMENT-V1 (5 章 hits, optional)
   amaterasu: number;
   truth_layer: number;
   /** MC-22 carami + purification の合算（単一 __meaningArbitrationClause 無し） */
@@ -207,6 +209,7 @@ function buildPromptTraceSummary24hV1(traces: PromptTraceV1[]): PromptTraceSumma
       kotodama_genten: z((t) => t.clause_lengths.kotodama_genten),
       unified_sound: z((t) => t.clause_lengths.unified_sound),
       iroha: z((t) => t.clause_lengths.iroha),
+      iroha_chapters: Object.fromEntries((["47ji", "ongi", "seimei", "shisei", "hokekyo"] as const).map((k) => [k, z((t) => t.clause_lengths.iroha_chapters?.[k] ?? 0)])),
       amaterasu: z((t) => t.clause_lengths.amaterasu),
       truth_layer: z((t) => t.clause_lengths.truth_layer),
       meaning_arbitration: z((t) => t.clause_lengths.meaning_arbitration),
