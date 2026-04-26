@@ -43,6 +43,9 @@ PWA_ASSETS_DIR = "/var/www/tenmon-pwa/pwa/assets"
 HOST = "https://tenmon-ark.com"
 DOCTOR_VERSION = "v2.0.0-phase1"
 
+_RAW_PROFILE = os.environ.get("TENMON_DOCTOR_PROFILE", "default").strip().lower()
+PROFILE = _RAW_PROFILE if _RAW_PROFILE in ("default", "old_vps") else "default"
+
 
 # ---- self-check (deny-token uses concatenated literals so this script is not its own false-positive) ----
 DENY_TOKENS = [
@@ -82,6 +85,53 @@ def self_check() -> None:
 # ---- helpers ----
 def _now_iso() -> str:
     return dt.datetime.now(dt.timezone.utc).isoformat()
+
+
+def _level_for_missing_local(default_level: str) -> str:
+    """Reclassify level for 'local resource missing' findings under old_vps profile.
+
+    old_vps profile observes the production VPS over HTTPS and is not expected
+    to host local DB / prompt_trace / evolution_log / PWA assets. Reclassify
+    those misses as info (skipped). default profile is unchanged.
+    """
+    if PROFILE == "old_vps":
+        return "info"
+    return default_level
+
+
+def _level_for_auth_missing(default_level: str) -> str:
+    """Reclassify level for 'auth missing' (401) findings under old_vps profile.
+
+    old_vps does not carry the production bearer token; treat 401 as info
+    rather than warn. default profile is unchanged.
+    """
+    if PROFILE == "old_vps":
+        return "info"
+    return default_level
+
+
+def _evaluate_online_signals(api_section: dict, pwa_section: dict) -> tuple[int, str]:
+    """Count HTTPS 200 signals from api_section / pwa_section.
+
+    Returns (signals_count, label). label is 'online' (>=3), 'partial' (>=1),
+    or 'offline' (0). Used by old_vps profile to drive next_card_suggestions
+    and to confirm the remote-observer base is reachable.
+    """
+    health = (api_section.get("health") or {})
+    chat_probe = (api_section.get("chat_probe") or {})
+    pwa_root = (pwa_section.get("pwa_root") or {})
+    pwa_evolution = (pwa_section.get("pwa_evolution") or {})
+    signals = sum([
+        health.get("status") == 200,
+        chat_probe.get("status") == 200,
+        pwa_root.get("status") == 200,
+        pwa_evolution.get("status") == 200,
+    ])
+    if signals >= 3:
+        return signals, "online"
+    if signals >= 1:
+        return signals, "partial"
+    return signals, "offline"
 
 
 def _safe_mkdir(p: pathlib.Path) -> None:
@@ -352,14 +402,14 @@ def collect_pwa(findings: list[dict]) -> dict:
 
     bundles = sorted(glob_mod.glob(f"{PWA_ASSETS_DIR}/EvolutionLogPage-*.js"))
     if not bundles:
-        findings.append({"level": "warn", "area": "pwa",
+        findings.append({"level": _level_for_missing_local("warn"), "area": "pwa",
                          "message": "EvolutionLogPage bundle not found in assets"})
         return out
     out["bundle_path"] = bundles[-1]
     try:
         content = pathlib.Path(out["bundle_path"]).read_text(encoding="utf-8", errors="replace")
     except Exception as e:
-        findings.append({"level": "warn", "area": "pwa",
+        findings.append({"level": _level_for_missing_local("warn"), "area": "pwa",
                          "message": f"bundle read error: {e}"})
         return out
 
@@ -373,7 +423,7 @@ def collect_pwa(findings: list[dict]) -> dict:
         hit = (t in content)
         out["bundle_entry_hits"][t] = hit
         if not hit:
-            findings.append({"level": "warn", "area": "pwa",
+            findings.append({"level": _level_for_missing_local("warn"), "area": "pwa",
                              "message": f"bundle missing entry title: {t}"})
 
     sidebar_label = "進化ログ"
@@ -388,7 +438,7 @@ def collect_pwa(findings: list[dict]) -> dict:
             pass
     out["sidebar_link_hit"] = found
     if not found:
-        findings.append({"level": "warn", "area": "pwa",
+        findings.append({"level": _level_for_missing_local("warn"), "area": "pwa",
                          "message": "sidebar 進化ログ link not found in PWA bundles"})
     return out
 
@@ -432,7 +482,7 @@ def collect_db(findings: list[dict]) -> dict:
         finally:
             conn.close()
     except Exception as e:
-        findings.append({"level": "warn", "area": "db",
+        findings.append({"level": _level_for_missing_local("warn"), "area": "db",
                          "message": f"DB read error: {e}"})
 
     if out["kotodama_units"] not in (None, 12):
@@ -485,7 +535,7 @@ def collect_safety(findings: list[dict]) -> dict:
     out["denylist_path"] = str(deny_path) if deny_path else None
     out["denylist_exists"] = deny_path is not None
     if not deny_path:
-        findings.append({"level": "warn", "area": "safety",
+        findings.append({"level": _level_for_missing_local("warn"), "area": "safety",
                          "message": "dangerous_script_denylist_v1.json not found"})
 
     runner = REPO_ROOT / "automation" / "tenmon_auto_runner.py"
@@ -499,7 +549,7 @@ def collect_safety(findings: list[dict]) -> dict:
         except Exception:
             pass
     if runner.exists() and not out["auto_runner_denylist_wired"]:
-        findings.append({"level": "warn", "area": "safety",
+        findings.append({"level": _level_for_missing_local("warn"), "area": "safety",
                          "message": "tenmon_auto_runner.py denylist wiring not detected"})
     return out
 
@@ -524,7 +574,7 @@ def collect_prompt_trace(findings: list[dict]) -> dict:
         "source": None,
     }
     if not PROMPT_TRACE_JSONL.exists():
-        findings.append({"level": "warn", "area": "prompt_trace",
+        findings.append({"level": _level_for_missing_local("warn"), "area": "prompt_trace",
                          "message": "mc_intelligence_fire.jsonl not found"})
         return out
     try:
@@ -592,14 +642,14 @@ def collect_evolution(findings: list[dict], bundle_content: str | None) -> dict:
             ids = re.findall(r'id:\s*"([^"]+)"', txt)
             out["entry_ids"] = ids[:8]
         except Exception as e:
-            findings.append({"level": "warn", "area": "evolution",
+            findings.append({"level": _level_for_missing_local("warn"), "area": "evolution",
                              "message": f"evolution_log read error: {e}"})
     else:
-        findings.append({"level": "warn", "area": "evolution",
+        findings.append({"level": _level_for_missing_local("warn"), "area": "evolution",
                          "message": "evolution_log_v1.ts not found"})
 
     if out["entry_ids"][:4] != EXPECTED_TOP4:
-        findings.append({"level": "warn", "area": "evolution",
+        findings.append({"level": _level_for_missing_local("warn"), "area": "evolution",
                          "message": f"top4 ids mismatch: got {out['entry_ids'][:4]}"})
 
     if bundle_content:
@@ -607,7 +657,7 @@ def collect_evolution(findings: list[dict], bundle_content: str | None) -> dict:
             hit = eid in bundle_content
             out["bundle_top4_hits"][eid] = hit
             if not hit:
-                findings.append({"level": "warn", "area": "evolution",
+                findings.append({"level": _level_for_missing_local("warn"), "area": "evolution",
                                  "message": f"bundle missing id: {eid}"})
     return out
 
@@ -624,7 +674,16 @@ def derive_verdict(findings: list[dict]) -> tuple[str, int, int, int]:
     return "GREEN", crit, warn, info
 
 
-def derive_next_cards(verdict: str, findings: list[dict]) -> list[str]:
+def derive_next_cards(verdict: str, findings: list[dict],
+                      online_signals: int = 0) -> list[str]:
+    if PROFILE == "old_vps":
+        if verdict in ("GREEN", "YELLOW") and online_signals >= 3:
+            return [
+                "CARD-DOCTOR-V2-OLD-VPS-FEEDBACK-INTEGRATION-V1",
+                "CARD-FEEDBACK-LOOP-CARD-GENERATION-V1",
+            ]
+        if online_signals < 3:
+            return ["CARD-DOCTOR-V2-OLD-VPS-CONNECTIVITY-AUDIT-V1"]
     if verdict == "GREEN":
         return [
             "CARD-FEEDBACK-LOOP-CARD-GENERATION-OBSERVE-V1",
@@ -645,6 +704,7 @@ def render_md(report: dict) -> str:
     L.append("")
     L.append(f"- generated_at: `{report['generated_at']}`")
     L.append(f"- doctor_version: `{report['doctor_version']}`")
+    L.append(f"- profile: `{report.get('profile', 'default')}`")
     L.append(f"- verdict: **{report['verdict']}**")
     s = report["summary"]
     L.append(f"- summary: critical={s['critical']} / warn={s['warn']} / info={s['info']}")
@@ -793,13 +853,16 @@ def cmd_verify() -> int:
     ev_section = collect_evolution(findings, bundle_content)
 
     verdict, crit, warn, info = derive_verdict(findings)
-    next_cards = derive_next_cards(verdict, findings)
+    online_signals, online_label = _evaluate_online_signals(api_section, pwa_section)
+    next_cards = derive_next_cards(verdict, findings, online_signals=online_signals)
 
     report = {
         "doctor_version": DOCTOR_VERSION,
+        "profile": PROFILE,
         "generated_at": _now_iso(),
         "verdict": verdict,
         "summary": {"critical": crit, "warn": warn, "info": info},
+        "online_status": {"signals": online_signals, "label": online_label},
         "git": git_section,
         "api": api_section,
         "pwa": pwa_section,
