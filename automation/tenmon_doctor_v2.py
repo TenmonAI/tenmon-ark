@@ -20,6 +20,7 @@ import argparse
 import datetime as dt
 import glob as glob_mod
 import json
+import os
 import pathlib
 import re
 import sqlite3
@@ -29,10 +30,15 @@ import urllib.error
 import urllib.request
 
 
-REPO_ROOT = pathlib.Path("/opt/tenmon-ark-repo")
-OUT_DIR = REPO_ROOT / "automation" / "out"
-KOKUZO_DB = "/opt/tenmon-ark-data/kokuzo.sqlite"
-PROMPT_TRACE_JSONL = pathlib.Path("/opt/tenmon-ark-data/mc_intelligence_fire.jsonl")
+REPO_ROOT = pathlib.Path(
+    os.environ.get("TENMON_DOCTOR_REPO_ROOT", "/opt/tenmon-ark-repo"))
+OUT_DIR = pathlib.Path(
+    os.environ.get("TENMON_DOCTOR_OUT_DIR", str(REPO_ROOT / "automation" / "out")))
+DATA_DIR = pathlib.Path(
+    os.environ.get("TENMON_DOCTOR_DATA_DIR", "/opt/tenmon-ark-data"))
+KOKUZO_DB = os.environ.get(
+    "TENMON_DOCTOR_KOKUZO_DB", str(DATA_DIR / "kokuzo.sqlite"))
+PROMPT_TRACE_JSONL = DATA_DIR / "mc_intelligence_fire.jsonl"
 PWA_ASSETS_DIR = "/var/www/tenmon-pwa/pwa/assets"
 HOST = "https://tenmon-ark.com"
 DOCTOR_VERSION = "v2.0.0-phase1"
@@ -76,6 +82,29 @@ def self_check() -> None:
 # ---- helpers ----
 def _now_iso() -> str:
     return dt.datetime.now(dt.timezone.utc).isoformat()
+
+
+def _safe_mkdir(p: pathlib.Path) -> None:
+    """mkdir -p with a refusal list for system-critical prefixes.
+
+    Raises RuntimeError for forbidden prefixes (env override misuse guard).
+    Raises the underlying OSError for permission/io errors after a hint.
+    """
+    forbidden_prefixes = (
+        "/etc", "/usr", "/bin", "/sbin", "/lib", "/lib64",
+        "/boot", "/dev", "/proc", "/sys", "/root",
+    )
+    p_str = str(p.resolve())
+    for fp in forbidden_prefixes:
+        if p_str == fp or p_str.startswith(fp + "/"):
+            raise RuntimeError(f"refusing to mkdir under {fp}: {p_str}")
+    try:
+        p.mkdir(parents=True, exist_ok=True)
+    except OSError as e:
+        print(f"[doctor_v2] OUT_DIR={p} is not writable: {e}", file=sys.stderr)
+        print("[doctor_v2] hint: set TENMON_DOCTOR_OUT_DIR to a writable path",
+              file=sys.stderr)
+        raise
 
 
 def _read_api_token() -> str | None:
@@ -782,7 +811,7 @@ def cmd_verify() -> int:
         "findings": findings,
     }
 
-    OUT_DIR.mkdir(parents=True, exist_ok=True)
+    _safe_mkdir(OUT_DIR)
     json_text = json.dumps(report, ensure_ascii=False, indent=2)
     md_text = render_md(report)
     sug_text = render_next_card_md(report)
