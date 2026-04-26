@@ -1,0 +1,435 @@
+{
+  "observer_version": "v1.0.0-oldvps-migration-phase1",
+  "generated_at": "2026-04-26T03:45:30.420961+00:00",
+  "verdict": "YELLOW",
+  "summary": {
+    "critical": 0,
+    "warn": 1,
+    "info": 0
+  },
+  "oldvps": {
+    "env_present": false,
+    "skipped": true,
+    "host_sha8": "",
+    "user": null,
+    "key_path_sha8": "",
+    "results_by_key": {}
+  },
+  "prod_vps": {
+    "host_sha8": "5c7f8169",
+    "uname": "Linux x220-158-23-9 5.15.0-171-generic #181-Ubuntu SMP Fri Feb 6 22:44:50 UTC 2026 x86_64",
+    "os_release_pretty": "Ubuntu 22.04.2 LTS",
+    "disk": {
+      "size": "388G",
+      "used": "37G",
+      "avail": "352G",
+      "use_pct": "10%"
+    },
+    "mem": {
+      "mem_total": "11Gi",
+      "mem_used": "4.0Gi",
+      "mem_avail": "7.4Gi",
+      "swap_total": "2.0Gi",
+      "swap_used": "2.0Gi",
+      "swap_free": "45Mi"
+    },
+    "uptime": "12:45:30 up 54 days,  4:55,  7 users,  load average: 0.20, 0.14, 0.10",
+    "runtimes": {
+      "python3": {
+        "present": true,
+        "version_first_line": "Python 3.10.12"
+      },
+      "node": {
+        "present": true,
+        "version_first_line": "v22.22.0"
+      },
+      "git": {
+        "present": true,
+        "version_first_line": "git version 2.34.1"
+      },
+      "sqlite3": {
+        "present": true,
+        "version_first_line": "3.37.2 2022-01-06 13:25:41 872ba256cbf61d9290b571c0e6d82a20c224ca3ad82971edc46b29818d5dalt1"
+      },
+      "curl": {
+        "present": true,
+        "version_first_line": "curl 7.81.0 (x86_64-pc-linux-gnu) libcurl/7.81.0 OpenSSL/3.0.2 zlib/1.2.11 brotli/1.0.9 zstd/1.4.8 libidn2/2.3.2 libpsl/..."
+      },
+      "jq": {
+        "present": true,
+        "version_first_line": "jq-1.6"
+      }
+    },
+    "tenmon_services": [
+      {
+        "unit": "mc-build-handoff.service",
+        "state_summary": "loaded inactive dead TENMON-ARK"
+      },
+      {
+        "unit": "mc-collect-all.service",
+        "state_summary": "loaded inactive dead TENMON-ARK"
+      },
+      {
+        "unit": "mc-collect-git.service",
+        "state_summary": "loaded inactive dead TENMON-ARK"
+      },
+      {
+        "unit": "mc-collect-live.service",
+        "state_summary": "loaded inactive dead TENMON-ARK"
+      },
+      {
+        "unit": "tenmon-ark-api.service",
+        "state_summary": "loaded active running TENMON-ARK"
+      },
+      {
+        "unit": "tenmon-notion-task-audit.service",
+        "state_summary": "loaded inactive dead TENMON"
+      },
+      {
+        "unit": "tenmon-notion-task-readback.service",
+        "state_summary": "loaded inactive dead TENMON"
+      },
+      {
+        "unit": "tenmon-notion-task-requeue.service",
+        "state_summary": "loaded inactive dead TENMON"
+      },
+      {
+        "unit": "tenmon-notion-task-seed.service",
+        "state_summary": "loaded inactive dead start"
+      },
+      {
+        "unit": "tenmon-notion-task-status-fix.service",
+        "state_summary": "loaded active running TENMON"
+      },
+      {
+        "unit": "tenmon-operations-level-autonomy.service",
+        "state_summary": "loaded failed failed TENMON"
+      },
+      {
+        "unit": "tenmon-runtime-watchdog.service",
+        "state_summary": "loaded active running TENMON"
+      },
+      {
+        "unit": "tenmon-storage-debug.service",
+        "state_summary": "loaded failed failed /usr/local/bin/tenmon-storage-sync-debu..."
+      },
+      {
+        "unit": "tenmon-strict-promotion.service",
+        "state_summary": "loaded activating auto-restart start"
+      },
+      {
+        "unit": "tenmon-todaycut-stack.service",
+        "state_summary": "loaded active exited TENMON"
+      }
+    ],
+    "tenmon_timers": [],
+    "api_health": {
+      "ok": true,
+      "ready": true,
+      "stage": "READY"
+    },
+    "api_git_sha": "b5a5c2c8"
+  },
+  "connection_methods": {
+    "candidate_A_https_public": {
+      "available": true,
+      "endpoints": [
+        {
+          "path": "/api/health",
+          "auth_required": false,
+          "verified_in_card": true,
+          "use_for": "doctor v2 readiness probe"
+        },
+        {
+          "path": "/pwa/",
+          "auth_required": false,
+          "verified_in_card": true,
+          "use_for": "PWA frontend probe"
+        },
+        {
+          "path": "/pwa/evolution",
+          "auth_required": false,
+          "verified_in_card": true,
+          "use_for": "evolution log probe"
+        }
+      ],
+      "limitation": "DB / journalctl / systemctl は届かない"
+    },
+    "candidate_B_https_authed": {
+      "available": true,
+      "endpoints": [
+        {
+          "path": "/api/mc/vnext/claude-summary",
+          "auth_required": true,
+          "verified_in_card": true,
+          "use_for": "doctor v2 acceptance verdict"
+        },
+        {
+          "path": "/api/mc/vnext/intelligence",
+          "auth_required": true,
+          "verified_in_card": true,
+          "use_for": "doctor v2 enforcer verdict / iroha 760-char metric"
+        },
+        {
+          "path": "/api/feedback/history",
+          "auth_required": true,
+          "verified_in_card": true,
+          "use_for": "feedback observer (46 records)"
+        }
+      ],
+      "limitation": "TENMON_MC_CLAUDE_READ_TOKEN を旧 VPS の env に置く必要 (commit/log 厳禁)"
+    },
+    "candidate_C_ssh_oldvps_to_prod": {
+      "available": false,
+      "reason": "本カードでは旧 VPS → 本番 VPS への ssh 経路を開かない (危険操作禁止)",
+      "future": "観測カバレッジ不足が判明した場合のみ別カードで検討"
+    },
+    "candidate_D_nginx_public": {
+      "available": true,
+      "note": "既存 nginx 経由公開エンドポイントは A と同等。追加開放はしない。"
+    },
+    "recommendation": "A + B (HTTPS のみ)。C は当面開けない。",
+    "reason": "IROHA SOURCE OBSERVE / Doctor v2 / Feedback Observer の全観測は HTTPS GET (public + authed) のみで完遂しており、ssh 経路は不要。"
+  },
+  "placement_candidates": [
+    {
+      "path": "/opt/tenmon-automation/doctor_v2/",
+      "perm": "root required",
+      "update_method": "git pull (within /opt/tenmon-automation)",
+      "conflict": "none (new directory)",
+      "pros": "system-wide; 既存 /opt/tenmon-* 命名と整合",
+      "cons": "root sudo 必要; 単純 cp ではなく git ベースを推奨",
+      "score": 9
+    },
+    {
+      "path": "~/tenmon-automation/",
+      "perm": "user only",
+      "update_method": "git pull",
+      "conflict": "none",
+      "pros": "user 権限で完結; 即座に運用開始可能",
+      "cons": "ユーザ削除時の消失リスク",
+      "score": 7
+    },
+    {
+      "path": "/var/lib/tenmon-automation/",
+      "perm": "root required",
+      "update_method": "manual / git",
+      "conflict": "none",
+      "pros": "logrotate との親和性",
+      "cons": "/var/lib は state directory で git repo を置く慣習が薄い",
+      "score": 5
+    },
+    {
+      "path": "(既存 clone repo 内)",
+      "perm": "既存と同じ",
+      "update_method": "既存に従う",
+      "conflict": "あり得る (既存の運用と分離されない)",
+      "pros": "ファイル少",
+      "cons": "automation OS と既存サービスが混在 → 役割分離原則に反する",
+      "score": 3
+    }
+  ],
+  "out_storage": {
+    "candidates": [
+      {
+        "path": "/opt/tenmon-automation/out/",
+        "score": 9,
+        "note": "コードと同居; logrotate.d を別途設定推奨"
+      },
+      {
+        "path": "~/tenmon-automation/out/",
+        "score": 7,
+        "note": "user perm 完結; 容量は個別 quota 注意"
+      },
+      {
+        "path": "/var/log/tenmon-automation/",
+        "score": 6,
+        "note": "syslog/logrotate 親和; ただし JSON ログは慣習的に /var/lib 寄り"
+      }
+    ],
+    "rotation_estimate": {
+      "per_run_kb_total": 155,
+      "assumed_runs_per_day": 24,
+      "monthly_mb_estimate": 27.2,
+      "policy_recommendation": "logrotate weekly / keep 4 weeks / compress old → 月 ~100MB (4GB VPS で 0.0025% / 余裕あり)"
+    }
+  },
+  "denylist_strategy": {
+    "current_state_on_prod": {
+      "central_json": {
+        "path": "automation/dangerous_script_denylist_v1.json",
+        "exists": false
+      },
+      "embedded_in_observers": 5,
+      "observer_files_checked": [
+        "automation/tenmon_doctor_v2.py",
+        "automation/tenmon_feedback_observer_v1.py",
+        "automation/tenmon_iroha_observer_v1.py",
+        "automation/tenmon_iroha_notion_structure_observer_v1.py",
+        "automation/tenmon_oldvps_migration_observer_v1.py"
+      ],
+      "notes": "現状は各 observer に DENY_TOKENS リストを embedded (連結記述)。central JSON はまだ存在しない。"
+    },
+    "propagation_options": [
+      {
+        "option": "A",
+        "method": "git clone で repo 全体を旧 VPS へ持ち込む",
+        "pros": "整合性最強。各 observer の self-check が同時に効く。",
+        "cons": "repo 全体を旧 VPS に置く副作用 (ただし read-only 用途なので低リスク)",
+        "score": 9
+      },
+      {
+        "option": "B",
+        "method": "central denylist JSON だけ持ち込む",
+        "pros": "軽量",
+        "cons": "central JSON が未作成。先行整備が必要。本カードで禁止された scp も避ける必要。",
+        "score": 4
+      },
+      {
+        "option": "C",
+        "method": "旧 VPS で新規作成 (重複ハードコード)",
+        "pros": "依存ゼロ",
+        "cons": "PROD と乖離するリスク高 (security drift)",
+        "score": 2
+      }
+    ],
+    "recommendation": "A (git clone via PREP card)",
+    "additional_oldvps_specific_tokens": [
+      "ssh root@<prod_host>",
+      "ssh -i <key> ... systemctl restart",
+      "ssh -i <key> ... rm -rf",
+      "本番 VPS 改変 (DB / nginx / systemctl / file write) を発火する全コマンド",
+      "scp / rsync / sftp の書き込み方向"
+    ]
+  },
+  "command_boundaries": {
+    "allowed_readonly": [
+      "ls / cat / stat / find / grep / head / tail",
+      "df / du / free / uptime / lscpu",
+      "git status / git log / git diff (read のみ)",
+      "systemctl is-active / is-enabled / status / list-units / list-timers",
+      "journalctl --no-pager (read)",
+      "python3 / node --version",
+      "curl -s (GET only)",
+      "ssh 経由の上記コマンド"
+    ],
+    "forbidden_state_changing": [
+      "rm / mv / cp (write 系)",
+      "systemctl restart / stop / start / enable / disable / edit",
+      "nginx -s",
+      "rsync (write 方向) / scp (write 方向)",
+      "git push / git pull (本カードでは pull も禁止)",
+      "crontab -e",
+      "chmod / chown",
+      "本番 VPS への ssh 改変コマンド",
+      "Notion API write (pages/databases/blocks/comments の create/update/append)"
+    ],
+    "self_check_token_count": 29
+  },
+  "systemd_future_conditions": {
+    "preconditions": [
+      "旧 VPS 上で doctor v2 が手動実行で安定動作",
+      "副作用ゼロを 5 回連続で確認",
+      "失敗時の通知経路 (ログ / Notion / mail) 確立",
+      "リソース監視 (CPU / メモリ / 容量) 設定",
+      "denylist self-check が常時 PASS",
+      "TENMON 裁定後のみ enable"
+    ],
+    "timer_design_candidates": {
+      "doctor_v2": "hourly / daily の 2 案",
+      "feedback_observer": "daily 1 回",
+      "iroha_observer": "weekly 1 回",
+      "note": "本カードでは何も登録しない。設計のみ。"
+    },
+    "rollback_plan": [
+      "timer は systemctl disable で即停止可能",
+      "script は read-only なので副作用なし",
+      "万一の ssh 接続障害時の再接続手順を PREP カードで明文化"
+    ]
+  },
+  "role_separation": {
+    "prod_vps": {
+      "role": "production / customer-facing",
+      "responsibilities": [
+        "ユーザ chat 提供",
+        "/api/* 公開",
+        "DB 保持 (/opt/tenmon-ark-data/kokuzo.sqlite)",
+        "nginx 配信",
+        "/pwa/ 配信",
+        "進化ログ更新"
+      ]
+    },
+    "old_vps_future": {
+      "role": "observation / automation / non-customer-facing",
+      "responsibilities": [
+        "doctor v2 定期実行 (read-only 観測)",
+        "feedback observer 定期実行",
+        "iroha observer 定期実行",
+        "結果を automation/out/ に保存",
+        "Notion 進化ログ書き込み (将来カード)",
+        "異常検知・next-card 提案 (将来)"
+      ]
+    },
+    "isolation_principles": [
+      "本番 VPS → 旧 VPS: 影響なし",
+      "旧 VPS → 本番 VPS: HTTPS GET のみ (write 経路を開かない)",
+      "旧 VPS 障害が本番 VPS に波及しないこと",
+      "旧 VPS は本番 VPS を改変できないこと"
+    ]
+  },
+  "prep_readiness": {
+    "items": [
+      {
+        "key": "oldvps_env_present",
+        "status": "blocked",
+        "note": "OLDVPS_HOST / OLDVPS_USER / OLDVPS_SSH_KEY を TENMON が手動で設定する必要"
+      },
+      {
+        "key": "prod_api_health",
+        "status": "ready",
+        "note": "本番 VPS health=ok 必要"
+      },
+      {
+        "key": "https_reachable_from_oldvps",
+        "status": "deferred",
+        "note": "OLDVPS env が揃ったら curl で /api/health を旧 VPS から probe する (PREP)"
+      },
+      {
+        "key": "denylist_strategy_decided",
+        "status": "ready",
+        "note": "推奨: git clone via PREP card (option A)"
+      },
+      {
+        "key": "placement_decided",
+        "status": "ready",
+        "note": "推奨: /opt/tenmon-automation/doctor_v2/ + /opt/tenmon-automation/out/"
+      },
+      {
+        "key": "out_rotation_designed",
+        "status": "ready",
+        "note": "logrotate weekly / keep 4 weeks / 月 ~100MB 想定"
+      },
+      {
+        "key": "command_boundaries_documented",
+        "status": "ready",
+        "note": "allowed/forbidden 一覧確定"
+      },
+      {
+        "key": "systemd_future_conditions",
+        "status": "ready",
+        "note": "前提条件 6 項 + rollback 設計済 (本カードでは登録しない)"
+      }
+    ],
+    "ready": 6,
+    "blocked": 1,
+    "deferred": 1,
+    "next_card_recommended": "A: CARD-DOCTOR-V2-OLD-VPS-MIGRATION-PREP-V1"
+  },
+  "findings": [
+    {
+      "level": "warn",
+      "area": "oldvps_env",
+      "message": "OLDVPS env missing (OLDVPS_HOST,OLDVPS_USER,OLDVPS_SSH_KEY); old-VPS area skipped (TENMON to populate)"
+    }
+  ]
+}
